@@ -290,13 +290,13 @@ src/
 
 ### Phase 3 — Agent Skill 实现
 
-- [ ] T-09: 创建 SKILL.md + references/ + assets/ → agent: `general-purpose` → 产出物: `.agents/skills/codebase-explorer/`
-- [ ] T-10: 实现验证脚本（validate_doc_links.py + check_coverage.py） → agent: `general-purpose` → 产出物: scripts/
+- [x] T-09: 创建 SKILL.md + references/ + assets/ → agent: `general-purpose` → 产出物: `.agents/skills/codebase-explorer/` ✅ 2026-03-22T17:00:00+01:00
+- [x] T-10: 实现验证脚本（validate_doc_links.py + check_coverage.py） → agent: `general-purpose` → 产出物: scripts/ ✅ 2026-03-22T16:30:00+01:00
 
 ### Phase 4 — 单元测试 + 集成测试
 
-- [ ] T-11: 编写 parser/ 和 graph/ 单元测试 → agent: `tdd-guide` → 产出物: `tests/test_parser.py`, `tests/test_graph.py`
-- [ ] T-12: 编写 state/, budget/, doc/ 单元测试 → agent: `tdd-guide` → 产出物: `tests/test_state.py`, `tests/test_budget.py`, `tests/test_depth_planner.py`
+- [x] T-11: 编写 parser/ 和 graph/ 单元测试 → agent: `tdd-guide` → 产出物: `tests/test_parser.py`, `tests/test_graph.py` ✅ 2026-03-22T16:30:00+01:00
+- [x] T-12: 编写 state/, budget/, doc/ 单元测试 → agent: `tdd-guide` → 产出物: `tests/test_state.py`, `tests/test_budget.py`, `tests/test_depth_planner.py` ✅ 2026-03-22T17:15:00+01:00
 - [ ] T-13: 编写 MCP Server 集成测试 → agent: `general-purpose` → 产出物: `tests/test_server_integration.py`
 
 ### Phase 5 — End-to-End 测试
