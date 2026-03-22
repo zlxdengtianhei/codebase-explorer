@@ -1,0 +1,213 @@
+{# ========================================================================== #}
+{# detail.md.j2 - Universal Detail Template (Level 2+)                      #}
+{# ========================================================================== #}
+{#
+  This template is RECURSIVE and works at any depth level (2, 3, 4, 5...).
+
+  Variable Reference:
+  -------------------
+  document:
+    .level: int                   - Current documentation level (2+)
+    .type: str                    - "detail"
+    .target_id: str               - Component identifier
+    .target_name: str             - Display name
+    .description: str             - Component purpose
+
+  breadcrumbs: list[Breadcrumb]
+    .level: int                   - Documentation level
+    .name: str                    - Display name
+    .path: str                    - Path to document
+
+  parent:
+    .name: str                    - Parent component name
+    .path: str                    - Path to parent document
+
+  children: list[Child] | none    - Sub-components (recursive)
+    .id: str
+    .name: str
+    .description: str
+    .path: str                    - Path to child DETAIL.md
+    .has_children: bool           - Whether child has further sub-documents
+
+  classes: list[ClassInfo]
+    .name: str
+    .description: str
+    .base_classes: list[str]
+    .methods: list[MethodInfo]
+      .name: str
+      .signature: str
+      .description: str
+      .visibility: str            - "public" | "private" | "protected"
+
+  functions: list[FuncInfo]
+    .name: str
+    .signature: str
+    .description: str
+    .called_by: list[str]
+    .calls: list[str]
+
+  structure_graph: str            - Mermaid internal structure diagram
+  data_flow_graph: str | none     - Mermaid data flow (optional at deep levels)
+
+  design_decisions: list[Decision] | none
+    .title: str
+    .description: str
+    .rationale: str
+
+  source_files: list[str]         - Source file paths covered
+
+  generation:
+    .timestamp: str
+    .tool_version: str
+
+  token_budget: int               - Approximate token count target
+#}
+<!-- doc-meta
+level: {{ document.level }}
+target: {{ document.target_id }}
+type: detail
+token_budget: {{ token_budget }}
+generated_at: {{ generation.timestamp }}
+parent: {{ parent.path }}
+{% if children %}
+children:
+{% for child in children %}
+  - {{ child.path }}
+{% endfor %}
+{% endif %}
+-->
+# {{ document.target_name }}
+
+> {{ document.description }}
+
+## Breadcrumb Navigation
+
+```
+{% for crumb in breadcrumbs %}
+{% if loop.last %}
+{{ crumb.name }} (current)
+{% else %}
+{{ crumb.name }} >
+{% endif %}
+{% endfor %}
+```
+
+| Level | Document |
+|-------|----------|
+{% for crumb in breadcrumbs %}
+| {{ crumb.level }} | [{{ crumb.name }}]({{ crumb.path }}){% if loop.last %} *(current)*{% endif %} |
+{% endfor %}
+
+## Internal Structure
+
+```mermaid
+{{ structure_graph }}
+```
+
+{% if classes %}
+## Classes
+
+{% for cls in classes %}
+### {{ cls.name }}
+
+{{ cls.description }}
+
+{% if cls.base_classes %}
+**Inheritance**: `{% for base in cls.base_classes %}{{ base }}{% if not loop.last %} > {% endif %}{% endfor %}`
+{% endif %}
+
+| Method | Signature | Description |
+|--------|-----------|-------------|
+{% for method in cls.methods %}
+{% if method.visibility == "public" %}
+| `{{ method.name }}` | `{{ method.signature }}` | {{ method.description | truncate(40) }} |
+{% endif %}
+{% endfor %}
+
+{% if cls.methods | selectattr("visibility", "!=", "public") | list %}
+<details>
+<summary>Private/Protected Methods</summary>
+
+| Method | Signature |
+|--------|-----------|
+{% for method in cls.methods %}
+{% if method.visibility != "public" %}
+| `{{ method.name }}` | `{{ method.signature }}` |
+{% endif %}
+{% endfor %}
+</details>
+{% endif %}
+
+{% endfor %}
+{% endif %}
+
+{% if functions %}
+## Functions
+
+| Function | Signature | Description |
+|----------|-----------|-------------|
+{% for func in functions %}
+| `{{ func.name }}` | `{{ func.signature }}` | {{ func.description | truncate(50) }} |
+{% endfor %}
+
+### Call Relationships
+
+{% for func in functions %}
+{% if func.called_by or func.calls %}
+**`{{ func.name }}`**:
+{% if func.called_by %}
+- Called by: `{% for caller in func.called_by %}{{ caller }}{% if not loop.last %}, {% endif %}{% endfor %}`
+{% endif %}
+{% if func.calls %}
+- Calls: `{% for callee in func.calls %}{{ callee }}{% if not loop.last %}, {% endif %}{% endfor %}`
+{% endif %}
+{% endif %}
+{% endfor %}
+{% endif %}
+
+{% if data_flow_graph %}
+## Data Flow
+
+```mermaid
+{{ data_flow_graph }}
+```
+{% endif %}
+
+{% if children %}
+## Sub-Components
+
+This component contains {{ children | length }} sub-component(s):
+
+| Component | Description | Detail |
+|-----------|-------------|--------|
+{% for child in children %}
+| **{{ child.name }}** | {{ child.description | truncate(50) }} | [L{{ document.level + 1 }} Detail]({{ child.path }}) |
+{% endfor %}
+
+{% endif %}
+
+{% if design_decisions and document.level <= 3 %}
+## Design Decisions
+
+{% for decision in design_decisions %}
+### {{ decision.title }}
+
+{{ decision.description }}
+
+**Rationale**: {{ decision.rationale }}
+
+{% endfor %}
+{% endif %}
+
+## Source Files
+
+{% for file in source_files %}
+- `{{ file }}`
+{% endfor %}
+{% if not source_files %}
+_No source files associated_
+{% endif %}
+
+---
+
+_Generated by {{ generation.tool_version }} on {{ generation.timestamp }} | Level {{ document.level }}_

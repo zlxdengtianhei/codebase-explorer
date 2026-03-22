@@ -1,0 +1,11 @@
+Metadata-Version: 2.4
+Name: codebase-explorer
+Version: 0.1.0
+Summary: MCP Server + Agent Skill for codebase exploration and documentation generation
+Requires-Python: <3.14,>=3.12
+Description-Content-Type: text/markdown
+Requires-Dist: aiosqlite>=0.22.1
+Requires-Dist: graph-sitter>=0.2.0
+Requires-Dist: jinja2>=3.1.0
+Requires-Dist: networkx>=3.0
+Requires-Dist: pydantic>=2.12.5

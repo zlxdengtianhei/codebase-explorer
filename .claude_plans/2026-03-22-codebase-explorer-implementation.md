@@ -281,12 +281,12 @@ src/
 
 ### Phase 2 — MCP Server 核心实现
 
-- [ ] T-03: 实现代码解析层 `src/parser/`（graph-sitter 封装 + 语言检测） → agent: `general-purpose` → 产出物: `src/parser/`
-- [ ] T-04: 实现图构建与分析层 `src/graph/`（依赖图 + Louvain 分组 + 拓扑排序） → agent: `general-purpose` → 产出物: `src/graph/`
-- [ ] T-05: 实现状态管理层 `src/state/`（SQLite schema + checkpoint + models） → agent: `general-purpose` → 产出物: `src/state/`
-- [ ] T-06: 实现预算控制层 `src/budget/`（token 估算 + AnalysisBudgetController） → agent: `general-purpose` → 产出物: `src/budget/`
-- [ ] T-07: 实现文档生成层 `src/doc/`（depth_planner + 动态 N 层生成 + Mermaid） → agent: `general-purpose` → 产出物: `src/doc/` + `src/templates/`
-- [ ] T-08: 实现 MCP Server 入口 `src/server.py`（FastMCP 15 工具注册 + Lifespan） → agent: `general-purpose` → 产出物: `src/server.py`
+- [x] T-03: 实现代码解析层 `src/parser/`（graph-sitter 封装 + 语言检测） → agent: `general-purpose` → 产出物: `src/parser/` ✅ 2026-03-22T14:00:00+01:00
+- [x] T-04: 实现图构建与分析层 `src/graph/`（依赖图 + Louvain 分组 + 拓扑排序） → agent: `general-purpose` → 产出物: `src/graph/` ✅ 2026-03-22T14:20:00+01:00
+- [x] T-05: 实现状态管理层 `src/state/`（SQLite schema + checkpoint + models） → agent: `general-purpose` → 产出物: `src/state/` ✅ 2026-03-22T14:30:00+01:00
+- [x] T-06: 实现预算控制层 `src/budget/`（token 估算 + AnalysisBudgetController） → agent: `general-purpose` → 产出物: `src/budget/` ✅ 2026-03-22T14:10:00+01:00
+- [x] T-07: 实现文档生成层 `src/doc/`（depth_planner + 动态 N 层生成 + Mermaid） → agent: `general-purpose` → 产出物: `src/doc/` + `src/templates/` ✅ 2026-03-22T15:15:00+01:00
+- [x] T-08: 实现 MCP Server 入口 `src/server.py`（FastMCP 15 工具注册 + Lifespan） → agent: `general-purpose` → 产出物: `src/server.py` ✅ 2026-03-22T16:00:00+01:00
 
 ### Phase 3 — Agent Skill 实现
 
