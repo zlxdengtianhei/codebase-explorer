@@ -1,18 +1,3 @@
-Metadata-Version: 2.4
-Name: codebase-explorer
-Version: 1.0.0
-Summary: MCP Server + Agent Skill for codebase exploration and documentation generation
-License-Expression: MIT
-Requires-Python: <3.14,>=3.12
-Description-Content-Type: text/markdown
-Requires-Dist: aiosqlite>=0.22.1
-Requires-Dist: graph-sitter>=0.2.0
-Requires-Dist: jinja2>=3.1.0
-Requires-Dist: mcp>=1.0.0
-Requires-Dist: networkx>=3.0
-Requires-Dist: python-louvain>=0.16
-Requires-Dist: pydantic>=2.12.5
-
 # Codebase Explorer
 
 一个本地运行的 MCP Server + Agent Skill，用于分析 Python/TypeScript/JavaScript 代码库结构并生成渐进式披露的架构文档。

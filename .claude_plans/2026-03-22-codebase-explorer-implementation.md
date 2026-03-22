@@ -306,7 +306,7 @@ src/
 
 ### Phase 6 — 最终整合
 
-- [ ] T-16: 创建 README.md + pyproject.toml + .mcp.json → agent: `general-purpose` → 产出物: `README.md`, `pyproject.toml`, `.mcp.json`
+- [x] T-16: 创建 README.md + pyproject.toml + .mcp.json → agent: `general-purpose` → 产出物: `README.md`, `pyproject.toml`, `.mcp.json` ✅ 2026-03-22T20:00:00+01:00
 
 ---
 

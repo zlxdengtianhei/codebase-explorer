@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "codebase-explorer": {
+      "command": "python",
+      "args": ["-m", "src.server"],
+      "transport": "stdio"
+    }
+  }
+}
