@@ -1,5 +1,6 @@
 pyproject.toml
 src/__init__.py
+src/server.py
 src/budget/__init__.py
 src/budget/controller.py
 src/budget/estimator.py
@@ -27,3 +28,5 @@ src/state/_schema.py
 src/state/checkpoint.py
 src/state/database.py
 src/state/models.py
+tests/test_graph.py
+tests/test_parser.py

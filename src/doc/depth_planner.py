@@ -48,6 +48,8 @@ _MIN_TOKENS_PER_DOC = 200
 _MIN_FUNCTIONS_PER_DOC = 2
 _MIN_CLASSES_PER_DOC = 1
 _MIN_LINES_FOR_STANDALONE = 100
+_SMALL_MODULE_MAX_COMPONENTS = 10
+_SMALL_MODULE_MAX_LINES = 200
 
 # -- Enums & data models (all immutable) ------------------------------------
 
@@ -147,6 +149,17 @@ def calculate_depth(metrics: ModuleMetrics) -> int:
         raw_depth = min(raw_depth, 2)
     if metrics.line_count < _MIN_LINES_FOR_STANDALONE and metrics.function_count < 5:
         raw_depth = 0
+
+    # Small-module constraint: modules with few components stay flat (depth 1).
+    # A module with fewer than 10 total components (functions + classes) and
+    # fewer than 200 lines does not benefit from being split further.
+    total_components = metrics.function_count + metrics.class_count
+    if (
+        raw_depth >= 2
+        and total_components < _SMALL_MODULE_MAX_COMPONENTS
+        and metrics.line_count < _SMALL_MODULE_MAX_LINES
+    ):
+        raw_depth = 1
 
     return min(raw_depth, MAX_DEPTH)
 

@@ -26,6 +26,7 @@ from src.doc._context import (
     find_plan_node,
     imported_by_list,
     imports_list,
+    make_relative_link,
     module_metrics,
     plan_nodes_to_doc_nodes,
     trim_to_budget,
@@ -46,6 +47,26 @@ _DOC_INDEX_FILENAME = "doc-index.json"
 
 # Re-export for backward compatibility
 _trim_to_budget = trim_to_budget
+
+
+def _plan_node_summary(
+    nodes: list[DocPlanNode],
+    path: str,
+) -> dict:
+    """Build a placeholder summary dict from a plan node for pre-generation contexts.
+
+    Used when a parent document needs to reference children that
+    have not been generated yet.
+    """
+    pn = find_plan_node(nodes, path)
+    target = pn.target if pn else path.replace("/DETAIL.md", "").replace("/OVERVIEW.md", "")
+    return {
+        "name": target,
+        "path": path,
+        "level": pn.level if pn else 2,
+        "description": target,
+        "token_count": 0,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -86,6 +107,8 @@ class DocumentGenerator:
         analysis_result: AnalysisResult | None,
         cross_ref_context: str,
         children_summaries: list[dict],
+        source_files: list[str] | None = None,
+        documented_modules: frozenset[str] | None = None,
     ) -> GeneratedDocument:
         """Generate a single document for a given doc node.
 
@@ -99,12 +122,16 @@ class DocumentGenerator:
             analysis_result: Analysis result for the target module.
             cross_ref_context: Pre-built cross-reference context.
             children_summaries: Summaries of child documents.
+            source_files: Source file paths covered by this document.
+            documented_modules: Set of module names that have documentation.
 
         Returns:
             ``GeneratedDocument`` with content and token count.
         """
         context = self._build_context(
             node, analysis_result, cross_ref_context, children_summaries,
+            source_files=source_files or [],
+            documented_modules=documented_modules,
         )
 
         if node.level == 0:
@@ -155,6 +182,27 @@ class DocumentGenerator:
         """
         output_dir.mkdir(parents=True, exist_ok=True)
 
+        # Build module_name -> source file list mapping for doc-index.json
+        module_files: dict[str, list[str]] = {
+            mod.name: list(mod.files) for mod in modules
+        }
+
+        # Determine which modules actually have documentation (level 1 nodes)
+        # to avoid generating broken cross-reference links.
+        documented_modules = frozenset(
+            n.target for n in plan.doc_tree if n.level == 1
+        )
+
+        # Collect files from merged (undocumented) modules into the "root"
+        # entry so that they still appear in doc-index.json for coverage.
+        merged_files: list[str] = []
+        for mod in modules:
+            if mod.name not in documented_modules:
+                merged_files.extend(mod.files)
+        if merged_files:
+            existing_root = module_files.get("root", [])
+            module_files["root"] = existing_root + merged_files
+
         sorted_nodes = sorted(plan.doc_tree, key=lambda n: n.level)
         doc_nodes = plan_nodes_to_doc_nodes(sorted_nodes, project_id="")
 
@@ -168,14 +216,31 @@ class DocumentGenerator:
                 summaries[cp] for cp in children_paths if cp in summaries
             ]
 
+            # For overview/index docs whose children haven't been generated
+            # yet, build placeholder summaries from the plan nodes so that
+            # the template can render navigation links to child documents.
+            if not children_sums and children_paths:
+                children_sums = [
+                    _plan_node_summary(sorted_nodes, cp)
+                    for cp in children_paths
+                ]
+
             result = analysis_results.get(doc_node.target)
             cross_ref = build_cross_ref(doc_node.target, analysis_results)
+
+            # Find the module record for source_files
+            source_files = module_files.get(doc_node.target, [])
+            if not source_files and "." in doc_node.target:
+                parent_target = doc_node.target.rsplit(".", 1)[0]
+                source_files = module_files.get(parent_target, [])
 
             doc = self.generate_doc(
                 node=doc_node,
                 analysis_result=result,
                 cross_ref_context=cross_ref,
                 children_summaries=children_sums,
+                source_files=source_files,
+                documented_modules=documented_modules,
             )
             generated.append(doc)
 
@@ -193,7 +258,7 @@ class DocumentGenerator:
             file_path.parent.mkdir(parents=True, exist_ok=True)
             file_path.write_text(doc.content, encoding="utf-8")
 
-        index_data = build_doc_index(generated, plan)
+        index_data = build_doc_index(generated, plan, module_files)
         index_path = output_dir / _DOC_INDEX_FILENAME
         index_path.write_text(
             json.dumps(index_data, indent=2, ensure_ascii=False),
@@ -211,6 +276,8 @@ class DocumentGenerator:
         result: AnalysisResult | None,
         cross_ref: str,
         children: list[dict],
+        source_files: list[str] | None = None,
+        documented_modules: frozenset[str] | None = None,
     ) -> dict:
         """Build the template variable context for rendering."""
         timestamp = datetime.now(UTC).isoformat()
@@ -226,8 +293,14 @@ class DocumentGenerator:
         if node.level == 0:
             return self._index_ctx(base, node, result, children)
         if node.level == 1:
-            return self._overview_ctx(base, node, result, children)
-        return self._detail_ctx(base, node, result, children)
+            return self._overview_ctx(
+                base, node, result, children,
+                documented_modules=documented_modules,
+            )
+        return self._detail_ctx(
+            base, node, result, children,
+            source_files=source_files or [],
+        )
 
     def _index_ctx(
         self, base: dict, node: DocNode,
@@ -240,7 +313,9 @@ class DocumentGenerator:
                 "description": c.get("description", ""),
                 "file_count": 0,
                 "complexity_score": 0.5,
-                "doc_path": c.get("path", ""),
+                "doc_path": make_relative_link(
+                    node.path, c.get("path", ""),
+                ),
             }
             for c in children
         ]
@@ -269,13 +344,16 @@ class DocumentGenerator:
     def _overview_ctx(
         self, base: dict, node: DocNode,
         result: AnalysisResult | None, children: list[dict],
+        documented_modules: frozenset[str] | None = None,
     ) -> dict:
         components = [
             {
                 "id": c.get("name", ""),
                 "name": c.get("name", ""),
                 "description": c.get("description", ""),
-                "doc_path": c.get("path", ""),
+                "doc_path": make_relative_link(
+                    node.path, c.get("path", ""),
+                ),
                 "depth": c.get("level", 2),
             }
             for c in children
@@ -287,18 +365,25 @@ class DocumentGenerator:
         dep_graph = self._mermaid.generate_dependency_mermaid(
             edges=deps_to_edges(result), target=node.target,
         )
+        parent_path_rel = make_relative_link(
+            node.path, node.parent_path or "INDEX.md",
+        )
         return {
             **base,
             "module": {
                 "id": node.target,
                 "name": node.target,
                 "description": result.description if result else "",
-                "parent_path": node.parent_path or "INDEX.md",
+                "parent_path": parent_path_rel,
             },
             "files": [],
             "dependencies": {
-                "imports": imports_list(result),
-                "imported_by": imported_by_list(result),
+                "imports": imports_list(
+                    result, node.path, documented_modules,
+                ),
+                "imported_by": imported_by_list(
+                    result, node.path, documented_modules,
+                ),
             },
             "public_interfaces": interfaces,
             "components": components,
@@ -309,19 +394,25 @@ class DocumentGenerator:
     def _detail_ctx(
         self, base: dict, node: DocNode,
         result: AnalysisResult | None, children: list[dict],
+        source_files: list[str] | None = None,
     ) -> dict:
         children_list = [
             {
                 "id": c.get("name", ""),
                 "name": c.get("name", ""),
                 "description": c.get("description", ""),
-                "path": c.get("path", ""),
+                "path": make_relative_link(
+                    node.path, c.get("path", ""),
+                ),
                 "has_children": False,
             }
             for c in children
         ] or None
         structure_graph = self._mermaid.generate_dependency_mermaid(
             edges=deps_to_edges(result), target=node.target,
+        )
+        parent_path_rel = make_relative_link(
+            node.path, node.parent_path or "../OVERVIEW.md",
         )
         return {
             **base,
@@ -335,7 +426,7 @@ class DocumentGenerator:
             "breadcrumbs": build_breadcrumbs(node),
             "parent": {
                 "name": node.parent_path or "Parent",
-                "path": node.parent_path or "../OVERVIEW.md",
+                "path": parent_path_rel,
             },
             "children": children_list,
             "classes": [],
@@ -343,5 +434,5 @@ class DocumentGenerator:
             "structure_graph": structure_graph,
             "data_flow_graph": None,
             "design_decisions": None,
-            "source_files": [],
+            "source_files": source_files or [],
         }

@@ -301,8 +301,8 @@ src/
 
 ### Phase 5 — End-to-End 测试
 
-- [ ] T-14: 克隆 Flask 仓库 + 运行完整 E2E 流程 → agent: `general-purpose` → 产出物: `test_repos/flask/.codebase-docs/`
-- [ ] T-15: 验证 E2E 结果 → agent: `general-purpose` → 产出物: `tests/e2e_validation_report.md`
+- [x] T-14: 克隆 Flask 仓库 + 运行完整 E2E 流程 → agent: `general-purpose` → 产出物: `test_repos/flask/.codebase-docs/` ✅ 2026-03-22T18:45:00+01:00
+- [x] T-15: 验证 E2E 结果 → agent: `general-purpose` → 产出物: `tests/e2e_validation_report.md` ✅ 2026-03-22T19:30:00+01:00 (fix-loop: 链接/覆盖率/深度修复)
 
 ### Phase 6 — 最终整合
 

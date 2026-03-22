@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import logging
 from datetime import UTC, datetime
+from pathlib import PurePosixPath
 
 from src.budget.estimator import estimate_tokens_from_chars
 from src.doc.depth_planner import DocPlanNode, DocStructurePlan
@@ -16,6 +17,52 @@ from src.doc.mermaid import MermaidGenerator
 from src.state.models import AnalysisResult, DocNode
 
 logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Relative link helpers
+# ---------------------------------------------------------------------------
+
+
+def make_relative_link(from_doc_path: str, to_doc_path: str) -> str:
+    """Compute a relative link from one document to another.
+
+    Both paths must be relative to the docs root (e.g. ``module_0/OVERVIEW.md``,
+    ``INDEX.md``).  The returned path is relative to the *directory* containing
+    ``from_doc_path``.
+
+    Examples:
+        >>> make_relative_link("module_0/OVERVIEW.md", "INDEX.md")
+        '../INDEX.md'
+        >>> make_relative_link("sansio/group_0/DETAIL.md", "INDEX.md")
+        '../../INDEX.md'
+        >>> make_relative_link("sansio/group_0/DETAIL.md", "sansio/OVERVIEW.md")
+        '../OVERVIEW.md'
+        >>> make_relative_link("INDEX.md", "module_0/OVERVIEW.md")
+        'module_0/OVERVIEW.md'
+    """
+    from_dir = str(PurePosixPath(from_doc_path).parent)
+    # Use PurePosixPath to compute the relative path from from_dir to to_doc_path
+    # We need manual relpath since PurePosixPath doesn't have it
+    from_parts = [] if from_dir == "." else from_dir.split("/")
+    to_parts = to_doc_path.split("/")
+
+    # Find common prefix length
+    common = 0
+    for a, b in zip(from_parts, to_parts):
+        if a == b:
+            common += 1
+        else:
+            break
+
+    ups = len(from_parts) - common
+    remaining = to_parts[common:]
+
+    if ups == 0 and not remaining:
+        return to_doc_path
+
+    parts = [".."] * ups + remaining
+    return "/".join(parts)
 
 
 # ---------------------------------------------------------------------------
@@ -125,24 +172,58 @@ def deps_to_edges(result: AnalysisResult | None) -> list[tuple[str, str]]:
     return [(result.module_name, dep) for dep in result.dependencies]
 
 
-def imports_list(result: AnalysisResult | None) -> list[dict]:
-    """Build imports list for overview template."""
+def imports_list(
+    result: AnalysisResult | None,
+    from_doc_path: str = "",
+    documented_modules: frozenset[str] | None = None,
+) -> list[dict]:
+    """Build imports list for overview template.
+
+    If ``from_doc_path`` is provided, links are relative to that document.
+    If ``documented_modules`` is provided, only include dependencies that
+    have generated documentation (prevents broken links).
+    """
     if not result:
         return []
-    return [
-        {"name": dep, "doc_path": f"../{dep}/OVERVIEW.md", "description": ""}
-        for dep in result.dependencies
-    ]
+    entries: list[dict] = []
+    for dep in result.dependencies:
+        if documented_modules is not None and dep not in documented_modules:
+            continue
+        target_path = f"{dep}/OVERVIEW.md"
+        link = (
+            make_relative_link(from_doc_path, target_path)
+            if from_doc_path
+            else f"../{dep}/OVERVIEW.md"
+        )
+        entries.append({"name": dep, "doc_path": link, "description": ""})
+    return entries
 
 
-def imported_by_list(result: AnalysisResult | None) -> list[dict]:
-    """Build imported-by list for overview template."""
+def imported_by_list(
+    result: AnalysisResult | None,
+    from_doc_path: str = "",
+    documented_modules: frozenset[str] | None = None,
+) -> list[dict]:
+    """Build imported-by list for overview template.
+
+    If ``from_doc_path`` is provided, links are relative to that document.
+    If ``documented_modules`` is provided, only include dependents that
+    have generated documentation (prevents broken links).
+    """
     if not result:
         return []
-    return [
-        {"name": dep, "doc_path": f"../{dep}/OVERVIEW.md", "description": ""}
-        for dep in result.dependents
-    ]
+    entries: list[dict] = []
+    for dep in result.dependents:
+        if documented_modules is not None and dep not in documented_modules:
+            continue
+        target_path = f"{dep}/OVERVIEW.md"
+        link = (
+            make_relative_link(from_doc_path, target_path)
+            if from_doc_path
+            else f"../{dep}/OVERVIEW.md"
+        )
+        entries.append({"name": dep, "doc_path": link, "description": ""})
+    return entries
 
 
 def module_metrics(result: AnalysisResult | None) -> dict:
@@ -161,9 +242,18 @@ def module_metrics(result: AnalysisResult | None) -> dict:
 
 
 def build_breadcrumbs(node: DocNode) -> list[dict]:
-    """Build breadcrumb trail from root to current node."""
+    """Build breadcrumb trail from root to current node.
+
+    All paths are computed relative to the current document's location.
+    """
+    current_path = node.path
+
     crumbs: list[dict] = [
-        {"level": 0, "name": "Project", "path": "INDEX.md"},
+        {
+            "level": 0,
+            "name": "Project",
+            "path": make_relative_link(current_path, "INDEX.md"),
+        },
     ]
 
     if node.level >= 1 and node.parent_path:
@@ -174,14 +264,14 @@ def build_breadcrumbs(node: DocNode) -> list[dict]:
                 if "." in node.target
                 else node.target
             ),
-            "path": node.parent_path,
+            "path": make_relative_link(current_path, node.parent_path),
         })
 
     if node.level >= 2:
         crumbs.append({
             "level": node.level,
             "name": node.target,
-            "path": node.path,
+            "path": make_relative_link(current_path, node.path),
         })
 
     return crumbs
@@ -195,9 +285,18 @@ def build_breadcrumbs(node: DocNode) -> list[dict]:
 def build_doc_index(
     generated: list,  # list[GeneratedDocument] -- avoid circular import
     plan: DocStructurePlan,
+    module_files: dict[str, list[str]] | None = None,
 ) -> dict:
-    """Build the doc-index.json structure."""
+    """Build the doc-index.json structure.
+
+    Args:
+        generated: List of generated documents.
+        plan: The documentation structure plan.
+        module_files: Mapping of module target name to source file paths.
+            Used to populate the ``source_files`` field in each entry.
+    """
     plan_lookup: dict[str, DocPlanNode] = {n.path: n for n in plan.doc_tree}
+    file_lookup = module_files or {}
 
     docs: list[dict] = []
     for doc in generated:
@@ -215,6 +314,15 @@ def build_doc_index(
                 entry["parent"] = plan_node.parent_path
             if plan_node.children_paths:
                 entry["children"] = list(plan_node.children_paths)
+
+        # Populate source_files from the module's file list.
+        # For detail docs (target like "module.sub"), look up the parent module.
+        source_files = file_lookup.get(doc.target, [])
+        if not source_files and "." in doc.target:
+            parent_target = doc.target.rsplit(".", 1)[0]
+            source_files = file_lookup.get(parent_target, [])
+        entry["source_files"] = sorted(source_files)
+
         docs.append(entry)
 
     total_tokens = sum(d.actual_tokens for d in generated)

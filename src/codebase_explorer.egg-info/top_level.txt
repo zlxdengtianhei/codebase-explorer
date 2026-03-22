@@ -3,5 +3,6 @@ budget
 doc
 graph
 parser
+server
 state
 templates

@@ -7,5 +7,6 @@ Description-Content-Type: text/markdown
 Requires-Dist: aiosqlite>=0.22.1
 Requires-Dist: graph-sitter>=0.2.0
 Requires-Dist: jinja2>=3.1.0
+Requires-Dist: mcp>=1.0.0
 Requires-Dist: networkx>=3.0
 Requires-Dist: pydantic>=2.12.5
