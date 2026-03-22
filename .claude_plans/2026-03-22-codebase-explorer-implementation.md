@@ -271,13 +271,13 @@ src/
 
 ### Phase 0 — 工具链验证 ⚡
 
-- [ ] T-00: 验证 graph-sitter 安装 + Py/TS/JS 解析能力 → agent: `general-purpose` → 产出物: `scripts/verify_toolchain.py`
+- [x] T-00: 验证 graph-sitter 安装 + Py/TS/JS 解析能力 → agent: `general-purpose` → 产出物: `scripts/verify_toolchain.py` ✅ 2026-03-22T04:00:00+01:00
 
 ### Phase 1 — 核心架构设计
 
-- [ ] T-01: 设计 MCP Server 整体架构 + 15 个工具接口规格 → agent: `architect` → 产出物: `design/architecture.md`
-- [ ] T-02: 设计文档模板系统（动态 N 层 Jinja2 模板 + Token 预算） → sub-agent: `Explore` → 产出物: `design/doc_templates.md`
-- [ ] T-02b: ★ 设计动态文档深度策略（阈值、分割算法、递归终止条件） → agent: `architect` → 产出物: `design/depth_strategy.md`
+- [x] T-01: 设计 MCP Server 整体架构 + 15 个工具接口规格 → agent: `architect` → 产出物: `design/architecture.md` ✅ 2026-03-22T13:30:00+01:00
+- [x] T-02: 设计文档模板系统（动态 N 层 Jinja2 模板 + Token 预算） → sub-agent: `Explore` → 产出物: `design/doc_templates.md` ✅ 2026-03-22T12:00:00+01:00
+- [x] T-02b: ★ 设计动态文档深度策略（阈值、分割算法、递归终止条件） → agent: `architect` → 产出物: `design/depth_strategy.md` ✅ 2026-03-22T12:00:00+01:00
 
 ### Phase 2 — MCP Server 核心实现
 
