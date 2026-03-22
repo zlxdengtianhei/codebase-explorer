@@ -297,7 +297,7 @@ src/
 
 - [x] T-11: 编写 parser/ 和 graph/ 单元测试 → agent: `tdd-guide` → 产出物: `tests/test_parser.py`, `tests/test_graph.py` ✅ 2026-03-22T16:30:00+01:00
 - [x] T-12: 编写 state/, budget/, doc/ 单元测试 → agent: `tdd-guide` → 产出物: `tests/test_state.py`, `tests/test_budget.py`, `tests/test_depth_planner.py` ✅ 2026-03-22T17:15:00+01:00
-- [ ] T-13: 编写 MCP Server 集成测试 → agent: `general-purpose` → 产出物: `tests/test_server_integration.py`
+- [x] T-13: 编写 MCP Server 集成测试 → agent: `general-purpose` → 产出物: `tests/test_server_integration.py` ✅ 2026-03-22T18:00:00+01:00
 
 ### Phase 5 — End-to-End 测试
 
