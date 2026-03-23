@@ -1,396 +1,878 @@
-"""Codebase Explorer MCP Server -- FastMCP entry point with 15 tools."""
+"""Codebase Explorer MCP Server -- FastMCP entry point with 7 tools (V2).
+
+V2 Architecture:
+- No SQLite (replaced with JSON state file)
+- No Jinja2 templates (docs written by LLM agents)
+- 7 streamlined tools (down from 15 in V1)
+- Feature Cone based grouping (replaces Louvain as primary)
+"""
 from __future__ import annotations
-import logging, os, uuid
+
+import hashlib
+import json
+import logging
+import os
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated, Literal
+
 from mcp.server.fastmcp import FastMCP, Context
 from mcp.server.fastmcp.exceptions import ToolError
 from pydantic import Field
-from src.budget.controller import AnalysisBudgetController
-from src.budget.estimator import estimate_tokens_from_lines
-from src.doc.depth_planner import plan_doc_structure as _plan_doc_structure
-from src.doc.generator import DocumentGenerator
+
+from src.budget.estimator import estimate_tokens_from_chars
+from src.doc.depth_planner import calculate_feature_cone_depth, build_task_manifest
 from src.doc.mermaid import MermaidGenerator
-from src.doc.templates import TemplateRenderer
-from src.graph.dependency import (build_dependency_graph, get_dependency_graph_mermaid,
-    get_module_dependency_subgraph)
-from src.graph.grouper import group_modules, get_module_metrics
+from src.graph.dependency import get_module_dependency_subgraph
+from src.graph.feature_cone import extract_feature_cones, FeatureCone
 from src.graph.ordering import topological_order
+from src.graph.weighted_graph import build_weighted_dependency_graph
 from src.parser.codebase import CodebaseParser, CodebaseParseError
-from src.state.checkpoint import CheckpointManager
-from src.state.database import Database
-from src.state.models import (AnalysisResult, AnalysisTask, DocNode, ModuleRecord, ProjectRecord)
+from src.state.json_store import atomic_write_state, read_state, update_task_status
 
 logger = logging.getLogger(__name__)
-DB_PATH = Path(os.environ.get("CODEBASE_EXPLORER_DB",
-    str(Path.home() / ".codebase-explorer" / "state.db")))
+
+# ---------------------------------------------------------------------------
+# Type Aliases
+# ---------------------------------------------------------------------------
+
 _Str = Annotated[str | None, Field(description="Project ID. None = latest.")]
+
+# ---------------------------------------------------------------------------
+# FastMCP Server Setup
+# ---------------------------------------------------------------------------
+
 
 @asynccontextmanager
 async def _lifespan(server: FastMCP):
-    db = Database(DB_PATH)
-    await db.initialize()
+    """Initialize parser for the server lifespan."""
+    parser = CodebaseParser()
     try:
-        yield {"db": db, "parser": CodebaseParser(), "ckpt": CheckpointManager(db),
-               "budgets": {}, "docgen": DocumentGenerator(TemplateRenderer(), MermaidGenerator())}
+        yield {"parser": parser}
     finally:
-        await db.close()
+        pass
 
-mcp = FastMCP("codebase-explorer",
-    instructions="Code analysis and progressive-disclosure doc generation server.",
-    lifespan=_lifespan)
 
-def _lc(ctx): return ctx.request_context.lifespan_context
-def _db(ctx) -> Database: return _lc(ctx)["db"]
-def _parser(ctx) -> CodebaseParser: return _lc(ctx)["parser"]
-def _ckpt(ctx) -> CheckpointManager: return _lc(ctx)["ckpt"]
-def _budgets(ctx) -> dict: return _lc(ctx)["budgets"]
-def _docgen(ctx) -> DocumentGenerator: return _lc(ctx)["docgen"]
-def _uid(): return uuid.uuid4().hex[:8]
-def _now(): return datetime.now(UTC)
+mcp = FastMCP(
+    "codebase-explorer",
+    instructions="Codebase analysis server with feature-cone grouping and token-aware task planning.",
+    lifespan=_lifespan,
+)
 
-async def _proj(ctx, pid):
-    p = await _db(ctx).get_project(pid) if pid else await _db(ctx).get_latest_project()
-    if p is None: raise ToolError("No project found. Call index_codebase first.")
-    return p
+# ---------------------------------------------------------------------------
+# Helper Functions
+# ---------------------------------------------------------------------------
+
+
+def _lc(ctx):
+    """Get lifespan context."""
+    return ctx.request_context.lifespan_context
+
+
+def _parser(ctx) -> CodebaseParser:
+    """Get parser from context."""
+    return _lc(ctx)["parser"]
+
+
+def _now() -> str:
+    """Get current UTC timestamp in ISO format."""
+    return datetime.now(UTC).isoformat()
+
+
+def _project_id_from_path(path: str) -> str:
+    """Generate deterministic project ID from path."""
+    return hashlib.sha256(path.encode()).hexdigest()[:12]
+
+
+def _find_latest_project_dir() -> Path | None:
+    """Find the most recently modified .codebase-analysis directory."""
+    # Search in common locations
+    search_paths = [Path.cwd(), Path.home()]
+
+    candidates = []
+    for base in search_paths:
+        if not base.exists():
+            continue
+        for p in base.rglob(".codebase-analysis"):
+            if p.is_dir() and (p / "state.json").exists():
+                candidates.append(p)
+
+    if not candidates:
+        return None
+
+    # Return most recently modified
+    return max(candidates, key=lambda p: p.stat().st_mtime)
+
+
+def _resolve_output_dir(path: str, output_dir: str | None) -> Path:
+    """Resolve output directory for analysis results."""
+    if output_dir:
+        return Path(output_dir).resolve()
+    return Path(path).resolve() / ".codebase-analysis"
+
+
+def _validate_json_files_exist(output_dir: Path) -> bool:
+    """Check if all required JSON files exist."""
+    required = [
+        "01_structure.json",
+        "02_dag.json",
+        "03_feature_cones.json",
+        "04_file_tokens.json",
+        "05_task_manifest.json",
+    ]
+    return all((output_dir / f).exists() for f in required)
+
+
+# ---------------------------------------------------------------------------
+# Tool 1: analyze_codebase
+# ---------------------------------------------------------------------------
+
+
 @mcp.tool(annotations={"readOnlyHint": False, "idempotentHint": True})
-async def index_codebase(
+async def analyze_codebase(
     path: Annotated[str, Field(description="Absolute path to the codebase root")],
-    languages: Annotated[list[Literal["python", "typescript", "javascript"]] | None,
-        Field(description="Languages to analyze. None = auto-detect.")] = None,
+    languages: Annotated[
+        list[Literal["python", "typescript", "javascript"]] | None,
+        Field(description="Languages to analyze. None = auto-detect."),
+    ] = None,
+    output_dir: Annotated[
+        str | None,
+        Field(description="Output directory for JSON files. None = {path}/.codebase-analysis/"),
+    ] = None,
+    force_reindex: Annotated[
+        bool, Field(description="Force reindex even if cache exists.")
+    ] = False,
     ctx: Context = None,
 ) -> dict:
-    """Parse source files, build dependency graph, group modules, store in DB."""
-    resolved = Path(path).resolve()
-    if not resolved.is_dir(): raise ToolError(f"Not a directory: {path}")
-    db, parser, pid = _db(ctx), _parser(ctx), _uid()
-    try: snap = parser.parse(str(resolved), languages=languages)
-    except CodebaseParseError as e: raise ToolError(str(e)) from e
-    gr = build_dependency_graph(snap)
-    gp = group_modules(gr.graph, snap)
-    proj = ProjectRecord(id=pid, path=str(resolved), created_at=_now(), status="indexed",
-        languages=list(snap.languages_detected), file_count=len(snap.files),
-        function_count=len(snap.functions), class_count=len(snap.classes),
-        total_lines=snap.total_lines)
-    await db.insert_project(proj)
-    mods = []
-    for name, files in gp.modules.items():
-        fis = [f for f in snap.files if f.filepath in set(files)]
-        mods.append(ModuleRecord(id=f"{pid}_{name}", project_id=pid, name=name,
-            files=list(files), file_count=len(files),
-            line_count=sum(f.line_count for f in fis),
-            function_count=sum(len(f.function_names) for f in fis),
-            class_count=sum(len(f.class_names) for f in fis),
-            is_utility=name in gp.utility_files))
-    await db.insert_modules(mods)
-    return {"status": "success",
-        "summary": f"Indexed {len(snap.files)} files, {len(snap.functions)} functions",
-        "data": {"project_id": pid, "file_count": len(snap.files),
-            "function_count": len(snap.functions), "class_count": len(snap.classes),
-            "languages": list(snap.languages_detected), "module_count": gp.module_count}}
+    """Run complete analysis pipeline and generate 5 JSON files + state.json.
+
+    This is the main entry point that replaces V1's index_codebase + create_analysis_plan.
+    Performs purely deterministic analysis (no LLM calls).
+
+    Pipeline:
+      1. Parse codebase → CodebaseSnapshot
+      2. Build weighted dependency graph → nx.DiGraph
+      3. Extract feature cones via SCC + DAG analysis
+      4. Estimate tokens per file (chars ÷ 4)
+      5. Build task manifest (greedy bin packing)
+      6. Write 5 JSON files + state.json
+
+    Returns:
+        Project metadata and paths to all generated files.
+    """
+    resolved_path = Path(path).resolve()
+    if not resolved_path.is_dir():
+        raise ToolError(f"Not a directory: {path}")
+
+    output_path = _resolve_output_dir(str(resolved_path), output_dir)
+    project_id = _project_id_from_path(str(resolved_path))
+
+    # Check cache
+    if not force_reindex and _validate_json_files_exist(output_path):
+        logger.info(f"[analyze_codebase] Cache hit for {resolved_path}")
+        return {
+            "status": "success",
+            "project_id": project_id,
+            "output_dir": str(output_path),
+            "cached": True,
+            "message": "Using cached analysis results",
+            "files": {
+                "01_structure": str(output_path / "01_structure.json"),
+                "02_dag": str(output_path / "02_dag.json"),
+                "03_feature_cones": str(output_path / "03_feature_cones.json"),
+                "04_file_tokens": str(output_path / "04_file_tokens.json"),
+                "05_task_manifest": str(output_path / "05_task_manifest.json"),
+            },
+            "state_file": str(output_path / "state.json"),
+        }
+
+    # Ensure output directory exists
+    output_path.mkdir(parents=True, exist_ok=True)
+
+    # Step 1: Parse codebase
+    logger.info(f"[analyze_codebase] Parsing {resolved_path}...")
+    try:
+        snapshot = _parser(ctx).parse(str(resolved_path), languages=languages)
+    except CodebaseParseError as e:
+        raise ToolError(str(e)) from e
+
+    # Step 2: Build weighted dependency graph
+    logger.info("[analyze_codebase] Building weighted dependency graph...")
+    weighted_result = build_weighted_dependency_graph(snapshot)
+    graph = weighted_result.graph
+
+    # Step 3: Extract feature cones
+    logger.info("[analyze_codebase] Extracting feature cones...")
+    cones, infrastructure = extract_feature_cones(graph, snapshot)
+    logger.info(
+        f"[analyze_codebase] Found {len(cones)} cones, {len(infrastructure)} infrastructure files"
+    )
+
+    # Step 4: Estimate tokens per file
+    logger.info("[analyze_codebase] Estimating tokens...")
+    file_tokens = {}
+    file_details = []
+    for file_info in snapshot.files:
+        lang = file_info.language or "default"
+        estimate = estimate_tokens_from_chars(file_info.char_count, lang)
+        file_tokens[file_info.filepath] = estimate.source_tokens
+        file_details.append(
+            {
+                "filepath": file_info.filepath,
+                "language": lang,
+                "char_count": file_info.char_count,
+                "line_count": file_info.line_count,
+                "estimated_tokens": estimate.source_tokens,
+                "method": estimate.method,
+            }
+        )
+
+    # Step 5: Build DAG layers and task manifest
+    logger.info("[analyze_codebase] Building task manifest...")
+    cone_dicts = {}
+    for cone_id, cone in cones.items():
+        cone_tokens = sum(file_tokens.get(f, 0) for f in cone.exclusive_files)
+        cone_dicts[cone_id] = {
+            "cone_id": cone_id,
+            "entry_point": cone.entry_point,
+            "exclusive_files": cone.exclusive_files,
+            "shared_deps": cone.shared_deps,
+            "layer": cone.layer,
+            "token_count": cone_tokens,
+        }
+
+    task_manifest = build_task_manifest(cone_dicts, file_tokens)
+
+    # Step 6: Write JSON files
+    # 01_structure.json
+    structure_data = {
+        "project_id": project_id,
+        "path": str(resolved_path),
+        "analyzed_at": _now(),
+        "languages": list(snapshot.languages_detected),
+        "file_count": len(snapshot.files),
+        "function_count": len(snapshot.functions),
+        "class_count": len(snapshot.classes),
+        "total_lines": snapshot.total_lines,
+        "files": [
+            {
+                "filepath": f.filepath,
+                "language": f.language,
+                "line_count": f.line_count,
+                "char_count": f.char_count,
+                "function_names": f.function_names,
+                "class_names": f.class_names,
+                "import_sources": f.import_sources,
+            }
+            for f in snapshot.files
+        ],
+    }
+    (output_path / "01_structure.json").write_text(
+        json.dumps(structure_data, indent=2, ensure_ascii=False), encoding="utf-8"
+    )
+
+    # 02_dag.json
+    dag_data = {
+        "project_id": project_id,
+        "node_count": weighted_result.node_count,
+        "edge_count": weighted_result.edge_count,
+        "total_weight": weighted_result.total_weight,
+        "nodes": list(graph.nodes()),
+        "edges": [
+            {"source": u, "target": v, "weight": graph[u][v].get("weight", 1)}
+            for u, v in graph.edges()
+        ],
+    }
+    (output_path / "02_dag.json").write_text(
+        json.dumps(dag_data, indent=2, ensure_ascii=False), encoding="utf-8"
+    )
+
+    # 03_feature_cones.json
+    cones_data = {
+        "project_id": project_id,
+        "cone_count": len(cones),
+        "infrastructure_files": list(infrastructure),
+        "cones": cone_dicts,
+    }
+    (output_path / "03_feature_cones.json").write_text(
+        json.dumps(cones_data, indent=2, ensure_ascii=False), encoding="utf-8"
+    )
+
+    # 04_file_tokens.json
+    tokens_data = {
+        "project_id": project_id,
+        "total_tokens": sum(file_tokens.values()),
+        "file_count": len(file_tokens),
+        "files": file_details,
+    }
+    (output_path / "04_file_tokens.json").write_text(
+        json.dumps(tokens_data, indent=2, ensure_ascii=False), encoding="utf-8"
+    )
+
+    # 05_task_manifest.json
+    (output_path / "05_task_manifest.json").write_text(
+        json.dumps(task_manifest, indent=2, ensure_ascii=False), encoding="utf-8"
+    )
+
+    # state.json
+    state = {
+        "project_id": project_id,
+        "path": str(resolved_path),
+        "created_at": _now(),
+        "status": "analysis_complete",
+        "tasks": {
+            task_id: {
+                "status": "pending",
+                "created_at": _now(),
+                "output_files": [],
+            }
+            for task_id in task_manifest.get("tasks", {})
+        },
+        "documentation": {
+            "output_dir": str(output_path),
+            "index_written": False,
+            "details_written": 0,
+            "snippets_written": 0,
+            "total_planned": len(task_manifest.get("tasks", {})),
+            "source_files_covered": [],
+            "source_file_coverage_percent": 0.0,
+        },
+    }
+    atomic_write_state(output_path / "state.json", state)
+
+    logger.info(f"[analyze_codebase] Analysis complete. Output: {output_path}")
+
+    return {
+        "status": "success",
+        "project_id": project_id,
+        "output_dir": str(output_path),
+        "files_analyzed": len(snapshot.files),
+        "feature_cones_found": len(cones),
+        "task_count": len(task_manifest.get("tasks", {})),
+        "total_tokens": sum(file_tokens.values()),
+        "files": {
+            "01_structure": str(output_path / "01_structure.json"),
+            "02_dag": str(output_path / "02_dag.json"),
+            "03_feature_cones": str(output_path / "03_feature_cones.json"),
+            "04_file_tokens": str(output_path / "04_file_tokens.json"),
+            "05_task_manifest": str(output_path / "05_task_manifest.json"),
+        },
+        "state_file": str(output_path / "state.json"),
+    }
+
+
+# ---------------------------------------------------------------------------
+# Tool 2: get_structure
+# ---------------------------------------------------------------------------
+
+
 @mcp.tool(annotations={"readOnlyHint": True})
-async def get_modules(
-    project_id: _Str = None,
-    sort_by: Annotated[Literal["name", "size", "complexity", "dependency"],
-        Field(description="Sort order.")] = "name",
-    ctx: Context = None,
+async def get_structure(
+    module: Annotated[str | None, Field(description="Module/cone name")] = None,
+    file: Annotated[str | None, Field(description="File path")] = None,
+    function: Annotated[str | None, Field(description="Function name")] = None,
 ) -> dict:
-    """List detected modules with metrics."""
-    proj = await _proj(ctx, project_id)
-    items = [{"name": m.name, "file_count": m.file_count, "line_count": m.line_count,
-        "function_count": m.function_count, "class_count": m.class_count,
-        "is_utility": m.is_utility} for m in await _db(ctx).get_modules(proj.id)]
-    if sort_by == "size": items.sort(key=lambda m: m["line_count"], reverse=True)
-    elif sort_by == "complexity":
-        items.sort(key=lambda m: m["function_count"] + m["class_count"] * 3, reverse=True)
-    return {"status": "success",
-        "data": {"project_id": proj.id, "modules": items, "total_modules": len(items)}}
+    """Query code structure from 01_structure.json.
+
+    Three mutually exclusive query modes:
+    - module: Get all files in a cone/module
+    - file: Get detailed info for a single file
+    - function: Get function signature and dependencies
+    - None: Return project summary
+    """
+    # Find the latest project directory
+    project_dir = _find_latest_project_dir()
+    if not project_dir:
+        raise ToolError("No project found. Run analyze_codebase first.")
+
+    structure_path = project_dir / "01_structure.json"
+    if not structure_path.exists():
+        raise ToolError(f"Structure file not found: {structure_path}")
+
+    structure = json.loads(structure_path.read_text(encoding="utf-8"))
+    files = structure.get("files", [])
+
+    # Mode: Summary
+    if not any([module, file, function]):
+        language_breakdown = {}
+        for f in files:
+            lang = f.get("language", "unknown")
+            language_breakdown[lang] = language_breakdown.get(lang, 0) + 1
+
+        # Find most imported files
+        import_counts = {}
+        for f in files:
+            for imp in f.get("import_sources", []):
+                import_counts[imp] = import_counts.get(imp, 0) + 1
+        most_imported = sorted(import_counts.items(), key=lambda x: x[1], reverse=True)[:10]
+
+        return {
+            "status": "success",
+            "query_type": "summary",
+            "file_count": structure.get("file_count", 0),
+            "function_count": structure.get("function_count", 0),
+            "class_count": structure.get("class_count", 0),
+            "language_breakdown": language_breakdown,
+            "most_imported_files": [
+                {"filepath": fp, "import_count": cnt} for fp, cnt in most_imported
+            ],
+        }
+
+    # Mode: Module/Cone query
+    if module:
+        # Load feature cones to get files in the module
+        cones_path = project_dir / "03_feature_cones.json"
+        if not cones_path.exists():
+            raise ToolError("Feature cones file not found")
+
+        cones_data = json.loads(cones_path.read_text(encoding="utf-8"))
+        cone = cones_data.get("cones", {}).get(module)
+        if not cone:
+            raise ToolError(f"Module/cone '{module}' not found")
+
+        module_files = [
+            f for f in files if f["filepath"] in cone.get("exclusive_files", [])
+        ]
+
+        return {
+            "status": "success",
+            "query_type": "module",
+            "module_name": module,
+            "files": module_files,
+            "file_count": len(module_files),
+            "total_functions": sum(len(f.get("function_names", [])) for f in module_files),
+            "total_classes": sum(len(f.get("class_names", [])) for f in module_files),
+        }
+
+    # Mode: File query
+    if file:
+        file_info = next((f for f in files if f["filepath"] == file), None)
+        if not file_info:
+            raise ToolError(f"File not found: {file}")
+
+        # Build reverse index (imported_by)
+        imported_by = []
+        for f in files:
+            if file in f.get("import_sources", []):
+                imported_by.append(f["filepath"])
+
+        return {
+            "status": "success",
+            "query_type": "file",
+            "filepath": file_info["filepath"],
+            "language": file_info.get("language", "unknown"),
+            "line_count": file_info.get("line_count", 0),
+            "functions": [
+                {
+                    "name": fn,
+                    # Note: function details not available in structure.json
+                    # Would need to parse functions array from snapshot
+                }
+                for fn in file_info.get("function_names", [])
+            ],
+            "classes": [
+                {"name": cn} for cn in file_info.get("class_names", [])
+            ],
+            "import_sources": file_info.get("import_sources", []),
+            "imported_by": imported_by,
+        }
+
+    # Mode: Function query
+    if function:
+        matches = []
+        for f in files:
+            if function in f.get("function_names", []):
+                matches.append(
+                    {
+                        "filepath": f["filepath"],
+                        # Note: line_start, line_end, calls not available in structure.json
+                    }
+                )
+
+        if not matches:
+            raise ToolError(f"Function '{function}' not found")
+
+        return {
+            "status": "success",
+            "query_type": "function",
+            "function_name": function,
+            "matches": matches,
+        }
+
+    # Should not reach here
+    raise ToolError("Invalid query parameters")
+
+
+# ---------------------------------------------------------------------------
+# Tool 3: get_feature_cones
+# ---------------------------------------------------------------------------
+
+
 @mcp.tool(annotations={"readOnlyHint": True})
-async def get_module_detail(
-    module_name: Annotated[str, Field(description="Module name")],
-    project_id: _Str = None, ctx: Context = None,
+async def get_feature_cones(
+    cone_id: Annotated[str | None, Field(description="Cone ID. None = all cones.")] = None,
 ) -> dict:
-    """Get file list, interfaces, dependencies for a module."""
-    db, proj = _db(ctx), await _proj(ctx, project_id)
-    mod = await db.get_module(proj.id, module_name)
-    if mod is None: raise ToolError(f"Module '{module_name}' not found")
-    res = await db.get_result(proj.id, module_name)
-    analysis = ({"description": res.description, "public_interfaces": res.public_interfaces,
-        "dependencies": res.dependencies, "dependents": res.dependents,
-        "mermaid_diagram": res.mermaid_diagram} if res else None)
-    return {"status": "success", "data": {"name": mod.name, "files": mod.files,
-        "file_count": mod.file_count, "line_count": mod.line_count,
-        "function_count": mod.function_count, "class_count": mod.class_count,
-        "is_utility": mod.is_utility, "description": mod.description, "analysis": analysis}}
+    """Query feature cones from 03_feature_cones.json.
+
+    A feature cone represents a cohesive feature unit containing
+    all files from entry point to implementation.
+    """
+    project_dir = _find_latest_project_dir()
+    if not project_dir:
+        raise ToolError("No project found. Run analyze_codebase first.")
+
+    cones_path = project_dir / "03_feature_cones.json"
+    if not cones_path.exists():
+        raise ToolError(f"Feature cones file not found: {cones_path}")
+
+    cones_data = json.loads(cones_path.read_text(encoding="utf-8"))
+    cones = cones_data.get("cones", {})
+
+    # Return summary list
+    if not cone_id:
+        summaries = [
+            {
+                "cone_id": cid,
+                "name": c.get("entry_point", cid),
+                "entry_file": c.get("entry_point", ""),
+                "is_utility": False,  # TODO: determine from layer or naming
+                "file_count": len(c.get("exclusive_files", [])),
+                "total_tokens": c.get("token_count", 0),
+                "layer": c.get("layer", 0),
+            }
+            for cid, c in cones.items()
+        ]
+
+        return {
+            "status": "success",
+            "total_cones": len(cones),
+            "cones": summaries,
+        }
+
+    # Return specific cone details
+    cone = cones.get(cone_id)
+    if not cone:
+        raise ToolError(f"Cone '{cone_id}' not found")
+
+    # TODO: Add layer breakdown (would need to compute from DAG)
+    # TODO: Add depends_on_cones (would need cross-cone dependency analysis)
+
+    return {
+        "status": "success",
+        "cone_id": cone_id,
+        "name": cone.get("entry_point", cone_id),
+        "entry_file": cone.get("entry_point", ""),
+        "is_utility": False,
+        "file_count": len(cone.get("exclusive_files", [])),
+        "total_tokens": cone.get("token_count", 0),
+        "layer": cone.get("layer", 0),
+        "files": cone.get("exclusive_files", []),
+        "layers": [],  # TODO: implement layer breakdown
+        "shared_deps": cone.get("shared_deps", []),
+        "depends_on_cones": [],  # TODO: implement
+    }
+
+
+# ---------------------------------------------------------------------------
+# Tool 4: get_dependency_graph
+# ---------------------------------------------------------------------------
+
+
 @mcp.tool(annotations={"readOnlyHint": True})
 async def get_dependency_graph(
-    scope: Annotated[Literal["project", "module"],
-        Field(description="'project' or 'module'.")] = "project",
-    target: Annotated[str | None, Field(description="Module name for scope=module.")] = None,
-    project_id: _Str = None, ctx: Context = None,
+    scope: Annotated[
+        Literal["project", "cone", "file"],
+        Field(description="Scope: 'project', 'cone', or 'file'"),
+    ] = "project",
+    target: Annotated[
+        str | None,
+        Field(description="Cone ID or file path (required for scope=cone/file)"),
+    ] = None,
+    include_weights: Annotated[
+        bool, Field(description="Include edge weights in diagram")
+    ] = False,
 ) -> dict:
-    """Get dependency graph as Mermaid diagram."""
-    db, proj = _db(ctx), await _proj(ctx, project_id)
-    gr = build_dependency_graph(_parser(ctx).parse(proj.path))
-    if scope == "module":
-        if not target: raise ToolError("'target' required for scope='module'")
-        mod = await db.get_module(proj.id, target)
-        if mod is None: raise ToolError(f"Module '{target}' not found")
-        mermaid = get_dependency_graph_mermaid(
-            get_module_dependency_subgraph(gr.graph, mod.files))
-    else: mermaid = get_dependency_graph_mermaid(gr.graph)
-    return {"status": "success", "data": {"scope": scope, "target": target,
-        "mermaid_graph": mermaid, "node_count": gr.file_count, "edge_count": gr.edge_count,
-        "circular_deps": [list(c) for c in gr.circular_deps]}}
+    """Generate Mermaid dependency graph from 02_dag.json.
+
+    Scopes:
+    - project: Cone-level dependency graph
+    - cone: File-level graph within a cone
+    - file: Direct dependencies of a single file
+    """
+    project_dir = _find_latest_project_dir()
+    if not project_dir:
+        raise ToolError("No project found. Run analyze_codebase first.")
+
+    dag_path = project_dir / "02_dag.json"
+    if not dag_path.exists():
+        raise ToolError(f"DAG file not found: {dag_path}")
+
+    dag_data = json.loads(dag_path.read_text(encoding="utf-8"))
+
+    # TODO: Implement actual Mermaid graph generation
+    # This is a placeholder that returns basic graph info
+
+    return {
+        "status": "success",
+        "scope": scope,
+        "target": target,
+        "mermaid_graph": f"graph TD\n    %% Placeholder for {scope} graph\n",
+        "node_count": dag_data.get("node_count", 0),
+        "edge_count": dag_data.get("edge_count", 0),
+        "circular_deps": [],  # TODO: extract from SCC analysis
+    }
+
+
+# ---------------------------------------------------------------------------
+# Tool 5: get_progress
+# ---------------------------------------------------------------------------
+
+
 @mcp.tool(annotations={"readOnlyHint": True})
-async def estimate_module_tokens(
-    module_name: Annotated[str | None, Field(description="Module name. None = all.")] = None,
-    project_id: _Str = None, ctx: Context = None,
+async def get_progress(
+    project_id: Annotated[
+        str | None, Field(description="Project ID. None = latest project.")
+    ] = None,
 ) -> dict:
-    """Estimate token counts per module using line heuristics."""
-    proj = await _proj(ctx, project_id)
-    mods = await _db(ctx).get_modules(proj.id)
-    if module_name:
-        mods = [m for m in mods if m.name == module_name]
-        if not mods: raise ToolError(f"Module '{module_name}' not found")
-    lang = proj.languages[0] if proj.languages else "python"
-    ests, total = [], 0
-    for m in mods:
-        t = estimate_tokens_from_lines(m.line_count, lang)
-        ests.append({"module": m.name, "estimated_tokens": t, "line_count": m.line_count,
-            "file_count": m.file_count, "language": lang})
-        total += t
-    return {"status": "success", "data": {"estimates": ests, "total_tokens": total}}
-@mcp.tool(annotations={"readOnlyHint": False, "idempotentHint": True})
-async def create_analysis_plan(
-    project_id: _Str = None,
-    max_tokens_per_batch: Annotated[int,
-        Field(description="Max tokens/batch.", ge=10000, le=200000)] = 60000,
-    ctx: Context = None,
-) -> dict:
-    """Create analysis tasks ordered by DAG topology."""
-    db, proj = _db(ctx), await _proj(ctx, project_id)
-    mods_list = await db.get_modules(proj.id)
-    snap = _parser(ctx).parse(proj.path)
-    gr = build_dependency_graph(snap)
-    gp = group_modules(gr.graph, snap)
-    order = topological_order(gr.graph, gp.modules)
-    lang = proj.languages[0] if proj.languages else "python"
-    tasks, batches = [], []
-    for bi, layer in enumerate(order):
-        lt, lm = 0, []
-        for mn in layer:
-            mod = next((m for m in mods_list if m.name == mn), None)
-            if not mod: continue
-            t = estimate_tokens_from_lines(mod.line_count, lang)
-            lt += t; lm.append(mn)
-            tasks.append(AnalysisTask(id=f"task_{_uid()}", project_id=proj.id,
-                module_name=mn, status="pending", batch_index=bi, created_at=_now()))
-        if lm: batches.append({"batch": bi, "modules": lm, "estimated_tokens": lt})
-    await db.create_tasks(tasks)
-    tt = sum(b["estimated_tokens"] for b in batches)
-    _budgets(ctx)[proj.id] = AnalysisBudgetController(
-        total_budget=max(tt, 50000), total_modules=len(tasks))
-    return {"status": "success",
-        "summary": f"Created {len(tasks)} tasks in {len(batches)} layers",
-        "data": {"tasks": batches, "total_batches": len(batches), "total_modules": len(tasks)}}
+    """Query task completion status from state.json."""
+    project_dir = _find_latest_project_dir()
+    if not project_dir:
+        raise ToolError("No project found. Run analyze_codebase first.")
+
+    state_path = project_dir / "state.json"
+    if not state_path.exists():
+        raise ToolError(f"State file not found: {state_path}")
+
+    state = read_state(state_path)
+    if not state:
+        raise ToolError("Failed to read state file")
+
+    tasks = state.get("tasks", {})
+    total = len(tasks)
+    pending = sum(1 for t in tasks.values() if t.get("status") == "pending")
+    in_progress = sum(1 for t in tasks.values() if t.get("status") == "in_progress")
+    complete = sum(1 for t in tasks.values() if t.get("status") == "complete")
+    failed = sum(1 for t in tasks.values() if t.get("status") == "failed")
+
+    progress_percent = (complete / total * 100) if total > 0 else 0.0
+
+    next_pending = [
+        tid for tid, t in tasks.items() if t.get("status") == "pending"
+    ][:10]  # Limit to 10
+
+    doc_info = state.get("documentation", {})
+
+    return {
+        "status": "success",
+        "project_id": state.get("project_id"),
+        "tasks": {
+            "total": total,
+            "pending": pending,
+            "in_progress": in_progress,
+            "complete": complete,
+            "failed": failed,
+            "progress_percent": round(progress_percent, 2),
+        },
+        "documentation": {
+            "output_dir": doc_info.get("output_dir", ""),
+            "index_written": doc_info.get("index_written", False),
+            "details_written": doc_info.get("details_written", 0),
+            "snippets_written": doc_info.get("snippets_written", 0),
+            "total_planned": doc_info.get("total_planned", 0),
+            "source_file_coverage_percent": doc_info.get(
+                "source_file_coverage_percent", 0.0
+            ),
+        },
+        "next_pending_tasks": next_pending,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Tool 6: get_file_tokens
+# ---------------------------------------------------------------------------
+
+
 @mcp.tool(annotations={"readOnlyHint": True})
-async def check_budget_status(project_id: _Str = None, ctx: Context = None) -> dict:
-    """Check budget consumption and stop conditions."""
-    proj = await _proj(ctx, project_id)
-    ctrl = _budgets(ctx).get(proj.id)
-    if ctrl is None:
-        s = await _db(ctx).get_task_status_summary(proj.id)
-        return {"status": "success", "data": {"total_budget": 0, "used_tokens": 0,
-            "remaining_tokens": 0, "usage_percent": 0.0, "should_stop": False,
-            "stop_reason": None, "task_summary": s}}
-    return ctrl.check_budget_status(proj.id)
-@mcp.tool(annotations={"readOnlyHint": True})
-async def get_next_batch(
-    project_id: _Str = None,
-    batch_size: Annotated[int, Field(description="Max modules/batch.", ge=1, le=10)] = 3,
-    ctx: Context = None,
+async def get_file_tokens(
+    file: Annotated[str | None, Field(description="File path. None = all files.")] = None,
+    module: Annotated[
+        str | None, Field(description="Module/cone ID. None = all modules.")
+    ] = None,
 ) -> dict:
-    """Get next pending modules to analyze."""
-    db, proj = _db(ctx), await _proj(ctx, project_id)
-    tasks = await db.get_next_pending_tasks(proj.id, batch_size)
-    s = await db.get_task_status_summary(proj.id)
-    batch = []
-    for t in tasks:
-        mod = await db.get_module(proj.id, t.module_name)
-        batch.append({"name": t.module_name, "task_id": t.id,
-            "files": mod.files if mod else [], "batch_index": t.batch_index})
-    return {"status": "success", "data": {"modules": batch, "batch_count": len(batch),
-        "progress_percent": s["progress_percent"], "remaining": s["pending"]}}
+    """Query file token estimates from 04_file_tokens.json."""
+    project_dir = _find_latest_project_dir()
+    if not project_dir:
+        raise ToolError("No project found. Run analyze_codebase first.")
+
+    tokens_path = project_dir / "04_file_tokens.json"
+    if not tokens_path.exists():
+        raise ToolError(f"Tokens file not found: {tokens_path}")
+
+    tokens_data = json.loads(tokens_path.read_text(encoding="utf-8"))
+    files = tokens_data.get("files", [])
+
+    # Mode: All files
+    if not file and not module:
+        return {
+            "status": "success",
+            "total_tokens": tokens_data.get("total_tokens", 0),
+            "file_count": tokens_data.get("file_count", 0),
+            "files": files,
+        }
+
+    # Mode: Single file
+    if file:
+        file_info = next((f for f in files if f["filepath"] == file), None)
+        if not file_info:
+            raise ToolError(f"File not found: {file}")
+
+        return {
+            "status": "success",
+            "filepath": file_info["filepath"],
+            "language": file_info.get("language", "unknown"),
+            "char_count": file_info.get("char_count", 0),
+            "line_count": file_info.get("line_count", 0),
+            "estimated_tokens": file_info.get("estimated_tokens", 0),
+            "method": file_info.get("method", "unknown"),
+            "cone_id": file_info.get("cone_id"),
+        }
+
+    # Mode: Module/Cone
+    if module:
+        # Load cone data to get files
+        cones_path = project_dir / "03_feature_cones.json"
+        if not cones_path.exists():
+            raise ToolError("Feature cones file not found")
+
+        cones_data = json.loads(cones_path.read_text(encoding="utf-8"))
+        cone = cones_data.get("cones", {}).get(module)
+        if not cone:
+            raise ToolError(f"Module/cone '{module}' not found")
+
+        cone_files = [
+            f
+            for f in files
+            if f["filepath"] in cone.get("exclusive_files", [])
+        ]
+
+        total = sum(f.get("estimated_tokens", 0) for f in cone_files)
+        max_tokens = max((f.get("estimated_tokens", 0) for f in cone_files), default=0)
+
+        return {
+            "status": "success",
+            "cone_id": module,
+            "file_count": len(cone_files),
+            "total_tokens": total,
+            "avg_tokens_per_file": (total / len(cone_files)) if cone_files else 0.0,
+            "max_file_tokens": max_tokens,
+            "files": cone_files,
+        }
+
+    raise ToolError("Invalid query parameters")
+
+
+# ---------------------------------------------------------------------------
+# Tool 7: submit_analysis
+# ---------------------------------------------------------------------------
+
+
 @mcp.tool(annotations={"readOnlyHint": False})
 async def submit_analysis(
-    module_name: Annotated[str, Field(description="Module name")],
-    description: Annotated[str, Field(description="One-line module description")],
-    public_interfaces: Annotated[list[str], Field(description="Public signatures")],
-    key_data_structures: Annotated[list[str], Field(description="Key data structures")],
-    dependencies: Annotated[list[str], Field(description="Dependencies")],
-    patterns_identified: Annotated[list[str], Field(description="Design patterns")],
-    detailed_analysis: Annotated[str | None,
-        Field(description="Full Markdown analysis")] = None,
-    mermaid_diagram: Annotated[str | None, Field(description="Mermaid diagram")] = None,
-    token_count: Annotated[int, Field(description="Tokens consumed")] = 0,
-    project_id: _Str = None, ctx: Context = None,
+    task_id: Annotated[str, Field(description="Task ID from task_manifest")],
+    detail_paths: Annotated[
+        list[str], Field(description="Paths to written DETAIL.md files")
+    ],
+    snippet_paths: Annotated[
+        list[str], Field(description="Paths to written SNIPPET.md files")
+    ],
+    tokens_used: Annotated[int, Field(description="Tokens consumed")],
+    source_files_covered: Annotated[
+        list[str] | None,
+        Field(description="Source files covered by this analysis"),
+    ] = None,
+    project_id: Annotated[
+        str | None, Field(description="Project ID. None = latest.")
+    ] = None,
 ) -> dict:
-    """Submit analysis results for a module and mark task completed."""
-    db, proj = _db(ctx), await _proj(ctx, project_id)
-    result = AnalysisResult(id=f"res_{_uid()}", task_id="", project_id=proj.id,
-        module_name=module_name, description=description,
-        public_interfaces=list(public_interfaces),
-        key_data_structures=list(key_data_structures),
-        dependencies=list(dependencies), dependents=[],
-        patterns_identified=list(patterns_identified),
-        detailed_analysis=detailed_analysis, mermaid_diagram=mermaid_diagram,
-        token_count=token_count, created_at=_now())
-    await db.insert_result(result)
-    ctrl = _budgets(ctx).get(proj.id)
-    if ctrl and token_count > 0:
-        try: ctrl.allocate(module_name, token_count); ctrl.record_usage(module_name, token_count)
-        except (ValueError, KeyError): pass
-    s = await db.get_task_status_summary(proj.id)
-    return {"status": "success",
-        "summary": f"Analysis for '{module_name}' saved. {s['completed']}/{s['total']} done.",
-        "data": {"result_id": result.id, "modules_completed": s["completed"],
-            "modules_remaining": s["pending"], "progress_percent": s["progress_percent"]}}
-@mcp.tool(annotations={"readOnlyHint": True})
-async def get_analysis_status(project_id: _Str = None, ctx: Context = None) -> dict:
-    """Get overall analysis progress: pending, in-progress, completed, failed."""
-    s = await _db(ctx).get_task_status_summary((await _proj(ctx, project_id)).id)
-    return {"status": "success", "data": {"total_tasks": s["total"], "pending": s["pending"],
-        "in_progress": s["in_progress"], "completed": s["completed"], "failed": s["failed"],
-        "completed_modules": s["completed_modules"], "progress_percent": s["progress_percent"]}}
-@mcp.tool(annotations={"readOnlyHint": False})
-async def save_checkpoint(
-    phase: Annotated[Literal["indexing", "module_analysis", "cross_reference", "doc_generation"],
-        Field(description="Current phase")],
-    status: Annotated[Literal["in_progress", "completed", "interrupted"],
-        Field(description="Status")] = "in_progress",
-    tokens_processed: Annotated[int, Field(description="Tokens processed so far")] = 0,
-    metadata: Annotated[dict | None, Field(description="Optional metadata")] = None,
-    project_id: _Str = None, ctx: Context = None,
-) -> dict:
-    """Save analysis checkpoint for session resume."""
-    db, proj = _db(ctx), await _proj(ctx, project_id)
-    s = await db.get_task_status_summary(proj.id)
-    mods = await db.get_modules(proj.id)
-    analyzed, all_n = s["completed_modules"], [m.name for m in mods]
-    pending = [n for n in all_n if n not in set(analyzed)]
-    ckpt = await _ckpt(ctx).create_checkpoint(project_id=proj.id, phase=phase,
-        analyzed_modules=analyzed, pending_modules=pending, status=status,
-        total_tokens_processed=tokens_processed, metadata=metadata)
-    pct = len(analyzed) / len(all_n) * 100 if all_n else 0.0
-    return {"status": "success",
-        "summary": f"Checkpoint: {len(analyzed)}/{len(all_n)} modules, phase={phase}",
-        "data": {"checkpoint_id": ckpt.id, "analyzed_modules": analyzed,
-            "pending_modules": pending, "progress_percent": round(pct, 1)}}
-@mcp.tool(annotations={"readOnlyHint": True})
-async def load_checkpoint(
-    checkpoint_id: Annotated[str | None,
-        Field(description="Checkpoint ID. None = latest.")] = None,
-    project_id: _Str = None, ctx: Context = None,
-) -> dict:
-    """Load a checkpoint to resume a previous session."""
-    proj = await _proj(ctx, project_id)
-    restored = await _ckpt(ctx).restore_checkpoint(proj.id, checkpoint_id=checkpoint_id)
-    if restored is None:
-        return {"status": "success", "summary": "No checkpoint found", "data": None}
-    ckpt, results = restored
-    summaries = {r.module_name: {"description": r.description,
-        "public_interfaces": r.public_interfaces, "token_count": r.token_count}
-        for r in results}
-    pct = len(ckpt.analyzed_modules) / ckpt.total_modules * 100 if ckpt.total_modules else 0.0
-    return {"status": "success",
-        "summary": f"Restored: {len(ckpt.analyzed_modules)}/{ckpt.total_modules} analyzed",
-        "data": {"checkpoint_id": ckpt.id, "phase": ckpt.phase,
-            "analyzed_modules": ckpt.analyzed_modules,
-            "pending_modules": ckpt.pending_modules, "module_summaries": summaries,
-            "progress_percent": round(pct, 1),
-            "tokens_processed": ckpt.total_tokens_processed}}
-@mcp.tool(annotations={"readOnlyHint": True})
-async def get_cross_ref_context(
-    module_name: Annotated[str, Field(description="Module being analyzed")],
-    max_tokens: Annotated[int,
-        Field(description="Max tokens for context.", ge=500, le=30000)] = 2000,
-    project_id: _Str = None, ctx: Context = None,
-) -> dict:
-    """Build cross-reference context from dependency summaries, trimmed to max_tokens."""
-    db, proj = _db(ctx), await _proj(ctx, project_id)
-    mod = await db.get_module(proj.id, module_name)
-    if mod is None: raise ToolError(f"Module '{module_name}' not found")
-    all_res = await db.get_all_results(proj.id)
-    parts, resolved, tok_est = [], 0, 0
-    for r in all_res:
-        if r.module_name == module_name: continue
-        entry = f"# {r.module_name}\n{r.description}\nInterfaces: {', '.join(r.public_interfaces[:10])}\n---\n"
-        et = len(entry) // 4
-        if tok_est + et > max_tokens: break
-        parts.append(entry); tok_est += et; resolved += 1
-    pending = max(0, len(await db.get_modules(proj.id)) - 1 - resolved)
-    return {"status": "success", "data": {"target_module": module_name,
-        "context": "\n".join(parts), "dependencies_resolved": resolved,
-        "dependencies_pending": pending, "context_tokens": tok_est}}
-@mcp.tool(annotations={"readOnlyHint": False, "idempotentHint": True})
-async def plan_doc_structure(project_id: _Str = None, ctx: Context = None) -> dict:
-    """Plan documentation tree: depths, splits, budgets per module."""
-    db, proj = _db(ctx), await _proj(ctx, project_id)
-    mods = await db.get_modules(proj.id)
-    snap = _parser(ctx).parse(proj.path)
-    gr = build_dependency_graph(snap)
-    gp = group_modules(gr.graph, snap)
-    metrics = get_module_metrics(gr.graph, gp.modules)
-    plan = _plan_doc_structure(proj.id, mods, metrics)
-    nodes = [DocNode(id=f"doc_{_uid()}", project_id=proj.id, path=n.path,
-        level=n.level, target=n.target, token_budget=n.token_budget,
-        parent_path=n.parent_path, children_paths=list(n.children_paths),
-        status="planned") for n in plan.doc_tree]
-    await db.insert_doc_nodes(nodes)
-    tree = [{"path": n.path, "level": n.level, "target": n.target,
-        "token_budget": n.token_budget, "parent": n.parent_path,
-        "children": list(n.children_paths)} for n in plan.doc_tree]
-    return {"status": "success",
-        "summary": f"Planned {plan.total_docs} docs, max depth {plan.max_depth}",
-        "data": {"doc_tree": tree, "total_docs": plan.total_docs,
-            "max_depth": plan.max_depth, "depth_decisions": plan.depth_decisions}}
-@mcp.tool(annotations={"readOnlyHint": False})
-async def generate_doc(
-    target: Annotated[str, Field(description="Module name or 'root' for INDEX")],
-    level: Annotated[int, Field(description="0=INDEX, 1=OVERVIEW, 2+=DETAIL", ge=0, le=5)],
-    token_budget: Annotated[int, Field(description="Token budget", ge=200)],
-    parent_path: Annotated[str | None, Field(description="Parent doc path")] = None,
-    children: Annotated[list[str] | None, Field(description="Child doc paths")] = None,
-    project_id: _Str = None, ctx: Context = None,
-) -> dict:
-    """Generate a single Jinja2-rendered document for a target at a given level."""
-    db, proj = _db(ctx), await _proj(ctx, project_id)
-    res = await db.get_result(proj.id, target) if target != "root" else None
-    all_res = await db.get_all_results(proj.id)
-    xref = "\n".join(f"## {r.module_name}\n{r.description}" for r in all_res
-                     if r.module_name != target)[:5000]
-    csums: list[dict] = []
-    if children:
-        dtree = await db.get_doc_tree(proj.id)
-        for cp in children:
-            cn = next((n for n in dtree if n.path == cp), None)
-            if cn:
-                cr = await db.get_result(proj.id, cn.target)
-                csums.append({"name": cn.target, "path": cn.path, "level": cn.level,
-                    "description": cr.description if cr else cn.target})
-    dp = ("INDEX.md" if level == 0 else f"{target}/OVERVIEW.md" if level == 1
-          else f"{target}/DETAIL.md")
-    node = DocNode(id=f"doc_{_uid()}", project_id=proj.id, path=dp, level=level,
-        target=target, token_budget=token_budget, parent_path=parent_path,
-        children_paths=children or [], status="planned")
-    gen = _docgen(ctx).generate_doc(node=node, analysis_result=res,
-        cross_ref_context=xref, children_summaries=csums)
-    await db.update_doc_node_content(node.id, gen.content, gen.actual_tokens)
-    return {"status": "success", "data": {"path": gen.path, "content": gen.content,
-        "actual_tokens": gen.actual_tokens, "level": gen.level, "target": gen.target}}
+    """Submit analysis completion and update state.json.
+
+    Called by DETAIL Agent after writing documentation files.
+    Atomically updates task status and coverage metrics.
+    """
+    project_dir = _find_latest_project_dir()
+    if not project_dir:
+        raise ToolError("No project found. Run analyze_codebase first.")
+
+    state_path = project_dir / "state.json"
+
+    # Verify files exist
+    for path in detail_paths + snippet_paths:
+        if not Path(path).exists():
+            raise ToolError(f"File not found: {path}")
+
+    # Update task status
+    output_files = [
+        {"path": p, "type": "detail", "status": "complete"}
+        for p in detail_paths
+    ] + [
+        {"path": p, "type": "snippet", "status": "complete"}
+        for p in snippet_paths
+    ]
+
+    state = update_task_status(
+        state_path,
+        task_id,
+        status="complete",
+        output_files=output_files,
+    )
+
+    # Update documentation metrics
+    doc = state.get("documentation", {})
+    doc["details_written"] = doc.get("details_written", 0) + len(detail_paths)
+    doc["snippets_written"] = doc.get("snippets_written", 0) + len(snippet_paths)
+
+    if source_files_covered:
+        existing = set(doc.get("source_files_covered", []))
+        existing.update(source_files_covered)
+        doc["source_files_covered"] = list(existing)
+
+        # Recalculate coverage
+        structure_path = project_dir / "01_structure.json"
+        if structure_path.exists():
+            structure = json.loads(structure_path.read_text(encoding="utf-8"))
+            total_files = structure.get("file_count", 0)
+            if total_files > 0:
+                doc["source_file_coverage_percent"] = (
+                    len(existing) / total_files * 100
+                )
+
+    state["documentation"] = doc
+    atomic_write_state(state_path, state)
+
+    # Calculate remaining tasks
+    tasks = state.get("tasks", {})
+    remaining = sum(
+        1
+        for t in tasks.values()
+        if t.get("status") in ("pending", "in_progress")
+    )
+    complete = sum(1 for t in tasks.values() if t.get("status") == "complete")
+    total = len(tasks)
+    progress = (complete / total * 100) if total > 0 else 0.0
+
+    return {
+        "status": "success",
+        "task_id": task_id,
+        "tasks_remaining": remaining,
+        "progress_percent": round(progress, 2),
+        "source_file_coverage_percent": doc.get("source_file_coverage_percent", 0.0),
+    }
+
+
+# ---------------------------------------------------------------------------
+# Main Entry Point
+# ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
     mcp.run()
