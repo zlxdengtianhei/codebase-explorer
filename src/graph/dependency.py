@@ -3,6 +3,8 @@
 Builds a NetworkX DiGraph where nodes are source file paths and edges
 represent import/dependency relationships.  All returned data structures
 are immutable.
+
+V2 adds support for weighted multi-relation graphs (import/call/inherit).
 """
 from __future__ import annotations
 
@@ -14,6 +16,10 @@ from pathlib import PurePosixPath
 import networkx as nx
 
 from src.parser.codebase import CodebaseSnapshot, FileInfo
+from src.graph.weighted_graph import (
+    build_weighted_dependency_graph as _build_weighted_graph,
+    WeightedGraphResult,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -149,6 +155,82 @@ def get_module_dependency_subgraph(
     """
     valid_nodes = [f for f in module_files if f in graph]
     return graph.subgraph(valid_nodes).copy()
+
+
+def get_file_dependency_subgraph(
+    graph: nx.DiGraph,
+    file_path: str,
+    hops: int = 1,
+) -> nx.DiGraph:
+    """Extract a subgraph centered on a specific file.
+
+    Returns the file and all nodes reachable within `hops` steps
+    (following both incoming and outgoing edges).
+
+    Args:
+        graph: Full dependency graph.
+        file_path: Center file path.
+        hops: Maximum number of edge hops (default: 1).
+
+    Returns:
+        Subgraph containing the center file and its neighbors within hops.
+
+    Example:
+        >>> graph = build_dependency_graph(snapshot).graph
+        >>> subgraph = get_file_dependency_subgraph(graph, "main.py", hops=1)
+        >>> # Returns main.py and its direct dependencies/dependents
+    """
+    if file_path not in graph:
+        logger.warning("File %s not in graph, returning empty subgraph", file_path)
+        return nx.DiGraph()
+
+    # Collect nodes within hops
+    nodes_to_include = {file_path}
+    frontier = {file_path}
+
+    for _ in range(hops):
+        new_frontier = set()
+        for node in frontier:
+            # Add predecessors (files that depend on this file)
+            new_frontier.update(graph.predecessors(node))
+            # Add successors (files this file depends on)
+            new_frontier.update(graph.successors(node))
+        nodes_to_include.update(new_frontier)
+        frontier = new_frontier
+
+    logger.info(
+        "[dependency] get_file_dependency_subgraph: file=%s, hops=%d, subgraph has %d nodes",
+        file_path,
+        hops,
+        len(nodes_to_include),
+    )
+
+    return graph.subgraph(nodes_to_include).copy()
+
+
+def build_weighted_dependency_graph(snapshot: CodebaseSnapshot) -> WeightedGraphResult:
+    """Build a weighted multi-relation dependency graph.
+
+    This is a convenience wrapper around the weighted_graph module.
+    Combines import (weight=1), call (weight=2), and inherit (weight=3) edges.
+
+    Args:
+        snapshot: CodebaseSnapshot produced by the parser layer.
+
+    Returns:
+        WeightedGraphResult with graph and metadata.
+
+    Example:
+        >>> snapshot = parser.parse("/path/to/codebase")
+        >>> result = build_weighted_dependency_graph(snapshot)
+        >>> print(result.summary)
+    """
+    result = _build_weighted_graph(snapshot)
+    logger.info(
+        "[dependency] build_weighted_dependency_graph: %s",
+        result.summary,
+    )
+    return result
 
 
 def get_dependency_graph_mermaid(graph: nx.DiGraph) -> str:
