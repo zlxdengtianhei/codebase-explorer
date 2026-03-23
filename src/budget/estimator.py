@@ -91,6 +91,8 @@ def _line_ratio(language: str) -> int:
 def estimate_tokens_from_chars(char_count: int, language: str = "python") -> int:
     """Estimate token count from character count.  Accuracy: +/- 15%.
 
+    This is the V2 primary estimation method.
+
     Args:
         char_count: Number of characters in the source code (>= 0).
         language: Programming language for ratio lookup.
@@ -102,15 +104,18 @@ def estimate_tokens_from_chars(char_count: int, language: str = "python") -> int
         raise ValueError(f"char_count must be >= 0, got {char_count}")
     ratio = _chars_ratio(language)
     estimated = int(char_count / ratio)
-    logger.debug(
-        "estimate_tokens_from_chars: chars=%d lang=%s ratio=%.1f -> tokens=%d",
-        char_count, language, ratio, estimated,
+    logger.info(
+        "[estimator] estimate_tokens_from_chars: %d chars / %.1f = %d tokens (%s)",
+        char_count, ratio, estimated, language,
     )
     return estimated
 
 
 def estimate_tokens_from_lines(line_count: int, language: str = "python") -> int:
     """Estimate token count from line count.  Accuracy: +/- 20%.
+
+    .. deprecated:: V2
+        Use :func:`estimate_tokens_from_chars` instead for better accuracy.
 
     Args:
         line_count: Number of source code lines (>= 0).
@@ -119,6 +124,9 @@ def estimate_tokens_from_lines(line_count: int, language: str = "python") -> int
     Returns:
         Estimated token count (always >= 0).
     """
+    logger.warning(
+        "[estimator] estimate_tokens_from_lines deprecated, use estimate_tokens_from_chars"
+    )
     if line_count < 0:
         raise ValueError(f"line_count must be >= 0, got {line_count}")
     tpl = _line_ratio(language)
