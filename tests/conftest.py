@@ -12,16 +12,16 @@ from src.parser.codebase import (
     FileInfo,
     FunctionInfo,
 )
-from src.state.database import Database
+# from src.state.database import Database  # TEMPORARY: Removed in Phase 1, will be updated in TEST-01
 
 
-@pytest_asyncio.fixture
-async def db():
-    """In-memory async SQLite database for testing."""
-    database = Database(Path(":memory:"))
-    await database.initialize()
-    yield database
-    await database.close()
+# @pytest_asyncio.fixture
+# async def db():
+#     """In-memory async SQLite database for testing."""
+#     database = Database(Path(":memory:"))
+#     await database.initialize()
+#     yield database
+#     await database.close()
 
 
 @pytest.fixture
