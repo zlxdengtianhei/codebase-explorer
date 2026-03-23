@@ -21,6 +21,8 @@ pip install -e .
 uv pip install -e .
 ```
 
+详细安装指南（MCP Server 配置、Agent Skill 安装、多客户端适配）请参见 [INSTALL.md](INSTALL.md)。
+
 ### As MCP Server
 
 配置 `.mcp.json`:

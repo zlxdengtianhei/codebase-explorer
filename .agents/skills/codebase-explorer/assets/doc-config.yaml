@@ -1,0 +1,16 @@
+# Default configuration for codebase-explorer
+output_dir: .codebase-docs
+max_depth: 5
+languages:
+  - python
+  - typescript
+  - javascript
+budget:
+  total_tokens: 50000
+  max_per_module: 10000
+depth:
+  min_lines_for_split: 200
+  min_components_for_split: 15
+  decay_factor: 0.6
+templates:
+  dir: src/templates

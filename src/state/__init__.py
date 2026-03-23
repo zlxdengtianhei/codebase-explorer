@@ -1,16 +1,11 @@
 """State management layer for Codebase Explorer.
 
-Provides SQLite-backed persistence for analysis state, checkpoints,
-and documentation tree information.
+Provides data models for analysis state and documentation tree information.
 
 Public API:
-    - Database: Async SQLite CRUD operations with WAL mode.
-    - CheckpointManager: Checkpoint save/restore for session resume.
     - Models: Immutable Pydantic data models (frozen=True).
 """
 
-from .checkpoint import CheckpointManager
-from .database import Database
 from .models import (
     AnalysisPhase,
     AnalysisResult,
@@ -26,9 +21,6 @@ from .models import (
 )
 
 __all__ = [
-    # Core classes
-    "Database",
-    "CheckpointManager",
     # Models
     "ProjectRecord",
     "ModuleRecord",

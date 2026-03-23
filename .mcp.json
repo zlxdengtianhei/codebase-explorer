@@ -1,8 +1,8 @@
 {
   "mcpServers": {
     "codebase-explorer": {
-      "command": "python",
-      "args": ["-m", "src.server"],
+      "command": "uv",
+      "args": ["run", "--directory", "/Users/lexuanzhang/code/codebase-explorer", "python", "-m", "src.server"],
       "transport": "stdio"
     }
   }
