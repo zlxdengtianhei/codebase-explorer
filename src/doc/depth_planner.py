@@ -316,3 +316,157 @@ def plan_doc_structure(
         doc_tree=tuple(nodes), total_docs=len(nodes),
         max_depth=max_depth_val, depth_decisions=depth_decisions,
     )
+
+
+# ---------------------------------------------------------------------------
+# V2 Functions (DAG-based depth calculation and task manifest)
+# ---------------------------------------------------------------------------
+
+
+def calculate_feature_cone_depth(
+    cone_tokens: int,
+    dag_layers: int = 1,
+    token_budget: int = 100000,
+) -> int:
+    """Calculate documentation depth for a feature cone based on DAG layers.
+
+    V2 replacement for three-dimensional threshold tables.
+
+    Args:
+        cone_tokens: Estimated token count for the cone.
+        dag_layers: Number of DAG layers in the cone (default: 1).
+        token_budget: Available token budget for documentation.
+
+    Returns:
+        Recommended depth level (0-5).
+
+    Example:
+        >>> depth = calculate_feature_cone_depth(12000, dag_layers=3, token_budget=100000)
+        >>> print(f"Depth: {depth}")
+    """
+    # Base depth from DAG layers (capped at 5)
+    base_depth = min(dag_layers, MAX_DEPTH)
+
+    # Adjust based on token budget
+    # Small cones (low tokens) get reduced depth
+    if cone_tokens < 2000:
+        adjusted_depth = min(base_depth, 1)
+    elif cone_tokens < 8000:
+        adjusted_depth = min(base_depth, 2)
+    elif cone_tokens < 32000:
+        adjusted_depth = min(base_depth, 3)
+    else:
+        adjusted_depth = base_depth
+
+    logger.info(
+        "[depth_planner] cone depth=%d (dag_layers=%d, cone_tokens=%d, budget=%d)",
+        adjusted_depth, dag_layers, cone_tokens, token_budget,
+    )
+
+    return adjusted_depth
+
+
+def build_task_manifest(
+    cones: dict[str, dict],
+    file_tokens: dict[str, int],
+    context_budget: int = 100000,
+) -> dict:
+    """Build task manifest for agent execution (V2).
+
+    Implements First-Fit Decreasing (FFD) bin-packing algorithm to
+    assign feature cones to batch/single/split tasks based on token budget.
+
+    Args:
+        cones: Dictionary of cone_id -> cone_data with exclusive_files, shared_deps.
+        file_tokens: Dictionary of file_path -> estimated_tokens.
+        context_budget: Maximum tokens per task (default: 100k).
+
+    Returns:
+        Task manifest dictionary for 05_task_manifest.json.
+
+    Example:
+        >>> manifest = build_task_manifest(cones, file_tokens, context_budget=100000)
+        >>> print(f"Created {len(manifest['tasks'])} tasks")
+    """
+    tasks: dict[str, dict] = {}
+    task_counter = 1
+
+    # Sort cones by token count (decreasing) for FFD
+    cone_sizes = []
+    for cone_id, cone_data in cones.items():
+        exclusive_files = cone_data.get("exclusive_files", [])
+        total_tokens = sum(file_tokens.get(f, 0) for f in exclusive_files)
+        cone_sizes.append((cone_id, total_tokens))
+
+    cone_sizes.sort(key=lambda x: x[1], reverse=True)
+
+    # Bin packing: assign cones to tasks
+    current_batch: list[str] = []
+    current_batch_tokens = 0
+    batch_task_id = None
+
+    for cone_id, cone_tokens in cone_sizes:
+        # Large cone: single task
+        if cone_tokens > context_budget * 0.8:
+            task_id = f"task_{task_counter:03d}"
+            tasks[task_id] = {
+                "type": "single",
+                "cone_ids": [cone_id],
+                "estimated_tokens": cone_tokens,
+                "status": "pending",
+            }
+            task_counter += 1
+            logger.info(
+                "[depth_planner] created single task %s for cone %s (%d tokens)",
+                task_id, cone_id, cone_tokens,
+            )
+
+        # Fits in current batch
+        elif current_batch_tokens + cone_tokens <= context_budget:
+            current_batch.append(cone_id)
+            current_batch_tokens += cone_tokens
+
+        # Batch full, create task
+        else:
+            if current_batch:
+                batch_task_id = f"task_{task_counter:03d}"
+                tasks[batch_task_id] = {
+                    "type": "batch",
+                    "cone_ids": current_batch.copy(),
+                    "estimated_tokens": current_batch_tokens,
+                    "status": "pending",
+                }
+                task_counter += 1
+                logger.info(
+                    "[depth_planner] created batch task %s with %d cones (%d tokens)",
+                    batch_task_id, len(current_batch), current_batch_tokens,
+                )
+
+            # Start new batch
+            current_batch = [cone_id]
+            current_batch_tokens = cone_tokens
+
+    # Final batch
+    if current_batch:
+        batch_task_id = f"task_{task_counter:03d}"
+        tasks[batch_task_id] = {
+            "type": "batch",
+            "cone_ids": current_batch.copy(),
+            "estimated_tokens": current_batch_tokens,
+            "status": "pending",
+        }
+        logger.info(
+            "[depth_planner] created final batch task %s with %d cones (%d tokens)",
+            batch_task_id, len(current_batch), current_batch_tokens,
+        )
+
+    logger.info(
+        "[depth_planner] built task manifest: %d tasks for %d cones",
+        len(tasks), len(cones),
+    )
+
+    return {
+        "schema_version": "2.0",
+        "tasks": tasks,
+        "context_budget": context_budget,
+    }
