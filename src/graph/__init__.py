@@ -33,6 +33,10 @@ from src.graph.feature_cone import (
     extract_feature_cones,
     assign_scc_to_cone,
 )
+from src.graph.weighted_graph import (
+    WeightedGraphResult,
+    build_weighted_dependency_graph,
+)
 
 __all__ = [
     # dependency
@@ -58,4 +62,7 @@ __all__ = [
     "find_feature_roots",
     "extract_feature_cones",
     "assign_scc_to_cone",
+    # weighted_graph
+    "WeightedGraphResult",
+    "build_weighted_dependency_graph",
 ]
