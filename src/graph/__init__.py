@@ -27,6 +27,12 @@ from src.graph.ordering import (
     compute_pagerank,
     create_analysis_plan,
 )
+from src.graph.feature_cone import (
+    FeatureCone,
+    find_feature_roots,
+    extract_feature_cones,
+    assign_scc_to_cone,
+)
 
 __all__ = [
     # dependency
@@ -47,4 +53,9 @@ __all__ = [
     "topological_order",
     "compute_pagerank",
     "create_analysis_plan",
+    # feature_cone
+    "FeatureCone",
+    "find_feature_roots",
+    "extract_feature_cones",
+    "assign_scc_to_cone",
 ]
