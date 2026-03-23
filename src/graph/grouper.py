@@ -1,4 +1,8 @@
-"""Module grouping via Louvain community detection.
+"""Module grouping via Feature Cone extraction and Louvain community detection.
+
+V2 Architecture:
+- Feature Cone extraction is the primary grouping strategy (horizontal slices)
+- Louvain community detection is fallback for specific cases (flat directories)
 
 Utility nodes (high in-degree) are isolated before detection and
 assigned to a dedicated utility group.
@@ -13,6 +17,11 @@ from dataclasses import dataclass
 import networkx as nx
 
 from src.parser.codebase import CodebaseSnapshot, FileInfo
+from src.graph.feature_cone import (
+    extract_feature_cones as _extract_feature_cones,
+    FeatureCone,
+)
+from src.graph.weighted_graph import build_weighted_dependency_graph
 
 logger = logging.getLogger(__name__)
 
@@ -398,3 +407,107 @@ def _compute_modularity(
     except (nx.NetworkXError, ZeroDivisionError):
         logger.warning("Modularity computation failed", exc_info=True)
         return 0.0
+
+
+# ---------------------------------------------------------------------------
+# V2 Feature Cone Integration
+# ---------------------------------------------------------------------------
+
+
+def extract_feature_cones(
+    snapshot: CodebaseSnapshot,
+    shared_threshold: int = 2,
+) -> tuple[dict[str, FeatureCone], frozenset[str]]:
+    """Extract feature cones from codebase snapshot.
+
+    This is the V2 primary grouping strategy. Uses weighted dependency graph
+    and Feature Cone extraction algorithm.
+
+    Args:
+        snapshot: Parsed codebase snapshot.
+        shared_threshold: Minimum cones sharing a node for infrastructure classification.
+
+    Returns:
+        Tuple of (cone_dict, infrastructure_nodes).
+
+    Example:
+        >>> snapshot = parser.parse("/path/to/codebase")
+        >>> cones, infra = extract_feature_cones(snapshot)
+        >>> for cone_id, cone in cones.items():
+        ...     print(f"{cone_id}: {len(cone.exclusive_files)} files")
+    """
+    # Build weighted dependency graph
+    weighted_result = build_weighted_dependency_graph(snapshot)
+    graph = weighted_result.graph
+
+    # Extract feature cones
+    cones, infrastructure = _extract_feature_cones(graph, snapshot, shared_threshold)
+
+    logger.info(
+        "[grouper] Feature Cone mode: extracted %d cones from DAG (%d infrastructure nodes)",
+        len(cones),
+        len(infrastructure),
+    )
+
+    return cones, infrastructure
+
+
+def get_cone_metrics(
+    cone: FeatureCone,
+    file_lookup: dict[str, FileInfo] | None = None,
+) -> ModuleMetrics:
+    """Compute complexity metrics for a feature cone.
+
+    Args:
+        cone: FeatureCone object.
+        file_lookup: Optional mapping of filepath -> FileInfo for metadata.
+
+    Returns:
+        ModuleMetrics for the cone.
+
+    Example:
+        >>> cones, _ = extract_feature_cones(snapshot)
+        >>> metrics = get_cone_metrics(cones["cli.py"])
+        >>> print(f"Token estimate: {metrics.estimated_tokens}")
+    """
+    # Combine exclusive and shared files
+    all_files = list(cone.exclusive_files) + list(cone.shared_deps)
+
+    # Compute basic counts
+    function_count = 0
+    class_count = 0
+    line_count = 0
+    char_count = 0
+
+    if file_lookup:
+        for filepath in all_files:
+            if filepath in file_lookup:
+                fi = file_lookup[filepath]
+                function_count += len(fi.function_names)
+                class_count += len(fi.class_names)
+                line_count += fi.line_count
+                # Note: FileInfo doesn't have char_count in current schema
+                # Use line_count * 40 as rough estimate
+                char_count += fi.line_count * 40
+
+    # Estimate tokens (chars / 4)
+    estimated_tokens = char_count // 4 if char_count > 0 else line_count * 10
+
+    logger.info(
+        "[grouper] get_cone_metrics: cone '%s' metrics computed (%d files, %d tokens)",
+        cone.cone_id,
+        len(all_files),
+        estimated_tokens,
+    )
+
+    return ModuleMetrics(
+        name=cone.cone_id,
+        file_count=len(all_files),
+        function_count=function_count,
+        class_count=class_count,
+        line_count=line_count,
+        estimated_tokens=estimated_tokens,
+        internal_edges=0,  # Not computed for cones
+        external_edges=0,  # Not computed for cones
+        subpackage_count=0,  # Not computed for cones
+    )
