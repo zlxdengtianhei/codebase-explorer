@@ -5,10 +5,11 @@ description: >-
   documentation using MCP tools (V2). Uses feature cone extraction for module
   grouping and token-aware task planning. LLM agents write documentation directly
   (no Jinja2 templates). Produces INDEX.md, OVERVIEW.md, and DETAIL.md files
-  adapted to module complexity. Use for architecture documentation, code
-  exploration, dependency visualization, or generating docs. Triggers on
-  "architecture docs", "module overview", "code map", "dependency graph",
-  "codebase analysis", or "generate docs".
+  adapted to module complexity. Phase 5 Semantic Reorganization transforms flat
+  document structure into hierarchical architecture via doc-manifest.json SSOT.
+  Use for architecture documentation, code exploration, dependency visualization,
+  or generating docs. Triggers on "architecture docs", "module overview",
+  "code map", "dependency graph", "codebase analysis", or "generate docs".
 version: 2.0.0
 license: MIT
 compatibility:
@@ -56,7 +57,7 @@ The codebase-explorer MCP server must be running. Verify by calling
 
 ---
 
-## 5-Phase Workflow
+## 6-Phase Workflow
 
 ### Phase 1: Index (MCP Automated)
 
@@ -102,7 +103,7 @@ User: Analyze the Flask codebase
 4. **Naming Quality** - Replace `cone_0` with semantic names like `request-handling`
 
 **Agent Actions:**
-- Assign semantic `cone_name` for each cone
+- Assign semantic `name` for each cone
 - Set `action: "keep" | "merge" | "split" | "rename"`
 - Write reasoning in `validation_notes` field
 - **Directly update** `03_feature_cones.json` (no approval needed)
@@ -151,9 +152,9 @@ For each feature cone, evaluate:
 - Are there files that clearly belong to a DIFFERENT cone by function?
 
 ### 3. Size Appropriateness
-- Cones with `cone_token_estimate > 30000`: Flag as "too large" (split candidate)
-- Cones with `cone_token_estimate < 500`: Flag as "too small" (merge candidate)
-- Algorithm constraint: Do NOT suggest merging two cones whose combined tokens exceed 30000
+- Cones with `exclusive_total_tokens > 30000`: Flag as "too large" (split candidate)
+- Cones with `exclusive_total_tokens < 500` AND `exclusive_file_count == 1`: Flag as "too small" (merge candidate)
+- Algorithm constraint: Do NOT suggest merging two cones whose combined `exclusive_total_tokens` exceeds 30000
 
 ### 4. Naming Quality
 - Is the cone name `cone_N`? Suggest a semantic name.
@@ -161,11 +162,14 @@ For each feature cone, evaluate:
 
 ## What You MUST Do
 
-1. For each cone: assign a semantic `cone_name`
+1. For each cone: assign a semantic `name`
 2. For cones with problems: specify `action: "merge" | "split" | "rename" | "keep"`
 3. Write your final judgment directly into the updated JSON structure
 4. For each change, write a brief `reasoning` field (1-2 sentences)
-5. Preserve all algorithm-set fields (especially `files`, `layers`, `dependency_edges`)
+5. Preserve all fields that the algorithm set (especially `exclusive_files`,
+   `layers_within_cone`, `exclusive_total_tokens`, `shared_deps`, `dag_layer`,
+   `cohesion_score`, `entry_point`) -- only update `name`, `action`,
+   `validation_notes`, `confidence`, and `reasoning`
 
 ## Output Format
 
@@ -175,24 +179,24 @@ Use this schema for each cone:
 
 ```json
 {
-  "cone_id": "cone_0",
-  "cone_name": "request-handling",       ← YOUR SEMANTIC NAME
+  "cone_id": "feature_request_handling",
+  "name": "request-handling",             ← YOUR SEMANTIC NAME
   "action": "keep",                       ← keep | merge | split | rename
   "merge_target": null,                   ← if action=merge, target cone_id
   "split_into": null,                     ← if action=split, list of new groupings
   "confidence": "high",                   ← high | medium | low
   "reasoning": "These files collectively implement the request/response cycle...",
   "validation_notes": "Algorithm placed ctx.py and wrappers.py together correctly.",
-  "files": ["flask/views.py", "flask/ctx.py", "flask/wrappers.py"],
-  "layers": {{...preserve algorithm output...}},
-  "dependency_edges": {{...preserve algorithm output...}},
-  "cone_token_estimate": 8400
+  "exclusive_files": ["flask/views.py", "flask/ctx.py", "flask/wrappers.py"],
+  "layers_within_cone": {{...preserve algorithm output...}},
+  "shared_deps": {{...preserve algorithm output...}},
+  "exclusive_total_tokens": 8400
 }
 ```
 
 ## Rules
 
-- NEVER change the `files` list unless you are merging or splitting cones
+- NEVER change the `exclusive_files` list unless you are merging or splitting cones
 - NEVER invent dependencies — use only what the dependency graph shows
 - If unsure, set `action: "keep"` and `confidence: "low"` with a note
 - Algorithm constraint violations are NOT allowed
@@ -339,6 +343,27 @@ Write to: `.codebase-analysis/snippets/{{cone_id}}.md`
 被 {{dependent_names_comma_separated}} 使用。
 ```
 
+## @unit Markup (MANDATORY for multi-file cones)
+
+When `file_count > 1`, your DETAIL.md MUST wrap each source file's content
+section with `@unit` fence markers:
+
+<!-- @unit: {filepath} | tokens: {estimated_tokens} -->
+### {filename} -- brief description
+
+...documentation content for this file...
+
+<!-- @/unit: {filepath} -->
+
+Rules:
+- `{filepath}` is the relative path from project root (e.g., `flask/views.py`)
+- `tokens` value is the approximate token count for this section (written chars / 4)
+- The **功能概述** and **设计决策** sections go OUTSIDE all @unit markers
+  (at the top and bottom of the document)
+- Single-file cones (`file_count == 1`) do NOT need @unit markers
+- @unit markers are the foundation for Phase 5 Semantic Reorganization split operations
+- Nested @unit markers are NOT supported
+
 ## Style Constraints (NON-NEGOTIABLE)
 
 1. **Language**: 中文（Chinese）for 功能概述、内部逻辑、设计决策 sections.
@@ -403,12 +428,14 @@ Write to: `.codebase-analysis/snippets/{{cone_id}}.md`
 **Inputs:**
 - `03_feature_cones.json` (architecture structure)
 - `.codebase-analysis/snippets/*.md` (all cone summaries)
-- `04_doc_plan.json` (document tree structure)
+- `04_file_tokens.json` (per-file token estimates)
+- `05_task_manifest.json` (task assignments + document tree structure)
 
 **Outputs:**
 - `.codebase-docs/INDEX.md`
 - `.codebase-docs/{feature}/OVERVIEW.md` (for cones with sub-components)
 - `.codebase-docs/doc-index.json`
+- `.codebase-docs/doc-manifest.json` (initial flat structure for Phase 5)
 
 **Key Constraint:** INDEX Agent NEVER reads source code files
 
@@ -440,11 +467,24 @@ Your inputs are already processed — trust them.
 
 {{/each}}
 
-## Input 3: Document Plan
+## Input 3: Task Manifest + Token Estimates
 
 ```json
-{{doc_plan_json}}
+{{task_manifest_json}}
 ```
+
+```json
+{{file_tokens_json}}
+```
+
+The task manifest (`05_task_manifest.json`) contains task assignments and
+`output_files` structure. Use `feature_cones` in each task to determine which
+cones map to which tasks. Use `04_file_tokens.json` for per-file token budget info.
+
+For each cone, determine `needs_overview` as follows:
+- `needs_overview: true` when the cone has multiple DETAIL files (split tasks)
+- `needs_overview: true` when `exclusive_file_count > 3`
+- `needs_overview: false` for single-file cones with one DETAIL
 
 ## PRE-FLIGHT VALIDATION (Mandatory)
 
@@ -459,9 +499,10 @@ Do NOT fabricate SNIPPET content.
 
 ### Check 2: Dependency Edge Consistency
 
-The Mermaid diagram MUST contain EXACTLY the edges in `dependency_map`.
+The Mermaid diagram MUST contain EXACTLY the edges from `02_dag.json` (cone-level
+edges). Use `edges` array from `02_dag.json` for cone dependency relationships.
 DO NOT add edges based on SNIPPET inference.
-DO NOT remove edges from `dependency_map`.
+DO NOT remove edges from the DAG.
 
 ### Check 3: Status Field Compliance
 
@@ -471,8 +512,9 @@ Do NOT infer status from SNIPPET content.
 
 ### Check 4: OVERVIEW Requirement
 
-Only generate OVERVIEW.md for cones where `doc_plan.needs_overview: true`.
-Do not add or skip OVERVIEWs.
+Only generate OVERVIEW.md for cones that meet the `needs_overview` criteria
+(multiple DETAIL files from split tasks, or `exclusive_file_count > 3`).
+Do not add or skip OVERVIEWs beyond these criteria.
 
 ## Outputs
 
@@ -506,7 +548,7 @@ Schema:
   "cones": [
     {
       "cone_id": "request-handling",
-      "cone_name": "Request Handling",
+      "name": "Request Handling",
       "status": "complete",
       "detail_path": "request-handling/DETAIL.md",
       "snippet_path": "../.codebase-analysis/snippets/cone_request.md",
@@ -519,26 +561,488 @@ Schema:
 }
 ```
 
+### Output 4: doc-manifest.json (Initial Flat Structure)
+
+Write to: `.codebase-docs/doc-manifest.json`
+
+This file is the Single Source of Truth (SSOT) for document organization. Phase 4
+initializes it as a flat structure; Phase 5 iterates it into a hierarchical structure.
+
+Schema:
+```json
+{
+  "version": "2.1",
+  "status": "initial",
+  "project_id": "{{project_id}}",
+  "root_index": ".codebase-docs/INDEX.md",
+  "created_at": "ISO-8601",
+  "updated_at": "ISO-8601",
+
+  "details": {
+    "<detail_id>": {
+      "path": ".codebase-docs/<group>/<DETAIL_filename>.md",
+      "source_files": ["<source_file_path_1>", "<source_file_path_2>"],
+      "units": ["<source_file_path_1>", "<source_file_path_2>"],
+      "tokens": 1200,
+      "group": "<group_id>"
+    }
+  },
+
+  "groups": {
+    "<group_id>": {
+      "name": "<Human Readable Group Name>",
+      "index_path": ".codebase-docs/<group>/INDEX.md",
+      "parent": null,
+      "detail_ids": ["<detail_id_1>", "<detail_id_2>"],
+      "subgroups": []
+    }
+  },
+
+  "operations_log": []
+}
+```
+
+Initialization rules:
+- `status` MUST be `"initial"` (Phase 5 will transition to `"final"`)
+- All `groups[*].parent` values MUST be `null` (flat, no hierarchy)
+- All `groups[*].subgroups` arrays MUST be empty
+- `details[*].units` is populated from the DETAIL's `@unit` markers
+  (for single-file cones without @unit markers, `units` equals `source_files`)
+- `details[*].tokens` is estimated from DETAIL character count / 4
+- Each group maps to a batch from the task manifest's cone assignments
+- `operations_log` is an empty array
+
+## Link Path Rules
+
+| From document | To INDEX.md | To {cone}/OVERVIEW.md | To {cone}/DETAIL.md |
+|---------------|-------------|----------------------|---------------------|
+| INDEX.md (depth 0) | self | `{cone}/OVERVIEW.md` | `{cone}/DETAIL.md` |
+| OVERVIEW.md (depth 1) | `../INDEX.md` | `../{cone}/OVERVIEW.md` | `DETAIL.md` (same dir) |
+| DETAIL.md (depth 1) | `../INDEX.md` | `OVERVIEW.md` (same dir) | sibling DETAIL: `./OTHER.md` |
+| DETAIL.md (depth 2) | `../../INDEX.md` | `../OVERVIEW.md` | sibling: `./OTHER.md` |
+
 ## Style Constraints
 
 1. **No source code** - Do not read or reference source file content
 2. **Trust SNIPPETs** - Use SNIPPET content verbatim, do not paraphrase
 3. **Consistent linking** - All links must be relative paths from the doc location
-4. **Mermaid accuracy** - Diagram edges must match `dependency_map` exactly
+4. **Mermaid accuracy** - Diagram edges must match `02_dag.json` edges exactly
+5. **Use authoritative field names** - Reference `name` (not `cone_name`),
+   `exclusive_files` (not `files`), `exclusive_total_tokens` (not `cone_token_estimate`)
 ```
 
 ---
 
-### Phase 5: Validate (Automated Script)
+### Phase 5: Semantic Reorganization (Reorganization INDEX Agents)
+
+**Purpose:** Transform Phase 4's flat, algorithm-derived document structure into a
+semantically coherent, hierarchical documentation architecture. The dependency graph
+parser cannot resolve all relationships (e.g., cross-package imports, dynamic dispatch).
+This produces many "orphan cones" -- for example, Flask's 54 cones include 50 single-file
+cones. Only an LLM that has read the actual DETAIL content can make correct reorganization
+decisions.
+
+**Core principle:** "Generate first, reorganize later."
+
+**Inputs:**
+- All `.codebase-docs/{group}/DETAIL*.md` files (with `@unit` markers)
+- Phase 4 batch INDEX.md files
+- `.codebase-docs/doc-manifest.json` (status: `"initial"`)
+- `02_dag.json` (for Mermaid diagram generation)
+
+**Outputs:**
+- Reorganized DETAIL files (moved/merged/split)
+- Regenerated group INDEX.md files
+- `.codebase-docs/INDEX.md` (final root INDEX)
+- `.codebase-docs/doc-manifest.json` (status: `"final"`, hierarchical)
+
+**Key Constraint:** Reorganization INDEX Agents read DETAIL content but NEVER read
+source code files. They operate on documentation structure, not on code.
+
+#### Entry Conditions (Phase 4 Completion Flags)
+
+Phase 5 begins when ALL of the following are true:
+
+| Condition | How to check |
+|-----------|--------------|
+| All Phase 3 DETAIL tasks are `"complete"` in `state.json` | `state.json.tasks[*].status == "complete"` for all DETAIL tasks |
+| All Phase 4 INDEX tasks are `"complete"` in `state.json` | `state.json.tasks["index_assembly"].status == "complete"` |
+| `doc-manifest.json` exists and is valid JSON | File exists at `.codebase-docs/doc-manifest.json` with `version` field |
+| `doc-manifest.json` has `details` and `groups` fields | Both top-level keys exist and are non-empty objects |
+| At least one batch INDEX.md exists | At least one `groups[*].index_path` file exists on disk |
+| All `details[*].path` files exist on disk | File existence check for every path in manifest |
+
+If any condition is not met, Phase 5 MUST NOT start. Log the failing condition and
+return control to the Skill orchestrator.
+
+#### Exit Conditions (Phase 5 Completion Flags)
+
+| Condition | How to verify |
+|-----------|---------------|
+| `doc-manifest.json` status is `"final"` | `doc-manifest.json.status == "final"` |
+| Root `INDEX.md` has been regenerated | `.codebase-docs/INDEX.md` exists and was updated |
+| Every `details[*].path` exists on disk | File existence check passes |
+| Every `groups[*].index_path` exists on disk | File existence check passes |
+| Referential integrity holds | All `group` refs valid, all `detail_ids` valid, all `subgroups` valid |
+| `operations_log` exists | Field exists (may be `[]` for no-op) |
+
+#### The Four Reorganization Operations
+
+**Operation 1: Move** -- Transfer an entire DETAIL from one group to another.
+
+When to use: A DETAIL is semantically misplaced in its current group.
+
+Steps:
+1. Read `doc-manifest.json`
+2. Move file on disk: `mv .codebase-docs/<old-group>/DETAIL_x.md .codebase-docs/<new-group>/DETAIL_x.md`
+3. Update manifest: change `details["x"].group` and `details["x"].path`, update both groups' `detail_ids`
+4. Update internal relative links in the moved DETAIL (use Link Path Rules above)
+5. Append operation record to `operations_log`
+
+**Operation 2: Merge** -- Combine multiple small DETAILs into one.
+
+When to use: Multiple DETAILs < 500 tokens each describe tightly coupled sub-features.
+Combined token count must NOT exceed 8000 tokens.
+
+Steps:
+1. Read all source DETAIL files
+2. Concatenate all @unit blocks (preserving markers and content)
+3. LLM writes a new `## 功能概述` section for the merged content
+4. Merge `source_files` and `units` arrays (union, deduplicated)
+5. Write merged DETAIL; delete original files
+6. Update manifest: create new entry, remove old entries, update group's `detail_ids`
+7. Append operation record to `operations_log`
+
+Special case for merging single-file DETAILs (no @unit markers):
+When merging two DETAILs that lack @unit markers (single-file cones), the merge operation
+MUST add @unit markers for each original file's content, since the result is now a
+multi-file DETAIL. This is the ONE exception to the "do not add @unit" rule.
+
+**Operation 3: Split** -- Extract @unit blocks from a DETAIL into a new DETAIL.
+
+When to use: A multi-file DETAIL contains @unit blocks belonging to a different domain.
+
+Preconditions: Source DETAIL must have @unit markers. Cannot split a single-file DETAIL.
+
+Steps:
+1. Read source DETAIL, locate target @unit block(s) via `<!-- @unit: {filepath}` markers
+2. Extract matched content (including markers)
+3. Write new DETAIL with extracted @unit block(s), new 功能概述, new 设计决策
+4. Update source DETAIL: remove extracted blocks, LLM rewrites 功能概述
+5. Update manifest: create new detail entry, update original entry (remove units, reduce tokens)
+6. Append operation record to `operations_log`
+
+**Operation 4: Create Group / Dissolve Group**
+
+Create Group: Establish a new group directory with INDEX.md.
+Steps: mkdir, LLM writes INDEX.md, add group to manifest, update parent's subgroups.
+
+Dissolve Group: Remove an empty or too-small group, transfer DETAILs to parent.
+Steps: Move all DETAILs to parent group, transfer subgroups, delete INDEX.md and directory,
+remove group from manifest.
+
+#### @unit Parsing Rules
+
+Phase 5 parses @unit markers to identify splittable segments:
+
+```python
+import re
+
+UNIT_PATTERN = re.compile(
+    r'(<!-- @unit: (?P<filepath>[^\|]+?)\s*\|\s*tokens:\s*(?P<tokens>\d+)\s*-->)'
+    r'(?P<content>.*?)'
+    r'(<!-- @/unit: (?P=filepath)\s*-->)',
+    re.DOTALL
+)
+```
+
+Rules:
+- Opening and closing @unit tags MUST have matching filepaths (backreference enforced)
+- Nested @unit markers are NOT supported
+- Content outside all @unit blocks = "global sections" (功能概述, 设计决策, 在系统中的位置)
+- DETAILs without @unit markers are atomic -- Phase 5 cannot split them
+- If a DETAIL has malformed @unit markers, treat it as atomic and log a warning
+
+#### @unit Usage Per Operation
+
+| Operation | How @unit is used |
+|-----------|-------------------|
+| **Move** | Entire DETAIL (with all @unit blocks) is moved. No @unit parsing needed. |
+| **Merge** | All @unit blocks from source DETAILs are concatenated. Original @unit markers preserved. |
+| **Split** | Specific @unit blocks extracted by matching filepath. Extracted content (incl. markers) placed in new DETAIL. Global sections must be regenerated for both files. |
+| **Create Group** | Does not interact with @unit markers directly. |
+
+**Invariant**: Phase 5 NEVER modifies the content within @unit markers. It only
+moves @unit blocks between DETAIL files. The @unit content remains exactly as
+Phase 3 DETAIL Agents wrote it.
+
+#### Bottom-Up Hierarchical Processing Order
+
+Processing order is determined by group hierarchy depth:
+
+```
+Level N (deepest):  Leaf groups with no subgroups
+Level N-1:          Groups whose only children are Level N groups
+...
+Level 1:            Groups whose parent is the root
+Level 0:            Root INDEX Agent (generates final INDEX.md)
+```
+
+Processing sequence:
+1. Calculate levels for all groups
+2. Sort groups by level DESCENDING (deepest first)
+3. For each level (deepest to shallowest):
+   a. Spawn Reorganization INDEX Agent for each group at this level (parallel within level)
+   b. Each agent reads its group's DETAILs and sibling context
+   c. Each agent outputs and executes reorganization plan
+   d. Wait for all agents at this level to complete
+   e. Merge manifest updates
+4. Root INDEX Agent (Level 0):
+   a. Read updated manifest
+   b. Evaluate cross-group reorganization needs
+   c. Generate final `.codebase-docs/INDEX.md`
+   d. Set `manifest.status = "final"`
+   e. Write final `doc-manifest.json`
+
+#### doc-manifest.json State Transitions
+
+```
+Phase 4 Output        Phase 5 Processing         Phase 5 Done
+┌──────────┐         ┌──────────────────┐       ┌──────────┐
+│ "initial" │────────→│ "reorganizing"   │──────→│ "final"  │
+│ flat      │         │ iterative updates│       │ hierarchy│
+│ no parent │         │ add parents      │       │ stable   │
+│ no subgrp │         │ add subgroups    │       │ verified │
+│ ops_log=[]│         │ ops_log grows    │       │ ops_log  │
+└──────────┘         └──────────────────┘       └──────────┘
+```
+
+Invariants that MUST hold at every state:
+1. Every `detail.group` references a valid `groups` key
+2. Every ID in `groups[*].detail_ids` references a valid `details` key
+3. Every ID in `groups[*].subgroups` references a valid `groups` key
+4. No circular parent chains exist
+5. Union of all `groups[*].detail_ids` equals the set of all `details` keys
+6. Every `details[*].path` file exists on disk
+7. Every `groups[*].index_path` file exists on disk (after INDEX regeneration)
+
+#### Reorganization INDEX Agent Prompt Template
+
+```
+# Semantic Reorganization Task — {{group_name}}
+
+## Your Role
+
+You are the Reorganization INDEX Agent for the **{{group_name}}** group.
+Your responsibility is to review all DETAIL documents assigned to this group,
+evaluate their semantic coherence, and reorganize them if needed.
+
+You can read DETAIL content but you MUST NOT read source code files.
+You operate on documentation structure, not on code.
+
+## Current Document Manifest
+
+```json
+{{current_manifest}}
+```
+
+## Batch INDEX Context
+
+The following INDEX documents provide the current organizational structure:
+
+{{batch_index_content}}
+
+## DETAIL Files in Your Group
+
+{{#each detail_files}}
+### {{detail_id}} ({{tokens}} tokens, {{unit_count}} units)
+
+**Source files:** {{source_files_list}}
+
+**功能概述 (first paragraph):**
+{{first_paragraph}}
+
+**@unit list:**
+{{#each units}}
+- `{{filepath}}` ({{tokens}} tokens)
+{{/each}}
+{{/each}}
+
+## Sibling Groups (for context)
+
+{{#each sibling_groups}}
+- **{{group_name}}** ({{detail_count}} details): {{brief_description}}
+{{/each}}
+
+## Your Task
+
+Analyze the DETAIL documents in your group and determine if reorganization is needed.
+
+### Decision Criteria
+
+1. **Semantic Misplacement**: Does any DETAIL describe functionality that clearly belongs
+   to a sibling group? A DETAIL about JSON serialization testing should be in the
+   json-serialization group, not the test-suite group.
+
+2. **Redundant Small DETAILs**: Are there multiple DETAILs under 500 tokens that describe
+   aspects of the same logical feature? Merge candidates must be in the same group and
+   their combined tokens must not exceed 8000.
+
+3. **Cross-Domain @units**: Does any multi-file DETAIL contain @unit blocks where some
+   units belong to a completely different functional domain?
+
+4. **Missing Subgroup Structure**: Are there 5+ DETAILs that share a common sub-theme
+   that would benefit from a subgroup?
+
+### Decision Priority
+
+1. Do NOT reorganize unless there is a clear semantic reason
+2. Prefer Move over Split (simpler operation)
+3. Prefer Merge only when both DETAILs are very small (< 500 tokens each)
+4. Create subgroups only when there are 3+ DETAILs that clearly belong together
+5. Algorithm constraints are inviolable: never merge past 8000 tokens combined
+
+## Output Format
+
+Output a reorganization plan as JSON:
+
+```json
+{
+  "group": "{{group_id}}",
+  "analysis": "Brief 2-3 sentence analysis of the group's current state",
+  "operations": [
+    {
+      "type": "move",
+      "detail_id": "<detail_id>",
+      "to_group": "<target_group_id>",
+      "reason": "<1-2 sentence justification>"
+    },
+    {
+      "type": "merge",
+      "detail_ids": ["<id1>", "<id2>"],
+      "new_name": "<merged document title>",
+      "reason": "<1-2 sentence justification>"
+    },
+    {
+      "type": "split",
+      "detail_id": "<detail_id>",
+      "extract_units": ["<filepath1>"],
+      "to_group": "<target_group_id>",
+      "reason": "<1-2 sentence justification>"
+    },
+    {
+      "type": "create_group",
+      "group_id": "<new_group_id>",
+      "name": "<Human Readable Name>",
+      "parent": "<parent_group_id or null>",
+      "reason": "<1-2 sentence justification>"
+    }
+  ]
+}
+```
+
+If no reorganization is needed, output:
+```json
+{
+  "group": "{{group_id}}",
+  "analysis": "All DETAILs are semantically coherent within this group. No changes needed.",
+  "operations": []
+}
+```
+
+## Execution Instructions
+
+After outputting the plan, execute it:
+
+1. **Create Group** operations first (target groups must exist before Move/Split)
+2. **Split** operations second (creates new DETAILs that may need moving)
+3. **Move** operations third (moves existing and newly split DETAILs)
+4. **Merge** operations last (after all moves are done, merge within final groups)
+5. After ALL operations: update `doc-manifest.json` with all changes
+6. Regenerate this group's INDEX.md to reflect the new structure
+
+## Constraints (NON-NEGOTIABLE)
+
+- Do NOT add, delete, or modify content within @unit markers
+- Only move @unit blocks between DETAIL files during Split operations
+- After every Split or Merge, regenerate the affected DETAIL's `## 功能概述` section
+- Keep @unit internal content exactly as Phase 3 DETAIL Agents wrote it
+- Update `doc-manifest.json` after each operation to maintain consistency
+- Do NOT read source code files — work only with DETAIL documents
+- Do NOT create @unit markers that did not exist in Phase 3 output
+  (exception: Merge of single-file DETAILs requires adding @unit markers)
+- Combined token count for Merge must not exceed 8000
+- Every DETAIL must belong to exactly one group after all operations
+- When moving DETAILs, update relative links per the Link Path Rules table
+
+## Style Constraints (Same as All Agents)
+
+1. Language: 中文 for prose sections, English for technical terms/signatures
+2. Headers: ## for sections, ### for subsections. No #### or deeper.
+3. Mermaid: Use `graph TD`, valid identifiers, max 15 nodes
+4. No opinions: Describe facts only
+5. No first person: Use third person or imperative
+```
+
+#### Template Variable Injection Reference
+
+| Variable | Source | Description |
+|----------|--------|-------------|
+| `{{group_name}}` | `manifest.groups[group_id].name` | Human-readable group name |
+| `{{group_id}}` | Loop variable | Machine ID of the group |
+| `{{current_manifest}}` | `doc-manifest.json` file content | Full JSON of current manifest |
+| `{{batch_index_content}}` | Read from `groups[*].index_path` files | Concatenated Phase 4 INDEX content |
+| `{{detail_files}}` | For each `detail_id` in group: read DETAIL, parse @units | Detail metadata array |
+| `{{detail_id}}` | Key from `manifest.details` | Machine ID of each DETAIL |
+| `{{tokens}}` | `manifest.details[detail_id].tokens` | Token count of the DETAIL |
+| `{{unit_count}}` | `len(manifest.details[detail_id].units)` | Number of @unit blocks |
+| `{{source_files_list}}` | `manifest.details[detail_id].source_files` | Comma-separated source paths |
+| `{{first_paragraph}}` | Parsed from `## 功能概述` section | First 2-3 sentences |
+| `{{units}}` | Parsed via @unit regex from DETAIL file | Array of `{filepath, tokens}` |
+| `{{sibling_groups}}` | Groups where `parent == this_group.parent` and `id != this_group_id` | Peer group context |
+
+#### Root INDEX Agent Special Responsibilities
+
+The Root INDEX Agent runs last (after all group-level agents). Additional responsibilities:
+
+1. **Global architecture overview**: Generate final `.codebase-docs/INDEX.md` with:
+   - Project title and description
+   - Mermaid dependency diagram at group level (edges from `02_dag.json`)
+   - Feature list with summaries (from SNIPPET files)
+   - Architecture layers breakdown
+   - Cross-cutting concerns identification
+
+2. **Empty group cleanup**: Dissolve groups with 0 DETAILs after lower-level reorganization
+
+3. **Top-level grouping assessment**: Determine if top-level groups should be merged
+   or if new meta-groups are needed
+
+4. **Final manifest write**: Set `status: "final"` and verify all invariants
+
+5. **Link regeneration**: Ensure all relative links in root INDEX.md point to reorganized structure
+
+#### Error Handling
+
+- **Agent failure**: Re-read `operations_log` to find completed operations. Roll back
+  incomplete operations or re-run Phase 4 INDEX assembly to reset to `"initial"` state.
+- **@unit parse failure**: Treat DETAIL as atomic (unsplittable). Log warning in
+  `operations_log` with `type: "warning"`.
+- **Token budget violation**: If Merge would exceed 8000 tokens, do NOT execute.
+  Keep as separate DETAILs or create a subgroup with OVERVIEW instead.
+
+---
+
+### Phase 6: Validate (Automated Script)
 
 **Quality Checks:**
 
 ```python
-check_all_files_exist(doc_plan)        # All planned docs generated
+check_all_files_exist(doc_manifest)    # All planned docs generated
 check_link_integrity(docs_dir)         # Markdown links resolve 100%
 check_source_coverage(doc_index_json)  # Source file coverage >= 80%
 check_snippet_coverage(feature_cones)  # Every cone has a SNIPPET
 check_token_budgets(doc_index_json)    # Docs within budget
+check_manifest_integrity(doc_manifest) # doc-manifest.json referential integrity
 ```
 
 **Output:** `validation_report.json`
@@ -621,14 +1125,24 @@ Query file token estimates from `04_file_tokens.json`.
 - `module` - Return all files in a cone + aggregate stats
 - None - Return all files
 
-### 7. submit_analysis(task_id, detail_paths, snippet_paths, tokens_used, source_files_covered)
+### 7. submit_analysis(task_id, detail_paths, snippet_paths, tokens_used, source_files_covered, project_id, manifest_path)
 
-Task completion callback. Called by DETAIL Agent after writing docs.
+Task completion callback. Called by DETAIL/INDEX Agent after writing docs.
 Atomically updates `state.json` with completion status.
+
+**Parameters:**
+- `task_id: str` - Required. Task ID from `05_task_manifest.json`
+- `detail_paths: list[str]` - Required. Paths to written docs (DETAIL/OVERVIEW/INDEX)
+- `snippet_paths: list[str]` - Required. Paths to written SNIPPET files
+- `tokens_used: int` - Required. Agent self-reported token consumption
+- `source_files_covered: list[str] | None` - Optional. Source files documented
+- `project_id: str | None` - Optional. Defaults to most recent `analyze_codebase` result
+- `manifest_path: str | None` - Optional. Path to `doc-manifest.json` (Phase 4/5)
 
 **Returns:**
 ```json
 {
+  "status": "success",
   "task_id": "task_abc",
   "tasks_remaining": 5,
   "progress_percent": 66.67,
@@ -645,33 +1159,40 @@ Atomically updates `state.json` with completion status.
 ```
 User: Generate architecture docs for the Flask codebase
 
-1. Call analyze_codebase(path="/path/to/flask")
+1. Phase 1: Call analyze_codebase(path="/path/to/flask")
    → Returns: {"feature_cones_found": 7, "task_count": 12}
 
-2. Spawn Validator Agent
+2. Phase 2: Spawn Validator Agent
    → Reviews 03_feature_cones.json
    → Updates cone names, flags issues
    → Writes updated 03_feature_cones.json
 
-3. Read 05_task_manifest.json
+3. Phase 3: Read 05_task_manifest.json
    → Get task queue (batch/single/split tasks)
-
-4. Spawn DETAIL Agents (parallel, DAG order)
+   → Spawn DETAIL Agents (parallel, DAG order)
    → Each agent reads assigned files
-   → Writes DETAIL.md + SNIPPET.md
+   → Writes DETAIL.md (with @unit markers) + SNIPPET.md
    → Calls submit_analysis()
 
-5. Check get_progress() until all tasks complete
+4. Check get_progress() until all DETAIL tasks complete
 
-6. Spawn INDEX Agent
-   → Reads all SNIPPETs
-   → Writes INDEX.md + OVERVIEWs + doc-index.json
+5. Phase 4: Spawn INDEX Agent
+   → Reads all SNIPPETs + 03_feature_cones.json
+   → Writes batch INDEX.md + OVERVIEWs + doc-index.json
+   → Initializes doc-manifest.json (flat structure)
 
-7. Run validation script
-   → Checks links, coverage, budgets
+6. Phase 5: Spawn Reorganization INDEX Agents (bottom-up)
+   → Level N agents process deepest groups first (parallel within level)
+   → Each agent evaluates semantic coherence of DETAILs
+   → Executes Move/Merge/Split/Create Group operations
+   → Root INDEX Agent generates final INDEX.md
+   → Writes doc-manifest.json (status: "final")
+
+7. Phase 6: Run validation script
+   → Checks links, coverage, budgets, manifest integrity
    → Writes validation_report.json
 
-Output: .codebase-docs/ directory with complete documentation
+Output: .codebase-docs/ directory with semantically organized documentation
 ```
 
 ### Example 2: Resume Interrupted Session
@@ -753,11 +1274,14 @@ User: Show me the feature structure of this codebase
 ## Best Practices
 
 1. **Always run analyze_codebase first** - Generates required JSON files
-2. **Follow DAG order** - Process cones from leaf to root
+2. **Follow DAG order** - Process cones from leaf to root in Phase 3
 3. **Monitor progress** - Use get_progress() to track completion
-4. **Validate after generation** - Run Phase 5 validation script
-5. **Handle large cones** - Split tasks prevent context overflow
-6. **Resume gracefully** - state.json enables session recovery
+4. **Use @unit markers** - Multi-file cones MUST have @unit markers for Phase 5
+5. **Initialize doc-manifest.json** - Phase 4 creates the flat structure for Phase 5
+6. **Reorganize bottom-up** - Phase 5 processes deepest groups first
+7. **Validate after reorganization** - Run Phase 6 validation script
+8. **Handle large cones** - Split tasks prevent context overflow
+9. **Resume gracefully** - state.json enables session recovery
 
 ---
 
@@ -767,6 +1291,7 @@ User: Show me the feature structure of this codebase
    - MCP Server: Deterministic analysis (no LLM)
    - Skill: Orchestration (no LLM decisions)
    - Agents: Semantic understanding + doc writing (LLM)
+   - Phase 5: Semantic reorganization (LLM reads docs, not source code)
 
 2. **Progressive Disclosure**
    - INDEX.md: Project overview

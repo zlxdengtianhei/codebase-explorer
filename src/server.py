@@ -14,8 +14,10 @@ import logging
 import os
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Annotated, Literal
+
+import networkx as nx
 
 from mcp.server.fastmcp import FastMCP, Context
 from mcp.server.fastmcp.exceptions import ToolError
@@ -124,6 +126,87 @@ def _validate_json_files_exist(output_dir: Path) -> bool:
     return all((output_dir / f).exists() for f in required)
 
 
+def _build_graph_from_dag(
+    nodes: list[str],
+    edges: list[dict],
+) -> nx.DiGraph:
+    """Reconstruct a NetworkX DiGraph from persisted 02_dag.json data.
+
+    Args:
+        nodes: List of node identifiers (file paths).
+        edges: List of edge dicts with source, target, weight, and
+               optional edge_types fields.
+
+    Returns:
+        A new NetworkX DiGraph with all node and edge attributes.
+    """
+    graph = nx.DiGraph()
+    for node in nodes:
+        graph.add_node(node)
+
+    for edge in edges:
+        src = edge["source"]
+        tgt = edge["target"]
+        weight = edge.get("weight", 1)
+        edge_types = edge.get("edge_types", [])
+        graph.add_edge(src, tgt, weight=weight, edge_types=edge_types)
+
+    return graph
+
+
+def _short_mermaid_label(filepath: str) -> str:
+    """Create a short display label from a file path for Mermaid diagrams.
+
+    Uses at most the last two path components and escapes Mermaid-unsafe
+    characters.
+    """
+    parts = PurePosixPath(filepath).parts
+    label = "/".join(parts[-2:]) if len(parts) >= 2 else filepath
+    return label.replace('"', "'").replace("[", "(").replace("]", ")")
+
+
+def _render_mermaid(
+    graph: nx.DiGraph,
+    *,
+    include_weights: bool = False,
+) -> str:
+    """Render a NetworkX DiGraph as a Mermaid flowchart string.
+
+    Args:
+        graph: The subgraph to render.
+        include_weights: When True, annotate edges with weight and
+                         relationship types (import/call/inherit).
+
+    Returns:
+        Complete Mermaid graph definition string.
+    """
+    if graph.number_of_nodes() == 0:
+        return "graph TD\n    empty[No nodes]"
+
+    lines: list[str] = ["graph TD"]
+    node_ids: dict[str, str] = {}
+
+    for idx, node in enumerate(sorted(graph.nodes())):
+        safe_id = f"n{idx}"
+        node_ids[node] = safe_id
+        label = _short_mermaid_label(node)
+        lines.append(f'    {safe_id}["{label}"]')
+
+    for src, tgt, data in sorted(graph.edges(data=True)):
+        src_id = node_ids[src]
+        tgt_id = node_ids[tgt]
+
+        if include_weights:
+            weight = data.get("weight", 1)
+            edge_types = data.get("edge_types", [])
+            type_str = "/".join(edge_types) if edge_types else "dep"
+            lines.append(f"    {src_id} -->|{type_str} w={weight}| {tgt_id}")
+        else:
+            lines.append(f"    {src_id} --> {tgt_id}")
+
+    return "\n".join(lines)
+
+
 # ---------------------------------------------------------------------------
 # Tool 1: analyze_codebase
 # ---------------------------------------------------------------------------
@@ -215,16 +298,16 @@ async def analyze_codebase(
     file_details = []
     for file_info in snapshot.files:
         lang = file_info.language or "default"
-        estimate = estimate_tokens_from_chars(file_info.char_count, lang)
-        file_tokens[file_info.filepath] = estimate.source_tokens
+        tokens = estimate_tokens_from_chars(file_info.char_count, lang)
+        file_tokens[file_info.filepath] = tokens
         file_details.append(
             {
                 "filepath": file_info.filepath,
                 "language": lang,
                 "char_count": file_info.char_count,
                 "line_count": file_info.line_count,
-                "estimated_tokens": estimate.source_tokens,
-                "method": estimate.method,
+                "estimated_tokens": tokens,
+                "method": "chars",
             }
         )
 
@@ -592,14 +675,21 @@ async def get_dependency_graph(
     include_weights: Annotated[
         bool, Field(description="Include edge weights in diagram")
     ] = False,
+    hops: Annotated[
+        int, Field(description="N-hop neighbors for scope=file (default 1)")
+    ] = 1,
 ) -> dict:
     """Generate Mermaid dependency graph from 02_dag.json.
 
     Scopes:
-    - project: Cone-level dependency graph
-    - cone: File-level graph within a cone
-    - file: Direct dependencies of a single file
+    - project: Full DAG dependency graph (all nodes and edges)
+    - cone: File-level graph within a specific feature cone
+    - file: N-hop neighbor subgraph centered on a single file
+
+    include_weights=True annotates edges with weight and relationship type.
     """
+    logger.info("[DEP-GRAPH] Generating dependency graph scope=%s", scope)
+
     project_dir = _find_latest_project_dir()
     if not project_dir:
         raise ToolError("No project found. Run analyze_codebase first.")
@@ -610,17 +700,99 @@ async def get_dependency_graph(
 
     dag_data = json.loads(dag_path.read_text(encoding="utf-8"))
 
-    # TODO: Implement actual Mermaid graph generation
-    # This is a placeholder that returns basic graph info
+    # --- Reconstruct NetworkX graph from persisted DAG data ---------------
+    all_nodes: list[str] = dag_data.get("nodes", [])
+    all_edges: list[dict] = dag_data.get("edges", [])
+
+    graph = _build_graph_from_dag(all_nodes, all_edges)
+
+    # --- Detect circular dependencies (SCC with >1 member) ---------------
+    circular_deps = [
+        sorted(scc)
+        for scc in nx.strongly_connected_components(graph)
+        if len(scc) > 1
+    ]
+
+    # --- Extract subgraph based on scope ----------------------------------
+    if scope == "project":
+        subgraph = graph
+
+    elif scope == "cone":
+        if not target:
+            raise ToolError("target (cone_id) is required when scope='cone'")
+
+        cones_path = project_dir / "03_feature_cones.json"
+        if not cones_path.exists():
+            raise ToolError(f"Feature cones file not found: {cones_path}")
+
+        cones_data = json.loads(cones_path.read_text(encoding="utf-8"))
+        cone = cones_data.get("cones", {}).get(target)
+        if not cone:
+            raise ToolError(f"Cone '{target}' not found")
+
+        # Collect all files relevant to this cone: exclusive + shared_deps
+        cone_files = set(cone.get("exclusive_files", []))
+        cone_files.update(cone.get("shared_deps", []))
+        valid_nodes = [n for n in cone_files if n in graph]
+        subgraph = graph.subgraph(valid_nodes).copy()
+
+    elif scope == "file":
+        if not target:
+            raise ToolError("target (file_path) is required when scope='file'")
+
+        if target not in graph:
+            raise ToolError(f"File '{target}' not found in dependency graph")
+
+        # Collect N-hop neighbors (both predecessors and successors)
+        nodes_to_include = {target}
+        frontier = {target}
+        for _ in range(max(1, hops)):
+            new_frontier = set()
+            for node in frontier:
+                new_frontier.update(graph.predecessors(node))
+                new_frontier.update(graph.successors(node))
+            nodes_to_include.update(new_frontier)
+            frontier = new_frontier
+
+        subgraph = graph.subgraph(nodes_to_include).copy()
+
+    else:
+        raise ToolError(f"Invalid scope: {scope}")
+
+    # --- Build Mermaid diagram from subgraph ------------------------------
+    mermaid_graph = _render_mermaid(subgraph, include_weights=include_weights)
+
+    # --- Build structured node and edge lists for the response ------------
+    result_nodes = sorted(subgraph.nodes())
+    result_edges = [
+        {
+            "source": u,
+            "target": v,
+            "weight": data.get("weight", 1),
+            "edge_types": data.get("edge_types", []),
+        }
+        for u, v, data in sorted(subgraph.edges(data=True))
+    ]
+
+    node_count = subgraph.number_of_nodes()
+    edge_count = subgraph.number_of_edges()
+
+    logger.info(
+        "[DEP-GRAPH] Graph generated: %d nodes, %d edges",
+        node_count,
+        edge_count,
+    )
 
     return {
         "status": "success",
         "scope": scope,
         "target": target,
-        "mermaid_graph": f"graph TD\n    %% Placeholder for {scope} graph\n",
-        "node_count": dag_data.get("node_count", 0),
-        "edge_count": dag_data.get("edge_count", 0),
-        "circular_deps": [],  # TODO: extract from SCC analysis
+        "mermaid_graph": mermaid_graph,
+        "nodes": result_nodes,
+        "edges": result_edges,
+        "node_count": node_count,
+        "edge_count": edge_count,
+        "circular_deps": circular_deps,
     }
 
 
