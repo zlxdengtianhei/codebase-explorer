@@ -292,6 +292,68 @@ async def analyze_codebase(
         f"[analyze_codebase] Found {len(cones)} cones, {len(infrastructure)} infrastructure files"
     )
 
+    # Step 3b: DAG layer calculation via SCC condensation + topological ordering
+    # First: compute file-level layers using SCC condensation on the full graph
+    condensed = nx.condensation(graph)
+    file_layer: dict[str, int] = {}
+    # Kahn-style layer assignment on condensed DAG
+    remaining = set(condensed.nodes())
+    layer_idx = 0
+    while remaining:
+        current = {n for n in remaining if all(p not in remaining for p in condensed.predecessors(n))}
+        if not current:
+            current = remaining.copy()
+        for scc_node in current:
+            members = condensed.nodes[scc_node].get("members", set())
+            for member in members:
+                file_layer[member] = layer_idx
+        remaining -= current
+        layer_idx += 1
+    total_layers = layer_idx
+
+    # Derive cone layer = max file layer among exclusive files
+    cone_layer: dict[str, int] = {}
+    for cid, cone in cones.items():
+        if cone.exclusive_files:
+            cone_layer[cid] = max(file_layer.get(f, 0) for f in cone.exclusive_files)
+        else:
+            cone_layer[cid] = 0
+
+    logger.info("[PIPELINE] SCC condensation: %d components, DAG layering: %d layers computed",
+                condensed.number_of_nodes(), total_layers)
+
+    updated_cones: dict[str, FeatureCone] = {}
+    for cid, cone in cones.items():
+        updated_cones[cid] = FeatureCone(
+            cone_id=cone.cone_id, entry_point=cone.entry_point,
+            exclusive_files=cone.exclusive_files, shared_deps=cone.shared_deps,
+            layer=cone_layer.get(cid, 0), token_count=cone.token_count,
+        )
+    cones = updated_cones
+
+    # Step 3c: Louvain fallback when feature cones are degraded
+    single_file = sum(1 for c in cones.values() if len(c.exclusive_files) <= 1)
+    if len(cones) > 3 and single_file / len(cones) > 0.7:
+        logger.warning(
+            "[PIPELINE] Louvain fallback triggered — feature cones degraded (%d/%d single-file)",
+            single_file, len(cones),
+        )
+        from src.graph.grouper import group_modules
+        grouping = group_modules(graph, snapshot)
+        cones = {}
+        for mod_name, mod_files in grouping.modules.items():
+            cones[mod_name] = FeatureCone(
+                cone_id=mod_name, entry_point=mod_name,
+                exclusive_files=list(mod_files), shared_deps=[],
+            )
+        infrastructure = grouping.utility_files
+        logger.info("[PIPELINE] Louvain produced %d modules", len(cones))
+
+    logger.info(
+        "[PIPELINE] feature cones: %d cones, %d layers",
+        len(cones), total_layers,
+    )
+
     # Step 4: Estimate tokens per file
     logger.info("[analyze_codebase] Estimating tokens...")
     file_tokens = {}
@@ -363,7 +425,12 @@ async def analyze_codebase(
         "total_weight": weighted_result.total_weight,
         "nodes": list(graph.nodes()),
         "edges": [
-            {"source": u, "target": v, "weight": graph[u][v].get("weight", 1)}
+            {
+                "source": u,
+                "target": v,
+                "weight": graph[u][v].get("weight", 1),
+                "edge_types": graph[u][v].get("edge_types", []),
+            }
             for u, v in graph.edges()
         ],
     }
@@ -588,6 +655,164 @@ async def get_structure(
 
 
 # ---------------------------------------------------------------------------
+# Tool 3: get_feature_cones  -- helpers
+# ---------------------------------------------------------------------------
+
+_UTILITY_KEYWORDS = frozenset({
+    "utils", "util", "helpers", "helper", "common", "shared", "lib",
+    "core", "base", "internal", "config", "constants", "types",
+    "middleware", "logging", "errors", "exceptions",
+})
+
+_HIGH_FAN_OUT_THRESHOLD = 3
+"""Cones depended on by >= this many other cones are considered utility."""
+
+
+def _is_utility_cone(
+    cone_name: str,
+    *,
+    layer: int = 0,
+    total_cones: int = 1,
+    all_cones: dict | None = None,
+) -> bool:
+    """Determine if a cone is a utility/infrastructure module.
+
+    A cone is classified as utility when:
+    - Its name (entry_point / cone_id) contains utility-related keywords, OR
+    - It sits at layer 0 (leaf dependency) while there are upper-layer cones, OR
+    - It has high fan-out: many other cones list it among their shared_deps.
+
+    Args:
+        cone_name: The cone identifier or entry-point path to inspect.
+        layer: The cone's DAG layer (0 = deepest leaf).
+        total_cones: Total number of cones in the project.
+        all_cones: Full cones dict (for fan-out calculation).
+
+    Returns:
+        True if the cone should be flagged as utility/infrastructure.
+    """
+    # Check naming patterns -- normalise the path to lowercase parts
+    name_lower = cone_name.lower().replace("\\", "/")
+    path_parts = PurePosixPath(name_lower).parts
+    # Check each path segment and the stem (filename without extension)
+    stem = PurePosixPath(name_lower).stem
+    for part in (*path_parts, stem):
+        if part in _UTILITY_KEYWORDS:
+            return True
+
+    # Layer heuristic: layer 0 in a multi-layer project is typically a leaf utility
+    if layer == 0 and total_cones > 2:
+        return True
+
+    # Fan-out heuristic: if many cones depend on this cone's files
+    if all_cones is not None:
+        exclusive_files = set(
+            all_cones.get(cone_name, {}).get("exclusive_files", [])
+        )
+        if exclusive_files:
+            dependents = sum(
+                1
+                for cid, c in all_cones.items()
+                if cid != cone_name
+                and exclusive_files & set(c.get("shared_deps", []))
+            )
+            if dependents >= _HIGH_FAN_OUT_THRESHOLD:
+                return True
+
+    return False
+
+
+def _compute_cone_layers(
+    cone_files: list[str],
+    dag_nodes: list[str],
+    dag_edges: list[dict],
+) -> list[list[str]]:
+    """Compute topological layer groups for files within a single cone.
+
+    Builds a subgraph containing only the cone's files, then assigns each
+    file to a layer using Kahn-style BFS (predecessors-first).  Layer 0
+    contains files with no internal predecessors (deepest leaves); higher
+    layers depend on lower ones.
+
+    Args:
+        cone_files: Files belonging to this cone (exclusive + shared_deps).
+        dag_nodes: All nodes from 02_dag.json.
+        dag_edges: All edges from 02_dag.json.
+
+    Returns:
+        List of layer groups, where each group is a sorted list of file paths.
+        layers[0] = leaf files, layers[-1] = top-level entry files.
+        Returns a single-element list wrapping all files when the cone has
+        only one file or no internal edges.
+    """
+    if not cone_files:
+        return []
+
+    cone_set = set(cone_files)
+
+    # Build subgraph restricted to cone files
+    subgraph = nx.DiGraph()
+    for node in cone_files:
+        subgraph.add_node(node)
+    for edge in dag_edges:
+        src = edge["source"]
+        tgt = edge["target"]
+        if src in cone_set and tgt in cone_set:
+            subgraph.add_edge(src, tgt)
+
+    # Kahn-style layer assignment
+    remaining = set(subgraph.nodes())
+    layers: list[list[str]] = []
+    while remaining:
+        # Nodes whose predecessors are all already placed
+        current_layer = {
+            n for n in remaining
+            if all(p not in remaining for p in subgraph.predecessors(n))
+        }
+        if not current_layer:
+            # Break cycles by placing all remaining nodes
+            current_layer = remaining.copy()
+        layers.append(sorted(current_layer))
+        remaining -= current_layer
+
+    return layers
+
+
+def _compute_depends_on_cones(
+    cone_id: str,
+    cone_shared_deps: list[str],
+    all_cones: dict,
+) -> list[str]:
+    """Find which other cones the given cone depends on via shared dependencies.
+
+    A cone X "depends on" cone Y when one of X's shared_deps is an
+    exclusive file of Y.  This captures inter-cone dependency edges.
+
+    Args:
+        cone_id: The cone whose dependencies we are computing.
+        cone_shared_deps: shared_deps list of the target cone.
+        all_cones: Full cones dict from 03_feature_cones.json.
+
+    Returns:
+        Sorted list of cone IDs that this cone depends on.
+    """
+    if not cone_shared_deps:
+        return []
+
+    shared_set = set(cone_shared_deps)
+    dependent_cones: set[str] = set()
+
+    for cid, c in all_cones.items():
+        if cid == cone_id:
+            continue
+        other_exclusive = set(c.get("exclusive_files", []))
+        if shared_set & other_exclusive:
+            dependent_cones.add(cid)
+
+    return sorted(dependent_cones)
+
+
+# ---------------------------------------------------------------------------
 # Tool 3: get_feature_cones
 # ---------------------------------------------------------------------------
 
@@ -611,6 +836,7 @@ async def get_feature_cones(
 
     cones_data = json.loads(cones_path.read_text(encoding="utf-8"))
     cones = cones_data.get("cones", {})
+    total_cones = len(cones)
 
     # Return summary list
     if not cone_id:
@@ -619,7 +845,12 @@ async def get_feature_cones(
                 "cone_id": cid,
                 "name": c.get("entry_point", cid),
                 "entry_file": c.get("entry_point", ""),
-                "is_utility": False,  # TODO: determine from layer or naming
+                "is_utility": _is_utility_cone(
+                    cid,
+                    layer=c.get("layer", 0),
+                    total_cones=total_cones,
+                    all_cones=cones,
+                ),
                 "file_count": len(c.get("exclusive_files", [])),
                 "total_tokens": c.get("token_count", 0),
                 "layer": c.get("layer", 0),
@@ -629,7 +860,7 @@ async def get_feature_cones(
 
         return {
             "status": "success",
-            "total_cones": len(cones),
+            "total_cones": total_cones,
             "cones": summaries,
         }
 
@@ -638,22 +869,45 @@ async def get_feature_cones(
     if not cone:
         raise ToolError(f"Cone '{cone_id}' not found")
 
-    # TODO: Add layer breakdown (would need to compute from DAG)
-    # TODO: Add depends_on_cones (would need cross-cone dependency analysis)
+    # Compute is_utility for this specific cone
+    is_utility = _is_utility_cone(
+        cone_id,
+        layer=cone.get("layer", 0),
+        total_cones=total_cones,
+        all_cones=cones,
+    )
+
+    # Compute internal layer breakdown from DAG data
+    dag_path = project_dir / "02_dag.json"
+    layers: list[list[str]] = []
+    if dag_path.exists():
+        dag_data = json.loads(dag_path.read_text(encoding="utf-8"))
+        dag_nodes = dag_data.get("nodes", [])
+        dag_edges = dag_data.get("edges", [])
+        cone_files = list(cone.get("exclusive_files", []))
+        cone_files.extend(cone.get("shared_deps", []))
+        layers = _compute_cone_layers(cone_files, dag_nodes, dag_edges)
+
+    # Compute inter-cone dependencies from shared_deps
+    depends_on = _compute_depends_on_cones(
+        cone_id,
+        cone.get("shared_deps", []),
+        cones,
+    )
 
     return {
         "status": "success",
         "cone_id": cone_id,
         "name": cone.get("entry_point", cone_id),
         "entry_file": cone.get("entry_point", ""),
-        "is_utility": False,
+        "is_utility": is_utility,
         "file_count": len(cone.get("exclusive_files", [])),
         "total_tokens": cone.get("token_count", 0),
         "layer": cone.get("layer", 0),
         "files": cone.get("exclusive_files", []),
-        "layers": [],  # TODO: implement layer breakdown
+        "layers": layers,
         "shared_deps": cone.get("shared_deps", []),
-        "depends_on_cones": [],  # TODO: implement
+        "depends_on_cones": depends_on,
     }
 
 
@@ -978,10 +1232,15 @@ async def submit_analysis(
 
     state_path = project_dir / "state.json"
 
-    # Verify files exist
+    # Verify files exist and append end marker
+    end_marker = "\n<!-- codebase-explorer: end -->\n"
     for path in detail_paths + snippet_paths:
-        if not Path(path).exists():
+        p = Path(path)
+        if not p.exists():
             raise ToolError(f"File not found: {path}")
+        content = p.read_text(encoding="utf-8")
+        if "<!-- codebase-explorer: end -->" not in content:
+            p.write_text(content + end_marker, encoding="utf-8")
 
     # Update task status
     output_files = [
