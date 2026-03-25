@@ -2,10 +2,17 @@
 
 Provides immutable data structures and a unified interface for parsing
 Python, TypeScript, and JavaScript codebases.
+
+When graph-sitter (codegen) is not installed, a lightweight fallback
+parser based on Python's built-in ``ast`` module is used automatically.
+The fallback supports Python files only and provides best-effort import
+resolution, function/class extraction, and character counts.
 """
 from __future__ import annotations
 
+import ast
 import logging
+import os
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -74,6 +81,13 @@ class CodebaseSnapshot:
     total_lines: int
 
 
+# -- Sentinel for AST fallback ----------------------------------------------
+
+_USE_FALLBACK = object()
+"""Returned by ``_init_codebase`` when codegen is not importable, signalling
+the caller to use the built-in AST fallback parser."""
+
+
 # -- Parser -----------------------------------------------------------------
 
 class CodebaseParser:
@@ -105,7 +119,19 @@ class CodebaseParser:
         for lang in resolved:
             logger.info("Parsing %s files in %s", lang, root)
             codebase = self._init_codebase(str(root), lang)
+            if codebase is _USE_FALLBACK:
+                # codegen not importable -- fall back to built-in ast module
+                if lang == "python":
+                    files, funcs, classes, lines = self._fallback_parse_python(str(root))
+                    all_files.extend(files)
+                    all_funcs.extend(funcs)
+                    all_cls.extend(classes)
+                    total_lines += lines
+                else:
+                    logger.warning("No AST fallback available for %s; skipping", lang)
+                continue
             if codebase is None:
+                # codegen available but failed for this language -- skip it
                 continue
             files, funcs, classes, lines = self._extract(codebase, lang)
             all_files.extend(files)
@@ -148,14 +174,20 @@ class CodebaseParser:
         return list(profile.languages.keys())
 
     def _init_codebase(self, root: str, language: str) -> object | None:
-        """Initialise a graph-sitter Codebase; returns None on failure."""
+        """Initialise a graph-sitter Codebase; returns None on failure.
+
+        Returns ``_USE_FALLBACK`` when codegen is not importable, signalling
+        the caller to use the built-in AST fallback parser.  Returns ``None``
+        when codegen is importable but fails at runtime for this language.
+        """
         try:
             from codegen import Codebase  # graph-sitter package
-        except ImportError as exc:
-            raise CodebaseParseError(
-                "graph-sitter (codegen) is not installed. "
-                "Run: pip install graph-sitter"
-            ) from exc
+        except ImportError:
+            logger.info(
+                "graph-sitter (codegen) not available; using AST fallback for %s",
+                language,
+            )
+            return _USE_FALLBACK
         try:
             return Codebase(root, language=language)
         except RecursionError:
@@ -194,6 +226,152 @@ class CodebaseParser:
             if ci is not None:
                 classes.append(ci)
         return files, funcs, classes, total_lines
+
+    # -- AST fallback parser --------------------------------------------------
+
+    def _fallback_parse_python(
+        self, root: str,
+    ) -> tuple[list[FileInfo], list[FunctionInfo], list[ClassInfo], int]:
+        """Parse Python files using the built-in ``ast`` module.
+
+        Walks the directory tree under *root*, parses each ``.py`` file,
+        and extracts file info, top-level functions, and classes.  Import
+        resolution is best-effort: ``import foo`` resolves to ``foo.py``
+        if that file exists under *root*.
+
+        Returns:
+            (files, functions, classes, total_lines) tuple.
+        """
+        root_path = Path(root).resolve()
+        py_files = sorted(root_path.rglob("*.py"))
+
+        # Build a module-name → filepath lookup for import resolution
+        module_map: dict[str, str] = {}
+        for pf in py_files:
+            rel = pf.relative_to(root_path)
+            # "models.py" → "models", "pkg/utils.py" → "pkg.utils"
+            module_name = str(rel.with_suffix("")).replace(os.sep, ".")
+            # Store relative posix path as the canonical filepath
+            module_map[module_name] = str(rel)
+
+        files: list[FileInfo] = []
+        funcs: list[FunctionInfo] = []
+        classes: list[ClassInfo] = []
+        total_lines = 0
+
+        for pf in py_files:
+            rel_path = str(pf.relative_to(root_path))
+            try:
+                source = pf.read_text(encoding="utf-8")
+            except Exception:  # noqa: BLE001
+                logger.warning("Failed to read %s; skipping", pf)
+                continue
+
+            line_count = source.count("\n") + 1 if source else 0
+            char_count = len(source)
+
+            try:
+                tree = ast.parse(source, filename=str(pf))
+            except SyntaxError:
+                logger.warning("SyntaxError parsing %s; recording as empty", pf)
+                files.append(FileInfo(
+                    filepath=rel_path, language="python",
+                    line_count=line_count, function_names=(),
+                    class_names=(), import_sources=(),
+                    char_count=char_count,
+                ))
+                total_lines += line_count
+                continue
+
+            func_names: list[str] = []
+            class_names: list[str] = []
+            import_sources: list[str] = []
+
+            for node in ast.walk(tree):
+                if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
+                    func_names.append(node.name)
+                    fi = self._ast_extract_function(node, rel_path, source)
+                    if fi is not None:
+                        funcs.append(fi)
+                elif isinstance(node, ast.ClassDef):
+                    class_names.append(node.name)
+                    ci = self._ast_extract_class(node, rel_path)
+                    if ci is not None:
+                        classes.append(ci)
+                elif isinstance(node, ast.Import):
+                    for alias in node.names:
+                        resolved = module_map.get(alias.name)
+                        if resolved is not None:
+                            import_sources.append(resolved)
+                elif isinstance(node, ast.ImportFrom):
+                    if node.module:
+                        resolved = module_map.get(node.module)
+                        if resolved is not None:
+                            import_sources.append(resolved)
+
+            files.append(FileInfo(
+                filepath=rel_path, language="python",
+                line_count=line_count,
+                function_names=tuple(func_names),
+                class_names=tuple(class_names),
+                import_sources=tuple(dict.fromkeys(import_sources)),
+                char_count=char_count,
+            ))
+            total_lines += line_count
+
+        logger.info(
+            "AST fallback parsed %d Python files (%d lines) in %s",
+            len(files), total_lines, root,
+        )
+        return files, funcs, classes, total_lines
+
+    @staticmethod
+    def _ast_extract_function(
+        node: ast.FunctionDef | ast.AsyncFunctionDef,
+        filepath: str,
+        source: str,
+    ) -> FunctionInfo | None:
+        """Extract a FunctionInfo from an AST FunctionDef node."""
+        try:
+            params = tuple(
+                arg.arg for arg in node.args.args if arg.arg != "self"
+            )
+            rt = ast.get_source_segment(source, node.returns) if node.returns else None
+            return FunctionInfo(
+                name=node.name, filepath=filepath,
+                start_line=node.lineno, end_line=node.end_lineno or node.lineno,
+                parameters=params, return_type=str(rt) if rt else None,
+                calls=(), dependencies=(),
+            )
+        except Exception:  # noqa: BLE001
+            return None
+
+    @staticmethod
+    def _ast_extract_class(
+        node: ast.ClassDef, filepath: str,
+    ) -> ClassInfo | None:
+        """Extract a ClassInfo from an AST ClassDef node."""
+        try:
+            methods = tuple(
+                n.name for n in node.body
+                if isinstance(n, ast.FunctionDef | ast.AsyncFunctionDef)
+            )
+            bases: list[str] = []
+            for base in node.bases:
+                if isinstance(base, ast.Name):
+                    bases.append(base.id)
+                elif isinstance(base, ast.Attribute):
+                    bases.append(base.attr)
+            return ClassInfo(
+                name=node.name, filepath=filepath,
+                start_line=node.lineno, end_line=node.end_lineno or node.lineno,
+                methods=methods, base_classes=tuple(bases),
+                subclasses=(),
+            )
+        except Exception:  # noqa: BLE001
+            return None
+
+    # -- graph-sitter extraction helpers ------------------------------------
 
     def _extract_file(self, sf: object, language: str) -> FileInfo | None:
         try:
