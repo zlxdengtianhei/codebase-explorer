@@ -61,18 +61,18 @@ Codebase Explorer V2 的核心算法（Feature Cone 提取）在边界条件下�
 - [x] T-03: 添加 MCP 传输层集成测试 → agent: `tdd-guide` → 产出物: `tests/test_server_mcp.py` ✅ 2026-03-25
 
 ### Phase 2 — 核心算法优化
-- [ ] T-04: 实现权重感知 BFS（替换无界 BFS） → `orchestrated-development` → 产出物: 修改 `src/graph/feature_cone.py`
-- [ ] T-05: 实现动态 SHARED_THRESHOLD → `orchestrated-development` → 产出物: 修改 `src/graph/feature_cone.py`
-- [ ] T-06: 实现锥体大小再平衡 pass → `orchestrated-development` → 产出物: 新函数 in `src/graph/feature_cone.py`
-- [ ] T-07: 实现目录亲和力合并 + 命名规律识别 → `orchestrated-development` → 产出物: 新文件 `src/graph/semantic_hints.py`
-- [ ] T-08: 实现锥体质量评分（confidence_score） → `orchestrated-development` → 产出物: 新函数 in `src/graph/feature_cone.py`
+- [x] T-04: 实现权重感知 BFS（替换无界 BFS） → `orchestrated-development` → 产出物: 修改 `src/graph/feature_cone.py` ✅ 2026-03-25
+- [x] T-05: 实现动态 SHARED_THRESHOLD → `orchestrated-development` → 产出物: 修改 `src/graph/feature_cone.py` ✅ 2026-03-25
+- [x] T-06: 实现锥体大小再平衡 pass → `orchestrated-development` → 产出物: 新函数 in `src/graph/feature_cone.py` ✅ 2026-03-25
+- [x] T-07: 实现目录亲和力合并 + 命名规律识别 → `orchestrated-development` → 产出物: 新文件 `src/graph/semantic_hints.py` ✅ 2026-03-25
+- [x] T-08: 实现锥体质量评分（confidence_score） → `orchestrated-development` → 产出物: 新函数 in `src/graph/feature_cone.py` ✅ 2026-03-25
 
 ### Phase 3 — Flask 基准测试与前后对比
-- [ ] T-09: Flask 基线采集（优化前的算法跑 Flask） → agent: `Explore` → 产出物: `.claude_plans/artifacts/flask_baseline.json`
-- [ ] T-10: Flask 优化后采集 + 定量对比报告 → agent: `Explore` → 产出物: `.claude_plans/artifacts/flask_optimized.json` + `flask_comparison.md`
+- [x] T-09: Flask 基线采集（优化前的算法跑 Flask） → agent: `Explore` → 产出物: `.claude_plans/artifacts/flask_baseline.json` ✅ 2026-03-25
+- [x] T-10: Flask 优化后采集 + 定量对比报告 → agent: `Explore` → 产出物: `.claude_plans/artifacts/flask_optimized.json` + `flask_comparison.md` ✅ 2026-03-25
 
 ### Phase 4 — LLM 语义评审
-- [ ] T-11: LLM 阅读 Flask 全部源码 + 分类结果，评估分组语义合理性 → `deep-research` → 产出物: `.claude_plans/artifacts/flask_llm_review.md`
+- [x] T-11: LLM 阅读 Flask 全部源码 + 分类结果，评估分组语义合理性 → `deep-research` → 产出物: `.claude_plans/artifacts/flask_llm_review.md` ✅ 2026-03-25
 - [ ] T-12: 根据 LLM 评审反馈调整算法参数/逻辑 → `orchestrated-development` → 产出物: 相关文件修改
 
 ### Phase 5 — 验证与收尾
@@ -418,12 +418,12 @@ Phase 5:  [T-13 ∥ T-14]
 ## Checkpoint（检查点）
 
 ```yaml
-phase: 1
-current_task: T-09
+phase: 3
+current_task: T-12
 status: in_progress
-last_updated: 2026-03-25T10:30:00Z
-completed: [T-01, T-02, T-03]
-pending: [T-09, T-04, T-05, T-06, T-07, T-08, T-10, T-11, T-12, T-13, T-14]
+last_updated: 2026-03-25T15:00:00Z
+completed: [T-01, T-02, T-03, T-09, T-04, T-05, T-06, T-07, T-08, T-10, T-11]
+pending: [T-12, T-13, T-14]
 blocked: []
 fix_loop_count: 0
 current_fix_target: null
@@ -438,7 +438,13 @@ escalated: []
 |------|---------|--------|------|---------|--------|------|
 | T-01 | 1 | — | Replace len(layers) with total_layers | tests: 180/180 pass | keep | Fixed NameError at line 354 |
 | T-02 | 1 | — | Added _is_utility_cone, _compute_cone_layers, _compute_depends_on_cones | tests: 180/180 pass | keep | Implemented 3 TODOs in get_feature_cones |
-| T-03 | 1 | — | 8 MCP integration tests via memory transport | tests: 188/188 pass | keep | Created test_server_mcp.py with 8 tests covering all 7 MCP tools |
+| T-03 | 1 | f5438da | 8 MCP integration tests via memory transport | tests: 188/188 pass | keep | Created test_server_mcp.py |
+| T-09 | 1 | — | Flask baseline pipeline run | 2 cones, 100% single-file, 91.7% infra | keep | Baseline captured |
+| T-04 | 1 | 76d13ac | Weight-aware affinity-decay BFS | tests: 198/198 pass | keep | decay: import=0.3, call=0.5, inherit=0.7 |
+| T-05 | 1 | 76d13ac | dynamic_shared_threshold | tests: 206/206 pass | keep | max(2, round(N*0.3)) |
+| T-06 | 1 | 76d13ac | rebalance_cones | tests: 184/184 pass | keep | mega-cone split + orphan merge |
+| T-07 | 1 | 87de671 | semantic_hints.py | tests: 244/244 pass | keep | classify_file + directory_affinity_score |
+| T-08 | 1 | 87de671 | cone_quality_score | tests: 244/244 pass | keep | confidence_score: dir/connectivity/naming |
 
 ---
 

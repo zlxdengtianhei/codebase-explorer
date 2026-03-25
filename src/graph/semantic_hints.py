@@ -16,6 +16,7 @@ _CATEGORY_PATTERNS: dict[str, tuple[list[str], list[str]]] = {
             r"^test_",        # test_foo.py
             r"_test$",        # foo_test.py
             r"^tests$",       # tests.py
+            r"^testing$",     # testing.py (test utilities / test client)
             r"^conftest$",    # conftest.py
             r"^fixtures$",    # fixtures.py
             r"^factories$",   # factories.py

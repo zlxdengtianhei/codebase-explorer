@@ -1,0 +1,43 @@
+{
+  "algorithm_version": "v1-baseline",
+  "target": "test_repos/flask/src/flask",
+  "description": "Pre-optimization baseline: naive in-degree=0 root detection with simple BFS, no affinity decay, no rebalancing. Flask's highly connected graph produces only 2 roots (flask/__main__.py, flask/views.py) with nearly all files classified as infrastructure.",
+  "metrics": {
+    "total_files": 24,
+    "total_cones": 2,
+    "single_file_cones": 2,
+    "single_file_ratio": 1.0,
+    "max_cone_size": 1,
+    "max_cone_ratio": 0.0417,
+    "avg_cone_size": 1.0,
+    "infrastructure_files": 22,
+    "infrastructure_ratio": 0.917,
+    "avg_confidence_score": null
+  },
+  "cones": [
+    {
+      "cone_id": "flask/__main__.py",
+      "entry_point": "flask/__main__.py",
+      "exclusive_files": ["flask/__main__.py"],
+      "shared_deps": [],
+      "exclusive_file_count": 1,
+      "total_file_count": 1,
+      "tokens": 214
+    },
+    {
+      "cone_id": "flask/views.py",
+      "entry_point": "flask/views.py",
+      "exclusive_files": ["flask/views.py"],
+      "shared_deps": [],
+      "exclusive_file_count": 1,
+      "total_file_count": 1,
+      "tokens": 2687
+    }
+  ],
+  "confidence_scores": null,
+  "cone_names": ["flask/__main__.py", "flask/views.py"],
+  "cone_sizes": {
+    "flask/__main__.py": 1,
+    "flask/views.py": 1
+  }
+}
