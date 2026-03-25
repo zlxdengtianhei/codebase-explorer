@@ -38,6 +38,7 @@ class FileInfo:
     function_names: tuple[str, ...]
     class_names: tuple[str, ...]
     import_sources: tuple[str, ...]  # resolved import target paths
+    char_count: int = 0
 
 @dataclass(frozen=True)
 class FunctionInfo:

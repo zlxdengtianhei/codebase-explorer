@@ -105,6 +105,8 @@ def update_task_status(
         state["tasks"][task_id]["error"] = error
 
     # Update metadata
+    if "metadata" not in state:
+        state["metadata"] = {}
     state["metadata"]["last_updated_at"] = datetime.now(UTC).isoformat()
 
     # Atomic write

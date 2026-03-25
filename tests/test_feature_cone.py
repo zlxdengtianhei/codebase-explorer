@@ -13,6 +13,14 @@ from src.graph.feature_cone import (
 from src.parser.codebase import CodebaseSnapshot, FileInfo
 
 
+def _collect_all_files(cones: dict[str, FeatureCone]) -> set[str]:
+    """Collect all exclusive files from all cones."""
+    all_files: set[str] = set()
+    for cone in cones.values():
+        all_files.update(cone.exclusive_files)
+    return all_files
+
+
 def _make_simple_dag() -> nx.DiGraph:
     """Create a simple DAG without SCC for testing.
 
@@ -115,18 +123,20 @@ class TestExtractFeatureCones:
 
         cones, infrastructure = extract_feature_cones(dag, snapshot, shared_threshold=2)
 
-        # Should have one cone starting from cli.py
-        assert len(cones) == 1
-        assert "cli.py" in cones
+        # After rebalancing, the single mega-cone may be split into sub-cones.
+        # All sub-cones should trace back to the cli.py entry point.
+        assert len(cones) >= 1
+        for cone in cones.values():
+            assert cone.entry_point == "cli.py"
 
-        # Cone should contain all dependencies
-        cone = cones["cli.py"]
-        assert "cli.py" in cone.exclusive_files
-        assert "app.py" in cone.exclusive_files
-        assert "utils.py" in cone.exclusive_files
-        assert "helpers.py" in cone.exclusive_files
+        # Collect all exclusive files across all cones
+        all_exclusive = _collect_all_files(cones)
+        assert "cli.py" in all_exclusive
+        assert "app.py" in all_exclusive
+        assert "utils.py" in all_exclusive
+        assert "helpers.py" in all_exclusive
 
-        # No infrastructure nodes (only one cone)
+        # No infrastructure nodes (only one original cone before rebalancing)
         assert len(infrastructure) == 0
 
     def test_shared_infrastructure_detection(self):
@@ -154,10 +164,11 @@ class TestExtractFeatureCones:
 
         cones, _ = extract_feature_cones(dag, snapshot)
 
-        cone = cones["cli.py"]
-        assert cone.cone_id == "cli.py"
-        assert cone.entry_point == "cli.py"
-        assert len(cone.exclusive_files) > 0
+        # After rebalancing, cones may be renamed but all should trace to cli.py
+        assert len(cones) >= 1
+        for cone in cones.values():
+            assert cone.entry_point == "cli.py"
+            assert len(cone.exclusive_files) > 0
 
 
 class TestAssignSccToCone:
