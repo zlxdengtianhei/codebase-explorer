@@ -86,6 +86,45 @@ _CATEGORY_PATTERNS: dict[str, tuple[list[str], list[str]]] = {
             r"^settings$",    # settings/
         ],
     ),
+    "middleware": (
+        [
+            r"^middlewares?$",       # middleware.py, middlewares.py
+        ],
+        [
+            r"^middlewares?$",       # middleware/, middlewares/
+        ],
+    ),
+    "security": (
+        [
+            r"^security$",          # security.py
+            r"^auth$",              # auth.py
+            r"^permissions$",       # permissions.py
+        ],
+        [
+            r"^security$",          # security/
+            r"^auth$",              # auth/
+        ],
+    ),
+    "utils": (
+        [
+            r"^utils$",             # utils.py
+            r"^helpers$",           # helpers.py
+            r"^common$",            # common.py
+            r"^shared$",            # shared.py
+            r"^lib$",               # lib.py
+        ],
+        [
+            r"^utils$",             # utils/
+            r"^helpers$",           # helpers/
+        ],
+    ),
+    "exceptions": (
+        [
+            r"^exceptions$",        # exceptions.py
+            r"^errors$",            # errors.py
+        ],
+        [],
+    ),
 }
 
 # Pre-compile patterns for performance
@@ -97,6 +136,51 @@ _COMPILED_PATTERNS: dict[str, tuple[list[re.Pattern[str]], list[re.Pattern[str]]
     for category, (stem_pats, dir_pats) in _CATEGORY_PATTERNS.items()
 }
 
+
+
+def is_reexport_facade(filepath: str, root_path: str) -> bool:
+    """Detect whether an ``__init__.py`` is a re-export facade.
+
+    A facade ``__init__.py`` mostly re-exports symbols from sibling modules
+    via relative imports and defines very few (or no) classes/functions of
+    its own.  When the ratio ``relative_imports / (relative_imports + defs)``
+    exceeds 0.8, the file is considered a facade.
+
+    Args:
+        filepath: Relative file path (e.g. ``"fastapi/__init__.py"``).
+        root_path: Absolute path to the project root.
+
+    Returns:
+        ``True`` if the file is a re-export facade ``__init__.py``.
+    """
+    import ast as _ast
+    from pathlib import Path as _Path
+
+    if not filepath.endswith("__init__.py"):
+        return False
+
+    full_path = _Path(root_path) / filepath
+    if not full_path.exists():
+        return False
+
+    try:
+        source = full_path.read_text(encoding="utf-8")
+        tree = _ast.parse(source)
+    except Exception:  # noqa: BLE001
+        return False
+
+    relative_imports = sum(
+        1 for n in _ast.walk(tree)
+        if isinstance(n, _ast.ImportFrom) and n.level and n.level > 0
+    )
+    definitions = sum(
+        1 for n in _ast.walk(tree)
+        if isinstance(n, (_ast.FunctionDef, _ast.AsyncFunctionDef, _ast.ClassDef))
+    )
+    total = relative_imports + definitions
+    if total == 0:
+        return False
+    return (relative_imports / total) > 0.8
 
 
 def classify_file(filepath: str) -> str:

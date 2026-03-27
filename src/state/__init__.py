@@ -15,15 +15,14 @@ from .json_store import (
 )
 from .models import (
     AnalysisPhase,
-    AnalysisResult,
-    AnalysisTask,
-    CheckpointRecord,
     CheckpointStatus,
-    DocNode,
     DocNodeStatus,
-    ModuleRecord,
-    ProjectRecord,
+    DocumentationMeta,
+    OutputFileRecord,
+    ProjectMeta,
     ProjectStatus,
+    StateFile,
+    TaskRecord,
     TaskStatus,
 )
 
@@ -33,13 +32,12 @@ __all__ = [
     "read_state",
     "update_task_status",
     "resume_from_state",
-    # Models
-    "ProjectRecord",
-    "ModuleRecord",
-    "AnalysisTask",
-    "AnalysisResult",
-    "CheckpointRecord",
-    "DocNode",
+    # V5 Models
+    "OutputFileRecord",
+    "TaskRecord",
+    "ProjectMeta",
+    "DocumentationMeta",
+    "StateFile",
     # Type aliases
     "ProjectStatus",
     "TaskStatus",

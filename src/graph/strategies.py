@@ -86,6 +86,7 @@ class FeatureConeStrategy:
         cones, infrastructure = extract_feature_cones(graph, snapshot)
 
         modules: dict[str, FunctionalModule] = {}
+        entry_points: dict[str, str] = {}
         for cid, cone in cones.items():
             modules[cid] = FunctionalModule(
                 module_id=cone.cone_id,
@@ -96,12 +97,13 @@ class FeatureConeStrategy:
                 token_count=cone.token_count,
                 directory_hint="",
             )
+            entry_points[cid] = cone.entry_point
 
         return StrategyResult(
             modules=modules,
             infrastructure=tuple(infrastructure),
             strategy_used=self.name,
-            metadata={},
+            metadata={"entry_points": entry_points},
         )
 
 

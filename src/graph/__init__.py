@@ -17,8 +17,6 @@ from src.graph.grouper import (
     ModuleMetrics,
     GroupingResult,
     group_modules,
-    recursive_subgroup,
-    get_module_metrics,
     identify_utility_nodes,
 )
 from src.graph.ordering import (
@@ -29,9 +27,7 @@ from src.graph.ordering import (
 )
 from src.graph.feature_cone import (
     FeatureCone,
-    find_feature_roots,
     extract_feature_cones,
-    assign_scc_to_cone,
 )
 from src.graph.weighted_graph import (
     WeightedGraphResult,
@@ -49,8 +45,6 @@ __all__ = [
     "ModuleMetrics",
     "GroupingResult",
     "group_modules",
-    "recursive_subgroup",
-    "get_module_metrics",
     "identify_utility_nodes",
     # ordering
     "AnalysisPlan",
@@ -59,9 +53,7 @@ __all__ = [
     "create_analysis_plan",
     # feature_cone
     "FeatureCone",
-    "find_feature_roots",
     "extract_feature_cones",
-    "assign_scc_to_cone",
     # weighted_graph
     "WeightedGraphResult",
     "build_weighted_dependency_graph",

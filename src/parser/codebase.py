@@ -87,6 +87,12 @@ _USE_FALLBACK = object()
 """Returned by ``_init_codebase`` when codegen is not importable, signalling
 the caller to use the built-in AST fallback parser."""
 
+_EXCLUDED_DIRS = frozenset({
+    ".venv", "venv", "node_modules", "__pycache__", ".git",
+    "dist", "build", ".tox", ".mypy_cache", ".pytest_cache", ".eggs",
+})
+"""Directory names to exclude from file discovery during parsing."""
+
 
 # -- Parser -----------------------------------------------------------------
 
@@ -243,7 +249,10 @@ class CodebaseParser:
             (files, functions, classes, total_lines) tuple.
         """
         root_path = Path(root).resolve()
-        py_files = sorted(root_path.rglob("*.py"))
+        py_files = sorted(
+            f for f in root_path.rglob("*.py")
+            if not any(part in _EXCLUDED_DIRS for part in f.relative_to(root_path).parts)
+        )
 
         # Build a module-name → filepath lookup for import resolution
         module_map: dict[str, str] = {}
@@ -304,8 +313,40 @@ class CodebaseParser:
                         if resolved is not None:
                             import_sources.append(resolved)
                 elif isinstance(node, ast.ImportFrom):
-                    if node.module:
-                        resolved = module_map.get(node.module)
+                    abs_module = self._resolve_import_from(
+                        node, rel_path, module_map,
+                    )
+                    if abs_module is not None:
+                        import_sources.append(abs_module)
+
+            # T-08: Detect dynamic imports (importlib.import_module / __import__)
+            for dyn_node in ast.walk(tree):
+                if not isinstance(dyn_node, ast.Call):
+                    continue
+                func = dyn_node.func
+                # importlib.import_module("module.path")
+                if (
+                    isinstance(func, ast.Attribute)
+                    and func.attr == "import_module"
+                    and isinstance(func.value, ast.Name)
+                    and func.value.id == "importlib"
+                ):
+                    if (
+                        dyn_node.args
+                        and isinstance(dyn_node.args[0], ast.Constant)
+                        and isinstance(dyn_node.args[0].value, str)
+                    ):
+                        resolved = module_map.get(dyn_node.args[0].value)
+                        if resolved is not None:
+                            import_sources.append(resolved)
+                # __import__("module.path")
+                elif isinstance(func, ast.Name) and func.id == "__import__":
+                    if (
+                        dyn_node.args
+                        and isinstance(dyn_node.args[0], ast.Constant)
+                        and isinstance(dyn_node.args[0].value, str)
+                    ):
+                        resolved = module_map.get(dyn_node.args[0].value)
                         if resolved is not None:
                             import_sources.append(resolved)
 
@@ -319,6 +360,55 @@ class CodebaseParser:
             ))
             total_lines += line_count
 
+        # T-06: Second pass — resolve function calls to file-level dependencies.
+        # Build func_name → filepath mapping (skip ambiguous names).
+        func_name_count: dict[str, int] = {}
+        for fn in funcs:
+            func_name_count[fn.name] = func_name_count.get(fn.name, 0) + 1
+
+        func_name_to_file: dict[str, str] = {
+            fn.name: fn.filepath
+            for fn in funcs
+            if func_name_count.get(fn.name, 0) == 1
+        }
+
+        # T-07: Also build class_name → filepath for inheritance edges.
+        class_name_count: dict[str, int] = {}
+        for ci in classes:
+            class_name_count[ci.name] = class_name_count.get(ci.name, 0) + 1
+
+        class_name_to_file: dict[str, str] = {
+            ci.name: ci.filepath
+            for ci in classes
+            if class_name_count.get(ci.name, 0) == 1
+        }
+
+        # Resolve call targets to dependency file paths for each function.
+        updated_funcs: list[FunctionInfo] = []
+        for fn in funcs:
+            dep_files: list[str] = []
+            for call_name in fn.calls:
+                target_file = func_name_to_file.get(call_name)
+                if target_file and target_file != fn.filepath:
+                    dep_files.append(target_file)
+            updated_funcs.append(FunctionInfo(
+                name=fn.name, filepath=fn.filepath,
+                start_line=fn.start_line, end_line=fn.end_line,
+                parameters=fn.parameters, return_type=fn.return_type,
+                calls=fn.calls,
+                dependencies=tuple(dict.fromkeys(dep_files)),
+            ))
+        funcs = updated_funcs
+
+        # T-07: Enrich FileInfo.import_sources with inheritance-based edges.
+        # For each class, if its base class resolves to a different file,
+        # add that file as an import source (weighted_graph.py will create
+        # inherit edges from ClassInfo.base_classes → class_name_to_file).
+        # No FileInfo changes needed since weighted_graph.py already handles
+        # inheritance via ClassInfo.base_classes + its own class_name_to_file.
+        # The ClassInfo.base_classes are already correctly populated by
+        # _ast_extract_class, so weighted_graph.py will produce weight=3 edges.
+
         logger.info(
             "AST fallback parsed %d Python files (%d lines) in %s",
             len(files), total_lines, root,
@@ -326,22 +416,85 @@ class CodebaseParser:
         return files, funcs, classes, total_lines
 
     @staticmethod
+    def _resolve_import_from(
+        node: ast.ImportFrom,
+        current_file: str,
+        module_map: dict[str, str],
+    ) -> str | None:
+        """Resolve an ``ast.ImportFrom`` node to a file path.
+
+        Handles both absolute imports (``from foo.bar import X``) and
+        relative imports (``from .bar import X``, ``from ..baz import Y``).
+        """
+        level = node.level or 0
+        module = node.module or ""
+
+        if level == 0:
+            # Absolute import: direct lookup
+            return module_map.get(module)
+
+        # Relative import: compute base package from current file path
+        parts = current_file.replace(os.sep, "/").split("/")
+        # Remove the filename to get the package directory parts
+        pkg_parts = parts[:-1]
+
+        # Go up (level - 1) directories (level=1 means current package)
+        up = level - 1
+        if up > len(pkg_parts):
+            return None
+        if up > 0:
+            pkg_parts = pkg_parts[:-up]
+
+        # Build the absolute module name
+        if module:
+            abs_parts = pkg_parts + module.split(".")
+        else:
+            abs_parts = pkg_parts
+
+        abs_module = ".".join(abs_parts)
+
+        # Try exact match, then __init__ for package imports
+        resolved = module_map.get(abs_module)
+        if resolved is not None:
+            return resolved
+        init_module = abs_module + ".__init__"
+        return module_map.get(init_module)
+
+    @staticmethod
     def _ast_extract_function(
         node: ast.FunctionDef | ast.AsyncFunctionDef,
         filepath: str,
         source: str,
     ) -> FunctionInfo | None:
-        """Extract a FunctionInfo from an AST FunctionDef node."""
+        """Extract a FunctionInfo from an AST FunctionDef node.
+
+        Extracts function calls from the body (``ast.Call`` nodes) to
+        populate the ``calls`` field.  Only simple calls (``foo()`` and
+        ``self.foo()``) are captured; chained attribute calls are skipped.
+        """
         try:
             params = tuple(
                 arg.arg for arg in node.args.args if arg.arg != "self"
             )
             rt = ast.get_source_segment(source, node.returns) if node.returns else None
+
+            # T-06: Extract function call names from the body
+            call_names: list[str] = []
+            for child in ast.walk(node):
+                if not isinstance(child, ast.Call):
+                    continue
+                func = child.func
+                if isinstance(func, ast.Name):
+                    call_names.append(func.id)
+                elif isinstance(func, ast.Attribute):
+                    call_names.append(func.attr)
+
             return FunctionInfo(
                 name=node.name, filepath=filepath,
                 start_line=node.lineno, end_line=node.end_lineno or node.lineno,
                 parameters=params, return_type=str(rt) if rt else None,
-                calls=(), dependencies=(),
+                calls=tuple(dict.fromkeys(call_names)),
+                dependencies=(),  # filled in second pass
             )
         except Exception:  # noqa: BLE001
             return None

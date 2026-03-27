@@ -1,29 +1,16 @@
 """Document generation layer for codebase-explorer.
 
-This package implements dynamic N-layer documentation planning:
-
-- **depth_planner**: Three-dimensional depth decision algorithm and
-  token budget allocation (see design/depth_strategy.md).
-- **mermaid**: Mermaid diagram generation for dependency, class, and
-  flow diagrams.
+V5 Architecture:
+- **depth_planner**: DAG-based depth calculation and FFD bin-packing
+  for agent task assignment.
 """
 
 from src.doc.depth_planner import (
-    DocPlanNode,
-    DocStructurePlan,
-    DocumentPlan,
-    SplitStrategy,
-    plan_doc_structure,
-    plan_documentation,
+    build_task_manifest,
+    calculate_feature_cone_depth,
 )
-from src.doc.mermaid import MermaidGenerator
 
 __all__ = [
-    "DocPlanNode",
-    "DocStructurePlan",
-    "DocumentPlan",
-    "MermaidGenerator",
-    "SplitStrategy",
-    "plan_doc_structure",
-    "plan_documentation",
+    "build_task_manifest",
+    "calculate_feature_cone_depth",
 ]
