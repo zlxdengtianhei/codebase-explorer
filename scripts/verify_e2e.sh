@@ -7,17 +7,19 @@ mkdir -p .cc_test_logs
 
 # Step 1: 跑 codebase-explorer MCP 分析 scrapy
 env -u CLAUDECODE claude \
-  -p "你是 codebase-explorer 的 E2E 测试器。请依次执行以下操作，每步输出完整的工具返回 JSON（不要省略字段）：
-1. analyze_codebase(path='test_repos/scrapy', force_reindex=true) — 输出时注意标注 output_dir 和持久化文件路径
-2. get_modules() — 输出完整 JSON，注意包含 grouping（含 GroupingStrategy protocol 接口和 available_strategies）和 token_budget 字段
-3. 从 modules 中选 file_count 最大且 module_id 不含 testing/docs/scrapydocs 的模块 → get_modules(module_id=该ID)
-4. 从该模块 files 中选 token_count 最大的 .py（排除 __init__.py）→ get_function_deps(file=该文件)
-5. get_dependency_graph()
-6. doc_operation(operation='get_template') — 注意输出 YAML front matter 和 HTML comment 标记
-7. doc_operation(operation='get_protocol') — 注意输出三步协议和 INDEX 拼合规则
-8. doc_operation(operation='merge_modules', source_module='步骤3模块', target_module='从summary另选一个模块')
+  -p "CRITICAL: You MUST output the FULL raw JSON from each tool call. DO NOT summarize. DO NOT create tables. Copy-paste the EXACT JSON.
 
-输出要求：每步先写步骤号，然后原样粘贴完整 JSON 返回值，不要省略或改写任何字段。用 --- 分隔。" \
+Execute these steps and output the raw JSON return value for each:
+1. analyze_codebase(path='test_repos/scrapy', force_reindex=true)
+2. get_modules() (no args — summary mode)
+3. Pick the module with highest file_count (exclude IDs containing testing/docs/scrapydocs) → get_modules(module_id=that_id)
+4. From that module's files, pick the .py with highest token_count (exclude __init__.py) → get_function_deps(file=that_path)
+5. get_dependency_graph() — for this one, output ONLY node_count, edge_count, and first 5 edges (skip full mermaid)
+6. doc_operation(operation='get_template')
+7. doc_operation(operation='get_protocol')
+8. doc_operation(operation='merge_modules', source_module=step3_module, target_module=pick_another_from_summary)
+
+FORMAT: For each step write STEP N then paste the COMPLETE JSON. Separate with ---. NO summaries." \
   --dangerously-skip-permissions \
   --max-turns 20 \
   --output-format json \
