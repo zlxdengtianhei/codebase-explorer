@@ -15,6 +15,7 @@ env -u CLAUDECODE claude \
 5. 调用 get_dependency_graph()（默认 scope=project）
 6. 调用 doc_operation(operation='get_template') 获取 DETAIL/INDEX 格式模板
 7. 调用 doc_operation(operation='get_protocol') 获取三步协议
+8. 调用 doc_operation(operation='merge_modules', source_module='步骤3中模块ID', target_module='从summary中选另一个模块ID') 演示模块合并
 将每一步的完整返回结果原样输出，用 --- 分隔。" \
   --dangerously-skip-permissions \
   --max-turns 20 \

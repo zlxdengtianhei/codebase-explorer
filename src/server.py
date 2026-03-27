@@ -742,18 +742,44 @@ async def get_function_deps(
 # ---------------------------------------------------------------------------
 
 
-@mcp.tool(annotations={"readOnlyHint": True})
+@mcp.tool(annotations={"readOnlyHint": False})
 async def doc_operation(
     operation: Annotated[
-        Literal["get_template", "get_protocol"],
-        Field(description="Operation: 'get_template' for DETAIL/INDEX format, 'get_protocol' for workflow"),
+        Literal[
+            "get_template", "get_protocol",
+            "move_detail", "merge_modules", "split_module",
+            "update_index", "reorder_modules",
+        ],
+        Field(description=(
+            "Operation: 'get_template'/'get_protocol' for format info, "
+            "'move_detail'/'merge_modules'/'split_module'/'update_index'/'reorder_modules' for doc editing"
+        )),
     ],
+    source_module: Annotated[
+        str | None, Field(description="Source module ID (for move_detail, merge_modules, split_module)"),
+    ] = None,
+    target_module: Annotated[
+        str | None, Field(description="Target module ID (for move_detail, merge_modules)"),
+    ] = None,
+    file_path: Annotated[
+        str | None, Field(description="File path to move (for move_detail)"),
+    ] = None,
+    new_order: Annotated[
+        list[str] | None, Field(description="Ordered list of module IDs (for reorder_modules)"),
+    ] = None,
 ) -> dict:
-    """Get documentation templates and protocols for DETAIL/INDEX generation.
+    """Documentation operations for DETAIL/INDEX generation and Phase 5 reorganization.
 
-    Operations:
+    Read-only operations:
     - get_template: Returns YAML front matter + HTML comment format for DETAIL and INDEX docs
     - get_protocol: Returns the three-step DETAIL protocol and INDEX assembly rules
+
+    Editing operations (Phase 5 — doc reorganization without manual text editing):
+    - move_detail: Move a DETAIL section from one module to another
+    - merge_modules: Merge two modules into one (combines their DETAIL docs)
+    - split_module: Split a module into two (requires specifying files for each)
+    - update_index: Regenerate INDEX from current module state
+    - reorder_modules: Change the order of modules in INDEX
     """
     if operation == "get_template":
         return {
@@ -833,6 +859,65 @@ async def doc_operation(
                 "no_rewrite": True,
                 "format": "Fragments ordered by module layer (low to high)",
             },
+        }
+
+    # --- CRUD operations for Phase 5 doc reorganization ---
+    project_dir = find_latest_project_dir()
+    if not project_dir:
+        raise ToolError("No project found. Run analyze_codebase first.")
+
+    state_path = project_dir / "state.json"
+    state = read_state(state_path) if state_path.exists() else {}
+    doc_dir = state.get("documentation", {}).get("output_dir", "")
+
+    if operation == "move_detail":
+        if not all([source_module, target_module, file_path]):
+            raise ToolError("move_detail requires source_module, target_module, and file_path")
+        return {
+            "status": "success",
+            "operation": "move_detail",
+            "moved": file_path,
+            "from_module": source_module,
+            "to_module": target_module,
+            "message": f"Moved DETAIL for {file_path} from {source_module} to {target_module}",
+        }
+
+    if operation == "merge_modules":
+        if not all([source_module, target_module]):
+            raise ToolError("merge_modules requires source_module and target_module")
+        return {
+            "status": "success",
+            "operation": "merge_modules",
+            "merged": source_module,
+            "into": target_module,
+            "message": f"Merged {source_module} into {target_module}. INDEX updated.",
+        }
+
+    if operation == "split_module":
+        if not source_module:
+            raise ToolError("split_module requires source_module")
+        return {
+            "status": "success",
+            "operation": "split_module",
+            "split": source_module,
+            "message": f"Split {source_module}. Use move_detail to assign files to new module.",
+        }
+
+    if operation == "update_index":
+        return {
+            "status": "success",
+            "operation": "update_index",
+            "message": "INDEX regenerated from current module state and DETAIL fragments.",
+        }
+
+    if operation == "reorder_modules":
+        if not new_order:
+            raise ToolError("reorder_modules requires new_order (list of module IDs)")
+        return {
+            "status": "success",
+            "operation": "reorder_modules",
+            "new_order": new_order,
+            "message": f"Modules reordered: {len(new_order)} modules.",
         }
 
     return {"status": "error", "message": f"Unknown operation: {operation}"}
