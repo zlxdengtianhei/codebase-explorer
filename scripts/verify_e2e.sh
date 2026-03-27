@@ -42,10 +42,10 @@ env -u CLAUDECODE claude \
 
 ${E2E_OUTPUT}" \
   --dangerously-skip-permissions \
-  --max-turns 3 \
+  --max-turns 5 \
   --output-format json \
   --no-session-persistence \
-  --model sonnet \
+  --model haiku \
   --setting-sources "" \
   > .cc_test_logs/judge_result.json 2> .cc_test_logs/judge_debug.log
 
