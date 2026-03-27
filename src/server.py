@@ -8,13 +8,10 @@ V2 Architecture:
 """
 from __future__ import annotations
 
-import hashlib
 import json
 import logging
-import os
 from contextlib import asynccontextmanager
-from datetime import UTC, datetime
-from pathlib import Path, PurePosixPath
+from pathlib import Path
 from typing import Annotated, Literal
 
 import networkx as nx
@@ -24,22 +21,29 @@ from mcp.server.fastmcp.exceptions import ToolError
 from pydantic import Field
 
 from src.budget.estimator import estimate_tokens_from_chars
-from src.doc.depth_planner import calculate_feature_cone_depth, build_task_manifest
-from src.doc.mermaid import MermaidGenerator
-from src.graph.dependency import get_module_dependency_subgraph
+from src.doc.depth_planner import build_task_manifest
 from src.graph.feature_cone import extract_feature_cones, FeatureCone
-from src.graph.ordering import topological_order
 from src.graph.weighted_graph import build_weighted_dependency_graph
 from src.parser.codebase import CodebaseParser, CodebaseParseError
+from src.server_helpers import (
+    build_graph_from_dag,
+    compute_cone_layers,
+    compute_depends_on_cones,
+    find_latest_project_dir,
+    is_utility_cone,
+    now_iso,
+    project_id_from_path,
+    render_mermaid,
+    resolve_output_dir,
+    validate_json_files_exist,
+    write_analysis_outputs,
+)
 from src.state.json_store import atomic_write_state, read_state, update_task_status
 
 logger = logging.getLogger(__name__)
 
-# ---------------------------------------------------------------------------
-# Type Aliases
-# ---------------------------------------------------------------------------
-
-_Str = Annotated[str | None, Field(description="Project ID. None = latest.")]
+MAX_HOPS = 5
+"""Maximum number of hops for file-scope dependency graph traversal."""
 
 # ---------------------------------------------------------------------------
 # FastMCP Server Setup
@@ -50,10 +54,7 @@ _Str = Annotated[str | None, Field(description="Project ID. None = latest.")]
 async def _lifespan(server: FastMCP):
     """Initialize parser for the server lifespan."""
     parser = CodebaseParser()
-    try:
-        yield {"parser": parser}
-    finally:
-        pass
+    yield {"parser": parser}
 
 
 mcp = FastMCP(
@@ -63,7 +64,7 @@ mcp = FastMCP(
 )
 
 # ---------------------------------------------------------------------------
-# Helper Functions
+# Context Helpers
 # ---------------------------------------------------------------------------
 
 
@@ -75,136 +76,6 @@ def _lc(ctx):
 def _parser(ctx) -> CodebaseParser:
     """Get parser from context."""
     return _lc(ctx)["parser"]
-
-
-def _now() -> str:
-    """Get current UTC timestamp in ISO format."""
-    return datetime.now(UTC).isoformat()
-
-
-def _project_id_from_path(path: str) -> str:
-    """Generate deterministic project ID from path."""
-    return hashlib.sha256(path.encode()).hexdigest()[:12]
-
-
-def _find_latest_project_dir() -> Path | None:
-    """Find the most recently modified .codebase-analysis directory."""
-    # Search in common locations
-    search_paths = [Path.cwd(), Path.home()]
-
-    candidates = []
-    for base in search_paths:
-        if not base.exists():
-            continue
-        for p in base.rglob(".codebase-analysis"):
-            if p.is_dir() and (p / "state.json").exists():
-                candidates.append(p)
-
-    if not candidates:
-        return None
-
-    # Return most recently modified
-    return max(candidates, key=lambda p: p.stat().st_mtime)
-
-
-def _resolve_output_dir(path: str, output_dir: str | None) -> Path:
-    """Resolve output directory for analysis results."""
-    if output_dir:
-        return Path(output_dir).resolve()
-    return Path(path).resolve() / ".codebase-analysis"
-
-
-def _validate_json_files_exist(output_dir: Path) -> bool:
-    """Check if all required JSON files exist."""
-    required = [
-        "01_structure.json",
-        "02_dag.json",
-        "03_feature_cones.json",
-        "04_file_tokens.json",
-        "05_task_manifest.json",
-    ]
-    return all((output_dir / f).exists() for f in required)
-
-
-def _build_graph_from_dag(
-    nodes: list[str],
-    edges: list[dict],
-) -> nx.DiGraph:
-    """Reconstruct a NetworkX DiGraph from persisted 02_dag.json data.
-
-    Args:
-        nodes: List of node identifiers (file paths).
-        edges: List of edge dicts with source, target, weight, and
-               optional edge_types fields.
-
-    Returns:
-        A new NetworkX DiGraph with all node and edge attributes.
-    """
-    graph = nx.DiGraph()
-    for node in nodes:
-        graph.add_node(node)
-
-    for edge in edges:
-        src = edge["source"]
-        tgt = edge["target"]
-        weight = edge.get("weight", 1)
-        edge_types = edge.get("edge_types", [])
-        graph.add_edge(src, tgt, weight=weight, edge_types=edge_types)
-
-    return graph
-
-
-def _short_mermaid_label(filepath: str) -> str:
-    """Create a short display label from a file path for Mermaid diagrams.
-
-    Uses at most the last two path components and escapes Mermaid-unsafe
-    characters.
-    """
-    parts = PurePosixPath(filepath).parts
-    label = "/".join(parts[-2:]) if len(parts) >= 2 else filepath
-    return label.replace('"', "'").replace("[", "(").replace("]", ")")
-
-
-def _render_mermaid(
-    graph: nx.DiGraph,
-    *,
-    include_weights: bool = False,
-) -> str:
-    """Render a NetworkX DiGraph as a Mermaid flowchart string.
-
-    Args:
-        graph: The subgraph to render.
-        include_weights: When True, annotate edges with weight and
-                         relationship types (import/call/inherit).
-
-    Returns:
-        Complete Mermaid graph definition string.
-    """
-    if graph.number_of_nodes() == 0:
-        return "graph TD\n    empty[No nodes]"
-
-    lines: list[str] = ["graph TD"]
-    node_ids: dict[str, str] = {}
-
-    for idx, node in enumerate(sorted(graph.nodes())):
-        safe_id = f"n{idx}"
-        node_ids[node] = safe_id
-        label = _short_mermaid_label(node)
-        lines.append(f'    {safe_id}["{label}"]')
-
-    for src, tgt, data in sorted(graph.edges(data=True)):
-        src_id = node_ids[src]
-        tgt_id = node_ids[tgt]
-
-        if include_weights:
-            weight = data.get("weight", 1)
-            edge_types = data.get("edge_types", [])
-            type_str = "/".join(edge_types) if edge_types else "dep"
-            lines.append(f"    {src_id} -->|{type_str} w={weight}| {tgt_id}")
-        else:
-            lines.append(f"    {src_id} --> {tgt_id}")
-
-    return "\n".join(lines)
 
 
 # ---------------------------------------------------------------------------
@@ -248,11 +119,11 @@ async def analyze_codebase(
     if not resolved_path.is_dir():
         raise ToolError(f"Not a directory: {path}")
 
-    output_path = _resolve_output_dir(str(resolved_path), output_dir)
-    project_id = _project_id_from_path(str(resolved_path))
+    output_path = resolve_output_dir(str(resolved_path), output_dir)
+    project_id = project_id_from_path(str(resolved_path))
 
     # Check cache
-    if not force_reindex and _validate_json_files_exist(output_path):
+    if not force_reindex and validate_json_files_exist(output_path):
         logger.info(f"[analyze_codebase] Cache hit for {resolved_path}")
         return {
             "status": "success",
@@ -344,7 +215,7 @@ async def analyze_codebase(
         for mod_name, mod_files in grouping.modules.items():
             cones[mod_name] = FeatureCone(
                 cone_id=mod_name, entry_point=mod_name,
-                exclusive_files=list(mod_files), shared_deps=[],
+                exclusive_files=tuple(mod_files), shared_deps=(),
             )
         infrastructure = grouping.utility_files
         logger.info("[PIPELINE] Louvain produced %d modules", len(cones))
@@ -389,107 +260,21 @@ async def analyze_codebase(
 
     task_manifest = build_task_manifest(cone_dicts, file_tokens)
 
-    # Step 6: Write JSON files
-    # 01_structure.json
-    structure_data = {
-        "project_id": project_id,
-        "path": str(resolved_path),
-        "analyzed_at": _now(),
-        "languages": list(snapshot.languages_detected),
-        "file_count": len(snapshot.files),
-        "function_count": len(snapshot.functions),
-        "class_count": len(snapshot.classes),
-        "total_lines": snapshot.total_lines,
-        "files": [
-            {
-                "filepath": f.filepath,
-                "language": f.language,
-                "line_count": f.line_count,
-                "char_count": f.char_count,
-                "function_names": f.function_names,
-                "class_names": f.class_names,
-                "import_sources": f.import_sources,
-            }
-            for f in snapshot.files
-        ],
-    }
-    (output_path / "01_structure.json").write_text(
-        json.dumps(structure_data, indent=2, ensure_ascii=False), encoding="utf-8"
+    # Step 6: Write JSON files + state.json
+    write_analysis_outputs(
+        output_path=output_path,
+        project_id=project_id,
+        resolved_path=resolved_path,
+        snapshot=snapshot,
+        weighted_result=weighted_result,
+        graph=graph,
+        cones=cones,
+        infrastructure=infrastructure,
+        cone_dicts=cone_dicts,
+        file_tokens=file_tokens,
+        file_details=file_details,
+        task_manifest=task_manifest,
     )
-
-    # 02_dag.json
-    dag_data = {
-        "project_id": project_id,
-        "node_count": weighted_result.node_count,
-        "edge_count": weighted_result.edge_count,
-        "total_weight": weighted_result.total_weight,
-        "nodes": list(graph.nodes()),
-        "edges": [
-            {
-                "source": u,
-                "target": v,
-                "weight": graph[u][v].get("weight", 1),
-                "edge_types": graph[u][v].get("edge_types", []),
-            }
-            for u, v in graph.edges()
-        ],
-    }
-    (output_path / "02_dag.json").write_text(
-        json.dumps(dag_data, indent=2, ensure_ascii=False), encoding="utf-8"
-    )
-
-    # 03_feature_cones.json
-    cones_data = {
-        "project_id": project_id,
-        "cone_count": len(cones),
-        "infrastructure_files": list(infrastructure),
-        "cones": cone_dicts,
-    }
-    (output_path / "03_feature_cones.json").write_text(
-        json.dumps(cones_data, indent=2, ensure_ascii=False), encoding="utf-8"
-    )
-
-    # 04_file_tokens.json
-    tokens_data = {
-        "project_id": project_id,
-        "total_tokens": sum(file_tokens.values()),
-        "file_count": len(file_tokens),
-        "files": file_details,
-    }
-    (output_path / "04_file_tokens.json").write_text(
-        json.dumps(tokens_data, indent=2, ensure_ascii=False), encoding="utf-8"
-    )
-
-    # 05_task_manifest.json
-    (output_path / "05_task_manifest.json").write_text(
-        json.dumps(task_manifest, indent=2, ensure_ascii=False), encoding="utf-8"
-    )
-
-    # state.json
-    state = {
-        "project_id": project_id,
-        "path": str(resolved_path),
-        "created_at": _now(),
-        "status": "analysis_complete",
-        "tasks": {
-            task_id: {
-                "status": "pending",
-                "created_at": _now(),
-                "output_files": [],
-            }
-            for task_id in task_manifest.get("tasks", {})
-        },
-        "documentation": {
-            "output_dir": str(output_path),
-            "index_written": False,
-            "details_written": 0,
-            "snippets_written": 0,
-            "total_planned": len(task_manifest.get("tasks", {})),
-            "source_files_covered": [],
-            "source_file_coverage_percent": 0.0,
-        },
-    }
-    atomic_write_state(output_path / "state.json", state)
 
     logger.info(f"[analyze_codebase] Analysis complete. Output: {output_path}")
 
@@ -532,7 +317,7 @@ async def get_structure(
     - None: Return project summary
     """
     # Find the latest project directory
-    project_dir = _find_latest_project_dir()
+    project_dir = find_latest_project_dir()
     if not project_dir:
         raise ToolError("No project found. Run analyze_codebase first.")
 
@@ -655,164 +440,6 @@ async def get_structure(
 
 
 # ---------------------------------------------------------------------------
-# Tool 3: get_feature_cones  -- helpers
-# ---------------------------------------------------------------------------
-
-_UTILITY_KEYWORDS = frozenset({
-    "utils", "util", "helpers", "helper", "common", "shared", "lib",
-    "core", "base", "internal", "config", "constants", "types",
-    "middleware", "logging", "errors", "exceptions",
-})
-
-_HIGH_FAN_OUT_THRESHOLD = 3
-"""Cones depended on by >= this many other cones are considered utility."""
-
-
-def _is_utility_cone(
-    cone_name: str,
-    *,
-    layer: int = 0,
-    total_cones: int = 1,
-    all_cones: dict | None = None,
-) -> bool:
-    """Determine if a cone is a utility/infrastructure module.
-
-    A cone is classified as utility when:
-    - Its name (entry_point / cone_id) contains utility-related keywords, OR
-    - It sits at layer 0 (leaf dependency) while there are upper-layer cones, OR
-    - It has high fan-out: many other cones list it among their shared_deps.
-
-    Args:
-        cone_name: The cone identifier or entry-point path to inspect.
-        layer: The cone's DAG layer (0 = deepest leaf).
-        total_cones: Total number of cones in the project.
-        all_cones: Full cones dict (for fan-out calculation).
-
-    Returns:
-        True if the cone should be flagged as utility/infrastructure.
-    """
-    # Check naming patterns -- normalise the path to lowercase parts
-    name_lower = cone_name.lower().replace("\\", "/")
-    path_parts = PurePosixPath(name_lower).parts
-    # Check each path segment and the stem (filename without extension)
-    stem = PurePosixPath(name_lower).stem
-    for part in (*path_parts, stem):
-        if part in _UTILITY_KEYWORDS:
-            return True
-
-    # Layer heuristic: layer 0 in a multi-layer project is typically a leaf utility
-    if layer == 0 and total_cones > 2:
-        return True
-
-    # Fan-out heuristic: if many cones depend on this cone's files
-    if all_cones is not None:
-        exclusive_files = set(
-            all_cones.get(cone_name, {}).get("exclusive_files", [])
-        )
-        if exclusive_files:
-            dependents = sum(
-                1
-                for cid, c in all_cones.items()
-                if cid != cone_name
-                and exclusive_files & set(c.get("shared_deps", []))
-            )
-            if dependents >= _HIGH_FAN_OUT_THRESHOLD:
-                return True
-
-    return False
-
-
-def _compute_cone_layers(
-    cone_files: list[str],
-    dag_nodes: list[str],
-    dag_edges: list[dict],
-) -> list[list[str]]:
-    """Compute topological layer groups for files within a single cone.
-
-    Builds a subgraph containing only the cone's files, then assigns each
-    file to a layer using Kahn-style BFS (predecessors-first).  Layer 0
-    contains files with no internal predecessors (deepest leaves); higher
-    layers depend on lower ones.
-
-    Args:
-        cone_files: Files belonging to this cone (exclusive + shared_deps).
-        dag_nodes: All nodes from 02_dag.json.
-        dag_edges: All edges from 02_dag.json.
-
-    Returns:
-        List of layer groups, where each group is a sorted list of file paths.
-        layers[0] = leaf files, layers[-1] = top-level entry files.
-        Returns a single-element list wrapping all files when the cone has
-        only one file or no internal edges.
-    """
-    if not cone_files:
-        return []
-
-    cone_set = set(cone_files)
-
-    # Build subgraph restricted to cone files
-    subgraph = nx.DiGraph()
-    for node in cone_files:
-        subgraph.add_node(node)
-    for edge in dag_edges:
-        src = edge["source"]
-        tgt = edge["target"]
-        if src in cone_set and tgt in cone_set:
-            subgraph.add_edge(src, tgt)
-
-    # Kahn-style layer assignment
-    remaining = set(subgraph.nodes())
-    layers: list[list[str]] = []
-    while remaining:
-        # Nodes whose predecessors are all already placed
-        current_layer = {
-            n for n in remaining
-            if all(p not in remaining for p in subgraph.predecessors(n))
-        }
-        if not current_layer:
-            # Break cycles by placing all remaining nodes
-            current_layer = remaining.copy()
-        layers.append(sorted(current_layer))
-        remaining -= current_layer
-
-    return layers
-
-
-def _compute_depends_on_cones(
-    cone_id: str,
-    cone_shared_deps: list[str],
-    all_cones: dict,
-) -> list[str]:
-    """Find which other cones the given cone depends on via shared dependencies.
-
-    A cone X "depends on" cone Y when one of X's shared_deps is an
-    exclusive file of Y.  This captures inter-cone dependency edges.
-
-    Args:
-        cone_id: The cone whose dependencies we are computing.
-        cone_shared_deps: shared_deps list of the target cone.
-        all_cones: Full cones dict from 03_feature_cones.json.
-
-    Returns:
-        Sorted list of cone IDs that this cone depends on.
-    """
-    if not cone_shared_deps:
-        return []
-
-    shared_set = set(cone_shared_deps)
-    dependent_cones: set[str] = set()
-
-    for cid, c in all_cones.items():
-        if cid == cone_id:
-            continue
-        other_exclusive = set(c.get("exclusive_files", []))
-        if shared_set & other_exclusive:
-            dependent_cones.add(cid)
-
-    return sorted(dependent_cones)
-
-
-# ---------------------------------------------------------------------------
 # Tool 3: get_feature_cones
 # ---------------------------------------------------------------------------
 
@@ -826,7 +453,7 @@ async def get_feature_cones(
     A feature cone represents a cohesive feature unit containing
     all files from entry point to implementation.
     """
-    project_dir = _find_latest_project_dir()
+    project_dir = find_latest_project_dir()
     if not project_dir:
         raise ToolError("No project found. Run analyze_codebase first.")
 
@@ -845,7 +472,7 @@ async def get_feature_cones(
                 "cone_id": cid,
                 "name": c.get("entry_point", cid),
                 "entry_file": c.get("entry_point", ""),
-                "is_utility": _is_utility_cone(
+                "is_utility": is_utility_cone(
                     cid,
                     layer=c.get("layer", 0),
                     total_cones=total_cones,
@@ -870,7 +497,7 @@ async def get_feature_cones(
         raise ToolError(f"Cone '{cone_id}' not found")
 
     # Compute is_utility for this specific cone
-    is_utility = _is_utility_cone(
+    is_utility = is_utility_cone(
         cone_id,
         layer=cone.get("layer", 0),
         total_cones=total_cones,
@@ -886,10 +513,10 @@ async def get_feature_cones(
         dag_edges = dag_data.get("edges", [])
         cone_files = list(cone.get("exclusive_files", []))
         cone_files.extend(cone.get("shared_deps", []))
-        layers = _compute_cone_layers(cone_files, dag_nodes, dag_edges)
+        layers = compute_cone_layers(cone_files, dag_nodes, dag_edges)
 
     # Compute inter-cone dependencies from shared_deps
-    depends_on = _compute_depends_on_cones(
+    depends_on = compute_depends_on_cones(
         cone_id,
         cone.get("shared_deps", []),
         cones,
@@ -908,6 +535,129 @@ async def get_feature_cones(
         "layers": layers,
         "shared_deps": cone.get("shared_deps", []),
         "depends_on_cones": depends_on,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Tool 3b: get_modules (V5 format)
+# ---------------------------------------------------------------------------
+
+
+@mcp.tool(annotations={"readOnlyHint": True})
+async def get_modules(
+    module_id: Annotated[
+        str | None,
+        Field(description="Module ID for detail view. None = summary of all modules."),
+    ] = None,
+) -> dict:
+    """Query functional modules in V5 format.
+
+    Two modes:
+    - Summary (no args): Module list with metadata only (<3KB). No file lists.
+    - Detail (module_id): Single module with file list and token counts.
+
+    Use summary first to get module IDs, then detail for specific modules.
+    """
+    project_dir = find_latest_project_dir()
+    if not project_dir:
+        raise ToolError("No project found. Run analyze_codebase first.")
+
+    cones_path = project_dir / "03_feature_cones.json"
+    if not cones_path.exists():
+        raise ToolError("Feature cones not found. Run analyze_codebase first.")
+
+    cones_data = json.loads(cones_path.read_text(encoding="utf-8"))
+    cones = cones_data.get("cones", {})
+    infra_files = cones_data.get("infrastructure", [])
+
+    # Load file tokens
+    tokens_path = project_dir / "04_file_tokens.json"
+    file_tokens: dict[str, int] = {}
+    if tokens_path.exists():
+        tokens_data = json.loads(tokens_path.read_text(encoding="utf-8"))
+        for ft in tokens_data.get("files", []):
+            file_tokens[ft["filepath"]] = ft.get("estimated_tokens", 0)
+
+    def _dir_hint(files: tuple | list) -> str:
+        if not files:
+            return ""
+        dirs: dict[str, int] = {}
+        for f in files:
+            d = str(Path(f).parent)
+            dirs[d] = dirs.get(d, 0) + 1
+        return max(dirs.items(), key=lambda x: x[1])[0] + "/"
+
+    def _friendly_name(cone_id: str) -> str:
+        return cone_id.replace("_", " ").replace("::", " / ").title()
+
+    # --- Summary mode (no module_id) ---
+    if not module_id:
+        total_files = sum(len(c.get("exclusive_files", [])) for c in cones.values())
+        total_tokens = sum(c.get("token_count", 0) for c in cones.values())
+        infra_tokens = sum(file_tokens.get(f, 0) for f in infra_files)
+
+        modules = []
+        for cid, cone in cones.items():
+            deps = compute_depends_on_cones(
+                cid, cone.get("shared_deps", []), cones,
+            )
+            modules.append({
+                "module_id": cid,
+                "name": _friendly_name(cid),
+                "file_count": len(cone.get("exclusive_files", [])),
+                "token_count": cone.get("token_count", 0),
+                "layer": cone.get("layer", 0),
+                "depends_on": deps,
+                "directory_hint": _dir_hint(cone.get("exclusive_files", [])),
+            })
+
+        return {
+            "status": "success",
+            "total_modules": len(cones),
+            "total_files": total_files,
+            "total_tokens": total_tokens,
+            "strategy_used": "feature_cone",
+            "modules": modules,
+            "infrastructure": {
+                "file_count": len(infra_files),
+                "token_count": infra_tokens,
+            },
+        }
+
+    # --- Detail mode (specific module_id) ---
+    cone = cones.get(module_id)
+    if not cone:
+        raise ToolError(f"Module '{module_id}' not found")
+
+    exclusive_files = cone.get("exclusive_files", [])
+    files_with_tokens = [
+        {"filepath": f, "token_count": file_tokens.get(f, 0)}
+        for f in exclusive_files
+    ]
+
+    deps = compute_depends_on_cones(
+        module_id, cone.get("shared_deps", []), cones,
+    )
+
+    # Compute internal layers from DAG
+    dag_path = project_dir / "02_dag.json"
+    internal_layers: list[list[str]] = []
+    if dag_path.exists():
+        dag_data = json.loads(dag_path.read_text(encoding="utf-8"))
+        cone_files = list(exclusive_files) + list(cone.get("shared_deps", []))
+        internal_layers = compute_cone_layers(
+            cone_files, dag_data.get("nodes", []), dag_data.get("edges", []),
+        )
+
+    return {
+        "status": "success",
+        "module_id": module_id,
+        "name": _friendly_name(module_id),
+        "layer": cone.get("layer", 0),
+        "depends_on": deps,
+        "files": files_with_tokens,
+        "internal_layers": internal_layers,
+        "token_count": cone.get("token_count", 0),
     }
 
 
@@ -944,7 +694,7 @@ async def get_dependency_graph(
     """
     logger.info("[DEP-GRAPH] Generating dependency graph scope=%s", scope)
 
-    project_dir = _find_latest_project_dir()
+    project_dir = find_latest_project_dir()
     if not project_dir:
         raise ToolError("No project found. Run analyze_codebase first.")
 
@@ -958,7 +708,7 @@ async def get_dependency_graph(
     all_nodes: list[str] = dag_data.get("nodes", [])
     all_edges: list[dict] = dag_data.get("edges", [])
 
-    graph = _build_graph_from_dag(all_nodes, all_edges)
+    graph = build_graph_from_dag(all_nodes, all_edges)
 
     # --- Detect circular dependencies (SCC with >1 member) ---------------
     circular_deps = [
@@ -998,9 +748,10 @@ async def get_dependency_graph(
             raise ToolError(f"File '{target}' not found in dependency graph")
 
         # Collect N-hop neighbors (both predecessors and successors)
+        clamped_hops = max(1, min(hops, MAX_HOPS))
         nodes_to_include = {target}
         frontier = {target}
-        for _ in range(max(1, hops)):
+        for _ in range(clamped_hops):
             new_frontier = set()
             for node in frontier:
                 new_frontier.update(graph.predecessors(node))
@@ -1014,7 +765,7 @@ async def get_dependency_graph(
         raise ToolError(f"Invalid scope: {scope}")
 
     # --- Build Mermaid diagram from subgraph ------------------------------
-    mermaid_graph = _render_mermaid(subgraph, include_weights=include_weights)
+    mermaid_graph = render_mermaid(subgraph, include_weights=include_weights)
 
     # --- Build structured node and edge lists for the response ------------
     result_nodes = sorted(subgraph.nodes())
@@ -1062,7 +813,7 @@ async def get_progress(
     ] = None,
 ) -> dict:
     """Query task completion status from state.json."""
-    project_dir = _find_latest_project_dir()
+    project_dir = find_latest_project_dir()
     if not project_dir:
         raise ToolError("No project found. Run analyze_codebase first.")
 
@@ -1127,7 +878,7 @@ async def get_file_tokens(
     ] = None,
 ) -> dict:
     """Query file token estimates from 04_file_tokens.json."""
-    project_dir = _find_latest_project_dir()
+    project_dir = find_latest_project_dir()
     if not project_dir:
         raise ToolError("No project found. Run analyze_codebase first.")
 
@@ -1226,16 +977,19 @@ async def submit_analysis(
     Called by DETAIL Agent after writing documentation files.
     Atomically updates task status and coverage metrics.
     """
-    project_dir = _find_latest_project_dir()
+    project_dir = find_latest_project_dir()
     if not project_dir:
         raise ToolError("No project found. Run analyze_codebase first.")
 
     state_path = project_dir / "state.json"
+    project_root = project_dir.parent  # .codebase-analysis sits inside the project
 
-    # Verify files exist and append end marker
+    # Verify files exist, validate paths are within project directory, and append end marker
     end_marker = "\n<!-- codebase-explorer: end -->\n"
     for path in detail_paths + snippet_paths:
-        p = Path(path)
+        p = Path(path).resolve()
+        if not p.is_relative_to(project_root):
+            raise ToolError(f"Path traversal rejected — file is outside project directory: {path}")
         if not p.exists():
             raise ToolError(f"File not found: {path}")
         content = p.read_text(encoding="utf-8")
