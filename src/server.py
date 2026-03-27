@@ -662,6 +662,76 @@ async def get_modules(
 
 
 # ---------------------------------------------------------------------------
+# Tool 3c: get_function_deps
+# ---------------------------------------------------------------------------
+
+
+@mcp.tool(annotations={"readOnlyHint": True})
+async def get_function_deps(
+    file: Annotated[str, Field(description="File path to query function dependencies for")],
+    module_id: Annotated[
+        str | None,
+        Field(description="Optional: limit results to within-module dependencies"),
+    ] = None,
+) -> dict:
+    """Get cross-file function-level dependencies for a specific file.
+
+    Returns which functions in the given file call functions in other files.
+    Only cross-file calls are included (same-file internal calls excluded).
+
+    Use this when writing DETAIL docs to describe dependency relationships.
+    """
+    project_dir = find_latest_project_dir()
+    if not project_dir:
+        raise ToolError("No project found. Run analyze_codebase first.")
+
+    deps_path = project_dir / "06_function_deps.json"
+    if not deps_path.exists():
+        raise ToolError(
+            "Function deps not found. Re-run analyze_codebase with force_reindex=true."
+        )
+
+    deps_data = json.loads(deps_path.read_text(encoding="utf-8"))
+    function_deps = deps_data.get("function_deps", {})
+
+    file_deps = function_deps.get(file)
+    if file_deps is None:
+        return {
+            "status": "success",
+            "file": file,
+            "dependencies": [],
+            "message": "No cross-file function dependencies found for this file",
+        }
+
+    # Optional: filter to within-module deps
+    if module_id:
+        cones_path = project_dir / "03_feature_cones.json"
+        if cones_path.exists():
+            cones_data = json.loads(cones_path.read_text(encoding="utf-8"))
+            cone = cones_data.get("cones", {}).get(module_id)
+            if cone:
+                module_files = set(cone.get("exclusive_files", []))
+                filtered = []
+                for dep_entry in file_deps:
+                    filtered_calls = [
+                        c for c in dep_entry["calls"]
+                        if c["target_file"] in module_files
+                    ]
+                    if filtered_calls:
+                        filtered.append({
+                            "source_function": dep_entry["source_function"],
+                            "calls": filtered_calls,
+                        })
+                file_deps = filtered
+
+    return {
+        "status": "success",
+        "file": file,
+        "dependencies": file_deps,
+    }
+
+
+# ---------------------------------------------------------------------------
 # Tool 4: get_dependency_graph
 # ---------------------------------------------------------------------------
 
