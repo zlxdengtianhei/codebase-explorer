@@ -83,8 +83,12 @@ f) Write the complete DETAIL.md to $REPO_ABS/.codebase-docs/{module_id}/DETAIL.m
    Format: YAML front matter + <!-- module:{module_id} --> + per-file sections + index-fragment + <!-- end:{module_id} --> + <!-- codebase-explorer: end -->
 g) After writing docs, call submit_analysis(task_id=..., status="complete", output_files=[...])
 
-## Phase 4: Assemble INDEX
-Call doc_operation(operation="update_index") to assemble INDEX.md from all DETAIL index-fragment blocks.
+## Phase 4: Assemble INDEX + Review
+1. Call doc_operation(operation="update_index") to assemble INDEX.md from all DETAIL index-fragment blocks.
+2. Review the generated INDEX.md: Are module names functional (e.g., "Request Handling") or just directory names?
+3. If modules need reorganization, use doc_operation("move_detail") or doc_operation("merge_modules").
+4. Re-run doc_operation(operation="update_index") if any changes were made.
+5. Call submit_analysis(task_id="index_assembly", status="complete", output_files=["INDEX.md"]) to persist checkpoint.
 The INDEX should have: YAML front matter + Mermaid module dependency graph + per-module summaries.
 
 ## CRITICAL RULES:
@@ -101,6 +105,9 @@ The INDEX should have: YAML front matter + Mermaid module dependency graph + per
 - Write real documentation based on actual source code — not placeholders
 - Process ALL modules from get_modules(). Do NOT skip any.
 - Generate at least 3 DETAIL.md files
+- Module names in docs should be FUNCTIONAL (e.g., "Application Core", "JSON Serialization"), NOT directory names (e.g., "src/flask/")
+- Call submit_analysis after completing EACH task to enable checkpoint recovery
+- Token budget: check token_count per file from get_modules(module_id=X). Scale doc depth proportionally.
 PROMPT_EOF
 
 echo "--- Step 2: Running E2E via Claude Code self-invocation ---"

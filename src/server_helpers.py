@@ -431,6 +431,7 @@ def write_analysis_outputs(
     # 03_feature_cones.json
     cones_data = {
         "project_id": project_id,
+        "strategy_used": "feature_cone",
         "cone_count": len(cones),
         "infrastructure_files": list(infrastructure),
         "cones": cone_dicts,
