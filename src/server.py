@@ -599,17 +599,11 @@ async def get_modules(
 
         modules = []
         for cid, cone in cones.items():
-            deps = compute_depends_on_cones(
-                cid, cone.get("shared_deps", []), cones,
-            )
             modules.append({
                 "module_id": cid,
-                "name": _friendly_name(cid),
                 "file_count": len(cone.get("exclusive_files", [])),
                 "token_count": cone.get("token_count", 0),
                 "layer": cone.get("layer", 0),
-                "depends_on": deps,
-                "directory_hint": _dir_hint(cone.get("exclusive_files", [])),
             })
 
         return {
@@ -741,6 +735,107 @@ async def get_function_deps(
         "file": file,
         "dependencies": file_deps,
     }
+
+
+# ---------------------------------------------------------------------------
+# Tool 3d: doc_operation (V5)
+# ---------------------------------------------------------------------------
+
+
+@mcp.tool(annotations={"readOnlyHint": True})
+async def doc_operation(
+    operation: Annotated[
+        Literal["get_template", "get_protocol"],
+        Field(description="Operation: 'get_template' for DETAIL/INDEX format, 'get_protocol' for workflow"),
+    ],
+) -> dict:
+    """Get documentation templates and protocols for DETAIL/INDEX generation.
+
+    Operations:
+    - get_template: Returns YAML front matter + HTML comment format for DETAIL and INDEX docs
+    - get_protocol: Returns the three-step DETAIL protocol and INDEX assembly rules
+    """
+    if operation == "get_template":
+        return {
+            "status": "success",
+            "detail_template": {
+                "yaml_front_matter": (
+                    "---\n"
+                    "module: {module_id}\n"
+                    "file: {filepath}\n"
+                    "token_count: {token_count}\n"
+                    "layer: {layer}\n"
+                    "---"
+                ),
+                "html_markers": {
+                    "module_start": "<!-- module:{module_id} -->",
+                    "module_end": "<!-- /module:{module_id} -->",
+                    "file_start": "<!-- file:{filepath} -->",
+                    "file_end": "<!-- /file:{filepath} -->",
+                    "index_fragment": "<!-- index-fragment:{module_id} -->",
+                },
+                "sections": [
+                    "## Functions (Step 1: function descriptions)",
+                    "## Dependencies (Step 2: cross-file calls from get_function_deps)",
+                    "## Index Fragment (Step 3: summary paragraph for INDEX assembly)",
+                ],
+            },
+            "index_template": {
+                "yaml_front_matter": (
+                    "---\n"
+                    "project: {project_id}\n"
+                    "total_modules: {total_modules}\n"
+                    "generated_by: codebase-explorer\n"
+                    "---"
+                ),
+                "assembly_rule": "INDEX is assembled by concatenating all Step 3 INDEX fragments from DETAIL sub-agents. No separate Agent rewrites the INDEX.",
+                "format": (
+                    "<!-- index:start -->\n"
+                    "# {project_name} Architecture\n\n"
+                    "{concatenated_index_fragments}\n"
+                    "<!-- index:end -->"
+                ),
+            },
+        }
+
+    if operation == "get_protocol":
+        return {
+            "status": "success",
+            "detail_protocol": {
+                "name": "Three-Step DETAIL Protocol",
+                "steps": [
+                    {
+                        "step": 1,
+                        "name": "Function Descriptions",
+                        "input": "Source file content",
+                        "output": "Function names, signatures, and purpose descriptions",
+                        "tool": "Read source file directly",
+                    },
+                    {
+                        "step": 2,
+                        "name": "Dependency Analysis",
+                        "input": "get_function_deps(file=filepath)",
+                        "output": "Cross-file call relationships with target functions",
+                        "tool": "get_function_deps",
+                    },
+                    {
+                        "step": 3,
+                        "name": "INDEX Fragment",
+                        "input": "Steps 1-2 output",
+                        "output": "One paragraph summarizing this module for INDEX assembly",
+                        "tool": "Agent writes <!-- index-fragment:{module_id} --> block",
+                    },
+                ],
+                "token_budget_rule": "Stop if cumulative tokens exceed module token_count from get_modules",
+            },
+            "index_assembly": {
+                "method": "Direct concatenation of all index-fragment blocks from DETAIL outputs",
+                "no_rewrite": True,
+                "format": "Fragments ordered by module layer (low to high)",
+            },
+        }
+
+    return {"status": "error", "message": f"Unknown operation: {operation}"}
 
 
 # ---------------------------------------------------------------------------
