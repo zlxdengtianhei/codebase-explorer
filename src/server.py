@@ -599,11 +599,15 @@ async def get_modules(
 
         modules = []
         for cid, cone in cones.items():
+            deps = compute_depends_on_cones(
+                cid, cone.get("shared_deps", []), cones,
+            )
             modules.append({
                 "module_id": cid,
                 "file_count": len(cone.get("exclusive_files", [])),
                 "token_count": cone.get("token_count", 0),
                 "layer": cone.get("layer", 0),
+                "depends_on": deps,
             })
 
         return {
