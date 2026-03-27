@@ -83,12 +83,18 @@ f) Write the complete DETAIL.md to $REPO_ABS/.codebase-docs/{module_id}/DETAIL.m
    Format: YAML front matter + <!-- module:{module_id} --> + per-file sections + index-fragment + <!-- end:{module_id} --> + <!-- codebase-explorer: end -->
 g) After writing docs, call submit_analysis(task_id=..., status="complete", output_files=[...])
 
-## Phase 4: Assemble INDEX + Review
+## Phase 4: Assemble INDEX + Review & Reorganize
 1. Call doc_operation(operation="update_index") to assemble INDEX.md from all DETAIL index-fragment blocks.
-2. Review the generated INDEX.md: Are module names functional (e.g., "Request Handling") or just directory names?
-3. If modules need reorganization, use doc_operation("move_detail") or doc_operation("merge_modules").
-4. Re-run doc_operation(operation="update_index") if any changes were made.
-5. Call submit_analysis(task_id="index_assembly", status="complete", output_files=["INDEX.md"]) to persist checkpoint.
+2. Read the generated INDEX.md. MANDATORY REVIEW:
+   a) For each module, call doc_operation(operation="list_module_files", module_id=X) to see its files.
+   b) Evaluate: Do the files in each module belong together functionally? Is the module name accurate?
+   c) Check: Are there modules mixing framework infrastructure (typing, logging, signals) with application code?
+   d) Document your review findings explicitly (e.g., "Module X looks coherent because..." or "Module Y mixes concerns because...").
+3. If any module has poor cohesion or misleading name:
+   - Use doc_operation("move_detail", source_module=..., target_module=..., filepath=...) to relocate misplaced files
+   - Use doc_operation("merge_modules", source=..., target=...) if two modules should be combined
+   - Re-run doc_operation(operation="update_index") after reorganization
+4. Call submit_analysis(task_id="index_assembly", status="complete", output_files=["INDEX.md"]) to persist checkpoint.
 The INDEX should have: YAML front matter + Mermaid module dependency graph + per-module summaries.
 
 ## CRITICAL RULES:
@@ -108,6 +114,7 @@ The INDEX should have: YAML front matter + Mermaid module dependency graph + per
 - Module names in docs should be FUNCTIONAL (e.g., "Application Core", "JSON Serialization"), NOT directory names (e.g., "src/flask/")
 - Call submit_analysis after completing EACH task to enable checkpoint recovery
 - Token budget: check token_count per file from get_modules(module_id=X). Scale doc depth proportionally.
+- Phase 4 REVIEW IS MANDATORY: You MUST call list_module_files for each module and document your review of module coherence before finalizing INDEX.
 PROMPT_EOF
 
 echo "--- Step 2: Running E2E via Claude Code self-invocation ---"

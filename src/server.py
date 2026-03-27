@@ -1168,7 +1168,9 @@ async def doc_operation(
             dag_data = json.loads(dag_path.read_text(encoding="utf-8"))
             cd = json.loads(cones_path.read_text(encoding="utf-8"))
             mod_graph = build_module_level_graph(
-                cd.get("cones", {}), dag_data.get("edges", []),
+                cd.get("cones", {}),
+                dag_data.get("edges", []),
+                infrastructure_files=cd.get("infrastructure_files", []),
             )
             mermaid_block = (
                 "\n```mermaid\n"

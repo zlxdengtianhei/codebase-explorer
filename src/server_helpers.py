@@ -326,15 +326,17 @@ def compute_inter_module_deps_from_dag(
 def build_module_level_graph(
     cones: dict,
     dag_edges: list[dict],
+    infrastructure_files: Sequence[str] | None = None,
 ) -> nx.DiGraph:
     """Build a module-level aggregated graph from file-level DAG edges.
 
-    Nodes = cone IDs, edges = aggregated cross-module dependencies with
-    weight = number of file-level edges between the two modules.
+    Nodes = cone IDs (+ optional "Infrastructure" node), edges = aggregated
+    cross-module dependencies with weight = number of file-level edges.
     """
     file_to_cone = build_file_to_cone_map(cones)
+    infra_set = set(infrastructure_files or [])
 
-    # Count cross-module edges
+    # Count cross-module edges (including cone→Infrastructure)
     edge_weights: dict[tuple[str, str], int] = {}
     for edge in dag_edges:
         src_cone = file_to_cone.get(edge["source"])
@@ -342,10 +344,15 @@ def build_module_level_graph(
         if src_cone and tgt_cone and src_cone != tgt_cone:
             key = (src_cone, tgt_cone)
             edge_weights[key] = edge_weights.get(key, 0) + 1
+        elif src_cone and not tgt_cone and edge["target"] in infra_set:
+            key = (src_cone, "Infrastructure")
+            edge_weights[key] = edge_weights.get(key, 0) + 1
 
     graph = nx.DiGraph()
     for cone_id in cones:
         graph.add_node(cone_id)
+    if infra_set and any(t == "Infrastructure" for _, t in edge_weights):
+        graph.add_node("Infrastructure")
     for (src, tgt), weight in edge_weights.items():
         graph.add_edge(src, tgt, weight=weight)
 
