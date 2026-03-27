@@ -7,16 +7,17 @@ mkdir -p .cc_test_logs
 
 # Step 1: 跑 codebase-explorer MCP 分析 scrapy
 env -u CLAUDECODE claude \
-  -p "你是 codebase-explorer 的 E2E 测试器。请依次执行以下操作并汇总所有结果：
-1. 调用 analyze_codebase(path='test_repos/scrapy', force_reindex=true)
-2. 调用 get_modules()（无参数，获取 summary）。注意观察 grouping 和 token_budget 字段。
-3. 从 summary 的 modules 列表中，选 file_count 最大且 module_id 不含 testing/docs/scrapydocs 的模块，调用 get_modules(module_id=该模块ID)
-4. 从该模块详情的 files 列表中，选 token_count 最大的 .py 文件（排除 __init__.py），调用 get_function_deps(file=该文件)
-5. 调用 get_dependency_graph()（默认 scope=project）
-6. 调用 doc_operation(operation='get_template') 获取 DETAIL/INDEX 格式模板
-7. 调用 doc_operation(operation='get_protocol') 获取三步协议
-8. 调用 doc_operation(operation='merge_modules', source_module='步骤3中模块ID', target_module='从summary中选另一个模块ID') 演示模块合并
-将每一步的完整返回结果原样输出，用 --- 分隔。" \
+  -p "你是 codebase-explorer 的 E2E 测试器。请依次执行以下操作，每步输出完整的工具返回 JSON（不要省略字段）：
+1. analyze_codebase(path='test_repos/scrapy', force_reindex=true) — 输出时注意标注 output_dir 和持久化文件路径
+2. get_modules() — 输出完整 JSON，注意包含 grouping（含 GroupingStrategy protocol 接口和 available_strategies）和 token_budget 字段
+3. 从 modules 中选 file_count 最大且 module_id 不含 testing/docs/scrapydocs 的模块 → get_modules(module_id=该ID)
+4. 从该模块 files 中选 token_count 最大的 .py（排除 __init__.py）→ get_function_deps(file=该文件)
+5. get_dependency_graph()
+6. doc_operation(operation='get_template') — 注意输出 YAML front matter 和 HTML comment 标记
+7. doc_operation(operation='get_protocol') — 注意输出三步协议和 INDEX 拼合规则
+8. doc_operation(operation='merge_modules', source_module='步骤3模块', target_module='从summary另选一个模块')
+
+输出要求：每步先写步骤号，然后原样粘贴完整 JSON 返回值，不要省略或改写任何字段。用 --- 分隔。" \
   --dangerously-skip-permissions \
   --max-turns 20 \
   --output-format json \
