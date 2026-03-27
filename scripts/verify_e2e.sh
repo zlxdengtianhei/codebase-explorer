@@ -9,9 +9,9 @@ mkdir -p .cc_test_logs
 env -u CLAUDECODE claude \
   -p "你是 codebase-explorer 的 E2E 测试器。请依次执行以下操作并汇总所有结果：
 1. 调用 analyze_codebase(path='test_repos/scrapy', force_reindex=true)
-2. 调用 get_modules()（无参数，获取 summary）
-3. 从 summary 中选第一个模块，调用 get_modules(module_id=该模块ID)
-4. 从该模块的文件列表中选第一个 .py 文件，调用 get_function_deps(file=该文件)
+2. 调用 get_modules()（无参数，获取 summary）。注意观察 grouping 和 token_budget 字段。
+3. 从 summary 的 modules 列表中，选 file_count 最大且名称不含 testing/docs/scrapydocs 的模块，调用 get_modules(module_id=该模块ID)
+4. 从该模块详情的 files 列表中，选 token_count 最大的 .py 文件（排除 __init__.py），调用 get_function_deps(file=该文件)
 5. 调用 get_dependency_graph()（默认 scope=project）
 将每一步的完整返回结果原样输出，用 --- 分隔。" \
   --dangerously-skip-permissions \

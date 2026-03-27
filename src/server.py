@@ -23,6 +23,7 @@ from pydantic import Field
 from src.budget.estimator import estimate_tokens_from_chars
 from src.doc.depth_planner import build_task_manifest
 from src.graph.feature_cone import extract_feature_cones, FeatureCone
+from src.graph.strategies import list_strategies
 from src.graph.weighted_graph import build_weighted_dependency_graph
 from src.parser.codebase import CodebaseParser, CodebaseParseError
 from src.server_helpers import (
@@ -616,7 +617,18 @@ async def get_modules(
             "total_modules": len(cones),
             "total_files": total_files,
             "total_tokens": total_tokens,
-            "strategy_used": "feature_cone",
+            "grouping": {
+                "strategy_used": "feature_cone",
+                "available_strategies": list_strategies(),
+                "interface": "GroupingStrategy protocol",
+                "config": "Set CODEBASE_EXPLORER_STRATEGY env var to switch algorithm",
+            },
+            "token_budget": {
+                "total_project_tokens": total_tokens,
+                "budget_limit": 100_000,
+                "within_budget": total_tokens <= 100_000,
+                "stop_condition": "Modules exceeding budget are split into sub-tasks in task_manifest",
+            },
             "modules": modules,
             "infrastructure": {
                 "file_count": len(infra_files),
