@@ -1,529 +1,546 @@
-# MCP Tools Reference
+# MCP Tools Reference (V5)
 
-> Load this file when you need full parameter specifications and return values.
+> Load this file when you need full parameter specifications and return values
+> for the 9 V5 MCP tools.
 
 ## Table of Contents
 
-1. [Indexing and Analysis Tools](#1-indexing-and-analysis-tools)
-2. [Budget and Chunking Tools](#2-budget-and-chunking-tools)
-3. [Task Management Tools](#3-task-management-tools)
-4. [Checkpoint and Cross-Reference Tools](#4-checkpoint-and-cross-reference-tools)
-5. [Document Generation Tools](#5-document-generation-tools)
-6. [Error Codes](#6-error-codes)
+1. [Tool Overview](#1-tool-overview)
+2. [analyze_codebase](#2-analyze_codebase)
+3. [get_structure](#3-get_structure)
+4. [get_modules](#4-get_modules)
+5. [get_function_deps](#5-get_function_deps)
+6. [doc_operation](#6-doc_operation)
+7. [get_dependency_graph](#7-get_dependency_graph)
+8. [get_progress](#8-get_progress)
+9. [get_file_tokens](#9-get_file_tokens)
+10. [submit_analysis](#10-submit_analysis)
+11. [Error Reference](#11-error-reference)
 
 ---
 
-## 1. Indexing and Analysis Tools
+## 1. Tool Overview
 
-### index_codebase
+V5 has exactly **9 tools**. There is no SQLite database, no Jinja2 templates, and
+no `get_feature_cones` tool (use `get_modules` instead). All state is stored as JSON
+files under `.codebase-analysis/`. LLM agents write documentation directly.
 
-Parse a codebase, build dependency graph, run Louvain community detection.
+| Tool | Phase | Purpose |
+|------|-------|---------|
+| `analyze_codebase` | 1 | Full pipeline: parse → graph → cones → 6 JSON files |
+| `get_structure` | 1-4 | Query file/function/class metadata |
+| `get_modules` | 2-4 | Module listing (summary or detail with file lists) |
+| `get_function_deps` | 3 | Cross-file function call dependencies per file |
+| `doc_operation` | 3-4 | Template/protocol info + INDEX assembly + reorganization |
+| `get_dependency_graph` | 3-4 | Mermaid dependency graph (project, cone, or file scope) |
+| `get_progress` | any | Check task completion status for recovery |
+| `get_file_tokens` | 3 | Per-file token estimates |
+| `submit_analysis` | 3-4 | Mark task complete, update state.json |
 
-**Parameters**:
+---
+
+## 2. analyze_codebase
+
+Full analysis pipeline entry point. Parses the codebase, builds a weighted
+dependency graph, extracts feature cones via SCC + DAG analysis, estimates
+tokens per file (chars / 4), and writes 6 JSON files plus state.json.
+
+**Parameters:**
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
 | `path` | `str` | Yes | -- | Absolute path to the codebase root directory |
 | `languages` | `list["python"\|"typescript"\|"javascript"] \| null` | No | `null` | Languages to analyze. null = auto-detect |
+| `output_dir` | `str \| null` | No | `null` | Output directory. null = `{path}/.codebase-analysis/` |
+| `force_reindex` | `bool` | No | `false` | Re-run even if output files already exist |
+| `exclude_paths` | `list[str] \| null` | No | `null` | Additional directories/files to exclude (e.g. `["vendor/", "generated/"]`) |
+| `include_tests` | `bool` | No | `false` | Include test directories (tests/, test/) in analysis |
 
-**Returns**:
+**Returns:**
 ```json
 {
   "status": "success",
-  "summary": "Indexed 42 files, 156 functions, 28 classes",
+  "project_id": "abc123",
+  "output_dir": "/path/.codebase-analysis/",
+  "files_analyzed": 127,
+  "feature_cones_found": 9,
+  "task_count": 15,
+  "total_tokens": 45000,
+  "files": {
+    "01_structure": "/path/.codebase-analysis/01_structure.json",
+    "02_dag": "/path/.codebase-analysis/02_dag.json",
+    "03_feature_cones": "/path/.codebase-analysis/03_feature_cones.json",
+    "04_file_tokens": "/path/.codebase-analysis/04_file_tokens.json",
+    "05_task_manifest": "/path/.codebase-analysis/05_task_manifest.json"
+  },
+  "state_file": "/path/.codebase-analysis/state.json"
+}
+```
+
+**Output files written to `.codebase-analysis/`:**
+
+| File | Content |
+|------|---------|
+| `01_structure.json` | File list, function/class metadata |
+| `02_dag.json` | Weighted dependency edges + Mermaid graph |
+| `03_feature_cones.json` | Feature cone groupings + layer structure + cohesion_score |
+| `04_file_tokens.json` | Per-file token estimates (chars / 4) |
+| `05_task_manifest.json` | Agent task queue |
+| `06_function_deps.json` | Cross-file function call relationships |
+| `state.json` | Task status + coverage metrics |
+
+**Notes:** Idempotent unless `force_reindex=true`. Must be called before any other tool.
+Token estimation: characters / 4 (uniform for all languages). Test directories are excluded
+by default; set `include_tests=true` to include them.
+
+**Example:**
+```
+analyze_codebase(path="/home/user/flask", languages=["python"], force_reindex=true)
+```
+
+---
+
+## 3. get_structure
+
+Query code structure metadata from `01_structure.json`. Three mutually exclusive
+query modes: module, file, or function.
+
+**Parameters:**
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `module` | `str \| null` | No | `null` | Module/cone name — returns all files in that module |
+| `file` | `str \| null` | No | `null` | File path — returns detailed file info |
+| `function` | `str \| null` | No | `null` | Function name — returns signature + dependencies |
+
+Pass at most one parameter at a time. Passing none returns project summary.
+
+**Returns (project summary — no params):**
+```json
+{
+  "status": "success",
   "data": {
-    "project_id": "proj_abc123",
+    "project_id": "abc123",
     "file_count": 42,
     "function_count": 156,
     "class_count": 28,
     "languages": ["python"],
-    "module_count": 6
+    "cone_count": 9
   }
 }
 ```
 
-**Notes**: Idempotent. Timeout: 120s. Must be called before any other tool.
-
-**Example**:
-```
-index_codebase(path="/home/user/flask", languages=["python"])
-```
+**Precondition:** `analyze_codebase` must have been called.
 
 ---
 
-### get_modules
+## 4. get_modules
 
-Get the list of detected modules after Louvain grouping.
+Query functional modules. Two modes:
+- **Summary** (no `module_id`): Returns compact list with metadata only (< 3KB). Use first to discover module IDs.
+- **Detail** (with `module_id`): Returns single module with full file list and token counts.
 
-**Parameters**:
-
-| Parameter | Type | Required | Default | Description |
-|-----------|------|----------|---------|-------------|
-| `project_id` | `str \| null` | No | `null` | Project ID. null = use latest |
-| `sort_by` | `"name"\|"size"\|"complexity"\|"dependency"` | No | `"name"` | Sort order. "dependency" = topological |
-
-**Returns**:
-```json
-{
-  "status": "success",
-  "data": {
-    "project_id": "proj_abc123",
-    "modules": [
-      {
-        "name": "core",
-        "file_count": 8,
-        "line_count": 2400,
-        "function_count": 45,
-        "class_count": 12,
-        "is_utility": false
-      }
-    ],
-    "total_modules": 6
-  }
-}
-```
-
-**Precondition**: `index_codebase` must have been called.
-
----
-
-### get_module_detail
-
-Get detailed information about a specific module.
-
-**Parameters**:
+**Parameters:**
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
-| `module_name` | `str` | Yes | -- | Name of the module to inspect |
-| `project_id` | `str \| null` | No | `null` | Project ID. null = latest |
+| `module_id` | `str \| null` | No | `null` | Module ID for detail view. null = summary of all modules |
 
-**Returns**:
+**Returns (summary — no module_id):**
 ```json
 {
   "status": "success",
-  "data": {
-    "name": "core",
-    "files": ["src/core/app.py", "src/core/models.py"],
-    "functions": [{"name": "create_app", "params": "(config: Config)", "file": "src/core/app.py"}],
-    "classes": [{"name": "Flask", "methods": ["run", "route"], "file": "src/core/app.py"}],
-    "dependencies": ["utils", "config"],
-    "dependents": ["api", "cli"],
-    "metrics": {"line_count": 2400, "complexity": 3.2},
-    "mermaid_graph": "graph TD\n  core --> utils\n  core --> config"
-  }
-}
-```
-
----
-
-### get_dependency_graph
-
-Get the dependency graph in Mermaid format.
-
-**Parameters**:
-
-| Parameter | Type | Required | Default | Description |
-|-----------|------|----------|---------|-------------|
-| `scope` | `"project"\|"module"` | No | `"project"` | Graph scope |
-| `target` | `str \| null` | No | `null` | Module name (required when scope="module") |
-| `project_id` | `str \| null` | No | `null` | Project ID. null = latest |
-
-**Returns**:
-```json
-{
-  "status": "success",
-  "data": {
-    "nodes": [{"name": "core", "type": "module"}],
-    "edges": [{"from": "api", "to": "core", "weight": 5}],
-    "circular_deps": [["models", "schemas"]],
-    "mermaid_graph": "graph TD\n  api --> core\n  core --> utils"
-  }
-}
-```
-
----
-
-## 2. Budget and Chunking Tools
-
-### estimate_module_tokens
-
-Estimate token counts for module(s) using character/line heuristics.
-
-**Parameters**:
-
-| Parameter | Type | Required | Default | Description |
-|-----------|------|----------|---------|-------------|
-| `module_name` | `str \| null` | No | `null` | Module name. null = estimate all |
-| `project_id` | `str \| null` | No | `null` | Project ID. null = latest |
-
-**Returns**:
-```json
-{
-  "status": "success",
-  "data": {
-    "estimates": [
-      {"module": "core", "estimated_tokens": 28800,
-       "line_count": 2400, "file_count": 8, "language": "python"}
-    ],
-    "total_tokens": 92000
-  }
-}
-```
-
-**Heuristics**: Python ~4.2 chars/token, TypeScript/JavaScript ~3.8 chars/token.
-
----
-
-### create_analysis_plan
-
-Generate a chunked analysis plan with DAG topological ordering.
-
-**Parameters**:
-
-| Parameter | Type | Required | Default | Description |
-|-----------|------|----------|---------|-------------|
-| `project_id` | `str \| null` | No | `null` | Project ID. null = latest |
-| `max_tokens_per_batch` | `int` | No | `60000` | Max tokens per batch (10000-200000) |
-
-**Returns**:
-```json
-{
-  "status": "success",
-  "summary": "Created 8 analysis tasks in 4 layers",
-  "data": {
-    "tasks": [
-      {"batch": 0, "modules": ["utils", "config"],
-       "estimated_tokens": 12000, "reason": "leaf_modules"},
-      {"batch": 1, "modules": ["models"],
-       "estimated_tokens": 18000, "reason": "layer_1"}
-    ],
-    "total_batches": 4,
-    "total_modules": 8
-  }
-}
-```
-
-**Notes**: Idempotent. Leaf modules (no dependencies) are batched first.
-
----
-
-### check_budget_status
-
-Check whether the agent should stop and save progress.
-
-**Parameters**:
-
-| Parameter | Type | Required | Default | Description |
-|-----------|------|----------|---------|-------------|
-| `used_tokens` | `int` | Yes | -- | Tokens consumed so far |
-| `modules_completed` | `int` | No | `0` | Modules analyzed this session |
-| `pending_cross_refs` | `int` | No | `0` | Unresolved cross-references |
-| `elapsed_minutes` | `float` | No | `0.0` | Minutes since session start |
-
-**Returns**:
-```json
-{
-  "status": "success",
-  "data": {
-    "total_budget": 129000,
-    "used_tokens": 85000,
-    "remaining_tokens": 44000,
-    "usage_percent": 65.9,
-    "should_stop": false,
-    "stop_reason": ""
-  }
-}
-```
-
-**Stop conditions**:
-1. Token usage > 85% of budget
-2. Pending cross-references > 3 unanalyzed modules
-3. Elapsed time > 15 minutes
-
----
-
-## 3. Task Management Tools
-
-### get_next_batch
-
-Get the next batch of modules to analyze.
-
-**Parameters**:
-
-| Parameter | Type | Required | Default | Description |
-|-----------|------|----------|---------|-------------|
-| `project_id` | `str \| null` | No | `null` | Project ID. null = latest |
-| `batch_size` | `int` | No | `3` | Max modules per batch (1-10) |
-
-**Returns**:
-```json
-{
-  "status": "success",
-  "data": {
-    "batch_index": 2,
-    "modules": [
-      {"name": "services", "files": ["src/services/auth.py"],
-       "estimated_tokens": 24000,
-       "dependency_summaries": "# Module: utils\nDescription: ..."}
-    ],
-    "remaining_batches": 2,
-    "total_progress_percent": 50.0
-  }
-}
-```
-
-**Precondition**: `create_analysis_plan` must have been called.
-
----
-
-### submit_analysis
-
-Submit analysis results for a module.
-
-**Parameters**:
-
-| Parameter | Type | Required | Default | Description |
-|-----------|------|----------|---------|-------------|
-| `module_name` | `str` | Yes | -- | Module name |
-| `description` | `str` | Yes | -- | One-line description |
-| `public_interfaces` | `list[str]` | Yes | -- | Public function/class signatures |
-| `key_data_structures` | `list[str]` | Yes | -- | Important data structures |
-| `dependencies` | `list[str]` | Yes | -- | Module dependencies |
-| `patterns_identified` | `list[str]` | Yes | -- | Design patterns found |
-| `detailed_analysis` | `str \| null` | No | `null` | Full markdown analysis |
-| `mermaid_diagram` | `str \| null` | No | `null` | Internal structure diagram |
-| `token_count` | `int` | No | `0` | Tokens consumed for this analysis |
-| `project_id` | `str \| null` | No | `null` | Project ID. null = latest |
-
-**Returns**:
-```json
-{
-  "status": "success",
-  "summary": "Analysis for 'services' saved. 6/8 modules complete.",
-  "data": {
-    "result_id": "res_abc",
-    "modules_completed": 6,
-    "modules_remaining": 2,
-    "progress_percent": 75.0
-  }
-}
-```
-
----
-
-### get_analysis_status
-
-Get overall analysis progress and task status.
-
-**Parameters**:
-
-| Parameter | Type | Required | Default | Description |
-|-----------|------|----------|---------|-------------|
-| `project_id` | `str \| null` | No | `null` | Project ID. null = latest |
-
-**Returns**:
-```json
-{
-  "status": "success",
-  "data": {
-    "total_tasks": 8,
-    "pending": 2,
-    "in_progress": 0,
-    "completed": 6,
-    "failed": 0,
-    "completed_modules": ["utils", "config", "models"],
-    "errors": [],
-    "progress_percent": 75.0
-  }
-}
-```
-
----
-
-## 4. Checkpoint and Cross-Reference Tools
-
-### save_checkpoint
-
-Save an analysis checkpoint for session resume.
-
-**Parameters**:
-
-| Parameter | Type | Required | Default | Description |
-|-----------|------|----------|---------|-------------|
-| `phase` | `"indexing"\|"module_analysis"\|"cross_reference"\|"doc_generation"` | Yes | -- | Current phase |
-| `status` | `"in_progress"\|"completed"\|"interrupted"` | No | `"in_progress"` | Status |
-| `tokens_processed` | `int` | No | `0` | Total tokens processed |
-| `project_id` | `str \| null` | No | `null` | Project ID. null = latest |
-
-**Returns**:
-```json
-{
-  "status": "success",
-  "summary": "Checkpoint saved: 6/8 modules analyzed",
-  "data": {
-    "checkpoint_id": "ckpt_abc",
-    "analyzed_modules": ["utils", "config"],
-    "pending_modules": ["api", "cli"],
-    "progress_percent": 75.0
-  }
-}
-```
-
----
-
-### load_checkpoint
-
-Load an analysis checkpoint to resume a previous session.
-
-**Parameters**:
-
-| Parameter | Type | Required | Default | Description |
-|-----------|------|----------|---------|-------------|
-| `checkpoint_id` | `str \| null` | No | `null` | Checkpoint ID. null = latest |
-| `project_id` | `str \| null` | No | `null` | Project ID. null = latest |
-
-**Returns**:
-```json
-{
-  "status": "success",
-  "summary": "Restored checkpoint: 6/8 modules analyzed",
-  "data": {
-    "checkpoint_id": "ckpt_abc",
-    "phase": "module_analysis",
-    "analyzed_modules": ["utils", "config"],
-    "pending_modules": ["api", "cli"],
-    "module_summaries": {
-      "utils": {"description": "Shared utilities", "public_interfaces": ["sanitize()"]}
-    },
-    "progress_percent": 75.0,
-    "tokens_processed": 45000
-  }
-}
-```
-
----
-
-### get_cross_ref_context
-
-Build cross-reference context from dependency summaries.
-
-**Parameters**:
-
-| Parameter | Type | Required | Default | Description |
-|-----------|------|----------|---------|-------------|
-| `module_name` | `str` | Yes | -- | Module being analyzed |
-| `max_tokens` | `int` | No | `16000` | Max tokens for context (500-30000) |
-| `project_id` | `str \| null` | No | `null` | Project ID. null = latest |
-
-**Returns**:
-```json
-{
-  "status": "success",
-  "data": {
-    "target_module": "services",
-    "context": "# Module: utils\nDescription: Shared utilities...\n---\n# Module: models\n...",
-    "dependencies_resolved": 3,
-    "dependencies_pending": 1,
-    "context_tokens": 8500
-  }
-}
-```
-
-**Notes**: Returns summaries (not source code) of dependencies, ordered by
-reference weight. Unanalyzed dependencies show file list and "pending" status.
-
----
-
-## 5. Document Generation Tools
-
-### plan_doc_structure
-
-Plan the full documentation tree with dynamic depth decisions.
-
-**Parameters**:
-
-| Parameter | Type | Required | Default | Description |
-|-----------|------|----------|---------|-------------|
-| `project_id` | `str \| null` | No | `null` | Project ID. null = latest |
-
-**Returns**:
-```json
-{
-  "status": "success",
-  "summary": "Planned 12 documents across 3 depth levels",
-  "data": {
-    "doc_tree": [
-      {"path": "INDEX.md", "level": 0, "target": "root",
-       "token_budget": 1200, "parent": null,
-       "children": ["core/OVERVIEW.md", "utils/OVERVIEW.md"]},
-      {"path": "core/OVERVIEW.md", "level": 1, "target": "core",
-       "token_budget": 2000, "parent": "INDEX.md",
-       "children": ["core/app/DETAIL.md"]}
-    ],
-    "total_docs": 12,
-    "max_depth": 3,
-    "depth_decisions": {
-      "core": {"depth": 2, "reason": "1453 lines, 28 components",
-               "split_strategy": "subpackage"},
-      "utils": {"depth": 1, "reason": "utility module, 200 lines",
-                "split_strategy": "file"}
+  "total_modules": 9,
+  "total_files": 42,
+  "total_tokens": 45000,
+  "grouping": {
+    "strategy_used": "feature_cone",
+    "available_strategies": ["feature_cone", "louvain"]
+  },
+  "token_budget": {
+    "total_project_tokens": 45000,
+    "budget_limit": 100000,
+    "within_budget": true
+  },
+  "inter_module_deps": {
+    "total_edges": 12,
+    "modules_with_deps": 7
+  },
+  "modules": [
+    {
+      "module_id": "routing",
+      "name": "Routing",
+      "file_count": 3,
+      "token_count": 7200,
+      "layer": 1,
+      "depends_on": ["globals", "exceptions"],
+      "directory_hint": "flask/"
     }
+  ],
+  "infrastructure": {
+    "file_count": 2,
+    "token_count": 1200
   }
 }
 ```
 
-**Precondition**: All modules must be analyzed (submit_analysis complete).
-
----
-
-### generate_doc
-
-Generate a single document using Jinja2 templates.
-
-**Parameters**:
-
-| Parameter | Type | Required | Default | Description |
-|-----------|------|----------|---------|-------------|
-| `target` | `str` | Yes | -- | Module name or "root" for INDEX |
-| `level` | `int` | Yes | -- | 0=INDEX, 1=OVERVIEW, 2+=DETAIL (0-5) |
-| `token_budget` | `int` | Yes | -- | Budget for this document (>= 200) |
-| `parent_path` | `str \| null` | No | `null` | Parent doc path for back-links |
-| `children` | `list[str] \| null` | No | `null` | Child doc paths for forward-links |
-| `project_id` | `str \| null` | No | `null` | Project ID. null = latest |
-
-**Returns**:
+**Returns (detail — specific module_id):**
 ```json
 {
   "status": "success",
-  "data": {
-    "path": "core/OVERVIEW.md",
-    "content": "# Core Module\n\n> ...",
-    "actual_tokens": 1850,
-    "level": 1,
-    "target": "core"
-  }
+  "module_id": "routing",
+  "name": "Routing",
+  "layer": 1,
+  "depends_on": ["globals", "exceptions"],
+  "files": [
+    {"filepath": "flask/routing.py", "token_count": 2800},
+    {"filepath": "flask/map.py", "token_count": 2100}
+  ],
+  "internal_layers": [["flask/map.py"], ["flask/routing.py"]],
+  "token_count": 7200
 }
 ```
 
-**Template selection**:
-- Level 0: `index.md.j2`
-- Level 1: `overview.md.j2`
-- Level 2+: `detail.md.j2` (universal, works at any depth)
+**Precondition:** `analyze_codebase` must have been called.
 
 ---
 
-## 6. Error Codes
+## 5. get_function_deps
+
+Get cross-file function-level dependencies for a specific file. Only cross-file
+calls are returned; same-file internal calls are excluded.
+
+Use during Phase 3 DETAIL generation to populate the 依赖关系 section.
+
+**Parameters:**
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `file` | `str` | Yes | -- | File path to query function dependencies for |
+| `module_id` | `str \| null` | No | `null` | Optional: limit results to within-module dependencies only |
+
+**Returns:**
+```json
+{
+  "status": "success",
+  "file": "flask/routing.py",
+  "dependencies": [
+    {
+      "source_function": "add_url_rule",
+      "calls": [
+        {
+          "target_file": "flask/globals.py",
+          "target_function": "current_app"
+        }
+      ]
+    }
+  ]
+}
+```
+
+If no cross-file dependencies are found:
+```json
+{
+  "status": "success",
+  "file": "flask/globals.py",
+  "dependencies": [],
+  "message": "No cross-file function dependencies found for this file"
+}
+```
+
+**Precondition:** `analyze_codebase` must have been called. Reads from `06_function_deps.json`.
+If that file is missing, re-run `analyze_codebase(force_reindex=true)`.
+
+---
+
+## 6. doc_operation
+
+Documentation operations for DETAIL/INDEX generation and Phase 4 reorganization.
+
+**Parameters:**
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `operation` | `str` | Yes | -- | One of: `get_template`, `get_protocol`, `move_detail`, `merge_modules`, `split_module`, `update_index`, `reorder_modules` |
+| `source_module` | `str \| null` | No | `null` | Source module ID (for `move_detail`, `merge_modules`, `split_module`) |
+| `target_module` | `str \| null` | No | `null` | Target module ID (for `move_detail`, `merge_modules`) |
+| `file_path` | `str \| null` | No | `null` | File path to move (for `move_detail`) |
+| `new_order` | `list[str] \| null` | No | `null` | Ordered list of module IDs (for `reorder_modules`) |
+
+### Operation: get_template
+
+Returns YAML front matter format and HTML marker format for DETAIL and INDEX documents.
+
+```
+doc_operation(operation="get_template")
+```
+
+Returns the required YAML front matter fields, HTML marker patterns
+(`<!-- module:{id} -->`, `<!-- file:{path} -->`, `<!-- index-fragment:{id} -->`),
+and the three sections each file block must contain.
+
+### Operation: get_protocol
+
+Returns the three-step DETAIL protocol and INDEX assembly rules.
+
+```
+doc_operation(operation="get_protocol")
+```
+
+Returns the three-step per-file protocol:
+1. Step 1 — Read source file and write function/class descriptions
+2. Step 2 — Call `get_function_deps` and write cross-file dependency relationships
+3. Step 3 — Write `<!-- index-fragment:{module_id} -->` block (after all files done)
+
+Also returns the token budget accumulation rule and INDEX assembly method
+(direct concatenation of all index-fragment blocks).
+
+### Operation: update_index
+
+Assembles INDEX.md from `<!-- index-fragment -->` blocks in all DETAIL files.
+Also builds a module-level Mermaid graph from `02_dag.json`.
+
+```
+doc_operation(operation="update_index")
+```
+
+Returns:
+```json
+{
+  "status": "success",
+  "operation": "update_index",
+  "index_path": "/path/.codebase-docs/INDEX.md",
+  "module_count": 9,
+  "message": "INDEX.md regenerated with 9 sections."
+}
+```
+
+### Operation: move_detail
+
+Move a DETAIL file from one module directory to another.
+
+```
+doc_operation(
+  operation="move_detail",
+  source_module="old_module_id",
+  target_module="new_module_id",
+  file_path="DETAIL.md"
+)
+```
+
+Requires: `source_module`, `target_module`, `file_path`
+
+### Operation: merge_modules
+
+Move all files from `source_module` directory into `target_module` directory.
+
+```
+doc_operation(
+  operation="merge_modules",
+  source_module="module_a",
+  target_module="module_b"
+)
+```
+
+Requires: `source_module`, `target_module`
+
+### Operation: split_module
+
+List all files in a module directory (to inspect before moving files out).
+This is a read-only listing operation — use `move_detail` to actually reassign files.
+
+```
+doc_operation(operation="split_module", source_module="large_module")
+```
+
+Returns list of files in the module. Use `move_detail` after inspection.
+
+### Operation: reorder_modules
+
+Set the display order for modules in the next INDEX assembly.
+
+```
+doc_operation(operation="reorder_modules", new_order=["module_a", "module_b", "module_c"])
+```
+
+Saves order to `doc-index.json`. Call `update_index` afterward to apply.
+
+**Precondition for editing operations:** `analyze_codebase` must have been called.
+Read-only operations (`get_template`, `get_protocol`) work without a project.
+
+---
+
+## 7. get_dependency_graph
+
+Generate a Mermaid dependency graph from `02_dag.json`.
+
+**Parameters:**
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `scope` | `"project"\|"cone"\|"module"\|"file"` | No | `"project"` | Graph scope (`cone` and `module` are aliases) |
+| `target` | `str \| null` | No | `null` | Cone ID or file path (required when scope is `cone`/`module`/`file`) |
+| `include_weights` | `bool` | No | `false` | Include edge weight labels |
+| `hops` | `int` | No | `1` | N-hop neighbors for scope=file |
+
+**Returns:**
+```json
+{
+  "status": "success",
+  "nodes": ["routing", "globals", "app"],
+  "edges": [
+    {"source": "app", "target": "routing", "weight": 5}
+  ],
+  "circular_deps": [],
+  "mermaid_graph": "graph TD\n  app --> routing\n  routing --> globals"
+}
+```
+
+**Scope behavior:**
+- `scope="project"` — Module-level aggregated graph (all modules as nodes)
+- `scope="cone"` or `scope="module"` — File-level graph within a specific module (`target` = module ID)
+- `scope="file"` — N-hop neighbor subgraph centered on a single file (`target` = file path)
+
+**Precondition:** `analyze_codebase` must have been called.
+
+---
+
+## 8. get_progress
+
+Query task completion status from `state.json`. Use for recovery and resume.
+
+**Parameters:**
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `project_id` | `str \| null` | No | `null` | Project ID. null = most recent `analyze_codebase` result |
+
+**Returns:**
+```json
+{
+  "status": "success",
+  "project_id": "abc123",
+  "tasks": {
+    "total": 15,
+    "pending": 3,
+    "in_progress": 2,
+    "complete": 10,
+    "failed": 0,
+    "progress_percent": 66.67
+  },
+  "documentation": {
+    "output_dir": "/path/.codebase-docs/",
+    "index_written": false,
+    "details_written": 10,
+    "snippets_written": 0,
+    "total_planned": 15,
+    "source_file_coverage_percent": 78.5
+  },
+  "next_pending_tasks": ["task_routing", "task_sessions"]
+}
+```
+
+**Precondition:** `analyze_codebase` must have been called.
+
+---
+
+## 9. get_file_tokens
+
+Query per-file token estimates from `04_file_tokens.json`.
+
+**Parameters:**
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `file` | `str \| null` | No | `null` | File path — returns token info for that file |
+| `module` | `str \| null` | No | `null` | Module/cone ID — returns all files in module + aggregate stats |
+
+Pass at most one parameter. Passing none returns all files.
+
+**Returns (module mode):**
+```json
+{
+  "status": "success",
+  "cone_id": "routing",
+  "file_count": 3,
+  "total_tokens": 7200,
+  "avg_tokens_per_file": 2400.0,
+  "max_file_tokens": 2800,
+  "files": [
+    {
+      "filepath": "flask/routing.py",
+      "language": "python",
+      "char_count": 11200,
+      "line_count": 382,
+      "estimated_tokens": 2800,
+      "method": "chars"
+    }
+  ]
+}
+```
+
+**Token estimation:** `estimated_tokens = char_count / 4` (uniform for all languages).
+
+**Precondition:** `analyze_codebase` must have been called.
+
+---
+
+## 10. submit_analysis
+
+Task completion callback. Called by DETAIL agents after writing documentation files.
+Atomically updates `state.json` with completion status and coverage metrics.
+
+**Parameters:**
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `task_id` | `str` | Yes | -- | Task ID from `05_task_manifest.json` |
+| `detail_paths` | `list[str]` | Yes | -- | Absolute paths to written DETAIL files |
+| `snippet_paths` | `list[str]` | Yes | -- | Absolute paths to written SNIPPET files (pass `[]` if none) |
+| `tokens_used` | `int` | Yes | -- | Agent self-reported token consumption |
+| `source_files_covered` | `list[str] \| null` | No | `null` | Source files documented in this task |
+| `project_id` | `str \| null` | No | `null` | Project ID. null = most recent `analyze_codebase` result |
+
+**Returns:**
+```json
+{
+  "status": "success",
+  "task_id": "task_routing",
+  "tasks_remaining": 5,
+  "progress_percent": 66.67,
+  "source_file_coverage_percent": 78.5
+}
+```
+
+**Notes:**
+- All paths in `detail_paths` and `snippet_paths` must exist and be within the project directory
+- MCP automatically appends `<!-- codebase-explorer: end -->` marker if missing
+- For Phase 3 tasks: pass `snippet_paths=[]` (V5 does not use SNIPPET files)
+
+**Example:**
+```
+submit_analysis(
+  task_id="task_routing",
+  detail_paths=["/path/.codebase-docs/routing/DETAIL.md"],
+  snippet_paths=[],
+  tokens_used=3200,
+  source_files_covered=["flask/routing.py", "flask/map.py"]
+)
+```
+
+---
+
+## 11. Error Reference
 
 | Error | Tool(s) | Description | Recovery |
 |-------|---------|-------------|----------|
-| `PROJECT_NOT_FOUND` | All except `index_codebase` | No project indexed yet | Call `index_codebase` first |
-| `MODULE_NOT_FOUND` | `get_module_detail`, `submit_analysis` | Invalid module name | Check `get_modules` for valid names |
-| `PLAN_NOT_CREATED` | `get_next_batch`, `generate_doc` | Analysis plan missing | Call `create_analysis_plan` |
-| `ANALYSIS_INCOMPLETE` | `plan_doc_structure` | Not all modules analyzed | Complete pending analyses |
-| `INVALID_PATH` | `index_codebase` | Path does not exist | Provide valid absolute path |
-| `BUDGET_EXCEEDED` | `generate_doc` | Content exceeds token budget | Reduce scope or increase budget |
-| `CHECKPOINT_NOT_FOUND` | `load_checkpoint` | No checkpoint exists | Start from Phase 1 |
-| `TASK_CLAIMED` | `get_next_batch` | Module locked by another agent | Skip to next module in batch |
-| `UNSUPPORTED_LANGUAGE` | `index_codebase` | Language not supported | Use python/typescript/javascript |
-| `TIMEOUT` | `index_codebase` | Indexing exceeded 120s | Index a smaller directory |
+| `PROJECT_NOT_FOUND` | All except `analyze_codebase` | No analysis output exists | Call `analyze_codebase` first |
+| `MODULE_NOT_FOUND` | `get_modules`, `get_file_tokens` | Invalid module ID | Call `get_modules()` to list valid IDs |
+| `FILE_NOT_FOUND` | `get_structure`, `get_file_tokens`, `get_function_deps` | File path not in index | Verify path is relative to project root |
+| `INVALID_PATH` | `analyze_codebase` | Path does not exist or is not a directory | Provide valid absolute path |
+| `TASK_NOT_FOUND` | `submit_analysis` | task_id not in manifest | Read `05_task_manifest.json` for valid IDs |
+| `TASK_ALREADY_COMPLETE` | `submit_analysis` | Task was already submitted | Idempotent — safe to ignore |
+| `UNSUPPORTED_LANGUAGE` | `analyze_codebase` | No supported files found | Try with explicit `languages` param |
+| `TIMEOUT` | `analyze_codebase` | Parsing exceeded time limit | Index a smaller subdirectory |
+| `FUNCTION_DEPS_NOT_FOUND` | `get_function_deps` | `06_function_deps.json` missing | Re-run `analyze_codebase(force_reindex=true)` |
+| `PATH_TRAVERSAL_REJECTED` | `submit_analysis` | File is outside project directory | Use paths within project root only |

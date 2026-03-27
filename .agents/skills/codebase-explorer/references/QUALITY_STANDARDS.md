@@ -1,279 +1,172 @@
-# Quality Standards Reference
+# Quality Standards Reference (V5)
 
 > Load this file when you need to verify documentation quality or understand
 > the acceptance criteria for each phase.
 
 ## Table of Contents
 
-1. [Coverage Standards](#1-coverage-standards)
-2. [Link Validity Standards](#2-link-validity-standards)
-3. [Token Budget Compliance](#3-token-budget-compliance)
-4. [Dynamic Depth Validation](#4-dynamic-depth-validation)
-5. [Content Quality Checklist](#5-content-quality-checklist)
-6. [Phase Gate Criteria](#6-phase-gate-criteria)
+1. [INDEX.md Checklist](#1-indexmd-checklist)
+2. [DETAIL.md Checklist](#2-detailmd-checklist)
+3. [Coverage Standards](#3-coverage-standards)
+4. [Content Quality Standards](#4-content-quality-standards)
+5. [Phase Gate Criteria](#5-phase-gate-criteria)
 
 ---
 
-## 1. Coverage Standards
+## 1. INDEX.md Checklist
 
-### Threshold: >= 80% Module Coverage
+The INDEX.md is assembled by `doc_operation("update_index")` from DETAIL fragments.
 
-Coverage measures the fraction of detected modules that have corresponding
-documentation.
+- [ ] YAML front matter present (`project`, `total_modules`, `generated_by`)
+- [ ] Mermaid dependency graph present in `## Module Dependency Graph` section
+- [ ] Mermaid graph edges match `02_dag.json` module-level edges (no fabricated edges)
+- [ ] Every module has a `<!-- module-index:{module_id} -->` block
+- [ ] Every module entry includes file count and token count
+- [ ] Every module entry has a link to its `DETAIL.md`
+- [ ] Links resolve (DETAIL files exist at the paths referenced)
+- [ ] `<!-- codebase-explorer: end -->` marker present at end of file
+
+---
+
+## 2. DETAIL.md Checklist
+
+Each module's DETAIL.md must pass all checks.
+
+### Structure Checks
+
+- [ ] YAML front matter present with all required fields: `module_id`, `module_name`, `file_count`, `generated_at`, `token_budget`
+- [ ] `<!-- module:{module_id} -->` opening marker present
+- [ ] `<!-- end:module:{module_id} -->` closing marker present (or `<!-- end:{module_id} -->`)
+- [ ] `<!-- codebase-explorer: end -->` marker at end of file
+
+### Per-File Checks (for each file in the module)
+
+- [ ] `<!-- file:{filepath} -->` opening marker present
+- [ ] `<!-- end:file:{filepath} -->` closing marker present
+- [ ] `#### 功能概述 (Purpose)` section present — describes what file does and why
+- [ ] `#### 数据流 (Data Flow)` section present — describes input/transform/output flow
+- [ ] `#### 核心接口 (Key Interfaces)` section present — lists function/class signatures
+- [ ] `#### 依赖关系 (Dependencies)` section present — lists specific cross-file dependencies
+
+### Index Fragment Check
+
+- [ ] `<!-- index-fragment:{module_id} -->` block present
+- [ ] Fragment contains 2-3 sentences describing module purpose
+- [ ] Fragment mentions key entry points (function/class names)
+- [ ] Fragment includes file count and token count
+- [ ] `<!-- end:index-fragment:{module_id} -->` closing marker present
+
+---
+
+## 3. Coverage Standards
+
+### Threshold: >= 80% Source File Coverage
+
+Coverage measures the fraction of source files that have been documented.
 
 ```
-coverage = documented_modules / total_modules
+coverage = documented_source_files / total_source_files
 ```
 
 | Coverage | Grade | Action |
 |----------|-------|--------|
 | >= 95% | Excellent | No action needed |
-| 80-94% | Acceptable | Note uncovered modules in final report |
+| 80-94% | Acceptable | Note uncovered files in final report |
 | 60-79% | Below standard | Must document critical modules before completion |
 | < 60% | Unacceptable | Analysis is incomplete; continue or report blocker |
 
+Check current coverage with `get_progress()` — see `source_file_coverage_percent`.
+
 ### What Counts as "Documented"
 
-A module is considered documented if:
-
-1. An analysis result has been submitted (via `submit_analysis`)
-2. At least one document has been generated for it (OVERVIEW or DETAIL)
-3. The document contains:
-   - Module name and description
-   - At least one public interface listed
-   - At least one dependency relationship documented
-
-### Modules That May Skip Documentation
-
-- **Depth 0 modules**: Too small for standalone docs; merged into parent.
-  These still count as "documented" if their parent's OVERVIEW includes
-  a summary paragraph about them.
-- **Auto-generated or vendor modules**: May be excluded from coverage
-  calculation if the user confirms.
+A source file is considered documented if:
+1. Its containing module has a DETAIL.md
+2. The DETAIL.md has a file block for this specific file (`<!-- file:{filepath} -->`)
+3. The file block contains all four required sections
 
 ---
 
-## 2. Link Validity Standards
+## 4. Content Quality Standards
 
-### Threshold: 100% Link Validity
+### 功能概述 (Purpose) — What to Check
 
-Every hyperlink in generated documentation must resolve:
+- Answers "what does this file do and why does it exist?"
+- Mentions the file's role within its module
+- Does NOT describe implementation details (no line-by-line walkthrough)
+- Does NOT just restate the filename
 
-| Link Type | Validation Rule |
-|-----------|----------------|
-| Internal doc links `[text](path)` | File must exist at the specified relative path |
-| Anchor links `[text](#section)` | Header must exist in the target document |
-| Cross-reference links | Target document must be in the doc tree |
-| Parent links | Must point to an existing parent document |
-| Child links | Must point to existing child documents |
-| Source file links | Must match actual file paths in the repository |
+**Good:** "Implements URL routing for Flask HTTP requests by building and querying
+a Rule-based dispatch table. All incoming requests pass through this file's match()
+logic before reaching view functions."
 
-### Validation Process
+**Bad:** "This file imports werkzeug.routing and defines several classes."
 
-```
-For each generated document:
-  1. Extract all markdown links: [text](url)
-  2. For relative paths:
-     - Resolve against document's directory
-     - Check file exists
-  3. For anchor links (#section):
-     - Parse target document headers
-     - Verify anchor matches a header slug
-  4. Report broken links with:
-     - Source document path
-     - Line number
-     - Expected target
-     - Suggested fix
-```
+### 数据流 (Data Flow) — What to Check
 
-### Common Link Errors
+- Describes the data flow path: what comes in, what transforms happen, what goes out
+- Mentions specific input types and output types
+- Does NOT describe every line of code
+- Is specific to this file (not the whole module)
 
-| Error | Cause | Fix |
-|-------|-------|-----|
-| Missing parent link | Parent doc not generated yet | Generate in correct order (bottom-up) |
-| Broken child link | Child merged into parent | Remove link, add inline summary |
-| Wrong depth in path | Path calculation error | Verify `../` count matches level difference |
-| Anchor not found | Header changed after linking | Regenerate linking document |
+### 核心接口 (Key Interfaces) — What to Check
 
----
+- Lists the most important public functions and classes
+- Includes actual signatures: `function_name(param: Type) -> ReturnType`
+- Each entry has a brief purpose description
+- Does NOT list private helpers (`_foo`) unless they are critical
+- Does NOT document every parameter in detail
 
-## 3. Token Budget Compliance
+### 依赖关系 (Dependencies) — What to Check
 
-### Threshold: >= 90% of Documents Within Budget
+- Lists specific function calls: "Calls `globals.current_app` to access app context"
+- Does NOT just say "imports X" without explaining why
+- Uses function/class names from the actual code (verified via `get_function_deps`)
+- Includes both outgoing calls (what this file calls) and incoming usage if notable
 
-A document is "within budget" if:
+### Index Fragment — What to Check
 
-```
-actual_tokens <= token_budget * 1.10  # Allow 10% overage
-```
-
-| Compliance | Grade | Action |
-|------------|-------|--------|
-| >= 95% | Excellent | No action |
-| 90-94% | Acceptable | Note over-budget docs in report |
-| 80-89% | Below standard | Regenerate over-budget documents with trimming |
-| < 80% | Unacceptable | Review template configuration and budget allocation |
-
-### Over-Budget Recovery
-
-If a document exceeds its budget:
-
-1. Identify which content sections are using the most tokens
-2. Apply priority-based trimming (see DOC_TEMPLATES.md Section 5)
-3. Trim in order: examples, internal helpers, edge cases,
-   implementation notes, data flow diagrams
-4. Regenerate with `generate_doc` and the same `token_budget`
-
-### Under-Budget Evaluation
-
-Documents significantly under budget (< 50% utilization) may indicate:
-
-- Missing content sections
-- Insufficient analysis depth
-- Module simpler than expected (acceptable if depth was correctly assessed)
-
-Check that under-budget documents still include all required sections
-for their level.
+- Stands alone: a reader who hasn't seen DETAIL can understand the module
+- Mentions 1-2 key entry points by name
+- Does NOT exceed 3 sentences
+- Is different from any individual file's 功能概述 (covers the whole module)
 
 ---
 
-## 4. Dynamic Depth Validation
-
-### Depth Decision Reasonableness
-
-After `plan_doc_structure`, verify that depth assignments are sensible:
-
-| Module Characteristic | Expected Depth | Flag If |
-|----------------------|----------------|---------|
-| < 100 LOC, < 5 functions | 0 (merged) | Depth > 1 |
-| 100-500 LOC | 1 | Depth > 2 |
-| 500-2000 LOC | 1-2 | Depth > 3 |
-| 2000-5000 LOC | 2-3 | Depth < 1 or > 4 |
-| 5000+ LOC | 3-5 | Depth < 2 |
-| Utility module (any size) | 0-2 | Depth > 2 |
-
-### Split Strategy Validation
-
-| Code Style | Expected Strategy | Flag If |
-|-----------|-------------------|---------|
-| 2+ balanced subpackages | SUBPACKAGE | CLASS or FILE chosen |
-| OOP-heavy (3+ classes) | CLASS | FUNCTION_GROUP chosen |
-| Functional (few classes) | FUNCTION_GROUP | CLASS chosen |
-| Mixed content | HYBRID | -- |
-| Flat structure | FILE | SUBPACKAGE chosen (no subpackages) |
-
-### Minimum Documentable Unit Enforcement
-
-Sub-documents should NOT be created for units below these thresholds:
-
-| Metric | Minimum | Action If Below |
-|--------|---------|----------------|
-| Lines of code | 30 | Merge into parent as inline section |
-| Functions | 2 | Merge into parent |
-| Classes | 1 | Merge into parent (for class-split) |
-| Estimated tokens | 200 | Merge into parent as summary line |
-
-### Termination Condition Audit
-
-Every leaf document in the tree should have a valid termination reason:
-
-| Reason | Valid When |
-|--------|-----------|
-| `max_depth_reached` | Current depth equals configured max_depth |
-| `below_min_lines` | LOC below configured threshold |
-| `budget_exhausted` | Remaining budget below minimum |
-| `no_meaningful_split` | Cannot create 2+ documentable sub-units |
-| `utility_module_depth_limit` | Utility module at depth 2 |
-| `single_unit_file` | Single file with 0-1 classes |
-
----
-
-## 5. Content Quality Checklist
-
-### Level 0 (INDEX.md)
-
-- [ ] Project name and description present
-- [ ] Technology stack listed
-- [ ] Mermaid architecture diagram included
-- [ ] All modules listed with descriptions
-- [ ] Module links resolve to OVERVIEW documents
-- [ ] Entry points documented
-- [ ] Metrics table (files, functions, classes, LOC)
-- [ ] doc-meta comment at top
-- [ ] Token count within budget
-
-### Level 1 (OVERVIEW.md)
-
-- [ ] Module name and description
-- [ ] Navigation: link to parent INDEX.md
-- [ ] Navigation: links to child DETAIL documents
-- [ ] Mermaid dependency diagram (who imports whom)
-- [ ] Import dependencies listed with links
-- [ ] Dependents listed with links
-- [ ] Public interfaces with signatures
-- [ ] Component table (if depth > 1)
-- [ ] File list (truncated at 15 if necessary)
-- [ ] Metrics (file_count, function_count, class_count, complexity)
-- [ ] doc-meta comment at top
-- [ ] Token count within budget
-
-### Level 2+ (DETAIL.md)
-
-- [ ] Component name and description
-- [ ] Breadcrumb navigation chain (all levels back to INDEX)
-- [ ] Mermaid internal structure diagram
-- [ ] Classes with method tables (public methods)
-- [ ] Functions with signatures and descriptions
-- [ ] Call relationships (called_by, calls)
-- [ ] Data flow diagram (optional at depth 4+)
-- [ ] Sub-component table (if has children)
-- [ ] Source files listed
-- [ ] doc-meta comment at top
-- [ ] Token count within budget
-
----
-
-## 6. Phase Gate Criteria
+## 5. Phase Gate Criteria
 
 ### Phase 1 -> Phase 2 Gate
 
 | Criterion | Required |
 |-----------|----------|
-| `index_codebase` returned `status: "success"` | Yes |
-| `project_id` available | Yes |
-| Summary stats reported to user | Yes |
+| `analyze_codebase` returned `status: "success"` | Yes |
+| `03_feature_cones.json` exists with at least one module | Yes |
+| `06_function_deps.json` exists | Yes |
+| `files_analyzed > 0` in response | Yes |
 
 ### Phase 2 -> Phase 3 Gate
 
 | Criterion | Required |
 |-----------|----------|
-| `get_modules` returned non-empty module list | Yes |
-| User confirmed module grouping | Yes |
-| `create_analysis_plan` created tasks | Yes |
-| `plan_doc_structure` planned doc tree | Yes |
+| `get_modules()` returns non-empty module list | Yes |
+| No module has `token_count > 50000` without a split plan | Yes |
+| All source files are assigned to a module (no unassigned files) | Yes |
 
 ### Phase 3 -> Phase 4 Gate
 
 | Criterion | Required |
 |-----------|----------|
-| All analysis tasks completed or skipped | Yes |
-| `get_analysis_status` shows 0 pending tasks | Yes |
-| At least 80% of modules have analysis results | Yes |
+| All tasks in `05_task_manifest.json` have status `"complete"` | Yes |
+| `get_progress()` shows `progress_percent == 100` | Yes |
+| All module directories have a `DETAIL.md` file | Yes |
+| Each `DETAIL.md` has an `<!-- index-fragment -->` block | Yes |
 
-### Phase 4 -> Phase 5 Gate
-
-| Criterion | Required |
-|-----------|----------|
-| All planned documents generated | Yes |
-| `doc-index.json` created | Yes |
-| Documents written to output directory | Yes |
-
-### Phase 5 Completion
+### Phase 4 Completion
 
 | Criterion | Required |
 |-----------|----------|
-| Link validity: 100% | Yes |
-| Module coverage: >= 80% | Yes |
-| Token compliance: >= 90% | Yes |
-| Mermaid diagrams in every OVERVIEW | Yes |
+| `.codebase-docs/INDEX.md` exists and is non-empty | Yes |
+| INDEX.md contains a Mermaid graph | Yes |
+| INDEX.md has a `<!-- module-index -->` block for every module | Yes |
+| All DETAIL links in INDEX.md resolve to existing files | Yes |
+| Source file coverage >= 80% | Yes |
 | Final summary reported to user | Yes |
