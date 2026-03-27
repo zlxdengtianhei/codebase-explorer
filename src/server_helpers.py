@@ -393,6 +393,7 @@ def write_analysis_outputs(
     )
 
     # 06_function_deps.json — cross-file function call relationships
+    # Build function name → filepath (unique names only)
     func_name_count: dict[str, int] = {}
     for fn in snapshot.functions:
         func_name_count[fn.name] = func_name_count.get(fn.name, 0) + 1
@@ -403,16 +404,32 @@ def write_analysis_outputs(
         if func_name_count.get(fn.name, 0) == 1
     }
 
+    # Also build class name → filepath for constructor/usage deps
+    class_name_count: dict[str, int] = {}
+    for ci in snapshot.classes:
+        class_name_count[ci.name] = class_name_count.get(ci.name, 0) + 1
+
+    class_name_to_file: dict[str, str] = {
+        ci.name: ci.filepath
+        for ci in snapshot.classes
+        if class_name_count.get(ci.name, 0) == 1
+    }
+
+    # Build per-file function deps (check both function and class names)
     function_deps: dict[str, list] = {}
     for fn in snapshot.functions:
         calls = []
         for call_name in fn.calls:
             target_file = func_name_to_file.get(call_name)
+            dep_type = "call"
+            if not target_file:
+                target_file = class_name_to_file.get(call_name)
+                dep_type = "class_usage"
             if target_file and target_file != fn.filepath:
                 calls.append({
                     "target_file": target_file,
                     "target_function": call_name,
-                    "dep_type": "call",
+                    "dep_type": dep_type,
                 })
         if calls:
             function_deps.setdefault(fn.filepath, []).append({
