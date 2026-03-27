@@ -1,282 +1,152 @@
-"""Unit tests for the depth planner (doc/depth_planner.py).
+"""Tests for src/doc/depth_planner.py -- documentation depth planning.
 
-Covers: depth calculation, split strategy selection, recursive
-termination conditions, geometric-decay budget allocation, and
-project-level doc structure planning.
+Covers:
+- calculate_feature_cone_depth DAG-based depth
+- build_task_manifest FFD bin-packing
+- _split_cone_by_dag_layer layer splitting
 """
 from __future__ import annotations
 
 import pytest
 
-from src.graph.grouper import ModuleMetrics
-from src.state.models import ModuleRecord
-
 from src.doc.depth_planner import (
     MAX_DEPTH,
-    DocStructurePlan,
-    SplitStrategy,
-    allocate_budget_per_level,
-    calculate_depth,
-    plan_doc_structure,
-    select_split_strategy,
-    should_terminate,
+    build_task_manifest,
+    calculate_feature_cone_depth,
+    CONTEXT_BUDGET,
+    INFRA_CONTEXT_TOKENS,
 )
 
 
 # ---------------------------------------------------------------------------
-# Helpers
+# calculate_feature_cone_depth
 # ---------------------------------------------------------------------------
 
 
-def _metrics(
-    name: str = "core",
-    file_count: int = 5,
-    function_count: int = 10,
-    class_count: int = 3,
-    line_count: int = 300,
-    estimated_tokens: int = 4500,
-    subpackage_count: int = 1,
-) -> ModuleMetrics:
-    return ModuleMetrics(
-        name=name,
-        file_count=file_count,
-        function_count=function_count,
-        class_count=class_count,
-        line_count=line_count,
-        estimated_tokens=estimated_tokens,
-        internal_edges=5,
-        external_edges=2,
-        subpackage_count=subpackage_count,
-    )
+class TestCalculateFeatureConeDepth:
+    """Tests for DAG-based depth calculation."""
 
-
-def _module_record(
-    name: str = "core",
-    project_id: str = "proj_1",
-) -> ModuleRecord:
-    return ModuleRecord(
-        id=f"mod_{name}",
-        project_id=project_id,
-        name=name,
-        files=["a.py"],
-        file_count=1,
-        line_count=300,
-        function_count=10,
-        class_count=3,
-    )
-
-
-# ===========================================================================
-# Depth calculation tests
-# ===========================================================================
-
-
-class TestDepthCalculation:
-    """Depth is determined by max(structural, complexity, token) capped at MAX_DEPTH."""
-
-    def test_small_module_depth_0(self):
-        """Small module (< 50 lines, < 5 functions) should get depth 0-1."""
-        m = _metrics(
-            line_count=30,
-            function_count=3,
-            class_count=1,
-            estimated_tokens=400,
-            subpackage_count=0,
-        )
-        depth = calculate_depth(m)
+    def test_small_cone_capped_at_1(self) -> None:
+        """Cones with <2000 tokens are capped at depth 1."""
+        depth = calculate_feature_cone_depth(1000, dag_layers=5)
         assert depth <= 1
 
-    def test_medium_module_depth_1(self):
-        """Medium module (200-500 lines) should get depth 1-2."""
-        m = _metrics(
-            line_count=350,
-            function_count=12,
-            class_count=4,
-            estimated_tokens=5000,
-            subpackage_count=1,
-        )
-        depth = calculate_depth(m)
-        assert 1 <= depth <= 2
+    def test_medium_cone_capped_at_2(self) -> None:
+        """Cones with 2000-8000 tokens are capped at depth 2."""
+        depth = calculate_feature_cone_depth(5000, dag_layers=5)
+        assert depth <= 2
 
-    def test_large_module_depth_2_plus(self):
-        """Large module (> 800 lines, > 20 functions) should get depth >= 2."""
-        m = _metrics(
-            line_count=1200,
-            function_count=35,
-            class_count=10,
-            estimated_tokens=18000,
-            subpackage_count=4,
-        )
-        depth = calculate_depth(m)
-        assert depth >= 2
+    def test_large_cone_capped_at_3(self) -> None:
+        """Cones with 8000-32000 tokens are capped at depth 3."""
+        depth = calculate_feature_cone_depth(20000, dag_layers=5)
+        assert depth <= 3
 
-    def test_depth_capped_at_max(self):
-        """Even enormous modules cannot exceed MAX_DEPTH (5)."""
-        m = _metrics(
-            line_count=100_000,
-            function_count=5000,
-            class_count=500,
-            estimated_tokens=1_500_000,
-            subpackage_count=50,
-        )
-        depth = calculate_depth(m)
-        assert depth <= MAX_DEPTH
+    def test_very_large_cone_uses_dag_layers(self) -> None:
+        """Cones with >=32000 tokens use base depth from dag_layers."""
+        depth = calculate_feature_cone_depth(50000, dag_layers=4)
+        assert depth == 4
+
+    def test_dag_layers_capped_at_max_depth(self) -> None:
+        """dag_layers > MAX_DEPTH are capped."""
+        depth = calculate_feature_cone_depth(100000, dag_layers=10)
+        assert depth == MAX_DEPTH
+
+    def test_single_dag_layer(self) -> None:
+        """Single DAG layer yields depth 1 for non-tiny cones."""
+        depth = calculate_feature_cone_depth(10000, dag_layers=1)
+        assert depth == 1
+
+    def test_default_dag_layers(self) -> None:
+        """Default dag_layers=1."""
+        depth = calculate_feature_cone_depth(50000)
+        assert depth == 1
 
 
-# ===========================================================================
-# Split strategy tests
-# ===========================================================================
+# ---------------------------------------------------------------------------
+# build_task_manifest
+# ---------------------------------------------------------------------------
 
 
-class TestSplitStrategy:
-    """Strategy selection based on module characteristics."""
+class TestBuildTaskManifest:
+    """Tests for FFD bin-packing task manifest builder."""
 
-    def test_select_subpackage_strategy(self):
-        """Module with multiple subpackages -> SUBPACKAGE."""
-        m = _metrics(subpackage_count=5, class_count=2, function_count=8)
-        strategy = select_split_strategy(m)
-        assert strategy == SplitStrategy.SUBPACKAGE
+    def test_empty_cones(self) -> None:
+        """No cones produces manifest with only the INDEX task."""
+        manifest = build_task_manifest({}, {})
+        assert manifest["schema_version"] == "2.0"
+        assert manifest["total_tasks"] == 1
+        tasks = manifest["tasks"]
+        index_task = list(tasks.values())[0]
+        assert index_task["type"] == "index"
 
-    def test_select_class_strategy(self):
-        """Module with many classes, few functions -> CLASS."""
-        m = _metrics(
-            subpackage_count=1,
-            class_count=6,
-            function_count=10,
-        )
-        strategy = select_split_strategy(m)
-        assert strategy == SplitStrategy.CLASS
-
-    def test_select_function_group_strategy(self):
-        """Module with many functions, few classes -> FUNCTION_GROUP."""
-        m = _metrics(
-            subpackage_count=0,
-            class_count=1,
-            function_count=15,
-        )
-        strategy = select_split_strategy(m)
-        assert strategy == SplitStrategy.FUNCTION_GROUP
-
-    def test_select_file_fallback(self):
-        """Default fallback -> FILE."""
-        m = _metrics(
-            subpackage_count=0,
-            class_count=1,
-            function_count=3,
-            file_count=2,
-        )
-        strategy = select_split_strategy(m)
-        assert strategy == SplitStrategy.FILE
-
-
-# ===========================================================================
-# Termination condition tests
-# ===========================================================================
-
-
-class TestTermination:
-    """Recursive termination conditions."""
-
-    def test_terminate_at_max_depth(self):
-        m = _metrics(line_count=500, function_count=20)
-        stop, reason = should_terminate(MAX_DEPTH, m, remaining_budget=10_000)
-        assert stop is True
-        assert "max_depth" in reason
-
-    def test_terminate_small_module(self):
-        m = _metrics(line_count=10, function_count=1, class_count=0)
-        stop, reason = should_terminate(1, m, remaining_budget=10_000)
-        assert stop is True
-        assert "min_lines" in reason
-
-    def test_terminate_budget_exhausted(self):
-        m = _metrics(line_count=500, function_count=20)
-        stop, reason = should_terminate(1, m, remaining_budget=50)
-        assert stop is True
-        assert "budget" in reason
-
-
-# ===========================================================================
-# Token budget allocation tests
-# ===========================================================================
-
-
-class TestBudgetAllocation:
-    """Geometric-decay budget distribution."""
-
-    def test_budget_allocation_geometric_decay(self):
-        """Level 0 should receive more budget than level 1, etc."""
-        budgets = allocate_budget_per_level(total_budget=10_000, depth=3)
-        assert len(budgets) == 4  # levels 0, 1, 2, 3
-        # Geometric decay: level 0 weight > level 1 weight > ...
-        # After min-budget enforcement the relationship may not be strict,
-        # but level 0 should be >= level 1 when budget is sufficient.
-        # The key property is that the sum does not exceed total_budget.
-        assert sum(budgets) <= 10_000
-
-    def test_budget_per_level_minimums(self):
-        """Each level must meet its minimum budget (or be scaled down)."""
-        budgets = allocate_budget_per_level(total_budget=50_000, depth=4)
-        assert len(budgets) == 5  # levels 0-4
-        # With a generous budget the minimums should be met
-        from src.doc.depth_planner import _MIN_BUDGETS_PER_LEVEL
-        for i, b in enumerate(budgets):
-            minimum = _MIN_BUDGETS_PER_LEVEL.get(i, 1500)
-            # When budget is sufficient, each level should meet minimum
-            assert b >= minimum or sum(budgets) <= 50_000
-
-
-# ===========================================================================
-# plan_doc_structure integration tests
-# ===========================================================================
-
-
-class TestPlanDocStructure:
-    """Project-level documentation structure planning."""
-
-    def test_plan_doc_structure_basic(self):
-        """Given modules and metrics, returns DocStructurePlan."""
-        modules = [
-            _module_record("core"),
-            _module_record("api"),
-        ]
-        metrics = {
-            "core": _metrics(
-                name="core",
-                line_count=500,
-                function_count=15,
-                class_count=5,
-                estimated_tokens=7500,
-                subpackage_count=3,
-            ),
-            "api": _metrics(
-                name="api",
-                line_count=300,
-                function_count=10,
-                class_count=3,
-                estimated_tokens=4500,
-                subpackage_count=2,
-            ),
+    def test_single_small_cone(self) -> None:
+        """One small cone produces a single task + INDEX."""
+        cones = {
+            "cone_a": {
+                "exclusive_files": ["a.py", "b.py"],
+                "shared_deps": [],
+            }
         }
-        plan = plan_doc_structure("proj_1", modules, metrics)
-        assert isinstance(plan, DocStructurePlan)
-        assert plan.total_docs > 0
-        assert len(plan.doc_tree) == plan.total_docs
+        file_tokens = {"a.py": 500, "b.py": 300}
+        manifest = build_task_manifest(cones, file_tokens)
+        assert manifest["total_tasks"] == 2  # 1 single + 1 index
+        tasks = manifest["tasks"]
+        detail_tasks = [t for t in tasks.values() if t["type"] != "index"]
+        assert len(detail_tasks) == 1
+        assert detail_tasks[0]["type"] == "single"
 
-    def test_plan_doc_structure_has_index(self):
-        """The doc tree must always contain an INDEX.md at level 0."""
-        modules = [_module_record("core")]
-        metrics = {
-            "core": _metrics(
-                name="core",
-                line_count=500,
-                function_count=15,
-                class_count=5,
-                estimated_tokens=7500,
-                subpackage_count=3,
-            ),
+    def test_batching_small_cones(self) -> None:
+        """Multiple small cones that fit are batched together."""
+        cones = {
+            f"cone_{i}": {
+                "exclusive_files": [f"file_{i}.py"],
+                "shared_deps": [],
+            }
+            for i in range(5)
         }
-        plan = plan_doc_structure("proj_1", modules, metrics)
-        index_nodes = [n for n in plan.doc_tree if n.path == "INDEX.md"]
-        assert len(index_nodes) == 1
-        assert index_nodes[0].level == 0
+        file_tokens = {f"file_{i}.py": 100 for i in range(5)}
+        manifest = build_task_manifest(cones, file_tokens)
+        tasks = manifest["tasks"]
+        non_index = [t for t in tasks.values() if t["type"] != "index"]
+        # 5 cones * 100 tokens = 500 tokens total, fits in one bin
+        assert any(t["type"] == "batch" for t in non_index)
+
+    def test_oversized_cone_is_split(self) -> None:
+        """A cone exceeding context_budget is split into multiple tasks."""
+        # Create a cone with tokens exceeding context_budget
+        big_files = [f"big_{i}.py" for i in range(20)]
+        cones = {
+            "big_cone": {
+                "exclusive_files": big_files,
+                "shared_deps": [],
+            }
+        }
+        # Each file = 10000 tokens, total = 200000 > 100000 budget
+        file_tokens = {f: 10000 for f in big_files}
+        manifest = build_task_manifest(cones, file_tokens, context_budget=100_000)
+        tasks = manifest["tasks"]
+        split_tasks = [t for t in tasks.values() if t["type"] == "split"]
+        assert len(split_tasks) >= 2
+
+    def test_index_task_depends_on_all(self) -> None:
+        """The INDEX task depends on all preceding detail tasks."""
+        cones = {
+            "cone_a": {"exclusive_files": ["a.py"], "shared_deps": []},
+            "cone_b": {"exclusive_files": ["b.py"], "shared_deps": []},
+        }
+        file_tokens = {"a.py": 1000, "b.py": 1000}
+        manifest = build_task_manifest(cones, file_tokens)
+        tasks = manifest["tasks"]
+        index_tasks = [t for t in tasks.values() if t["type"] == "index"]
+        assert len(index_tasks) == 1
+        index_task = index_tasks[0]
+        detail_ids = sorted(
+            t["task_id"] for t in tasks.values() if t["type"] != "index"
+        )
+        assert index_task["dependencies"] == detail_ids
+
+    def test_manifest_schema_version(self) -> None:
+        """Manifest contains schema_version 2.0."""
+        manifest = build_task_manifest({}, {})
+        assert manifest["schema_version"] == "2.0"
+        assert manifest["context_budget"] == CONTEXT_BUDGET
