@@ -598,16 +598,21 @@ async def get_modules(
         infra_tokens = sum(file_tokens.get(f, 0) for f in infra_files)
 
         modules = []
+        total_dep_edges = 0
+        modules_with_deps = 0
         for cid, cone in cones.items():
             deps = compute_depends_on_cones(
                 cid, cone.get("shared_deps", []), cones,
             )
+            total_dep_edges += len(deps)
+            if deps:
+                modules_with_deps += 1
             modules.append({
                 "module_id": cid,
                 "file_count": len(cone.get("exclusive_files", [])),
                 "token_count": cone.get("token_count", 0),
                 "layer": cone.get("layer", 0),
-                "depends_on": deps,
+                "dep_count": len(deps),
             })
 
         return {
@@ -626,6 +631,11 @@ async def get_modules(
                 "budget_limit": 100_000,
                 "within_budget": total_tokens <= 100_000,
                 "stop_condition": "Modules exceeding budget are split into sub-tasks in task_manifest",
+            },
+            "inter_module_deps": {
+                "total_edges": total_dep_edges,
+                "modules_with_deps": modules_with_deps,
+                "note": "Use get_modules(module_id=X) for full depends_on list per module",
             },
             "modules": modules,
             "infrastructure": {
