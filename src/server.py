@@ -1,15 +1,17 @@
-"""Codebase Explorer MCP Server -- FastMCP entry point with 7 tools (V2).
+"""Codebase Explorer MCP Server -- FastMCP entry point with 9 tools (V5).
 
-V2 Architecture:
+V5 Architecture:
 - No SQLite (replaced with JSON state file)
 - No Jinja2 templates (docs written by LLM agents)
-- 7 streamlined tools (down from 15 in V1)
+- 9 tools: analyze_codebase, get_structure, get_modules, get_function_deps,
+  doc_operation, get_dependency_graph, get_progress, get_file_tokens, submit_analysis
 - Feature Cone based grouping (replaces Louvain as primary)
 """
 from __future__ import annotations
 
 import json
 import logging
+import re
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated, Literal
@@ -23,15 +25,15 @@ from pydantic import Field
 from src.budget.estimator import estimate_tokens_from_chars
 from src.doc.depth_planner import build_task_manifest
 from src.graph.feature_cone import extract_feature_cones, FeatureCone
-from src.graph.strategies import list_strategies
+from src.graph.strategies import get_strategy, list_strategies
 from src.graph.weighted_graph import build_weighted_dependency_graph
 from src.parser.codebase import CodebaseParser, CodebaseParseError
 from src.server_helpers import (
     build_graph_from_dag,
+    build_module_level_graph,
     compute_cone_layers,
-    compute_depends_on_cones,
+    compute_inter_module_deps_from_dag,
     find_latest_project_dir,
-    is_utility_cone,
     now_iso,
     project_id_from_path,
     render_mermaid,
@@ -98,6 +100,13 @@ async def analyze_codebase(
     force_reindex: Annotated[
         bool, Field(description="Force reindex even if cache exists.")
     ] = False,
+    exclude_paths: Annotated[
+        list[str] | None,
+        Field(description="Additional directory/file paths to exclude from analysis (e.g. ['vendor/', 'generated/'])"),
+    ] = None,
+    include_tests: Annotated[
+        bool, Field(description="Include test directories (tests/, test/) in analysis. Default: False."),
+    ] = False,
     ctx: Context = None,
 ) -> dict:
     """Run complete analysis pipeline and generate 5 JSON files + state.json.
@@ -152,16 +161,65 @@ async def analyze_codebase(
     except CodebaseParseError as e:
         raise ToolError(str(e)) from e
 
+    # Step 1b: Filter files based on exclude_paths and include_tests
+    _test_dirs = {"tests/", "test/", "tests\\", "test\\"}
+    user_excludes = set(exclude_paths or [])
+
+    def _should_exclude(filepath: str) -> bool:
+        # User-specified exclusions
+        for excl in user_excludes:
+            if filepath.startswith(excl) or ("/" + excl) in filepath:
+                return True
+        # Test directory exclusion (unless include_tests is True)
+        if not include_tests:
+            for td in _test_dirs:
+                if filepath.startswith(td) or ("/" + td) in filepath:
+                    return True
+        return False
+
+    filtered_files = tuple(f for f in snapshot.files if not _should_exclude(f.filepath))
+    filtered_funcs = tuple(f for f in snapshot.functions if not _should_exclude(f.filepath))
+    filtered_classes = tuple(c for c in snapshot.classes if not _should_exclude(c.filepath))
+
+    if len(filtered_files) < len(snapshot.files):
+        from src.parser.codebase import CodebaseSnapshot
+        excluded_count = len(snapshot.files) - len(filtered_files)
+        logger.info("[analyze_codebase] Excluded %d files (exclude_paths=%s, include_tests=%s)",
+                     excluded_count, exclude_paths, include_tests)
+        snapshot = CodebaseSnapshot(
+            root_path=snapshot.root_path,
+            files=filtered_files,
+            functions=filtered_funcs,
+            classes=filtered_classes,
+            languages_detected=snapshot.languages_detected,
+            total_lines=sum(f.line_count for f in filtered_files),
+        )
+
     # Step 2: Build weighted dependency graph
     logger.info("[analyze_codebase] Building weighted dependency graph...")
     weighted_result = build_weighted_dependency_graph(snapshot)
     graph = weighted_result.graph
 
-    # Step 3: Extract feature cones
+    # Step 3: Extract feature cones via pluggable strategy
     logger.info("[analyze_codebase] Extracting feature cones...")
-    cones, infrastructure = extract_feature_cones(graph, snapshot)
+    strategy = get_strategy()
+    strategy_result = strategy.group(graph, snapshot)
+    # Convert StrategyResult back to (cones, infrastructure) for downstream pipeline
+    entry_points = strategy_result.metadata.get("entry_points", {})
+    cones: dict[str, FeatureCone] = {}
+    for mid, mod in strategy_result.modules.items():
+        cones[mid] = FeatureCone(
+            cone_id=mod.module_id,
+            entry_point=entry_points.get(mid, mod.files[0] if mod.files else mid),
+            exclusive_files=mod.files,
+            shared_deps=mod.depends_on,
+            layer=mod.layer,
+            token_count=mod.token_count,
+        )
+    infrastructure = frozenset(strategy_result.infrastructure)
     logger.info(
-        f"[analyze_codebase] Found {len(cones)} cones, {len(infrastructure)} infrastructure files"
+        f"[analyze_codebase] Found {len(cones)} cones, {len(infrastructure)} infrastructure files "
+        f"(strategy={strategy_result.strategy_used})"
     )
 
     # Step 3b: DAG layer calculation via SCC condensation + topological ordering
@@ -247,9 +305,41 @@ async def analyze_codebase(
 
     # Step 5: Build DAG layers and task manifest
     logger.info("[analyze_codebase] Building task manifest...")
+
+    # Pre-build dag_edges list for cone layer computation and cohesion scoring
+    dag_edges_list = [
+        {
+            "source": u,
+            "target": v,
+            "weight": graph[u][v].get("weight", 1),
+            "edge_types": graph[u][v].get("edge_types", []),
+        }
+        for u, v in graph.edges()
+    ]
+    dag_nodes_list = list(graph.nodes())
+
     cone_dicts = {}
     for cone_id, cone in cones.items():
         cone_tokens = sum(file_tokens.get(f, 0) for f in cone.exclusive_files)
+        exclusive_set = set(cone.exclusive_files)
+
+        # Compute layers within this cone
+        layers_within = compute_cone_layers(
+            list(cone.exclusive_files), dag_nodes_list, dag_edges_list,
+        )
+
+        # Compute cohesion score: internal_edges / max(total_edges, 1)
+        internal_edges = 0
+        total_edges = 0
+        for u, v in graph.edges():
+            u_in = u in exclusive_set
+            v_in = v in exclusive_set
+            if u_in or v_in:
+                total_edges += 1
+                if u_in and v_in:
+                    internal_edges += 1
+        cohesion = internal_edges / max(total_edges, 1)
+
         cone_dicts[cone_id] = {
             "cone_id": cone_id,
             "entry_point": cone.entry_point,
@@ -257,6 +347,8 @@ async def analyze_codebase(
             "shared_deps": cone.shared_deps,
             "layer": cone.layer,
             "token_count": cone_tokens,
+            "layers_within_cone": layers_within,
+            "cohesion_score": round(cohesion, 4),
         }
 
     task_manifest = build_task_manifest(cone_dicts, file_tokens)
@@ -441,106 +533,7 @@ async def get_structure(
 
 
 # ---------------------------------------------------------------------------
-# Tool 3: get_feature_cones
-# ---------------------------------------------------------------------------
-
-
-@mcp.tool(annotations={"readOnlyHint": True})
-async def get_feature_cones(
-    cone_id: Annotated[str | None, Field(description="Cone ID. None = all cones.")] = None,
-) -> dict:
-    """Query feature cones from 03_feature_cones.json.
-
-    A feature cone represents a cohesive feature unit containing
-    all files from entry point to implementation.
-    """
-    project_dir = find_latest_project_dir()
-    if not project_dir:
-        raise ToolError("No project found. Run analyze_codebase first.")
-
-    cones_path = project_dir / "03_feature_cones.json"
-    if not cones_path.exists():
-        raise ToolError(f"Feature cones file not found: {cones_path}")
-
-    cones_data = json.loads(cones_path.read_text(encoding="utf-8"))
-    cones = cones_data.get("cones", {})
-    total_cones = len(cones)
-
-    # Return summary list
-    if not cone_id:
-        summaries = [
-            {
-                "cone_id": cid,
-                "name": c.get("entry_point", cid),
-                "entry_file": c.get("entry_point", ""),
-                "is_utility": is_utility_cone(
-                    cid,
-                    layer=c.get("layer", 0),
-                    total_cones=total_cones,
-                    all_cones=cones,
-                ),
-                "file_count": len(c.get("exclusive_files", [])),
-                "total_tokens": c.get("token_count", 0),
-                "layer": c.get("layer", 0),
-            }
-            for cid, c in cones.items()
-        ]
-
-        return {
-            "status": "success",
-            "total_cones": total_cones,
-            "cones": summaries,
-        }
-
-    # Return specific cone details
-    cone = cones.get(cone_id)
-    if not cone:
-        raise ToolError(f"Cone '{cone_id}' not found")
-
-    # Compute is_utility for this specific cone
-    is_utility = is_utility_cone(
-        cone_id,
-        layer=cone.get("layer", 0),
-        total_cones=total_cones,
-        all_cones=cones,
-    )
-
-    # Compute internal layer breakdown from DAG data
-    dag_path = project_dir / "02_dag.json"
-    layers: list[list[str]] = []
-    if dag_path.exists():
-        dag_data = json.loads(dag_path.read_text(encoding="utf-8"))
-        dag_nodes = dag_data.get("nodes", [])
-        dag_edges = dag_data.get("edges", [])
-        cone_files = list(cone.get("exclusive_files", []))
-        cone_files.extend(cone.get("shared_deps", []))
-        layers = compute_cone_layers(cone_files, dag_nodes, dag_edges)
-
-    # Compute inter-cone dependencies from shared_deps
-    depends_on = compute_depends_on_cones(
-        cone_id,
-        cone.get("shared_deps", []),
-        cones,
-    )
-
-    return {
-        "status": "success",
-        "cone_id": cone_id,
-        "name": cone.get("entry_point", cone_id),
-        "entry_file": cone.get("entry_point", ""),
-        "is_utility": is_utility,
-        "file_count": len(cone.get("exclusive_files", [])),
-        "total_tokens": cone.get("token_count", 0),
-        "layer": cone.get("layer", 0),
-        "files": cone.get("exclusive_files", []),
-        "layers": layers,
-        "shared_deps": cone.get("shared_deps", []),
-        "depends_on_cones": depends_on,
-    }
-
-
-# ---------------------------------------------------------------------------
-# Tool 3b: get_modules (V5 format)
+# Tool 3: get_modules (V5 format)
 # ---------------------------------------------------------------------------
 
 
@@ -597,22 +590,31 @@ async def get_modules(
         total_tokens = sum(c.get("token_count", 0) for c in cones.values())
         infra_tokens = sum(file_tokens.get(f, 0) for f in infra_files)
 
+        # Compute inter-module deps from DAG edges (not just shared_deps)
+        dag_path = project_dir / "02_dag.json"
+        dag_edges: list[dict] = []
+        if dag_path.exists():
+            dag_data = json.loads(dag_path.read_text(encoding="utf-8"))
+            dag_edges = dag_data.get("edges", [])
+
+        inter_module_deps = compute_inter_module_deps_from_dag(cones, dag_edges)
+
         modules = []
         total_dep_edges = 0
         modules_with_deps = 0
         for cid, cone in cones.items():
-            deps = compute_depends_on_cones(
-                cid, cone.get("shared_deps", []), cones,
-            )
-            total_dep_edges += len(deps)
-            if deps:
+            dep_set = inter_module_deps.get(cid, set())
+            total_dep_edges += len(dep_set)
+            if dep_set:
                 modules_with_deps += 1
             modules.append({
                 "module_id": cid,
+                "name": _friendly_name(cid),
                 "file_count": len(cone.get("exclusive_files", [])),
                 "token_count": cone.get("token_count", 0),
                 "layer": cone.get("layer", 0),
-                "dep_count": len(deps),
+                "depends_on": sorted(dep_set),
+                "directory_hint": _dir_hint(cone.get("exclusive_files", [])),
             })
 
         return {
@@ -635,7 +637,6 @@ async def get_modules(
             "inter_module_deps": {
                 "total_edges": total_dep_edges,
                 "modules_with_deps": modules_with_deps,
-                "note": "Use get_modules(module_id=X) for full depends_on list per module",
             },
             "modules": modules,
             "infrastructure": {
@@ -655,19 +656,20 @@ async def get_modules(
         for f in exclusive_files
     ]
 
-    deps = compute_depends_on_cones(
-        module_id, cone.get("shared_deps", []), cones,
-    )
-
-    # Compute internal layers from DAG
+    # Compute inter-module deps from DAG edges (consistent with summary mode)
     dag_path = project_dir / "02_dag.json"
+    dag_edges: list[dict] = []
     internal_layers: list[list[str]] = []
     if dag_path.exists():
         dag_data = json.loads(dag_path.read_text(encoding="utf-8"))
+        dag_edges = dag_data.get("edges", [])
         cone_files = list(exclusive_files) + list(cone.get("shared_deps", []))
         internal_layers = compute_cone_layers(
-            cone_files, dag_data.get("nodes", []), dag_data.get("edges", []),
+            cone_files, dag_data.get("nodes", []), dag_edges,
         )
+
+    inter_module_deps = compute_inter_module_deps_from_dag(cones, dag_edges)
+    deps = sorted(inter_module_deps.get(module_id, set()))
 
     return {
         "status": "success",
@@ -761,12 +763,13 @@ async def doc_operation(
     operation: Annotated[
         Literal[
             "get_template", "get_protocol",
-            "move_detail", "merge_modules", "split_module",
+            "move_detail", "merge_modules", "split_module", "list_module_files",
             "update_index", "reorder_modules",
         ],
         Field(description=(
             "Operation: 'get_template'/'get_protocol' for format info, "
-            "'move_detail'/'merge_modules'/'split_module'/'update_index'/'reorder_modules' for doc editing"
+            "'move_detail'/'merge_modules'/'split_module'/'list_module_files'/"
+            "'update_index'/'reorder_modules' for doc editing"
         )),
     ],
     source_module: Annotated[
@@ -781,59 +784,86 @@ async def doc_operation(
     new_order: Annotated[
         list[str] | None, Field(description="Ordered list of module IDs (for reorder_modules)"),
     ] = None,
+    params: Annotated[
+        dict | None, Field(description="Additional parameters (for move_detail block-level: source_module, target_module, filepath)"),
+    ] = None,
 ) -> dict:
     """Documentation operations for DETAIL/INDEX generation and Phase 5 reorganization.
 
     Read-only operations:
-    - get_template: Returns YAML front matter + HTML comment format for DETAIL and INDEX docs
-    - get_protocol: Returns the three-step DETAIL protocol and INDEX assembly rules
+    - get_template: Returns DETAIL format with four sections per file
+    - get_protocol: Returns the three-step documentation protocol
 
-    Editing operations (Phase 5 — doc reorganization without manual text editing):
-    - move_detail: Move a DETAIL section from one module to another
+    Editing operations (Phase 5 -- doc reorganization without manual text editing):
+    - move_detail: Move a file block from one module's DETAIL.md to another's
     - merge_modules: Merge two modules into one (combines their DETAIL docs)
-    - split_module: Split a module into two (requires specifying files for each)
-    - update_index: Regenerate INDEX from current module state
+    - split_module / list_module_files: List files in a module directory
+    - update_index: Regenerate INDEX.md from DETAIL.md index-fragment blocks
     - reorder_modules: Change the order of modules in INDEX
     """
     if operation == "get_template":
+        detail_format = (
+            "---\n"
+            "module_id: {module_id}\n"
+            "module_name: {module_name}\n"
+            "file_count: N\n"
+            "generated_at: {timestamp}\n"
+            "---\n"
+            "\n"
+            "<!-- module:{module_id} -->\n"
+            "\n"
+            "## {module_name}\n"
+            "\n"
+            "### {filename}\n"
+            "<!-- file:{filepath} -->\n"
+            "\n"
+            "#### Purpose\n"
+            "[What this file does and why it exists]\n"
+            "\n"
+            "#### Data Flow\n"
+            "[How data enters, transforms, and exits this file]\n"
+            "\n"
+            "#### Key Interfaces\n"
+            "[Important functions/classes with signatures and brief descriptions]\n"
+            "\n"
+            "#### Dependencies\n"
+            "[Cross-file dependencies with specific function names and purposes]\n"
+            "\n"
+            "<!-- end:file:{filepath} -->\n"
+            "\n"
+            "<!-- index-fragment:{module_id} -->\n"
+            "[2-3 sentence summary of this module for INDEX.md]\n"
+            "<!-- end:index-fragment:{module_id} -->\n"
+            "\n"
+            "<!-- end:{module_id} -->\n"
+            "<!-- codebase-explorer: end -->"
+        )
+
         return {
             "status": "success",
-            "detail_template": {
-                "yaml_front_matter": (
-                    "---\n"
-                    "module: {module_id}\n"
-                    "file: {filepath}\n"
-                    "token_count: {token_count}\n"
-                    "layer: {layer}\n"
-                    "---"
-                ),
-                "html_markers": {
-                    "module_start": "<!-- module:{module_id} -->",
-                    "module_end": "<!-- /module:{module_id} -->",
-                    "file_start": "<!-- file:{filepath} -->",
-                    "file_end": "<!-- /file:{filepath} -->",
-                    "index_fragment": "<!-- index-fragment:{module_id} -->",
-                },
-                "sections": [
-                    "## Functions (Step 1: function descriptions)",
-                    "## Dependencies (Step 2: cross-file calls from get_function_deps)",
-                    "## Index Fragment (Step 3: summary paragraph for INDEX assembly)",
-                ],
+            "detail_template": detail_format,
+            "html_markers": {
+                "module_start": "<!-- module:{module_id} -->",
+                "module_end": "<!-- end:{module_id} -->",
+                "file_start": "<!-- file:{filepath} -->",
+                "file_end": "<!-- end:file:{filepath} -->",
+                "index_fragment_start": "<!-- index-fragment:{module_id} -->",
+                "index_fragment_end": "<!-- end:index-fragment:{module_id} -->",
             },
+            "sections_per_file": [
+                "#### Purpose",
+                "#### Data Flow",
+                "#### Key Interfaces",
+                "#### Dependencies",
+            ],
             "index_template": {
                 "yaml_front_matter": (
-                    "---\n"
-                    "project: {project_id}\n"
-                    "total_modules: {total_modules}\n"
-                    "generated_by: codebase-explorer\n"
-                    "---"
+                    "---\ntitle: {project_name} Architecture\n"
+                    "generated: {timestamp}\nmodule_count: {N}\n---"
                 ),
-                "assembly_rule": "INDEX is assembled by concatenating all Step 3 INDEX fragments from DETAIL sub-agents. No separate Agent rewrites the INDEX.",
-                "format": (
-                    "<!-- index:start -->\n"
-                    "# {project_name} Architecture\n\n"
-                    "{concatenated_index_fragments}\n"
-                    "<!-- index:end -->"
+                "assembly_rule": (
+                    "INDEX is assembled by extracting index-fragment blocks from all "
+                    "DETAIL.md files. No separate agent rewrites the INDEX."
                 ),
             },
         }
@@ -842,36 +872,43 @@ async def doc_operation(
         return {
             "status": "success",
             "detail_protocol": {
-                "name": "Three-Step DETAIL Protocol",
+                "name": "Three-Step Documentation Protocol",
                 "steps": [
                     {
                         "step": 1,
-                        "name": "Function Descriptions",
-                        "input": "Source file content",
-                        "output": "Function names, signatures, and purpose descriptions",
+                        "name": "Read source code, write four sections per file",
+                        "description": (
+                            "For each file in the module:\n"
+                            "  a. Read the source code\n"
+                            "  b. Write: Purpose, Data Flow, Key Interfaces, Dependencies"
+                        ),
                         "tool": "Read source file directly",
                     },
                     {
                         "step": 2,
-                        "name": "Dependency Analysis",
-                        "input": "get_function_deps(file=filepath)",
-                        "output": "Cross-file call relationships with target functions",
+                        "name": "Query function dependencies",
+                        "description": (
+                            "Call get_function_deps(file=filepath) for key files. "
+                            "Integrate cross-file dependency info into the Dependencies section."
+                        ),
                         "tool": "get_function_deps",
                     },
                     {
                         "step": 3,
-                        "name": "INDEX Fragment",
-                        "input": "Steps 1-2 output",
-                        "output": "One paragraph summarizing this module for INDEX assembly",
-                        "tool": "Agent writes <!-- index-fragment:{module_id} --> block",
+                        "name": "Write index fragment",
+                        "description": (
+                            "At the end of DETAIL.md, write <!-- index-fragment:{module_id} --> block. "
+                            "Include a 2-3 sentence summary of the module's purpose. "
+                            "This fragment will be extracted by update_index to build INDEX.md."
+                        ),
+                        "tool": "Agent writes index-fragment block",
                     },
                 ],
-                "token_budget_rule": "Stop if cumulative tokens exceed module token_count from get_modules",
-            },
-            "index_assembly": {
-                "method": "Direct concatenation of all index-fragment blocks from DETAIL outputs",
-                "no_rewrite": True,
-                "format": "Fragments ordered by module layer (low to high)",
+                "token_budget_rule": (
+                    "Before reading each file, check: accumulated_tokens + file_token_count <= budget. "
+                    "If the next file would exceed the budget, STOP. Write INDEX fragment for completed files. "
+                    "Track accumulated_tokens as running sum of token_count for each file read."
+                ),
             },
         }
 
@@ -882,56 +919,315 @@ async def doc_operation(
 
     state_path = project_dir / "state.json"
     state = read_state(state_path) if state_path.exists() else {}
-    doc_dir = state.get("documentation", {}).get("output_dir", "")
+
+    # Resolve doc_dir: sibling of .codebase-analysis -> .codebase-docs
+    analysis_dir = Path(state.get("path", "")) if state.get("path") else project_dir.parent
+    doc_dir = analysis_dir / ".codebase-docs"
+
+    # Load or initialize doc-index.json
+    doc_index_path = doc_dir / "doc-index.json"
+    doc_index: dict = {}
+    if doc_index_path.exists():
+        doc_index = json.loads(doc_index_path.read_text(encoding="utf-8"))
+
+    def _save_doc_index() -> None:
+        doc_dir.mkdir(parents=True, exist_ok=True)
+        doc_index_path.write_text(
+            json.dumps(doc_index, indent=2, ensure_ascii=False), encoding="utf-8"
+        )
 
     if operation == "move_detail":
-        if not all([source_module, target_module, file_path]):
-            raise ToolError("move_detail requires source_module, target_module, and file_path")
+        # Block-level move: extract a file block from source DETAIL.md,
+        # insert into target DETAIL.md
+        p = params or {}
+        src_mod = p.get("source_module") or source_module
+        tgt_mod = p.get("target_module") or target_module
+        fp = p.get("filepath") or file_path
+
+        if not all([src_mod, tgt_mod, fp]):
+            raise ToolError(
+                "move_detail requires source_module, target_module, and filepath"
+            )
+
+        src_detail = doc_dir / src_mod / "DETAIL.md"
+        tgt_detail = doc_dir / tgt_mod / "DETAIL.md"
+
+        if not src_detail.exists():
+            raise ToolError(f"Source DETAIL.md not found: {src_detail}")
+
+        src_content = src_detail.read_text(encoding="utf-8")
+
+        # Extract the file block
+        block_pattern = re.compile(
+            rf"(<!-- file:{re.escape(fp)} -->.*?<!-- end:file:{re.escape(fp)} -->)",
+            re.DOTALL,
+        )
+        match = block_pattern.search(src_content)
+        if not match:
+            raise ToolError(
+                f"File block '<!-- file:{fp} -->' not found in {src_detail}"
+            )
+
+        extracted_block = match.group(1)
+
+        # Remove block from source
+        new_src_content = block_pattern.sub("", src_content).strip() + "\n"
+        # Update source YAML front matter file_count
+        src_file_count = len(re.findall(r"<!-- file:", new_src_content))
+        new_src_content = re.sub(
+            r"(file_count:\s*)\d+",
+            rf"\g<1>{src_file_count}",
+            new_src_content,
+            count=1,
+        )
+        src_detail.write_text(new_src_content, encoding="utf-8")
+
+        # Insert block into target DETAIL.md
+        tgt_dir = doc_dir / tgt_mod
+        tgt_dir.mkdir(parents=True, exist_ok=True)
+
+        if tgt_detail.exists():
+            tgt_content = tgt_detail.read_text(encoding="utf-8")
+            # Insert before the index-fragment marker
+            idx_frag_pos = tgt_content.find("<!-- index-fragment:")
+            if idx_frag_pos >= 0:
+                tgt_content = (
+                    tgt_content[:idx_frag_pos]
+                    + extracted_block + "\n\n"
+                    + tgt_content[idx_frag_pos:]
+                )
+            else:
+                # Append before end marker
+                end_pos = tgt_content.find("<!-- codebase-explorer: end -->")
+                if end_pos >= 0:
+                    tgt_content = (
+                        tgt_content[:end_pos]
+                        + extracted_block + "\n\n"
+                        + tgt_content[end_pos:]
+                    )
+                else:
+                    tgt_content += "\n" + extracted_block + "\n"
+        else:
+            tgt_content = extracted_block + "\n"
+
+        # Update target YAML front matter file_count
+        tgt_file_count = len(re.findall(r"<!-- file:", tgt_content))
+        tgt_content = re.sub(
+            r"(file_count:\s*)\d+",
+            rf"\g<1>{tgt_file_count}",
+            tgt_content,
+            count=1,
+        )
+        tgt_detail.write_text(tgt_content, encoding="utf-8")
+
         return {
             "status": "success",
             "operation": "move_detail",
-            "moved": file_path,
-            "from_module": source_module,
-            "to_module": target_module,
-            "message": f"Moved DETAIL for {file_path} from {source_module} to {target_module}",
+            "moved": fp,
+            "from_module": src_mod,
+            "to_module": tgt_mod,
+            "message": f"Moved file block '{fp}' from {src_mod}/DETAIL.md to {tgt_mod}/DETAIL.md",
         }
 
     if operation == "merge_modules":
         if not all([source_module, target_module]):
             raise ToolError("merge_modules requires source_module and target_module")
+
+        src_dir = doc_dir / source_module
+        tgt_dir = doc_dir / target_module
+        tgt_dir.mkdir(parents=True, exist_ok=True)
+
+        moved_files: list[str] = []
+        if src_dir.exists():
+            import shutil
+            for item in src_dir.iterdir():
+                dest = tgt_dir / item.name
+                if item.is_file():
+                    shutil.move(str(item), str(dest))
+                    moved_files.append(item.name)
+                elif item.is_dir():
+                    if dest.exists():
+                        # Merge subdirectory contents
+                        for sub_item in item.iterdir():
+                            shutil.move(str(sub_item), str(dest / sub_item.name))
+                        item.rmdir()
+                    else:
+                        shutil.move(str(item), str(dest))
+                    moved_files.append(item.name + "/")
+            # Remove empty source directory
+            if src_dir.exists() and not any(src_dir.iterdir()):
+                src_dir.rmdir()
+
+        # Update doc-index.json
+        docs = doc_index.get("documents", [])
+        for d in docs:
+            if d.get("module") == source_module:
+                d["module"] = target_module
+                old_prefix = source_module + "/"
+                new_prefix = target_module + "/"
+                if d.get("path", "").startswith(old_prefix):
+                    d["path"] = new_prefix + d["path"][len(old_prefix):]
+        doc_index["documents"] = docs
+        _save_doc_index()
+
         return {
             "status": "success",
             "operation": "merge_modules",
             "merged": source_module,
             "into": target_module,
-            "message": f"Merged {source_module} into {target_module}. INDEX updated.",
+            "moved_files": moved_files,
+            "message": f"Merged {source_module} into {target_module}. {len(moved_files)} items moved.",
         }
 
-    if operation == "split_module":
+    if operation in ("split_module", "list_module_files"):
+        if operation == "split_module":
+            logger.info("[doc_operation] 'split_module' is deprecated, use 'list_module_files'")
         if not source_module:
-            raise ToolError("split_module requires source_module")
+            raise ToolError(f"{operation} requires source_module")
+
+        src_dir = doc_dir / source_module
+        if not src_dir.exists():
+            raise ToolError(f"Module directory not found: {src_dir}")
+
+        files_in_module = [
+            str(f.relative_to(src_dir)) for f in src_dir.rglob("*") if f.is_file()
+        ]
+
         return {
             "status": "success",
-            "operation": "split_module",
-            "split": source_module,
-            "message": f"Split {source_module}. Use move_detail to assign files to new module.",
+            "operation": operation,
+            "source_module": source_module,
+            "files": files_in_module,
+            "message": (
+                f"Module {source_module} contains {len(files_in_module)} files. "
+                "Use move_detail to reassign files to a new module."
+            ),
         }
 
     if operation == "update_index":
+        doc_dir.mkdir(parents=True, exist_ok=True)
+
+        # Scan all DETAIL.md files for <!-- index-fragment:xxx --> blocks
+        _INDEX_FRAGMENT_RE = re.compile(
+            r"<!-- index-fragment:(\S+?) -->(.*?)<!-- end:index-fragment:\S+? -->",
+            re.DOTALL,
+        )
+
+        detail_fragments: dict[str, str] = {}
+        module_dirs = sorted(
+            [d for d in doc_dir.iterdir() if d.is_dir()],
+            key=lambda d: d.name,
+        )
+
+        for mod_dir in module_dirs:
+            for detail_file in sorted(mod_dir.rglob("DETAIL.md")):
+                content = detail_file.read_text(encoding="utf-8")
+                for m in _INDEX_FRAGMENT_RE.finditer(content):
+                    frag_module_id = m.group(1)
+                    frag_content = m.group(2).strip()
+                    if frag_content:
+                        detail_fragments[frag_module_id] = frag_content
+
+        # Determine module ordering:
+        # 1. Use doc-index order if available
+        # 2. Use cone data layer ordering if available
+        # 3. Alphabetical fallback
+        ordered_modules = doc_index.get("module_order", [])
+
+        # Try to get cone ordering from analysis data
+        cone_order: dict[str, int] = {}
+        cones_path = project_dir / "03_feature_cones.json"
+        project_name = "Project"
+        total_modules = 0
+        if cones_path.exists():
+            cd = json.loads(cones_path.read_text(encoding="utf-8"))
+            total_modules = cd.get("cone_count", 0)
+            project_name = Path(state.get("path", "Project")).name
+            for cid, cone in cd.get("cones", {}).items():
+                cone_order[cid] = cone.get("layer", 0)
+
+        # Build sorted module ID list
+        all_module_ids = sorted(
+            set(list(detail_fragments.keys()) + [d.name for d in module_dirs]),
+        )
+        if ordered_modules:
+            # Use explicit order, then append any missing
+            sorted_module_ids = [m for m in ordered_modules if m in all_module_ids]
+            for mid in all_module_ids:
+                if mid not in sorted_module_ids:
+                    sorted_module_ids.append(mid)
+        elif cone_order:
+            sorted_module_ids = sorted(all_module_ids, key=lambda m: cone_order.get(m, 999))
+        else:
+            sorted_module_ids = all_module_ids
+
+        # Build module-level Mermaid graph
+        mermaid_block = ""
+        dag_path = project_dir / "02_dag.json"
+        if dag_path.exists() and cones_path.exists():
+            dag_data = json.loads(dag_path.read_text(encoding="utf-8"))
+            cd = json.loads(cones_path.read_text(encoding="utf-8"))
+            mod_graph = build_module_level_graph(
+                cd.get("cones", {}), dag_data.get("edges", []),
+            )
+            mermaid_block = (
+                "\n```mermaid\n"
+                + render_mermaid(mod_graph, include_weights=True)
+                + "\n```\n"
+            )
+
+        # Build INDEX.md content
+        fragments_content: list[str] = []
+        for mid in sorted_module_ids:
+            frag = detail_fragments.get(mid, "")
+            fragments_content.append(f"<!-- module-index:{mid} -->")
+            fragments_content.append(f"## {mid}")
+            if frag:
+                fragments_content.append(frag)
+            fragments_content.append(f"<!-- end-module-index:{mid} -->")
+            fragments_content.append("")
+
+        ts = now_iso()
+        index_content = (
+            f"---\ntitle: {project_name} Architecture\n"
+            f"generated: {ts}\n"
+            f"module_count: {total_modules}\n"
+            f"---\n\n"
+            f"# {project_name} Architecture\n"
+            f"{mermaid_block}\n"
+            + "\n".join(fragments_content)
+            + "\n<!-- codebase-explorer: end -->\n"
+        )
+
+        index_path = doc_dir / "INDEX.md"
+        index_path.write_text(index_content, encoding="utf-8")
+
+        # Update doc-index.json
+        doc_index["index_path"] = "INDEX.md"
+        doc_index["module_count"] = len(sorted_module_ids)
+        _save_doc_index()
+
         return {
             "status": "success",
             "operation": "update_index",
-            "message": "INDEX regenerated from current module state and DETAIL fragments.",
+            "index_path": str(index_path),
+            "module_count": len(sorted_module_ids),
+            "fragments_found": len(detail_fragments),
+            "message": f"INDEX.md regenerated from {len(detail_fragments)} DETAIL.md index fragments.",
         }
 
     if operation == "reorder_modules":
         if not new_order:
             raise ToolError("reorder_modules requires new_order (list of module IDs)")
+
+        doc_index["module_order"] = new_order
+        _save_doc_index()
+
         return {
             "status": "success",
             "operation": "reorder_modules",
             "new_order": new_order,
-            "message": f"Modules reordered: {len(new_order)} modules.",
+            "message": "Module order saved. Call update_index to apply.",
         }
 
     return {"status": "error", "message": f"Unknown operation: {operation}"}
@@ -945,8 +1241,8 @@ async def doc_operation(
 @mcp.tool(annotations={"readOnlyHint": True})
 async def get_dependency_graph(
     scope: Annotated[
-        Literal["project", "cone", "file"],
-        Field(description="Scope: 'project', 'cone', or 'file'"),
+        Literal["project", "cone", "module", "file"],
+        Field(description="Scope: 'project', 'cone'/'module' (aliases), or 'file'"),
     ] = "project",
     target: Annotated[
         str | None,
@@ -968,6 +1264,10 @@ async def get_dependency_graph(
 
     include_weights=True annotates edges with weight and relationship type.
     """
+    # Normalize scope: "module" is an alias for "cone"
+    if scope == "module":
+        scope = "cone"
+
     logger.info("[DEP-GRAPH] Generating dependency graph scope=%s", scope)
 
     project_dir = find_latest_project_dir()
@@ -995,6 +1295,37 @@ async def get_dependency_graph(
 
     # --- Extract subgraph based on scope ----------------------------------
     if scope == "project":
+        # Module-level aggregated graph (not file-level)
+        cones_path = project_dir / "03_feature_cones.json"
+        if cones_path.exists():
+            cones_data = json.loads(cones_path.read_text(encoding="utf-8"))
+            cones_dict = cones_data.get("cones", {})
+            if cones_dict:
+                subgraph = build_module_level_graph(cones_dict, all_edges)
+                mermaid_graph = render_mermaid(subgraph, include_weights=include_weights)
+                result_nodes = sorted(subgraph.nodes())
+                result_edges = [
+                    {
+                        "source": u,
+                        "target": v,
+                        "weight": data.get("weight", 1),
+                        "edge_types": data.get("edge_types", []),
+                    }
+                    for u, v, data in sorted(subgraph.edges(data=True))
+                ]
+                return {
+                    "status": "success",
+                    "scope": scope,
+                    "target": target,
+                    "level": "module",
+                    "mermaid_graph": mermaid_graph,
+                    "nodes": result_nodes,
+                    "edges": result_edges,
+                    "node_count": subgraph.number_of_nodes(),
+                    "edge_count": subgraph.number_of_edges(),
+                    "circular_deps": [],
+                }
+        # Fallback: full file-level graph if no cones
         subgraph = graph
 
     elif scope == "cone":

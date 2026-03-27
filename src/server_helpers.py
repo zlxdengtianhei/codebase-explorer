@@ -82,6 +82,7 @@ def validate_json_files_exist(output_dir: Path) -> bool:
         "03_feature_cones.json",
         "04_file_tokens.json",
         "05_task_manifest.json",
+        "06_function_deps.json",
     ]
     return all((output_dir / f).exists() for f in required)
 
@@ -287,6 +288,68 @@ def compute_depends_on_cones(
             dependent_cones.add(cid)
 
     return sorted(dependent_cones)
+
+
+def build_file_to_cone_map(cones: dict) -> dict[str, str]:
+    """Build a mapping from file path to the cone that owns it (exclusive_files)."""
+    file_to_cone: dict[str, str] = {}
+    for cone_id, cone in cones.items():
+        for f in cone.get("exclusive_files", []):
+            file_to_cone[f] = cone_id
+    return file_to_cone
+
+
+def compute_inter_module_deps_from_dag(
+    cones: dict,
+    dag_edges: list[dict],
+) -> dict[str, set[str]]:
+    """Compute inter-module dependency sets from DAG edges.
+
+    For each edge (source→target) where source and target belong to
+    different cones, record that source_cone depends on target_cone.
+
+    Returns:
+        Dict mapping cone_id → set of cone_ids it depends on.
+    """
+    file_to_cone = build_file_to_cone_map(cones)
+    deps: dict[str, set[str]] = {cid: set() for cid in cones}
+
+    for edge in dag_edges:
+        src_cone = file_to_cone.get(edge["source"])
+        tgt_cone = file_to_cone.get(edge["target"])
+        if src_cone and tgt_cone and src_cone != tgt_cone:
+            deps[src_cone].add(tgt_cone)
+
+    return deps
+
+
+def build_module_level_graph(
+    cones: dict,
+    dag_edges: list[dict],
+) -> nx.DiGraph:
+    """Build a module-level aggregated graph from file-level DAG edges.
+
+    Nodes = cone IDs, edges = aggregated cross-module dependencies with
+    weight = number of file-level edges between the two modules.
+    """
+    file_to_cone = build_file_to_cone_map(cones)
+
+    # Count cross-module edges
+    edge_weights: dict[tuple[str, str], int] = {}
+    for edge in dag_edges:
+        src_cone = file_to_cone.get(edge["source"])
+        tgt_cone = file_to_cone.get(edge["target"])
+        if src_cone and tgt_cone and src_cone != tgt_cone:
+            key = (src_cone, tgt_cone)
+            edge_weights[key] = edge_weights.get(key, 0) + 1
+
+    graph = nx.DiGraph()
+    for cone_id in cones:
+        graph.add_node(cone_id)
+    for (src, tgt), weight in edge_weights.items():
+        graph.add_edge(src, tgt, weight=weight)
+
+    return graph
 
 
 # ---------------------------------------------------------------------------
