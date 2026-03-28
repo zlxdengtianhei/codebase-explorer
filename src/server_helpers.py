@@ -138,6 +138,7 @@ def render_mermaid(
     graph: nx.DiGraph,
     *,
     include_weights: bool = False,
+    labels: dict[str, str] | None = None,
 ) -> str:
     """Render a NetworkX DiGraph as a Mermaid flowchart string.
 
@@ -145,6 +146,7 @@ def render_mermaid(
         graph: The subgraph to render.
         include_weights: When True, annotate edges with weight and
                          relationship types (import/call/inherit).
+        labels: Optional mapping from node name to display label.
 
     Returns:
         Complete Mermaid graph definition string.
@@ -158,7 +160,7 @@ def render_mermaid(
     for idx, node in enumerate(sorted(graph.nodes())):
         safe_id = f"n{idx}"
         node_ids[node] = safe_id
-        label = short_mermaid_label(node)
+        label = (labels or {}).get(node) or short_mermaid_label(node)
         lines.append(f'    {safe_id}["{label}"]')
 
     for src, tgt, data in sorted(graph.edges(data=True)):

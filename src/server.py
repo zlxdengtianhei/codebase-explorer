@@ -1114,6 +1114,8 @@ async def doc_operation(
         )
 
         detail_fragments: dict[str, str] = {}
+        module_display_names: dict[str, str] = {}  # module_id → functional name
+        _YAML_NAME_RE = re.compile(r"^module_name:\s*(.+)$", re.MULTILINE)
         module_dirs = sorted(
             [d for d in doc_dir.iterdir() if d.is_dir()],
             key=lambda d: d.name,
@@ -1122,6 +1124,10 @@ async def doc_operation(
         for mod_dir in module_dirs:
             for detail_file in sorted(mod_dir.rglob("DETAIL.md")):
                 content = detail_file.read_text(encoding="utf-8")
+                # Extract module_name from YAML front matter
+                name_match = _YAML_NAME_RE.search(content)
+                if name_match:
+                    module_display_names[mod_dir.name] = name_match.group(1).strip()
                 for m in _INDEX_FRAGMENT_RE.finditer(content):
                     frag_module_id = m.group(1)
                     frag_content = m.group(2).strip()
@@ -1174,7 +1180,11 @@ async def doc_operation(
             )
             mermaid_block = (
                 "\n```mermaid\n"
-                + render_mermaid(mod_graph, include_weights=True)
+                + render_mermaid(
+                    mod_graph,
+                    include_weights=True,
+                    labels=module_display_names,
+                )
                 + "\n```\n"
             )
 
@@ -1182,8 +1192,9 @@ async def doc_operation(
         fragments_content: list[str] = []
         for mid in sorted_module_ids:
             frag = detail_fragments.get(mid, "")
+            heading = module_display_names.get(mid, mid)
             fragments_content.append(f"<!-- module-index:{mid} -->")
-            fragments_content.append(f"## {mid}")
+            fragments_content.append(f"## {heading}")
             if frag:
                 fragments_content.append(frag)
             fragments_content.append(f"<!-- end-module-index:{mid} -->")
