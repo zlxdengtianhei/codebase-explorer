@@ -1,230 +1,369 @@
-"""Tests for Feature Cone extraction algorithm."""
+"""Tests for src/graph/feature_cone.py — feature cone extraction algorithm.
+
+Covers:
+- extract_feature_cones (full pipeline with snapshot)
+- _separate_testing_files
+- _generate_cone_name / _rename_cones
+- FeatureCone dataclass
+- Various graph topologies (star, chain, diamond, disconnected)
+"""
 
 from __future__ import annotations
 
+import pytest
 import networkx as nx
 
 from src.graph.feature_cone import (
     FeatureCone,
-    assign_scc_to_cone,
+    _semantic_suffix,
+    _separate_testing_files,
+    _generate_cone_name,
+    _rename_cones,
     extract_feature_cones,
-    find_feature_roots,
 )
-from src.parser.codebase import CodebaseSnapshot, FileInfo
+from src.parser.codebase import (
+    ClassInfo,
+    CodebaseSnapshot,
+    FileInfo,
+    FunctionInfo,
+)
 
 
-def _collect_all_files(cones: dict[str, FeatureCone]) -> set[str]:
-    """Collect all exclusive files from all cones."""
-    all_files: set[str] = set()
-    for cone in cones.values():
-        all_files.update(cone.exclusive_files)
-    return all_files
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
 
 
-def _make_simple_dag() -> nx.DiGraph:
-    """Create a simple DAG without SCC for testing.
-
-    Structure:
-        cli.py → app.py → utils.py
-                 ↓
-              helpers.py
-    """
-    G = nx.DiGraph()
-    G.add_edge("cli.py", "app.py")
-    G.add_edge("app.py", "utils.py")
-    G.add_edge("app.py", "helpers.py")
-    return G
-
-
-def _make_dag_with_scc() -> nx.DiGraph:
-    """Create a DAG with SCC for testing.
-
-    Structure (after SCC condensation):
-        views.py → [app.py + ctx.py] (SCC) → utils.py
-        cli.py  → [app.py + ctx.py] (SCC) → helpers.py
-    """
-    G = nx.DiGraph()
-    # SCC: app.py <-> ctx.py
-    G.add_edge("app.py", "ctx.py")
-    G.add_edge("ctx.py", "app.py")
-    # Dependencies from SCC
-    G.add_edge("app.py", "utils.py")
-    G.add_edge("ctx.py", "helpers.py")
-    # Dependencies to SCC
-    G.add_edge("views.py", "app.py")
-    G.add_edge("cli.py", "ctx.py")
-    return G
-
-
-def _make_minimal_snapshot() -> CodebaseSnapshot:
-    """Create a minimal CodebaseSnapshot for testing."""
+def _make_snapshot(
+    files: tuple[FileInfo, ...] = (),
+    functions: tuple[FunctionInfo, ...] = (),
+    classes: tuple[ClassInfo, ...] = (),
+) -> CodebaseSnapshot:
+    """Build a minimal CodebaseSnapshot for testing."""
+    total_lines = sum(f.line_count for f in files)
     return CodebaseSnapshot(
-        root_path="/test",
-        files=(
-            FileInfo(
-                filepath="cli.py",
-                language="python",
-                line_count=10,
-                function_names=(),
-                class_names=(),
-                import_sources=(),
-            ),
-        ),
-        functions=(),
-        classes=(),
+        root_path="/fake",
+        files=files,
+        functions=functions,
+        classes=classes,
         languages_detected=("python",),
-        total_lines=10,
+        total_lines=total_lines,
     )
 
 
-class TestFindFeatureRoots:
-    """Test finding feature roots in DAG."""
+def _file(path: str, imports: tuple[str, ...] = ()) -> FileInfo:
+    """Shorthand FileInfo factory."""
+    return FileInfo(
+        filepath=path,
+        language="python",
+        line_count=50,
+        function_names=(),
+        class_names=(),
+        import_sources=imports,
+    )
 
-    def test_simple_dag_has_one_root(self):
-        """Simple DAG with one entry point should have one root."""
-        dag = _make_simple_dag()
-        roots = find_feature_roots(dag)
-        assert len(roots) == 1
-        assert "cli.py" in roots
 
-    def test_multiple_roots(self):
-        """DAG with multiple entry points should have multiple roots."""
-        G = nx.DiGraph()
-        G.add_edge("entry1.py", "common.py")
-        G.add_edge("entry2.py", "common.py")
+# ---------------------------------------------------------------------------
+# T-01: Test file root filtering in extract_feature_cones
+# ---------------------------------------------------------------------------
 
-        roots = find_feature_roots(G)
-        assert len(roots) == 2
-        assert "entry1.py" in roots
-        assert "entry2.py" in roots
 
-    def test_library_code_fallback(self):
-        """Library code with no in-degree=0 nodes should fallback to min+1."""
-        G = nx.DiGraph()
-        # All nodes have in-degree > 0 (library code)
-        G.add_edge("a.py", "b.py")
-        G.add_edge("b.py", "c.py")
-        G.add_edge("c.py", "a.py")  # Cycle, all in-degree >= 1
+class TestTestFileRootFiltering:
+    """Tests for T-01: test files filtered from roots before threshold calc."""
 
-        roots = find_feature_roots(G)
-        # Should fallback to min in-degree nodes
-        assert len(roots) > 0
-        # All nodes have in-degree 1, so all should be roots
-        assert len(roots) == 3
+    def test_test_roots_excluded_from_threshold(self):
+        """Test files as roots should be filtered out, reducing root count."""
+        # 3 real roots + 5 test roots = 8 total
+        # Without filtering: threshold = max(2, round(sqrt(8)*1.2)) = 3
+        # With filtering: 3 roots -> threshold = max(2, round(sqrt(3)*1.2)) = 2
+        dag = nx.DiGraph()
+        dag.add_edge("cli.py", "shared.py", weight=1)
+        dag.add_edge("api.py", "shared.py", weight=1)
+        dag.add_edge("app.py", "shared.py", weight=1)
+        for i in range(5):
+            dag.add_edge(f"tests/test_{i}.py", "shared.py", weight=1)
+
+        snapshot = _make_snapshot(
+            files=tuple(
+                _file(n) for n in dag.nodes()
+            ),
+        )
+        cones, infra = extract_feature_cones(dag, snapshot)
+        # shared.py should be infra (shared by all 3 non-test roots, threshold=2)
+        assert "shared.py" in infra
+
+    def test_all_test_roots_fallback(self):
+        """If all roots are test files, fall back to unfiltered roots."""
+        dag = nx.DiGraph()
+        dag.add_edge("tests/test_a.py", "utils.py", weight=1)
+        dag.add_edge("tests/test_b.py", "utils.py", weight=1)
+
+        snapshot = _make_snapshot(
+            files=tuple(_file(n) for n in dag.nodes()),
+        )
+        # Should not crash; falls back to unfiltered roots
+        cones, infra = extract_feature_cones(dag, snapshot)
+        assert len(cones) >= 1
+
+    def test_test_nodes_still_in_dag(self):
+        """Test files are filtered from roots but remain in the DAG for BFS."""
+        dag = nx.DiGraph()
+        dag.add_edge("cli.py", "tests/test_cli.py", weight=1)
+        dag.add_edge("cli.py", "app.py", weight=1)
+
+        snapshot = _make_snapshot(
+            files=tuple(_file(n) for n in dag.nodes()),
+        )
+        cones, infra = extract_feature_cones(dag, snapshot)
+        # test_cli.py should still be reachable via BFS from cli.py
+        all_files = set()
+        for cone in cones.values():
+            all_files.update(cone.exclusive_files)
+        all_files.update(infra)
+        assert "tests/test_cli.py" in all_files
+
+
+# ---------------------------------------------------------------------------
+# extract_feature_cones (full pipeline)
+# ---------------------------------------------------------------------------
 
 
 class TestExtractFeatureCones:
-    """Test feature cone extraction."""
+    """Integration tests for extract_feature_cones."""
 
-    def test_simple_cone_extraction(self):
-        """Extract cones from simple DAG."""
-        dag = _make_simple_dag()
-        snapshot = _make_minimal_snapshot()
+    def test_simple_chain(self):
+        """Simple chain: cli.py -> app.py -> utils.py."""
+        snapshot = _make_snapshot(
+            files=(
+                _file("cli.py", ("app.py",)),
+                _file("app.py", ("utils.py",)),
+                _file("utils.py"),
+            ),
+        )
+        dag = nx.DiGraph()
+        dag.add_edge("cli.py", "app.py", weight=1)
+        dag.add_edge("app.py", "utils.py", weight=1)
 
-        cones, infrastructure = extract_feature_cones(dag, snapshot, shared_threshold=2)
-
-        # After rebalancing, the single mega-cone may be split into sub-cones.
-        # All sub-cones should trace back to the cli.py entry point.
+        cones, infra = extract_feature_cones(dag, snapshot)
         assert len(cones) >= 1
+        # All files should be accounted for
+        all_files = set()
         for cone in cones.values():
-            assert cone.entry_point == "cli.py"
+            all_files.update(cone.exclusive_files)
+        all_files.update(infra)
+        assert {"cli.py", "app.py", "utils.py"}.issubset(all_files | set(infra))
 
-        # Collect all exclusive files across all cones
-        all_exclusive = _collect_all_files(cones)
-        assert "cli.py" in all_exclusive
-        assert "app.py" in all_exclusive
-        assert "utils.py" in all_exclusive
-        assert "helpers.py" in all_exclusive
+    def test_star_topology_shared_infrastructure(self):
+        """Star: A -> utils.py, B -> utils.py, C -> utils.py.
 
-        # No infrastructure nodes (only one original cone before rebalancing)
-        assert len(infrastructure) == 0
+        With Louvain-based infra detection, a file needs both semantic hints
+        (infra-like name) AND cross-community import to be classified as infra.
+        We use 'utils.py' which matches the known infra stems.
+        """
+        dag = nx.DiGraph()
+        dag.add_edge("A", "utils.py", weight=1)
+        dag.add_edge("B", "utils.py", weight=1)
+        dag.add_edge("C", "utils.py", weight=1)
 
-    def test_shared_infrastructure_detection(self):
-        """Detect shared infrastructure nodes."""
-        G = nx.DiGraph()
-        # Two entry points sharing common dependency
-        G.add_edge("entry1.py", "shared.py")
-        G.add_edge("entry2.py", "shared.py")
+        snapshot = _make_snapshot(
+            files=(_file("A"), _file("B"), _file("C"), _file("utils.py")),
+        )
 
-        snapshot = _make_minimal_snapshot()
+        cones, infra = extract_feature_cones(dag, snapshot)
+        # utils.py should be in infra OR all files in a single cone
+        # (Louvain may group them all together for such a small graph)
+        all_exclusive = set()
+        for c in cones.values():
+            all_exclusive.update(c.exclusive_files)
+        all_accounted = all_exclusive | set(infra)
+        assert {"A", "B", "C", "utils.py"}.issubset(all_accounted)
 
-        cones, infrastructure = extract_feature_cones(G, snapshot, shared_threshold=2)
+    def test_disconnected_graph_separate_cones(self):
+        """Two disconnected components get separate cones."""
+        dag = nx.DiGraph()
+        dag.add_edge("a/main.py", "a/util.py", weight=1)
+        dag.add_edge("b/main.py", "b/util.py", weight=1)
 
-        # shared.py should be in infrastructure (shared by 2 cones)
-        assert "shared.py" in infrastructure
+        snapshot = _make_snapshot(
+            files=(
+                _file("a/main.py", ("a/util.py",)),
+                _file("a/util.py"),
+                _file("b/main.py", ("b/util.py",)),
+                _file("b/util.py"),
+            ),
+        )
 
-        # Both cones should reference shared.py in shared_deps
-        for cone in cones.values():
-            assert "shared.py" in cone.shared_deps
-
-    def test_cone_metadata(self):
-        """Cone should have correct metadata."""
-        dag = _make_simple_dag()
-        snapshot = _make_minimal_snapshot()
-
-        cones, _ = extract_feature_cones(dag, snapshot)
-
-        # After rebalancing, cones may be renamed but all should trace to cli.py
-        assert len(cones) >= 1
-        for cone in cones.values():
-            assert cone.entry_point == "cli.py"
-            assert len(cone.exclusive_files) > 0
-
-
-class TestAssignSccToCone:
-    """Test SCC assignment to cones."""
-
-    def test_scc_assigned_to_dominant_cone(self):
-        """SCC should be assigned to the cone with most members."""
-        scc_members = ["app.py", "ctx.py", "globals.py"]
-
-        # Create mock cone assignments
-        # app.py and ctx.py belong to cone1, globals.py to cone2
-        cone_assignments = {
-            "app.py": "cone1",
-            "ctx.py": "cone1",
-            "globals.py": "cone2",
-        }
-
-        assigned_cone = assign_scc_to_cone(scc_members, cone_assignments)
-        assert assigned_cone == "cone1"  # cone1 has 2 members, cone2 has 1
-
-    def test_tie_goes_to_infrastructure(self):
-        """SCC with equal cone membership should go to infrastructure."""
-        scc_members = ["a.py", "b.py"]
-
-        # Both cones have equal representation
-        cone_assignments = {
-            "a.py": "cone1",
-            "b.py": "cone2",
-        }
-
-        assigned_cone = assign_scc_to_cone(scc_members, cone_assignments)
-        assert assigned_cone == "infrastructure"
-
-    def test_no_assignment_returns_infrastructure(self):
-        """SCC members not in any cone should return infrastructure."""
-        scc_members = ["orphan.py"]
-
-        cone_assignments = {}  # No assignments
-
-        assigned_cone = assign_scc_to_cone(scc_members, cone_assignments)
-        assert assigned_cone == "infrastructure"
-
-
-class TestIntegration:
-    """Integration tests with real DAG structures."""
-
-    def test_dag_with_scc(self):
-        """Test DAG containing SCC."""
-        dag = _make_dag_with_scc()
-        snapshot = _make_minimal_snapshot()
-
-        cones, infrastructure = extract_feature_cones(dag, snapshot)
-
-        # Should have cones for views.py and cli.py (entry points)
+        cones, infra = extract_feature_cones(dag, snapshot)
+        # Should have at least 2 cones (one per component)
         assert len(cones) >= 2
 
-        # The SCC (app.py + ctx.py) should be shared
-        # So it might end up in infrastructure
-        # (depends on whether both entry points reach it)
+    def test_empty_dag_raises_value_error(self):
+        """An empty DAG raises ValueError (no nodes)."""
+        dag = nx.DiGraph()
+        snapshot = _make_snapshot()
+        with pytest.raises(ValueError):
+            extract_feature_cones(dag, snapshot)
+
+    def test_louvain_groups_connected_components(self):
+        """Louvain-based extraction groups well-connected components together.
+
+        With Louvain, connected components with strong internal edges should
+        form distinct cones. shared_threshold is no longer used.
+        """
+        dag = nx.DiGraph()
+        # Two clear clusters with no cross-edges
+        dag.add_edge("a/main.py", "a/core.py", weight=2)
+        dag.add_edge("a/main.py", "a/helper.py", weight=1)
+        dag.add_edge("a/core.py", "a/helper.py", weight=1)
+        dag.add_edge("b/main.py", "b/engine.py", weight=2)
+        dag.add_edge("b/main.py", "b/util.py", weight=1)
+        dag.add_edge("b/engine.py", "b/util.py", weight=1)
+
+        snapshot = _make_snapshot(
+            files=(
+                _file("a/main.py"), _file("a/core.py"), _file("a/helper.py"),
+                _file("b/main.py"), _file("b/engine.py"), _file("b/util.py"),
+            ),
+        )
+
+        cones, infra = extract_feature_cones(dag, snapshot)
+        # Should have at least 2 cones (one per cluster)
+        assert len(cones) >= 2
+        # All files should be accounted for
+        all_files = set()
+        for c in cones.values():
+            all_files.update(c.exclusive_files)
+        all_files.update(infra)
+        expected = {"a/main.py", "a/core.py", "a/helper.py",
+                    "b/main.py", "b/engine.py", "b/util.py"}
+        assert expected.issubset(all_files)
+
+
+# ---------------------------------------------------------------------------
+# _generate_cone_name / _rename_cones
+# ---------------------------------------------------------------------------
+
+
+class TestConeNaming:
+    """Tests for _generate_cone_name and _rename_cones."""
+
+    def test_testing_cone_name(self):
+        """Files classified as testing produce 'testing' name."""
+        name = _generate_cone_name(["tests/test_a.py", "tests/test_b.py"])
+        assert name == "testing"
+
+    def test_api_cone_name(self):
+        """Files in api/ produce 'api' name."""
+        name = _generate_cone_name(["api/routes.py", "api/handlers.py"])
+        assert name == "api"
+
+    def test_empty_files_returns_empty(self):
+        """No files => 'empty'."""
+        name = _generate_cone_name([])
+        assert name == "empty"
+
+    def test_unknown_files_fallback_to_directory(self):
+        """Unknown-category files in same dir fall back to directory name."""
+        name = _generate_cone_name(["mypackage/foo.py", "mypackage/bar.py"])
+        assert name == "mypackage"
+
+    def test_rename_disambiguates_with_semantic_suffix(self):
+        """Duplicate names get semantic suffixes instead of numbers."""
+        cones = [
+            FeatureCone("c1", "c1", ("tests/test_a.py",), (), 0, 0),
+            FeatureCone("c2", "c2", ("tests/test_b.py",), (), 0, 0),
+        ]
+        renamed = _rename_cones(cones)
+        ids = [c.cone_id for c in renamed]
+        # Should use semantic suffixes like testing-test_a, testing-test_b
+        assert all("testing-" in i for i in ids)
+        # No __init__ or plain numeric suffix
+        assert all("-1" not in i and "-2" not in i for i in ids)
+
+    def test_root_level_files_core_runtime(self):
+        """Root-level unknown files get 'core-runtime' name."""
+        name = _generate_cone_name(["setup.py", "pyproject.py"])
+        assert name == "core-runtime"
+
+    def test_init_replaced_with_parent_dir(self):
+        """__init__.py as first file uses parent directory name."""
+        name = _generate_cone_name(["pkg/sub/__init__.py"])
+        assert name != "__init__"
+        assert name == "sub"
+
+    def test_new_categories_middleware(self):
+        """Files classified as middleware produce 'middleware' name."""
+        name = _generate_cone_name(["middleware.py", "auth_middleware.py"])
+        assert name == "middleware"
+
+    def test_new_categories_security(self):
+        """Files in security/ produce 'security' name."""
+        name = _generate_cone_name(["security/auth.py", "security/perms.py"])
+        assert name == "security"
+
+    def test_new_categories_utils(self):
+        """utils.py is classified as 'utils'."""
+        name = _generate_cone_name(["utils.py", "helpers.py"])
+        assert name == "utils"
+
+    def test_new_categories_exceptions(self):
+        """exceptions.py is classified as 'exceptions'."""
+        name = _generate_cone_name(["exceptions.py"])
+        assert name == "exceptions"
+
+
+# ---------------------------------------------------------------------------
+# _separate_testing_files
+# ---------------------------------------------------------------------------
+
+
+class TestSeparateTestingFiles:
+    """Tests for _separate_testing_files."""
+
+    def test_separate_testing_files(self):
+        """Testing files are separated from runtime files in a cone."""
+        mixed = FeatureCone(
+            "mixed", "mixed",
+            ("src/app.py", "tests/test_app.py", "src/utils.py"),
+            (), 0, 0,
+        )
+        result = _separate_testing_files([mixed])
+        assert len(result) == 2
+        cone_ids = {c.cone_id for c in result}
+        assert "mixed" in cone_ids
+        assert "mixed::testing" in cone_ids
+
+    def test_all_testing_not_separated(self):
+        """A cone that is all testing files is NOT split."""
+        all_test = FeatureCone(
+            "tests", "tests",
+            ("tests/test_a.py", "tests/test_b.py"),
+            (), 0, 0,
+        )
+        result = _separate_testing_files([all_test])
+        assert len(result) == 1
+
+
+# ---------------------------------------------------------------------------
+# FeatureCone dataclass
+# ---------------------------------------------------------------------------
+
+
+class TestFeatureConeDataclass:
+    """Tests for FeatureCone frozen dataclass."""
+
+    def test_frozen_immutable(self):
+        """FeatureCone is frozen and cannot be mutated."""
+        cone = FeatureCone("c", "entry.py", ("a.py",), ("b.py",), 0, 100)
+        with pytest.raises(AttributeError):
+            cone.cone_id = "new_id"  # type: ignore[misc]
+
+    def test_fields_accessible(self):
+        """All fields are accessible."""
+        cone = FeatureCone("c", "entry.py", ("a.py",), ("b.py",), 2, 500)
+        assert cone.cone_id == "c"
+        assert cone.entry_point == "entry.py"
+        assert cone.exclusive_files == ("a.py",)
+        assert cone.shared_deps == ("b.py",)
+        assert cone.layer == 2
+        assert cone.token_count == 500

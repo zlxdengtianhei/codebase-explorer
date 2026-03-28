@@ -1,8 +1,19 @@
-"""Tests for weighted dependency graph builder."""
+"""Tests for src/graph/weighted_graph.py — weighted multi-relation dependency graph.
+
+Covers:
+- build_weighted_dependency_graph
+- Edge weight accumulation (import=1, call=2, inherit=3)
+- Multiple relation types on the same edge
+- Empty / single-node / disconnected graphs
+- WeightedGraphResult metadata (node_count, edge_count, total_weight, summary)
+"""
 
 from __future__ import annotations
 
+import pytest
+
 from src.graph.weighted_graph import (
+    EDGE_WEIGHTS,
     WeightedGraphResult,
     build_weighted_dependency_graph,
 )
@@ -14,379 +25,396 @@ from src.parser.codebase import (
 )
 
 
-def _make_simple_import_snapshot() -> CodebaseSnapshot:
-    """Create snapshot with simple import dependencies."""
-    return CodebaseSnapshot(
-        root_path="/test",
-        files=(
-            FileInfo(
-                filepath="main.py",
-                language="python",
-                line_count=10,
-                function_names=(),
-                class_names=(),
-                import_sources=("utils.py",),
-            ),
-            FileInfo(
-                filepath="utils.py",
-                language="python",
-                line_count=5,
-                function_names=(),
-                class_names=(),
-                import_sources=(),
-            ),
-        ),
-        functions=(),
-        classes=(),
-        languages_detected=("python",),
-        total_lines=15,
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+
+def _file(path: str, imports: tuple[str, ...] = ()) -> FileInfo:
+    """Shorthand FileInfo factory."""
+    return FileInfo(
+        filepath=path,
+        language="python",
+        line_count=50,
+        function_names=(),
+        class_names=(),
+        import_sources=imports,
     )
 
 
-def _make_call_dependency_snapshot() -> CodebaseSnapshot:
-    """Create snapshot with function call dependencies."""
-    return CodebaseSnapshot(
-        root_path="/test",
-        files=(
-            FileInfo(
-                filepath="main.py",
-                language="python",
-                line_count=10,
-                function_names=("main",),
-                class_names=(),
-                import_sources=("utils.py",),
-            ),
-            FileInfo(
-                filepath="utils.py",
-                language="python",
-                line_count=5,
-                function_names=("helper",),
-                class_names=(),
-                import_sources=(),
-            ),
-        ),
-        functions=(
-            FunctionInfo(
-                name="main",
-                filepath="main.py",
-                start_line=1,
-                end_line=5,
-                parameters=(),
-                return_type=None,
-                calls=("helper",),
-                dependencies=("utils.py",),
-            ),
-            FunctionInfo(
-                name="helper",
-                filepath="utils.py",
-                start_line=1,
-                end_line=5,
-                parameters=(),
-                return_type=None,
-                calls=(),
-                dependencies=(),
-            ),
-        ),
-        classes=(),
-        languages_detected=("python",),
-        total_lines=15,
+def _func(
+    name: str,
+    filepath: str,
+    dependencies: tuple[str, ...] = (),
+) -> FunctionInfo:
+    """Shorthand FunctionInfo factory."""
+    return FunctionInfo(
+        name=name,
+        filepath=filepath,
+        start_line=1,
+        end_line=10,
+        parameters=(),
+        return_type=None,
+        calls=(),
+        dependencies=dependencies,
     )
 
 
-def _make_inheritance_snapshot() -> CodebaseSnapshot:
-    """Create snapshot with class inheritance."""
-    return CodebaseSnapshot(
-        root_path="/test",
-        files=(
-            FileInfo(
-                filepath="child.py",
-                language="python",
-                line_count=10,
-                function_names=(),
-                class_names=("Child",),
-                import_sources=("parent.py",),
-            ),
-            FileInfo(
-                filepath="parent.py",
-                language="python",
-                line_count=5,
-                function_names=(),
-                class_names=("Parent",),
-                import_sources=(),
-            ),
-        ),
-        functions=(),
-        classes=(
-            ClassInfo(
-                name="Child",
-                filepath="child.py",
-                start_line=1,
-                end_line=10,
-                methods=(),
-                base_classes=("Parent",),
-                subclasses=(),
-            ),
-            ClassInfo(
-                name="Parent",
-                filepath="parent.py",
-                start_line=1,
-                end_line=5,
-                methods=(),
-                base_classes=(),
-                subclasses=("Child",),
-            ),
-        ),
-        languages_detected=("python",),
-        total_lines=15,
+def _cls(
+    name: str,
+    filepath: str,
+    base_classes: tuple[str, ...] = (),
+) -> ClassInfo:
+    """Shorthand ClassInfo factory."""
+    return ClassInfo(
+        name=name,
+        filepath=filepath,
+        start_line=1,
+        end_line=20,
+        methods=(),
+        base_classes=base_classes,
+        subclasses=(),
     )
 
 
-def _make_multiple_relations_snapshot() -> CodebaseSnapshot:
-    """Create snapshot with multiple relation types between same files."""
+def _snapshot(
+    files: tuple[FileInfo, ...] = (),
+    functions: tuple[FunctionInfo, ...] = (),
+    classes: tuple[ClassInfo, ...] = (),
+) -> CodebaseSnapshot:
+    """Build a minimal CodebaseSnapshot."""
+    total_lines = sum(f.line_count for f in files)
     return CodebaseSnapshot(
-        root_path="/test",
-        files=(
-            FileInfo(
-                filepath="app.py",
-                language="python",
-                line_count=20,
-                function_names=("run",),
-                class_names=("App",),
-                import_sources=("core.py",),
-            ),
-            FileInfo(
-                filepath="core.py",
-                language="python",
-                line_count=15,
-                function_names=("init",),
-                class_names=("BaseApp",),
-                import_sources=(),
-            ),
-        ),
-        functions=(
-            FunctionInfo(
-                name="run",
-                filepath="app.py",
-                start_line=1,
-                end_line=10,
-                parameters=(),
-                return_type=None,
-                calls=("init",),
-                dependencies=("core.py",),
-            ),
-            FunctionInfo(
-                name="init",
-                filepath="core.py",
-                start_line=1,
-                end_line=5,
-                parameters=(),
-                return_type=None,
-                calls=(),
-                dependencies=(),
-            ),
-        ),
-        classes=(
-            ClassInfo(
-                name="App",
-                filepath="app.py",
-                start_line=12,
-                end_line=20,
-                methods=(),
-                base_classes=("BaseApp",),
-                subclasses=(),
-            ),
-            ClassInfo(
-                name="BaseApp",
-                filepath="core.py",
-                start_line=7,
-                end_line=15,
-                methods=(),
-                base_classes=(),
-                subclasses=("App",),
-            ),
-        ),
+        root_path="/fake",
+        files=files,
+        functions=functions,
+        classes=classes,
         languages_detected=("python",),
-        total_lines=35,
+        total_lines=total_lines,
     )
 
 
-def _make_duplicate_names_snapshot() -> CodebaseSnapshot:
-    """Create snapshot with duplicate function/class names across files."""
-    return CodebaseSnapshot(
-        root_path="/test",
-        files=(
-            FileInfo(
-                filepath="a.py",
-                language="python",
-                line_count=5,
-                function_names=("helper",),
-                class_names=(),
-                import_sources=(),
-            ),
-            FileInfo(
-                filepath="b.py",
-                language="python",
-                line_count=5,
-                function_names=("helper",),  # Duplicate name
-                class_names=(),
-                import_sources=(),
-            ),
-            FileInfo(
-                filepath="main.py",
-                language="python",
-                line_count=10,
-                function_names=("main",),
-                class_names=(),
-                import_sources=(),
-            ),
-        ),
-        functions=(
-            FunctionInfo(
-                name="helper",
-                filepath="a.py",
-                start_line=1,
-                end_line=5,
-                parameters=(),
-                return_type=None,
-                calls=(),
-                dependencies=(),
-            ),
-            FunctionInfo(
-                name="helper",
-                filepath="b.py",
-                start_line=1,
-                end_line=5,
-                parameters=(),
-                return_type=None,
-                calls=(),
-                dependencies=(),
-            ),
-            FunctionInfo(
-                name="main",
-                filepath="main.py",
-                start_line=1,
-                end_line=10,
-                parameters=(),
-                return_type=None,
-                calls=("helper",),  # Ambiguous call
-                dependencies=(),
-            ),
-        ),
-        classes=(),
-        languages_detected=("python",),
-        total_lines=20,
-    )
+# ---------------------------------------------------------------------------
+# Empty and trivial graphs
+# ---------------------------------------------------------------------------
 
 
-class TestBuildWeightedDependencyGraph:
-    """Test weighted dependency graph construction."""
-
-    def test_import_edge_weight(self):
-        """Import edges should have weight=1."""
-        snapshot = _make_simple_import_snapshot()
-        result = build_weighted_dependency_graph(snapshot)
-
-        assert result.graph.has_edge("main.py", "utils.py")
-        edge_data = result.graph.get_edge_data("main.py", "utils.py")
-        assert edge_data["weight"] == 1
-        assert "import" in edge_data["edge_types"]
-
-    def test_call_edge_weight(self):
-        """Call edges should have weight=2."""
-        snapshot = _make_call_dependency_snapshot()
-        result = build_weighted_dependency_graph(snapshot)
-
-        # Should have both import (weight=1) and call (weight=2)
-        assert result.graph.has_edge("main.py", "utils.py")
-        edge_data = result.graph.get_edge_data("main.py", "utils.py")
-        assert edge_data["weight"] == 3  # 1 (import) + 2 (call)
-        assert "import" in edge_data["edge_types"]
-        assert "call" in edge_data["edge_types"]
-
-    def test_inheritance_edge_weight(self):
-        """Inheritance edges should have weight=3."""
-        snapshot = _make_inheritance_snapshot()
-        result = build_weighted_dependency_graph(snapshot)
-
-        # Should have both import (weight=1) and inherit (weight=3)
-        assert result.graph.has_edge("child.py", "parent.py")
-        edge_data = result.graph.get_edge_data("child.py", "parent.py")
-        assert edge_data["weight"] == 4  # 1 (import) + 3 (inherit)
-        assert "import" in edge_data["edge_types"]
-        assert "inherit" in edge_data["edge_types"]
-
-    def test_multiple_relations_cumulative_weight(self):
-        """Multiple relations should accumulate weights."""
-        snapshot = _make_multiple_relations_snapshot()
-        result = build_weighted_dependency_graph(snapshot)
-
-        # app.py -> core.py: import (1) + call (2) + inherit (3) = 6
-        assert result.graph.has_edge("app.py", "core.py")
-        edge_data = result.graph.get_edge_data("app.py", "core.py")
-        assert edge_data["weight"] == 6
-        assert "import" in edge_data["edge_types"]
-        assert "call" in edge_data["edge_types"]
-        assert "inherit" in edge_data["edge_types"]
-
-    def test_duplicate_function_names_skipped(self):
-        """Duplicate function names should not create call edges."""
-        snapshot = _make_duplicate_names_snapshot()
-        result = build_weighted_dependency_graph(snapshot)
-
-        # main.py calls helper, but helper exists in both a.py and b.py
-        # So no call edge should be created (conservative strategy)
-        assert not result.graph.has_edge("main.py", "a.py")
-        assert not result.graph.has_edge("main.py", "b.py")
-
-    def test_result_metadata(self):
-        """Result should contain correct metadata."""
-        snapshot = _make_simple_import_snapshot()
-        result = build_weighted_dependency_graph(snapshot)
-
-        assert result.node_count == 2
-        assert result.edge_count == 1
-        assert result.total_weight == 1
-        assert "import_edges=1" in result.summary
+class TestEmptyAndTrivialGraphs:
+    """Edge cases: empty, single-node, no-edge graphs."""
 
     def test_empty_snapshot(self):
-        """Empty snapshot should produce empty graph."""
-        snapshot = CodebaseSnapshot(
-            root_path="/test",
-            files=(),
-            functions=(),
-            classes=(),
-            languages_detected=(),
-            total_lines=0,
-        )
-        result = build_weighted_dependency_graph(snapshot)
-
+        """Empty snapshot produces an empty graph."""
+        result = build_weighted_dependency_graph(_snapshot())
         assert result.node_count == 0
         assert result.edge_count == 0
         assert result.total_weight == 0
 
-    def test_self_loops_excluded(self):
-        """Self-loops should be excluded."""
-    def test_self_loops_excluded(self):
-        """Self-loops should be excluded."""
-        snapshot = CodebaseSnapshot(
-            root_path="/test",
-            files=(
-                FileInfo(
-                    filepath="self.py",
-                    language="python",
-                    line_count=10,
-                    function_names=(),
-                    class_names=(),
-                    import_sources=("self.py",),  # Self-import
-                ),
-            ),
-            functions=(),
-            classes=(),
-            languages_detected=("python",),
-            total_lines=10,
+    def test_single_node_no_edges(self):
+        """A single file with no imports produces 1 node, 0 edges."""
+        result = build_weighted_dependency_graph(
+            _snapshot(files=(_file("solo.py"),))
         )
-        result = build_weighted_dependency_graph(snapshot)
+        assert result.node_count == 1
+        assert result.edge_count == 0
+        assert result.total_weight == 0
+        assert result.graph.has_node("solo.py")
 
-        # Should have node but no self-loop
-        assert result.graph.has_node("self.py")
-        assert not result.graph.has_edge("self.py", "self.py")
+    def test_disconnected_nodes(self):
+        """Two files with no dependency produce 2 nodes, 0 edges."""
+        result = build_weighted_dependency_graph(
+            _snapshot(files=(_file("a.py"), _file("b.py")))
+        )
+        assert result.node_count == 2
+        assert result.edge_count == 0
+
+
+# ---------------------------------------------------------------------------
+# Import edges (weight = 1)
+# ---------------------------------------------------------------------------
+
+
+class TestImportEdges:
+    """Import-only dependency edges (weight = 1)."""
+
+    def test_single_import_edge(self):
+        """app.py imports utils.py => edge(app.py, utils.py, weight=1)."""
+        result = build_weighted_dependency_graph(
+            _snapshot(
+                files=(
+                    _file("app.py", imports=("utils.py",)),
+                    _file("utils.py"),
+                ),
+            )
+        )
+        assert result.edge_count == 1
+        edge_data = result.graph["app.py"]["utils.py"]
+        assert edge_data["weight"] == EDGE_WEIGHTS["import"]  # 1
+        assert "import" in edge_data["edge_types"]
+
+    def test_import_to_unknown_file_ignored(self):
+        """Importing a file not in the snapshot is silently ignored."""
+        result = build_weighted_dependency_graph(
+            _snapshot(files=(_file("app.py", imports=("nonexistent.py",)),))
+        )
+        assert result.edge_count == 0
+
+    def test_self_import_ignored(self):
+        """A file importing itself is ignored."""
+        result = build_weighted_dependency_graph(
+            _snapshot(files=(_file("app.py", imports=("app.py",)),))
+        )
+        assert result.edge_count == 0
+
+    def test_multiple_import_edges(self):
+        """Multiple import targets create separate edges."""
+        result = build_weighted_dependency_graph(
+            _snapshot(
+                files=(
+                    _file("app.py", imports=("utils.py", "config.py")),
+                    _file("utils.py"),
+                    _file("config.py"),
+                ),
+            )
+        )
+        assert result.edge_count == 2
+        assert result.total_weight == 2
+
+
+# ---------------------------------------------------------------------------
+# Call edges (weight = 2)
+# ---------------------------------------------------------------------------
+
+
+class TestCallEdges:
+    """Function-call dependency edges (weight = 2)."""
+
+    def test_single_call_edge(self):
+        """A function in app.py depends on utils.py => edge weight=2."""
+        result = build_weighted_dependency_graph(
+            _snapshot(
+                files=(_file("app.py"), _file("utils.py")),
+                functions=(_func("main", "app.py", dependencies=("utils.py",)),),
+            )
+        )
+        assert result.edge_count == 1
+        edge_data = result.graph["app.py"]["utils.py"]
+        assert edge_data["weight"] == EDGE_WEIGHTS["call"]  # 2
+        assert "call" in edge_data["edge_types"]
+
+    def test_call_to_self_ignored(self):
+        """Function depending on its own file is ignored."""
+        result = build_weighted_dependency_graph(
+            _snapshot(
+                files=(_file("app.py"),),
+                functions=(_func("main", "app.py", dependencies=("app.py",)),),
+            )
+        )
+        assert result.edge_count == 0
+
+
+# ---------------------------------------------------------------------------
+# Inheritance edges (weight = 3)
+# ---------------------------------------------------------------------------
+
+
+class TestInheritanceEdges:
+    """Class-inheritance dependency edges (weight = 3)."""
+
+    def test_single_inherit_edge(self):
+        """Child class inherits from parent => edge weight=3."""
+        result = build_weighted_dependency_graph(
+            _snapshot(
+                files=(_file("child.py"), _file("parent.py")),
+                classes=(
+                    _cls("Parent", "parent.py"),
+                    _cls("Child", "child.py", base_classes=("Parent",)),
+                ),
+            )
+        )
+        assert result.edge_count == 1
+        edge_data = result.graph["child.py"]["parent.py"]
+        assert edge_data["weight"] == EDGE_WEIGHTS["inherit"]  # 3
+        assert "inherit" in edge_data["edge_types"]
+
+    def test_inherit_unknown_class_ignored(self):
+        """Inheriting from a class not in the snapshot is ignored."""
+        result = build_weighted_dependency_graph(
+            _snapshot(
+                files=(_file("child.py"),),
+                classes=(_cls("Child", "child.py", base_classes=("MissingParent",)),),
+            )
+        )
+        assert result.edge_count == 0
+
+    def test_duplicate_class_name_skipped(self):
+        """Ambiguous class name (duplicates) => no edge created."""
+        result = build_weighted_dependency_graph(
+            _snapshot(
+                files=(_file("a.py"), _file("b.py"), _file("c.py")),
+                classes=(
+                    _cls("Base", "a.py"),
+                    _cls("Base", "b.py"),  # duplicate name
+                    _cls("Child", "c.py", base_classes=("Base",)),
+                ),
+            )
+        )
+        # "Base" is ambiguous => no inheritance edge created
+        assert result.edge_count == 0
+
+
+# ---------------------------------------------------------------------------
+# Weight accumulation (multiple relation types)
+# ---------------------------------------------------------------------------
+
+
+class TestWeightAccumulation:
+    """Weights accumulate when multiple relation types exist between same files."""
+
+    def test_import_plus_call_accumulates(self):
+        """import(1) + call(2) on same edge => weight=3."""
+        result = build_weighted_dependency_graph(
+            _snapshot(
+                files=(
+                    _file("app.py", imports=("utils.py",)),
+                    _file("utils.py"),
+                ),
+                functions=(_func("main", "app.py", dependencies=("utils.py",)),),
+            )
+        )
+        assert result.edge_count == 1
+        edge_data = result.graph["app.py"]["utils.py"]
+        assert edge_data["weight"] == EDGE_WEIGHTS["import"] + EDGE_WEIGHTS["call"]  # 3
+        assert set(edge_data["edge_types"]) == {"import", "call"}
+
+    def test_import_plus_inherit_accumulates(self):
+        """import(1) + inherit(3) on same edge => weight=4."""
+        result = build_weighted_dependency_graph(
+            _snapshot(
+                files=(
+                    _file("child.py", imports=("parent.py",)),
+                    _file("parent.py"),
+                ),
+                classes=(
+                    _cls("Parent", "parent.py"),
+                    _cls("Child", "child.py", base_classes=("Parent",)),
+                ),
+            )
+        )
+        edge_data = result.graph["child.py"]["parent.py"]
+        assert edge_data["weight"] == EDGE_WEIGHTS["import"] + EDGE_WEIGHTS["inherit"]  # 4
+        assert set(edge_data["edge_types"]) == {"import", "inherit"}
+
+    def test_all_three_types_accumulate(self):
+        """import(1) + call(2) + inherit(3) = weight 6."""
+        result = build_weighted_dependency_graph(
+            _snapshot(
+                files=(
+                    _file("child.py", imports=("parent.py",)),
+                    _file("parent.py"),
+                ),
+                functions=(
+                    _func("do_stuff", "child.py", dependencies=("parent.py",)),
+                ),
+                classes=(
+                    _cls("Parent", "parent.py"),
+                    _cls("Child", "child.py", base_classes=("Parent",)),
+                ),
+            )
+        )
+        edge_data = result.graph["child.py"]["parent.py"]
+        assert edge_data["weight"] == (
+            EDGE_WEIGHTS["import"] + EDGE_WEIGHTS["call"] + EDGE_WEIGHTS["inherit"]
+        )
+        assert set(edge_data["edge_types"]) == {"import", "call", "inherit"}
+
+
+# ---------------------------------------------------------------------------
+# WeightedGraphResult metadata & summary
+# ---------------------------------------------------------------------------
+
+
+class TestWeightedGraphResultMetadata:
+    """Tests for WeightedGraphResult fields and summary string."""
+
+    def test_result_fields(self):
+        """node_count, edge_count, total_weight are correct."""
+        result = build_weighted_dependency_graph(
+            _snapshot(
+                files=(
+                    _file("app.py", imports=("utils.py", "config.py")),
+                    _file("utils.py"),
+                    _file("config.py"),
+                ),
+            )
+        )
+        assert result.node_count == 3
+        assert result.edge_count == 2
+        assert result.total_weight == 2  # 2 import edges * 1
+
+    def test_summary_string_format(self):
+        """Summary contains expected structure."""
+        result = build_weighted_dependency_graph(
+            _snapshot(
+                files=(
+                    _file("app.py", imports=("utils.py",)),
+                    _file("utils.py"),
+                ),
+            )
+        )
+        assert "2 nodes" in result.summary
+        assert "1 edges" in result.summary
+        assert "import_edges=1" in result.summary
+        assert "call_edges=0" in result.summary
+        assert "inherit_edges=0" in result.summary
+        assert "total_weight=1" in result.summary
+
+    def test_frozen_dataclass(self):
+        """WeightedGraphResult is frozen."""
+        result = build_weighted_dependency_graph(_snapshot())
+        with pytest.raises(AttributeError):
+            result.node_count = 999  # type: ignore[misc]
+
+    def test_node_attributes_populated(self):
+        """Nodes carry language, line_count, function_count, class_count attrs."""
+        fi = FileInfo(
+            filepath="app.py",
+            language="python",
+            line_count=100,
+            function_names=("main", "helper"),
+            class_names=("App",),
+            import_sources=(),
+        )
+        result = build_weighted_dependency_graph(_snapshot(files=(fi,)))
+        node_data = result.graph.nodes["app.py"]
+        assert node_data["language"] == "python"
+        assert node_data["line_count"] == 100
+        assert node_data["function_count"] == 2
+        assert node_data["class_count"] == 1
+
+
+# ---------------------------------------------------------------------------
+# Integration: sample_snapshot from conftest
+# ---------------------------------------------------------------------------
+
+
+class TestWithSampleSnapshot:
+    """Integration test using the sample_snapshot fixture from conftest."""
+
+    def test_sample_snapshot_graph(self, sample_snapshot: CodebaseSnapshot):
+        """Build graph from the conftest sample_snapshot fixture."""
+        result = build_weighted_dependency_graph(sample_snapshot)
+        # 3 files: app.py, utils.py, models.py
+        assert result.node_count == 3
+        # app.py -> utils.py (import + call), models.py -> utils.py (import)
+        assert result.edge_count == 2
+        # app.py -> utils.py: import(1) + call(2) = 3
+        # models.py -> utils.py: import(1) = 1
+        assert result.total_weight == 4
+
+        edge_app_utils = result.graph["app.py"]["utils.py"]
+        assert edge_app_utils["weight"] == 3
+        assert set(edge_app_utils["edge_types"]) == {"import", "call"}
+
+        edge_models_utils = result.graph["models.py"]["utils.py"]
+        assert edge_models_utils["weight"] == 1
+        assert edge_models_utils["edge_types"] == ["import"]

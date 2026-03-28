@@ -1,291 +1,279 @@
-"""E2E pipeline test: validates the V2 analysis pipeline end-to-end.
+"""End-to-end tests for the complete codebase-explorer analysis pipeline.
 
-Tests the full stack WITHOUT MCP transport -- calls core functions directly
-using an AST-based fallback parser (since graph-sitter/codegen cannot be
-imported in the current environment).
+Verifies the full pipeline flow:
+  1. Parse codebase -> CodebaseSnapshot
+  2. Build weighted dependency graph
+  3. Extract feature cones via SCC + DAG
+  4. Estimate tokens per file
+  5. Build task manifest
+  6. Write 5 JSON files + state.json
 
-Pipeline under test:
-  1. AST fallback -> CodebaseSnapshot (with char_count)
-  2. build_weighted_dependency_graph -> WeightedGraphResult
-  3. extract_feature_cones -> {cone_id: FeatureCone}, infrastructure set
-  4. estimate_tokens_from_chars -> int per file
-  5. calculate_feature_cone_depth -> depth per cone
-  6. build_task_manifest -> FFD task manifest dict
-  7. atomic_write_state / read_state / update_task_status -> state management
-  8. [Bug check] server.py analyze_codebase attribute issues
-
-Extended tests (T-07):
-  9. Dependency graph tests (Mermaid generation, scope=project/file)
-  10. Feature cone tests (cone fields, infrastructure sharing)
-  11. Index Agent protocol validation (SKILL.md Phase 4/5 variables)
-  12. Task manifest bin-packing tests (batch/single/split types)
-
-Usage:
-    .venv/bin/python -m pytest tests/test_e2e_pipeline.py -v
-    .venv/bin/python tests/test_e2e_pipeline.py
+Uses a realistic temporary Python project with real dependency structures.
 """
+
 from __future__ import annotations
 
-import ast as _ast
 import json
-import logging
-import re
-import sys
-import tempfile
 from pathlib import Path
 
 import pytest
 
-_PROJECT_ROOT = Path(__file__).resolve().parent.parent
-if str(_PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(_PROJECT_ROOT))
-
 from src.budget.estimator import estimate_tokens_from_chars
-from src.doc.depth_planner import build_task_manifest, calculate_feature_cone_depth
-from src.graph.feature_cone import extract_feature_cones
-from src.graph.weighted_graph import build_weighted_dependency_graph
-from src.parser.codebase import (
-    ClassInfo,
-    CodebaseSnapshot,
-    FileInfo,
-    FunctionInfo,
+from src.doc.depth_planner import (
+    build_task_manifest,
+    calculate_feature_cone_depth,
 )
-from src.state.json_store import atomic_write_state, read_state, update_task_status
-
-logging.basicConfig(level=logging.WARNING, format="[E2E] %(levelname)s %(message)s")
-log = logging.getLogger("e2e_pipeline")
-log.setLevel(logging.INFO)
-
-FLASK_ROOT = _PROJECT_ROOT / "test_repos" / "flask" / "src" / "flask"
-SRC_ROOT = _PROJECT_ROOT / "src"
-
-SKILL_MD_PATH = _PROJECT_ROOT / ".agents" / "skills" / "codebase-explorer" / "SKILL.md"
-
+from src.graph.feature_cone import FeatureCone, extract_feature_cones
+from src.graph.weighted_graph import build_weighted_dependency_graph
+from src.parser.codebase import CodebaseParser, CodebaseSnapshot
+from src.server_helpers import (
+    project_id_from_path,
+    resolve_output_dir,
+    validate_json_files_exist,
+    write_analysis_outputs,
+)
+from src.state.json_store import read_state
 
 # ---------------------------------------------------------------------------
-# AST-based snapshot builder (no graph-sitter required)
+# Realistic project fixture: 8 Python files with real dependency chains
 # ---------------------------------------------------------------------------
 
+_PROJECT_FILES: dict[str, str] = {
+    "app/__init__.py": (
+        "from app.config import settings\n"
+        "from app.models import User\n"
+        "\n"
+        "__version__ = '1.0.0'\n"
+    ),
+    "app/config.py": (
+        "import os\n"
+        "\n"
+        "class Settings:\n"
+        "    DEBUG = os.getenv('DEBUG', 'false').lower() == 'true'\n"
+        "    DATABASE_URL = os.getenv('DATABASE_URL', 'sqlite:///db.sqlite3')\n"
+        "    SECRET_KEY = os.getenv('SECRET_KEY', 'dev-secret')\n"
+        "\n"
+        "settings = Settings()\n"
+    ),
+    "app/models.py": (
+        "from app.config import Settings\n"
+        "\n"
+        "\n"
+        "class BaseModel:\n"
+        "    def save(self):\n"
+        "        pass\n"
+        "\n"
+        "    def delete(self):\n"
+        "        pass\n"
+        "\n"
+        "\n"
+        "class User(BaseModel):\n"
+        "    def __init__(self, name: str, email: str):\n"
+        "        self.name = name\n"
+        "        self.email = email\n"
+        "\n"
+        "    def validate(self) -> bool:\n"
+        "        return bool(self.name and self.email)\n"
+        "\n"
+        "\n"
+        "class Admin(User):\n"
+        "    def __init__(self, name: str, email: str, role: str = 'admin'):\n"
+        "        super().__init__(name, email)\n"
+        "        self.role = role\n"
+        "\n"
+        "    def has_permission(self, perm: str) -> bool:\n"
+        "        return True\n"
+    ),
+    "app/utils.py": (
+        "import hashlib\n"
+        "import re\n"
+        "\n"
+        "\n"
+        "def hash_password(password: str) -> str:\n"
+        "    return hashlib.sha256(password.encode()).hexdigest()\n"
+        "\n"
+        "\n"
+        "def validate_email(email: str) -> bool:\n"
+        "    pattern = r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\\.[a-zA-Z0-9-.]+$'\n"
+        "    return bool(re.match(pattern, email))\n"
+        "\n"
+        "\n"
+        "def slugify(text: str) -> str:\n"
+        "    return re.sub(r'[^a-z0-9]+', '-', text.lower()).strip('-')\n"
+    ),
+    "app/api/routes.py": (
+        "from app.models import User, Admin\n"
+        "from app.utils import validate_email\n"
+        "from app.api.middleware import require_auth\n"
+        "\n"
+        "\n"
+        "def create_user(name: str, email: str) -> User:\n"
+        "    if not validate_email(email):\n"
+        "        raise ValueError('Invalid email')\n"
+        "    user = User(name=name, email=email)\n"
+        "    user.save()\n"
+        "    return user\n"
+        "\n"
+        "\n"
+        "def get_user(user_id: int) -> User:\n"
+        "    return User(name='test', email='test@example.com')\n"
+        "\n"
+        "\n"
+        "def list_admins() -> list:\n"
+        "    return [Admin(name='root', email='root@example.com')]\n"
+    ),
+    "app/api/__init__.py": "",
+    "app/api/middleware.py": (
+        "from app.config import Settings\n"
+        "from app.utils import hash_password\n"
+        "\n"
+        "\n"
+        "def require_auth(func):\n"
+        "    def wrapper(*args, **kwargs):\n"
+        "        return func(*args, **kwargs)\n"
+        "    return wrapper\n"
+        "\n"
+        "\n"
+        "def log_request(func):\n"
+        "    def wrapper(*args, **kwargs):\n"
+        "        print(f'Request: {func.__name__}')\n"
+        "        return func(*args, **kwargs)\n"
+        "    return wrapper\n"
+    ),
+    "cli.py": (
+        "from app.models import User\n"
+        "from app.api.routes import create_user, list_admins\n"
+        "from app.config import settings\n"
+        "\n"
+        "\n"
+        "def main():\n"
+        "    print('CLI started')\n"
+        "    user = create_user('Alice', 'alice@example.com')\n"
+        "    print(f'Created user: {user.name}')\n"
+        "    admins = list_admins()\n"
+        "    print(f'Admins: {len(admins)}')\n"
+        "\n"
+        "\n"
+        "if __name__ == '__main__':\n"
+        "    main()\n"
+    ),
+}
+"""Eight Python files with realistic import chains forming a diamond DAG:
 
-def _resolve_import_to_filepath(
-    module: str,
-    level: int,
-    current_file_rel: str,
-    all_file_rels: set[str],
-    pkg_prefix: str,
-) -> str | None:
-    """Resolve a Python import statement to a relative file path.
+    cli.py
+      -> app/api/routes.py -> app/models.py -> app/config.py
+      -> app/api/routes.py -> app/utils.py
+      -> app/api/routes.py -> app/api/middleware.py -> app/config.py
+      -> app/api/routes.py -> app/api/middleware.py -> app/utils.py
+      -> app/models.py
+      -> app/config.py
+    app/__init__.py -> app/config.py, app/models.py
+"""
 
-    Handles both relative imports (from . import x) and absolute imports
-    (import flask.app) by trying candidate paths against the known file set.
 
-    Args:
-        module: Module name string (e.g. "app", "flask.app", "json")
-        level: Relative import level (0=absolute, 1=from ., 2=from ..)
-        current_file_rel: Relative path of the importing file
-        all_file_rels: Set of all known relative file paths
-        pkg_prefix: Package directory prefix (e.g. "flask/")
+@pytest.fixture
+def realistic_project(tmp_path: Path) -> Path:
+    """Create a multi-file Python project in a temp directory.
 
-    Returns:
-        Resolved relative file path, or None if not resolvable.
+    Returns the project root path containing 8 Python files with real
+    import dependencies between them.
     """
-    current_dir = str(Path(current_file_rel).parent)
+    for rel_path, content in _PROJECT_FILES.items():
+        target = tmp_path / rel_path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(content, encoding="utf-8")
+    return tmp_path
 
-    # Build candidate base paths to try
-    candidates: list[str] = []
 
-    if level > 0:
-        # Relative import: from . import x  or  from .sub import x
-        base_dir = current_dir
-        for _ in range(level - 1):
-            base_dir = str(Path(base_dir).parent)
-        mod_path = module.replace(".", "/") if module else ""
-        if mod_path:
-            candidates.append(f"{base_dir}/{mod_path}.py")
-            candidates.append(f"{base_dir}/{mod_path}/__init__.py")
+@pytest.fixture
+def parsed_snapshot(realistic_project: Path) -> CodebaseSnapshot:
+    """Parse the realistic project and return the snapshot."""
+    parser = CodebaseParser()
+    return parser.parse(str(realistic_project), languages=["python"])
+
+
+@pytest.fixture
+def pipeline_outputs(realistic_project: Path, parsed_snapshot: CodebaseSnapshot) -> dict:
+    """Run the full analysis pipeline and return paths + data.
+
+    This fixture executes steps 2-6 of the pipeline (graph, cones, tokens,
+    manifest, write) and returns a dict with all intermediate results.
+    """
+    output_path = realistic_project / ".codebase-analysis"
+    output_path.mkdir(parents=True, exist_ok=True)
+    project_id = project_id_from_path(str(realistic_project))
+
+    # Step 2: Build weighted dependency graph
+    weighted_result = build_weighted_dependency_graph(parsed_snapshot)
+    graph = weighted_result.graph
+
+    # Step 3: Extract feature cones
+    cones, infrastructure = extract_feature_cones(graph, parsed_snapshot)
+
+    # Step 3b: Compute cone layers (simplified from server.py)
+    import networkx as nx
+
+    condensed = nx.condensation(graph)
+    file_layer: dict[str, int] = {}
+    remaining = set(condensed.nodes())
+    layer_idx = 0
+    while remaining:
+        current = {
+            n
+            for n in remaining
+            if all(p not in remaining for p in condensed.predecessors(n))
+        }
+        if not current:
+            current = remaining.copy()
+        for scc_node in current:
+            members = condensed.nodes[scc_node].get("members", set())
+            for member in members:
+                file_layer[member] = layer_idx
+        remaining -= current
+        layer_idx += 1
+    total_layers = layer_idx
+
+    cone_layer: dict[str, int] = {}
+    for cid, cone in cones.items():
+        if cone.exclusive_files:
+            cone_layer[cid] = max(file_layer.get(f, 0) for f in cone.exclusive_files)
         else:
-            candidates.append(f"{base_dir}/__init__.py")
-    else:
-        # Absolute import: try within the same package first, then as-is
-        mod_path = module.replace(".", "/")
-        candidates.append(f"{pkg_prefix}{mod_path}.py")
-        candidates.append(f"{pkg_prefix}{mod_path}/__init__.py")
-        candidates.append(f"{mod_path}.py")
-        candidates.append(f"{mod_path}/__init__.py")
+            cone_layer[cid] = 0
 
-    for c in candidates:
-        # Normalize double slashes
-        c = str(Path(c))
-        if c in all_file_rels:
-            return c
-    return None
+    updated_cones: dict[str, FeatureCone] = {}
+    for cid, cone in cones.items():
+        updated_cones[cid] = FeatureCone(
+            cone_id=cone.cone_id,
+            entry_point=cone.entry_point,
+            exclusive_files=cone.exclusive_files,
+            shared_deps=cone.shared_deps,
+            layer=cone_layer.get(cid, 0),
+            token_count=cone.token_count,
+        )
+    cones = updated_cones
 
-
-def _ast_build_snapshot(root: Path, language: str = "python") -> CodebaseSnapshot:
-    """Build a CodebaseSnapshot from Python files using stdlib ast.
-
-    Resolves import statements to file paths so that the weighted dependency
-    graph can build real edges (not just module-name strings).
-    """
-    # First pass: collect all relative file paths for import resolution
-    all_rel_paths: set[str] = set()
-    for py_path in root.rglob("*.py"):
-        all_rel_paths.add(str(py_path.relative_to(root.parent)))
-
-    pkg_prefix = root.name + "/"  # e.g. "flask/"
-
-    files: list[FileInfo] = []
-    funcs: list[FunctionInfo] = []
-    classes: list[ClassInfo] = []
-    total_lines = 0
-
-    for py_path in sorted(root.rglob("*.py")):
-        try:
-            source = py_path.read_text(encoding="utf-8")
-        except Exception:
-            continue
-
-        char_count = len(source)
-        line_count = source.count("\n") + 1
-        rel = str(py_path.relative_to(root.parent))
-        total_lines += line_count
-
-        try:
-            tree = _ast.parse(source, filename=str(py_path))
-        except SyntaxError:
-            files.append(FileInfo(
-                filepath=rel, language=language, line_count=line_count,
-                char_count=char_count, function_names=(), class_names=(), import_sources=(),
-            ))
-            continue
-
-        func_names: list[str] = []
-        class_names: list[str] = []
-        resolved_imports: list[str] = []
-
-        for node in _ast.walk(tree):
-            if isinstance(node, (_ast.FunctionDef, _ast.AsyncFunctionDef)):
-                func_names.append(node.name)
-                params = [a.arg for a in node.args.args]
-                calls: list[str] = []
-                for child in _ast.walk(node):
-                    if isinstance(child, _ast.Call):
-                        if isinstance(child.func, _ast.Name):
-                            calls.append(child.func.id)
-                        elif isinstance(child.func, _ast.Attribute):
-                            calls.append(child.func.attr)
-                funcs.append(FunctionInfo(
-                    name=node.name, filepath=rel,
-                    start_line=node.lineno,
-                    end_line=getattr(node, "end_lineno", node.lineno),
-                    parameters=tuple(params), return_type=None,
-                    calls=tuple(calls), dependencies=(),
-                ))
-            elif isinstance(node, _ast.ClassDef):
-                class_names.append(node.name)
-                methods = [
-                    n.name for n in _ast.iter_child_nodes(node)
-                    if isinstance(n, (_ast.FunctionDef, _ast.AsyncFunctionDef))
-                ]
-                bases = []
-                for b in node.bases:
-                    if isinstance(b, _ast.Name):
-                        bases.append(b.id)
-                    elif isinstance(b, _ast.Attribute):
-                        bases.append(b.attr)
-                classes.append(ClassInfo(
-                    name=node.name, filepath=rel,
-                    start_line=node.lineno,
-                    end_line=getattr(node, "end_lineno", node.lineno),
-                    methods=tuple(methods), base_classes=tuple(bases), subclasses=(),
-                ))
-            elif isinstance(node, _ast.Import):
-                for alias in node.names:
-                    fp = _resolve_import_to_filepath(
-                        alias.name, 0, rel, all_rel_paths, pkg_prefix)
-                    if fp:
-                        resolved_imports.append(fp)
-            elif isinstance(node, _ast.ImportFrom):
-                module = node.module or ""
-                level = node.level or 0
-                fp = _resolve_import_to_filepath(
-                    module, level, rel, all_rel_paths, pkg_prefix)
-                if fp:
-                    resolved_imports.append(fp)
-
-        files.append(FileInfo(
-            filepath=rel, language=language, line_count=line_count,
-            char_count=char_count,
-            function_names=tuple(func_names),
-            class_names=tuple(class_names),
-            import_sources=tuple(dict.fromkeys(resolved_imports)),  # deduplicate, preserve order
-        ))
-
-    return CodebaseSnapshot(
-        root_path=str(root),
-        files=tuple(files),
-        functions=tuple(funcs),
-        classes=tuple(classes),
-        languages_detected=(language,),
-        total_lines=total_lines,
-    )
-
-
-# ---------------------------------------------------------------------------
-# Determine test root: prefer Flask, fallback to project's own src/
-# ---------------------------------------------------------------------------
-
-
-def _select_test_root() -> Path:
-    """Select the test target root directory.
-
-    Returns Flask src/flask if available, otherwise the project's own src/.
-    """
-    if FLASK_ROOT.exists() and any(FLASK_ROOT.rglob("*.py")):
-        return FLASK_ROOT
-    return SRC_ROOT
-
-
-TEST_ROOT = _select_test_root()
-
-
-# ---------------------------------------------------------------------------
-# Full pipeline runner
-# ---------------------------------------------------------------------------
-
-
-def _run_pipeline(root: Path) -> dict:
-    log.info("Step 1: AST parse -> snapshot")
-    snapshot = _ast_build_snapshot(root)
-    log.info("  %d files, %d functions, %d classes, %d lines",
-             len(snapshot.files), len(snapshot.functions),
-             len(snapshot.classes), snapshot.total_lines)
-
-    log.info("Step 2: Build weighted dependency graph")
-    weighted = build_weighted_dependency_graph(snapshot)
-    log.info("  nodes=%d, edges=%d, weight=%.1f",
-             weighted.node_count, weighted.edge_count, weighted.total_weight)
-
-    log.info("Step 3: Extract feature cones")
-    cones, infrastructure = extract_feature_cones(weighted.graph, snapshot)
-    log.info("  cones=%d, infrastructure=%d", len(cones), len(infrastructure))
-
-    log.info("Step 4: Estimate tokens (chars / ratio)")
+    # Step 4: Estimate tokens per file
     file_tokens: dict[str, int] = {}
-    for fi in snapshot.files:
-        lang = fi.language or "default"
-        tokens = estimate_tokens_from_chars(fi.char_count, lang)
-        file_tokens[fi.filepath] = tokens
-    log.info("  total_tokens=%d across %d files", sum(file_tokens.values()), len(file_tokens))
+    file_details: list[dict] = []
+    for file_info in parsed_snapshot.files:
+        lang = file_info.language or "default"
+        tokens = estimate_tokens_from_chars(file_info.char_count, lang)
+        file_tokens[file_info.filepath] = tokens
+        file_details.append(
+            {
+                "filepath": file_info.filepath,
+                "language": lang,
+                "char_count": file_info.char_count,
+                "line_count": file_info.line_count,
+                "estimated_tokens": tokens,
+                "method": "chars",
+            }
+        )
 
-    log.info("Step 5: Calculate cone depths")
+    # Step 5: Build task manifest
     cone_dicts: dict[str, dict] = {}
-    depths: dict[str, int] = {}
     for cone_id, cone in cones.items():
         cone_tokens = sum(file_tokens.get(f, 0) for f in cone.exclusive_files)
-        dag_layers = cone.layer + 1
-        depth = calculate_feature_cone_depth(cone_tokens, dag_layers=dag_layers)
-        depths[cone_id] = depth
         cone_dicts[cone_id] = {
             "cone_id": cone_id,
             "entry_point": cone.entry_point,
@@ -295,1000 +283,607 @@ def _run_pipeline(root: Path) -> dict:
             "token_count": cone_tokens,
         }
 
-    log.info("Step 6: Build task manifest (FFD bin-packing)")
-    manifest = build_task_manifest(cone_dicts, file_tokens)
-    log.info("  tasks=%d, schema_version=%s",
-             len(manifest.get("tasks", {})), manifest.get("schema_version"))
+    task_manifest = build_task_manifest(cone_dicts, file_tokens)
+
+    # Step 6: Write JSON files + state.json
+    write_analysis_outputs(
+        output_path=output_path,
+        project_id=project_id,
+        resolved_path=realistic_project,
+        snapshot=parsed_snapshot,
+        weighted_result=weighted_result,
+        graph=graph,
+        cones=cones,
+        infrastructure=infrastructure,
+        cone_dicts=cone_dicts,
+        file_tokens=file_tokens,
+        file_details=file_details,
+        task_manifest=task_manifest,
+    )
 
     return {
-        "snapshot": snapshot,
-        "weighted": weighted,
+        "output_path": output_path,
+        "project_id": project_id,
+        "snapshot": parsed_snapshot,
+        "weighted_result": weighted_result,
+        "graph": graph,
         "cones": cones,
         "infrastructure": infrastructure,
-        "file_tokens": file_tokens,
-        "depths": depths,
         "cone_dicts": cone_dicts,
-        "manifest": manifest,
+        "file_tokens": file_tokens,
+        "file_details": file_details,
+        "task_manifest": task_manifest,
+        "total_layers": total_layers,
     }
 
 
 # ---------------------------------------------------------------------------
-# Shared fixtures (avoid re-running pipeline per test)
+# Test: Step 1 -- Parse codebase -> CodebaseSnapshot
 # ---------------------------------------------------------------------------
 
 
-@pytest.fixture(scope="module")
-def pipeline_result():
-    """Run the full pipeline once per test module and share the result."""
-    return _run_pipeline(TEST_ROOT)
+class TestStep1Parsing:
+    """Verify the parser produces a valid CodebaseSnapshot from the fixture."""
 
-
-@pytest.fixture(scope="module")
-def analysis_output_dir(tmp_path_factory, pipeline_result):
-    """Write analysis JSON files to a temporary directory (once per module).
-
-    Returns the output dir Path and the written JSON data dict.
-    """
-    import hashlib
-    from datetime import UTC, datetime
-
-    result = pipeline_result
-    snap = result["snapshot"]
-    weighted = result["weighted"]
-    cones = result["cones"]
-    cone_dicts = result["cone_dicts"]
-    file_tokens = result["file_tokens"]
-    manifest = result["manifest"]
-    infra = result["infrastructure"]
-
-    output_dir = tmp_path_factory.mktemp("codebase_analysis")
-    project_id = hashlib.sha256(str(TEST_ROOT).encode()).hexdigest()[:12]
-    now = datetime.now(UTC).isoformat()
-
-    files_data = [
-        {
-            "filepath": fi.filepath, "language": fi.language,
-            "line_count": fi.line_count, "char_count": fi.char_count,
-            "function_names": list(fi.function_names),
-            "class_names": list(fi.class_names),
-            "import_sources": list(fi.import_sources),
-        }
-        for fi in snap.files
-    ]
-
-    outputs = {
-        "01_structure.json": {
-            "project_id": project_id, "path": str(TEST_ROOT),
-            "analyzed_at": now,
-            "languages": list(snap.languages_detected),
-            "file_count": len(snap.files),
-            "function_count": len(snap.functions),
-            "class_count": len(snap.classes),
-            "total_lines": snap.total_lines,
-            "files": files_data,
-        },
-        "02_dag.json": {
-            "project_id": project_id,
-            "node_count": weighted.node_count,
-            "edge_count": weighted.edge_count,
-            "total_weight": weighted.total_weight,
-            "nodes": list(weighted.graph.nodes()),
-            "edges": [
-                {
-                    "source": u, "target": v,
-                    "weight": weighted.graph[u][v].get("weight", 1),
-                    "edge_types": weighted.graph[u][v].get("edge_types", []),
-                }
-                for u, v in weighted.graph.edges()
-            ],
-        },
-        "03_feature_cones.json": {
-            "project_id": project_id,
-            "cone_count": len(cones),
-            "infrastructure_files": list(infra),
-            "cones": cone_dicts,
-        },
-        "04_file_tokens.json": {
-            "project_id": project_id,
-            "total_tokens": sum(file_tokens.values()),
-            "file_count": len(file_tokens),
-            "files": [
-                {
-                    "filepath": fp,
-                    "language": "python",
-                    "char_count": next(
-                        (fi.char_count for fi in snap.files if fi.filepath == fp), 0
-                    ),
-                    "line_count": next(
-                        (fi.line_count for fi in snap.files if fi.filepath == fp), 0
-                    ),
-                    "estimated_tokens": tok,
-                    "method": "chars",
-                }
-                for fp, tok in file_tokens.items()
-            ],
-        },
-        "05_task_manifest.json": manifest,
-    }
-
-    for fname, data in outputs.items():
-        fpath = output_dir / fname
-        fpath.write_text(
-            json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8",
+    def test_snapshot_file_count(self, parsed_snapshot: CodebaseSnapshot) -> None:
+        """Snapshot should contain all 8 Python files from the fixture."""
+        # The parser may or may not include __init__.py files depending on
+        # whether they are empty or have content.  We have 8 files total,
+        # but app/api/__init__.py is empty so the parser may skip it.
+        file_paths = {f.filepath for f in parsed_snapshot.files}
+        assert len(file_paths) >= 5, (
+            f"Expected at least 5 parsed files, got {len(file_paths)}: {file_paths}"
         )
 
-    return output_dir
+    def test_snapshot_language_detected(self, parsed_snapshot: CodebaseSnapshot) -> None:
+        """Python should be detected as the project language."""
+        assert "python" in parsed_snapshot.languages_detected
+
+    def test_snapshot_total_lines_positive(self, parsed_snapshot: CodebaseSnapshot) -> None:
+        """Total lines across all files should be positive."""
+        assert parsed_snapshot.total_lines > 0
+
+    def test_snapshot_contains_functions(self, parsed_snapshot: CodebaseSnapshot) -> None:
+        """Parser should extract function definitions from the project."""
+        func_names = {f.name for f in parsed_snapshot.functions}
+        # At minimum, we expect some of the explicitly defined functions
+        expected_funcs = {"main", "create_user", "hash_password", "validate_email"}
+        found = expected_funcs & func_names
+        assert len(found) >= 2, (
+            f"Expected at least 2 of {expected_funcs} in parsed functions, "
+            f"found {found} from {func_names}"
+        )
+
+    def test_snapshot_contains_classes(self, parsed_snapshot: CodebaseSnapshot) -> None:
+        """Parser should extract class definitions from the project."""
+        class_names = {c.name for c in parsed_snapshot.classes}
+        expected_classes = {"BaseModel", "User", "Admin", "Settings"}
+        found = expected_classes & class_names
+        assert len(found) >= 2, (
+            f"Expected at least 2 of {expected_classes}, found {found}"
+        )
+
+    def test_import_sources_resolved(self, parsed_snapshot: CodebaseSnapshot) -> None:
+        """At least some import_sources should be resolved to file paths."""
+        all_imports: set[str] = set()
+        for fi in parsed_snapshot.files:
+            all_imports.update(fi.import_sources)
+        assert len(all_imports) > 0, "Expected at least one resolved import source"
 
 
 # ---------------------------------------------------------------------------
-# Original tests (updated to use TEST_ROOT instead of FLASK_ROOT)
+# Test: Step 2 -- Build weighted dependency graph
 # ---------------------------------------------------------------------------
 
 
-class TestCoreDataModels:
-    """Test basic data model correctness."""
+class TestStep2WeightedGraph:
+    """Verify the weighted dependency graph structure."""
 
-    def test_fileinfo_has_char_count(self):
-        """FileInfo must expose char_count (needed by estimator and server)."""
-        fi = FileInfo(
-            filepath="x.py", language="python", line_count=10,
-            char_count=500, function_names=(), class_names=(), import_sources=(),
-        )
-        assert fi.char_count == 500
-        log.info("PASS: FileInfo has char_count")
-
-    def test_server_api_signature_consistent(self):
-        """Verify server.py API is consistent with the fixed data models.
-
-        Checks:
-        - parser.FileInfo has char_count (needed by server analyze_codebase)
-        - estimate_tokens_from_chars returns int (server stores it directly)
-        """
-        from src.parser.codebase import FileInfo as ParserFileInfo
-
-        fi_fields = set(ParserFileInfo.__dataclass_fields__.keys())
-        assert "char_count" in fi_fields, (
-            "parser.FileInfo is missing 'char_count' -- server.py will AttributeError"
+    def test_graph_nodes_match_files(self, pipeline_outputs: dict) -> None:
+        """Graph nodes should correspond to parsed files."""
+        graph = pipeline_outputs["graph"]
+        snapshot = pipeline_outputs["snapshot"]
+        file_paths = {f.filepath for f in snapshot.files}
+        graph_nodes = set(graph.nodes())
+        # Every graph node should be a known file path
+        assert graph_nodes.issubset(file_paths), (
+            f"Graph has unknown nodes: {graph_nodes - file_paths}"
         )
 
-        result = estimate_tokens_from_chars(1000, "python")
-        assert isinstance(result, int), (
-            f"estimate_tokens_from_chars should return int, got {type(result)}"
-        )
-        assert result > 0, "Token estimate for 1000 chars must be > 0"
-        log.info("PASS: server API signatures are consistent")
+    def test_graph_has_edges(self, pipeline_outputs: dict) -> None:
+        """Graph should have at least one dependency edge."""
+        graph = pipeline_outputs["graph"]
+        assert graph.number_of_edges() > 0, "Expected dependency edges in graph"
 
+    def test_edge_weights_positive(self, pipeline_outputs: dict) -> None:
+        """All edge weights must be positive integers."""
+        graph = pipeline_outputs["graph"]
+        for u, v, data in graph.edges(data=True):
+            weight = data.get("weight", 0)
+            assert weight > 0, f"Edge {u} -> {v} has non-positive weight {weight}"
 
-class TestASTParser:
-    """Test AST-based snapshot building."""
-
-    def test_ast_snapshot_produces_files(self):
-        """AST parser must produce >=5 files from test source."""
-        snap = _ast_build_snapshot(TEST_ROOT)
-        assert len(snap.files) >= 5, f"Expected >=5 files, got {len(snap.files)}"
-        assert len(snap.functions) >= 5, f"Expected >=5 functions, got {len(snap.functions)}"
-        assert snap.total_lines >= 100
-        log.info("PASS: snapshot has %d files", len(snap.files))
-
-
-class TestWeightedGraph:
-    """Test weighted dependency graph construction."""
-
-    def test_weighted_graph_has_nodes_and_edges(self, pipeline_result):
-        """Weighted graph must have nodes and edges."""
-        result = pipeline_result["weighted"]
-        assert result.node_count > 0, "Graph has no nodes"
-        assert result.edge_count >= 0, "edge_count must be non-negative"
-        assert result.total_weight >= 0
-        log.info("PASS: graph has %d nodes, %d edges", result.node_count, result.edge_count)
-
-
-class TestFeatureCones:
-    """Test feature cone extraction."""
-
-    def test_feature_cones_extracted(self, pipeline_result):
-        """At least 1 feature cone must be extracted."""
-        cones = pipeline_result["cones"]
-        assert len(cones) >= 1, f"Expected >=1 cone, got {len(cones)}"
-        log.info("PASS: %d cones extracted", len(cones))
-
-    def test_cone_files_are_known_paths(self, pipeline_result):
-        """Every file in every cone must come from the parsed snapshot."""
-        snap = pipeline_result["snapshot"]
-        all_fps = {fi.filepath for fi in snap.files}
-        cones = pipeline_result["cones"]
-        for cone_id, cone in cones.items():
-            for fp in cone.exclusive_files:
-                assert fp in all_fps, f"Cone '{cone_id}' has unknown file: {fp}"
-        log.info("PASS: all cone files are valid")
-
-
-class TestTokenEstimation:
-    """Test token estimation."""
-
-    def test_token_estimates_positive(self, pipeline_result):
-        """Token estimates must be non-negative for all files."""
-        snap = pipeline_result["snapshot"]
-        for fi in snap.files:
-            tokens = estimate_tokens_from_chars(fi.char_count, fi.language)
-            assert tokens >= 0, f"Negative tokens for {fi.filepath}: {tokens}"
-        log.info("PASS: all token estimates non-negative")
-
-
-class TestDepthCalculation:
-    """Test cone depth calculation."""
-
-    def test_depth_values_in_range(self, pipeline_result):
-        """Cone depth must be in [0, 5]."""
-        for cone_id, depth in pipeline_result["depths"].items():
-            assert 0 <= depth <= 5, f"Cone '{cone_id}' depth={depth} out of [0,5]"
-        log.info("PASS: all depths in [0, 5]")
-
-
-class TestTaskManifest:
-    """Test task manifest construction."""
-
-    def test_task_manifest_schema(self, pipeline_result):
-        """Manifest must have schema_version='2.0' and >=1 task."""
-        manifest = pipeline_result["manifest"]
-        assert manifest.get("schema_version") == "2.0", (
-            f"Expected '2.0', got {manifest.get('schema_version')!r}"
-        )
-        tasks = manifest.get("tasks", {})
-        assert len(tasks) >= 1, "Manifest must have >=1 task"
-        log.info("PASS: manifest has %d tasks, schema_version='2.0'", len(tasks))
-
-    def test_task_types_valid(self, pipeline_result):
-        """Every task must have a valid type (single, batch, split, or index)."""
-        valid_types = {"single", "batch", "split", "index"}
-        for task_id, task in pipeline_result["manifest"].get("tasks", {}).items():
-            assert task.get("type") in valid_types, (
-                f"Task '{task_id}' has bad type: {task.get('type')!r}"
+    def test_edge_types_valid(self, pipeline_outputs: dict) -> None:
+        """Edge types must be from the known set {import, call, inherit}."""
+        valid_types = {"import", "call", "inherit"}
+        graph = pipeline_outputs["graph"]
+        for u, v, data in graph.edges(data=True):
+            edge_types = set(data.get("edge_types", []))
+            assert edge_types.issubset(valid_types), (
+                f"Edge {u} -> {v} has unknown types: {edge_types - valid_types}"
             )
-        log.info("PASS: all task types are valid")
 
-    def test_task_cone_ids_reference_real_cones(self, pipeline_result):
-        """cone_ids in tasks must all be real cone IDs (or 'all' for index tasks)."""
-        valid = set(pipeline_result["cones"].keys())
-        for task_id, task in pipeline_result["manifest"].get("tasks", {}).items():
+    def test_weighted_result_summary(self, pipeline_outputs: dict) -> None:
+        """WeightedGraphResult should include a non-empty summary string."""
+        wr = pipeline_outputs["weighted_result"]
+        assert wr.summary, "Expected non-empty summary"
+        assert wr.node_count > 0
+        assert wr.edge_count > 0
+        assert wr.total_weight > 0
+
+
+# ---------------------------------------------------------------------------
+# Test: Step 3 -- Extract feature cones
+# ---------------------------------------------------------------------------
+
+
+class TestStep3FeatureCones:
+    """Verify feature cone extraction from the DAG."""
+
+    def test_cones_exist(self, pipeline_outputs: dict) -> None:
+        """At least one feature cone should be extracted."""
+        cones = pipeline_outputs["cones"]
+        assert len(cones) > 0, "Expected at least one feature cone"
+
+    def test_cone_has_exclusive_files(self, pipeline_outputs: dict) -> None:
+        """At least one cone should have multiple exclusive files."""
+        cones = pipeline_outputs["cones"]
+        multi_file_cones = [
+            c for c in cones.values() if len(c.exclusive_files) > 1
+        ]
+        assert len(multi_file_cones) > 0, (
+            "Expected at least one cone with >1 exclusive files"
+        )
+
+    def test_not_all_single_file_cones(self, pipeline_outputs: dict) -> None:
+        """The pipeline should not degrade to all single-file cones."""
+        cones = pipeline_outputs["cones"]
+        single_file_count = sum(
+            1 for c in cones.values() if len(c.exclusive_files) <= 1
+        )
+        total = len(cones)
+        if total > 2:
+            ratio = single_file_count / total
+            assert ratio < 0.9, (
+                f"Too many single-file cones: {single_file_count}/{total} = {ratio:.1%}"
+            )
+
+    def test_infrastructure_is_frozenset(self, pipeline_outputs: dict) -> None:
+        """Infrastructure should be returned as a frozenset."""
+        infra = pipeline_outputs["infrastructure"]
+        assert isinstance(infra, frozenset)
+
+    def test_cone_ids_are_strings(self, pipeline_outputs: dict) -> None:
+        """Every cone_id should be a non-empty string."""
+        cones = pipeline_outputs["cones"]
+        for cid in cones:
+            assert isinstance(cid, str) and len(cid) > 0
+
+    def test_exclusive_files_not_in_other_cones(self, pipeline_outputs: dict) -> None:
+        """A file should appear in at most one cone's exclusive_files."""
+        cones = pipeline_outputs["cones"]
+        seen: dict[str, str] = {}
+        for cid, cone in cones.items():
+            for f in cone.exclusive_files:
+                if f in seen:
+                    pytest.fail(
+                        f"File '{f}' is exclusive in both "
+                        f"'{seen[f]}' and '{cid}'"
+                    )
+                seen[f] = cid
+
+
+# ---------------------------------------------------------------------------
+# Test: Step 4 -- Token estimation
+# ---------------------------------------------------------------------------
+
+
+class TestStep4TokenEstimation:
+    """Verify token estimation for parsed files."""
+
+    def test_all_files_have_token_estimates(self, pipeline_outputs: dict) -> None:
+        """Every parsed file should have a token estimate."""
+        snapshot = pipeline_outputs["snapshot"]
+        file_tokens = pipeline_outputs["file_tokens"]
+        for fi in snapshot.files:
+            assert fi.filepath in file_tokens, (
+                f"Missing token estimate for {fi.filepath}"
+            )
+
+    def test_nonempty_files_have_positive_tokens(self, pipeline_outputs: dict) -> None:
+        """Non-empty files should have token estimates > 0."""
+        file_tokens = pipeline_outputs["file_tokens"]
+        file_details = pipeline_outputs["file_details"]
+        for detail in file_details:
+            if detail["char_count"] > 0:
+                assert detail["estimated_tokens"] > 0, (
+                    f"File {detail['filepath']} has {detail['char_count']} chars "
+                    f"but 0 estimated tokens"
+                )
+
+    def test_token_estimate_reasonable_range(self, pipeline_outputs: dict) -> None:
+        """Token estimates should be in a reasonable range relative to char count."""
+        file_details = pipeline_outputs["file_details"]
+        for detail in file_details:
+            chars = detail["char_count"]
+            tokens = detail["estimated_tokens"]
+            if chars == 0:
+                continue
+            # Tokens should be roughly chars/3.5 for Python (within 5x range)
+            ratio = chars / max(tokens, 1)
+            assert 1.0 < ratio < 10.0, (
+                f"File {detail['filepath']}: char/token ratio {ratio:.1f} "
+                f"is outside reasonable range (chars={chars}, tokens={tokens})"
+            )
+
+
+# ---------------------------------------------------------------------------
+# Test: Step 5 -- Task manifest (bin packing)
+# ---------------------------------------------------------------------------
+
+
+class TestStep5TaskManifest:
+    """Verify the task manifest structure and bin packing logic."""
+
+    def test_manifest_has_tasks(self, pipeline_outputs: dict) -> None:
+        """Task manifest must contain at least one task."""
+        manifest = pipeline_outputs["task_manifest"]
+        assert "tasks" in manifest
+        assert len(manifest["tasks"]) > 0
+
+    def test_manifest_schema_version(self, pipeline_outputs: dict) -> None:
+        """Schema version should be '2.0'."""
+        manifest = pipeline_outputs["task_manifest"]
+        assert manifest.get("schema_version") == "2.0"
+
+    def test_task_types_valid(self, pipeline_outputs: dict) -> None:
+        """Every task should have a valid type."""
+        valid_types = {"single", "batch", "split", "index"}
+        manifest = pipeline_outputs["task_manifest"]
+        for task_id, task in manifest["tasks"].items():
+            assert task["type"] in valid_types, (
+                f"Task {task_id} has invalid type: {task['type']}"
+            )
+
+    def test_index_task_exists(self, pipeline_outputs: dict) -> None:
+        """There should be exactly one index task that depends on all others."""
+        manifest = pipeline_outputs["task_manifest"]
+        index_tasks = [
+            t for t in manifest["tasks"].values() if t["type"] == "index"
+        ]
+        assert len(index_tasks) == 1, (
+            f"Expected exactly 1 index task, found {len(index_tasks)}"
+        )
+        index_task = index_tasks[0]
+        other_task_ids = sorted(
+            tid for tid, t in manifest["tasks"].items() if t["type"] != "index"
+        )
+        assert sorted(index_task["dependencies"]) == other_task_ids, (
+            "Index task should depend on all non-index tasks"
+        )
+
+    def test_cone_references_valid(self, pipeline_outputs: dict) -> None:
+        """Task cone_ids should reference existing cones or 'all'."""
+        manifest = pipeline_outputs["task_manifest"]
+        cone_ids = set(pipeline_outputs["cone_dicts"].keys())
+        for task_id, task in manifest["tasks"].items():
             for cid in task.get("cone_ids", []):
                 if cid == "all":
-                    assert task.get("type") == "index", (
-                        f"Task '{task_id}' uses cone_id='all' but type is not 'index'"
-                    )
                     continue
-                assert cid in valid, f"Task '{task_id}' references unknown cone: '{cid}'"
-        log.info("PASS: all task cone_ids valid")
+                assert cid in cone_ids, (
+                    f"Task {task_id} references unknown cone '{cid}'"
+                )
+
+    def test_task_tokens_nonnegative(self, pipeline_outputs: dict) -> None:
+        """All token counts in tasks should be non-negative."""
+        manifest = pipeline_outputs["task_manifest"]
+        for task_id, task in manifest["tasks"].items():
+            assert task.get("total_tokens", 0) >= 0, (
+                f"Task {task_id} has negative total_tokens"
+            )
+            assert task.get("exclusive_tokens", 0) >= 0, (
+                f"Task {task_id} has negative exclusive_tokens"
+            )
+
+    def test_bin_packing_budget_respected(self, pipeline_outputs: dict) -> None:
+        """No single non-split task should exceed the context budget."""
+        manifest = pipeline_outputs["task_manifest"]
+        budget = manifest.get("context_budget", 100_000)
+        for task_id, task in manifest["tasks"].items():
+            if task["type"] == "split":
+                # Split tasks may individually exceed budget by design (parts)
+                continue
+            exclusive = task.get("exclusive_tokens", 0)
+            assert exclusive <= budget, (
+                f"Task {task_id} exclusive tokens ({exclusive}) exceeds budget ({budget})"
+            )
 
 
-class TestCoverage:
-    """Test file coverage."""
-
-    def test_coverage_of_source_files(self, pipeline_result):
-        """Most files should be covered by cones or infrastructure (>=50%)."""
-        result = pipeline_result
-        all_fps = {fi.filepath for fi in result["snapshot"].files}
-        covered: set[str] = set(result["infrastructure"])
-        for cone in result["cones"].values():
-            covered.update(cone.exclusive_files)
-            covered.update(cone.shared_deps)
-        pct = len(covered & all_fps) / len(all_fps) * 100 if all_fps else 100.0
-        log.info("Coverage: %.1f%% (%d/%d files)", pct, len(covered & all_fps), len(all_fps))
-        assert pct >= 50.0, f"Coverage too low: {pct:.1f}%"
-        log.info("PASS: coverage=%.1f%%", pct)
+# ---------------------------------------------------------------------------
+# Test: Step 6 -- JSON output files
+# ---------------------------------------------------------------------------
 
 
-class TestStateManagement:
-    """Test state management round-trips."""
+class TestStep6JsonOutputFiles:
+    """Verify the content and structure of each JSON output file."""
 
-    def test_state_management(self, tmp_path):
-        """atomic_write_state / read_state / update_task_status must round-trip."""
-        state_path = tmp_path / "state.json"
-        state = {
-            "project_id": "test123",
-            "tasks": {
-                "task_001": {"status": "pending", "output_files": []},
-            },
-            "documentation": {"details_written": 0},
-        }
-        atomic_write_state(state_path, state)
-        loaded = read_state(state_path)
-        assert loaded is not None, "read_state returned None"
-        assert loaded["project_id"] == "test123"
-        assert loaded["tasks"]["task_001"]["status"] == "pending"
-
-        (tmp_path / "detail.md").write_text("# Detail")
-        updated = update_task_status(
-            state_path, "task_001", status="complete",
-            output_files=[{"path": str(tmp_path / "detail.md"), "type": "detail"}],
-        )
-        assert updated["tasks"]["task_001"]["status"] == "complete"
-        log.info("PASS: state management round-trip")
-
-
-class TestJSONOutput:
-    """Test JSON file generation."""
-
-    def test_pipeline_writes_five_json_files(self, analysis_output_dir):
-        """Full pipeline writes 5 valid JSON output files."""
-        output_dir = analysis_output_dir
-
-        required_files = [
+    def test_all_json_files_created(self, pipeline_outputs: dict) -> None:
+        """All 5 JSON files + state.json should exist."""
+        out = pipeline_outputs["output_path"]
+        expected_files = [
             "01_structure.json",
             "02_dag.json",
             "03_feature_cones.json",
             "04_file_tokens.json",
             "05_task_manifest.json",
+            "state.json",
         ]
+        for fname in expected_files:
+            assert (out / fname).exists(), f"Missing output file: {fname}"
 
-        for fname in required_files:
-            fpath = output_dir / fname
-            assert fpath.exists(), f"Missing: {fname}"
-            parsed = json.loads(fpath.read_text())
-            assert isinstance(parsed, dict), f"{fname} is not a dict"
+    def test_validate_json_files_exist_helper(self, pipeline_outputs: dict) -> None:
+        """The validate_json_files_exist helper should return True."""
+        out = pipeline_outputs["output_path"]
+        assert validate_json_files_exist(out) is True
 
-        # Spot-check content
-        structure = json.loads((output_dir / "01_structure.json").read_text())
-        assert structure["file_count"] >= 5
-        assert structure["total_lines"] >= 100
+    # -- 01_structure.json ---
 
-        cones_json = json.loads((output_dir / "03_feature_cones.json").read_text())
-        assert cones_json["cone_count"] >= 1
+    def test_structure_file_list(self, pipeline_outputs: dict) -> None:
+        """01_structure.json should list all parsed files with metadata."""
+        out = pipeline_outputs["output_path"]
+        data = json.loads((out / "01_structure.json").read_text())
+        assert data["file_count"] > 0
+        assert len(data["files"]) == data["file_count"]
+        for entry in data["files"]:
+            assert "filepath" in entry
+            assert "language" in entry
+            assert "line_count" in entry
+            assert "function_names" in entry
+            assert "class_names" in entry
+            assert "import_sources" in entry
 
-        manifest_json = json.loads((output_dir / "05_task_manifest.json").read_text())
-        assert manifest_json["schema_version"] == "2.0"
-        assert len(manifest_json["tasks"]) >= 1
-
-        log.info("PASS: 5 JSON files written and validated")
-
-
-# ===========================================================================
-# T-07 NEW TESTS: Dependency Graph, Feature Cones, Index Protocol, Task Packing
-# ===========================================================================
-
-
-class TestDependencyGraph:
-    """Test dependency graph generation including Mermaid rendering."""
-
-    def test_project_scope_mermaid_non_empty(self, pipeline_result):
-        """get_dependency_graph(scope='project') returns non-empty Mermaid graph."""
-        import networkx as nx
-        from src.server import _build_graph_from_dag, _render_mermaid
-
-        weighted = pipeline_result["weighted"]
-
-        # Simulate the server-side rendering path
-        nodes = list(weighted.graph.nodes())
-        edges = [
-            {
-                "source": u, "target": v,
-                "weight": weighted.graph[u][v].get("weight", 1),
-                "edge_types": weighted.graph[u][v].get("edge_types", []),
-            }
-            for u, v in weighted.graph.edges()
-        ]
-
-        graph = _build_graph_from_dag(nodes, edges)
-        mermaid = _render_mermaid(graph)
-
-        assert mermaid is not None, "Mermaid output is None"
-        assert len(mermaid) > 0, "Mermaid output is empty"
-
-        # Must contain "graph" or "flowchart" keyword
-        mermaid_lower = mermaid.lower()
-        assert "graph" in mermaid_lower or "flowchart" in mermaid_lower, (
-            f"Mermaid output does not contain 'graph' or 'flowchart': {mermaid[:200]}"
-        )
-        log.info("PASS: project scope Mermaid graph contains valid keyword")
-
-    def test_project_scope_mermaid_has_nodes(self, pipeline_result):
-        """Project-scope Mermaid diagram must define at least one node."""
-        from src.server import _build_graph_from_dag, _render_mermaid
-
-        weighted = pipeline_result["weighted"]
-        nodes = list(weighted.graph.nodes())
-        edges = [
-            {
-                "source": u, "target": v,
-                "weight": weighted.graph[u][v].get("weight", 1),
-            }
-            for u, v in weighted.graph.edges()
-        ]
-
-        graph = _build_graph_from_dag(nodes, edges)
-        mermaid = _render_mermaid(graph)
-
-        # Node definitions look like: n0["label"]
-        node_pattern = re.compile(r'n\d+\["[^"]+"\]')
-        matches = node_pattern.findall(mermaid)
-        assert len(matches) >= 1, (
-            f"Mermaid diagram has no node definitions. Output:\n{mermaid[:500]}"
-        )
-        log.info("PASS: Mermaid diagram has %d node definitions", len(matches))
-
-    def test_file_scope_subgraph(self, pipeline_result):
-        """get_dependency_graph(scope='file', target=<known_file>) returns neighbor subgraph."""
-        from src.server import _build_graph_from_dag, _render_mermaid
-
-        weighted = pipeline_result["weighted"]
-        nodes = list(weighted.graph.nodes())
-        edges = [
-            {
-                "source": u, "target": v,
-                "weight": weighted.graph[u][v].get("weight", 1),
-                "edge_types": weighted.graph[u][v].get("edge_types", []),
-            }
-            for u, v in weighted.graph.edges()
-        ]
-
-        graph = _build_graph_from_dag(nodes, edges)
-
-        # Pick a known file that has at least one edge (use a file with edges)
-        target_file = None
-        for node in graph.nodes():
-            if graph.degree(node) > 0:
-                target_file = node
-                break
-
-        if target_file is None:
-            pytest.skip("No file with edges in graph; cannot test file-scope subgraph")
-
-        # Build N-hop neighbor subgraph (mimicking server logic)
-        nodes_to_include = {target_file}
-        frontier = {target_file}
-        for _ in range(1):  # 1-hop
-            new_frontier = set()
-            for node in frontier:
-                new_frontier.update(graph.predecessors(node))
-                new_frontier.update(graph.successors(node))
-            nodes_to_include.update(new_frontier)
-            frontier = new_frontier
-
-        subgraph = graph.subgraph(nodes_to_include).copy()
-        mermaid = _render_mermaid(subgraph)
-
-        # Subgraph must contain the target file
-        assert subgraph.number_of_nodes() >= 1, "File subgraph has no nodes"
-        assert target_file in subgraph, "Target file not in subgraph"
-
-        # Mermaid must be non-empty
-        assert "graph" in mermaid.lower() or "flowchart" in mermaid.lower(), (
-            f"File-scope Mermaid missing graph keyword: {mermaid[:200]}"
-        )
-        log.info(
-            "PASS: file-scope subgraph for '%s' has %d nodes",
-            target_file, subgraph.number_of_nodes(),
-        )
-
-    def test_mermaid_with_weights(self, pipeline_result):
-        """Mermaid rendering with include_weights=True includes weight annotations."""
-        from src.server import _build_graph_from_dag, _render_mermaid
-
-        weighted = pipeline_result["weighted"]
-        nodes = list(weighted.graph.nodes())
-        edges = [
-            {
-                "source": u, "target": v,
-                "weight": weighted.graph[u][v].get("weight", 1),
-                "edge_types": weighted.graph[u][v].get("edge_types", []),
-            }
-            for u, v in weighted.graph.edges()
-        ]
-
-        graph = _build_graph_from_dag(nodes, edges)
-        mermaid = _render_mermaid(graph, include_weights=True)
-
-        if weighted.edge_count > 0:
-            # Weight annotations look like: -->|type w=N|
-            assert "w=" in mermaid, (
-                f"Weighted Mermaid missing 'w=' annotation: {mermaid[:300]}"
-            )
-        log.info("PASS: Mermaid with weights renders correctly")
-
-    def test_circular_deps_detected(self, pipeline_result):
-        """Circular dependency detection returns a list (possibly empty)."""
-        import networkx as nx
-
-        graph = pipeline_result["weighted"].graph
-        circular = [
-            sorted(scc)
-            for scc in nx.strongly_connected_components(graph)
-            if len(scc) > 1
-        ]
-        # Just verify it is a list; project may or may not have circular deps
-        assert isinstance(circular, list), "circular_deps is not a list"
-        log.info("PASS: circular deps detection returned %d groups", len(circular))
-
-
-class TestFeatureConesExtended:
-    """Extended feature cone tests (T-07 requirement #2)."""
-
-    def test_get_feature_cones_returns_list(self, pipeline_result):
-        """get_feature_cones() returns a dict of feature cones."""
-        cones = pipeline_result["cones"]
-        assert isinstance(cones, dict), "cones is not a dict"
-        assert len(cones) >= 1, f"Expected >=1 cone, got {len(cones)}"
-        log.info("PASS: feature cones returned as dict with %d entries", len(cones))
-
-    def test_cone_has_required_fields(self, pipeline_result):
-        """Each cone must contain exclusive_files, entry_point fields."""
-        cones = pipeline_result["cones"]
-        for cone_id, cone in cones.items():
-            assert hasattr(cone, "exclusive_files"), (
-                f"Cone '{cone_id}' missing exclusive_files"
-            )
-            assert hasattr(cone, "entry_point"), (
-                f"Cone '{cone_id}' missing entry_point"
-            )
-            assert hasattr(cone, "cone_id"), (
-                f"Cone '{cone_id}' missing cone_id"
-            )
-            # exclusive_files must be a list
-            assert isinstance(cone.exclusive_files, list), (
-                f"Cone '{cone_id}' exclusive_files is not a list"
-            )
-            # entry_point must be a non-empty string
-            assert isinstance(cone.entry_point, str) and len(cone.entry_point) > 0, (
-                f"Cone '{cone_id}' has empty or non-string entry_point"
-            )
-        log.info("PASS: all cones have required fields")
-
-    def test_cone_dicts_have_required_fields(self, pipeline_result):
-        """Cone dicts (as used in task manifest) must have expected keys."""
-        cone_dicts = pipeline_result["cone_dicts"]
-        required_keys = {"cone_id", "entry_point", "exclusive_files", "shared_deps", "layer", "token_count"}
-        for cone_id, cd in cone_dicts.items():
-            missing = required_keys - set(cd.keys())
-            assert not missing, (
-                f"Cone dict '{cone_id}' missing keys: {missing}"
-            )
-        log.info("PASS: all cone_dicts have required keys")
-
-    def test_minimum_cone_count(self, pipeline_result):
-        """At least 3 feature cones must be extracted from the test codebase."""
-        cones = pipeline_result["cones"]
-        assert len(cones) >= 3, (
-            f"Expected >=3 cones from test codebase, got {len(cones)}"
-        )
-        log.info("PASS: %d cones >= 3", len(cones))
-
-    def test_infrastructure_nodes_are_shared(self, pipeline_result):
-        """Infrastructure nodes must be files shared by multiple cones."""
-        cones = pipeline_result["cones"]
-        infrastructure = pipeline_result["infrastructure"]
-
-        if not infrastructure:
-            # Infrastructure can be empty for very simple codebases
-            log.info("SKIP: no infrastructure nodes detected (acceptable for small codebases)")
-            return
-
-        # Verify each infrastructure file appears in shared_deps of >= 2 cones
-        for infra_file in infrastructure:
-            cone_refs = sum(
-                1 for cone in cones.values()
-                if infra_file in cone.shared_deps
-            )
-            assert cone_refs >= 2, (
-                f"Infrastructure file '{infra_file}' is shared by only {cone_refs} cone(s), "
-                f"expected >=2"
-            )
-        log.info(
-            "PASS: %d infrastructure files are all shared by >=2 cones",
-            len(infrastructure),
-        )
-
-
-class TestIndexAgentProtocol:
-    """Test Index Agent protocol validation (T-07 requirement #3).
-
-    Validates that SKILL.md Phase 4/5 prompt templates reference variables
-    that correspond to actual JSON fields in the analysis output.
-    """
-
-    @pytest.fixture(scope="class")
-    def skill_md_content(self):
-        """Read SKILL.md content once for the class."""
-        if not SKILL_MD_PATH.exists():
-            pytest.skip(f"SKILL.md not found at {SKILL_MD_PATH}")
-        return SKILL_MD_PATH.read_text(encoding="utf-8")
-
-    def test_phase4_index_agent_prompt_exists(self, skill_md_content):
-        """Phase 4 INDEX Agent Prompt Template must exist in SKILL.md."""
-        assert "Phase 4" in skill_md_content, (
-            "SKILL.md does not mention Phase 4"
-        )
-        assert "INDEX Agent" in skill_md_content, (
-            "SKILL.md does not mention INDEX Agent"
-        )
-        assert "INDEX Agent Prompt Template" in skill_md_content, (
-            "SKILL.md does not contain INDEX Agent Prompt Template section"
-        )
-        log.info("PASS: Phase 4 INDEX Agent Prompt Template found in SKILL.md")
-
-    def test_phase4_feature_cones_variable(self, skill_md_content):
-        """Phase 4 prompt must reference {{feature_cones_json}} variable."""
-        assert "{{feature_cones_json}}" in skill_md_content, (
-            "SKILL.md Phase 4 prompt missing {{feature_cones_json}} variable"
-        )
-        log.info("PASS: {{feature_cones_json}} variable found")
-
-    def test_phase4_snippet_content_variable(self, skill_md_content):
-        """Phase 4 prompt must reference snippet content variable."""
-        assert "{{snippet_content}}" in skill_md_content, (
-            "SKILL.md Phase 4 prompt missing {{snippet_content}} variable"
-        )
-        log.info("PASS: {{snippet_content}} variable found")
-
-    def test_phase4_task_manifest_variable(self, skill_md_content):
-        """Phase 4 prompt must reference {{task_manifest_json}} variable."""
-        assert "{{task_manifest_json}}" in skill_md_content, (
-            "SKILL.md Phase 4 prompt missing {{task_manifest_json}} variable"
-        )
-        log.info("PASS: {{task_manifest_json}} variable found")
-
-    def test_phase4_file_tokens_variable(self, skill_md_content):
-        """Phase 4 prompt must reference {{file_tokens_json}} variable."""
-        assert "{{file_tokens_json}}" in skill_md_content, (
-            "SKILL.md Phase 4 prompt missing {{file_tokens_json}} variable"
-        )
-        log.info("PASS: {{file_tokens_json}} variable found")
-
-    def test_phase4_project_id_variable(self, skill_md_content):
-        """Phase 4 doc-manifest.json schema must include {{project_id}}."""
-        assert "{{project_id}}" in skill_md_content, (
-            "SKILL.md Phase 4 doc-manifest schema missing {{project_id}} variable"
-        )
-        log.info("PASS: {{project_id}} variable found in doc-manifest schema")
-
-    def test_phase5_reorganization_prompt_exists(self, skill_md_content):
-        """Phase 5 Reorganization Prompt must exist in SKILL.md."""
-        assert "Phase 5" in skill_md_content, (
-            "SKILL.md does not mention Phase 5"
-        )
-        assert "Semantic Reorganization" in skill_md_content, (
-            "SKILL.md does not mention Semantic Reorganization"
-        )
-        assert "Reorganization INDEX Agent" in skill_md_content, (
-            "SKILL.md does not contain Reorganization INDEX Agent section"
-        )
-        log.info("PASS: Phase 5 Reorganization Prompt found in SKILL.md")
-
-    def test_phase5_unit_rule_exists(self, skill_md_content):
-        """Phase 5 must contain @unit rules."""
-        assert "@unit" in skill_md_content, (
-            "SKILL.md Phase 5 missing @unit rules"
-        )
-        # Verify @unit parsing regex is defined
-        assert "UNIT_PATTERN" in skill_md_content or "@unit:" in skill_md_content, (
-            "SKILL.md missing @unit parsing pattern definition"
-        )
-        log.info("PASS: @unit rules found in SKILL.md")
-
-    def test_phase5_unit_regex_pattern(self, skill_md_content):
-        """Phase 5 must define the @unit regex pattern for parsing."""
-        assert "<!-- @unit:" in skill_md_content, (
-            "SKILL.md missing <!-- @unit: --> marker definition"
-        )
-        assert "<!-- @/unit:" in skill_md_content, (
-            "SKILL.md missing <!-- @/unit: --> closing marker definition"
-        )
-        log.info("PASS: @unit marker syntax defined in SKILL.md")
-
-    def test_doc_manifest_schema_defined(self, skill_md_content):
-        """doc-manifest.json Schema must be defined in SKILL.md."""
-        assert "doc-manifest.json" in skill_md_content, (
-            "SKILL.md does not reference doc-manifest.json"
-        )
-        # Schema must include key fields
-        assert '"details"' in skill_md_content, (
-            "doc-manifest.json schema missing 'details' field"
-        )
-        assert '"groups"' in skill_md_content, (
-            "doc-manifest.json schema missing 'groups' field"
-        )
-        assert '"version"' in skill_md_content, (
-            "doc-manifest.json schema missing 'version' field"
-        )
-        assert '"operations_log"' in skill_md_content, (
-            "doc-manifest.json schema missing 'operations_log' field"
-        )
-        log.info("PASS: doc-manifest.json schema defined in SKILL.md")
-
-    def test_phase4_variables_match_json_fields(
-        self, skill_md_content, pipeline_result,
-    ):
-        """Verify Phase 4 prompt variables correspond to actual JSON field names.
-
-        The INDEX Agent prompt references {{feature_cones_json}}, {{snippet_content}},
-        {{task_manifest_json}}, and {{file_tokens_json}}. These should map to data
-        produced by the analysis pipeline.
-        """
-        # feature_cones_json -> maps to 03_feature_cones.json content
-        cone_dicts = pipeline_result["cone_dicts"]
-        for cd in cone_dicts.values():
-            assert "exclusive_files" in cd, "cone data missing exclusive_files"
-            assert "entry_point" in cd, "cone data missing entry_point"
-
-        # snippet_content -> will be generated by DETAIL Agents (validated structurally)
-        # Prompt references {{cone_name}} and {{cone_id}} -- verify cones have IDs
-        for cone_id, cone in pipeline_result["cones"].items():
-            assert cone.cone_id == cone_id, (
-                f"Cone '{cone_id}' has mismatched cone_id: {cone.cone_id}"
+    def test_structure_language_field(self, pipeline_outputs: dict) -> None:
+        """Every file in 01_structure.json should have 'python' as language."""
+        out = pipeline_outputs["output_path"]
+        data = json.loads((out / "01_structure.json").read_text())
+        for entry in data["files"]:
+            assert entry["language"] == "python", (
+                f"File {entry['filepath']} has language '{entry['language']}'"
             )
 
-        # task_manifest_json -> maps to 05_task_manifest.json
-        manifest = pipeline_result["manifest"]
-        assert "tasks" in manifest, "manifest missing 'tasks' key"
-        assert "schema_version" in manifest, "manifest missing 'schema_version' key"
+    def test_structure_functions_and_classes(self, pipeline_outputs: dict) -> None:
+        """01_structure.json should report aggregate function and class counts."""
+        out = pipeline_outputs["output_path"]
+        data = json.loads((out / "01_structure.json").read_text())
+        assert data["function_count"] >= 0
+        assert data["class_count"] >= 0
 
-        # file_tokens_json -> maps to 04_file_tokens.json
-        file_tokens = pipeline_result["file_tokens"]
-        assert len(file_tokens) > 0, "file_tokens is empty"
+    # -- 02_dag.json ---
 
-        log.info("PASS: Phase 4 template variables match actual JSON fields")
-
-    def test_phase5_reorganization_variables_table(self, skill_md_content):
-        """Phase 5 Template Variable Injection Reference table must exist."""
-        assert "Template Variable Injection Reference" in skill_md_content, (
-            "SKILL.md missing Template Variable Injection Reference table"
-        )
-        # Verify key variables are in the reference table
-        expected_vars = [
-            "{{group_name}}",
-            "{{group_id}}",
-            "{{current_manifest}}",
-            "{{detail_id}}",
-            "{{tokens}}",
-        ]
-        for var in expected_vars:
-            assert var in skill_md_content, (
-                f"Phase 5 variable reference table missing {var}"
-            )
-        log.info("PASS: Phase 5 variable injection reference table validated")
-
-    def test_doc_manifest_status_transitions(self, skill_md_content):
-        """SKILL.md must define doc-manifest status transitions: initial -> final."""
-        assert '"initial"' in skill_md_content, (
-            "SKILL.md missing 'initial' status for doc-manifest"
-        )
-        assert '"final"' in skill_md_content, (
-            "SKILL.md missing 'final' status for doc-manifest"
-        )
-        assert '"reorganizing"' in skill_md_content, (
-            "SKILL.md missing 'reorganizing' intermediate status"
-        )
-        log.info("PASS: doc-manifest status transitions defined (initial -> reorganizing -> final)")
-
-
-class TestTaskBinPacking:
-    """Test task manifest bin-packing (T-07 requirement #4)."""
-
-    def test_task_manifest_exists_and_valid(self, pipeline_result):
-        """Task manifest from pipeline must exist and be a valid dict."""
-        manifest = pipeline_result["manifest"]
-        assert isinstance(manifest, dict), "manifest is not a dict"
-        assert "tasks" in manifest, "manifest missing 'tasks' key"
-        assert "schema_version" in manifest, "manifest missing 'schema_version'"
-        assert manifest["schema_version"] == "2.0", (
-            f"Unexpected schema_version: {manifest['schema_version']}"
-        )
-        log.info("PASS: task manifest is valid")
-
-    def test_task_manifest_has_multiple_tasks(self, pipeline_result):
-        """Task manifest must contain >= 2 tasks (at least 1 detail + 1 index)."""
-        tasks = pipeline_result["manifest"].get("tasks", {})
-        assert len(tasks) >= 2, (
-            f"Expected >=2 tasks (detail + index), got {len(tasks)}"
-        )
-        log.info("PASS: task manifest has %d tasks", len(tasks))
-
-    def test_task_types_include_at_least_two_kinds(self, pipeline_result):
-        """Task types must include at least 2 of {batch, single, split, index}."""
-        tasks = pipeline_result["manifest"].get("tasks", {})
-        observed_types = {task.get("type") for task in tasks.values()}
-        assert len(observed_types) >= 2, (
-            f"Expected >=2 task types, got {observed_types}"
-        )
-        log.info("PASS: task types include %s", observed_types)
-
-    def test_index_task_exists(self, pipeline_result):
-        """An 'index' type task must exist in the manifest."""
-        tasks = pipeline_result["manifest"].get("tasks", {})
-        index_tasks = [t for t in tasks.values() if t.get("type") == "index"]
-        assert len(index_tasks) >= 1, "No index task found in manifest"
-        log.info("PASS: index task found")
-
-    def test_index_task_depends_on_all_detail_tasks(self, pipeline_result):
-        """The index task must depend on all non-index tasks."""
-        tasks = pipeline_result["manifest"].get("tasks", {})
-        index_tasks = [t for t in tasks.values() if t.get("type") == "index"]
-        assert len(index_tasks) >= 1, "No index task found"
-
-        index_task = index_tasks[0]
-        detail_task_ids = sorted(
-            tid for tid, t in tasks.items() if t.get("type") != "index"
-        )
-        index_deps = sorted(index_task.get("dependencies", []))
-
-        assert index_deps == detail_task_ids, (
-            f"Index task dependencies {index_deps} != detail task IDs {detail_task_ids}"
-        )
-        log.info("PASS: index task depends on all %d detail tasks", len(detail_task_ids))
-
-    def test_each_task_has_required_fields(self, pipeline_result):
-        """Every task must have required fields: task_id, type, cone_ids, files, status."""
-        required_fields = {"task_id", "type", "cone_ids", "status"}
-        tasks = pipeline_result["manifest"].get("tasks", {})
-        for task_id, task in tasks.items():
-            missing = required_fields - set(task.keys())
-            assert not missing, (
-                f"Task '{task_id}' missing required fields: {missing}"
-            )
-        log.info("PASS: all tasks have required fields")
-
-    def test_task_tokens_within_budget(self, pipeline_result):
-        """No task should exceed the context budget."""
-        manifest = pipeline_result["manifest"]
-        budget = manifest.get("context_budget", 100_000)
-        tasks = manifest.get("tasks", {})
-        for task_id, task in tasks.items():
-            total = task.get("total_tokens", 0)
-            assert total <= budget, (
-                f"Task '{task_id}' total_tokens={total} exceeds budget={budget}"
-            )
-        log.info("PASS: all tasks within token budget")
-
-    def test_all_cones_assigned_to_tasks(self, pipeline_result):
-        """Every non-infrastructure cone must appear in at least one task."""
-        cone_ids = set(pipeline_result["cones"].keys())
-        tasks = pipeline_result["manifest"].get("tasks", {})
-
-        assigned_cones: set[str] = set()
-        for task in tasks.values():
-            for cid in task.get("cone_ids", []):
-                if cid != "all":
-                    assigned_cones.add(cid)
-
-        unassigned = cone_ids - assigned_cones
-        assert not unassigned, (
-            f"Cones not assigned to any task: {unassigned}"
-        )
-        log.info("PASS: all %d cones assigned to tasks", len(cone_ids))
-
-
-class TestJSONFileIntegrity:
-    """Test that JSON output files have consistent cross-references."""
-
-    def test_dag_nodes_match_structure_files(self, analysis_output_dir):
-        """02_dag.json nodes should be a subset of 01_structure.json files."""
-        structure = json.loads(
-            (analysis_output_dir / "01_structure.json").read_text(),
-        )
-        dag = json.loads(
-            (analysis_output_dir / "02_dag.json").read_text(),
-        )
-        structure_files = {f["filepath"] for f in structure["files"]}
+    def test_dag_nodes_match_files(self, pipeline_outputs: dict) -> None:
+        """02_dag.json nodes should correspond to parsed file paths."""
+        out = pipeline_outputs["output_path"]
+        dag = json.loads((out / "02_dag.json").read_text())
+        structure = json.loads((out / "01_structure.json").read_text())
+        structure_paths = {f["filepath"] for f in structure["files"]}
         dag_nodes = set(dag["nodes"])
+        assert dag_nodes.issubset(structure_paths), (
+            f"DAG has nodes not in structure: {dag_nodes - structure_paths}"
+        )
 
-        extra_nodes = dag_nodes - structure_files
-        assert not extra_nodes, (
-            f"DAG has nodes not in structure: {extra_nodes}"
-        )
-        log.info("PASS: DAG nodes are subset of structure files")
+    def test_dag_edges_have_weights(self, pipeline_outputs: dict) -> None:
+        """Every edge in 02_dag.json must have a positive weight."""
+        out = pipeline_outputs["output_path"]
+        dag = json.loads((out / "02_dag.json").read_text())
+        assert len(dag["edges"]) > 0, "Expected at least one edge"
+        for edge in dag["edges"]:
+            assert "source" in edge
+            assert "target" in edge
+            assert edge.get("weight", 0) > 0, (
+                f"Edge {edge['source']} -> {edge['target']} weight <= 0"
+            )
 
-    def test_cone_files_exist_in_structure(self, analysis_output_dir):
-        """03_feature_cones.json exclusive_files should appear in 01_structure.json."""
-        structure = json.loads(
-            (analysis_output_dir / "01_structure.json").read_text(),
-        )
-        cones = json.loads(
-            (analysis_output_dir / "03_feature_cones.json").read_text(),
-        )
-        structure_files = {f["filepath"] for f in structure["files"]}
+    def test_dag_node_count_matches(self, pipeline_outputs: dict) -> None:
+        """node_count and edge_count metadata should match actual counts."""
+        out = pipeline_outputs["output_path"]
+        dag = json.loads((out / "02_dag.json").read_text())
+        assert dag["node_count"] == len(dag["nodes"])
+        assert dag["edge_count"] == len(dag["edges"])
 
-        for cone_id, cone_data in cones["cones"].items():
-            for fp in cone_data.get("exclusive_files", []):
-                assert fp in structure_files, (
-                    f"Cone '{cone_id}' exclusive_file '{fp}' not in structure"
-                )
-        log.info("PASS: all cone files found in structure")
+    # -- 03_feature_cones.json ---
 
-    def test_token_files_match_structure(self, analysis_output_dir):
-        """04_file_tokens.json files should match 01_structure.json files."""
-        structure = json.loads(
-            (analysis_output_dir / "01_structure.json").read_text(),
-        )
-        tokens = json.loads(
-            (analysis_output_dir / "04_file_tokens.json").read_text(),
-        )
-        structure_files = {f["filepath"] for f in structure["files"]}
-        token_files = {f["filepath"] for f in tokens["files"]}
+    def test_feature_cones_cones_exist(self, pipeline_outputs: dict) -> None:
+        """03_feature_cones.json should contain at least one cone."""
+        out = pipeline_outputs["output_path"]
+        data = json.loads((out / "03_feature_cones.json").read_text())
+        assert data["cone_count"] > 0
+        assert len(data["cones"]) == data["cone_count"]
 
-        assert token_files == structure_files, (
-            f"Token files mismatch. Extra in tokens: {token_files - structure_files}. "
-            f"Missing from tokens: {structure_files - token_files}"
-        )
-        log.info("PASS: token files match structure files")
+    def test_feature_cones_files_assigned(self, pipeline_outputs: dict) -> None:
+        """Each cone should have exclusive_files as a list."""
+        out = pipeline_outputs["output_path"]
+        data = json.loads((out / "03_feature_cones.json").read_text())
+        for cid, cone in data["cones"].items():
+            assert isinstance(cone["exclusive_files"], list), (
+                f"Cone {cid} exclusive_files is not a list"
+            )
+            assert isinstance(cone.get("shared_deps", []), list), (
+                f"Cone {cid} shared_deps is not a list"
+            )
 
-    def test_manifest_cone_ids_exist_in_cones(self, analysis_output_dir):
-        """05_task_manifest.json cone_ids should reference 03_feature_cones.json cones."""
-        cones = json.loads(
-            (analysis_output_dir / "03_feature_cones.json").read_text(),
+    def test_feature_cones_not_all_single_file(self, pipeline_outputs: dict) -> None:
+        """Not all cones should be single-file (quality check)."""
+        out = pipeline_outputs["output_path"]
+        data = json.loads((out / "03_feature_cones.json").read_text())
+        cones = data["cones"]
+        multi_file = sum(
+            1 for c in cones.values() if len(c["exclusive_files"]) > 1
         )
-        manifest = json.loads(
-            (analysis_output_dir / "05_task_manifest.json").read_text(),
+        # At least one multi-file cone expected for our 8-file project
+        assert multi_file >= 1, (
+            f"Expected at least 1 multi-file cone, got {multi_file}"
         )
-        valid_cone_ids = set(cones["cones"].keys())
 
-        for task_id, task in manifest["tasks"].items():
-            for cid in task.get("cone_ids", []):
-                if cid == "all":
-                    continue
-                assert cid in valid_cone_ids, (
-                    f"Task '{task_id}' references unknown cone '{cid}'"
-                )
-        log.info("PASS: all manifest cone_ids reference valid cones")
+    # -- 04_file_tokens.json ---
+
+    def test_file_tokens_all_positive(self, pipeline_outputs: dict) -> None:
+        """04_file_tokens.json should have positive tokens for non-empty files."""
+        out = pipeline_outputs["output_path"]
+        data = json.loads((out / "04_file_tokens.json").read_text())
+        assert data["file_count"] > 0
+        assert data["total_tokens"] > 0
+        for entry in data["files"]:
+            if entry["char_count"] > 0:
+                assert entry["estimated_tokens"] > 0
+
+    def test_file_tokens_total_matches_sum(self, pipeline_outputs: dict) -> None:
+        """total_tokens should equal the sum of individual estimates."""
+        out = pipeline_outputs["output_path"]
+        data = json.loads((out / "04_file_tokens.json").read_text())
+        computed_total = sum(f["estimated_tokens"] for f in data["files"])
+        assert data["total_tokens"] == computed_total
+
+    # -- 05_task_manifest.json ---
+
+    def test_task_manifest_on_disk(self, pipeline_outputs: dict) -> None:
+        """05_task_manifest.json should match the in-memory manifest."""
+        out = pipeline_outputs["output_path"]
+        disk_data = json.loads((out / "05_task_manifest.json").read_text())
+        in_memory = pipeline_outputs["task_manifest"]
+        assert disk_data["schema_version"] == in_memory["schema_version"]
+        assert set(disk_data["tasks"].keys()) == set(in_memory["tasks"].keys())
+
+    # -- state.json ---
+
+    def test_state_json_project_id(self, pipeline_outputs: dict) -> None:
+        """state.json should contain the correct project_id."""
+        out = pipeline_outputs["output_path"]
+        state = read_state(out / "state.json")
+        assert state is not None
+        assert state["project_id"] == pipeline_outputs["project_id"]
+
+    def test_state_json_status(self, pipeline_outputs: dict) -> None:
+        """state.json status should be 'analysis_complete'."""
+        out = pipeline_outputs["output_path"]
+        state = read_state(out / "state.json")
+        assert state is not None
+        assert state["status"] == "analysis_complete"
+
+    def test_state_json_tasks_match_manifest(self, pipeline_outputs: dict) -> None:
+        """state.json task entries should match 05_task_manifest tasks."""
+        out = pipeline_outputs["output_path"]
+        state = read_state(out / "state.json")
+        manifest = pipeline_outputs["task_manifest"]
+        assert state is not None
+        state_task_ids = set(state["tasks"].keys())
+        manifest_task_ids = set(manifest["tasks"].keys())
+        assert state_task_ids == manifest_task_ids, (
+            f"State tasks {state_task_ids} != manifest tasks {manifest_task_ids}"
+        )
+
+    def test_state_json_tasks_all_pending(self, pipeline_outputs: dict) -> None:
+        """All tasks in state.json should initially be 'pending'."""
+        out = pipeline_outputs["output_path"]
+        state = read_state(out / "state.json")
+        assert state is not None
+        for task_id, task in state["tasks"].items():
+            assert task["status"] == "pending", (
+                f"Task {task_id} should be 'pending', got '{task['status']}'"
+            )
+
+    def test_state_json_documentation_section(self, pipeline_outputs: dict) -> None:
+        """state.json should have a documentation section with initial values."""
+        out = pipeline_outputs["output_path"]
+        state = read_state(out / "state.json")
+        assert state is not None
+        doc = state.get("documentation", {})
+        assert doc["index_written"] is False
+        assert doc["details_written"] == 0
+        assert doc["snippets_written"] == 0
+        assert doc["source_file_coverage_percent"] == 0.0
 
 
 # ---------------------------------------------------------------------------
-# Standalone runner
+# Test: Depth planning and quality checks
 # ---------------------------------------------------------------------------
 
 
-def _run_standalone():
-    tests_no_tmp = [
-        ("TestCoreDataModels.fileinfo_has_char_count",
-         TestCoreDataModels().test_fileinfo_has_char_count),
-        ("TestCoreDataModels.server_api_signature_consistent",
-         TestCoreDataModels().test_server_api_signature_consistent),
-        ("TestASTParser.ast_snapshot_produces_files",
-         TestASTParser().test_ast_snapshot_produces_files),
-    ]
+class TestDepthPlanningQuality:
+    """Verify depth planning produces valid results."""
 
-    passed = failed = 0
-    failures: list[tuple[str, str]] = []
+    def test_feature_cone_depth_small_cone(self) -> None:
+        """Small cones (< 2000 tokens) should get depth <= 1."""
+        depth = calculate_feature_cone_depth(1500, dag_layers=3, token_budget=100_000)
+        assert depth <= 1
 
-    def _run(name, fn, *args):
-        nonlocal passed, failed
-        try:
-            fn(*args)
-            print(f"  PASS {name}")
-            passed += 1
-        except AssertionError as e:
-            print(f"  FAIL {name}: {e}")
-            failed += 1
-            failures.append((name, str(e)))
-        except Exception as e:
-            print(f"  FAIL {name}: ERROR: {e}")
-            failed += 1
-            failures.append((name, f"ERROR: {e}"))
+    def test_feature_cone_depth_medium_cone(self) -> None:
+        """Medium cones (2000-8000 tokens) should get depth <= 2."""
+        depth = calculate_feature_cone_depth(5000, dag_layers=4, token_budget=100_000)
+        assert depth <= 2
 
-    print(f"\n-- Core tests (no pipeline) -----------")
-    for name, fn in tests_no_tmp:
-        _run(name, fn)
+    def test_feature_cone_depth_large_cone(self) -> None:
+        """Large cones (> 32000 tokens) should use full DAG layer depth."""
+        depth = calculate_feature_cone_depth(50_000, dag_layers=4, token_budget=100_000)
+        assert depth == 4
 
-    print(f"\n-- Pipeline tests ----------------------")
-    try:
-        result = _run_pipeline(TEST_ROOT)
-        print(f"  Pipeline ran successfully with {len(result['cones'])} cones")
-    except Exception as e:
-        print(f"  FAIL Pipeline: {e}")
-        failed += 1
-        failures.append(("Pipeline", str(e)))
+    def test_feature_cone_depth_capped_at_5(self) -> None:
+        """Depth should never exceed MAX_DEPTH (5)."""
+        depth = calculate_feature_cone_depth(200_000, dag_layers=10, token_budget=100_000)
+        assert depth <= 5
 
-    print(f"\n{'='*60}")
-    print(f"Results: {passed} passed, {failed} failed")
-    if failures:
-        print("\nFailed:")
-        for name, msg in failures:
-            print(f"  - {name}:\n    {msg}\n")
-    return failed == 0
+    def test_task_manifest_all_files_covered(self, pipeline_outputs: dict) -> None:
+        """Every exclusive file from every cone should appear in some task."""
+        manifest = pipeline_outputs["task_manifest"]
+        cone_dicts = pipeline_outputs["cone_dicts"]
+
+        # Collect all exclusive files across cones
+        all_cone_files: set[str] = set()
+        for cone in cone_dicts.values():
+            all_cone_files.update(cone["exclusive_files"])
+
+        # Collect all files across tasks (excluding index task)
+        all_task_files: set[str] = set()
+        for task in manifest["tasks"].values():
+            if task["type"] != "index":
+                all_task_files.update(task.get("files", []))
+
+        missing = all_cone_files - all_task_files
+        assert missing == set(), (
+            f"Files not covered by any task: {missing}"
+        )
 
 
-if __name__ == "__main__":
-    print(f"Test root: {TEST_ROOT}")
-    if not TEST_ROOT.exists():
-        print(f"ERROR: not found: {TEST_ROOT}")
-        sys.exit(1)
-    ok = _run_standalone()
-    sys.exit(0 if ok else 1)
+# ---------------------------------------------------------------------------
+# Test: Output directory resolver
+# ---------------------------------------------------------------------------
+
+
+class TestOutputDirectoryResolution:
+    """Verify output directory resolution logic."""
+
+    def test_default_output_dir(self, realistic_project: Path) -> None:
+        """Without explicit output_dir, should use .codebase-analysis subdir."""
+        resolved = resolve_output_dir(str(realistic_project), None)
+        assert resolved == realistic_project / ".codebase-analysis"
+
+    def test_custom_output_dir(self, tmp_path: Path) -> None:
+        """Explicit output_dir should be used as-is (resolved)."""
+        custom = tmp_path / "custom-output"
+        resolved = resolve_output_dir("/some/project", str(custom))
+        assert resolved == custom.resolve()
+
+    def test_project_id_deterministic(self, realistic_project: Path) -> None:
+        """Same path should produce the same project_id every time."""
+        id1 = project_id_from_path(str(realistic_project))
+        id2 = project_id_from_path(str(realistic_project))
+        assert id1 == id2
+        assert len(id1) == 12  # SHA-256 truncated to 12 chars

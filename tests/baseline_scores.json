@@ -1,0 +1,822 @@
+{
+  "timestamp": "2026-03-26T11:09:05.208337+00:00",
+  "results": [
+    {
+      "repo": "celery",
+      "timestamp": "2026-03-26T11:09:02.254461+00:00",
+      "dimensions": {
+        "uniqueness": {
+          "score": 15.0,
+          "max": 15.0,
+          "details": {
+            "violations": 0,
+            "total": 353,
+            "violation_files": {}
+          }
+        },
+        "distribution": {
+          "score": 10.26,
+          "max": 15.0,
+          "details": {
+            "gini": 0.3163,
+            "mega_cones": 0,
+            "single_file_ratio": 0.0,
+            "cone_count": 26
+          }
+        },
+        "infra_accuracy": {
+          "score": 12.5,
+          "max": 15.0,
+          "details": {
+            "correct": 45,
+            "total": 54,
+            "misclassified": [
+              {
+                "file": "examples/celery_http_gateway/settings.py",
+                "expected": "infra",
+                "actual": "cone"
+              },
+              {
+                "file": "examples/django/proj/settings.py",
+                "expected": "infra",
+                "actual": "cone"
+              },
+              {
+                "file": "celery/utils/abstract.py",
+                "expected": "infra",
+                "actual": "cone"
+              },
+              {
+                "file": "examples/stamping/config.py",
+                "expected": "infra",
+                "actual": "cone"
+              },
+              {
+                "file": "t/unit/contrib/proj/conf.py",
+                "expected": "infra",
+                "actual": "cone"
+              },
+              {
+                "file": "t/unit/utils/__init__.py",
+                "expected": "infra",
+                "actual": "cone"
+              },
+              {
+                "file": "celery/security/utils.py",
+                "expected": "infra",
+                "actual": "cone"
+              },
+              {
+                "file": "celery/utils/static/__init__.py",
+                "expected": "infra",
+                "actual": "cone"
+              },
+              {
+                "file": "docs/conf.py",
+                "expected": "infra",
+                "actual": "cone"
+              }
+            ]
+          }
+        },
+        "coverage": {
+          "score": 10.0,
+          "max": 10.0,
+          "details": {
+            "covered": 416,
+            "total": 416,
+            "orphans": 0,
+            "coverage_ratio": 1.0
+          }
+        },
+        "dir_coherence": {
+          "score": 12.11,
+          "max": 15.0,
+          "details": {
+            "avg_spread": 2.9245,
+            "coherence": 0.8075,
+            "dirs_analyzed": 53,
+            "worst_dirs": {
+              "t/unit/app": 11,
+              "t/unit/utils": 11,
+              "t/integration": 8,
+              "t/unit/concurrency": 6,
+              "t/unit/contrib": 6
+            }
+          }
+        },
+        "dep_integrity": {
+          "score": 8.45,
+          "max": 15.0,
+          "details": {
+            "preserved": 58,
+            "total": 103,
+            "split_pairs": [
+              {
+                "src": "celery/apps/beat.py",
+                "tgt": "celery/beat.py",
+                "src_cone": "__main__",
+                "tgt_cone": "annotations"
+              },
+              {
+                "src": "celery/backends/cassandra.py",
+                "tgt": "celery/bin/multi.py",
+                "src_cone": "arangodb",
+                "tgt_cone": "__main__"
+              },
+              {
+                "src": "celery/backends/couchbase.py",
+                "tgt": "celery/bin/multi.py",
+                "src_cone": "arangodb",
+                "tgt_cone": "__main__"
+              },
+              {
+                "src": "celery/backends/couchbase.py",
+                "tgt": "celery/backends/gcs.py",
+                "src_cone": "arangodb",
+                "tgt_cone": "cache"
+              },
+              {
+                "src": "celery/backends/couchbase.py",
+                "tgt": "celery/backends/cache.py",
+                "src_cone": "arangodb",
+                "tgt_cone": "cache"
+              },
+              {
+                "src": "celery/backends/dynamodb.py",
+                "tgt": "celery/backends/elasticsearch.py",
+                "src_cone": "celery-dynamodb",
+                "tgt_cone": "arangodb"
+              },
+              {
+                "src": "celery/backends/gcs.py",
+                "tgt": "celery/backends/mongodb.py",
+                "src_cone": "cache",
+                "tgt_cone": "arangodb"
+              },
+              {
+                "src": "celery/backends/redis.py",
+                "tgt": "celery/contrib/testing/manager.py",
+                "src_cone": "arangodb",
+                "tgt_cone": "celery-autoretry"
+              },
+              {
+                "src": "celery/beat.py",
+                "tgt": "celery/schedules.py",
+                "src_cone": "annotations",
+                "tgt_cone": "celery-autoretry"
+              },
+              {
+                "src": "celery/bin/events.py",
+                "tgt": "celery/events/dumper.py",
+                "src_cone": "__main__",
+                "tgt_cone": "celery-autoretry"
+              }
+            ]
+          }
+        },
+        "naming_quality": {
+          "score": 15.0,
+          "max": 15.0,
+          "details": {
+            "duplicates": 0,
+            "generic": 0,
+            "match_ratio": 1.0
+          }
+        },
+        "cluster_ari": {
+          "score": 4.29,
+          "max": 15.0,
+          "details": {
+            "ari": 0.2861,
+            "nmi": 0.5815,
+            "matched_files": 56,
+            "total_annotated": 56,
+            "unique_true_clusters": 11,
+            "unique_pred_clusters": 13
+          }
+        }
+      },
+      "total": 76.18,
+      "max_possible": 115.0,
+      "cone_count": 26,
+      "infra_count": 63,
+      "file_count": 416
+    },
+    {
+      "repo": "fastapi",
+      "timestamp": "2026-03-26T11:09:03.240480+00:00",
+      "dimensions": {
+        "uniqueness": {
+          "score": 15.0,
+          "max": 15.0,
+          "details": {
+            "violations": 0,
+            "total": 1101,
+            "violation_files": {}
+          }
+        },
+        "distribution": {
+          "score": 4.36,
+          "max": 15.0,
+          "details": {
+            "gini": 0.7092,
+            "mega_cones": 0,
+            "single_file_ratio": 0.087,
+            "cone_count": 23
+          }
+        },
+        "infra_accuracy": {
+          "score": 12.19,
+          "max": 15.0,
+          "details": {
+            "correct": 52,
+            "total": 64,
+            "misclassified": [
+              {
+                "file": "docs_src/settings/tutorial001_py310.py",
+                "expected": "infra",
+                "actual": "cone"
+              },
+              {
+                "file": "docs_src/settings/app03_an_py310/__init__.py",
+                "expected": "infra",
+                "actual": "cone"
+              },
+              {
+                "file": "docs_src/settings/app03_py310/__init__.py",
+                "expected": "infra",
+                "actual": "cone"
+              },
+              {
+                "file": "docs_src/settings/__init__.py",
+                "expected": "infra",
+                "actual": "cone"
+              },
+              {
+                "file": "docs_src/settings/app03_py310/config.py",
+                "expected": "infra",
+                "actual": "cone"
+              },
+              {
+                "file": "docs_src/settings/app01_py310/__init__.py",
+                "expected": "infra",
+                "actual": "cone"
+              },
+              {
+                "file": "docs_src/settings/app02_py310/__init__.py",
+                "expected": "infra",
+                "actual": "cone"
+              },
+              {
+                "file": "fastapi/security/utils.py",
+                "expected": "infra",
+                "actual": "cone"
+              },
+              {
+                "file": "fastapi/security/__init__.py",
+                "expected": "cone",
+                "actual": "infra"
+              },
+              {
+                "file": "docs_src/settings/app01_py310/config.py",
+                "expected": "infra",
+                "actual": "cone"
+              }
+            ]
+          }
+        },
+        "coverage": {
+          "score": 10.0,
+          "max": 10.0,
+          "details": {
+            "covered": 1118,
+            "total": 1118,
+            "orphans": 0,
+            "coverage_ratio": 1.0
+          }
+        },
+        "dir_coherence": {
+          "score": 14.47,
+          "max": 15.0,
+          "details": {
+            "avg_spread": 1.2459,
+            "coherence": 0.9649,
+            "dirs_analyzed": 183,
+            "worst_dirs": {
+              "tests": 8,
+              "fastapi": 5,
+              "fastapi/middleware": 3,
+              "fastapi/openapi": 3,
+              "tests/test_tutorial/test_dependencies": 3
+            }
+          }
+        },
+        "dep_integrity": {
+          "score": 13.64,
+          "max": 15.0,
+          "details": {
+            "preserved": 40,
+            "total": 44,
+            "split_pairs": [
+              {
+                "src": "fastapi/applications.py",
+                "tgt": "fastapi/openapi/docs.py",
+                "src_cone": "background_tasks",
+                "tgt_cone": "custom_docs_ui"
+              },
+              {
+                "src": "fastapi/openapi/docs.py",
+                "tgt": "fastapi/encoders.py",
+                "src_cone": "custom_docs_ui",
+                "tgt_cone": "background_tasks"
+              },
+              {
+                "src": "scripts/mkdocs_hooks.py",
+                "tgt": "fastapi/params.py",
+                "src_cone": "app_b_an_py310",
+                "tgt_cone": "background_tasks"
+              },
+              {
+                "src": "tests/test_dependency_contextmanager.py",
+                "tgt": "tests/test_ws_router.py",
+                "src_cone": "testing-test_list",
+                "tgt_cone": "testing-test_dependency_contextvars"
+              }
+            ]
+          }
+        },
+        "naming_quality": {
+          "score": 15.0,
+          "max": 15.0,
+          "details": {
+            "duplicates": 0,
+            "generic": 0,
+            "match_ratio": 1.0
+          }
+        },
+        "cluster_ari": {
+          "score": 2.32,
+          "max": 15.0,
+          "details": {
+            "ari": 0.1545,
+            "nmi": 0.4961,
+            "matched_files": 30,
+            "total_annotated": 30,
+            "unique_true_clusters": 8,
+            "unique_pred_clusters": 6
+          }
+        }
+      },
+      "total": 75.63,
+      "max_possible": 115.0,
+      "cone_count": 23,
+      "infra_count": 17,
+      "file_count": 1118
+    },
+    {
+      "repo": "flask",
+      "timestamp": "2026-03-26T11:09:03.508664+00:00",
+      "dimensions": {
+        "uniqueness": {
+          "score": 15.0,
+          "max": 15.0,
+          "details": {
+            "violations": 0,
+            "total": 58,
+            "violation_files": {}
+          }
+        },
+        "distribution": {
+          "score": 8.69,
+          "max": 15.0,
+          "details": {
+            "gini": 0.4207,
+            "mega_cones": 0,
+            "single_file_ratio": 0.1,
+            "cone_count": 10
+          }
+        },
+        "infra_accuracy": {
+          "score": 12.27,
+          "max": 15.0,
+          "details": {
+            "correct": 9,
+            "total": 11,
+            "misclassified": [
+              {
+                "file": "src/flask/cli.py",
+                "expected": "cone",
+                "actual": "infra"
+              },
+              {
+                "file": "docs/conf.py",
+                "expected": "infra",
+                "actual": "cone"
+              }
+            ]
+          }
+        },
+        "coverage": {
+          "score": 10.0,
+          "max": 10.0,
+          "details": {
+            "covered": 83,
+            "total": 83,
+            "orphans": 0,
+            "coverage_ratio": 1.0
+          }
+        },
+        "dir_coherence": {
+          "score": 12.61,
+          "max": 15.0,
+          "details": {
+            "avg_spread": 1.6364,
+            "coherence": 0.8409,
+            "dirs_analyzed": 11,
+            "worst_dirs": {
+              "tests": 5,
+              "src/flask": 4,
+              "tests/test_apps/cliapp": 1,
+              "tests/test_apps/cliapp/inner1/inner2": 1,
+              "examples/javascript/js_example": 1
+            }
+          }
+        },
+        "dep_integrity": {
+          "score": 15.0,
+          "max": 15.0,
+          "details": {
+            "preserved": 3,
+            "total": 3,
+            "split_pairs": []
+          }
+        },
+        "naming_quality": {
+          "score": 15.0,
+          "max": 15.0,
+          "details": {
+            "duplicates": 0,
+            "generic": 0,
+            "match_ratio": 1.0
+          }
+        },
+        "cluster_ari": {
+          "score": 0.0,
+          "max": 15.0,
+          "details": {
+            "ari": -0.0096,
+            "nmi": 0.2248,
+            "matched_files": 22,
+            "total_annotated": 22,
+            "unique_true_clusters": 10,
+            "unique_pred_clusters": 4
+          }
+        }
+      },
+      "total": 77.02,
+      "max_possible": 115.0,
+      "cone_count": 10,
+      "infra_count": 25,
+      "file_count": 83
+    },
+    {
+      "repo": "rich",
+      "timestamp": "2026-03-26T11:09:04.186251+00:00",
+      "dimensions": {
+        "uniqueness": {
+          "score": 15.0,
+          "max": 15.0,
+          "details": {
+            "violations": 0,
+            "total": 186,
+            "violation_files": {}
+          }
+        },
+        "distribution": {
+          "score": 9.05,
+          "max": 15.0,
+          "details": {
+            "gini": 0.3969,
+            "mega_cones": 0,
+            "single_file_ratio": 0.0455,
+            "cone_count": 22
+          }
+        },
+        "infra_accuracy": {
+          "score": 6.43,
+          "max": 15.0,
+          "details": {
+            "correct": 3,
+            "total": 7,
+            "misclassified": [
+              {
+                "file": "docs/source/conf.py",
+                "expected": "infra",
+                "actual": "cone"
+              },
+              {
+                "file": "rich/logging.py",
+                "expected": "infra",
+                "actual": "cone"
+              },
+              {
+                "file": "rich/console.py",
+                "expected": "cone",
+                "actual": "infra"
+              },
+              {
+                "file": "examples/log.py",
+                "expected": "infra",
+                "actual": "cone"
+              }
+            ]
+          }
+        },
+        "coverage": {
+          "score": 10.0,
+          "max": 10.0,
+          "details": {
+            "covered": 213,
+            "total": 213,
+            "orphans": 0,
+            "coverage_ratio": 1.0
+          }
+        },
+        "dir_coherence": {
+          "score": 8.0,
+          "max": 15.0,
+          "details": {
+            "avg_spread": 5.6667,
+            "coherence": 0.5333,
+            "dirs_analyzed": 6,
+            "worst_dirs": {
+              "rich": 11,
+              "tests": 11,
+              "examples": 7,
+              "tools": 2,
+              "rich/_unicode_data": 2
+            }
+          }
+        },
+        "dep_integrity": {
+          "score": 11.25,
+          "max": 15.0,
+          "details": {
+            "preserved": 9,
+            "total": 12,
+            "split_pairs": [
+              {
+                "src": "examples/tree.py",
+                "tgt": "rich/filesize.py",
+                "src_cone": "exception",
+                "tgt_cone": "cp_progress"
+              },
+              {
+                "src": "rich/_wrap.py",
+                "tgt": "rich/palette.py",
+                "src_cone": "conf",
+                "tgt_cone": "benchmarks"
+              },
+              {
+                "src": "rich/file_proxy.py",
+                "tgt": "rich/ansi.py",
+                "src_cone": "highlighter",
+                "tgt_cone": "benchmarks"
+              }
+            ]
+          }
+        },
+        "naming_quality": {
+          "score": 15.0,
+          "max": 15.0,
+          "details": {
+            "duplicates": 0,
+            "generic": 0,
+            "match_ratio": 1.0
+          }
+        },
+        "cluster_ari": {
+          "score": 0.91,
+          "max": 15.0,
+          "details": {
+            "ari": 0.0605,
+            "nmi": 0.3647,
+            "matched_files": 43,
+            "total_annotated": 43,
+            "unique_true_clusters": 8,
+            "unique_pred_clusters": 7
+          }
+        }
+      },
+      "total": 65.77,
+      "max_possible": 115.0,
+      "cone_count": 22,
+      "infra_count": 27,
+      "file_count": 213
+    },
+    {
+      "repo": "scrapy",
+      "timestamp": "2026-03-26T11:09:05.207649+00:00",
+      "dimensions": {
+        "uniqueness": {
+          "score": 15.0,
+          "max": 15.0,
+          "details": {
+            "violations": 0,
+            "total": 390,
+            "violation_files": {}
+          }
+        },
+        "distribution": {
+          "score": 7.9,
+          "max": 15.0,
+          "details": {
+            "gini": 0.473,
+            "mega_cones": 0,
+            "single_file_ratio": 0.0,
+            "cone_count": 29
+          }
+        },
+        "infra_accuracy": {
+          "score": 13.27,
+          "max": 15.0,
+          "details": {
+            "correct": 69,
+            "total": 78,
+            "misclassified": [
+              {
+                "file": "scrapy/commands/parse.py",
+                "expected": "cone",
+                "actual": "infra"
+              },
+              {
+                "file": "scrapy/utils/testproc.py",
+                "expected": "infra",
+                "actual": "cone"
+              },
+              {
+                "file": "scrapy/utils/ossignal.py",
+                "expected": "infra",
+                "actual": "cone"
+              },
+              {
+                "file": "scrapy/utils/testsite.py",
+                "expected": "infra",
+                "actual": "cone"
+              },
+              {
+                "file": "scrapy/commands/settings.py",
+                "expected": "infra",
+                "actual": "cone"
+              },
+              {
+                "file": "docs/conf.py",
+                "expected": "infra",
+                "actual": "cone"
+              },
+              {
+                "file": "scrapy/utils/__init__.py",
+                "expected": "infra",
+                "actual": "cone"
+              },
+              {
+                "file": "docs/utils/linkfix.py",
+                "expected": "infra",
+                "actual": "cone"
+              },
+              {
+                "file": "scrapy/utils/benchserver.py",
+                "expected": "infra",
+                "actual": "cone"
+              }
+            ]
+          }
+        },
+        "coverage": {
+          "score": 10.0,
+          "max": 10.0,
+          "details": {
+            "covered": 441,
+            "total": 441,
+            "orphans": 0,
+            "coverage_ratio": 1.0
+          }
+        },
+        "dir_coherence": {
+          "score": 13.31,
+          "max": 15.0,
+          "details": {
+            "avg_spread": 2.5789,
+            "coherence": 0.8872,
+            "dirs_analyzed": 38,
+            "worst_dirs": {
+              "tests": 15,
+              "scrapy/extensions": 8,
+              "scrapy": 8,
+              "scrapy/downloadermiddlewares": 7,
+              "scrapy/commands": 5
+            }
+          }
+        },
+        "dep_integrity": {
+          "score": 10.71,
+          "max": 15.0,
+          "details": {
+            "preserved": 80,
+            "total": 112,
+            "split_pairs": [
+              {
+                "src": "scrapy/cmdline.py",
+                "tgt": "scrapy/shell.py",
+                "src_cone": "cli-__main__",
+                "tgt_cone": "scrapy-shell"
+              },
+              {
+                "src": "scrapy/commands/check.py",
+                "tgt": "scrapy/contracts/__init__.py",
+                "src_cone": "cli-__main__",
+                "tgt_cone": "scrapy-default"
+              },
+              {
+                "src": "scrapy/commands/check.py",
+                "tgt": "scrapy/commands/__init__.py",
+                "src_cone": "cli-__main__",
+                "tgt_cone": "cli-addons"
+              },
+              {
+                "src": "scrapy/commands/shell.py",
+                "tgt": "scrapy/commands/__init__.py",
+                "src_cone": "scrapy-shell",
+                "tgt_cone": "cli-addons"
+              },
+              {
+                "src": "scrapy/commands/startproject.py",
+                "tgt": "scrapy/commands/__init__.py",
+                "src_cone": "qpsclient",
+                "tgt_cone": "cli-addons"
+              },
+              {
+                "src": "scrapy/core/downloader/__init__.py",
+                "tgt": "scrapy/core/downloader/handlers/__init__.py",
+                "src_cone": "scrapy-shell",
+                "tgt_cone": "scrapy-middleware"
+              },
+              {
+                "src": "scrapy/core/downloader/handlers/datauri.py",
+                "tgt": "scrapy/responsetypes.py",
+                "src_cone": "api",
+                "tgt_cone": "scrapy-middleware"
+              },
+              {
+                "src": "scrapy/core/downloader/handlers/file.py",
+                "tgt": "scrapy/responsetypes.py",
+                "src_cone": "api",
+                "tgt_cone": "scrapy-middleware"
+              },
+              {
+                "src": "scrapy/core/downloader/handlers/ftp.py",
+                "tgt": "scrapy/responsetypes.py",
+                "src_cone": "api",
+                "tgt_cone": "scrapy-middleware"
+              },
+              {
+                "src": "scrapy/core/downloader/webclient.py",
+                "tgt": "scrapy/core/downloader/handlers/http11.py",
+                "src_cone": "scrapy-middleware",
+                "tgt_cone": "api"
+              }
+            ]
+          }
+        },
+        "naming_quality": {
+          "score": 14.83,
+          "max": 15.0,
+          "details": {
+            "duplicates": 0,
+            "generic": 0,
+            "match_ratio": 0.9655
+          }
+        },
+        "cluster_ari": {
+          "score": 2.81,
+          "max": 15.0,
+          "details": {
+            "ari": 0.1874,
+            "nmi": 0.5201,
+            "matched_files": 65,
+            "total_annotated": 65,
+            "unique_true_clusters": 11,
+            "unique_pred_clusters": 14
+          }
+        }
+      },
+      "total": 76.37,
+      "max_possible": 115.0,
+      "cone_count": 29,
+      "infra_count": 51,
+      "file_count": 441
+    }
+  ],
+  "aggregate_mean": 74.19
+}

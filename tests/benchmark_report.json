@@ -1,0 +1,853 @@
+{
+  "timestamp": "2026-03-26T00:21:06.229366+00:00",
+  "results": [
+    {
+      "repo": "celery",
+      "timestamp": "2026-03-26T00:21:03.265687+00:00",
+      "dimensions": {
+        "uniqueness": {
+          "score": 15.0,
+          "max": 15.0,
+          "details": {
+            "violations": 0,
+            "total": 343,
+            "violation_files": {}
+          }
+        },
+        "distribution": {
+          "score": 8.32,
+          "max": 15.0,
+          "details": {
+            "gini": 0.4451,
+            "mega_cones": 0,
+            "single_file_ratio": 0.3111,
+            "cone_count": 90
+          }
+        },
+        "infra_accuracy": {
+          "score": 10.56,
+          "max": 15.0,
+          "details": {
+            "correct": 38,
+            "total": 54,
+            "misclassified": [
+              {
+                "file": "t/unit/contrib/proj/conf.py",
+                "expected": "infra",
+                "actual": "cone"
+              },
+              {
+                "file": "celery/app/routes.py",
+                "expected": "cone",
+                "actual": "infra"
+              },
+              {
+                "file": "celery/utils/iso8601.py",
+                "expected": "infra",
+                "actual": "cone"
+              },
+              {
+                "file": "docs/conf.py",
+                "expected": "infra",
+                "actual": "cone"
+              },
+              {
+                "file": "t/unit/utils/__init__.py",
+                "expected": "infra",
+                "actual": "cone"
+              },
+              {
+                "file": "celery/security/utils.py",
+                "expected": "infra",
+                "actual": "cone"
+              },
+              {
+                "file": "celery/utils/static/__init__.py",
+                "expected": "infra",
+                "actual": "cone"
+              },
+              {
+                "file": "celery/utils/dispatch/signal.py",
+                "expected": "infra",
+                "actual": "cone"
+              },
+              {
+                "file": "examples/stamping/config.py",
+                "expected": "infra",
+                "actual": "cone"
+              },
+              {
+                "file": "celery/utils/term.py",
+                "expected": "infra",
+                "actual": "cone"
+              }
+            ]
+          }
+        },
+        "coverage": {
+          "score": 10.0,
+          "max": 10.0,
+          "details": {
+            "covered": 416,
+            "total": 416,
+            "orphans": 0,
+            "coverage_ratio": 1.0
+          }
+        },
+        "dir_coherence": {
+          "score": 11.36,
+          "max": 15.0,
+          "details": {
+            "avg_spread": 1.7273,
+            "coherence": 0.7576,
+            "dirs_analyzed": 55,
+            "worst_dirs": {
+              "celery/events": 4,
+              "t/unit/utils": 4,
+              "celery/concurrency": 3,
+              "t/unit/app": 3,
+              "t/unit/contrib": 3
+            }
+          }
+        },
+        "dep_integrity": {
+          "score": 5.14,
+          "max": 15.0,
+          "details": {
+            "preserved": 25,
+            "total": 73,
+            "split_pairs": [
+              {
+                "src": "celery/apps/beat.py",
+                "tgt": "celery/utils/term.py",
+                "src_cone": "beat",
+                "tgt_cone": "utils-iso8601"
+              },
+              {
+                "src": "celery/apps/worker.py",
+                "tgt": "celery/contrib/rdb.py",
+                "src_cone": "beat",
+                "tgt_cone": "contrib-abortable"
+              },
+              {
+                "src": "celery/apps/worker.py",
+                "tgt": "celery/utils/term.py",
+                "src_cone": "beat",
+                "tgt_cone": "utils-iso8601"
+              },
+              {
+                "src": "celery/apps/worker.py",
+                "tgt": "celery/utils/static/__init__.py",
+                "src_cone": "beat",
+                "tgt_cone": "utils-static"
+              },
+              {
+                "src": "celery/backends/cassandra.py",
+                "tgt": "celery/bin/multi.py",
+                "src_cone": "backends-arangodb",
+                "tgt_cone": "bin-beat"
+              },
+              {
+                "src": "celery/backends/couchbase.py",
+                "tgt": "celery/bin/multi.py",
+                "src_cone": "backends-arangodb",
+                "tgt_cone": "bin-beat"
+              },
+              {
+                "src": "celery/backends/couchdb.py",
+                "tgt": "celery/backends/mongodb.py",
+                "src_cone": "backends-arangodb",
+                "tgt_cone": "backends-mongodb"
+              },
+              {
+                "src": "celery/backends/filesystem.py",
+                "tgt": "celery/utils/sysinfo.py",
+                "src_cone": "backends-arangodb",
+                "tgt_cone": "utils-iso8601"
+              },
+              {
+                "src": "celery/backends/gcs.py",
+                "tgt": "celery/backends/mongodb.py",
+                "src_cone": "backends-arangodb",
+                "tgt_cone": "backends-mongodb"
+              },
+              {
+                "src": "celery/backends/redis.py",
+                "tgt": "celery/backends/asynchronous.py",
+                "src_cone": "backends-mongodb",
+                "tgt_cone": "backends-arangodb"
+              }
+            ]
+          }
+        },
+        "naming_quality": {
+          "score": 14.83,
+          "max": 15.0,
+          "details": {
+            "duplicates": 0,
+            "generic": 0,
+            "match_ratio": 0.9667
+          }
+        }
+      },
+      "total": 75.21,
+      "cone_count": 90,
+      "infra_count": 73,
+      "file_count": 416
+    },
+    {
+      "repo": "fastapi",
+      "timestamp": "2026-03-26T00:21:04.197981+00:00",
+      "dimensions": {
+        "uniqueness": {
+          "score": 15.0,
+          "max": 15.0,
+          "details": {
+            "violations": 0,
+            "total": 1096,
+            "violation_files": {}
+          }
+        },
+        "distribution": {
+          "score": 8.53,
+          "max": 15.0,
+          "details": {
+            "gini": 0.4311,
+            "mega_cones": 0,
+            "single_file_ratio": 0.1233,
+            "cone_count": 227
+          }
+        },
+        "infra_accuracy": {
+          "score": 10.78,
+          "max": 15.0,
+          "details": {
+            "correct": 46,
+            "total": 64,
+            "misclassified": [
+              {
+                "file": "docs_src/settings/app02_py310/config.py",
+                "expected": "infra",
+                "actual": "cone"
+              },
+              {
+                "file": "docs_src/settings/app02_py310/__init__.py",
+                "expected": "infra",
+                "actual": "cone"
+              },
+              {
+                "file": "docs_src/settings/app03_py310/__init__.py",
+                "expected": "infra",
+                "actual": "cone"
+              },
+              {
+                "file": "docs_src/settings/app02_an_py310/config.py",
+                "expected": "infra",
+                "actual": "cone"
+              },
+              {
+                "file": "docs_src/settings/app03_an_py310/config.py",
+                "expected": "infra",
+                "actual": "cone"
+              },
+              {
+                "file": "fastapi/security/base.py",
+                "expected": "infra",
+                "actual": "cone"
+              },
+              {
+                "file": "docs_src/settings/app03_an_py310/__init__.py",
+                "expected": "infra",
+                "actual": "cone"
+              },
+              {
+                "file": "fastapi/openapi/constants.py",
+                "expected": "infra",
+                "actual": "cone"
+              },
+              {
+                "file": "fastapi/openapi/models.py",
+                "expected": "cone",
+                "actual": "infra"
+              },
+              {
+                "file": "fastapi/security/utils.py",
+                "expected": "infra",
+                "actual": "cone"
+              }
+            ]
+          }
+        },
+        "coverage": {
+          "score": 10.0,
+          "max": 10.0,
+          "details": {
+            "covered": 1118,
+            "total": 1118,
+            "orphans": 0,
+            "coverage_ratio": 1.0
+          }
+        },
+        "dir_coherence": {
+          "score": 14.8,
+          "max": 15.0,
+          "details": {
+            "avg_spread": 1.1758,
+            "coherence": 0.9865,
+            "dirs_analyzed": 182,
+            "worst_dirs": {
+              "tests": 14,
+              "docs_src/dependencies": 3,
+              "docs_src/query_params_str_validations": 3,
+              "docs_src/bigger_applications/app_an_py310/internal": 2,
+              "docs_src/bigger_applications/app_an_py310": 2
+            }
+          }
+        },
+        "dep_integrity": {
+          "score": 7.06,
+          "max": 15.0,
+          "details": {
+            "preserved": 8,
+            "total": 17,
+            "split_pairs": [
+              {
+                "src": "docs_src/custom_docs_ui/tutorial001_py310.py",
+                "tgt": "fastapi/openapi/docs.py",
+                "src_cone": "custom_docs_ui",
+                "tgt_cone": "fastapi"
+              },
+              {
+                "src": "docs_src/custom_docs_ui/tutorial002_py310.py",
+                "tgt": "fastapi/openapi/docs.py",
+                "src_cone": "custom_docs_ui",
+                "tgt_cone": "fastapi"
+              },
+              {
+                "src": "docs_src/extending_openapi/tutorial001_py310.py",
+                "tgt": "fastapi/openapi/utils.py",
+                "src_cone": "extending_openapi",
+                "tgt_cone": "fastapi"
+              },
+              {
+                "src": "docs_src/handling_errors/tutorial003_py310.py",
+                "tgt": "fastapi/applications.py",
+                "src_cone": "handling_errors",
+                "tgt_cone": "fastapi"
+              },
+              {
+                "src": "docs_src/handling_errors/tutorial004_py310.py",
+                "tgt": "fastapi/applications.py",
+                "src_cone": "handling_errors",
+                "tgt_cone": "fastapi"
+              },
+              {
+                "src": "docs_src/handling_errors/tutorial005_py310.py",
+                "tgt": "fastapi/applications.py",
+                "src_cone": "handling_errors",
+                "tgt_cone": "fastapi"
+              },
+              {
+                "src": "docs_src/handling_errors/tutorial006_py310.py",
+                "tgt": "fastapi/applications.py",
+                "src_cone": "handling_errors",
+                "tgt_cone": "fastapi"
+              },
+              {
+                "src": "tests/test_dependency_contextmanager.py",
+                "tgt": "tests/test_ws_router.py",
+                "src_cone": "testing-test_dependency_after_yield_raise",
+                "tgt_cone": "testing-test_validate_response"
+              },
+              {
+                "src": "tests/test_dependency_contextvars.py",
+                "tgt": "tests/test_ws_router.py",
+                "src_cone": "testing-test_dependency_after_yield_raise",
+                "tgt_cone": "testing-test_validate_response"
+              }
+            ]
+          }
+        },
+        "naming_quality": {
+          "score": 14.98,
+          "max": 15.0,
+          "details": {
+            "duplicates": 0,
+            "generic": 0,
+            "match_ratio": 0.9956
+          }
+        }
+      },
+      "total": 81.15,
+      "cone_count": 227,
+      "infra_count": 22,
+      "file_count": 1118
+    },
+    {
+      "repo": "flask",
+      "timestamp": "2026-03-26T00:21:04.465701+00:00",
+      "dimensions": {
+        "uniqueness": {
+          "score": 15.0,
+          "max": 15.0,
+          "details": {
+            "violations": 0,
+            "total": 75,
+            "violation_files": {}
+          }
+        },
+        "distribution": {
+          "score": 8.09,
+          "max": 15.0,
+          "details": {
+            "gini": 0.4608,
+            "mega_cones": 0,
+            "single_file_ratio": 0.44,
+            "cone_count": 25
+          }
+        },
+        "infra_accuracy": {
+          "score": 9.55,
+          "max": 15.0,
+          "details": {
+            "correct": 7,
+            "total": 11,
+            "misclassified": [
+              {
+                "file": "docs/conf.py",
+                "expected": "infra",
+                "actual": "cone"
+              },
+              {
+                "file": "src/flask/config.py",
+                "expected": "infra",
+                "actual": "cone"
+              },
+              {
+                "file": "src/flask/logging.py",
+                "expected": "infra",
+                "actual": "cone"
+              },
+              {
+                "file": "src/flask/cli.py",
+                "expected": "cone",
+                "actual": "infra"
+              }
+            ]
+          }
+        },
+        "coverage": {
+          "score": 10.0,
+          "max": 10.0,
+          "details": {
+            "covered": 83,
+            "total": 83,
+            "orphans": 0,
+            "coverage_ratio": 1.0
+          }
+        },
+        "dir_coherence": {
+          "score": 11.67,
+          "max": 15.0,
+          "details": {
+            "avg_spread": 1.6667,
+            "coherence": 0.7778,
+            "dirs_analyzed": 12,
+            "worst_dirs": {
+              "src/flask": 4,
+              "tests": 4,
+              "src/flask/json": 2,
+              "examples/tutorial/flaskr": 2,
+              "examples/javascript/js_example": 1
+            }
+          }
+        },
+        "dep_integrity": {
+          "score": 7.17,
+          "max": 15.0,
+          "details": {
+            "preserved": 11,
+            "total": 23,
+            "split_pairs": [
+              {
+                "src": "examples/celery/src/task_app/__init__.py",
+                "tgt": "src/flask/config.py",
+                "src_cone": "task_app",
+                "tgt_cone": "flaskr"
+              },
+              {
+                "src": "examples/tutorial/flaskr/auth.py",
+                "tgt": "examples/tutorial/flaskr/db.py",
+                "src_cone": "security",
+                "tgt_cone": "flaskr"
+              },
+              {
+                "src": "examples/tutorial/tests/conftest.py",
+                "tgt": "tests/test_helpers.py",
+                "src_cone": "testing-conftest-1",
+                "tgt_cone": "testing-testing"
+              },
+              {
+                "src": "src/flask/sansio/blueprints.py",
+                "tgt": "src/flask/ctx.py",
+                "src_cone": "sansio",
+                "tgt_cone": "flask"
+              },
+              {
+                "src": "src/flask/sessions.py",
+                "tgt": "src/flask/sansio/blueprints.py",
+                "src_cone": "flask",
+                "tgt_cone": "sansio"
+              },
+              {
+                "src": "src/flask/wrappers.py",
+                "tgt": "src/flask/debughelpers.py",
+                "src_cone": "flask",
+                "tgt_cone": "js_example"
+              },
+              {
+                "src": "tests/conftest.py",
+                "tgt": "tests/test_reqctx.py",
+                "src_cone": "testing-conftest-2",
+                "tgt_cone": "testing-test_reqctx"
+              },
+              {
+                "src": "tests/test_basic.py",
+                "tgt": "tests/test_views.py",
+                "src_cone": "testing-testing",
+                "tgt_cone": "testing-test_subclassing"
+              },
+              {
+                "src": "tests/test_cli.py",
+                "tgt": "tests/test_testing.py",
+                "src_cone": "testing-conftest-2",
+                "tgt_cone": "testing-testing"
+              },
+              {
+                "src": "tests/test_signals.py",
+                "tgt": "src/flask/testing.py",
+                "src_cone": "testing-conftest-2",
+                "tgt_cone": "testing-testing"
+              }
+            ]
+          }
+        },
+        "naming_quality": {
+          "score": 14.6,
+          "max": 15.0,
+          "details": {
+            "duplicates": 0,
+            "generic": 0,
+            "match_ratio": 0.92
+          }
+        }
+      },
+      "total": 76.08,
+      "cone_count": 25,
+      "infra_count": 8,
+      "file_count": 83
+    },
+    {
+      "repo": "rich",
+      "timestamp": "2026-03-26T00:21:05.148108+00:00",
+      "dimensions": {
+        "uniqueness": {
+          "score": 15.0,
+          "max": 15.0,
+          "details": {
+            "violations": 0,
+            "total": 147,
+            "violation_files": {}
+          }
+        },
+        "distribution": {
+          "score": 10.51,
+          "max": 15.0,
+          "details": {
+            "gini": 0.2993,
+            "mega_cones": 0,
+            "single_file_ratio": 0.1333,
+            "cone_count": 15
+          }
+        },
+        "infra_accuracy": {
+          "score": 4.29,
+          "max": 15.0,
+          "details": {
+            "correct": 2,
+            "total": 7,
+            "misclassified": [
+              {
+                "file": "rich/errors.py",
+                "expected": "infra",
+                "actual": "cone"
+              },
+              {
+                "file": "examples/log.py",
+                "expected": "infra",
+                "actual": "cone"
+              },
+              {
+                "file": "rich/logging.py",
+                "expected": "infra",
+                "actual": "cone"
+              },
+              {
+                "file": "rich/console.py",
+                "expected": "cone",
+                "actual": "infra"
+              },
+              {
+                "file": "docs/source/conf.py",
+                "expected": "infra",
+                "actual": "cone"
+              }
+            ]
+          }
+        },
+        "coverage": {
+          "score": 10.0,
+          "max": 10.0,
+          "details": {
+            "covered": 213,
+            "total": 213,
+            "orphans": 0,
+            "coverage_ratio": 1.0
+          }
+        },
+        "dir_coherence": {
+          "score": 9.38,
+          "max": 15.0,
+          "details": {
+            "avg_spread": 2.5,
+            "coherence": 0.625,
+            "dirs_analyzed": 6,
+            "worst_dirs": {
+              "tests": 5,
+              "examples": 3,
+              "rich": 3,
+              "rich/_unicode_data": 2,
+              "benchmarks": 1
+            }
+          }
+        },
+        "dep_integrity": {
+          "score": 15.0,
+          "max": 15.0,
+          "details": {
+            "preserved": 0,
+            "total": 0
+          }
+        },
+        "naming_quality": {
+          "score": 14.33,
+          "max": 15.0,
+          "details": {
+            "duplicates": 0,
+            "generic": 0,
+            "match_ratio": 0.8667
+          }
+        }
+      },
+      "total": 78.51,
+      "cone_count": 15,
+      "infra_count": 66,
+      "file_count": 213
+    },
+    {
+      "repo": "scrapy",
+      "timestamp": "2026-03-26T00:21:06.228808+00:00",
+      "dimensions": {
+        "uniqueness": {
+          "score": 15.0,
+          "max": 15.0,
+          "details": {
+            "violations": 0,
+            "total": 392,
+            "violation_files": {}
+          }
+        },
+        "distribution": {
+          "score": 8.01,
+          "max": 15.0,
+          "details": {
+            "gini": 0.4661,
+            "mega_cones": 0,
+            "single_file_ratio": 0.2222,
+            "cone_count": 63
+          }
+        },
+        "infra_accuracy": {
+          "score": 10.77,
+          "max": 15.0,
+          "details": {
+            "correct": 56,
+            "total": 78,
+            "misclassified": [
+              {
+                "file": "scrapy/utils/_deps_compat.py",
+                "expected": "infra",
+                "actual": "cone"
+              },
+              {
+                "file": "scrapy/utils/testsite.py",
+                "expected": "infra",
+                "actual": "cone"
+              },
+              {
+                "file": "scrapy/spidermiddlewares/base.py",
+                "expected": "infra",
+                "actual": "cone"
+              },
+              {
+                "file": "scrapy/core/downloader/handlers/base.py",
+                "expected": "infra",
+                "actual": "cone"
+              },
+              {
+                "file": "docs/utils/linkfix.py",
+                "expected": "infra",
+                "actual": "cone"
+              },
+              {
+                "file": "scrapy/commands/settings.py",
+                "expected": "infra",
+                "actual": "cone"
+              },
+              {
+                "file": "scrapy/commands/__init__.py",
+                "expected": "cone",
+                "actual": "infra"
+              },
+              {
+                "file": "scrapy/utils/ftp.py",
+                "expected": "infra",
+                "actual": "cone"
+              },
+              {
+                "file": "scrapy/utils/benchserver.py",
+                "expected": "infra",
+                "actual": "cone"
+              },
+              {
+                "file": "scrapy/utils/signal.py",
+                "expected": "infra",
+                "actual": "cone"
+              }
+            ]
+          }
+        },
+        "coverage": {
+          "score": 10.0,
+          "max": 10.0,
+          "details": {
+            "covered": 441,
+            "total": 441,
+            "orphans": 0,
+            "coverage_ratio": 1.0
+          }
+        },
+        "dir_coherence": {
+          "score": 13.83,
+          "max": 15.0,
+          "details": {
+            "avg_spread": 1.7778,
+            "coherence": 0.9222,
+            "dirs_analyzed": 36,
+            "worst_dirs": {
+              "tests": 11,
+              "scrapy": 4,
+              "scrapy/utils": 4,
+              "scrapy/commands": 3,
+              "scrapy/extensions": 3
+            }
+          }
+        },
+        "dep_integrity": {
+          "score": 6.15,
+          "max": 15.0,
+          "details": {
+            "preserved": 48,
+            "total": 117,
+            "split_pairs": [
+              {
+                "src": "scrapy/commands/check.py",
+                "tgt": "scrapy/contracts/__init__.py",
+                "src_cone": "cli",
+                "tgt_cone": "contracts"
+              },
+              {
+                "src": "scrapy/commands/startproject.py",
+                "tgt": "scrapy/utils/template.py",
+                "src_cone": "cli",
+                "tgt_cone": "utils-genspider"
+              },
+              {
+                "src": "scrapy/core/downloader/__init__.py",
+                "tgt": "scrapy/core/downloader/handlers/__init__.py",
+                "src_cone": "downloader",
+                "tgt_cone": "api-_httpx"
+              },
+              {
+                "src": "scrapy/core/downloader/handlers/_httpx.py",
+                "tgt": "scrapy/utils/_download_handlers.py",
+                "src_cone": "api-_httpx",
+                "tgt_cone": "api-contextfactory"
+              },
+              {
+                "src": "scrapy/core/downloader/handlers/datauri.py",
+                "tgt": "scrapy/responsetypes.py",
+                "src_cone": "api-_httpx",
+                "tgt_cone": "scrapy-closespider"
+              },
+              {
+                "src": "scrapy/core/downloader/handlers/file.py",
+                "tgt": "scrapy/responsetypes.py",
+                "src_cone": "api-_httpx",
+                "tgt_cone": "scrapy-closespider"
+              },
+              {
+                "src": "scrapy/core/downloader/handlers/ftp.py",
+                "tgt": "scrapy/responsetypes.py",
+                "src_cone": "api-_httpx",
+                "tgt_cone": "scrapy-closespider"
+              },
+              {
+                "src": "scrapy/core/downloader/handlers/http2.py",
+                "tgt": "scrapy/core/downloader/contextfactory.py",
+                "src_cone": "api-_httpx",
+                "tgt_cone": "api-contextfactory"
+              },
+              {
+                "src": "scrapy/core/downloader/handlers/http2.py",
+                "tgt": "scrapy/core/http2/agent.py",
+                "src_cone": "api-_httpx",
+                "tgt_cone": "http2"
+              },
+              {
+                "src": "scrapy/core/downloader/handlers/http2.py",
+                "tgt": "scrapy/utils/_download_handlers.py",
+                "src_cone": "api-_httpx",
+                "tgt_cone": "api-contextfactory"
+              }
+            ]
+          }
+        },
+        "naming_quality": {
+          "score": 14.84,
+          "max": 15.0,
+          "details": {
+            "duplicates": 0,
+            "generic": 0,
+            "match_ratio": 0.9683
+          }
+        }
+      },
+      "total": 78.6,
+      "cone_count": 63,
+      "infra_count": 49,
+      "file_count": 441
+    }
+  ],
+  "aggregate_mean": 77.91
+}

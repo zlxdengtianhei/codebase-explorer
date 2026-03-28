@@ -1,0 +1,79 @@
+{
+  "version": "1.0.0",
+  "project": "codebase-explorer",
+  "generated_at": "2026-03-26",
+  "total_docs": 7,
+  "max_depth": 1,
+  "coverage": {
+    "modules_documented": 6,
+    "modules_total": 6,
+    "coverage_percent": 100.0,
+    "source_files_covered": 23,
+    "source_files_total": 23
+  },
+  "documents": [
+    {
+      "path": "INDEX.md",
+      "level": 0,
+      "doc_type": "index",
+      "target": "project",
+      "parent": null,
+      "children": [
+        "server/OVERVIEW.md",
+        "parser/OVERVIEW.md",
+        "graph/OVERVIEW.md",
+        "doc/OVERVIEW.md",
+        "state/OVERVIEW.md",
+        "budget/OVERVIEW.md"
+      ]
+    },
+    {
+      "path": "server/OVERVIEW.md",
+      "level": 1,
+      "doc_type": "overview",
+      "target": "server",
+      "parent": "INDEX.md",
+      "children": []
+    },
+    {
+      "path": "parser/OVERVIEW.md",
+      "level": 1,
+      "doc_type": "overview",
+      "target": "parser",
+      "parent": "INDEX.md",
+      "children": []
+    },
+    {
+      "path": "graph/OVERVIEW.md",
+      "level": 1,
+      "doc_type": "overview",
+      "target": "graph",
+      "parent": "INDEX.md",
+      "children": []
+    },
+    {
+      "path": "doc/OVERVIEW.md",
+      "level": 1,
+      "doc_type": "overview",
+      "target": "doc",
+      "parent": "INDEX.md",
+      "children": []
+    },
+    {
+      "path": "state/OVERVIEW.md",
+      "level": 1,
+      "doc_type": "overview",
+      "target": "state",
+      "parent": "INDEX.md",
+      "children": []
+    },
+    {
+      "path": "budget/OVERVIEW.md",
+      "level": 1,
+      "doc_type": "overview",
+      "target": "budget",
+      "parent": "INDEX.md",
+      "children": []
+    }
+  ]
+}

@@ -5,9 +5,7 @@ Summary: MCP Server + Agent Skill for codebase exploration and documentation gen
 License-Expression: MIT
 Requires-Python: <3.14,>=3.12
 Description-Content-Type: text/markdown
-Requires-Dist: aiosqlite>=0.22.1
 Requires-Dist: graph-sitter>=0.2.0
-Requires-Dist: jinja2>=3.1.0
 Requires-Dist: mcp>=1.0.0
 Requires-Dist: networkx>=3.0
 Requires-Dist: python-louvain>=0.16
@@ -35,6 +33,8 @@ pip install -e .
 # 或
 uv pip install -e .
 ```
+
+详细安装指南（MCP Server 配置、Agent Skill 安装、多客户端适配）请参见 [INSTALL.md](INSTALL.md)。
 
 ### As MCP Server
 
