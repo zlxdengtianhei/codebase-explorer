@@ -957,8 +957,10 @@ async def doc_operation(
 
         src_content = src_detail.read_text(encoding="utf-8")
 
-        # Extract the file block
+        # Extract the file block (including any preceding heading + separator)
+        # Matches: optional "---\n\n### filepath\n" + <!-- file:xxx -->...<!-- end:file:xxx -->
         block_pattern = re.compile(
+            rf"(?:---\s*\n+###\s+{re.escape(fp)}\s*\n)?"
             rf"(<!-- file:{re.escape(fp)} -->.*?<!-- end:file:{re.escape(fp)} -->)",
             re.DOTALL,
         )
@@ -970,8 +972,10 @@ async def doc_operation(
 
         extracted_block = match.group(1)
 
-        # Remove block from source
-        new_src_content = block_pattern.sub("", src_content).strip() + "\n"
+        # Remove the entire matched region (heading + block) from source
+        new_src_content = src_content[:match.start()] + src_content[match.end():]
+        # Clean up multiple blank lines
+        new_src_content = re.sub(r"\n{3,}", "\n\n", new_src_content).strip() + "\n"
         # Update source YAML front matter file_count
         src_file_count = len(re.findall(r"<!-- file:", new_src_content))
         new_src_content = re.sub(
