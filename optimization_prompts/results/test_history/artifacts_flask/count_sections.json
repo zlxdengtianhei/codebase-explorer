@@ -1,0 +1,57 @@
+{
+  "repo": "test_repos/flask",
+  "total_file_blocks": 35,
+  "total_complete_blocks": 35,
+  "total_missing_sections": {},
+  "modules": {
+    "conf": {
+      "file_blocks": 5,
+      "expected_files": 5,
+      "sections": {
+        "功能概述": 5,
+        "数据流": 5,
+        "核心接口": 5,
+        "依赖关系": 5
+      },
+      "missing": {},
+      "complete": true
+    },
+    "infrastructure": {
+      "file_blocks": 16,
+      "expected_files": 16,
+      "sections": {
+        "功能概述": 16,
+        "数据流": 16,
+        "核心接口": 16,
+        "依赖关系": 16
+      },
+      "missing": {},
+      "complete": true
+    },
+    "js_example": {
+      "file_blocks": 5,
+      "expected_files": 5,
+      "sections": {
+        "功能概述": 5,
+        "数据流": 5,
+        "核心接口": 5,
+        "依赖关系": 5
+      },
+      "missing": {},
+      "complete": true
+    },
+    "task_app": {
+      "file_blocks": 9,
+      "expected_files": 9,
+      "sections": {
+        "功能概述": 9,
+        "数据流": 9,
+        "核心接口": 9,
+        "依赖关系": 9
+      },
+      "missing": {},
+      "complete": true
+    }
+  },
+  "all_complete": true
+}

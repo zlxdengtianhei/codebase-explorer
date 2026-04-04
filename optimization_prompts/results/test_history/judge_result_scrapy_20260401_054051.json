@@ -1,0 +1,272 @@
+{
+  "mcp_data_quality": [
+    {
+      "id": "R1",
+      "verdict": "PASS",
+      "evidence": "Appendix A shows get_modules(summary) returns only module metadata (module_id, name, file_count, token_count, layer, depends_on). No function names, signatures, or code snippets in summary mode. Appendix C 03_feature_cones.json confirms structural-only data.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R2",
+      "verdict": "PASS",
+      "evidence": "Appendix C 06_function_deps.json exists, total_files_with_deps=141. Contains source_function -> target_function cross-file relationships: e.g., pytest_configure -> scrapy/utils/reactor.py:set_asyncio_event_loop_policy, load_settings -> scrapy/utils/conf.py:build_component_list.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R3",
+      "verdict": "PASS",
+      "evidence": "Appendix A describes get_modules(summary) returning modules array with only metadata (name, file_count, token_count, layer, depends_on). No file path lists. 10 modules with metadata-only fields is well under 3KB. Appendix C 03_feature_cones.json shows the raw cone data is separate from the summary API response.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R4",
+      "verdict": "PASS",
+      "evidence": "DETAIL.md files show token_budget=50000 in YAML front matter. SKILL.md specifies: token_budget = max(5000, min(50000, module_token_count * 4)). state.json records per-task token estimates. Sub-agent prompt template includes explicit budget tracking instructions.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R9",
+      "verdict": "PASS",
+      "evidence": "Appendix C 03_feature_cones.json contains 'strategy_used: feature_cone'. Appendix A states GroupingStrategy Protocol exists in src/graph/strategies.py with FeatureConeStrategy. get_modules() summary response includes 'grouping.strategy_used' and 'grouping.available_strategies' fields.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R10",
+      "verdict": "PASS",
+      "evidence": "Appendix C shows qps-bench-server module combines files from extras/, scrapy/core/, scrapy/downloadermiddlewares/, scrapy/extensions/, scrapy/pipelines/ — cross-directory grouping. scrapydocs combines docs/_ext/, scrapy/core/downloader/handlers/, scrapy/core/http2/, scrapy/templates/. Module boundaries clearly diverge from directory structure.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    }
+  ],
+  "pipeline_protocol": [
+    {
+      "id": "R5",
+      "verdict": "FAIL",
+      "evidence": "Appendix G shows infrastructure module: 51 file blocks total, 数据流 count=17/51 (missing 34). Total: 135/186 complete blocks (73%). total_missing.数据流=34. Criterion requires ALL file blocks have all 4 sections with total_missing=0.",
+      "fix_suggestion": "Re-document the infrastructure module ensuring every file block contains a 数据流 section. Even simple files require: 'No significant data transformation; this file defines [X] imported by [Y].' Run post-write validation counts after writing.",
+      "fix_category": "agent_behavior"
+    },
+    {
+      "id": "R5b",
+      "verdict": "PASS",
+      "evidence": "Appendix G per-module coverage: scrapy-scraper 17/18 = 94.4% (≥80%). scrapy-bench 12/11 = 109% (over-documented). All other modules: expected == file_blocks. No module falls below 80% threshold.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R6",
+      "verdict": "PASS",
+      "evidence": "Comparing INDEX.md Appendix B with DETAIL.md index-fragments: cli index-fragment 'provides all user-facing scrapy CLI commands...Key entry points: scrapy/commands/ Command classes, ContractsManager...' matches INDEX.md module-index:cli content verbatim. infrastructure and scrapydocs fragments also match INDEX entries.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R7",
+      "verdict": "FAIL",
+      "evidence": "E2E verification R16: 'All DETAIL.md have YAML front matter (3/11)'. Only cli/DETAIL.md, conf/DETAIL.md, scrapydocs/DETAIL.md have YAML front matter. Infrastructure, scrapy-__main__, scrapy-bench, scrapy-scraper, qps-bench-server, qpsclient, testing-conftest, testing-conftest-1 all start directly with HTML comment markers without YAML front matter.",
+      "fix_suggestion": "Add YAML front matter (---\\nmodule_id: X\\nmodule_name: Y\\nfile_count: N\\ngenerated_at: T\\ntoken_budget: N\\n---) to the 8 DETAIL.md files that are missing it.",
+      "fix_category": "agent_behavior"
+    },
+    {
+      "id": "R8",
+      "verdict": "PASS",
+      "evidence": "SKILL.md documents doc_operation MCP tool supporting: update_index, move_detail, merge_modules, reorder_modules, split_module (read-only), get_template, get_protocol. Phase 4 execution log shows doc_operation('update_index') was called and INDEX.md was assembled from fragments.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "P1",
+      "verdict": "PASS",
+      "evidence": "state.json shows status='analysis_complete'. 7 JSON files referenced in .codebase-analysis/ including 03_feature_cones.json (186 source files) and 06_function_deps.json (141 files with deps). E2E verification R1: PASS.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "P2",
+      "verdict": "PASS",
+      "evidence": "Coverage reached 100% in final state. Execution log (230 turns) demonstrates infrastructure module was identified and documented, consistent with the Phase 2 coverage gate check. Module groupings reflect validated cone analysis.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "P3",
+      "verdict": "FAIL",
+      "evidence": "Appendix G machine-readable summary: infrastructure module 数据流=17/51, missing=34. Total complete blocks 135/186 (73%). Criterion requires Appendix G section counts show 0 missing. Post-write validation (Step 4 in phase3-detail.md) was not properly executed for the infrastructure module — 34 missing sections were not caught and repaired.",
+      "fix_suggestion": "Strengthen sub-agent post-write validation: after writing DETAIL.md, count all 4 section headers and compare to file block count. For the infrastructure module specifically, add all 34 missing 数据流 sections.",
+      "fix_category": "agent_behavior"
+    },
+    {
+      "id": "P4",
+      "verdict": "PASS",
+      "evidence": "INDEX.md exists with all 11 modules documented. state.json shows index_written=true. All <!-- module-index:xxx --> blocks present in INDEX.md (E2E R12: 11 found). YAML front matter present in INDEX.md. Mermaid graph present.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    }
+  ],
+  "doc_quality": [
+    {
+      "id": "V1",
+      "verdict": "PASS",
+      "evidence": "10/11 module names clearly describe functional purpose: 'CLI Commands, Contracts & Spider Middleware', 'HTTP Request/Response, Selectors & Link Extraction', 'Middleware Orchestration, HTTP Cache & Spider Rules', 'Downloader, Scraper & Media Pipelines', 'Core Infrastructure: Engine, Crawler, Settings & Utilities'. All answer 'what can this codebase do?'. No module name equals its directory path.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V2",
+      "verdict": "PASS",
+      "evidence": "Appendix A confirms MCP summary returns only structural metadata (file count, token count, layer, depends_on). All semantic descriptions in DETAIL files (e.g., 'Central orchestrator — drives the Scheduler → Downloader → Scraper pipeline') were produced by the Agent reading source code. No semantic content in MCP responses.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V3",
+      "verdict": "PASS",
+      "evidence": "Each INDEX module section provides ≥1 meaningful sentence. E.g., scrapydocs: 'groups Scrapy's alternative and protocol-specific download handlers (HTTP/2, HTTPX experimental, FTP, S3, data URI, file), the TLS context factory...Key entry points: H2DownloadHandler, HttpxDownloadHandler...' — sufficient context to decide whether to read DETAIL.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V4",
+      "verdict": "PASS",
+      "evidence": "INDEX.md contains Mermaid graph with weighted edges (e.g., 'n3 -->|dep w=95| n0'). DETAIL dependency sections name specific functions: 'Calls scrapy/utils/conf.py:build_component_list() to expand SPIDER_CONTRACTS setting', 'Uses scrapy/contracts/__init__.py:ContractsManager — calls from_spider() and tested_methods_from_spidercls()'. Qualifies as 'A calls B.foo() to accomplish X'.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V5",
+      "verdict": "PASS",
+      "evidence": "HTML comment markers present throughout (<!-- module:xxx -->, <!-- file:xxx -->, <!-- index-fragment:xxx -->). INDEX.md has YAML front matter. Mermaid graph is parseable. INDEX → DETAIL → file path is traceable via [→ DETAIL] links. 8/11 DETAIL files lack YAML front matter but core structural markers are intact for AI parsing.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V6",
+      "verdict": "PASS",
+      "evidence": "state.json exists with project_id, path, status='analysis_complete', per-task completion timestamps. submit_analysis was called for all 7 tasks (state shows details_written=11). source_file_coverage_percent=100.0 in state.json. E2E R6 PASS.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V7",
+      "verdict": "PASS",
+      "evidence": "Phase 4 in SKILL.md includes Step 2 'MANDATORY Module Renaming + Review' and Step 3 reorganization with move_detail/merge_modules/reorder_modules. INDEX.md shows 11 modules with functional names — evidence that the agent executed the renaming review step. Module IDs like 'conf', 'cli', 'infrastructure' were renamed to descriptive headings.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V8",
+      "verdict": "PASS",
+      "evidence": "qps-bench-server module correctly groups MiddlewareManager and all concrete subclasses, downloader middlewares, signals, CrawlSpider — functionally cohesive. scrapy-scraper groups Downloader, DownloadHandlers, Scraper, and media pipelines. Cross-module dependencies noted via Mermaid edges in INDEX.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V9",
+      "verdict": "PASS",
+      "evidence": "SKILL.md specifies: token_budget = max(5000, min(50000, module_token_count * 4)). Small modules (testing-conftest: 1 file) get floor budget; large modules (infrastructure: 51 files) get 50000 cap. DETAIL YAML front matter in cli/conf/scrapydocs shows token_budget=50000 matching the proportional calculation.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V10",
+      "verdict": "PASS",
+      "evidence": "INDEX.md module sections contain 2-3 sentence summaries extracted from index-fragments. DETAIL.md contains full file-by-file analysis with 4 sections each. No large block duplication between INDEX summaries and DETAIL content — INDEX is a compressed extract, DETAIL is the full analysis.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    }
+  ],
+  "skill_effectiveness": [
+    {
+      "id": "S1",
+      "verdict": "PASS",
+      "evidence": "Execution log shows 230 turns producing: Phase 1 (analyze_codebase → 7 JSON files), Phase 2 (module validation), Phase 3 (7 parallel batches → 11 DETAIL.md files), Phase 4 (doc_operation update_index → INDEX.md). All 4 phases executed in order. No phantom phases. state.json confirms all tasks complete.",
+      "fix_suggestion": "",
+      "fix_category": "",
+      "root_cause": "agent_error"
+    },
+    {
+      "id": "S2",
+      "verdict": "FAIL",
+      "evidence": "DOC_TEMPLATES.md template explicitly requires YAML front matter with fields: module_id, module_name, file_count, generated_at, token_budget. Only 3/11 DETAIL.md files (cli, conf, scrapydocs) have YAML front matter. SKILL.md agent prompt template explicitly shows the ---\\nmodule_id:...\\n--- block at the top. Agent ignored this for 8 modules.",
+      "fix_suggestion": "Add YAML front matter to the 8 non-compliant DETAIL.md files. Consider adding a prominent WARNING to the DETAIL agent prompt template immediately before the output structure section.",
+      "fix_category": "agent_behavior",
+      "root_cause": "agent_error"
+    },
+    {
+      "id": "S3",
+      "verdict": "FAIL",
+      "evidence": "Phase 3 three-step protocol explicitly states 'NEVER skip this' for 数据流 and Step 4 post-write validation requires counting all 4 section headers. Appendix G shows infrastructure module: 数据流=17/51 (34 missing). The agent documented 51 files but wrote 数据流 for only 17 of them. Step 4 validation was not executed properly — if it had been, the 34 missing sections would have been caught and added.",
+      "fix_suggestion": "The post-write Step 4 validation must be enforced. After writing DETAIL.md, the sub-agent must grep for all 4 section headers and compare counts. Missing sections must be added before calling submit_analysis.",
+      "fix_category": "agent_behavior",
+      "root_cause": "agent_error"
+    },
+    {
+      "id": "S4",
+      "verdict": "PASS",
+      "evidence": "MCP tool calls in DETAIL files and state.json use correct parameter names: output_dir, module_id, operation, source_files_covered, detail_paths. No evidence of wrong parameter names like 'filepath' vs 'file' or incorrect operation strings. E2E verification passes all MCP-related structural checks.",
+      "fix_suggestion": "",
+      "fix_category": "",
+      "root_cause": "agent_error"
+    },
+    {
+      "id": "S5",
+      "verdict": "FAIL",
+      "evidence": "QUALITY_STANDARDS.md Phase 3->4 gate: 'All module directories have a DETAIL.md file' ✓, 'Each DETAIL.md has an index-fragment block' ✓. But per-file checks require all 4 sections — infrastructure has 34 missing 数据流 sections per Appendix G. Coverage 100% ✓. The section completeness gate is not satisfied.",
+      "fix_suggestion": "Enforce sub-agent post-write validation before marking task complete. Add infrastructure module re-documentation to fix the 34 missing 数据流 sections.",
+      "fix_category": "agent_behavior",
+      "root_cause": "agent_error"
+    },
+    {
+      "id": "S6",
+      "verdict": "FAIL",
+      "evidence": "The Skill documentation is correct and unambiguous: YAML front matter is explicitly shown in templates, 数据流 is explicitly marked 'NEVER skip', post-write validation Step 4 is explicit. Agent produced correct output for 10/11 modules but failed infrastructure (51 files, likely due to context pressure causing shortcuts). Two independent deviations: (1) missing YAML on 8 modules, (2) 34 missing 数据流 sections in infrastructure. Both violate clear Skill instructions.",
+      "fix_suggestion": "Consider adding a Skill-level enforcement: the agent prompt template should include a pre-completion checklist requiring explicit confirmation of YAML front matter and section counts before submitting. For very large modules (>40 files), the Skill should mandate splitting into smaller batches to prevent context-pressure shortcuts.",
+      "fix_category": "skill_doc",
+      "root_cause": "both"
+    }
+  ],
+  "overall_verdict": "HAS_FAILURES",
+  "pass_count": 24,
+  "total": 31,
+  "critical_failures": [
+    "R5",
+    "P3",
+    "S3",
+    "S5",
+    "R7",
+    "S2",
+    "S6"
+  ],
+  "skill_defects": [
+    "S6"
+  ],
+  "fix_priority": [
+    {
+      "id": "R5/P3/S3/S5",
+      "fix_category": "agent_behavior",
+      "target_file": ".codebase-docs/infrastructure/DETAIL.md",
+      "suggested_fix": "Add missing 数据流 sections to 34 file blocks in infrastructure/DETAIL.md. For simple utility files, use the minimum acceptable content: 'No significant data transformation; this file defines [X] constants/utilities imported by [Y modules].' Then re-run post-write validation (count markers) to confirm 51/51 complete.",
+      "expected_impact": "Fixes R5, P3, S3, S5 simultaneously. Raises total complete blocks from 135/186 (73%) to 186/186 (100%)."
+    },
+    {
+      "id": "R7/S2",
+      "fix_category": "agent_behavior",
+      "target_file": ".codebase-docs/{infrastructure,scrapy-__main__,scrapy-bench,scrapy-scraper,qps-bench-server,qpsclient,testing-conftest,testing-conftest-1}/DETAIL.md",
+      "suggested_fix": "Prepend YAML front matter block to 8 DETAIL.md files: ---\\nmodule_id: {id}\\nmodule_name: {name}\\nfile_count: {N}\\ngenerated_at: {timestamp}\\ntoken_budget: {N}\\n---",
+      "expected_impact": "Fixes R7 and S2. Brings YAML front matter compliance from 3/11 to 11/11."
+    },
+    {
+      "id": "S6",
+      "fix_category": "skill_doc",
+      "target_file": ".agents/skills/codebase-explorer/phases/phase3-detail.md",
+      "suggested_fix": "Add to the DETAIL Agent Prompt Template a mandatory pre-submit checklist: '⚠️ BEFORE calling submit_analysis: (1) Count <!-- file: markers in DETAIL.md. (2) Count each of 4 section headers. (3) All counts must be equal. (4) Verify YAML front matter exists at line 1. If any count fails, add missing sections NOW.' Also add rule: modules with >40 files MUST be split into batches of ≤25 to prevent context-pressure shortcuts.",
+      "expected_impact": "Prevents recurrence of R5, R7, S2, S3, S5 failures in future runs. Makes Skill self-enforcing rather than relying on agent discipline."
+    }
+  ],
+  "summary": "24/31 pass (77%). The biggest gap is the infrastructure module: 34 missing 数据流 sections (affecting R5, P3, S3, S5) combined with 8/11 DETAIL.md files lacking YAML front matter (R7, S2). Both are agent_error — the Skill documentation is clear and unambiguous on both points. The 10/11 other modules are correctly documented with full compliance. The root cause is likely context pressure during the large infrastructure module (51 files in one agent), causing the agent to skip 数据流 sections and skip YAML front matter. Fix priority: (1) patch infrastructure/DETAIL.md with 34 missing 数据流 sections, (2) add YAML front matter to 8 files, (3) strengthen the Skill's per-batch size limit and pre-submit validation checklist to prevent recurrence."
+}

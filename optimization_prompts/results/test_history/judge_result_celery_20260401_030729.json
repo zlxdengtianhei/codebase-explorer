@@ -1,0 +1,273 @@
+{
+  "mcp_data_quality": [
+    {
+      "id": "R1",
+      "verdict": "PASS",
+      "evidence": "Appendix A expected response shape for get_modules(summary) shows only metadata fields: module_id, name, file_count, token_count, layer, depends_on — no function names, signatures, or descriptions. Appendix C 03_feature_cones.json confirms cone records contain only file lists and structural metadata.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R2",
+      "verdict": "PASS",
+      "evidence": "Appendix C 06_function_deps.json (first 100 lines) contains explicit cross-file function call mappings: main() → maybe_patch_concurrency (celery/__init__.py), shared_task() → connect_on_app_finalize (_state.py), _get_current_app() → Celery class_usage (app/base.py). total_files_with_deps=273, non-empty.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R3",
+      "verdict": "PASS",
+      "evidence": "Appendix A expected response shape for get_modules(summary) shows modules array with only metadata fields and no file path listings. This shape is consistent with the < 3000 char, no-file-path constraint. Appendix C 03_feature_cones.json's cone data (with full path lists) is a separate file not returned by the summary endpoint.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R4",
+      "verdict": "PASS",
+      "evidence": "DETAIL.md YAML front matter shows scaled token_budget values: testing-test_security token_budget: 12908 (3227 tokens × 4 = 12908 ✓); testing-test_canvas token_budget: 50000 (96914 tokens × 4 = 387656 → capped at 50000 ✓); annotations token_budget: 26240 (6560 × 4 = 26240 ✓). SKILL.md formula max(5000, min(50000, module_token_count × 4)) confirmed.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R9",
+      "verdict": "PASS",
+      "evidence": "Appendix A: 'GroupingStrategy Protocol evidence: src/graph/strategies.py defines GroupingStrategy Protocol + FeatureConeStrategy.' Appendix C 03_feature_cones.json shows strategy_used: 'feature_cone' at root level. state.json also records strategy_used: 'feature_cone'. Protocol exists and is active.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R10",
+      "verdict": "PASS",
+      "evidence": "Appendix C 03_feature_cones.json: __main__ module groups files from celery/apps/, celery/bin/, celery/contrib/rdb.py, celery/events/cursesmon.py, docs/_ext/, t/unit/apps/, t/unit/bin/ — 7 different directory trees in one module. asynpool module includes celery/concurrency/, celery/loaders/, celery/worker/heartbeat.py, docs/conf.py, examples/stamping/, t/smoke/, t/unit/worker/ — cross-directory fusion confirmed.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    }
+  ],
+  "pipeline_protocol": [
+    {
+      "id": "R5",
+      "verdict": "PASS",
+      "evidence": "Appendix G machine-readable summary: total_file_blocks=316, total_complete_blocks=316, total_missing_sections={}, all_complete=true. Console: 'Total: 316/316 complete blocks (100%) — Verdict: ALL COMPLETE'. Every one of 24 modules shows complete=true and missing={}. Note: testing-test_solo shows file_blocks=0 (marker format violation captured under R7) while section header counts still register 3 each, resulting in zero missing-section count.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R5b",
+      "verdict": "FAIL",
+      "evidence": "Appendix G testing-test_solo: file_blocks=0, expected_files=3. Using Appendix G expected vs actual counts: 0/3 = 0% < 80% threshold. The sub-agent wrote uppercase <!-- FILE:xxx --> markers; the verification script counts only lowercase <!-- file:xxx --> markers, yielding zero properly-formed file blocks. Console confirms: '✓ testing-test_solo: 0/3 file blocks'. All other 23 modules exceed 80%.",
+      "fix_suggestion": "Fix testing-test_solo/DETAIL.md to use lowercase <!-- file:xxx --> markers. Add explicit case-sensitivity warning to DOC_TEMPLATES.md.",
+      "fix_category": "skill_doc"
+    },
+    {
+      "id": "R6",
+      "verdict": "PASS",
+      "evidence": "Cross-checking 2 modules: (1) INDEX.md testing-test_security entry reads 'Provides both unit and integration test coverage for Celery's message signing infrastructure. Unit tests verify certificate/key loading...' — matches DETAIL.md index-fragment verbatim. (2) INDEX.md autoretry entry reads 'Celery 跨层横切关注点的实现集合：任务自动重试逻辑...' — matches DETAIL.md index-fragment. doc_operation('update_index') confirmed in execution log.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R7",
+      "verdict": "FAIL",
+      "evidence": "Appendix E verification script: 'FAIL R10: All DETAIL.md have <!-- file:xxx --> markers (23/24)' and 'FAIL R11: All DETAIL.md have <!-- module:xxx --> markers (23/24)'. Appendix B testing-test_solo/DETAIL.md shows: <!-- MODULE:testing-test_solo --> (uppercase), <!-- FILE:t/unit/concurrency/test_solo.py --> (uppercase), <!-- /MODULE:testing-test_solo --> — all violating DOC_TEMPLATES.md which requires exclusively lowercase markers. YAML front matter is also absent from testing-test_solo DETAIL.md.",
+      "fix_suggestion": "Add explicit case-sensitivity warning to DOC_TEMPLATES.md marker quick reference: 'CASE SENSITIVE: <!-- FILE:xxx --> and <!-- MODULE:xxx --> are INVALID. Only lowercase <!-- file:xxx --> and <!-- module:xxx --> are accepted.' Rewrite testing-test_solo/DETAIL.md to comply.",
+      "fix_category": "skill_doc"
+    },
+    {
+      "id": "R8",
+      "verdict": "PASS",
+      "evidence": "SKILL.md and phase4-index.md document doc_operation supporting: update_index, move_detail, merge_modules, reorder_modules, split_module (list_module_files). Execution log confirms doc_operation('update_index') was called in Phase 4. Phase 4 step 3 in SKILL.md shows move_detail and merge_modules operations with full parameter signatures. No manual text editing is required for reorganization.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "P1",
+      "verdict": "PASS",
+      "evidence": "Execution log: 'Phase 1 — Analysis: analyze_codebase built DAG, extracted 24 feature cones via SCC analysis, estimated token budgets per module.' Appendix C: 03_feature_cones.json exists with cone_count=24 and non-empty cones dict. 06_function_deps.json exists with total_files_with_deps=273. state.json shows status: 'analysis_complete'.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "P2",
+      "verdict": "PASS",
+      "evidence": "Execution log: 'Phase 2 — Validation: 4 modules flagged >50k tokens. Infrastructure module (73 files, 293k tokens) not required — cone modules alone hit 81.4% coverage.' Coverage check was performed before Phase 3 using get_progress(). Module overview reviewed via get_modules() to catch oversized modules.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "P3",
+      "verdict": "PASS",
+      "evidence": "Appendix G: 316/316 complete blocks, total_missing_sections={}, all_complete=true per authoritative section count data. 依赖关系 sections contain specific function-level dependencies from get_function_deps: e.g., 'ResultConsumer.drain_events → celery/backends/asynchronous.py:reconnect_on_error', 'RPCBackend.on_task_call → celery/_state.py:task_join_will_block'. No template-identical content detected across different files. Format issues for testing-test_solo are captured under R7; section completeness per Appendix G criterion is fully met.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "P4",
+      "verdict": "PASS",
+      "evidence": "Execution log: 'doc_operation(\"update_index\") assembled 23/24 fragments. Manual fixes applied.' INDEX.md in Appendix B contains all 24 <!-- module-index:xxx --> blocks with <!-- end-module-index:xxx --> closing markers. All 24 modules have [→ DETAIL] links. Mermaid graph present. INDEX.md is 23948 bytes per Appendix E verification.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    }
+  ],
+  "doc_quality": [
+    {
+      "id": "V1",
+      "verdict": "PASS",
+      "evidence": "INDEX.md module names include: 'CLI Entry Point & Application Launcher', 'Prefork Pool & Concurrency Management', 'Worker Bootsteps & Consumer Components', 'Message Authentication & Cryptography', 'Storage Backend Implementations'. All 3 sampled names answer 'what can this codebase do?' rather than reflecting directory/file names. Execution log confirms 3 headings were renamed from bare module_id values during Phase 4.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V2",
+      "verdict": "PASS",
+      "evidence": "Appendix A: get_modules(summary) shape contains only structural metadata. 06_function_deps.json contains only call-graph relationships. All semantic narrative (功能概述, 数据流 prose) appears exclusively in DETAIL.md, authored by the Agent after reading source code. MCP tools provide zero semantic content — confirmed by the purely structural nature of 03_feature_cones.json and 06_function_deps.json.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V3",
+      "verdict": "PASS",
+      "evidence": "INDEX.md security module entry: '(4 files, 3227 tokens) — Provides both unit and integration test coverage for Celery's message signing infrastructure. Unit tests verify certificate/key loading, error handling, and the full serialize/deserialize round-trip; the integration test exercises the end-to-end flow...' Each summary stands alone and is actionable for choosing which DETAIL to read. No 'See DETAIL for more info' placeholders found.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V4",
+      "verdict": "PASS",
+      "evidence": "INDEX.md contains Mermaid graph with weighted edges (n1 -->|dep w=72| n0, n5 -->|dep w=3| n10). DETAIL.md rpc.py: 'RPCBackend.on_task_call → celery/_state.py:task_join_will_block', 'ResultConsumer.drain_events → celery/backends/asynchronous.py:reconnect_on_error'. DETAIL.md loops.py: 'asynloop → celery/worker/consumer/consumer.py:create_task_handler, celery/worker/consumer/consumer.py:on_ready'. Descriptions name specific functions and explain purpose — not hollow 'imports X' statements.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V5",
+      "verdict": "PASS",
+      "evidence": "DETAIL.md files have YAML front matter, <!-- module:xxx --> / <!-- file:xxx --> / <!-- end:file:xxx --> / <!-- index-fragment:xxx --> markers. INDEX.md has YAML front matter, Mermaid graph, <!-- module-index:xxx --> markers with [→ DETAIL] links enabling INDEX→DETAIL→source-file traceability. Exception: testing-test_solo uses uppercase markers (covered by R7) breaking parsability for that one module, but 23/24 are fully AI-parseable.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V6",
+      "verdict": "PASS",
+      "evidence": "Appendix C state.json: all 13 tasks show status='complete' with timestamps and output_file paths. documentation.source_files_covered lists 280+ absolute file paths. state.json was populated via submit_analysis calls. Per SKILL.md, get_progress() can restore state from this file. JSON analysis files (03_feature_cones.json, 06_function_deps.json) persist on disk.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V7",
+      "verdict": "PASS",
+      "evidence": "Execution log: 'Phase 4 manual fixes applied: 3 module headings renamed to functional names, 2 table-format fragments replaced with prose summaries, 1 empty fragment populated, Mermaid graph node labels updated.' phase4-index.md Step 2 mandates review and Step 3 provides move_detail/merge_modules/reorder_modules operations. The review mechanism was exercised and produced concrete reorganization actions.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V8",
+      "verdict": "PASS",
+      "evidence": "asynpool module functionally groups concurrent task execution: celery/concurrency/asynpool.py, prefork.py, eventlet.py, gevent.py + celery/worker/heartbeat.py + celery/loaders/ — all serve the parallel execution and worker initialization domain. Cross-module dependencies explicitly captured in INDEX.md Mermaid graph (n5/Worker Bootsteps → n10/Task Control, n8/Worker Loops → n5, etc.).",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V9",
+      "verdict": "PASS",
+      "evidence": "testing-test_security token_budget: 12908 = 3227×4 ✓. testing-test_canvas token_budget: 50000 = cap(96914×4) ✓. testing-test_loops token_budget: 50000 = cap(76427×4) ✓. annotations token_budget: 26240 = 6560×4 ✓. SKILL.md formula max(5000, min(50000, module_token_count×4)) consistently applied across all modules.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V10",
+      "verdict": "PASS",
+      "evidence": "INDEX.md __main__ entry is a 2-sentence overview with key entry points. DETAIL.md __main__ contains full per-file analysis for 33 files with data flow, interface signatures, and dependency specifics — entirely different granularity. No verbatim block duplication detected between INDEX summaries and DETAIL content. INDEX functions as navigation layer; DETAIL functions as reference layer.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    }
+  ],
+  "skill_effectiveness": [
+    {
+      "id": "S1",
+      "verdict": "PASS",
+      "evidence": "Execution log: 'Pipeline: 4 phases, 12 tasks, 3 rounds of parallel sub-agents.' Phase 1 (analyze_codebase), Phase 2 (validation + coverage gate), Phase 3 (parallel DETAIL generation), Phase 4 (update_index + review + manual fixes) — all 4 phases executed in correct order. No phases skipped, no phantom phases added. Parallel batches of ≤5 agents match SKILL.md batch constraint.",
+      "fix_suggestion": "",
+      "fix_category": "",
+      "root_cause": "agent_error"
+    },
+    {
+      "id": "S2",
+      "verdict": "FAIL",
+      "evidence": "testing-test_solo/DETAIL.md (Appendix B) uses uppercase markers: <!-- MODULE:testing-test_solo -->, <!-- FILE:t/unit/concurrency/test_solo.py -->, <!-- /MODULE:testing-test_solo --> — all violating DOC_TEMPLATES.md which shows exclusively lowercase markers. YAML front matter is absent. Section headers use '#### t/unit/concurrency/test_solo.py' as a subsection title instead of standard <!-- file:xxx --> + section pattern. DOC_TEMPLATES.md shows the correct format; the sub-agent did not follow it. 23/24 modules comply correctly.",
+      "fix_suggestion": "Add a prominent WRONG vs RIGHT example to DOC_TEMPLATES.md marker section. Add YAML front matter as a required pre-check in the sub-agent prompt template. Rewrite testing-test_solo/DETAIL.md.",
+      "fix_category": "skill_doc",
+      "root_cause": "agent_error"
+    },
+    {
+      "id": "S3",
+      "verdict": "FAIL",
+      "evidence": "Execution log: 'Missing index-fragment in testing-test_solo DETAIL.md — update_index found only 23/24 fragments. The fragment block was absent despite the sub-agent reporting success. Required manual INDEX.md edit.' Also: '2 sub-agents wrote ## Index Fragment headings + markdown tables instead of the required prose summary.' Step 3 (write index-fragment after all files) was violated for ≥3 modules. The Skill template shows a prose example but does not explicitly prohibit tables, contributing to the ambiguity.",
+      "fix_suggestion": "Add post-write mandatory check in phase3-detail.md: 'After writing DETAIL.md, grep for <!-- index-fragment: --> — if absent or a markdown table is present, the task is INCOMPLETE. Do not call submit_analysis.' Add explicit negative example showing table format as WRONG.",
+      "fix_category": "skill_doc",
+      "root_cause": "both"
+    },
+    {
+      "id": "S4",
+      "verdict": "PASS",
+      "evidence": "All MCP tool calls in execution log use correct parameter names: analyze_codebase(path, force_reindex), get_modules(module_id=X, output_dir=Y), get_function_deps(file=filepath, output_dir=output_dir), doc_operation(operation='update_index', output_dir=output_dir), submit_analysis(task_id, detail_paths, source_files_covered, output_dir). No wrong parameter names (e.g., 'file_path' vs 'filepath') detected. SKILL.md parameter documentation was accurately followed.",
+      "fix_suggestion": "",
+      "fix_category": "",
+      "root_cause": "agent_error"
+    },
+    {
+      "id": "S5",
+      "verdict": "FAIL",
+      "evidence": "Source file coverage 81.37% ≥ 80% ✓. Appendix G shows 316/316 sections complete ✓. BUT QUALITY_STANDARDS.md Phase 3 gate requires 'Each DETAIL.md has an index-fragment block' — execution log confirms testing-test_solo DETAIL.md was missing a valid index-fragment (update_index returned only 23/24 fragments). Two additional modules had table-format fragments violating the prose requirement. Multiple phase gate criteria were not met without manual intervention.",
+      "fix_suggestion": "Add a main-agent validation loop in phase3-detail.md: after all sub-agents complete, the main agent scans each DETAIL.md for <!-- index-fragment: --> before calling submit_analysis. Gate Phase 4 entry on this check.",
+      "fix_category": "skill_doc",
+      "root_cause": "both"
+    },
+    {
+      "id": "S6",
+      "verdict": "FAIL",
+      "evidence": "Execution log explicitly documents 3 categories of deviation requiring manual fixes: (1) testing-test_solo sub-agent used uppercase markers despite DOC_TEMPLATES.md showing lowercase — sub-agent either did not read the template or ignored it. (2) 2 sub-agents wrote markdown table index-fragments instead of prose — the Skill template shows prose but does not explicitly prohibit tables. (3) 3 module headings defaulted to bare module_id strings post update_index — Phase 4 Step 2a rename instruction exists but was not self-enforcing. Total: 6 affected modules requiring human intervention. The Skill was not self-sufficient.",
+      "fix_suggestion": "Add a post-run checklist for the main agent at end of Phase 3 and Phase 4: verify marker case, verify fragment prose format, verify all headings renamed. Make Phase 4 Step 2a into a structured scan with explicit grep commands.",
+      "fix_category": "skill_doc",
+      "root_cause": "both"
+    }
+  ],
+  "overall_verdict": "HAS_FAILURES",
+  "pass_count": 25,
+  "total": 31,
+  "critical_failures": [
+    "R5b",
+    "R7",
+    "S2",
+    "S3",
+    "S5",
+    "S6"
+  ],
+  "skill_defects": [
+    "S3",
+    "S5",
+    "S6"
+  ],
+  "fix_priority": [
+    {
+      "id": "R7 / R5b / S2",
+      "fix_category": "skill_doc",
+      "target_file": ".agents/skills/codebase-explorer/references/DOC_TEMPLATES.md",
+      "suggested_fix": "Add a highlighted warning block immediately after the Marker Quick Reference table: 'CASE SENSITIVE — CRITICAL: All markers use ONLY lowercase. WRONG: <!-- FILE:xxx -->, <!-- MODULE:xxx -->. RIGHT: <!-- file:xxx -->, <!-- module:xxx -->. Uppercase variants are silently ignored by all tooling and will cause verification failures.' Also add a WRONG vs RIGHT example for YAML front matter placement.",
+      "expected_impact": "Fixes R7, R5b, S2 — eliminates the testing-test_solo marker format failure and prevents recurrence in future runs"
+    },
+    {
+      "id": "S3 / S5",
+      "fix_category": "skill_doc",
+      "target_file": ".agents/skills/codebase-explorer/phases/phase3-detail.md",
+      "suggested_fix": "In Step 3 (write INDEX fragment): (a) Show a WRONG example using a markdown table labeled 'DO NOT DO THIS'. (b) Add Step 4 as a mandatory post-write validation: 'grep the DETAIL.md you just wrote for the string <!-- index-fragment: -->. If not found, STOP and add it before calling submit_analysis. If a markdown table is found inside the fragment block, replace it with prose sentences.' (c) Add instruction for main agent: after all sub-agents complete, verify each DETAIL.md has a valid index-fragment before proceeding to Phase 4.",
+      "expected_impact": "Fixes S3, S5 — prevents missing or table-format index-fragments, makes phase gate self-enforcing"
+    },
+    {
+      "id": "S6",
+      "fix_category": "skill_doc",
+      "target_file": ".agents/skills/codebase-explorer/phases/phase4-index.md",
+      "suggested_fix": "Replace Step 2a prose with a structured scan command: 'Run: grep -E \"^## \" INDEX.md to list all headings. For each heading: (1) Does it exactly match a module_id from 03_feature_cones.json? If yes → rename required. (2) Is it ≤ 3 words? If yes → expand required. (3) Does it describe a capability (verb/noun phrase) rather than a file/directory name? If no → rename required. Do not proceed to Step 2b until all headings pass all 3 checks.'",
+      "expected_impact": "Fixes the module heading rename gap in S6; makes Phase 4 review mechanical and auditable rather than relying on agent judgment"
+    }
+  ],
+  "summary": "The V5 run scores 25/31 (81%) with all 6 failures traceable to a single root cause: the testing-test_solo sub-agent produced a non-standard DETAIL.md using uppercase markers (<!-- FILE: -->, <!-- MODULE: -->), missing YAML front matter, and an absent index-fragment — violating R5b, R7, S2, S3, S5, and S6. All other 23 modules are correctly formatted with 316/316 file sections complete, 81.4% source coverage, function-level dependencies throughout, and meaningful functional module names in the INDEX. The MCP data layer (Dimension A) is fully compliant, and all V1-V10 document quality criteria pass. The biggest systemic gap is Skill self-sufficiency (S6): three classes of agent deviation — wrong marker case, table-format index-fragments, and bare module_id headings — required manual Phase 4 intervention. The highest-priority fix is adding an explicit case-sensitivity warning to DOC_TEMPLATES.md, followed by a mandatory post-write index-fragment existence check in phase3-detail.md."
+}

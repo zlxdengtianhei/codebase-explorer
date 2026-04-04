@@ -1,0 +1,264 @@
+{
+  "mcp_data_quality": [
+    {
+      "id": "R1",
+      "verdict": "PASS",
+      "evidence": "Appendix A shows get_modules(summary) expected shape contains only module metadata (module_id, name, file_count, token_count, layer, depends_on) — no function names or signatures. 03_feature_cones.json in Appendix C confirms module entries contain only structural fields. All semantic content in DETAIL.md was written by the Agent after reading source, confirming MCP provided structural data only.",
+      "fix_suggestion": null,
+      "fix_category": null
+    },
+    {
+      "id": "R2",
+      "verdict": "PASS",
+      "evidence": "06_function_deps.json exists and is non-empty (Appendix E R17: PASS). Appendix C shows source_function -> target_function cross-file relationships: e.g., create_app in task_app/__init__.py calls Flask(src/flask/app.py), from_mapping(src/flask/config.py), render_template(src/flask/templating.py). total_files_with_deps=23.",
+      "fix_suggestion": null,
+      "fix_category": null
+    },
+    {
+      "id": "R3",
+      "verdict": "PASS",
+      "evidence": "Appendix A documents get_modules() summary shape returns only module-level metadata with no file path lists. Execution log shows Phase 2 consumed only module_count (3 modules, 19 files) without file path enumeration. 3-module response at ~200 chars per entry is well under 3000 chars. Direct size measurement not available in appendices but design and usage are consistent with the constraint.",
+      "fix_suggestion": null,
+      "fix_category": null
+    },
+    {
+      "id": "R4",
+      "verdict": "PASS",
+      "evidence": "All three DETAIL.md YAML front matter includes token_budget: conf=10856 (source 2714 tokens, ~4x), js_example=22652 (source 5663 tokens, ~4x), task_app=27328 (source 6832 tokens, ~4x). Formula max(5000, min(50000, module_token_count * 4)) applied per module. Phase 3 prompt template in SKILL.md explicitly tracks accumulated_tokens and stops reading files when budget is exceeded.",
+      "fix_suggestion": null,
+      "fix_category": null
+    },
+    {
+      "id": "R9",
+      "verdict": "PASS",
+      "evidence": "Appendix A explicitly states 'File: src/graph/strategies.py defines GroupingStrategy Protocol + FeatureConeStrategy.' 03_feature_cones.json in Appendix C shows strategy_used: 'feature_cone' as a top-level field. The Protocol + concrete implementation pattern confirms pluggable algorithm design.",
+      "fix_suggestion": null,
+      "fix_category": null
+    },
+    {
+      "id": "R10",
+      "verdict": "PASS",
+      "evidence": "03_feature_cones.json shows cross-directory grouping: js_example module mixes examples/javascript/ files with src/flask/json/provider.py, src/flask/json/tag.py, src/flask/logging.py from core source. conf module groups docs/conf.py, examples/celery/, and examples/tutorial/ together. Module grouping is clearly not a 1:1 mapping to directory structure.",
+      "fix_suggestion": null,
+      "fix_category": null
+    }
+  ],
+  "pipeline_protocol": [
+    {
+      "id": "R5",
+      "verdict": "PASS",
+      "evidence": "All three DETAIL.md files contain all four sections per file with substantive content. Spot-check: auth.py in conf/DETAIL.md has meaningful 功能概述 (auth blueprint purpose and URL prefix), 数据流 (before_app_request hook → session → db → g.user), 核心接口 (login_required, load_logged_in_user, register, login, logout with descriptions), 依赖关系 (specific: 'Calls get_db() from examples/tutorial/flaskr/db.py in load_logged_in_user, register, and login to obtain the SQLite connection'). Note: js_example and task_app DETAIL files use Japanese kanji '依赖関係' instead of Chinese '依赖关系' — style violation flagged in S2, but four sections are present and substantive.",
+      "fix_suggestion": null,
+      "fix_category": null
+    },
+    {
+      "id": "R6",
+      "verdict": "PASS",
+      "evidence": "INDEX.md module summaries match verbatim with index-fragment blocks in DETAIL files. conf: INDEX 'This module contains the Sphinx documentation build configuration...' = exact text of <!-- index-fragment:conf --> in conf/DETAIL.md. Same verbatim match confirmed for js_example and task_app. doc_operation('update_index') extracts fragments directly.",
+      "fix_suggestion": null,
+      "fix_category": null
+    },
+    {
+      "id": "R7",
+      "verdict": "PASS",
+      "evidence": "All DETAIL.md have: YAML front matter (module_id, module_name, file_count, generated_at, token_budget), <!-- module:xxx --> opening marker, <!-- file:xxx --> and <!-- end:file:xxx --> per-file markers, <!-- index-fragment:xxx --> and <!-- end:index-fragment:xxx --> blocks, <!-- codebase-explorer: end --> tail marker. INDEX.md has: YAML front matter (title, generated, module_count), Mermaid graph, <!-- module-index:conf/js_example/task_app --> and <!-- end-module-index:xxx --> markers. All required markers present across all documents.",
+      "fix_suggestion": null,
+      "fix_category": null
+    },
+    {
+      "id": "R8",
+      "verdict": "PASS",
+      "evidence": "doc_operation MCP tool is listed in the 9 MCP tools table in SKILL.md and phase4-index.md documents operations: update_index, move_detail, merge_modules, reorder_modules, split_module. Execution summary in Appendix D confirms doc_operation('update_index') was called in Phase 4. Note: Appendix E's R8 check ('Inter-module dep_count sum > 0') is a different metric and does not affect this requirement.",
+      "fix_suggestion": null,
+      "fix_category": null
+    },
+    {
+      "id": "P1",
+      "verdict": "PASS",
+      "evidence": "Appendix E R1 PASS: '.codebase-analysis/ exists with 7 JSON files (incl. 06_function_deps.json)'. state.json shows project_id 9b425a3ed56f, created_at 2026-03-28T23:31:56. 03_feature_cones.json exists with 3 cones. analyze_codebase was called and succeeded.",
+      "fix_suggestion": null,
+      "fix_category": null
+    },
+    {
+      "id": "P2",
+      "verdict": "PASS",
+      "evidence": "Execution log (Appendix D) confirms get_modules() was called after analysis and before DETAIL generation: 'get_modules() returned 19 files in 3 modules + 0 infrastructure files.' The Agent evaluated the coverage gate before Phase 3. The gate passed incorrectly due to MCP bug (infrastructure.file_count not populated), but the Phase 2 procedure was executed as specified.",
+      "fix_suggestion": null,
+      "fix_category": null
+    },
+    {
+      "id": "P3",
+      "verdict": "PASS",
+      "evidence": "Three distinct DETAIL.md files with genuinely different per-file content (not template-identical). get_modules(module_id=X) called per module (YAML token_budget reflects per-module values). get_function_deps evidence: dependency sections name specific cross-file calls ('Calls app_context() from src/flask/app.py inside FlaskTask.__call__ to wrap task execution'). index-fragment blocks written after all files. Files with no cross-file deps correctly state 'No cross-file function dependencies detected by the analyzer.'",
+      "fix_suggestion": null,
+      "fix_category": null
+    },
+    {
+      "id": "P4",
+      "verdict": "PASS",
+      "evidence": "Execution summary states doc_operation('update_index') was called in Phase 4. INDEX.md exists at .codebase-docs/INDEX.md (Appendix E R2: PASS, 2701 bytes). All 3 modules have <!-- module-index:xxx --> blocks with [→ DETAIL] links. Phase 4 Final Quality Check listed in execution log confirms INDEX assembly completed.",
+      "fix_suggestion": null,
+      "fix_category": null
+    }
+  ],
+  "doc_quality": [
+    {
+      "id": "V1",
+      "verdict": "PASS",
+      "evidence": "Module display names are functional, not directory-derived: 'Documentation & Example Application Bootstrap', 'JSON Serialization & Logging', 'Flask Core & Celery Integration Example'. Module IDs (conf/js_example/task_app) were replaced with capability-describing names. All three answer 'what does this code do' — serialization, logging, Celery integration, auth bootstrap are all capabilities, not locations.",
+      "fix_suggestion": null,
+      "fix_category": null
+    },
+    {
+      "id": "V2",
+      "verdict": "PASS",
+      "evidence": "MCP output (03_feature_cones.json, 06_function_deps.json) contains only structural data: file paths, token counts, layer numbers, function call graphs with dep_type. Zero semantic descriptions in MCP output. All Purpose/Data Flow/Key Interfaces/Dependencies content in DETAIL.md was authored by the Agent after reading source files.",
+      "fix_suggestion": null,
+      "fix_category": null
+    },
+    {
+      "id": "V3",
+      "verdict": "PASS",
+      "evidence": "Each INDEX module section has >= 3 sentences with named entry points. Example: conf module names create_app(), login_required(), get_db(), init_app() as key entry points and describes flaskr tutorial + Celery example + Sphinx docs scope. A reader can decide 'I need to understand session-based auth → read conf/DETAIL.md' without opening DETAIL first. All three module summaries are self-contained navigation aids.",
+      "fix_suggestion": null,
+      "fix_category": null
+    },
+    {
+      "id": "V4",
+      "verdict": "PASS",
+      "evidence": "INDEX.md contains Mermaid dependency graph with edges (n1/n2/n3 all depend on n0 with dep weights). DETAIL sections reference specific function calls with purpose stated: 'Calls get_db() from examples/tutorial/flaskr/db.py in load_logged_in_user, register, and login to obtain the SQLite connection.' Dependencies exceed 'A imports B' level throughout. Minor: Mermaid edge labels are 'dep w=N' rather than descriptive text, but this is generated by doc_operation and not an Agent failure.",
+      "fix_suggestion": null,
+      "fix_category": null
+    },
+    {
+      "id": "V5",
+      "verdict": "PASS",
+      "evidence": "Structured HTML comment markers enable machine parsing: <!-- module:xxx -->, <!-- file:xxx -->, <!-- index-fragment:xxx -->, <!-- module-index:xxx -->. YAML front matter in all documents. Mermaid graph in INDEX. Traceable chain: INDEX.md [→ DETAIL](conf/DETAIL.md) → <!-- file:examples/tutorial/flaskr/auth.py --> → absolute file path. An AI agent can parse from module entry point to source file without ambiguity.",
+      "fix_suggestion": null,
+      "fix_category": null
+    },
+    {
+      "id": "V6",
+      "verdict": "PASS",
+      "evidence": "state.json exists with both tasks marked 'complete', source_files_covered list, and timestamps. 7 JSON analysis files in .codebase-analysis/ (Appendix E R1 PASS). submit_analysis called per execution log (Phase 3 sub-agent prompt mandates it). Progress is recoverable: a new session can call get_progress() and continue from task state.",
+      "fix_suggestion": null,
+      "fix_category": null
+    },
+    {
+      "id": "V7",
+      "verdict": "PASS",
+      "evidence": "Phase 4 Final Quality Check executed per execution log: verified INDEX.md exists with Mermaid graph, verified <!-- module-index --> blocks for all 3 modules, checked DETAIL link resolution, checked module names are functional. Agent identified coverage issue (54.3%) and diagnosed root cause. Review mechanism exists and was executed, though coverage finding led to no corrective action due to S4/S6 skill defect.",
+      "fix_suggestion": null,
+      "fix_category": null
+    },
+    {
+      "id": "V8",
+      "verdict": "PASS",
+      "evidence": "Feature cone grouping co-locates functionally related files: conf module groups all flaskr tutorial components (app factory + auth + db) together. js_example groups JSON infrastructure (provider.py, tag.py) with logging.py — all serve the Flask request/response pipeline. Cross-module dependencies explicitly noted: db.py states 'Called by examples/tutorial/flaskr/__init__.py (create_app) via db.init_app(app)'; celery task_app dependencies on src/flask/ core documented.",
+      "fix_suggestion": null,
+      "fix_category": null
+    },
+    {
+      "id": "V9",
+      "verdict": "PASS",
+      "evidence": "Token budgets scale dynamically: conf (2714 source tokens) → 10856 budget, js_example (5663) → 22652, task_app (6832) → 27328. All ~4x the source token count per formula max(5000, min(50000, module_token_count * 4)). Small modules would get the 5000 floor; large modules would be capped at 50000. Budget is not fixed.",
+      "fix_suggestion": null,
+      "fix_category": null
+    },
+    {
+      "id": "V10",
+      "verdict": "PASS",
+      "evidence": "INDEX.md contains 2-3 sentence module summaries + key entry points + DETAIL links (no file-level details). DETAIL.md contains per-file 4-section analysis. The index-fragment text appearing in both is by design (assembled copy). No large-block verbatim duplication beyond the fragment: INDEX does not contain file-level Purpose/Data Flow/Key Interfaces content that is also in DETAIL.",
+      "fix_suggestion": null,
+      "fix_category": null
+    }
+  ],
+  "skill_effectiveness": [
+    {
+      "id": "S1",
+      "verdict": "PASS",
+      "evidence": "Execution log confirms 4-phase execution in order: Phase 1 (analyze_codebase called, 7 JSON files generated), Phase 2 (get_modules() validation, coverage gate evaluated), Phase 3 (DETAIL generation for all 3 modules, submit_analysis called), Phase 4 (doc_operation update_index + Final Quality Check). No phases skipped or reordered. No phantom phases added.",
+      "fix_suggestion": null,
+      "fix_category": null,
+      "root_cause": null
+    },
+    {
+      "id": "S2",
+      "verdict": "FAIL",
+      "evidence": "js_example/DETAIL.md and task_app/DETAIL.md use Japanese kanji '依赖関係' in 依赖关系 section headers across all 10 file sections (5 in js_example: __init__.py, views.py, provider.py, tag.py, logging.py; 5 in task_app: blueprints.py, debughelpers.py, signals.py, typing.py, views.py). Only conf/DETAIL.md consistently uses correct Chinese '依赖关系'. DOC_TEMPLATES.md contains explicit WARNING with Unicode codepoints. The Skill warning exists but was insufficient to prevent the error in 10/19 file sections.",
+      "fix_suggestion": "In the Phase 3 DETAIL Agent Prompt Template, add a 'COPY THESE EXACT HEADERS' box immediately before Step 1 with all four headers pre-formatted. Do not rely on the Style Constraints section at the bottom — the warning must appear inline at the point of use.",
+      "fix_category": "skill_doc",
+      "root_cause": "agent_error"
+    },
+    {
+      "id": "S3",
+      "verdict": "PASS",
+      "evidence": "Three-step protocol followed: Step 1 — source files were read (content is substantive and file-specific, not boilerplate). Step 2 — get_function_deps called per file; dependency sections contain specific cross-file function names ('Calls app_context() from src/flask/app.py inside FlaskTask.__call__ to wrap task execution'); files with no cross-file deps correctly state 'No cross-file function dependencies detected.' Step 3 — index-fragment blocks appear after all file sections in each DETAIL. Protocol order preserved.",
+      "fix_suggestion": null,
+      "fix_category": null,
+      "root_cause": null
+    },
+    {
+      "id": "S4",
+      "verdict": "FAIL",
+      "evidence": "QUALITY_STANDARDS.md Phase 2 gate states: 'total_analyzed = get_modules().total_files + get_modules().infrastructure.file_count'. The MCP server does not populate infrastructure.file_count — it returns 0. Appendix D confirms: 'get_modules() returned 19 files in 3 modules + 0 infrastructure files.' The Skill's worked example claims infrastructure.file_count=16 for this exact 35-file scenario, but the actual MCP response has 0. This field mismatch caused the Phase 2 formula to compute 19/19 = 100% coverage instead of 19/35 = 54.3%.",
+      "fix_suggestion": "Remove infrastructure.file_count from the Phase 2 formula. Replace with: 'Call get_progress() after get_modules(). Use source_file_coverage_percent as the authoritative coverage value.' Update the QUALITY_STANDARDS.md worked example to show get_progress()-based check.",
+      "fix_category": "skill_doc",
+      "root_cause": "skill_defect"
+    },
+    {
+      "id": "S5",
+      "verdict": "FAIL",
+      "evidence": "state.json reports source_file_coverage_percent: 54.285714%. QUALITY_STANDARDS.md threshold: < 60% = 'Unacceptable / Analysis is incomplete.' 16 of 35 source files undocumented: all infrastructure files (src/flask/app.py, src/flask/sansio/app.py, src/flask/ctx.py, src/flask/globals.py, src/flask/config.py, src/flask/cli.py, src/flask/wrappers.py, src/flask/helpers.py, src/flask/testing.py, src/flask/sessions.py, src/flask/json/__init__.py, src/flask/__init__.py, src/flask/sansio/blueprints.py, src/flask/sansio/scaffold.py, src/flask/templating.py, examples/tutorial/flaskr/blog.py). Appendix E Execution Summary acknowledges this as below threshold.",
+      "fix_suggestion": "Fix S4 (use get_progress() in Phase 2 gate). When coverage < 80%, the Skill must direct the agent to create an infrastructure pseudo-module documenting the uncovered files. This is already described in SKILL.md Phase 2 but the gate never triggers due to the formula bug.",
+      "fix_category": "skill_doc",
+      "root_cause": "skill_defect"
+    },
+    {
+      "id": "S6",
+      "verdict": "FAIL",
+      "evidence": "The Skill documentation described MCP behavior (infrastructure.file_count=16) that the MCP server does not implement (returns 0). Appendix D execution log: 'The Phase 2 worked example in the Skill docs shows infrastructure.file_count=16 for this exact 35-file / 19-cone scenario — meaning the MCP server has a bug where it doesn't populate the infrastructure count, causing Phase 2's coverage gate to pass when it should have flagged the 16 uncovered files.' The Agent correctly followed Skill instructions but was given inaccurate data about the MCP's output format, leading to the false coverage pass. The Skill was not self-sufficient for this scenario.",
+      "fix_suggestion": "Audit all Skill docs for MCP field references against actual server behavior. Replace the Phase 2 infrastructure.file_count pattern with get_progress()-based check in both QUALITY_STANDARDS.md and phase2-validation.md. Add a note: 'Do not compute coverage from get_modules() fields — use get_progress().source_file_coverage_percent as the single source of truth.'",
+      "fix_category": "skill_doc",
+      "root_cause": "skill_defect"
+    }
+  ],
+  "overall_verdict": "HAS_FAILURES",
+  "pass_count": 26,
+  "total": 30,
+  "critical_failures": [
+    "S5",
+    "S4",
+    "S6",
+    "S2"
+  ],
+  "skill_defects": [
+    "S4",
+    "S5",
+    "S6"
+  ],
+  "fix_priority": [
+    {
+      "id": "S4",
+      "fix_category": "skill_doc",
+      "target_file": ".agents/skills/codebase-explorer/references/QUALITY_STANDARDS.md",
+      "suggested_fix": "In Phase 2 -> Phase 3 Gate section, replace the line 'Note: total_analyzed = get_modules().total_files + get_modules().infrastructure.file_count' with 'Note: Use get_progress().source_file_coverage_percent as the authoritative coverage metric. Do NOT compute coverage from get_modules() fields — infrastructure.file_count may not be populated.' Update the worked example to show a get_progress() call result, not a get_modules() field derivation.",
+      "expected_impact": "Root fix for S4, S5, S6. Causes Phase 2 to correctly fail on the 54% coverage scenario, triggering infrastructure pseudo-module creation and raising coverage to >= 80%."
+    },
+    {
+      "id": "S6",
+      "fix_category": "skill_doc",
+      "target_file": ".agents/skills/codebase-explorer/phases/phase2-validation.md",
+      "suggested_fix": "Update Phase 2 coverage gate procedure to: (1) Call get_progress() after get_modules(). (2) Read source_file_coverage_percent from get_progress() response. (3) If < 80%, call get_modules(module_id='infrastructure') to list uncovered files and create an infrastructure pseudo-module plan. Remove any reference to computing coverage from get_modules() response fields.",
+      "expected_impact": "Directly fixes S6 root cause. Ensures Phase 2 behaves correctly when infrastructure files are present."
+    },
+    {
+      "id": "S2",
+      "fix_category": "skill_doc",
+      "target_file": ".agents/skills/codebase-explorer/phases/phase3-detail.md",
+      "suggested_fix": "In the DETAIL Agent Prompt Template, directly before the 'Step 1' instructions, add a boxed section: 'CRITICAL — COPY THESE EXACT HEADERS (do not retype):\\n#### 功能概述 (Purpose)\\n#### 数据流 (Data Flow)\\n#### 核心接口 (Key Interfaces)\\n#### 依赖关系 (Dependencies)\\nWARNING: 依赖关系 is Chinese (U+5173 U+7CFB). If you type 依赖関係 with Japanese kanji you will fail the quality check.' Place the warning at the point of use, not only in a separate Style Constraints section.",
+      "expected_impact": "Fixes S2. Prevents Japanese kanji substitution in section headers across all generated DETAIL files."
+    }
+  ],
+  "summary": "26/30 pass. All MCP data quality, pipeline protocol, and document quality requirements pass. The 4 failures are concentrated in Skill Effectiveness. Root issue: the Phase 2 coverage gate formula in QUALITY_STANDARDS.md references get_modules().infrastructure.file_count, a field the MCP server does not populate (returns 0). This caused the gate to compute 19/19 = 100% coverage instead of 19/35 = 54.3%, allowing Phase 3 to proceed without documenting 16 infrastructure files. Result: 54.3% coverage — below the 60% 'Unacceptable' threshold (S4, S5, S6, all skill_defect). Secondary failure: the Agent used Japanese kanji '依赖関係' instead of Chinese '依赖关系' in 10 of 19 file sections across js_example and task_app modules, despite an explicit warning in DOC_TEMPLATES.md (S2, agent_error). Priority fix: replace the infrastructure.file_count formula in QUALITY_STANDARDS.md and phase2-validation.md with a direct get_progress().source_file_coverage_percent check — this single change resolves S4, S5, and S6."
+}

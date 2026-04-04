@@ -25,11 +25,13 @@
 - 模块深度检测，防止单个模块过度膨胀
 - 流程执行权交给 CLI Agent，MCP 只提供数据
 
-### 3. 审查 Agent 机制
+### 3. ~~审查 Agent 机制~~ → INDEX 重组文档（已演化）
 
-> "这个检测，可以不只是通过纯代码，而是应该再请一个 Agent 检查一下这个深度检测与模块分割是否合理，还可以再启动一个审查 Agent 再次审查是否合理是否还需要修改。"
+> 原始需求："再请一个 Agent 检查一下这个深度检测与模块分割是否合理"
+>
+> **已过时。** 此需求已被 V5 Phase 4（INDEX 汇编 + 语义重组）覆盖。Agent 在生成完整 INDEX 后审查模块命名/放置/排序，并通过 `doc_operation` 工具（move_detail/merge_modules/reorder_modules）进行重组。在看到完整文档产出后审查，比仅看分组数据更有意义。
 
-**需求**：引入 LLM 审查环节，由 Agent 判断代码分析产出的模块分割和深度规划是否语义上合理，支持多轮审查。
+**当前需求**：Phase 4 完成 INDEX 汇编后，Agent 必须审查模块组织的语义合理性，如发现不合理则使用工具重组。
 
 ### 4. 可变深度的树结构
 
@@ -110,7 +112,160 @@
 
 > "我认为这个采用实际代码量以及这个比例（源码的 15-30%）是比较合理的，动态的进行管理。"
 
-**需求**：文档 Token 预算不应固定，而是按源码量的 15-30% 动态分配（小模块 30%，大模块 15%，下限 800 上限 6000）。
+**需求**：文档 Token 预算不应固定，而是按源码量的 15-30% 动态分配。
+
+**实测数据（V5 迭代后）：**
+
+| 仓库 | 源码 | 文档产出 | 实际比例 |
+|------|------|---------|---------|
+| Flask (35 files) | 104K tokens | 18.6K tokens | 17.9% |
+| Rich (146 files) | 356K tokens | 43.3K tokens | 12.2% |
+| FastAPI (526 files) | 302K tokens | 52.4K tokens | 17.4% |
+| Celery (392 files) | 946K tokens | 137K tokens | 14.5% |
+
+当前实现使用 `max(5000, min(50000, module_token_count * 4))` 作为每个模块的预算上限，但 Agent 实际写作量自然收敛到 12-18% 的范围，符合设计目标。
+
+### 15. 测试结果保存机制
+
+> "把历史日志、历史生成的文档，以及 Judge 给出的这一系列测试结果全部保存下来。"
+
+**需求**：每次 E2E 测试运行的完整结果必须持久化保存，包括：
+- Judge 评分 JSON（按 repo + 时间戳命名）
+- Verify 验证日志
+- 生成的文档 artifacts（INDEX.md、DETAIL.md 快照）
+- 执行 prompt 和结果 JSON
+- `count_sections.py` 全量验证结果
+
+当前保存位置：`optimization_prompts/results/test_history/`
+
+### 16. 层级化文档结构（解决扁平化问题）
+
+> "像这种层级很深的文件，它本身实现起来层级很多，结构也比较复杂。虽然说在 Context Token 的计算结果上可以将它们放在一起，但是对于这种过深的、不同层级的文件，读取时还是应该让不同的 Sub-agent 来进行。这样做的好处：1. 减少 Agent 的困惑度；2. 更简单地生成合适的文档。"
+
+**需求**：当前的两文档模型（INDEX + DETAIL）过于扁平。对于 DAG 层级较深的代码库（如 Scrapy 8 层），需要多层嵌套的 INDEX/DETAIL 结构：
+
+1. **同一层级的文件**放在同一个 DETAIL 中
+2. **不同层级的文件**拆分为子模块，给出子 INDEX
+3. **目录结构**按层级组织：同一层级的 DETAIL 放在同一层级的目录中
+4. **浅层嵌套**时，下一层的 INDEX 与当前层的 DETAIL 放在一起
+5. **上层 INDEX**必须说明其下层对应的 INDEX 和 DETAIL
+
+示例结构：
+```
+.codebase-docs/
+├── INDEX.md                          # 顶层：模块概览
+├── core/
+│   ├── INDEX.md                      # 核心模块的子 INDEX
+│   ├── engine/DETAIL.md              # 同层文件的 DETAIL
+│   └── scraper/DETAIL.md
+├── middleware/
+│   ├── INDEX.md
+│   └── DETAIL.md                     # 浅层时 INDEX + DETAIL 放一起
+└── cli/
+    └── DETAIL.md
+```
+
+### 17. 文件间依赖关系的层级化展示
+
+> "之前不是也说 detail 涉及到文件之间没有依赖说明吗？我们现在是否也可以在组织形式中去体现出这种层级关系？"
+
+**需求**：DETAIL 内部的文件间依赖关系应该通过组织形式来体现，而不仅仅通过"依赖关系"节的文字描述。具体：
+- 同一 DETAIL 中的文件按 DAG layer 排序（底层先、上层后）
+- 文件间的调用方向从 DETAIL 的组织顺序中可以直接看出
+- 可选：在 DETAIL 头部添加模块内的 Mermaid 子图
+
+### 18. 大仓库的模块化拆分执行
+
+> "针对 MCP 的分层结果，还有一个问题需要考虑：有没有可能因为代码量太大，导致主 agent 在接收结果时任务过重？我们需要一种针对 MCP 返回内容的保护机制。"
+
+**需求**：对于超大代码库（>300 文件），采用模块化拆分执行策略：
+
+1. **模块独立 Agent**：每个模块启动独立的 Agent，由它作为该模块的"主 Agent"负责 Skill 分配和文档生成
+2. **用户侧嵌套调用**：如果系统不支持嵌套 Agent 调用，为每个模块生成独立的 prompt，用户手动运行 `claude -p` 完成
+3. **结果整合**：通过整合 prompt 将各模块的探索结果合并
+
+> "虽然这种嵌套机制在系统层面可能受到限制，但通过 prompt 引导用户进行嵌套调用，我们可以实现接近无限的层级深度。即便代码量巨大、层级很深，只要做好模块间的管理，依然能确保获得正确的实现结果。"
+
+### 19. MCP 返回内容的渐进式披露保护
+
+> "假如文档层级过多，也许可以采用'渐进式披露'的方案。"
+
+**需求**：MCP 返回的分层结果应该支持渐进式披露：
+- 第一层：只返回顶层模块列表和元数据
+- 第二层：按需返回特定模块的子模块/文件列表
+- 第三层：按需返回特定文件的详细结构
+- 避免一次性返回全部层级数据导致主 Agent 上下文溢出
+
+---
+
+## 一（附）、技术需求 R1-R10（来自 06_v5_mcp_skill_redesign）
+
+> 以下是对用户需求 1-19 的技术细化，定义了 MCP 和 Skill 各自的具体职责边界。来源于 V5 设计讨论中用户的进一步澄清。
+
+### R1：MCP 只做"文件→功能模块"分类
+
+> "MCP 其实都不需要函数名，你只需要把这个文件在哪个分组、哪个层级分类好就可以了。"
+
+MCP 的 `get_modules(summary)` 输出**不含函数名、函数签名、代码片段**。只返回：文件→模块的映射、模块间依赖关系、模块在 DAG 中的层级、每个模块的 token 量估算。
+
+### R2：MCP 提供函数级依赖关系
+
+> "MCP 还是要给出函数的依赖。要让它在 details 中说明这些函数相互之间的依赖关系。"
+
+`get_function_deps(file)` 返回跨文件的函数调用关系（A.foo() → B.bar()），供 DETAIL 的依赖关系节使用。这不是用于分组的，而是用于**文档内容的数据来源**。
+
+### R3：MCP 输出过滤——控制上下文注入量
+
+> "不要让过多的上下文全部一次性注入到所有 agent 的上下文中。"
+
+- 主 Agent 只看到模块列表摘要（`get_modules(summary)` <500 tokens）
+- Sub-agent 只看到自己负责的模块文件列表（`get_modules(module_id=X)`）
+- 不相关的模块信息不应注入
+
+### R4：Token 预算驱动的渐进式读码
+
+> "让 subagent 每一次提取出一定量的文件，这个量是与 Token 总量挂钩的。"
+
+Sub-agent 逐文件读取，累计 token 接近预算时停止当前批次，下一个 sub-agent 继续。全局停止条件：所有文件已被阅读并产出 DETAIL。
+
+### R5：DETAIL 逐文件生成，三步输出
+
+> "LLM 在生成 Detail 输出时，应该是逐个文件进行的。"
+
+每个文件执行：
+1. **Step 1 — 四节内容**：读源码，写 功能概述/数据流/核心接口/依赖关系
+2. **Step 2 — 依赖丰富**：调 `get_function_deps(file)` 替换依赖关系占位符
+3. **Step 3 — INDEX 片段**：写模块在 INDEX 中的摘要
+
+### R6：INDEX 由 DETAIL 片段直接拼合
+
+> "把这个 index 最终应该是可以直接生成出来的。应该是可以直接组合在一起的。"
+
+Sub-agent 写 DETAIL 时同时输出 `<!-- index-fragment -->` 块，所有 sub-agent 完成后由 `doc_operation("update_index")` 自动拼合为 INDEX.md。
+
+### R7：固定格式的 DETAIL 和 INDEX
+
+> "Index 和 Detail 都应该有一个固定的输出格式，让 Agent 能够快速进行重新安排和更新。"
+
+DETAIL：YAML front matter + `<!-- module:xxx -->` / `<!-- file:xxx -->` HTML 标记 + 四节结构。INDEX：YAML + Mermaid 图 + `<!-- module-index:xxx -->` 标记。工具通过标记精准操作内容块。
+
+### R8：重组工具化
+
+> "应该通过一个固定的工具，识别出具体哪一块内容，将其提取出来并放到合适的位置。"
+
+`doc_operation` 支持 move_detail（移动文件块）、merge_modules（合并模块）、split_module（拆分）、reorder_modules（排序）、update_index（重新汇编）。工具负责格式合规，LLM 只负责决策。
+
+### R9：可插拔的分类算法 + 统一输出接口
+
+> "最终应该有一个统一的接口，可以用那个统一接口来进行算法的更换，然后直接进行测试。"
+
+`GroupingStrategy` Protocol 定义统一接口。当前实现 `FeatureConeStrategy`（Louvain + directory affinity + SCC）。可通过环境变量 `CODEBASE_EXPLORER_STRATEGY` 切换算法。
+
+### R10：目录 + 依赖融合的分类方式
+
+> "无论是通过目录引导，还是通过图关系引导，最终给出的结果都应该是按照功能模块进行分类的。"
+
+文件分类融合两种信号：目录结构（开发者的天然分组）+ 依赖图（代码间的实际调用关系）。权重自适应——目录结构好的项目多依赖目录信号，扁平项目多依赖依赖图信号。
 
 ---
 
@@ -203,6 +358,54 @@
 
 ---
 
-## 四、一句话总结
+## 五、MCP Tool Response 设计约束（2026-03-31 补充）
+
+> 背景：codebase-explorer 作为 MCP Server 被 Claude Code (CLI Agent) 调用。每次 MCP 工具返回直接占用 Agent 的上下文窗口。Claude Code 对 MCP 响应有 **25,000 token 的硬性上限**（超出截断），且返回内容的信噪比直接影响 Agent 的推理质量。
+
+### 5.1 核心约束
+
+- **所有 MCP tool 的单次响应不得超过 50KB（约 12,500 tokens）**，建议控制在 20KB 以内
+- **禁止返回无上限的列表**：凡是返回数组（files、modules、edges）的工具，必须有明确的 ceiling 或分层/分页机制
+- **摘要/详情分层**：高频调用的工具（如 get_modules、get_structure）必须提供"摘要模式"，详情通过参数按需获取
+- **MCP 返回的信息必须与 Skill 文档一致**：如果 Skill 要求中文 section header，MCP 的 `get_template` 也必须返回中文 header。两个信源矛盾会导致 Agent 即兴发挥
+
+### 5.2 各工具响应规模基准（实测数据）
+
+| 工具 | Flask (35 files) | Scrapy (186 files) | 500+ files 外推 | 状态 |
+|------|-----------------|--------------------|-----------------|----|
+| analyze_codebase | ~112 tokens | ~150 tokens | ~200 tokens | ✅ 安全 |
+| get_modules(summary) | ~269 tokens | ~427 tokens | ~700 tokens | ✅ 安全 |
+| get_modules(module_id=X) | ~196 tokens | ~417 tokens | ~600 tokens | ✅ 安全 |
+| get_structure(module=X) | ~311 tokens | ~3,028 tokens | **~12,500 tokens** | ⚠️ **P1: >20 files 风险** |
+| get_function_deps(file=X) | ~1,197 tokens | ~1,539 tokens | ~2,000 tokens | ✅ 安全 |
+| get_file_tokens(all) | ~1,315 tokens | **~7,002 tokens** | **~18,750 tokens** | 🔴 **P0: 接近 25k 限制** |
+| doc_operation(get_template) | ~367 tokens | ~367 tokens | ~367 tokens | ✅ 安全 |
+
+### 5.3 待解决的高优问题
+
+1. **P0: `get_file_tokens()` 无参数调用** — 在大型项目（>200 files）接近 MCP 25k token 限制，可能被截断
+   - 方案：禁止无参数调用 或 添加 `max_files` 参数（默认 50）
+2. **P1: `get_structure(module=large_module)`** — 在 20+ 文件模块时达 3k+ tokens
+   - 方案：添加 `slim=True` 参数，默认只返回 filepath + line_count + function_count
+3. **P1: `get_template` 返回英文 header 而 Skill 要求中文** — 两个矛盾信源导致 Agent 使用日文变体
+   - 方案：MCP 返回的模板与 Skill 文档保持完全一致
+4. **P2: `get_modules()` summary 包含重复静态元信息** — `grouping`、`token_budget` 字段每次调用都返回
+   - 方案：移至 `analyze_codebase` 返回中（只返回一次）
+
+### 5.4 设计原则（参考 MCP 规范 + 社区最佳实践）
+
+1. **"摘要 → 详情" 分层是 MCP 推荐的核心模式**：大数据集应提供 drill-down 工具，而非一次返回全量
+2. **Tool description 是 Agent 的语义接口**：对可能返回大响应的工具，在 description 里显式标注规模限制
+3. **避免 Agent 需要的信息分散在多个矛盾信源**：MCP 工具返回 和 Skill 文档 的内容必须对齐
+4. **分页优于截断**：宁可让 Agent 多调一次带 offset 的工具，也不要返回截断数据
+
+> 参考资料：
+> - MCP 规范 Pagination 章节（2025-03-26 版本）
+> - Claude Code MCP 25k token 限制（[Issue #2638](https://github.com/anthropics/claude-code/issues/2638)）
+> - MCP Tool Descriptions 研究（arXiv 2602.14878）
+
+---
+
+## 六、一句话总结
 
 **从代码的依赖关系中自动提取功能结构，用确定性分析划定骨架，用 LLM 填充语义，产出一套"功能优先、层级内嵌"的渐进式架构文档——让 AI Agent 在 vibe coding 中能从功能需求直接定位到需要修改的代码。**

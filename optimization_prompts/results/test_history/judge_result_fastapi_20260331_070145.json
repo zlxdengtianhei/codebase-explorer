@@ -1,0 +1,243 @@
+{
+  "mcp_data_quality": [
+    {
+      "id": "R1",
+      "verdict": "PASS",
+      "evidence": "Appendix A shows get_modules(summary) response shape contains only module metadata (module_id, name, file_count, token_count, layer, depends_on) — no function names, signatures, or code snippets. Appendix B DETAIL files confirm all semantic content (功能概述, 数据流, 核心接口 narrative descriptions) was Agent-generated after reading source files, not sourced from MCP output.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R2",
+      "verdict": "PASS",
+      "evidence": "Appendix C shows 06_function_deps.json with total_files_with_deps=227 and source_function → target_function cross-file relationships, e.g., 'upsert_item' → Body (fastapi/param_functions.py, dep_type: call), 'read_main' → Header/HTTPException (fastapi/param_functions.py, fastapi/exceptions.py). File is non-empty and contains genuine function-level call data.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R3",
+      "verdict": "PASS",
+      "evidence": "Appendix A response shape for get_modules(summary) shows 6 scalar metadata fields per module with no file path arrays. 8 modules × ~100 chars each ≈ under 1KB total — well under 3000 char limit. Appendix C 03_feature_cones.json contains full file lists but that is a raw analysis file, not the summary endpoint response.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R4",
+      "verdict": "PASS",
+      "evidence": "DETAIL.md YAML front matter shows dynamic token_budget values: infrastructure=50000 (75899 token module, capped), background_tasks=5680 (1420×4), app_an_py310=5000 (floor applied to 719-token module), testing=6120 (1530×4). Formula max(5000, min(50000, module_token_count×4)) from SKILL.md was applied. get_modules returns token_count per module enabling this budget control.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R9",
+      "verdict": "PASS",
+      "evidence": "Appendix C 03_feature_cones.json contains 'strategy_used': 'feature_cone' field at top level. Appendix A states GroupingStrategy Protocol exists in src/graph/strategies.py with FeatureConeStrategy as the concrete implementation. The strategy_used field in JSON output confirms pluggable algorithm architecture.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R10",
+      "verdict": "PASS",
+      "evidence": "Appendix C shows advanced_middleware module contains files from at least 8 different directories: docs_src/advanced_middleware/, docs_src/app_testing/, docs_src/async_tests/, docs_src/behind_a_proxy/, docs_src/body/, docs_src/metadata/, fastapi/middleware/, scripts/playwright/. Module grouping is clearly not directory-based.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    }
+  ],
+  "pipeline_protocol": [
+    {
+      "id": "R5",
+      "verdict": "PASS",
+      "evidence": "All four sections present and substantive across sampled modules. routing.py: 功能概述 explains APIRoute/APIRouter roles; 数据流 describes route registration → request handling → SSE streaming paths; 核心接口 lists APIRoute, APIRouter, get_request_handler() with signatures; 依赖关系 names specific calls (solve_dependencies(), jsonable_encoder(), serialize_json()) with cross-file paths. Content is architecturally meaningful, not template-hollow.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R6",
+      "verdict": "PASS",
+      "evidence": "INDEX.md <!-- module-index:infrastructure --> reads 'Core foundational layer of the FastAPI package, providing the public import surface (fastapi/__init__.py)...' — matches verbatim the <!-- index-fragment:infrastructure --> block in infrastructure/DETAIL.md. Same assembly pattern confirmed for body_updates (Core Routing & Request Lifecycle) and security modules.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R7",
+      "verdict": "PASS",
+      "evidence": "All DETAIL.md have: YAML front matter (all 5 fields), <!-- module:{id} -->, <!-- file:{path} -->, <!-- end:file:{path} -->, <!-- index-fragment:{id} -->, <!-- end:index-fragment:{id} -->, <!-- end:{id} -->, <!-- codebase-explorer: end -->. INDEX.md has: YAML front matter, Mermaid graph block, <!-- module-index:{id} --> and <!-- end-module-index:{id} --> for each of 9 modules. Verified across advanced_middleware, body_updates, security, testing DETAIL files.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R8",
+      "verdict": "PASS",
+      "evidence": "SKILL.md and phase4-index.md document doc_operation supporting update_index, move_detail, merge_modules, reorder_modules, split_module operations. Appendix E confirms .codebase-analysis/ exists. Phase 4 execution log confirms doc_operation('update_index') was called and INDEX.md was assembled automatically from DETAIL fragments.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "P1",
+      "verdict": "PASS",
+      "evidence": "Appendix C state.json shows 'status': 'analysis_complete'. Appendix E PASS for R1 confirms 7 JSON files exist in .codebase-analysis/ including 06_function_deps.json. Execution log shows 110 turns with analysis phase completed. 03_feature_cones.json (Appendix C) contains populated cone data for 8 feature cones.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "P2",
+      "verdict": "PASS",
+      "evidence": "get_modules() summary was called (9 modules identified and validated per execution summary). State.json shows analysis_complete before DETAIL generation tasks. Appendix E verification checks pass for module-level structure. The execution produced exactly the modules enumerated in the pre-DETAIL overview stage.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "P3",
+      "verdict": "PASS",
+      "evidence": "9 DETAIL.md files produced with full per-file content. Three-step protocol evidence: (1) substantive four-section content per file shows source was read; (2) dependency sections name specific function calls from get_function_deps (e.g., routing.py lists solve_dependencies(), get_dependant(), jsonable_encoder() with source file paths); (3) index-fragment blocks appear after all file sections in every DETAIL.md. Different file sections have genuinely different content reflecting their respective source files.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "P4",
+      "verdict": "PASS",
+      "evidence": "INDEX.md exists (Appendix B) with all 9 modules, each with <!-- module-index:{id} --> block and functional module names. Execution log confirms doc_operation('update_index') was called. Phase 4 review step documented in execution summary: 'Final INDEX.md verification: Mermaid graph: 9 nodes with functional names, dependency edges with weights... All 9 modules have [→ DETAIL] links'.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    }
+  ],
+  "doc_quality": [
+    {
+      "id": "V1",
+      "verdict": "PASS",
+      "evidence": "All 9 module names are functional capability descriptions: 'Infrastructure & Shared Utilities', 'Core Routing & Request Lifecycle', 'Security Schemes & HTTP Authentication', 'Dependencies, Security Tutorials & Build Scripts', 'General Tutorial Examples & Middleware', 'Background Tasks, Static Files & Templates', 'Response Patterns, Streaming & WebSocket Tutorials', 'Bigger Applications — Multi-Router Tutorial', 'Tutorial Testing Examples'. None match their module_ids (infrastructure, body_updates, security, main, advanced_middleware, background_tasks, docs_src, app_an_py310, testing).",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V2",
+      "verdict": "PASS",
+      "evidence": "get_modules() summary returns purely structural data (file_count, token_count, layer, depends_on arrays). All 功能概述 descriptions in DETAIL.md contain architectural explanations that require reading source code (e.g., 'Pydantic v2 compatibility adapter — the concrete implementation layer behind fastapi/_compat/__init__.py') — clearly Agent-generated semantic content, not MCP output.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V3",
+      "verdict": "PASS",
+      "evidence": "Every INDEX module summary is self-contained and decision-enabling. Core Routing entry: 'The heart of FastAPI's request processing pipeline: routing.py defines APIRoute and APIRouter which handle route registration, dependency injection orchestration, request/response validation, and SSE streaming; dependencies/models.py defines the Dependant dataclass...' — sufficient to decide 'I need to understand routing, read body_updates/DETAIL.md'.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V4",
+      "verdict": "PASS",
+      "evidence": "INDEX.md has Mermaid graph with 9 functional nodes and weighted edges (n6→n0 dep w=168, n4→n0 dep w=53, n8→n1 dep w=4). DETAIL dependency sections achieve 'A calls B.foo() to accomplish X' level: routing.py 依赖关系 states 'Calls solve_dependencies(), get_dependant(), get_flat_dependant()... from fastapi/dependencies/utils.py' and 'Calls format_sse_event() from fastapi/sse.py' with architectural purpose context.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V5",
+      "verdict": "PASS",
+      "evidence": "Structured HTML comment markers throughout (<!-- file:xxx -->, <!-- module-index:xxx -->, <!-- index-fragment:xxx -->). YAML front matter in all DETAIL files. Parseable Mermaid diagram in INDEX.md. Navigation chain: INDEX.md module-index block → [→ DETAIL](module_id/DETAIL.md) → <!-- file:{filepath} --> → source file path. Fully traceable for AI parsing.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V6",
+      "verdict": "FAIL",
+      "evidence": "Appendix C state.json shows total_planned=5, details_written=5, source_file_coverage_percent=9.695% (51 files tracked). Four modules with DETAIL files on disk — docs_src (50 files), advanced_middleware (162 files), app_an_py310 (8 files), main (197 files) = 417 files — were never submitted via submit_analysis. A session resumed via get_progress() would report ~9.7% coverage and show 4 modules as undocumented despite their DETAIL files existing on disk.",
+      "fix_suggestion": "Call submit_analysis retroactively for the 4 unsubmitted modules with their absolute DETAIL paths. Long-term: add submit_analysis as a numbered step inside the sub-agent prompt template (not just the 'After Writing' epilogue section) to prevent omission under context pressure.",
+      "fix_category": "agent_behavior"
+    },
+    {
+      "id": "V7",
+      "verdict": "PASS",
+      "evidence": "Execution log documents Phase 4 review: 'Final INDEX.md verification: Mermaid graph: 9 nodes with functional names, dependency edges with weights. Module order: Infrastructure → Core Routing → Security → Dependencies/Tutorials → General Tutorials → Background Tasks → Response Patterns → Bigger Apps → Testing. All headings: Functional descriptions (none are raw slugs)'. Module naming was actively verified and validated.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V8",
+      "verdict": "PASS",
+      "evidence": "Functionally related files are co-located: all fastapi/security/*.py files in the Security module; all core fastapi/*.py infrastructure in the Infrastructure module; routing.py + dependencies/models.py + exception_handlers.py + middleware/asyncexitstack.py grouped in Core Routing. Cross-module dependencies explicitly noted in Mermaid graph and in DETAIL dependency sections.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V9",
+      "verdict": "PASS",
+      "evidence": "Dynamic budget verified: infrastructure (75899 tokens) → budget 50000 (cap applied); background_tasks (1420 tokens) → budget 5680 (1420×4); app_an_py310 (719 tokens) → budget 5000 (floor applied); testing (1530 tokens) → budget 6120 (1530×4); body_updates (63970 tokens) → budget 50000 (near-cap). Formula max(5000, min(50000, module_token_count×4)) produces correct scaling across 3 orders of magnitude.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V10",
+      "verdict": "PASS",
+      "evidence": "INDEX.md contains only 2-3 sentence summaries with key entry points (no code, no file-level detail). DETAIL.md has full per-file breakdowns with four sections each. The index-fragment block appearing in both DETAIL and INDEX is the designed assembly mechanism (extracted verbatim by update_index), not accidental duplication. No large content blocks appear in both documents.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    }
+  ],
+  "skill_effectiveness": [
+    {
+      "id": "S1",
+      "verdict": "PASS",
+      "evidence": "Execution log shows all 4 phases executed in prescribed order: Phase 1 (analyze_codebase, analysis_complete), Phase 2 (module validation, 8 cones reviewed), Phase 3 (9 DETAIL sub-agents, 110 turns total), Phase 4 (update_index + mandatory renaming review). No phases skipped, no phantom phases inserted. Module order in execution matches SKILL.md phase descriptions.",
+      "fix_suggestion": "",
+      "fix_category": "",
+      "root_cause": ""
+    },
+    {
+      "id": "S2",
+      "verdict": "PASS",
+      "evidence": "Generated DETAIL.md files match DOC_TEMPLATES.md precisely: YAML front matter with all 5 required fields (module_id, module_name, file_count, generated_at, token_budget), correct marker names (<!-- module:{id} --> not module-ref or module-section), all four section headers use Chinese characters (关系 U+5173 U+7CFB verified, not Japanese 関係 U+95A2 U+4FC2), ### file headers, #### section headers, index-fragment structure. INDEX.md format matches template with YAML + Mermaid + module-index markers.",
+      "fix_suggestion": "",
+      "fix_category": "",
+      "root_cause": ""
+    },
+    {
+      "id": "S3",
+      "verdict": "PASS",
+      "evidence": "Three-step protocol followed for all documented files. Step 1 evidence: substantive 功能概述/数据流/核心接口 showing source code was read. Step 2 evidence: 依赖关系 sections contain specific function-level cross-file calls (routing.py references solve_dependencies(), get_dependant(), format_sse_event() with file paths — only obtainable via get_function_deps). Step 3 evidence: index-fragment blocks appear after all file sections in correct order in every DETAIL file.",
+      "fix_suggestion": "",
+      "fix_category": "",
+      "root_cause": ""
+    },
+    {
+      "id": "S4",
+      "verdict": "PASS",
+      "evidence": "All MCP tool invocations succeeded: analyze_codebase produced 7 JSON files, get_modules returned 8 cone modules, get_function_deps populated dependency data in DETAIL sections, doc_operation('update_index') assembled INDEX.md correctly, submit_analysis updated state.json for 5 modules. No evidence of wrong parameter names causing tool failures or empty responses.",
+      "fix_suggestion": "",
+      "fix_category": "",
+      "root_cause": ""
+    },
+    {
+      "id": "S5",
+      "verdict": "PASS",
+      "evidence": "Execution log reports 468/526 files documented (~89% coverage, exceeds 80% threshold). All 9 DETAIL.md files contain all required sections (confirmed by Appendix E checks R10, R11 PASS for all 9 DETAIL files). Phase gate criteria met: DETAIL files exist, index-fragment blocks present, module names are functional. Coverage discrepancy in state.json (9.7%) is a V6 tracking issue, not an actual coverage gap.",
+      "fix_suggestion": "",
+      "fix_category": "",
+      "root_cause": ""
+    },
+    {
+      "id": "S6",
+      "verdict": "PASS",
+      "evidence": "Skill documentation was sufficient to guide correct output: module naming is functional (renaming rule was followed), four-section format is exact, Chinese character warning was heeded (no Japanese kanji found), Mermaid graph assembled from 02_dag.json correctly, dependency content is function-level specific. The single deviation — missing submit_analysis for 4 of 9 modules — is an agent operational lapse. SKILL.md states 'IMMEDIATELY call submit_analysis' and 'Do NOT batch submit_analysis calls' unambiguously. No Skill ambiguity caused the omission.",
+      "fix_suggestion": "Strengthen submit_analysis reinforcement by adding it as a numbered bullet inside the sub-agent prompt template (currently only in the 'After Writing DETAIL.md' epilogue section which agents may deprioritize when context budget is tight). Consider a completion checklist item: '[ ] submit_analysis called for this module before returning'.",
+      "fix_category": "skill_doc",
+      "root_cause": "agent_error"
+    }
+  ],
+  "overall_verdict": "HAS_FAILURES",
+  "pass_count": 29,
+  "total": 30,
+  "critical_failures": [
+    "V6"
+  ],
+  "skill_defects": [],
+  "fix_priority": [
+    {
+      "id": "V6",
+      "fix_category": "agent_behavior",
+      "target_file": ".agents/skills/codebase-explorer/phases/phase3-detail.md",
+      "suggested_fix": "Move the submit_analysis call from the 'After Writing DETAIL.md' epilogue into the numbered three-step per-file protocol as Step 4 (post-module, not post-file). Add it explicitly to the sub-agent prompt template as: 'Step 4: After completing ALL files and the index-fragment, call submit_analysis immediately. This is not optional. Skipping submit_analysis = the module is invisible to recovery.' Also add a Phase 3 completion guard: count .codebase-docs/*/DETAIL.md files on disk vs task records in state.json; if they differ, call submit_analysis for untracked modules before proceeding to Phase 4.",
+      "expected_impact": "Fixes V6 (persistent/recoverable state). Makes get_progress() accurately report 89% coverage instead of 9.7%. Ensures session recovery via get_progress() correctly identifies all documented modules. No impact on documentation quality since output quality is already high."
+    }
+  ],
+  "summary": "The V5 Skill produced high-quality architecture documentation for the FastAPI codebase — 9 functionally-named modules, 89% source file coverage, correct four-section per-file format throughout, a Mermaid dependency graph with weighted edges, and INDEX assembled automatically from DETAIL fragments. The single failure is V6 (persistent/recoverable): 4 of 9 modules (docs_src, advanced_middleware, app_an_py310, main — covering 417 files and ~79% of documented content) were written to disk but never submitted via submit_analysis. As a result, state.json reports 9.7% coverage and only 5 tasks, meaning a session resumed via get_progress() would incorrectly believe the bulk of the work is undone. The fix is operational: the Skill instructions are unambiguous ('Do NOT batch submit_analysis calls'), but the agent skipped the step for the second batch of modules — likely a context-pressure issue where the agent rushed to finish. Recommended fix: embed submit_analysis as a numbered mandatory step inside the sub-agent prompt template, not just in the post-writing epilogue where it is easily skipped."
+}

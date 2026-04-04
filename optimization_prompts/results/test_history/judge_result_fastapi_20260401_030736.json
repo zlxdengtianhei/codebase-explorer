@@ -1,0 +1,252 @@
+{
+  "mcp_data_quality": [
+    {
+      "id": "R1",
+      "verdict": "PASS",
+      "evidence": "Appendix A shows get_modules(summary) returns only module metadata: module_id, name, file_count, token_count, layer, depends_on. Appendix C 03_feature_cones.json contains cone_id, entry_point, exclusive_files — structural data only. No function names or signatures in MCP output.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R2",
+      "verdict": "PASS",
+      "evidence": "Appendix C shows 06_function_deps.json exists with total_files_with_deps=227 and explicit source_function → target_function cross-file call relationships, e.g., 'upsert_item' → fastapi/param_functions.py:Body, 'read_main' → fastapi/exceptions.py:HTTPException.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R3",
+      "verdict": "PASS",
+      "evidence": "Appendix A get_modules summary shape shows modules array with only metadata (no file path lists). The schema is compact; no field contains per-file path arrays. Actual MCP calls in SKILL.md use get_modules() summary mode before DETAIL generation.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R4",
+      "verdict": "PASS",
+      "evidence": "DETAIL.md YAML front matter includes token_budget per module (50000 for large, 5000-6120 for small). body_updates/DETAIL.md explicitly states 'Token budget (50k) covered 5 core files.' infrastructure/DETAIL.md: 'Token budget (50k) covered 19 of 26 files.' Budget-aware processing is evident.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R9",
+      "verdict": "PASS",
+      "evidence": "Appendix C 03_feature_cones.json contains 'strategy_used': 'feature_cone'. Appendix A states 'GroupingStrategy Protocol exists in code: src/graph/strategies.py defines GroupingStrategy Protocol + FeatureConeStrategy.' get_modules summary returns grouping.strategy_used and available_strategies fields.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R10",
+      "verdict": "PASS",
+      "evidence": "security module groups fastapi/security/*.py WITH docs_src/custom_response/__init__.py and fastapi/openapi/__init__.py. body_updates module groups fastapi/routing.py, fastapi/dependencies/models.py, fastapi/middleware/asyncexitstack.py, and 52 docs_src/* files — all cross-directory. Module grouping ≠ directory structure.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    }
+  ],
+  "pipeline_protocol": [
+    {
+      "id": "R5",
+      "verdict": "PASS",
+      "evidence": "Appendix G: 187/187 complete file blocks (100%). All 9 modules show zero missing sections. Every file block has all four sections: 功能概述, 数据流, 核心接口, 依赖关系. Machine-readable summary confirms all_complete=true.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R5b",
+      "verdict": "FAIL",
+      "evidence": "Appendix G expected vs actual file block counts show 4 modules below 80%: advanced_middleware 43/162=26.5%, body_updates 5/57=8.8%, main 36/197=18.3%, infrastructure 19/26=73.1%. Only app_an_py310 (8/8), background_tasks (13/13), docs_src (50/50), security (7/7), testing (6/6) meet the 80% per-module threshold.",
+      "fix_suggestion": "The Skill's token budget mechanism intentionally limits per-module file coverage for large modules. Add explicit guidance in phase3-detail.md: for modules where token_budget < module_token_count, the Skill must document at minimum 80% of files or split documentation across multiple passes until per-module 80% is reached. Alternatively, clarify in QUALITY_STANDARDS.md whether overall coverage vs per-module coverage is the intended gate.",
+      "fix_category": "skill_doc"
+    },
+    {
+      "id": "R6",
+      "verdict": "PASS",
+      "evidence": "INDEX.md advanced_middleware entry matches advanced_middleware/DETAIL.md index-fragment verbatim: 'FastAPI middleware layer (CORS, GZip, HTTPS redirect, trusted host, WSGI — all thin Starlette re-exports)...' infrastructure INDEX entry matches infrastructure/DETAIL.md fragment. Content is consistent across 2 spot-checked modules.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R7",
+      "verdict": "PASS",
+      "evidence": "All DETAIL.md files checked: YAML front matter present, <!-- module:xxx -->, <!-- file:xxx -->, <!-- end:file:xxx -->, <!-- index-fragment:xxx -->, <!-- end:index-fragment:xxx -->, <!-- end:{module_id} -->, <!-- codebase-explorer: end --> all present. INDEX.md has YAML front matter, Mermaid graph, <!-- module-index:xxx --> and <!-- end-module-index:xxx --> markers for all 9 modules.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R8",
+      "verdict": "PASS",
+      "evidence": "phase4-index.md documents doc_operation supporting: update_index, move_detail, merge_modules, reorder_modules, split_module. SKILL.md MCP Tools table confirms doc_operation exists. State.json task_008 shows INDEX.md generated, indicating doc_operation('update_index') was called. Phase 4 review step documents use of move_detail for reorganization.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "P1",
+      "verdict": "PASS",
+      "evidence": "State.json status='analysis_complete'. Appendix E verification confirms '.codebase-analysis/ exists with 7 JSON files (incl. 06_function_deps.json)'. Appendix C shows 03_feature_cones.json with project_id, cone_count=8, and full file lists.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "P2",
+      "verdict": "PASS",
+      "evidence": "State.json shows analysis_complete before any task execution. SKILL.md Phase 2 requires get_modules() call before DETAIL generation. The 8-module structure in state.json matches Phase 2 module validation output. Execution log (134 turns) is consistent with full 4-phase pipeline execution.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "P3",
+      "verdict": "PASS",
+      "evidence": "Appendix G: all 9 modules have DETAIL.md with correct structure. 187/187 file blocks complete. get_function_deps was called: dependency sections reference specific function names, e.g., 'calls is_body_allowed_for_status_code() from fastapi/utils.py', 'calls jsonable_encoder() from fastapi/encoders.py', 'calls solve_dependencies() from fastapi/dependencies/utils.py'.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "P4",
+      "verdict": "PASS",
+      "evidence": "State.json task_008 shows output_files=[{path: '.codebase-docs/INDEX.md', type: 'detail', status: 'complete'}], completed_at present. INDEX.md exists with 9 modules, Mermaid graph, and module-index markers. Appendix E confirms INDEX.md exists at 7957 bytes.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    }
+  ],
+  "doc_quality": [
+    {
+      "id": "V1",
+      "verdict": "PASS",
+      "evidence": "All module headings answer 'what capability does this code provide': 'Core Application & Routing Engine', 'Infrastructure & Shared Utilities', 'Dependency Injection, Security & Build Scripts', 'Response & Stream Tutorial Examples'. No heading equals its module_id (body_updates → 'Core Application & Routing Engine', docs_src → 'Response & Stream Tutorial Examples', advanced_middleware → 'Middleware, Routing Basics & Configuration Tutorials').",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V2",
+      "verdict": "PASS",
+      "evidence": "MCP output in Appendix C is purely structural (file lists, entry_points, token counts, dependency edges). All semantic descriptions ('Implements URL routing', 'The foundational layer of FastAPI', 'The dependency resolution engine') appear only in Agent-written DETAIL.md files.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V3",
+      "verdict": "PASS",
+      "evidence": "INDEX.md module summaries are substantive: e.g., infrastructure entry is 3 sentences describing public API surface, parameter declaration system, dependency resolution engine — sufficient to decide 'I need to read infrastructure/DETAIL.md to understand Depends()'. Each entry includes file count, token count, key entry points, and [→ DETAIL] link.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V4",
+      "verdict": "PASS",
+      "evidence": "INDEX.md contains Mermaid graph with weighted edges (n4 -->|dep w=53| n0). DETAIL dependency sections reference specific function calls: 'http_exception_handler calls is_body_allowed_for_status_code() from fastapi/utils.py to determine if response body is allowed', 'get_request_handler calls solve_dependencies() from fastapi/dependencies/utils.py for each request'. Not just 'A imports B'.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V5",
+      "verdict": "PASS",
+      "evidence": "Structured HTML comment markers (<!-- module:xxx -->, <!-- file:xxx -->, <!-- module-index:xxx -->), YAML front matter in all files, parseable Mermaid graph in INDEX.md. Traceable path: INDEX.md [→ DETAIL] links → DETAIL.md <!-- file:xxx --> blocks → source file paths.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V6",
+      "verdict": "PASS",
+      "evidence": "JSON analysis files exist (Appendix C: 03_feature_cones.json, 06_function_deps.json). State.json tracks progress with source_file_coverage_percent=88.78%, task statuses, and output_files paths. All 8 tasks show completed_at timestamps and submit_analysis was called.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V7",
+      "verdict": "PASS",
+      "evidence": "Phase 4 step 2 is 'MANDATORY Module Renaming + Review' including 2b (misplacement check) and 2c (ordering check). Evidence of review execution: body_updates renamed to 'Core Application & Routing Engine', docs_src renamed to 'Response & Stream Tutorial Examples'. Mermaid graph ordering reflects dependency layers.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V8",
+      "verdict": "PASS",
+      "evidence": "Security module correctly groups all fastapi/security/*.py files. Infrastructure module groups foundational files (params.py, param_functions.py, dependencies/utils.py, exceptions.py) from different subdirectories. body_updates module groups routing engine files (routing.py, dependencies/models.py, exception_handlers.py) with cross-directory coherence.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V9",
+      "verdict": "PASS",
+      "evidence": "DETAIL.md YAML front matter shows budget scaling: app_an_py310=5000 (719 source tokens), testing=6120, background_tasks=5680, docs_src=32048, security=30908, advanced_middleware=50000, body_updates=50000, main=50000, infrastructure=50000. Small modules get floor budget; large modules get proportional 50k cap.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V10",
+      "verdict": "PASS",
+      "evidence": "INDEX module summaries are 2-3 sentences + key entry points. DETAIL files contain per-file analysis with 4 sections each. No large-block duplication: the infrastructure INDEX entry ('The foundational layer of FastAPI: public API surface...') is a synthesis, not a copy of any individual file's 功能概述.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    }
+  ],
+  "skill_effectiveness": [
+    {
+      "id": "S1",
+      "verdict": "PASS",
+      "evidence": "State.json shows 8 tasks: tasks 001-007 are DETAIL generation (Phase 3), task_008 is INDEX (Phase 4). All executed in order. No phantom phases. Execution log: 134 turns, result preview confirms all 9 modules documented with INDEX assembled.",
+      "fix_suggestion": "",
+      "fix_category": "",
+      "root_cause": "agent_error"
+    },
+    {
+      "id": "S2",
+      "verdict": "PASS",
+      "evidence": "Generated DETAIL.md files match DOC_TEMPLATES.md exactly: YAML front matter with module_id/module_name/file_count/generated_at/token_budget, <!-- module:xxx --> opening, <!-- file:xxx --> / <!-- end:file:xxx --> per-file, <!-- index-fragment:xxx --> / <!-- end:index-fragment:xxx -->, <!-- end:{module_id} -->, <!-- codebase-explorer: end -->. Section headers use #### (4 hashes).",
+      "fix_suggestion": "",
+      "fix_category": "",
+      "root_cause": "agent_error"
+    },
+    {
+      "id": "S3",
+      "verdict": "PASS",
+      "evidence": "Step 2 (get_function_deps enrichment) evidence: dependency sections name specific functions — 'calls is_body_allowed_for_status_code() from fastapi/utils.py', 'calls jsonable_encoder() from fastapi/encoders.py', 'calls get_authorization_scheme_param() from fastapi/security/utils.py'. index-fragments appear after all file blocks. Protocol order was followed.",
+      "fix_suggestion": "",
+      "fix_category": "",
+      "root_cause": "agent_error"
+    },
+    {
+      "id": "S4",
+      "verdict": "PASS",
+      "evidence": "MCP tool calls in SKILL.md use correct parameter names: analyze_codebase(path, force_reindex), get_modules(module_id, output_dir), get_function_deps(file, output_dir), doc_operation(operation, output_dir), submit_analysis(task_id, detail_paths, snippet_paths, tokens_used, source_files_covered, output_dir). State.json output_file paths are absolute, matching the submit_analysis requirement documented in SKILL.md.",
+      "fix_suggestion": "",
+      "fix_category": "",
+      "root_cause": "agent_error"
+    },
+    {
+      "id": "S5",
+      "verdict": "PASS",
+      "evidence": "QUALITY_STANDARDS.md phase gate: overall source_file_coverage_percent=88.78% >= 80% threshold. All 187/187 file blocks have all 4 required sections. All 8 tasks show status='complete' in state.json. Phase gate criteria in QUALITY_STANDARDS.md are met (overall coverage, not per-module).",
+      "fix_suggestion": "",
+      "fix_category": "",
+      "root_cause": "agent_error"
+    },
+    {
+      "id": "S6",
+      "verdict": "PASS",
+      "evidence": "Output is coherent with Skill instructions throughout: modules renamed per phase4-index.md mandate, format matches DOC_TEMPLATES.md, dependencies enriched via get_function_deps, token budgets respected per phase3-detail.md formula. No evidence of agent confusion or improvisation. The one failure (R5b per-module coverage) is a consequence of Skill's intentional token budget design, not agent deviation.",
+      "fix_suggestion": "",
+      "fix_category": "",
+      "root_cause": "skill_defect"
+    }
+  ],
+  "overall_verdict": "HAS_FAILURES",
+  "pass_count": 30,
+  "total": 31,
+  "critical_failures": [
+    "R5b"
+  ],
+  "skill_defects": [
+    "S6"
+  ],
+  "fix_priority": [
+    {
+      "id": "R5b",
+      "fix_category": "skill_doc",
+      "target_file": ".agents/skills/codebase-explorer/phases/phase3-detail.md",
+      "suggested_fix": "Add a per-module coverage gate: after documenting files within budget, if file_blocks_written / expected_files < 0.80 for any module, the agent must either (a) spawn a continuation pass with increased budget for the remaining files, or (b) document remaining files in abbreviated form (功能概述 only). Add this check to Step 4 (post-write validation). Also update QUALITY_STANDARDS.md Phase 3→4 gate to include per-module coverage >= 80% as a required criterion alongside overall coverage.",
+      "expected_impact": "R5b PASS; S6 full PASS (Skill is self-sufficient for all judge criteria); overall_verdict ALL_PASS"
+    }
+  ],
+  "summary": "30/31 requirements pass. The single failure is R5b (per-module file coverage): 4 large modules document fewer than 80% of their files — advanced_middleware 43/162 (26.5%), body_updates 5/57 (8.8%), main 36/197 (18.3%), infrastructure 19/26 (73.1%). This is caused by the Skill's intentional token-budget cutoff mechanism (correct design for quality-over-quantity) but the Skill lacks a compensating per-module coverage floor. All other dimensions pass: MCP data is structurally clean, the 4-phase pipeline executed correctly, document format and markers are perfect (187/187 file blocks complete), dependencies are architecturally meaningful, and module naming is fully functional. Fix: add a per-module 80% coverage gate to phase3-detail.md with a mandatory continuation pass for large under-covered modules."
+}

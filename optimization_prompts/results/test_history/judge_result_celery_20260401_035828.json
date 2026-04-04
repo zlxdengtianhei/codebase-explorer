@@ -1,0 +1,286 @@
+{
+  "mcp_data_quality": [
+    {
+      "id": "R1",
+      "verdict": "PASS",
+      "evidence": "Appendix A shows get_modules(summary) returns only module metadata (module_id, name, file_count, token_count, layer, depends_on). No function names, signatures, or code snippets in the summary response shape.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R2",
+      "verdict": "PASS",
+      "evidence": "Appendix C: 06_function_deps.json exists, total_files_with_deps=273, contains source_function → target_function cross-file call entries (e.g., celery/__main__.py:main → celery/__init__.py:maybe_patch_concurrency).",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R3",
+      "verdict": "PASS",
+      "evidence": "Appendix A summary response shape contains only per-module metadata array with no file path lists. The structure (name, file_count, token_count, layer, depends_on) is concise and well under 3000 chars for a typical project.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R4",
+      "verdict": "PASS",
+      "evidence": "DETAIL.md YAML front matter shows `token_budget` values per module (e.g., 42681, 8560, 50000). state.json tracks task completion. Evidence of budget-aware processing: budget formula max(5000, min(50000, module_token_count*4)) is applied per DETAIL headers.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R9",
+      "verdict": "PASS",
+      "evidence": "Appendix C 03_feature_cones.json has `\"strategy_used\": \"feature_cone\"`. Appendix A states 'GroupingStrategy Protocol exists in src/graph/strategies.py defines GroupingStrategy Protocol + FeatureConeStrategy'.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R10",
+      "verdict": "PASS",
+      "evidence": "Module grouping clearly diverges from directory structure. 'azureblockblob' contains celery/bootsteps.py, celery/worker/control.py, celery/worker/consumer/tasks.py, celery/backends/azureblockblob.py, celery/events/snapshot.py — files from at least 5 directories. 'annotations' spans celery/app/, examples/, t/unit/. No 1:1 directory-to-module mapping.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    }
+  ],
+  "pipeline_protocol": [
+    {
+      "id": "R5",
+      "verdict": "FAIL",
+      "evidence": "Appendix G: 61/305 complete file blocks (20%). Missing sections — 功能概述: 103, 数据流: 204, 核心接口: 103, 依赖关系: 103. Only 6 of 24 modules have all sections complete (builtins, celery, control, gcs, security, testing-test_security). 18 modules have partial or zero 数据流 sections. The criterion requires ALL file blocks in ALL DETAIL.md files to have all four sections; total_missing > 0 → FAIL.",
+      "fix_suggestion": "Add mandatory Step 4 post-write validation enforcement in sub-agent prompts. Require agents to count section headers after writing and fill missing ones before exiting. Specifically reinforce: 数据流 is required even for test-only or trivial files.",
+      "fix_category": "agent_behavior"
+    },
+    {
+      "id": "R5b",
+      "verdict": "FAIL",
+      "evidence": "Appendix G: control module has 18 file_blocks / 25 expected_files = 72%, which is below the 80% threshold. Also: testing-test_loops has 20/23 = 87% (PASS), __main__ has 27/33 = 82% (PASS), azureblockblob 18/19 = 95% (PASS). Control module fails the 80% per-module coverage gate.",
+      "fix_suggestion": "For control module: the agent stopped at 18 of 25 files. Sub-agent prompts should enforce file-by-file completion before writing the index-fragment, not stop mid-module.",
+      "fix_category": "agent_behavior"
+    },
+    {
+      "id": "R6",
+      "verdict": "PASS",
+      "evidence": "Appendix B: INDEX.md module entries match the index-fragment blocks in DETAIL.md files. E.g., testing-test_security INDEX entry '**Testing-Test Security** (4 files, 3227 tokens) — Unit and integration test suite...' matches exactly the `<!-- index-fragment:testing-test_security -->` block in DETAIL.md. Same for celery module: '**RPC Backend, Worker Event Loops & Delayed Delivery**' appears identically in both.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R7",
+      "verdict": "PASS",
+      "evidence": "DETAIL.md files have: YAML front matter (---), `<!-- module:{id} -->`, `<!-- file:{path} -->`, `<!-- end:file:{path} -->`, `<!-- index-fragment:{id} -->` markers. INDEX.md has: YAML front matter, Mermaid graph, `<!-- module-index:{id} -->` and `<!-- end-module-index:{id} -->` markers. All confirmed in Appendix B.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R8",
+      "verdict": "PASS",
+      "evidence": "SKILL.md Phase 4 documents doc_operation() supporting operations: update_index, move_detail, merge_modules, reorder_modules, split_module. INDEX.md was assembled via doc_operation(\"update_index\") as confirmed by state.json task_013 completion.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "P1",
+      "verdict": "PASS",
+      "evidence": "state.json shows status: 'analysis_complete'. Appendix C confirms 03_feature_cones.json and 06_function_deps.json exist and are non-empty. strategy_used='feature_cone', cone_count=24, total_files_with_deps=273.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "P2",
+      "verdict": "PASS",
+      "evidence": "Execution log (Appendix D) confirms 203-turn pipeline executed all 4 phases. Phase 2 validation including coverage gate check occurred (81.4% reported). get_modules() summary would have been called before DETAIL generation per SKILL.md Phase 2 requirement.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "P3",
+      "verdict": "FAIL",
+      "evidence": "Appendix G: 61/305 file blocks complete = 20%. Missing 数据流: 204 instances across 18 of 24 modules. Most severely: testing-conftest (0/10 数据流), testing-test_amqp (0/8), testing-test_backend (0/11), testing-test_beat (0/10), testing-test_canvas (0/13), testing-test_loops (0/20), testing-test_mem_leak (0/9), testing-test_multi (0/18), testing-test_solo (0/3), testing-test_worker (0/19). The 'all_complete: false' in machine-readable summary is definitive. Template-identical grouped blocks (e.g., 'Remaining bin commands (grouped)' with shared sections) indicate further protocol violation.",
+      "fix_suggestion": "Enforce Step 4 post-write validation in every sub-agent. Add explicit check in sub-agent prompt: after writing DETAIL.md, read it back, grep for section header counts, and fix any missing sections before submitting.",
+      "fix_category": "agent_behavior"
+    },
+    {
+      "id": "P4",
+      "verdict": "PASS",
+      "evidence": "state.json task_013 shows INDEX.md written as 'complete'. INDEX.md in Appendix B contains all 24 modules with `<!-- module-index -->` blocks and Mermaid dependency graph. doc_operation('update_index') was executed.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    }
+  ],
+  "doc_quality": [
+    {
+      "id": "V1",
+      "verdict": "FAIL",
+      "evidence": "INDEX.md `##` headings are module_id-derived: '## Main', '## Asynpool', '## Azureblockblob', '## Gcs', '## Celery', '## Contrib', '## Autoretry'. The Mermaid graph labels: 'n1[\"Main\"]', 'n3[\"Asynpool\"]', 'n5[\"Azureblockblob\"]', 'n11[\"Gcs\"]'. SKILL.md Phase 4 Step 2a explicitly requires renaming all module headings from module_ids to functional descriptions. The bold functional names exist inside sections ('**CLI Entry Points, Worker/Beat App Wrappers...**') but the ## headings themselves do not answer 'what capability does this provide?'",
+      "fix_suggestion": "Phase 4 agent must edit INDEX.md `##` headings and Mermaid labels after update_index assembly. Add validation rule: if heading == module_id (case-insensitive), it must be renamed.",
+      "fix_category": "agent_behavior"
+    },
+    {
+      "id": "V2",
+      "verdict": "PASS",
+      "evidence": "Appendix A confirms MCP summary returns only structural metadata (name, file_count, token_count, layer, depends_on). All semantic descriptions in DETAIL.md (功能概述, 数据流, etc.) are agent-authored prose, not returned from MCP.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V3",
+      "verdict": "PASS",
+      "evidence": "INDEX module summaries are substantive. E.g., 'testing-test_security': 'Unit and integration test suite for Celery's message authentication layer. Covers Certificate, CertStore, FSCertStore, PrivateKey, and SecureSerializer...' Each summary includes key entry points and is sufficient to decide whether to read the DETAIL.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V4",
+      "verdict": "PASS",
+      "evidence": "INDEX.md contains Mermaid dependency graph with weighted edges (e.g., 'n1 -->|dep w=72| n0'). DETAIL dependency sections reference specific cross-file calls: e.g., __main__/DETAIL.md: 'Calls celery/__init__.py:maybe_patch_concurrency(). Delegates to celery/bin/celery.py:main().' security/DETAIL.md: 'Calls celery/security/serialization.py:register_auth() to instantiate and register the SecureSerializer with kombu.'",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V5",
+      "verdict": "PASS",
+      "evidence": "All DETAIL.md files have YAML front matter, HTML comment markers (<!-- module -->, <!-- file -->, <!-- index-fragment -->), and structured section headers. INDEX.md has YAML front matter, Mermaid graph, and module-index markers. Path traceability: INDEX → [→ DETAIL](module_id/DETAIL.md) → <!-- file:path --> blocks.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V6",
+      "verdict": "PASS",
+      "evidence": "state.json exists with all 13 tasks marked 'complete', timestamps, and output_file paths. 06_function_deps.json and 03_feature_cones.json persist analysis. submit_analysis was called for each module (state.json shows details_written: 25, source_file_coverage_percent: 81.38%).",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V7",
+      "verdict": "PASS",
+      "evidence": "SKILL.md Phase 4 includes mandatory review step (Step 2): read INDEX, check for misplacements, check ordering, rename module headings. doc_operation(\"update_index\") was called (task_013 complete). Review mechanism exists in the Skill and was at least partially executed (INDEX.md generated with functional descriptions in fragments).",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V8",
+      "verdict": "PASS",
+      "evidence": "Functionally related files are co-located: 'security' groups celery/security/__init__.py + certificate.py + key.py + serialization.py + utils.py + test fixtures. 'backends' groups all result backend implementations. 'control' groups states.py + EventDispatcher + EventReceiver + State + Control + Inspect. Cross-module dependencies noted in dependency sections.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V9",
+      "verdict": "PASS",
+      "evidence": "DETAIL.md YAML front matter shows per-module token_budget values: __main__=42681, annotations=8560, celery=33452, security=22516, control=50000. Formula max(5000, min(50000, module_token_count*4)) scales proportionally. Small modules (annotations: 1640 tokens → budget 8560 > floor 5000) and large modules (control/backends/gcs capped at 50000) receive different budgets.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V10",
+      "verdict": "PASS",
+      "evidence": "INDEX module sections contain 2-3 sentence summaries + key entry points. DETAIL.md files contain per-file 功能概述/数据流/核心接口/依赖关系 detail. The index-fragment content appearing in both locations is intentional by design (update_index extracts fragments), not duplication — DETAIL contains substantially more content per file. No large prose blocks appear verbatim in both documents.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    }
+  ],
+  "skill_effectiveness": [
+    {
+      "id": "S1",
+      "verdict": "PASS",
+      "evidence": "Execution log (Appendix D): all 4 phases executed in correct order — analyze_codebase (P1) → module validation (P2) → DETAIL generation (P3) → INDEX assembly (P4). 13 tasks completed, 203 turns. No phantom phases added. state.json confirms phase completion order.",
+      "fix_suggestion": "",
+      "fix_category": "",
+      "root_cause": "agent_error"
+    },
+    {
+      "id": "S2",
+      "verdict": "FAIL",
+      "evidence": "DOC_TEMPLATES.md requires per-file blocks with all 4 sections each. Actual DETAIL.md files use grouped file blocks where multiple files share one set of sections. Example from __main__/DETAIL.md: '### Remaining bin commands (grouped)' with `<!-- file:purge.py -->`, `<!-- file:migrate.py -->`, ... `<!-- end:file:upgrade.py -->` sharing ONE set of 4 sections for 5 files. Same pattern in annotations (grouped examples), asynpool (grouped stubs), testing modules. This explains the 61/305 complete block count — the counter expects 4 sections per `<!-- file:xxx -->` marker, but grouped blocks have N markers sharing 4 sections.",
+      "fix_suggestion": "Add explicit rule to DETAIL Agent Prompt Template: 'NEVER group multiple files under a single set of sections. Each <!-- file:xxx --> marker must have its own 功能概述, 数据流, 核心接口, 依赖关系 sections before <!-- end:file:xxx -->.'",
+      "fix_category": "skill_doc",
+      "root_cause": "agent_error"
+    },
+    {
+      "id": "S3",
+      "verdict": "FAIL",
+      "evidence": "数据流 section missing in 204/305 file blocks across 18 modules. The systematic absence of 数据流 in all testing modules (testing-conftest: 0/10, testing-test_amqp: 0/8, testing-test_backend: 0/11, testing-test_canvas: 0/13, testing-test_loops: 0/20, testing-test_multi: 0/18, testing-test_worker: 0/19) indicates the agent deliberately omitted 数据流 for test files, violating the explicit instruction: 'NEVER skip this. Even for simple files.' The mandatory Step 4 post-write validation was also not executed, since it would have caught and remediated these missing sections.",
+      "fix_suggestion": "Add reinforced 数据流 reminder specifically for test modules in the sub-agent prompt. Consider adding: 'For test files where data flow is simple, write: Data flows from test setup (fixtures/mocks) → function under test → assertion. No complex transformation.' This prevents agent rationalization that test files don't need this section.",
+      "fix_category": "agent_behavior",
+      "root_cause": "agent_error"
+    },
+    {
+      "id": "S4",
+      "verdict": "PASS",
+      "evidence": "MCP tool calls use correct parameter names throughout: get_modules(module_id=X, output_dir=Y), get_function_deps(file=path, output_dir=Y), doc_operation(operation='update_index'), submit_analysis(task_id, detail_paths, source_files_covered). No misnamed parameters observed in execution evidence. 06_function_deps.json populated with data confirms get_function_deps calls succeeded.",
+      "fix_suggestion": "",
+      "fix_category": "",
+      "root_cause": "agent_error"
+    },
+    {
+      "id": "S5",
+      "verdict": "FAIL",
+      "evidence": "QUALITY_STANDARDS.md Phase 3→4 gate requires: 'Each DETAIL.md has an <!-- index-fragment --> block' (PASS) and implicitly all four sections per file. Source file coverage 81.4% >= 80% (PASS). However, section completeness fails catastrophically: 61/305 complete blocks (20%) violates the per-file four-section requirement. Phase 4 gate requires 'All DETAIL links resolve' (PASS) but the underlying DETAIL content quality gate is not met.",
+      "fix_suggestion": "Add explicit quality gate to QUALITY_STANDARDS.md Phase 3→4: 'complete_sections_percent (from post-write validation) >= 95%'. Make this a hard stop that prevents Phase 4 if violated.",
+      "fix_category": "skill_doc",
+      "root_cause": "agent_error"
+    },
+    {
+      "id": "S6",
+      "verdict": "PASS",
+      "evidence": "The Skill instructions are unambiguous: 'NEVER skip this [数据流]', 'Every file MUST have ALL 4 sections. No exceptions.', 'Step 4 post-write validation MANDATORY'. The agent's pattern of omitting 数据流 from test modules and using grouped file blocks are agent deviations from clear instructions, not the result of ambiguous or contradictory Skill documentation. The Skill is self-sufficient; execution failures are agent-side.",
+      "fix_suggestion": "Consider adding explicit example in DETAIL Agent Prompt Template for a test file with all 4 sections including a minimal 数据流 to reduce agent rationalization.",
+      "fix_category": "agent_behavior",
+      "root_cause": "agent_error"
+    }
+  ],
+  "overall_verdict": "HAS_FAILURES",
+  "pass_count": 24,
+  "total": 31,
+  "critical_failures": [
+    "R5 — 61/305 complete file blocks (20%); 数据流 missing in 204 instances",
+    "P3 — DETAIL generation incomplete; systematic omission of 数据流 across 18 modules",
+    "R5b — control module 18/25 file blocks (72%), below 80% threshold",
+    "S3 — Step 4 post-write validation not executed; 数据流 skipped for all testing modules",
+    "S2 — Grouped file blocks violate per-file section requirement from DOC_TEMPLATES.md",
+    "V1 — Module ## headings remain module_id-derived; Phase 4 renaming step not completed",
+    "S5 — Phase 3 quality gate not met; section completeness 20% far below acceptable threshold"
+  ],
+  "skill_defects": [
+    "S5"
+  ],
+  "fix_priority": [
+    {
+      "id": "S3",
+      "fix_category": "agent_behavior",
+      "target_file": ".agents/skills/codebase-explorer/phases/phase3-detail.md",
+      "suggested_fix": "In the DETAIL Agent Prompt Template, add a reinforced block immediately before the three-step protocol: '⚠️ 数据流 IS MANDATORY FOR EVERY FILE INCLUDING TEST FILES. For test files write: \"Data flows from test fixtures → function under test → assertion validation. [Specific mock/fixture setup] → [method called] → [assertion pattern].\" NEVER leave this section empty or omit it.' Also add an inline example of a complete test file block with all 4 sections.",
+      "expected_impact": "Fixes R5, P3, S3, S5 — the 204 missing 数据流 sections are the single largest quality gap"
+    },
+    {
+      "id": "S2",
+      "fix_category": "skill_doc",
+      "target_file": ".agents/skills/codebase-explorer/phases/phase3-detail.md",
+      "suggested_fix": "Add to the Three-Step Per-File Protocol: '⚠️ NEVER GROUP FILES. Each <!-- file:xxx --> marker requires its own four sections before <!-- end:file:xxx -->. Even if multiple files are similar or empty, document each individually. Grouped blocks WILL fail automated section counting.'",
+      "expected_impact": "Fixes S2, partially improves R5 and P3 counts"
+    },
+    {
+      "id": "V1",
+      "fix_category": "skill_doc",
+      "target_file": ".agents/skills/codebase-explorer/phases/phase4-index.md",
+      "suggested_fix": "Add to Step 2a a hard validation rule: 'After editing headings, verify: grep all `## ` lines in INDEX.md. If any heading matches its module_id (case-insensitive, ignoring hyphens), it MUST be renamed before proceeding. Also update the Mermaid node labels to use the functional name.' Add example: '`## Asynpool` → must become `## Prefork Pool & Concurrency`; Mermaid `n3[\"Asynpool\"]` → `n3[\"Prefork Pool & Concurrency\"]`'.",
+      "expected_impact": "Fixes V1"
+    },
+    {
+      "id": "S5",
+      "fix_category": "skill_doc",
+      "target_file": ".agents/skills/codebase-explorer/references/QUALITY_STANDARDS.md",
+      "suggested_fix": "Add to Phase 3→4 Gate criteria: '| complete_file_block_percent >= 95% | Yes | (counted as: file blocks with all 4 sections / total file blocks) |'. Add a verification command: 'grep -c \"#### 数据流\" DETAIL.md should equal grep -c \"<!-- file:\" DETAIL.md'.",
+      "expected_impact": "Fixes S5; creates measurable gate to prevent incomplete DETAIL advancing to Phase 4"
+    },
+    {
+      "id": "R5b",
+      "fix_category": "agent_behavior",
+      "target_file": ".agents/skills/codebase-explorer/phases/phase3-detail.md",
+      "suggested_fix": "Add to Step 4 (verify coverage): 'For each module, verify file_blocks_written >= 0.80 * expected_file_count. If below 80%, spawn an additional sub-agent for the missing files before calling submit_analysis.'",
+      "expected_impact": "Fixes R5b; prevents partial modules from being submitted as complete"
+    }
+  ],
+  "summary": "The biggest gap is systematic omission of 数据流 sections across all testing modules (204 missing instances, 18/24 modules affected), combined with the use of grouped file blocks that share one set of sections for multiple files. Together these cause 80% of file blocks to be incomplete (61/305 complete = 20%). The Skill instructions are correct and unambiguous — this is agent non-compliance. Secondary issue: Phase 4 module renaming was not completed, leaving ## headings as module_id-derived names (Asynpool, Gcs, Azureblockblob) rather than functional descriptions. Fix priority: (1) add explicit 数据流 template for test files with example, (2) prohibit grouped file blocks, (3) enforce Phase 4 heading renaming with validation rule, (4) add quantitative Phase 3→4 gate for section completeness."
+}

@@ -1,0 +1,259 @@
+{
+  "mcp_data_quality": [
+    {
+      "id": "R1",
+      "verdict": "PASS",
+      "evidence": "Appendix A explicitly states 'modules array contains NO file path lists, NO function names. Only metadata.' get_modules(summary) response shape shows only {module_id, name, file_count, token_count, layer, depends_on}. No function names or signatures visible in any MCP output.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R2",
+      "verdict": "PASS",
+      "evidence": "Appendix C 06_function_deps.json exists and is non-empty with 273 files_with_deps. Contains source_function → target_function cross-file call entries, e.g., celery/__main__.py:main() → celery/__init__.py:maybe_patch_concurrency(), celery/_state.py:_get_current_app() → celery/app/base.py:Celery class_usage.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R3",
+      "verdict": "PASS",
+      "evidence": "Appendix A confirms summary mode returns only metadata (no file path lists). 24 modules × ~60 chars of metadata each ≈ ~1500 chars, well under 3000 char limit. The structure explicitly excludes function names and file path arrays from summary response.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R4",
+      "verdict": "PASS",
+      "evidence": "DETAIL.md YAML front matter contains token_budget values that vary by module size: autoretry=12600 (5-file module), control=5000 (floor for 1-file module), backends=56000 (13-file large module). Skill template specifies token_budget = max(5000, min(50000, module_token_count × 4)), confirming dynamic budget calculation driven by token counts from MCP.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R9",
+      "verdict": "PASS",
+      "evidence": "Appendix C 03_feature_cones.json contains 'strategy_used': 'feature_cone'. Appendix A states 'src/graph/strategies.py defines GroupingStrategy Protocol + FeatureConeStrategy', confirming pluggable algorithm with Protocol abstraction.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R10",
+      "verdict": "PASS",
+      "evidence": "Module grouping clearly crosses directory boundaries. testing-test_beat contains files from t/unit/app/, t/unit/events/, t/unit/utils/, t/unit/backends/ — four distinct directories. testing-test_loaders spans t/unit/app/, t/unit/concurrency/, t/unit/contrib/, t/integration/. Module grouping is driven by dependency cones, not directories.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    }
+  ],
+  "pipeline_protocol": [
+    {
+      "id": "R5",
+      "verdict": "PASS",
+      "evidence": "Appendix G machine-readable summary: total_file_blocks=300, total_complete_blocks=300, all_complete=true, total_missing_sections={} (empty). 300/300 file blocks across all 24 DETAIL.md files have all four required sections (功能概述, 数据流, 核心接口, 依赖关系). Zero missing sections.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R5b",
+      "verdict": "FAIL",
+      "evidence": "Appendix G expected_files vs file_blocks per module reveals 6 modules below 80% coverage: control=1/25 (4%), __main__=25/33 (76%), testing-test_amqp=5/8 (63%), testing-test_loops=16/23 (70%), testing-test_mem_leak_in_exception_handling=4/9 (44%), testing-test_multi=11/18 (61%). The control module is especially severe — cone has 25 files but only celery/app/control.py was documented.",
+      "fix_suggestion": "Add per-module coverage gate at end of Phase 3 Step 4: after submit_analysis for each module, check file_blocks_written / cone_exclusive_file_count >= 0.8. If below threshold, spawn additional sub-agent to document remaining files before moving to next module.",
+      "fix_category": "skill_doc"
+    },
+    {
+      "id": "R6",
+      "verdict": "PASS",
+      "evidence": "Cross-checking 2 modules: annotations module — INDEX.md contains '**Task Annotations, Routing & Example Applications** (33 files, 6560 tokens)' which matches DETAIL.md index-fragment verbatim. security module — INDEX.md '**Message Signing & Certificate Management** (7 files, 5629 tokens)' matches DETAIL.md index-fragment exactly. Assembled via doc_operation('update_index').",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R7",
+      "verdict": "PASS",
+      "evidence": "All DETAIL.md samples have: YAML front matter (module_id, module_name, file_count, generated_at, token_budget), <!-- module:{id} -->, <!-- file:xxx -->, <!-- end:file:xxx -->, <!-- index-fragment:xxx -->, <!-- end:index-fragment:xxx -->, <!-- end:{id} -->, <!-- codebase-explorer: end -->. INDEX.md has: YAML front matter, Mermaid graph, <!-- module-index:{id} -->, <!-- end-module-index:{id} --> markers for all 24 modules.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R8",
+      "verdict": "PASS",
+      "evidence": "SKILL.md documents doc_operation supporting move_detail, merge_modules, update_index, reorder_modules, split_module (list_module_files). Phase 4 phase4-index.md shows explicit instructions for using these operations. Execution log confirms INDEX assembled via doc_operation('update_index') producing INDEX.md with 24 modules.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "P1",
+      "verdict": "PASS",
+      "evidence": "Appendix C shows 03_feature_cones.json (non-empty, 24 cones) and 06_function_deps.json (non-empty, 273 files_with_deps). state.json shows status='analysis_complete'. Appendix E verify script: 'PASS R1: .codebase-analysis/ exists with 7 JSON files (incl. 06_function_deps.json)'.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "P2",
+      "verdict": "PASS",
+      "evidence": "state.json coverage_percent = 80.87% at completion, and documentation was produced for all modules. Appendix E verify passes 'PASS R6: state.json >=50% tasks complete'. The successful module grouping and token budget application in DETAIL.md files implies get_modules() summary was reviewed before Phase 3 batching decisions.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "P3",
+      "verdict": "PASS",
+      "evidence": "All 24 modules have DETAIL.md with index-fragment blocks (Appendix E: 'PASS R3: At least 3 DETAIL.md with index-fragment blocks (24 found)'). Dependencies in DETAIL.md reference specific function names obtainable only via get_function_deps: e.g., 'celery/utils/functional.py:mlazy', 'celery/app/amqp.py:TaskConsumer'. 300/300 file blocks complete.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "P4",
+      "verdict": "PASS",
+      "evidence": "INDEX.md exists at 19150 bytes (Appendix E: 'PASS R2: INDEX.md exists and >500 bytes'). All 24 modules have <!-- module-index:xxx --> blocks (Appendix E: 'PASS R12: INDEX.md has >=3 module-index markers (24 found)'). Mermaid graph present with full dependency edges (Appendix E: 'PASS R7: INDEX.md contains Mermaid diagram').",
+      "fix_suggestion": "",
+      "fix_category": ""
+    }
+  ],
+  "doc_quality": [
+    {
+      "id": "V1",
+      "verdict": "FAIL",
+      "evidence": "At least 7 module headings in INDEX.md still equal or closely resemble their module_id: '## Annotations' (≈ 'annotations'), '## Autoretry' (≈ 'autoretry'), '## Backends' (≈ 'backends'), '## Builtins' (≈ 'builtins'), '## Contrib' (≈ 'contrib'), '## Control' (≈ 'control'), '## Security' (≈ 'security'). Additionally '## Testing-Test Security', '## Testing-Test Amqp', '## Testing-Conftest' are formatted module_ids. Phase 4 SKILL.md explicitly states 'You MUST edit every ## {heading} and **{name}** in INDEX.md' with rule 'If a module heading matches its module_id... it MUST be renamed.' The bold names (**Security Serializer Tests — Unit & Integration**) are descriptive, but section headings were not all updated.",
+      "fix_suggestion": "Add a mandatory completion checklist item in phase4-index.md: 'For each <!-- module-index:{id} --> block, verify ## heading does NOT contain the module_id string. If heading matches module_id (case-insensitive, hyphens/underscores normalized), STOP and rename before continuing.' Include an example table of all module_ids that must be verified.",
+      "fix_category": "skill_doc"
+    },
+    {
+      "id": "V2",
+      "verdict": "PASS",
+      "evidence": "MCP output in Appendix C (03_feature_cones.json, 06_function_deps.json) contains only structural data: file paths, token counts, call relationships, layer assignments. All semantic descriptions ('Implements URL routing...', 'Provides broker-to-broker task migration...') appear exclusively in DETAIL.md files written by the Agent. No semantic content in MCP JSON files.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V3",
+      "verdict": "PASS",
+      "evidence": "INDEX.md module summaries exceed 1 meaningful sentence and identify entry points. Example: '**Cloud Backends, Worker Bootsteps & Remote Control Infrastructure** (17 files, 46520 tokens) — Covers Azure Blob Storage, Consul, and CosmosDB result backends; the Blueprint/Step bootstep system...; Key entry points: AzureBlockBlobBackend, Blueprint, Panel, Pidbox, Autoscaler.' A reader can determine which DETAIL to consult without 'See DETAIL for more info' placeholders.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V4",
+      "verdict": "PASS",
+      "evidence": "INDEX.md contains Mermaid graph with 100+ dependency edges (e.g., n1 -->|dep w=72| n0, n10 -->|dep w=37| n0). DETAIL dependency sections are architecturally specific: annotations.py '使用 celery/utils/functional.py:mlazy for deferred import of string-specified annotation classes'; redis.py 'on_chord_part_return() calls celery/canvas.py:maybe_signature(), celery/result.py:allow_join_result()'. Exceeds 'A imports B' level with purpose context.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V5",
+      "verdict": "PASS",
+      "evidence": "Structured markers enable AI parsing: YAML front matter for metadata, <!-- module:xxx --> / <!-- file:xxx --> / <!-- index-fragment:xxx --> for block boundaries, <!-- module-index:xxx --> in INDEX for navigation. Traceable path: INDEX.md [→ DETAIL](azureblockblob/DETAIL.md) → <!-- file:celery/backends/azureblockblob.py --> → absolute file path in source.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V6",
+      "verdict": "PASS",
+      "evidence": "state.json shows all 13 tasks with status='complete' and completed_at timestamps. Six JSON analysis files confirmed in Appendix E (R1 PASS). submit_analysis called for each module (state.json documentation.details_written=25, index_written=true). source_files_covered array in state.json lists 316 absolute file paths. Recovery possible via get_progress().",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V7",
+      "verdict": "PASS",
+      "evidence": "Phase 4 phase4-index.md Step 2b explicitly requires reviewing module organization for misplacements and Step 3 provides reorder/move/merge operations. Execution log result: 'Module headings renamed (technical IDs → functional names): Azureblockblob → Cloud Backends & Worker Infrastructure, Asynpool → Async Pool & Concurrency Backends, Gcs → GCS Backend & Django Integration, Celery → Core Events & Testing Infrastructure'. Review was executed with reorganization.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V8",
+      "verdict": "PASS",
+      "evidence": "Functionally related files are co-located: testing-test_beat groups beat scheduler tests, schedule type tests, time utilities, and cloud backend tests — all related to time-driven and persistence-layer testing. testing-test_security co-locates all security component tests. Cross-module dependencies explicitly noted in Mermaid graph and individual dependency sections.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V9",
+      "verdict": "PASS",
+      "evidence": "Token budgets scale with module size: control (1 file, 3200 tokens) → budget=5000 (floor), autoretry (5 files, 12600 tokens) → budget=15000 (~4×), backends (13 files, 56000 tokens) → budget=50000 (capped). Skill formula max(5000, min(50000, module_token_count × 4)) is applied, producing proportional allocation capped at 50000.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V10",
+      "verdict": "PASS",
+      "evidence": "INDEX module entries are 3-5 sentence summaries with key entry points only. DETAIL files contain per-file 4-section analysis (functionally distinct from INDEX). The index-fragment in DETAIL is deliberately copied verbatim to INDEX (by design, not duplication). No large code blocks or complete file content reproduced in both documents.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    }
+  ],
+  "skill_effectiveness": [
+    {
+      "id": "S1",
+      "verdict": "PASS",
+      "evidence": "Execution log: 13/13 tasks completed. state.json tasks task_001 through task_013 all show status='complete'. Phases executed in order: analyze_codebase (Phase 1) → module validation (Phase 2) → 12 DETAIL generation tasks in parallel batches (Phase 3) → INDEX assembly task_013 (Phase 4). No phantom phases; all 4 Skill phases present in execution.",
+      "fix_suggestion": "",
+      "fix_category": "",
+      "root_cause": ""
+    },
+    {
+      "id": "S2",
+      "verdict": "PASS",
+      "evidence": "DETAIL.md format precisely matches DOC_TEMPLATES.md: YAML front matter with all 5 required fields (module_id, module_name, file_count, generated_at, token_budget) ✓; <!-- module:{id} --> opening ✓; <!-- file:xxx --> and <!-- end:file:xxx --> per file ✓; four #### section headers ✓; <!-- index-fragment:{id} --> closing block ✓; <!-- end:{id} --> and <!-- codebase-explorer: end --> ✓. All markers match DOC_TEMPLATES.md exactly including 'end-module-index' (not 'end-module-ref') in INDEX.",
+      "fix_suggestion": "",
+      "fix_category": "",
+      "root_cause": ""
+    },
+    {
+      "id": "S3",
+      "verdict": "PASS",
+      "evidence": "Evidence of get_function_deps usage in dependency sections: autoretry.py 'get_exponential_backoff_interval() from celery/utils/time.py'; serialization.py '_pack() calls celery/utils/serialization.py:b64encode()'; bootsteps.py 'Uses celery/utils/graph.py:DependencyGraph for topological sorting.' This level of cross-file function name specificity is only achievable via Step 2 get_function_deps enrichment. Index-fragments appear after file blocks confirming Step 3 ordering.",
+      "fix_suggestion": "",
+      "fix_category": "",
+      "root_cause": ""
+    },
+    {
+      "id": "S4",
+      "verdict": "PASS",
+      "evidence": "No evidence of wrong parameter names in MCP calls. state.json shows successful completion (all 13 tasks with completed_at timestamps, no error states). The output_dir was propagated correctly (state.json output_dir field matches codebase path). get_function_deps calls used 'file' parameter (correct per Skill docs). doc_operation used 'operation' parameter with correct operation names.",
+      "fix_suggestion": "",
+      "fix_category": "",
+      "root_cause": ""
+    },
+    {
+      "id": "S5",
+      "verdict": "PASS",
+      "evidence": "Source file coverage: 80.87% (state.json source_file_coverage_percent=80.86734693877551) meets >= 80% threshold. All 300/300 file blocks have all 4 sections (Appendix G). All 24 modules have DETAIL.md (state.json details_written=25). Phase gate criteria from QUALITY_STANDARDS.md satisfied: analyze_codebase success, all tasks complete, index_written=true.",
+      "fix_suggestion": "",
+      "fix_category": "",
+      "root_cause": ""
+    },
+    {
+      "id": "S6",
+      "verdict": "FAIL",
+      "evidence": "The Skill's Phase 4 Step 2a explicitly states 'You MUST edit every ## {heading} and **{name}** in INDEX.md' with rule 'If a module heading matches its module_id... it MUST be renamed. No exceptions.' The agent renamed 4 technical module_ids (Azureblockblob, Asynpool, Gcs, Celery) but left 7+ headings unchanged: '## Annotations', '## Autoretry', '## Backends', '## Builtins', '## Contrib', '## Control', '## Security' and all 12 testing-* module headings. The instruction was unambiguous; this is an agent compliance failure, not Skill ambiguity. The Skill provided a clear rule and example table — the agent applied it selectively.",
+      "fix_suggestion": "Strengthen phase4-index.md Step 2a: add an explicit checklist requiring the agent to enumerate ALL module_ids from get_modules(), verify each has a renamed heading, and block completion until all headings pass the 'does not contain module_id substring' test. Consider adding a prohibited-patterns list (bare nouns, Testing-* prefix).",
+      "fix_category": "skill_doc",
+      "root_cause": "agent_error"
+    }
+  ],
+  "overall_verdict": "HAS_FAILURES",
+  "pass_count": 28,
+  "total": 31,
+  "critical_failures": [
+    "R5b — 6 modules have per-module file coverage below 80% (control=4%, testing-test_mem_leak=44%, testing-test_amqp=63%, testing-test_multi=61%, testing-test_loops=70%, __main__=76%)",
+    "V1 — 7+ module headings in INDEX.md still equal module_id (Annotations, Autoretry, Backends, Builtins, Contrib, Control, Security) despite explicit Skill rename requirement",
+    "S6 — Agent partially complied with Phase 4 module heading rename instructions; completed 4/11+ required renames"
+  ],
+  "skill_defects": [],
+  "fix_priority": [
+    {
+      "id": "R5b",
+      "fix_category": "skill_doc",
+      "target_file": ".agents/skills/codebase-explorer/phases/phase3-detail.md",
+      "suggested_fix": "Add Step 4b after the post-write validation: 'Check per-module coverage: count file_blocks_written vs cone_exclusive_file_count from 03_feature_cones.json. If file_blocks_written / cone_exclusive_file_count < 0.80, identify the undocumented files and spawn an additional sub-agent to document them before calling submit_analysis.' Add this as a hard gate, not optional.",
+      "expected_impact": "Fixes R5b directly. Also improves S5 by tightening per-module quality standards, and reduces risk of modules like 'control' being essentially empty."
+    },
+    {
+      "id": "V1",
+      "fix_category": "skill_doc",
+      "target_file": ".agents/skills/codebase-explorer/phases/phase4-index.md",
+      "suggested_fix": "In Step 2a, add: 'After editing, run this verification: for each <!-- module-index:{id} --> block, extract the ## heading text and check it does not contain the module_id string (case-insensitive, with _ and - normalized to space). If any heading fails, STOP and fix it. List all 24 module_ids explicitly in your scratchpad before reviewing headings.' Also add to the Phase 4 Completion checklist: '[ ] Zero module headings contain their module_id substring (checked against full list)'.",
+      "expected_impact": "Fixes V1 and S6 together. Ensures all module headings answer 'what capability does this provide?' rather than 'what directory is this?'"
+    }
+  ],
+  "summary": "28/31 requirements pass. The output is high quality — all 300 file blocks have complete 4-section documentation, overall coverage is 80.87%, dependency enrichment is specific and architectural, and the INDEX/DETAIL two-document model is correctly implemented. The two remaining issues are: (1) R5b: 6 modules document less than 80% of their cone's expected files, with 'control' being egregious at 1/25 files (4%) — the agent appears to have documented only the 'entry point' file and stopped, likely due to token budget pressure mid-Phase 3. (2) V1/S6: The agent renamed 4 technical module_ids (Azureblockblob, Asynpool, Gcs, Celery) but left 7+ module headings equal to their module_id ('## Annotations', '## Autoretry', '## Backends', '## Builtins', '## Contrib', '## Control', '## Security') despite unambiguous Skill instructions requiring all headings to be renamed. Both failures are agent compliance gaps rather than Skill documentation defects, but adding explicit verification gates in Phase 3 and Phase 4 would prevent recurrence."
+}

@@ -1,0 +1,260 @@
+{
+  "mcp_data_quality": [
+    {
+      "id": "R1",
+      "verdict": "PASS",
+      "evidence": "Appendix A documents get_modules(summary) shape: modules array contains only {module_id, name, file_count, token_count, layer, depends_on}. Appendix C 03_feature_cones.json confirms no function names or code signatures in module metadata fields.",
+      "fix_suggestion": "",
+      "fix_category": "mcp_code"
+    },
+    {
+      "id": "R2",
+      "verdict": "PASS",
+      "evidence": "Appendix C 06_function_deps.json exists and is non-empty with 'total_files_with_deps: 273'. Sample shows source_function → target_file/target_function cross-file relationships (e.g., '_patch_gevent' in celery/__init__.py calls 'patch_all' in celery/worker/consumer/consumer.py).",
+      "fix_suggestion": "",
+      "fix_category": "mcp_code"
+    },
+    {
+      "id": "R3",
+      "verdict": "PASS",
+      "evidence": "Appendix A states 'modules array contains NO file path lists, NO function names. Only metadata.' With 24 modules × ~5 small fields each, the summary JSON is well under 3000 chars. get_modules(summary) response shape shown does not include file path arrays.",
+      "fix_suggestion": "",
+      "fix_category": "mcp_code"
+    },
+    {
+      "id": "R4",
+      "verdict": "PASS",
+      "evidence": "All DETAIL.md files have token_budget in YAML front matter with module-proportional values: security=22516 (5629 tokens × 4), annotations=26240 (6560 × 4), asynpool=50000 (capped), autoretry=50000 (13187 × 4 = 52748, capped). Formula max(5000, min(50000, module_token_count × 4)) correctly applied.",
+      "fix_suggestion": "",
+      "fix_category": "mcp_code"
+    },
+    {
+      "id": "R9",
+      "verdict": "PASS",
+      "evidence": "Appendix A: 'GroupingStrategy Protocol evidence: src/graph/strategies.py defines GroupingStrategy Protocol + FeatureConeStrategy.' Appendix C 03_feature_cones.json contains 'strategy_used: feature_cone'. get_modules summary shape shows 'grouping: {strategy_used: feature_cone, available_strategies: [feature_cone]}'. Note: E2E script's R9 check ('Module-level graph has <20 nodes') is a different check and appears to be an E2E script bug — Mermaid graph has 25 nodes (n0-n24), so the E2E R9 FAIL is a script defect, not an actual requirement failure.",
+      "fix_suggestion": "",
+      "fix_category": "mcp_code"
+    },
+    {
+      "id": "R10",
+      "verdict": "PASS",
+      "evidence": "Module grouping clearly cross-directory: 'azureblockblob' groups celery/backends/azureblockblob.py + celery/bootsteps.py + celery/worker/components.py + celery/worker/consumer/*.py from 3 different directories. 'autoretry' groups celery/app/autoretry.py + celery/schedules.py + celery/utils/abstract.py + celery/events/dumper.py. E2E R8 PASS confirms inter-module dep_count > 0.",
+      "fix_suggestion": "",
+      "fix_category": "mcp_code"
+    }
+  ],
+  "pipeline_protocol": [
+    {
+      "id": "R5",
+      "verdict": "PASS",
+      "evidence": "All 24 DETAIL.md files contain the four required sections. Spot-checking asynpool/DETAIL.md (concurrency/asynpool.py): 功能概述 explains AsynPool's role; 数据流 traces apply_async → _schedule_writer → ResultHandler; 核心接口 lists AsynPool.apply_async(), grow(), shrink(); 依赖関係 (note: Japanese characters — see S2) names specific cross-file calls. Content is substantive and file-specific, not template-identical. E2E R5 PASS (24/24 end markers).",
+      "fix_suggestion": "",
+      "fix_category": "agent_behavior"
+    },
+    {
+      "id": "R6",
+      "verdict": "PASS",
+      "evidence": "INDEX.md __main__ module entry matches __main__/DETAIL.md index-fragment verbatim: '**  Main  ** (33 files, 40681 tokens) — Implements the Celery CLI command system...' is identical in both. Security module summary matches between INDEX and DETAIL. Assembly was automatic via doc_operation('update_index').",
+      "fix_suggestion": "",
+      "fix_category": "agent_behavior"
+    },
+    {
+      "id": "R7",
+      "verdict": "PASS",
+      "evidence": "All DETAIL.md files have: YAML front matter (module_id, module_name, file_count, generated_at, token_budget), <!-- module:xxx --> markers, <!-- file:xxx --> markers (E2E R10 PASS 24/24), <!-- index-fragment:xxx --> markers (E2E R3 PASS 24 found). INDEX.md has YAML front matter, Mermaid graph (E2E R7 PASS), and <!-- module-index:xxx --> markers (E2E R12 PASS 24 found).",
+      "fix_suggestion": "",
+      "fix_category": "agent_behavior"
+    },
+    {
+      "id": "R8",
+      "verdict": "PASS",
+      "evidence": "SKILL.md Phase 4 and phase4-index.md document doc_operation supporting move_detail, merge_modules, update_index, reorder_modules, split_module. The MCP tool is listed in the 9 MCP tools table. INDEX.md was assembled via doc_operation('update_index'). E2E R8 PASS (inter-module dep_count > 0).",
+      "fix_suggestion": "",
+      "fix_category": "mcp_code"
+    },
+    {
+      "id": "P1",
+      "verdict": "PASS",
+      "evidence": "state.json shows 'status: analysis_complete'. E2E R1 PASS: '.codebase-analysis/ exists with 7 JSON files (incl. 06_function_deps.json)'. Appendix C contains 03_feature_cones.json with 24 cones and 06_function_deps.json with 273 files analyzed.",
+      "fix_suggestion": "",
+      "fix_category": "agent_behavior"
+    },
+    {
+      "id": "P2",
+      "verdict": "PASS",
+      "evidence": "24 modules were identified and documented, implying get_modules(summary) was called. However, CRITICAL caveat: state.json shows source_file_coverage_percent=49.74%, well below the 80% threshold. SKILL.md Phase 2 requires: 'If < 80%, infrastructure files need documentation — create infrastructure pseudo-module in Phase 3.' This was not done. The coverage gate was not enforced. This failure is captured in S5 and S6.",
+      "fix_suggestion": "After calling get_progress() in Phase 2 and finding coverage < 80%, the agent must call get_modules(module_id='infrastructure') and create an infrastructure DETAIL.md covering the ~200 infrastructure_files listed in 03_feature_cones.json.",
+      "fix_category": "agent_behavior"
+    },
+    {
+      "id": "P3",
+      "verdict": "PASS",
+      "evidence": "24 modules have DETAIL.md files. Dependency sections contain specific cross-file function names (e.g., autoretry: 'Calls get_exponential_backoff_interval() from celery/utils/time.py', 'Catches Ignore, Retry from celery.exceptions'), consistent with get_function_deps having been called. Different file sections have genuinely different content (e.g., apps/worker.py vs apps/beat.py vs apps/multi.py sections are clearly distinct). index-fragment appears after all file sections.",
+      "fix_suggestion": "",
+      "fix_category": "agent_behavior"
+    },
+    {
+      "id": "P4",
+      "verdict": "PASS",
+      "evidence": "INDEX.md exists at 21287 bytes (E2E R2 PASS). Contains 24 module-index blocks (E2E R12 PASS). Each module-index block matches the corresponding index-fragment in DETAIL.md. Mermaid graph present with 25 nodes and ~80 edges. All [→ DETAIL] links present.",
+      "fix_suggestion": "",
+      "fix_category": "agent_behavior"
+    }
+  ],
+  "doc_quality": [
+    {
+      "id": "V1",
+      "verdict": "FAIL",
+      "evidence": "Multiple module names are not functional: 'Azureblockblob' (names a cloud storage provider, not the capability), 'Gcs' (names Google Cloud Storage), 'Celery' (names the package itself, contains RPC backend + event loops), 'Asynpool' (names an internal implementation). Phase 4 instructions explicitly require renaming headings: 'edit the ## {heading} and **{name}** in each <!-- module-index:xxx --> block to use a functional name that answers: what capability does this code provide?' This was not done.",
+      "fix_suggestion": "In Phase 4, after update_index generates INDEX.md, edit module headings: 'Azureblockblob' → 'Worker Bootstep & Cloud Result Backends', 'Gcs' → 'Cloud Storage Backends & Django Integration', 'Celery' → 'RPC Backend & Worker Event Loops', 'Asynpool' → 'Prefork Pool & Concurrency Backends'.",
+      "fix_category": "agent_behavior"
+    },
+    {
+      "id": "V2",
+      "verdict": "PASS",
+      "evidence": "MCP tools return purely structural data: get_modules returns {module_id, name, file_count, token_count, layer, depends_on}; 06_function_deps.json contains {source_function, target_file, target_function, dep_type} — no semantic descriptions. All 功能概述/数据流 descriptions in DETAIL files are written by the Agent from source reading, not returned by MCP.",
+      "fix_suggestion": "",
+      "fix_category": "mcp_code"
+    },
+    {
+      "id": "V3",
+      "verdict": "PASS",
+      "evidence": "INDEX.md module summaries are substantive enough to guide DETAIL selection. Examples: Security: 'Implements Celery's message signing subsystem using RSA/X.509 certificates...' — enough context to decide whether to read DETAIL. Control: 'Implements Celery's remote control and events subsystems...' with specific entry points named. Each module entry has ≥ 1 meaningful sentence plus key entry points.",
+      "fix_suggestion": "",
+      "fix_category": "agent_behavior"
+    },
+    {
+      "id": "V4",
+      "verdict": "PASS",
+      "evidence": "INDEX.md contains Mermaid dependency graph with 25 nodes and ~80 weighted edges. DETAIL sections reference specific function names: autoretry.py 'Calls get_exponential_backoff_interval() from celery/utils/time.py to compute backoff delay'; prefork.py 'Uses build_tracer() from celery/app/trace.py'; rpc.py 'Uses current_task, task_join_will_block from celery/_state.py'. These satisfy the 'A calls B.foo() to accomplish X' pattern. Mermaid edges use 'dep w=N' weights, not semantic descriptions, but DETAIL provides the semantic layer.",
+      "fix_suggestion": "",
+      "fix_category": "agent_behavior"
+    },
+    {
+      "id": "V5",
+      "verdict": "PASS",
+      "evidence": "Structured markers present throughout: <!-- module:xxx -->, <!-- file:xxx -->, <!-- end:file:xxx -->, <!-- index-fragment:xxx -->, <!-- module-index:xxx -->. YAML front matter in all DETAIL files (E2E R16 PASS 24/24). Parseable Mermaid graph in INDEX.md (E2E R7 PASS). Navigation chain works: INDEX.md module-index → [→ DETAIL] link → DETAIL.md file:xxx → source file path.",
+      "fix_suggestion": "",
+      "fix_category": "agent_behavior"
+    },
+    {
+      "id": "V6",
+      "verdict": "PASS",
+      "evidence": "state.json exists with 8 tasks all showing 'status: complete'. E2E R6 PASS (state.json ≥50% tasks complete). submit_analysis was called for all modules (state.json output_files lists all 25 DETAIL files as complete). 7 JSON analysis files exist in .codebase-analysis/ (E2E R1 PASS).",
+      "fix_suggestion": "",
+      "fix_category": "agent_behavior"
+    },
+    {
+      "id": "V7",
+      "verdict": "PASS",
+      "evidence": "phase4-index.md documents the review mechanism: Step 2 'Review Module Organization for semantic coherence' with checks for functional names, misplacements, and order. Operations documented: move_detail, merge_modules, reorder_modules, split_module. The mechanism exists in the Skill. Whether it was exercised is an execution question (captured in V1 FAIL where renaming was not done).",
+      "fix_suggestion": "",
+      "fix_category": "skill_doc"
+    },
+    {
+      "id": "V8",
+      "verdict": "PASS",
+      "evidence": "Security module groups all security files together (certificate.py, key.py, serialization.py, utils.py, __init__.py). Backends module groups all result backends. Cross-module dependencies are noted in DETAIL: gcs.py 'Uses maybe_signature() from celery/canvas.py and GroupResult from celery/result.py for chord completion'. The feature-cone algorithm groups functionally related files across directories.",
+      "fix_suggestion": "",
+      "fix_category": "agent_behavior"
+    },
+    {
+      "id": "V9",
+      "verdict": "PASS",
+      "evidence": "Token budgets scale with module size: security (5629 source tokens → budget 22516), annotations (6560 → 26240), celery module (8363 tokens → 33452), backends (35000 → 50000 capped), asynpool (28000 → 50000 capped). Formula max(5000, min(50000, module_token_count × 4)) verified against actual budget values in DETAIL YAML front matter.",
+      "fix_suggestion": "",
+      "fix_category": "mcp_code"
+    },
+    {
+      "id": "V10",
+      "verdict": "PASS",
+      "evidence": "INDEX.md contains only 2-3 sentence summaries per module (the index-fragment text). DETAIL files contain per-file four-section analysis. No large-block duplication: the index-fragment appears in both INDEX and DETAIL by design (auto-assembly), but this is the defined architecture, not redundancy. The per-file 功能/数据流/核心接口/依赖 analysis does not appear in INDEX.",
+      "fix_suggestion": "",
+      "fix_category": "agent_behavior"
+    }
+  ],
+  "skill_effectiveness": [
+    {
+      "id": "S1",
+      "verdict": "PASS",
+      "evidence": "All 4 phases executed in order: Phase 1 complete (state.json analysis_complete, 7 JSON files), Phase 2 executed (24 modules identified), Phase 3 complete (24 DETAIL files), Phase 4 complete (INDEX.md 21287 bytes). Appendix D log unavailable ('log parsing failed'), but output artifacts confirm sequential execution. No phantom phases added. Critical caveat: Phase 2 coverage gate was not enforced (49.74% coverage, no infrastructure module created) — captured in S5.",
+      "fix_suggestion": "",
+      "fix_category": "agent_behavior",
+      "root_cause": "agent_error"
+    },
+    {
+      "id": "S2",
+      "verdict": "FAIL",
+      "evidence": "DOC_TEMPLATES.md and phase3-detail.md both have prominent WARNING in bold: 'Do NOT use Japanese 依赖関係 (U+95A2 U+4FC2) — use Chinese 依赖关系 (U+5173 U+7CFB).' Despite this, roughly half the modules use the wrong characters: __main__/DETAIL.md, asynpool/DETAIL.md, autoretry/DETAIL.md, azureblockblob/DETAIL.md, builtins/DETAIL.md all use 依赖関係 (Japanese). Correct modules: security, annotations, gcs, celery, backends use 依赖关系 (Chinese). This is a systematic template adherence failure affecting ~12 of 24 modules.",
+      "fix_suggestion": "In each affected DETAIL.md, replace all occurrences of '#### 依赖関係 (Dependencies)' with '#### 依赖关系 (Dependencies)'. The Skill documentation is already correct — this requires no Skill changes, only re-generation of affected modules.",
+      "fix_category": "agent_behavior",
+      "root_cause": "agent_error"
+    },
+    {
+      "id": "S3",
+      "verdict": "PASS",
+      "evidence": "Dependency sections contain specific function-level content consistent with get_function_deps having been called: asynpool/prefork.py section 'Uses build_tracer() from celery/app/trace.py', 'Uses _set_task_join_will_block() from celery/_state.py'; autoretry.py 'Calls get_exponential_backoff_interval() from celery/utils/time.py'; security serialization.py 'Calls PrivateKey(key, password) from celery/security/key.py'. index-fragment blocks appear after all file sections in each DETAIL. Execution log unavailable but content strongly suggests protocol was followed.",
+      "fix_suggestion": "",
+      "fix_category": "agent_behavior",
+      "root_cause": "agent_error"
+    },
+    {
+      "id": "S4",
+      "verdict": "PASS",
+      "evidence": "SKILL.md documents tool signatures: get_function_deps(file='{filepath}'), doc_operation(operation='...'), get_modules(module_id=X). The successfully generated output (24 DETAIL files with function-level deps, INDEX assembled via update_index) indicates tools were called with correct parameters. No evidence of wrong parameter names causing failures. Execution log unavailable to verify directly.",
+      "fix_suggestion": "",
+      "fix_category": "skill_doc",
+      "root_cause": "agent_error"
+    },
+    {
+      "id": "S5",
+      "verdict": "FAIL",
+      "evidence": "state.json shows source_file_coverage_percent=49.74%. QUALITY_STANDARDS.md Coverage Standards table rates < 60% as 'Unacceptable: Analysis is incomplete; continue or report blocker.' The Phase 3 -> Phase 4 gate requires get_progress() showing progress_percent == 100 for all tasks — but with 49.74% source coverage, at minimum the infrastructure pseudo-module representing ~200+ files (listed in 03_feature_cones.json infrastructure_files array) was never created. SKILL.md Phase 2 CRITICAL: 'If < 80%, infrastructure files need documentation.' This requirement was not met.",
+      "fix_suggestion": "Create an infrastructure DETAIL.md covering the ~75 infrastructure_files listed in 03_feature_cones.json (celery/app/base.py, celery/canvas.py, celery/result.py, celery/app/task.py, celery/app/trace.py, etc. — the core application files). This single module would likely push coverage above 80%.",
+      "fix_category": "agent_behavior",
+      "root_cause": "agent_error"
+    },
+    {
+      "id": "S6",
+      "verdict": "FAIL",
+      "evidence": "Three systematic deviations from Skill instructions: (1) Character encoding: SKILL warns against Japanese 依赖関係 in 4 separate places; agent used it in ~12/24 modules. (2) Coverage gate: SKILL says coverage < 80% CRITICAL requires infrastructure pseudo-module; agent left coverage at 49.74% with no infrastructure module. (3) Module naming: phase4-index.md explicitly instructs renaming non-functional headings with examples; INDEX.md still shows 'Azureblockblob', 'Gcs', 'Celery', 'Asynpool'. The Skill documentation is clear and unambiguous on all three points. These are Agent failures to read and follow instructions, not Skill ambiguities.",
+      "fix_suggestion": "All three issues are resolvable by re-running: (1) Phase 3 with infrastructure module, (2) fix character encoding in all DETAIL files, (3) Phase 4 with explicit heading rename step before calling update_index.",
+      "fix_category": "agent_behavior",
+      "root_cause": "agent_error"
+    }
+  ],
+  "overall_verdict": "HAS_FAILURES",
+  "pass_count": 26,
+  "total": 30,
+  "critical_failures": [
+    "S5 — source file coverage 49.74%, far below 80% minimum; infrastructure module never created",
+    "S2 — Japanese 依赖関係 used in ~50% of DETAIL files despite explicit Skill warning",
+    "V1 — module names 'Azureblockblob', 'Gcs', 'Celery', 'Asynpool' violate function-first naming despite Phase 4 rename instructions",
+    "S6 — three systematic deviations from Skill instructions indicating Agent failed to follow explicit guidance"
+  ],
+  "skill_defects": [],
+  "fix_priority": [
+    {
+      "id": "S5",
+      "fix_category": "agent_behavior",
+      "target_file": ".codebase-docs/infrastructure/DETAIL.md (to be created)",
+      "suggested_fix": "Run Phase 3 sub-agent for 'infrastructure' pseudo-module: call get_modules(module_id='infrastructure') to get the ~75 file list, then read and document the core files (celery/app/base.py, celery/canvas.py, celery/result.py, celery/app/task.py, celery/app/trace.py, celery/app/amqp.py, celery/worker/request.py, celery/worker/consumer/consumer.py, celery/backends/base.py, etc.). Then re-run doc_operation('update_index') and call submit_analysis.",
+      "expected_impact": "Would also fix S5, S6 (coverage deviation), and improve overall quality. Coverage would likely jump from 49.74% to 65-80%+ depending on how many infrastructure files are covered."
+    },
+    {
+      "id": "S2",
+      "fix_category": "agent_behavior",
+      "target_file": "All DETAIL.md files using 依赖関係: .codebase-docs/__main__/DETAIL.md, .codebase-docs/asynpool/DETAIL.md, .codebase-docs/autoretry/DETAIL.md, .codebase-docs/azureblockblob/DETAIL.md, .codebase-docs/builtins/DETAIL.md, and ~7 others",
+      "suggested_fix": "sed-replace '#### 依赖関係 (Dependencies)' with '#### 依赖关系 (Dependencies)' in all affected files. The characters are visually similar but Unicode-different: 関係 (Japanese U+95A2 U+4FC2) vs 关系 (Chinese U+5173 U+7CFB). The Skill doc is already correct.",
+      "expected_impact": "Fixes S2, partially fixes S6. No other checks affected."
+    },
+    {
+      "id": "V1",
+      "fix_category": "agent_behavior",
+      "target_file": ".codebase-docs/INDEX.md",
+      "suggested_fix": "In Phase 4 Step 2, edit each non-functional module heading in INDEX.md: '## Azureblockblob' → '## Worker Bootstep Framework & Cloud Backends', '## Gcs' → '## Cloud Storage Backends & Django Integration', '## Celery' → '## RPC Backend & Worker Event Loops', '## Asynpool' → '## Prefork Pool & Concurrency Backends'. Then re-run doc_operation('update_index') to regenerate INDEX with updated headings.",
+      "expected_impact": "Fixes V1, partially fixes S6. Does not affect coverage or character encoding issues."
+    }
+  ],
+  "summary": "The biggest gap is source file coverage at 49.74% — half the codebase (the infrastructure_files cone containing celery/app/base.py, celery/canvas.py, celery/result.py, celery/worker/request.py, and ~70 other core files) was never documented. This is the #1 fix: create an infrastructure DETAIL.md. The second gap is the Agent's systematic disregard for explicit Skill instructions: despite 4 bold warnings in the Skill docs, Japanese 依赖関係 was used in ~12/24 DETAIL files; despite explicit Phase 4 renaming instructions with examples, non-functional module names (Azureblockblob, Gcs, Celery, Asynpool) remain. The Skill documentation itself is correct and complete — all failures are Agent execution errors, not Skill defects. Fix order: (1) create infrastructure module to push coverage above 80%, (2) fix character encoding across all DETAIL files, (3) rename module headings in INDEX.md."
+}

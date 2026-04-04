@@ -1,0 +1,23 @@
+=== Codebase Explorer V5 E2E Verification ===
+Repo: /Users/lexuanzhang/code/codebase-explorer/test_repos/scrapy
+
+  PASS  R1: .codebase-analysis/ exists with 7 JSON files (incl. 06_function_deps.json)
+  FAIL  R2: INDEX.md exists and >500 bytes (0 bytes)
+  PASS  R3: At least 3 DETAIL.md with index-fragment blocks (10 found)
+  PASS  R4: At least 3 DETAIL.md files >200 bytes (10 found)
+  PASS  R5: All DETAIL.md have end marker (10/10)
+  PASS  R6: state.json >=50% tasks complete
+  FAIL  R7: INDEX.md contains Mermaid diagram
+  PASS  R8: Inter-module dep_count sum > 0
+  PASS  R9: Module-level graph has <50 nodes
+  PASS  R10: All DETAIL.md have <!-- file:xxx --> markers (10/10)
+  PASS  R11: All DETAIL.md have <!-- module:xxx --> markers (10/10)
+  FAIL  R12: INDEX.md has >=3 module-index markers (0 found)
+  PASS  R13: Parser has _EXCLUDED_DIRS path exclusion
+  PASS  R14: run_real_e2e.sh loads Skill (no --setting-sources "")
+  PASS  R15: >=10 unit tests in key test files (167 found)
+  PASS  R16: All DETAIL.md have YAML front matter (10/10)
+  PASS  R17: 06_function_deps.json exists and non-empty
+  PASS  R18: All file blocks have 4 sections (131/131 complete)
+
+=== Result: 15/18 ===

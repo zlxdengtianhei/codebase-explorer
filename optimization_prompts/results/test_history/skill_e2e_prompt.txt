@@ -1,0 +1,32 @@
+You are a Claude Code agent executing a codebase documentation pipeline.
+Your ONLY source of instructions is the Skill documentation files listed below.
+Do NOT use any prior knowledge about codebase-explorer. Follow ONLY the Skill docs.
+
+TARGET REPO: /Users/lexuanzhang/code/codebase-explorer/test_repos/scrapy
+OUTPUT DIR:  /Users/lexuanzhang/code/codebase-explorer/test_repos/scrapy/.codebase-docs
+
+## Your Task
+
+1. Read the Skill documentation files in this exact order:
+   - Main skill: /Users/lexuanzhang/code/codebase-explorer/.agents/skills/codebase-explorer/SKILL.md
+   - Phase 1: /Users/lexuanzhang/code/codebase-explorer/.agents/skills/codebase-explorer/phases/phase1-analysis.md
+   - Phase 2: /Users/lexuanzhang/code/codebase-explorer/.agents/skills/codebase-explorer/phases/phase2-validation.md
+   - Phase 3: /Users/lexuanzhang/code/codebase-explorer/.agents/skills/codebase-explorer/phases/phase3-detail.md
+   - Phase 4: /Users/lexuanzhang/code/codebase-explorer/.agents/skills/codebase-explorer/phases/phase4-index.md
+   - Templates: /Users/lexuanzhang/code/codebase-explorer/.agents/skills/codebase-explorer/references/DOC_TEMPLATES.md
+
+2. Execute the complete 4-phase pipeline as described in SKILL.md.
+
+3. For Phase 3, if the Skill says to spawn sub-agents, you may process modules
+   sequentially instead (sub-agent spawning is optional in test mode).
+
+4. After completing all phases, write a brief execution summary to stdout.
+
+## Critical Rules
+
+- Follow the Skill documentation EXACTLY as written.
+- Do not skip any phase or step described in the Skill.
+- This is a test of the Skill documentation quality — ambiguities or errors
+  in the Skill will be evaluated as part of the judge process.
+- Use the codebase-explorer MCP tools as instructed by the Skill.
+- Write real documentation based on actual source code analysis.

@@ -1,0 +1,268 @@
+{
+  "mcp_data_quality": [
+    {
+      "id": "R1",
+      "verdict": "PASS",
+      "evidence": "Appendix A shows get_modules(summary) returns only module metadata (module_id, name, file_count, token_count, layer, depends_on). Appendix C confirms 03_feature_cones.json contains no function names or signatures — only structural metadata per cone.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R2",
+      "verdict": "PASS",
+      "evidence": "Appendix C shows 06_function_deps.json exists, is non-empty (141 files with deps), and contains source_function -> target_function cross-file call relationships. Example: conftest.py::pytest_configure -> scrapy/utils/reactor.py::set_asyncio_event_loop_policy with dep_type='call'.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R3",
+      "verdict": "PASS",
+      "evidence": "Appendix A shows get_modules(summary) response shape contains only module metadata arrays — no file path lists. The modules array entries contain only module_id, name, file_count, token_count, layer, depends_on. No complete file path listings visible in summary output.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R4",
+      "verdict": "PASS",
+      "evidence": "DETAIL.md YAML front matter shows token_budget field: scrapydocs has token_budget=50000, testing-conftest has token_budget=5000, testing-conftest-1 has token_budget=5000. SKILL.md formula max(5000, min(50000, module_token_count*4)) is consistent with observed budgets. 03_feature_cones.json shows token_count per cone.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R9",
+      "verdict": "PASS",
+      "evidence": "Appendix A: 'src/graph/strategies.py defines GroupingStrategy Protocol + FeatureConeStrategy.' Appendix C 03_feature_cones.json has 'strategy_used': 'feature_cone'. Both Protocol definition and strategy_used field present.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R10",
+      "verdict": "PASS",
+      "evidence": "Appendix C shows cross-directory grouping: scrapydocs cone includes docs/_ext/scrapydocs.py, docs/_ext/scrapyfixautodoc.py, scrapy/core/downloader/contextfactory.py, scrapy/core/http2/agent.py — spanning docs/, scrapy/core/, scrapy/utils/ directories. qps-bench-server includes extras/qps-bench-server.py alongside scrapy/core/spidermw.py. Module grouping clearly != directory structure.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    }
+  ],
+  "pipeline_protocol": [
+    {
+      "id": "R5",
+      "verdict": "FAIL",
+      "evidence": "Appendix G machine-readable summary: infrastructure module has 52 file blocks with 0/52 complete blocks. ALL four sections (功能概述, 数据流, 核心接口, 依赖关系) show 0 instances across 52 file blocks. Root cause: infrastructure/DETAIL.md uses ### (3-hash) section headers instead of required #### (4-hash), causing section detector to find zero matches. Total: 135/187 complete blocks (72%), total_missing=208 section instances.",
+      "fix_suggestion": "Re-run infrastructure sub-agent to replace all ### section headers with #### in infrastructure/DETAIL.md. All 52 file blocks need 4-section headers upgraded from ### to ####.",
+      "fix_category": "agent_behavior"
+    },
+    {
+      "id": "R5b",
+      "verdict": "FAIL",
+      "evidence": "Appendix G: infrastructure module has 52 file blocks for 51 expected files (blocks exist) but 0 complete file blocks due to wrong header level (### vs ####). If 'documents' means complete 4-section documentation, infrastructure has 0/51 = 0% coverage with complete sections, far below the 80% threshold. All other 10 modules achieve 100% complete coverage.",
+      "fix_suggestion": "Fix infrastructure/DETAIL.md section headers (### to ####). Once corrected, infrastructure will have 102% file block coverage (52 blocks for 51 expected files).",
+      "fix_category": "agent_behavior"
+    },
+    {
+      "id": "R6",
+      "verdict": "PASS",
+      "evidence": "Cross-checking INDEX.md vs DETAIL.md fragments: infrastructure INDEX shows '**Scrapy 基础设施层** (51 files, 101460 tokens) — 引擎调度...' matching infrastructure DETAIL index-fragment exactly. cli INDEX shows '**CLI Commands, Contracts, Dupe Filtering & Spider Middleware** (20 files, 19096 tokens)' matching cli DETAIL fragment exactly. Consistent across both modules checked.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R7",
+      "verdict": "PASS",
+      "evidence": "All DETAIL.md files verified: YAML front matter present (module_id, module_name, file_count, generated_at, token_budget). <!-- module:xxx --> markers present. <!-- file:xxx --> and <!-- end:file:xxx --> markers present across all 11 modules. <!-- index-fragment:xxx --> markers present. INDEX.md has YAML front matter (title, generated, module_count), Mermaid graph, and <!-- module-index:xxx --> / <!-- end-module-index:xxx --> markers for all 11 modules.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R8",
+      "verdict": "PASS",
+      "evidence": "Appendix F phase4-index.md documents doc_operation tool with operations: update_index (assembles INDEX from fragments), move_detail (moves file docs between modules), merge_modules (combines small modules), reorder_modules (changes display order), split_module (read-only listing). Tool exists and is documented in Skill as the reorganization mechanism.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "P1",
+      "verdict": "PASS",
+      "evidence": "Appendix E: 'PASS R1: .codebase-analysis/ exists with 7 JSON files (incl. 06_function_deps.json)'. state.json shows status='analysis_complete'. Appendix C shows 03_feature_cones.json and 06_function_deps.json both exist and non-empty with 10 cones and 141 files with deps respectively.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "P2",
+      "verdict": "PASS",
+      "evidence": "Appendix D execution result: 'Phase 2 (validate): ✓'. Coverage check was performed: state.json shows source_file_coverage_percent=89.78% and an 'infrastructure' module was created — consistent with Phase 2 coverage gate check detecting infrastructure files and creating a plan. 304 turns executed, indicating full pipeline was run.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "P3",
+      "verdict": "FAIL",
+      "evidence": "Appendix G: infrastructure module has 0/52 complete file blocks. All four required sections show 0 matches in 52 file blocks because infrastructure/DETAIL.md uses ### (3-hash) headers instead of required #### (4-hash). Phase 3 completion criterion 'All file blocks have 4 sections' is violated for 1 out of 11 modules. For get_function_deps evidence: all other 10 modules show specific function-level dependency citations (e.g., cli DETAIL: 'Calls scrapy/contracts/__init__.py::ContractsManager.from_crawler()'), confirming get_function_deps was called for those modules.",
+      "fix_suggestion": "Fix infrastructure/DETAIL.md section headers from ### to #### for all 52 file blocks. Then re-run submit_analysis for the infrastructure module.",
+      "fix_category": "agent_behavior"
+    },
+    {
+      "id": "P4",
+      "verdict": "PASS",
+      "evidence": "INDEX.md exists with 11 <!-- module-index:xxx --> blocks, YAML front matter (title: 'scrapy Architecture', module_count: 10 — note minor discrepancy: 11 modules rendered but count=10 in front matter), Mermaid graph with correct module edges, and [→ DETAIL] links for all modules. state.json shows index_written=true. Appendix D: 'Phase 4 (INDEX.md): ✓ 11/11 modules'.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    }
+  ],
+  "doc_quality": [
+    {
+      "id": "V1",
+      "verdict": "FAIL",
+      "evidence": "INDEX.md ## section headings use module_id names, not functional descriptions: '## Testing-Conftest', '## Testing-Conftest-1', '## Scrapydocs', '## Qps-Bench-Server', '## scrapy-__main__', '## Cli', '## Conf', '## infrastructure'. None of these answer 'what can this codebase do?' The bold descriptions (**Root Test Configuration**, **CLI Commands...**) ARE functional, but the ## headings — which control document navigation and TOC — are module_id labels. Phase 4 instructions explicitly require renaming ## headings: 'NEVER acceptable final names. You MUST edit every ## {heading}'.",
+      "fix_suggestion": "Edit INDEX.md to replace ## module_id headings with functional descriptions. E.g., '## Testing-Conftest' → '## Test Suite Bootstrap & Fixtures', '## Cli' → '## CLI Commands & Spider Contracts', '## infrastructure' → '## Scrapy Core Infrastructure'.",
+      "fix_category": "agent_behavior"
+    },
+    {
+      "id": "V2",
+      "verdict": "PASS",
+      "evidence": "03_feature_cones.json contains only structural data: file lists, token counts, layer numbers, cone_id, cohesion_score. No semantic descriptions. All semantic content (功能概述, 数据流, 核心接口, 依赖关系 sections) was written by the Agent after reading source files. Clear separation maintained.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V3",
+      "verdict": "PASS",
+      "evidence": "INDEX module summaries are substantive. Example: Testing-Conftest: 'Top-level pytest conftest that configures test collection exclusions, registers the --reactor CLI flag, and installs asyncio/Twisted reactor hooks before the test session starts. Provides session-scoped mockserver and reactor_pytest fixtures consumed throughout the test suite.' Each summary clearly identifies what to find in DETAIL. No 'See DETAIL for more info' placeholders found.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V4",
+      "verdict": "PASS",
+      "evidence": "INDEX.md has Mermaid dependency graph with directional edges (e.g., 'n1 -->|dep w=53| n0'). DETAIL sections cite specific function names: cli/DETAIL.md::scrapy/commands/check.py dependencies: 'Calls scrapy/contracts/__init__.py::ContractsManager.from_crawler() and tested_methods_iter()'. conf/DETAIL.md::scrapy/linkextractors/lxmlhtml.py: 'Calls scrapy/utils/response.py::get_base_url() for base URL resolution', 'Calls scrapy/link.py::Link for link objects'. Exceeds 'A imports B' baseline with clear purpose statements.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V5",
+      "verdict": "PASS",
+      "evidence": "All DETAIL.md files have: YAML front matter, <!-- module:xxx --> / <!-- file:xxx --> / <!-- index-fragment:xxx --> HTML comment markers. INDEX.md has <!-- module-index:xxx --> markers and [→ DETAIL](module_id/DETAIL.md) links. Full traceability path: INDEX → [→ DETAIL] link → <!-- file:filepath --> block. Mermaid graph is valid TD-format syntax.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V6",
+      "verdict": "PASS",
+      "evidence": "Appendix E: 7 JSON files exist in .codebase-analysis/ including 06_function_deps.json. state.json exists with completed task records (task_001 through task_007, all 'complete'). state.json shows documentation tracking: index_written=true, details_written=7, source_files_covered list of 189 files. submit_analysis was called for each module.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V7",
+      "verdict": "PASS",
+      "evidence": "Phase 4 SKILL docs describe explicit review step: Step 2 (MANDATORY Module Renaming + Review) checking for misplacements and ordering, Step 3 (Reorganize if needed) with doc_operation move_detail/merge_modules/reorder_modules. INDEX.md was assembled and contains coherent module organization. Phase 4 completed per Appendix D ('Phase 4 (INDEX.md): ✓'). The mechanism exists and was invoked.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V8",
+      "verdict": "PASS",
+      "evidence": "Module groupings show functional correlation: 'cli' contains all 10 CLI command files + contracts + dupefilters + spiderstate — all CLI-facing functionality. 'infrastructure' groups engine, crawler, settings, utils — all foundational layer files. 'scrapy-scraper' groups the complete request→download→spider→pipeline cycle. Cross-module dependencies explicitly noted in dependency sections.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V9",
+      "verdict": "PASS",
+      "evidence": "DETAIL.md token_budget values scale with module size: testing-conftest (1137 source tokens) → token_budget=5000 (floor), testing-conftest-1 (263 tokens) → token_budget=5000 (floor), scrapydocs (15086 tokens) → token_budget=50000 (~60240 → capped at 50000), scrapy-__main__ (50000 tokens) → token_budget=50000. Consistent with SKILL.md formula max(5000, min(50000, module_token_count * 4)).",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V10",
+      "verdict": "PASS",
+      "evidence": "INDEX.md module entries contain only the index-fragment content (2-3 sentence summaries + key entry points). DETAIL.md contains full per-file four-section analysis. No large-block content duplication found: INDEX infrastructure summary is 2 sentences, while DETAIL infrastructure contains ~50 file blocks with full analysis. Clear information boundary maintained.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    }
+  ],
+  "skill_effectiveness": [
+    {
+      "id": "S1",
+      "verdict": "PASS",
+      "evidence": "Appendix D execution result explicitly states: 'Phase 1 (analyze): ✓, Phase 2 (validate): ✓, Phase 3 (DETAIL.md): ✓ 7/7 tasks, Phase 4 (INDEX.md): ✓ 11/11 modules'. All 4 phases executed in order. state.json shows analysis_complete status with all 7 tasks complete. No phantom phases detected.",
+      "fix_suggestion": "",
+      "fix_category": "",
+      "root_cause": "agent_error"
+    },
+    {
+      "id": "S2",
+      "verdict": "FAIL",
+      "evidence": "infrastructure/DETAIL.md uses ### (3-hash) section headers (e.g., '### 功能概述', '### 数据流') instead of the required #### (4-hash) specified in DOC_TEMPLATES.md. The template explicitly shows '#### 功能概述 (Purpose)' and phase3-detail.md repeats 'Section headers use FOUR hashes: #### 功能概述 (Purpose) — NOT ### (three hashes)'. This is confirmed by Appendix G showing 0/52 section detections for infrastructure (the detector counts #### headers). All other 10 modules correctly use #### headers.",
+      "fix_suggestion": "Sub-agent for infrastructure module did not use the correct #### header level. Fix infrastructure/DETAIL.md by replacing all ### section headers with ####. Update SKILL.md to add a bold warning in the infrastructure module prompt about header level.",
+      "fix_category": "agent_behavior",
+      "root_cause": "agent_error"
+    },
+    {
+      "id": "S3",
+      "verdict": "FAIL",
+      "evidence": "Phase 3 Step 4 (Post-write validation) was not executed for the infrastructure module. If it had been, the agent would have counted #### markers, found 0, and fixed the headers. phase3-detail.md explicitly states: 'Step 4 — Post-write validation (MANDATORY — do NOT skip): Count #### 功能概述 → must equal expected_blocks. If ANY count < expected_blocks: find the incomplete file block and ADD the missing section.' The infrastructure module's 0/52 complete blocks proves this step was skipped.",
+      "fix_suggestion": "Add automated format validation to the infrastructure sub-agent prompt. Consider adding a post-task hook in SKILL.md that re-runs count_sections.py and blocks submit_analysis if sections are missing.",
+      "fix_category": "skill_doc",
+      "root_cause": "agent_error"
+    },
+    {
+      "id": "S4",
+      "verdict": "PASS",
+      "evidence": "All 10 successfully documented modules show correct MCP tool usage: get_function_deps returns per-file cross-file dependencies (evidenced by specific function citations like 'Calls scrapy/contracts/__init__.py::ContractsManager.from_crawler()'). doc_operation('update_index') was called (INDEX.md assembled). submit_analysis called for all 7 task IDs per state.json. No evidence of wrong parameter names in tool call output.",
+      "fix_suggestion": "",
+      "fix_category": "",
+      "root_cause": "agent_error"
+    },
+    {
+      "id": "S5",
+      "verdict": "FAIL",
+      "evidence": "QUALITY_STANDARDS.md Phase 3→4 gate requires 'Each DETAIL.md has an <!-- index-fragment --> block' and all per-file checks pass. infrastructure module fails per-file checks: 0/52 file blocks have correct section headers. Coverage 89.78% passes the 80% threshold, but infrastructure's structural failure violates 'All file blocks have 4 sections' gate criterion. Appendix G total: 135/187 complete blocks (72%), below the implicit 100% standard for submitted tasks.",
+      "fix_suggestion": "Fix infrastructure/DETAIL.md headers, then re-run submit_analysis for the infrastructure task before considering Phase 3 complete.",
+      "fix_category": "agent_behavior",
+      "root_cause": "agent_error"
+    },
+    {
+      "id": "S6",
+      "verdict": "FAIL",
+      "evidence": "The infrastructure sub-agent deviated from Skill instructions by using ### headers instead of ####. The Skill documentation is unambiguous: DOC_TEMPLATES.md shows '#### 功能概述 (Purpose)', phase3-detail.md states 'CRITICAL — COPY THESE EXACT HEADERS' with #### prefix, and the DETAIL Agent Prompt Template shows 'Section headers use FOUR hashes: #### 功能概述 (Purpose)'. The failure is agent error (sub-agent did not read/follow the template), not a Skill defect. However, the missing Step 4 validation enforcement is a contributing Skill weakness.",
+      "fix_suggestion": "In SKILL.md and phase3-detail.md, add a machine-checkable validation rule: before submit_analysis, agent must grep -c '#### 功能概述' DETAIL.md and verify count equals number of <!-- file: --> markers. If mismatch, block and fix.",
+      "fix_category": "skill_doc",
+      "root_cause": "agent_error"
+    }
+  ],
+  "overall_verdict": "HAS_FAILURES",
+  "pass_count": 23,
+  "total": 31,
+  "critical_failures": [
+    "R5",
+    "R5b",
+    "P3",
+    "S2",
+    "S5"
+  ],
+  "skill_defects": [],
+  "fix_priority": [
+    {
+      "id": "R5",
+      "fix_category": "agent_behavior",
+      "target_file": "test_repos/scrapy/.codebase-docs/infrastructure/DETAIL.md",
+      "suggested_fix": "Replace all ### section headers with #### in infrastructure/DETAIL.md. There are 52 file blocks, each needing 4 headers upgraded from ### to ####. Specifically: '### 功能概述' → '#### 功能概述 (Purpose)', '### 数据流' → '#### 数据流 (Data Flow)', '### 核心接口' → '#### 核心接口 (Key Interfaces)', '### 依赖关系' → '#### 依赖关系 (Dependencies)'. Also add missing (Purpose)/(Data Flow)/(Key Interfaces)/(Dependencies) English suffixes to match template exactly.",
+      "expected_impact": "Fixes R5, R5b, P3, S2, S5 simultaneously. All 52 infrastructure file blocks will become complete, bringing total from 135/187 (72%) to 187/187 (100%) complete blocks."
+    },
+    {
+      "id": "V1",
+      "fix_category": "agent_behavior",
+      "target_file": "test_repos/scrapy/.codebase-docs/INDEX.md",
+      "suggested_fix": "Replace all ## {module_id} section headings with functional names that answer 'what capability does this code provide?'. Examples: '## Testing-Conftest' → '## Test Suite Bootstrap & Reactor Fixtures', '## Testing-Conftest-1' → '## Documentation Doctest Configuration', '## Scrapydocs' → '## Alternative Download Handlers & TLS/SSL', '## Qps-Bench-Server' → '## Middleware Managers, Exporters & Signals', '## scrapy-__main__' → '## CLI Entry Point & Core Feature Modules', '## scrapy-scraper' → '## Core Scraping Loop & Runtime Pipeline', '## Conf' → '## HTTP Abstraction, Link Extraction & Selectors', '## Qpsclient' → '## Feed Spiders, Compression & Benchmarking', '## Scrapy-Bench' → '## Benchmarking, Diagnostics & Spider Middleware Utilities', '## Cli' → '## CLI Commands, Contracts & Request Deduplication', '## infrastructure' → '## Scrapy Core Infrastructure'.",
+      "expected_impact": "Fixes V1. Does not affect other requirements."
+    },
+    {
+      "id": "S3",
+      "fix_category": "skill_doc",
+      "target_file": ".agents/skills/codebase-explorer/phases/phase3-detail.md",
+      "suggested_fix": "Strengthen Step 4 Post-write Validation by adding an explicit blocking condition: 'After counting #### markers, if count(#### 功能概述) < count(<!-- file:), you MUST fix the file immediately. Do NOT call submit_analysis until counts match. This is not optional — submit_analysis with incomplete sections will cause AUTOMATED TEST FAILURE.' Also add to the DETAIL Agent Prompt Template an explicit reminder: 'Before writing any section header, verify you are typing #### (4 hashes). The most common error is writing ### (3 hashes). Use exactly: #### 功能概述 (Purpose)'.",
+      "expected_impact": "Prevents future recurrence of infrastructure-style format failures. Improves S3, S6 for future runs."
+    }
+  ],
+  "summary": "23/31 requirements pass. The single root failure is the infrastructure module's DETAIL.md using ### (3-hash) section headers instead of the required #### (4-hash), causing Appendix G to detect 0/52 complete file blocks for that module. This cascades to fail R5, R5b, P3, S2, S5. The fix is surgical: update infrastructure/DETAIL.md headers (### → ####), which immediately resolves all five failures. A secondary issue is V1: INDEX.md ## headings use module_id names (e.g., '## Scrapydocs', '## Testing-Conftest') instead of functional descriptions; the bold text within each section IS functional, but the ## headings visible in TOC/navigation are not. Both failures are agent errors, not Skill documentation defects — the Skill docs clearly specify #### headers and heading renaming requirements."
+}

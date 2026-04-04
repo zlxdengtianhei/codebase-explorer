@@ -1,0 +1,252 @@
+{
+  "mcp_data_quality": [
+    {
+      "id": "R1",
+      "verdict": "PASS",
+      "evidence": "Appendix A shows get_modules(summary) returns only metadata (module_id, name, file_count, token_count, layer, depends_on). No function names or signatures. Appendix C 03_feature_cones.json confirms this — cone data is structural only.",
+      "fix_suggestion": "",
+      "fix_category": "mcp_code"
+    },
+    {
+      "id": "R2",
+      "verdict": "PASS",
+      "evidence": "Appendix C 06_function_deps.json exists, non-empty, contains source_function → target_function cross-file relationships (e.g., upsert_item → Body in fastapi/param_functions.py; read_main → HTTPException in fastapi/exceptions.py). Appendix E R17 confirms it passes.",
+      "fix_suggestion": "",
+      "fix_category": "mcp_code"
+    },
+    {
+      "id": "R3",
+      "verdict": "PASS",
+      "evidence": "Appendix A shows summary mode returns only module metadata array with no file path lists. With 8 modules × ~5 fields each, the JSON is well under 3000 chars. Appendix E R1 confirms codebase-analysis directory is correct.",
+      "fix_suggestion": "",
+      "fix_category": "mcp_code"
+    },
+    {
+      "id": "R4",
+      "verdict": "PASS",
+      "evidence": "DETAIL.md YAML front matter includes token_budget in every module (e.g., infrastructure: 50000, security: 30908, app_an_py310: 5000). Agent used formula max(5000, min(50000, module_token_count * 4)) per Appendix D.",
+      "fix_suggestion": "",
+      "fix_category": "mcp_code"
+    },
+    {
+      "id": "R9",
+      "verdict": "PASS",
+      "evidence": "Appendix C 03_feature_cones.json has strategy_used: 'feature_cone'. Appendix A states GroupingStrategy Protocol exists in src/graph/strategies.py defining FeatureConeStrategy. Appendix E R9 confirms < 50 nodes.",
+      "fix_suggestion": "",
+      "fix_category": "mcp_code"
+    },
+    {
+      "id": "R10",
+      "verdict": "PASS",
+      "evidence": "Appendix C shows cross-directory grouping: 'security' module contains fastapi/security/ files AND docs_src/custom_response/tutorial009c_py310.py. 'advanced_middleware' spans fastapi/middleware/, fastapi/cli.py, docs_src/advanced_middleware/, docs_src/body/, etc.",
+      "fix_suggestion": "",
+      "fix_category": "mcp_code"
+    }
+  ],
+  "pipeline_protocol": [
+    {
+      "id": "R5",
+      "verdict": "PASS",
+      "evidence": "Appendix G: 525/525 complete blocks (100%). All 9 modules show all four sections present for every file block. Verified by machine-readable summary: all_complete: true.",
+      "fix_suggestion": "",
+      "fix_category": "agent_behavior"
+    },
+    {
+      "id": "R5b",
+      "verdict": "PASS",
+      "evidence": "Appendix G per-module coverage: advanced_middleware 162/162 (100%), app_an_py310 8/8 (100%), background_tasks 13/13 (100%), body_updates 57/57 (100%), docs_src 50/50 (100%), infrastructure 26/26 (100%), main 197/197 (100%), security 6/7 (85.7%≥80%), testing 6/6 (100%). All modules ≥ 80%.",
+      "fix_suggestion": "",
+      "fix_category": "agent_behavior"
+    },
+    {
+      "id": "R6",
+      "verdict": "PASS",
+      "evidence": "Appendix D: 'Called doc_operation(update_index) → assembled INDEX.md from 9 index-fragments'. Comparing INDEX.md infrastructure section with infrastructure/DETAIL.md index-fragment — both read 'The foundational layer of the FastAPI library. Includes the public API surface (fastapi/__init__.py), all parameter descriptor factories...' — content is consistent.",
+      "fix_suggestion": "",
+      "fix_category": "agent_behavior"
+    },
+    {
+      "id": "R7",
+      "verdict": "PASS",
+      "evidence": "All DETAIL.md files have YAML front matter (module_id, module_name, file_count, generated_at, token_budget), <!-- module:xxx -->, <!-- file:xxx -->, <!-- end:file:xxx -->, <!-- index-fragment:xxx --> markers. INDEX.md has YAML front matter, Mermaid graph, <!-- module-index:xxx --> markers. Verified across all 9 modules.",
+      "fix_suggestion": "",
+      "fix_category": "agent_behavior"
+    },
+    {
+      "id": "R8",
+      "verdict": "PASS",
+      "evidence": "SKILL.md and phase4-index.md document doc_operation supporting move_detail, merge_modules, update_index, split_module (list_module_files equivalent), and reorder_modules. Agent used update_index in Phase 4.",
+      "fix_suggestion": "",
+      "fix_category": "mcp_code"
+    },
+    {
+      "id": "P1",
+      "verdict": "PASS",
+      "evidence": "Appendix D: 'Called analyze_codebase → identified 526 source files'. Appendix C state.json: status: 'analysis_complete'. Appendix E R1: '.codebase-analysis/ exists with 7 JSON files'.",
+      "fix_suggestion": "",
+      "fix_category": "agent_behavior"
+    },
+    {
+      "id": "P2",
+      "verdict": "PASS",
+      "evidence": "Appendix D: 'Confirmed all task files exist and are readable. Token budget per task calculated as max(5000, min(50000, module_tokens * 4)). Infrastructure pseudo-module (26 files, 75,899 tokens) identified.' This confirms get_modules(summary) was called and coverage gate was checked before Phase 3.",
+      "fix_suggestion": "",
+      "fix_category": "agent_behavior"
+    },
+    {
+      "id": "P3",
+      "verdict": "PASS",
+      "evidence": "Appendix G: 525/525 complete file blocks across all 9 modules. Dependency sections in DETAIL.md files reference specific function names from get_function_deps output (e.g., routing.py: 'fastapi.dependencies.utils.solve_dependencies: Resolves dependency graph at request time'). All modules have DETAIL.md with index-fragments.",
+      "fix_suggestion": "",
+      "fix_category": "agent_behavior"
+    },
+    {
+      "id": "P4",
+      "verdict": "PASS",
+      "evidence": "Appendix D: 'Called doc_operation(update_index) → assembled INDEX.md from 9 index-fragments'. INDEX.md in Appendix B exists with all 9 modules, Mermaid graph, and [→ DETAIL] links for each module.",
+      "fix_suggestion": "",
+      "fix_category": "agent_behavior"
+    }
+  ],
+  "doc_quality": [
+    {
+      "id": "V1",
+      "verdict": "PASS",
+      "evidence": "Module names answer 'what capability does this code provide?': 'Infrastructure & Shared Utilities', 'Body Updates & Core Routing', 'Response & Protocol Examples', 'Bigger Applications: Multi-Router Pattern', 'Authentication & Security Schemes'. None equal directory names. Per Appendix D, agent explicitly renamed modules (e.g., 'App An Py310' → 'Bigger Applications: Multi-Router Pattern').",
+      "fix_suggestion": "",
+      "fix_category": "agent_behavior"
+    },
+    {
+      "id": "V2",
+      "verdict": "PASS",
+      "evidence": "MCP output in Appendix C (03_feature_cones.json, 06_function_deps.json) contains purely structural data (file paths, token counts, call edges). All semantic descriptions (purpose, data flow, key interfaces) appear only in Agent-written DETAIL.md files.",
+      "fix_suggestion": "",
+      "fix_category": "mcp_code"
+    },
+    {
+      "id": "V3",
+      "verdict": "PASS",
+      "evidence": "INDEX.md module summaries are multi-sentence with key entry points named. Example: infrastructure module — 'Includes the public API surface (fastapi/__init__.py), all parameter descriptor factories, the dependency injection engine...' + 'Key entry points: get_dependant(), solve_dependencies(), get_openapi()...' A reader can decide which DETAIL to read.",
+      "fix_suggestion": "",
+      "fix_category": "agent_behavior"
+    },
+    {
+      "id": "V4",
+      "verdict": "PASS",
+      "evidence": "INDEX.md contains Mermaid graph with weighted edges (e.g., 'n6 -->|dep w=168| n0'). DETAIL dependency sections name specific functions: routing.py — 'fastapi.dependencies.utils.solve_dependencies: Resolves dependency graph at request time'; security/api_key.py — 'Uses fastapi/openapi/models.py::APIKey, APIKeyIn to construct OpenAPI security scheme model; Extends fastapi/security/base.py::SecurityBase'.",
+      "fix_suggestion": "",
+      "fix_category": "agent_behavior"
+    },
+    {
+      "id": "V5",
+      "verdict": "PASS",
+      "evidence": "All DETAIL.md have structured HTML comment markers, YAML front matter, and parseable Mermaid in INDEX.md. Navigation path is traceable: INDEX.md module-index block → [→ DETAIL] link → DETAIL.md <!-- file:xxx --> block. Machine-parseable by design.",
+      "fix_suggestion": "",
+      "fix_category": "agent_behavior"
+    },
+    {
+      "id": "V6",
+      "verdict": "PASS",
+      "evidence": "Appendix C state.json shows all 8 tasks complete with timestamps and output_file paths. JSON analysis files exist. submit_analysis was called for completed modules. Coverage tracked at 135.55% in state.json.",
+      "fix_suggestion": "",
+      "fix_category": "agent_behavior"
+    },
+    {
+      "id": "V7",
+      "verdict": "PASS",
+      "evidence": "Appendix D Phase 4: 'Reviewed module organization for semantic coherence. Renamed module headings: App An Py310 → Bigger Applications: Multi-Router Pattern; Docs Src → Response & Protocol Examples.' Phase 4 doc_operation(move_detail/reorder_modules) capability was available and Phase 4 review was executed.",
+      "fix_suggestion": "",
+      "fix_category": "agent_behavior"
+    },
+    {
+      "id": "V8",
+      "verdict": "PASS",
+      "evidence": "Module grouping reflects functional correlation: infrastructure bundles fastapi core internals across subdirectories; security module contains api_key.py, http.py, oauth2.py which implement the security scheme family. Cross-module dependencies noted in DETAIL files.",
+      "fix_suggestion": "",
+      "fix_category": "agent_behavior"
+    },
+    {
+      "id": "V9",
+      "verdict": "PASS",
+      "evidence": "Token budgets scale with source size: app_an_py310 (8 files, 719 tokens) → budget 5000; infrastructure (26 files, 75899 tokens) → budget 50000; security (7 files, 7727 tokens) → budget 30908. Formula max(5000, min(50000, module_tokens * 4)) confirmed in Appendix D.",
+      "fix_suggestion": "",
+      "fix_category": "agent_behavior"
+    },
+    {
+      "id": "V10",
+      "verdict": "PASS",
+      "evidence": "INDEX.md module sections contain only the 2-3 sentence index-fragment summaries. DETAIL.md contains per-file four-section analysis. No verbatim block duplication between INDEX and DETAIL: INDEX infrastructure section is ~150 words while DETAIL infrastructure is ~5000 words.",
+      "fix_suggestion": "",
+      "fix_category": "agent_behavior"
+    }
+  ],
+  "skill_effectiveness": [
+    {
+      "id": "S1",
+      "verdict": "PASS",
+      "evidence": "Appendix D confirms all 4 phases executed in order: Phase 1 (analyze_codebase), Phase 2 (validation, token budgets), Phase 3 (DETAIL generation for 7 modules), Phase 4 (update_index + rename). No phases skipped or re-ordered. Matches SKILL.md pipeline description exactly.",
+      "fix_suggestion": "",
+      "fix_category": "agent_behavior",
+      "root_cause": "agent_error"
+    },
+    {
+      "id": "S2",
+      "verdict": "PASS",
+      "evidence": "Comparing actual DETAIL.md against DOC_TEMPLATES.md: YAML front matter has all required fields (module_id, module_name, file_count, generated_at, token_budget) ✓; <!-- module:{id} --> ✓; <!-- file:xxx --> and <!-- end:file:xxx --> ✓; all four Chinese-header sections ✓; <!-- index-fragment:xxx --> ✓; <!-- end:{id} --> ✓; <!-- codebase-explorer: end --> ✓. Format matches template exactly.",
+      "fix_suggestion": "",
+      "fix_category": "agent_behavior",
+      "root_cause": "agent_error"
+    },
+    {
+      "id": "S3",
+      "verdict": "PASS",
+      "evidence": "Dependency sections in DETAIL.md contain specific cross-file function call data derived from get_function_deps (e.g., routing.py: 'fastapi.dependencies.utils.solve_dependencies: Resolves dependency graph'; security/api_key.py cites fastapi/openapi/models.py::APIKey). Index-fragments appear at the end of each DETAIL after all file blocks. Three-step protocol followed.",
+      "fix_suggestion": "",
+      "fix_category": "agent_behavior",
+      "root_cause": "agent_error"
+    },
+    {
+      "id": "S4",
+      "verdict": "PASS",
+      "evidence": "MCP tool parameter names in execution match Skill documentation: analyze_codebase(path, force_reindex), get_modules(module_id, output_dir), get_function_deps(file, output_dir), doc_operation(operation, output_dir), submit_analysis(task_id, detail_paths, source_files_covered, output_dir). No discrepancies found between Skill docs and actual tool definitions in Appendix A.",
+      "fix_suggestion": "",
+      "fix_category": "skill_doc",
+      "root_cause": "agent_error"
+    },
+    {
+      "id": "S5",
+      "verdict": "PASS",
+      "evidence": "Appendix G: 525/525 complete blocks. All modules >= 80% file coverage. state.json shows all 8 tasks complete. INDEX.md exists with all modules. All phase gate criteria from QUALITY_STANDARDS.md met: YAML front matter, markers, 4 sections, index-fragment, Mermaid graph, >= 80% coverage.",
+      "fix_suggestion": "",
+      "fix_category": "agent_behavior",
+      "root_cause": "agent_error"
+    },
+    {
+      "id": "S6",
+      "verdict": "FAIL",
+      "evidence": "Appendix D 'Ambiguities Encountered' item 1: 'task_id=infrastructure not valid in manifest — the Skill's submit with task_id=infrastructure instruction fails; the MCP server only accepts task IDs from the manifest. Workaround: write DETAIL.md and let update_index pick up the index-fragment. Submit rejected.' The Skill's Phase 2 HARD STOP says to add infrastructure as a Phase 3 module, but Phase 3 submit_analysis instructions do not clarify that the infrastructure pseudo-module has no task_id in the manifest, causing the Agent to improvise.",
+      "fix_suggestion": "Add a note to phase3-detail.md and SKILL.md clarifying that the infrastructure pseudo-module does not have a task_id in 05_task_manifest.json. Instruct the Agent to write infrastructure/DETAIL.md and call doc_operation('update_index') to pick up the index-fragment; submit_analysis for infrastructure should be skipped or called with a placeholder task_id.",
+      "fix_category": "skill_doc",
+      "root_cause": "skill_defect"
+    }
+  ],
+  "overall_verdict": "HAS_FAILURES",
+  "pass_count": 30,
+  "total": 31,
+  "critical_failures": [
+    "S6"
+  ],
+  "skill_defects": [
+    "S6"
+  ],
+  "fix_priority": [
+    {
+      "id": "S6",
+      "fix_category": "skill_doc",
+      "target_file": ".agents/skills/codebase-explorer/phases/phase3-detail.md",
+      "suggested_fix": "Add a callout block after the infrastructure coverage gate instruction: 'NOTE: The infrastructure pseudo-module does NOT have a task_id in 05_task_manifest.json. After writing infrastructure/DETAIL.md, skip submit_analysis (or use a dummy task_id and expect rejection). The index-fragment will be picked up automatically by doc_operation(update_index) in Phase 4. Do not waste a turn retrying submit_analysis for infrastructure.' Also update SKILL.md Phase 2 section to include this caveat.",
+      "expected_impact": "Eliminates the only documented improvisation in the execution log. Would make S6 PASS and bring total to 31/31."
+    }
+  ],
+  "summary": "Output quality is excellent: 525/525 file blocks complete (100%), all 9 modules documented with correct format, 135% source file coverage, functional module names, meaningful dependency descriptions, and correct Mermaid graph. The single failure (S6) is a low-impact Skill documentation defect: the Skill instructs the Agent to add 'infrastructure' as a Phase 3 module and submit it, but does not explain that infrastructure has no task_id in the task manifest, causing submit_analysis to fail. The Agent successfully worked around this by writing the DETAIL.md directly and relying on update_index to pick up the index-fragment. Fix is a 2-line clarification in phase3-detail.md."
+}

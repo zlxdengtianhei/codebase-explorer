@@ -1,0 +1,260 @@
+{
+  "mcp_data_quality": [
+    {
+      "id": "R1",
+      "verdict": "PASS",
+      "evidence": "Appendix A shows get_modules(summary) returns only module metadata (module_id, name, file_count, token_count, layer, depends_on). No function names, signatures, or code snippets in the modules array.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R2",
+      "verdict": "PASS",
+      "evidence": "Appendix C: 06_function_deps.json exists, non-empty, with 72 files with deps. Explicit source_function→target_function cross-file relationships shown (e.g., setup → rich/console.py:Console, time_wrapping → rich/text.py:wrap).",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R3",
+      "verdict": "PASS",
+      "evidence": "Appendix A shows get_modules() summary response contains only module metadata objects with no file path lists. The modules array items contain only module_id, name, file_count, token_count, layer, depends_on — structurally compact.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R4",
+      "verdict": "PASS",
+      "evidence": "DETAIL.md YAML front matter shows distinct token_budget values scaled to module size: cp_progress=13220 (3305×4), highlighter=18704 (4676×4), bars=35816 (8954×4), infrastructure=50000 (capped). Budget formula max(5000, min(50000, tokens×4)) is applied per module.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R9",
+      "verdict": "PASS",
+      "evidence": "Appendix A: 'src/graph/strategies.py defines GroupingStrategy Protocol + FeatureConeStrategy'. Appendix C: 03_feature_cones.json contains 'strategy_used: feature_cone'. Both Protocol definition and strategy_used field are confirmed.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R10",
+      "verdict": "PASS",
+      "evidence": "Appendix C: 'benchmarks' module contains rich/_palettes.py, rich/_windows.py, rich/ansi.py alongside benchmarks/ directory files — cross-directory grouping. 'unicode10-0-0' contains both rich/_unicode_data/*.py and tools/ files. Module grouping != directory structure.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    }
+  ],
+  "pipeline_protocol": [
+    {
+      "id": "R5",
+      "verdict": "PASS",
+      "evidence": "All 8 DETAIL.md files have all four sections per file. Content is substantive: bars.py describes trigonometry-based rendering with Bar/Color/Align; live_render.py explains cursor-repositioning engine; benchmarks.py details 8 benchmark suite classes. Sections explain 'what the code does' and 'how data flows'. Note: bars/DETAIL.md uses Japanese kanji '依赖関係' instead of Chinese '依赖关系' in headers — format violation tracked in S2.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R6",
+      "verdict": "PASS",
+      "evidence": "Comparing Infrastructure module: INDEX.md '**Infrastructure** (45 files, 180988 tokens) — Rich's complete core library. Central class: `Console`...' exactly matches infrastructure/DETAIL.md index-fragment. Bars module index-fragment in INDEX matches bars/DETAIL.md fragment verbatim. Assembly mechanism confirmed working.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R7",
+      "verdict": "PASS",
+      "evidence": "All 8 DETAIL.md files have YAML front matter (module_id, module_name, file_count, generated_at, token_budget), <!-- module:xxx -->, <!-- file:xxx -->, <!-- end:file:xxx -->, <!-- index-fragment:xxx --> markers. INDEX.md has YAML front matter, Mermaid graph, <!-- module-index:xxx --> markers. Appendix E R10/R11/R12/R16 all PASS.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R8",
+      "verdict": "PASS",
+      "evidence": "SKILL.md lists doc_operation tool with operations: update_index, move_detail, merge_modules, reorder_modules, split_module. Appendix F phase4-index.md documents all five operations with parameter signatures. MCP tool mcp__codebase-explorer__doc_operation is registered in the system.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "P1",
+      "verdict": "PASS",
+      "evidence": "Appendix C state.json: status='analysis_complete', tasks all complete. 03_feature_cones.json has 7 cones, 06_function_deps.json has 72 files with deps. Appendix E R1 confirms 7 JSON files exist. analyze_codebase succeeded.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "P2",
+      "verdict": "PASS",
+      "evidence": "Appendix D log parsing failed, so direct execution evidence is unavailable. Inferring from output: coverage is 92.5% (above 80% gate), all modules passed to Phase 3, infrastructure pseudo-module correctly handled. Appendix E verification passed all gate criteria. Output is consistent with Phase 2 having been executed.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "P3",
+      "verdict": "PASS",
+      "evidence": "Three-step protocol evidence: (1) Source files were read — sections describe internal logic not derivable from structure alone. (2) get_function_deps enrichment present — benchmarks.py 依赖关系 names 'rich/console.py:Console', 'rich/text.py:wrap()', 'rich/color.py:downgrade()'; infrastructure/console.py cites 'rich/text.py:Text.from_markup()', 'rich/markup.py:render()'. (3) index-fragment appears at end of each DETAIL after all files. File sections are genuinely distinct content — bars.py (trigonometry circle rendering) vs columns.py (API fetch + Columns display) vs exception.py (ZeroDivisionError demo).",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "P4",
+      "verdict": "PASS",
+      "evidence": "Appendix C state.json: task_003 complete, index_written=true. INDEX.md exists with 8 <!-- module-index:xxx --> blocks, Mermaid graph, and [→ DETAIL] links. Appendix E R2/R12 PASS. doc_operation('update_index') was invoked as INDEX content matches all DETAIL index-fragment blocks.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    }
+  ],
+  "doc_quality": [
+    {
+      "id": "V1",
+      "verdict": "FAIL",
+      "evidence": "INDEX.md module names: 'Bars' (named after examples/bars.py entry point), 'Benchmarks' (named after benchmarks/ directory), 'Conf' (named after docs/source/conf.py — the Skill's own phase4-index.md lists 'Conf' as an example of a POOR name), 'Cp Progress' (named after examples/cp_progress.py). Only 'Unicode Width Tables', 'Infrastructure', 'Highlighter' are acceptably functional. 5 of 8 modules fail the 'what can this codebase do?' test.",
+      "fix_suggestion": "Phase 4 agent must rename headings in INDEX.md: 'Bars' → 'UI Component Examples & Live Rendering', 'Conf' → 'Markdown, Logging & Integration Components', 'Benchmarks' → 'Performance Benchmarks & Platform Utilities', 'Cp Progress' → 'Progress Bar Examples & File Utilities', 'Export' → 'Console Export & Full-Screen Application Examples'.",
+      "fix_category": "agent_behavior"
+    },
+    {
+      "id": "V2",
+      "verdict": "PASS",
+      "evidence": "MCP output (03_feature_cones.json, 06_function_deps.json) contains only structural data — file paths, token counts, call relationships. All semantic content ('Implements URL routing...', 'Central class: Console orchestrates...') is authored by the Agent after reading source files.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V3",
+      "verdict": "PASS",
+      "evidence": "INDEX.md Infrastructure summary is 5-sentence multi-paragraph block naming Console, Segment, Style, Text, Color as entry points — clearly actionable. Highlighter summary explains 'DEFAULT theme consumed by Console', JSON renderable via JSONHighlighter. Each summary provides enough orientation to decide which DETAIL to read.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V4",
+      "verdict": "PASS",
+      "evidence": "INDEX.md Mermaid graph present with weighted edges (e.g., 'n1 -->|dep w=69| n0'). DETAIL dependency sections name specific functions: infrastructure/console.py '→ calls rich/text.py:Text.from_markup(), rich/markup.py:render()'; benchmarks/benchmarks.py 'ColorSuite calls rich/color.py:downgrade()'; cp_progress/tree.py 'calls rich/filesize.py:decimal() to format raw byte counts'. Critical check passes — specific function names with purpose explanations present.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V5",
+      "verdict": "PASS",
+      "evidence": "Structured HTML comment markers throughout (<!-- module:xxx -->, <!-- file:xxx -->, <!-- index-fragment:xxx -->, <!-- module-index:xxx -->). YAML front matter in all documents. Mermaid graph is parseable. INDEX→DETAIL link '[→ DETAIL](infrastructure/DETAIL.md)' is traceable. Appendix E R10/R11/R12/R16 all PASS.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V6",
+      "verdict": "PASS",
+      "evidence": "Appendix C: state.json exists with all tasks marked complete and source_files_covered list of 140 files. 03_feature_cones.json, 06_function_deps.json, and 4 other JSON files confirmed in Appendix E R1. submit_analysis was called (state.json shows output_files tracked per task). Recovery is possible from state.json.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V7",
+      "verdict": "PASS",
+      "evidence": "Phase 4 SKILL.md Step 2 'Review Module Organization' explicitly checks for: (a) functional module names, (b) obvious misplacements, (c) sensible ordering. Step 3 provides move_detail, merge_modules, reorder_modules tools. The mechanism exists in the Skill. (Note: agent did not fully execute the review — see V1 and S6.)",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V8",
+      "verdict": "PASS",
+      "evidence": "Infrastructure module correctly groups all core rendering classes (Console, Text, Style, Segment, Color). Benchmarks module groups benchmark suite with its exclusive utility deps (_palettes.py, _windows.py) from the feature cone. Cross-module dependencies explicitly noted in DETAIL sections (e.g., benchmarks/progress_bar.py uses 'rich/color.py:get_truecolor(), blend_rgb(), from_triplet()').",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V9",
+      "verdict": "PASS",
+      "evidence": "DETAIL.md token_budget values confirm dynamic scaling: cp_progress=13220=3305×4, highlighter=18704=4676×4, bars=35816=8954×4. All modules exceeding 12500 tokens are capped at 50000 (infrastructure=180988 tokens→50000, unicode10-0-0=78275 tokens→50000). Formula max(5000, min(50000, tokens×4)) applied correctly.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V10",
+      "verdict": "PASS",
+      "evidence": "INDEX.md contains 2-3 sentence module summaries (index-fragments). DETAIL.md contains per-file four-section analysis. Information boundaries are clear: INDEX answers 'which module?'; DETAIL answers 'how does each file work?'. The index-fragment appearing in both documents is the designed assembly mechanism, not duplication — each document serves a distinct navigation purpose.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    }
+  ],
+  "skill_effectiveness": [
+    {
+      "id": "S1",
+      "verdict": "PASS",
+      "evidence": "Appendix D log parsing failed — direct phase ordering cannot be confirmed from log. Output evidence: state.json phase progression (analysis_complete → tasks complete → index_written), 8 DETAIL.md files generated before INDEX.md assembled, coverage 92.5%. Output is consistent with all 4 phases executed in correct order. No phantom phases detected.",
+      "fix_suggestion": "",
+      "fix_category": "",
+      "root_cause": "agent_error"
+    },
+    {
+      "id": "S2",
+      "verdict": "FAIL",
+      "evidence": "bars/DETAIL.md uses Japanese kanji '依赖関係' (関係 = U+95A2 U+4FC2) instead of Chinese '依赖关系' (关系 = U+5173 U+7CFB) for the fourth section header in all 25 file sections. DOC_TEMPLATES.md includes explicit warning: 'Do NOT use Japanese 依赖関係 (U+95A2 U+4FC2)'. SKILL.md phase3-detail.md repeats the warning twice with 'WARNING:' prefix. Other modules (benchmarks, conf, infrastructure, cp_progress, highlighter, unicode10-0-0) correctly use Chinese characters.",
+      "fix_suggestion": "Fix bars/DETAIL.md by replacing all instances of '依赖関係' with '依赖关系'. Consider adding a post-write MCP validation hook or quality check step to the Phase 3 protocol that verifies header character encoding before submitting.",
+      "fix_category": "agent_behavior",
+      "root_cause": "agent_error"
+    },
+    {
+      "id": "S3",
+      "verdict": "PASS",
+      "evidence": "Step 2 enrichment evidence: benchmarks/benchmarks.py dependency section names 'rich/console.py:Console', 'rich/text.py:wrap()', 'rich/color.py:downgrade()' — data matching 06_function_deps.json structure. infrastructure/console.py cites 'rich/_windows_renderer.py:legacy_windows_render()', 'rich/markup.py:render()'. Files legitimately having no cross-file tracked calls say 'No tracked cross-file call dependencies' (example scripts). index-fragment appears after all files in each DETAIL ✓.",
+      "fix_suggestion": "",
+      "fix_category": "",
+      "root_cause": "agent_error"
+    },
+    {
+      "id": "S4",
+      "verdict": "PASS",
+      "evidence": "MCP tool calls match Skill documentation: get_modules(module_id=X) for per-module detail, get_function_deps(file=filepath) producing 06_function_deps.json with 72 files, doc_operation(operation='update_index') producing INDEX.md, analyze_codebase producing state.json with analysis_complete. No evidence of wrong parameter names or incorrect signatures in output artifacts.",
+      "fix_suggestion": "",
+      "fix_category": "",
+      "root_cause": "agent_error"
+    },
+    {
+      "id": "S5",
+      "verdict": "FAIL",
+      "evidence": "Two quality standard violations: (1) QUALITY_STANDARDS.md checklist item '#### 依赖关系 (Dependencies) section present' — fails for bars/DETAIL.md which uses Japanese kanji headers across all 25 file sections. (2) V1 failure: QUALITY_STANDARDS.md Phase 4 Completion requires semantically coherent module organization; 5 of 8 modules retain entry-point-derived names ('Conf', 'Bars', 'Benchmarks', 'Cp Progress', 'Export'). Source file coverage 92.5% ✓.",
+      "fix_suggestion": "Run a validation pass after Phase 3 to verify Chinese character headers. Run a validation pass after Phase 4 to verify module names are not entry-point-derived (check if name equals module_id or is a bare directory/filename).",
+      "fix_category": "agent_behavior",
+      "root_cause": "agent_error"
+    },
+    {
+      "id": "S6",
+      "verdict": "FAIL",
+      "evidence": "Two clear deviations from Skill instructions: (1) Module renaming: phase4-index.md explicitly says 'edit the ## {heading} and **{name}** in each <!-- module-index:xxx --> block to use a functional name' and lists 'Conf' as a POOR name example — agent left 'Conf', 'Bars', 'Benchmarks', 'Cp Progress' unchanged. (2) Character encoding: bars sub-agent used '依赖関係' despite dual WARNING notices in SKILL.md and DOC_TEMPLATES.md. Both Skill instructions were unambiguous. Skill does not require amendment.",
+      "fix_suggestion": "Add an explicit Phase 4 checklist item: 'Verify no module heading matches its module_id literally or is a bare filename. If so, rename.' This would make the post-update_index edit obligation more salient. Consider adding a doc_operation('validate_names') tool that flags entry-point-derived names.",
+      "fix_category": "skill_doc",
+      "root_cause": "agent_error"
+    }
+  ],
+  "overall_verdict": "HAS_FAILURES",
+  "pass_count": 26,
+  "total": 30,
+  "critical_failures": [
+    "V1",
+    "S2",
+    "S5",
+    "S6"
+  ],
+  "skill_defects": [],
+  "fix_priority": [
+    {
+      "id": "V1",
+      "fix_category": "agent_behavior",
+      "target_file": "test_repos/rich/.codebase-docs/INDEX.md",
+      "suggested_fix": "Rename module headings and **bold names** in all <!-- module-index:xxx --> blocks: 'Bars' → 'UI Component Examples & Live Rendering Engine', 'Conf' → 'Markdown Rendering, Logging & Integration Components', 'Benchmarks' → 'Performance Benchmarks & Platform Utilities', 'Cp Progress' → 'Progress Bar Examples & File Utilities', 'Export' → 'Console Export, Full-Screen Layouts & CLI Entry Point'.",
+      "expected_impact": "Fixes S5 (quality standards), S6 (phase4 review compliance), and satisfies V7 review mechanism being actually applied."
+    },
+    {
+      "id": "S2",
+      "fix_category": "agent_behavior",
+      "target_file": "test_repos/rich/.codebase-docs/bars/DETAIL.md",
+      "suggested_fix": "Replace all 25 occurrences of '#### 依赖関係 (Dependencies)' with '#### 依赖关系 (Dependencies)' (关系 = U+5173 U+7CFB). The fix is a bulk find-replace on the character 関係 → 关系 in bars/DETAIL.md.",
+      "expected_impact": "Fixes S2, S5 (DETAIL.md checklist compliance). Also fixes potential downstream parsing failures for tools that check for the exact Chinese header."
+    },
+    {
+      "id": "S6",
+      "fix_category": "skill_doc",
+      "target_file": ".agents/skills/codebase-explorer/phases/phase4-index.md",
+      "suggested_fix": "Add a mandatory checklist item in Phase 4 Step 5 (Final Quality Check): '[ ] No module heading equals its module_id literally or matches a bare filename/directory (e.g., conf, bars, cp_progress are INVALID). If so, rename before completing.' Also add a box at the top of phase4-index.md: 'CRITICAL: After update_index, you MUST rename module headings to functional descriptions. update_index uses module_id as default name — these are NEVER acceptable final names.'",
+      "expected_impact": "Reduces agent_error rate for V1 and S6 in future runs. Makes the mandatory nature of renaming impossible to overlook."
+    }
+  ],
+  "summary": "26/30 requirements pass. The pipeline mechanics are solid: MCP analysis, DETAIL generation with function-level dependency enrichment, and INDEX assembly all work correctly at 92.5% source coverage. The two critical gaps are: (1) Phase 4 module renaming was skipped — 5 of 8 modules retain entry-point-derived names ('Conf', 'Bars', 'Benchmarks', 'Cp Progress') despite the Skill explicitly listing 'Conf' as a poor example name. (2) The bars sub-agent used Japanese kanji '依赖関係' instead of Chinese '依赖关系' in all 25 file sections despite dual WARNING notices in the Skill docs. Both failures are agent_error — the Skill instructions are clear. Priority fix: enforce the Phase 4 module renaming step more conspicuously in phase4-index.md (the instruction is present but appears as a subordinate 'Note' rather than a mandatory gate)."
+}

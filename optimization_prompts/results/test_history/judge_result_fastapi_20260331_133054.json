@@ -1,0 +1,280 @@
+{
+  "mcp_data_quality": [
+    {
+      "id": "R1",
+      "verdict": "PASS",
+      "evidence": "Appendix A confirms get_modules(summary) returns only module metadata (name, file_count, token_count, depends_on, layer). No function names or code snippets appear in the summary output shown in Appendix C state.json.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R2",
+      "verdict": "PASS",
+      "evidence": "Appendix C shows 06_function_deps.json exists with 'total_files_with_deps: 227' and cross-file call relationships (source_function → target_file/target_function, dep_type). E.g., upsert_item → Body in fastapi/param_functions.py.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R3",
+      "verdict": "PASS",
+      "evidence": "Appendix A explicitly states the summary response shape: modules array contains NO file path lists. Appendix C 03_feature_cones.json shows modules as compact metadata objects. The summary structure is well below 3KB.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R4",
+      "verdict": "PASS",
+      "evidence": "infrastructure/DETAIL.md YAML front matter shows 'token_budget: 50000'. SKILL.md phase3-detail.md documents dynamic budget formula: max(5000, min(50000, module_token_count * 4)). State.json task outputs confirm budget-aware processing occurred.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R9",
+      "verdict": "PASS",
+      "evidence": "Appendix A states 'src/graph/strategies.py defines GroupingStrategy Protocol + FeatureConeStrategy.' Appendix C 03_feature_cones.json contains 'strategy_used: feature_cone' field.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R10",
+      "verdict": "PASS",
+      "evidence": "Appendix C 03_feature_cones.json cone 'advanced_middleware' contains files from docs_src/advanced_middleware/, docs_src/app_testing/, docs_src/body/, docs_src/query_params/, fastapi/cli.py, fastapi/middleware/ — cross-directory grouping confirmed.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    }
+  ],
+  "pipeline_protocol": [
+    {
+      "id": "R5",
+      "verdict": "FAIL",
+      "evidence": "Appendix G authoritative count: 23/106 complete blocks (22%). Missing sections: 数据流 34 instances, 核心接口 35 instances, 依赖关系 1 instance. Affected modules: advanced_middleware (19 missing 数据流, 20 missing 核心接口), body_updates_2 (3+2), docs_src (2+2), main (10+11+1). Only app_an_py310, body_updates, infrastructure are fully complete.",
+      "fix_suggestion": "Re-run Phase 3 sub-agents for advanced_middleware, body_updates_2, docs_src, main with explicit Step 4 post-write validation enforced — agents must count section headers and fix missing sections before calling submit_analysis.",
+      "fix_category": "agent_behavior"
+    },
+    {
+      "id": "R5b",
+      "verdict": "FAIL",
+      "evidence": "Appendix G expected vs actual file block counts: advanced_middleware 35/162 (21.6%), app_an_py310 1/8 (12.5%), body_updates 5/57 (8.8%), docs_src 9/50 (18%), infrastructure 17/26 (65.4%), main 24/197 (12.2%). All below 80% threshold. Note: state.json reports 93.5% overall coverage because agents used directory-level blocks (e.g., '<!-- file:docs_src/body/ -->' covers 4 actual files), so per-module file block counts are technically misleading, but by the literal Appendix G metric all modules fail.",
+      "fix_suggestion": "Either enforce individual file blocks per source file, or update the verification script to count source files covered by directory blocks. If directory grouping is intentional, update R5b threshold documentation to reflect this pattern.",
+      "fix_category": "skill_doc"
+    },
+    {
+      "id": "R6",
+      "verdict": "PASS",
+      "evidence": "Cross-checking infrastructure module: INDEX.md module-index:infrastructure summary matches verbatim the index-fragment:infrastructure in infrastructure/DETAIL.md ('The foundational layer of the FastAPI library containing core type annotations...'). Cross-checking advanced_middleware: INDEX.md 'Middleware, CLI & General Tutorial Examples' content matches task_004 index-fragment in advanced_middleware/DETAIL.md.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R7",
+      "verdict": "FAIL",
+      "evidence": "Appendix E R16: 'All DETAIL.md have YAML front matter (1/7)'. Only infrastructure/DETAIL.md has YAML front matter. advanced_middleware, app_an_py310, body_updates, body_updates_2, docs_src, main DETAIL files all begin directly with HTML comment markers. Additionally, DETAIL module markers use task IDs (<!-- module:task_001 -->) instead of module IDs (<!-- module:body_updates -->) per DOC_TEMPLATES.md spec.",
+      "fix_suggestion": "Sub-agent prompts must be updated to prepend YAML front matter before writing any content. The phase3-detail.md template shows YAML clearly — agents must copy it exactly.",
+      "fix_category": "agent_behavior"
+    },
+    {
+      "id": "R8",
+      "verdict": "PASS",
+      "evidence": "SKILL.md documents doc_operation supporting: update_index, move_detail, merge_modules, split_module, reorder_modules. Phase 4 instructions in phase4-index.md describe how to use these operations. The MCP server provides these capabilities.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "P1",
+      "verdict": "PASS",
+      "evidence": "Execution log: 'Phase 1 — Analysis ✅ MCP analyzed 526 source files → 8 cones + infrastructure pseudo-module'. State.json status: 'analysis_complete'. Appendix C confirms 03_feature_cones.json and 06_function_deps.json exist and are non-empty.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "P2",
+      "verdict": "PASS",
+      "evidence": "Execution log: 'Phase 2 — Validation ✅ 93.5% coverage planned (>80% gate), infrastructure module required'. Coverage gate was checked, infrastructure pseudo-module was identified and planned. get_modules() summary was called before Phase 3.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "P3",
+      "verdict": "FAIL",
+      "evidence": "Appendix G: total_missing_sections = {数据流: 34, 核心接口: 35, 依赖关系: 1}. 70 missing section instances across 4 modules. Phase 3 critical check requires 'All file blocks have 4 sections' and 'total_missing > 0' → FAIL. get_function_deps was called (06_function_deps.json populated), but Step 4 validation (count-and-fix) was skipped by sub-agents.",
+      "fix_suggestion": "Enforce Step 4 post-write validation in sub-agent prompts. Consider adding a main-agent verification step that reads DETAIL.md after sub-agent completion and re-dispatches to fix agents for any module with missing sections.",
+      "fix_category": "agent_behavior"
+    },
+    {
+      "id": "P4",
+      "verdict": "PASS",
+      "evidence": "Execution log: 'Phase 4 — INDEX ✅ INDEX.md generated with Mermaid dependency graph + 7 module summaries'. INDEX.md exists in Appendix B with YAML front matter, Mermaid graph, and 7 module-index blocks. doc_operation('update_index') was called per execution summary.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    }
+  ],
+  "doc_quality": [
+    {
+      "id": "V1",
+      "verdict": "PASS",
+      "evidence": "INDEX.md module names are functional: 'Infrastructure & Shared Utilities', 'Core Routing & Dependency Engine', 'App Bootstrap, Concurrency & Tutorial Examples', 'Bigger Applications Tutorial: Multi-Router Architecture'. None equal their module_id (infrastructure, body_updates, body_updates_2, app_an_py310). All answer 'what capability does this code provide.'",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V2",
+      "verdict": "PASS",
+      "evidence": "Appendix A confirms MCP returns only structural data (file counts, token counts, dependency edges). Semantic descriptions ('The foundational layer...', 'The heart of FastAPI's request pipeline...') were written by the Agent after reading source files.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V3",
+      "verdict": "PASS",
+      "evidence": "INDEX.md module summaries provide sufficient context: infrastructure entry lists key entry points (jsonable_encoder, get_dependant, solve_dependencies, OAuth2PasswordBearer, BackgroundTasks, get_openapi). Core Routing entry explains what each component does. Each module summary >= 1 substantive sentence enabling navigation decisions.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V4",
+      "verdict": "PASS",
+      "evidence": "INDEX.md has Mermaid dependency graph with weighted edges. DETAIL files reference specific function names: routing.py dependencies section names 'fastapi/applications.py → FastAPI (inherits from APIRouter)', 'all @app.get/post/... decorators call APIRouter.add_api_route()'. Dependencies describe purpose, not just imports.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V5",
+      "verdict": "PASS",
+      "evidence": "Structured HTML comment markers present throughout (<!-- module:xxx -->, <!-- file:xxx -->, <!-- index-fragment:xxx -->, <!-- module-index:xxx -->). INDEX.md has YAML front matter. Mermaid graph is machine-parseable. Navigation chain INDEX→DETAIL→file path is traceable via [→ DETAIL] links. Note: YAML missing from 6/7 DETAIL files reduces AI parseability but core traceability works.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V6",
+      "verdict": "PASS",
+      "evidence": "State.json exists with all 8 tasks showing status 'complete'. submit_analysis was called per state.json being fully populated with output_files. JSON analysis files exist (03_feature_cones.json, 06_function_deps.json per Appendix C). source_file_coverage_percent: 93.5%.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V7",
+      "verdict": "PASS",
+      "evidence": "Phase 4 SKILL.md (phase4-index.md) includes mandatory Step 2 'Module Renaming + Review' with explicit coherence checks. INDEX.md module names are functionally renamed (not raw module_ids), indicating Step 2 was executed. Review mechanism exists in the Skill and was applied.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V8",
+      "verdict": "PASS",
+      "evidence": "body_updates module groups fastapi/_compat/v2.py, fastapi/dependencies/models.py, fastapi/exception_handlers.py, fastapi/middleware/asyncexitstack.py, fastapi/routing.py — all part of the request-handling pipeline. infrastructure groups all foundational shared utilities. Cross-module dependencies explicitly noted (routing.py depends on infrastructure's jsonable_encoder, solve_dependencies).",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V9",
+      "verdict": "PASS",
+      "evidence": "SKILL.md documents dynamic budget formula: max(5000, min(50000, module_token_count * 4)). Infrastructure DETAIL.md YAML shows token_budget: 50000. Phase3-detail.md includes per-file budget tracking instructions ('check accumulated_tokens + file_token_count <= token_budget').",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V10",
+      "verdict": "PASS",
+      "evidence": "INDEX.md module sections contain 2-3 sentence summaries with key entry points. DETAIL.md contains per-file four-section analysis. The index-fragment content intentionally appears in both (extraction mechanism), but full file analysis only exists in DETAIL. No large verbatim content blocks duplicated between documents.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    }
+  ],
+  "skill_effectiveness": [
+    {
+      "id": "S1",
+      "verdict": "PASS",
+      "evidence": "Execution log confirms all 4 phases executed in sequence: Phase 1 Analysis ✅ → Phase 2 Validation ✅ → Phase 3 DETAIL ✅ → Phase 4 INDEX ✅. No phases skipped. No phantom phases added. Task ordering in state.json (task_001 through task_008) confirms expected pipeline flow.",
+      "fix_suggestion": "",
+      "fix_category": "",
+      "root_cause": "agent_error"
+    },
+    {
+      "id": "S2",
+      "verdict": "FAIL",
+      "evidence": "DOC_TEMPLATES.md clearly shows YAML front matter (module_id, module_name, file_count, generated_at, token_budget) as required in DETAIL.md. Only infrastructure/DETAIL.md complies (1/7). Other 6 DETAIL files begin with bare HTML comments. Additionally, DOC_TEMPLATES.md specifies '<!-- module:{module_id} -->' markers, but DETAIL files use task IDs: '<!-- module:task_001 -->', '<!-- module:task_004 -->', etc. Only infrastructure uses the correct module_id marker.",
+      "fix_suggestion": "Sub-agent prompts must be updated to copy the YAML front matter template exactly before writing any content. The DETAIL agent prompt template in phase3-detail.md should be more prominent about YAML being first. Also clarify that {module_id} in markers refers to the cone module_id (e.g., 'body_updates'), NOT the task_id (e.g., 'task_001').",
+      "fix_category": "skill_doc",
+      "root_cause": "both"
+    },
+    {
+      "id": "S3",
+      "verdict": "FAIL",
+      "evidence": "Phase3-detail.md Step 4 (post-write validation) explicitly requires counting all 4 section headers and fixing any missing sections before proceeding. Appendix G shows 70 missing sections: advanced_middleware missing 19 数据流 + 20 核心接口, main missing 10 数据流 + 11 核心接口 + 1 依赖关系. Step 4 was clearly skipped by sub-agents for large modules. The three-step per-file protocol was also partially followed (get_function_deps was called per 06_function_deps.json, but sections were omitted for many files).",
+      "fix_suggestion": "Add a hard enforcement mechanism in the sub-agent prompt: 'After writing DETAIL.md, run a self-check — for each <!-- file:xxx --> marker, verify 功能概述/数据流/核心接口/依赖关系 all follow before <!-- end:file:xxx -->. If any section is missing, add it NOW before calling submit_analysis.'",
+      "fix_category": "agent_behavior",
+      "root_cause": "agent_error"
+    },
+    {
+      "id": "S4",
+      "verdict": "PASS",
+      "evidence": "State.json shows all 8 tasks completed successfully. MCP tool calls used correct parameter names (output_dir, module_id, operation). doc_operation('update_index') produced valid INDEX.md. get_function_deps results appear in dependency sections of documented files. No evidence of wrong parameter names in execution.",
+      "fix_suggestion": "",
+      "fix_category": "",
+      "root_cause": "agent_error"
+    },
+    {
+      "id": "S5",
+      "verdict": "FAIL",
+      "evidence": "QUALITY_STANDARDS.md Phase 3→4 gate requires all tasks complete ✓ (met). Per-file checks require all 4 sections ✗ (Appendix G: 83/106 blocks are incomplete). Section 3 coverage: 93.5% ≥ 80% ✓. But section 2 per-file checks fail for 83/106 blocks. Phase gate criteria not fully met.",
+      "fix_suggestion": "Add an explicit quality gate check after Phase 3: call get_progress(), read all DETAIL files, and verify section counts before proceeding to Phase 4.",
+      "fix_category": "skill_doc",
+      "root_cause": "agent_error"
+    },
+    {
+      "id": "S6",
+      "verdict": "FAIL",
+      "evidence": "Multiple deviations from Skill instructions: (1) YAML front matter skipped in 6/7 DETAIL files despite template showing it clearly; (2) Module markers use task IDs instead of module IDs — the Skill says '{module_id}' but doesn't explicitly warn that this differs from the task_id visible to sub-agents, creating ambiguity; (3) Step 4 post-write validation completely skipped in large modules despite being marked 'MANDATORY — do NOT skip'. Evidence of improvisation: sub-agents apparently completed documentation without running the required self-check, suggesting the validation step instructions were not compelling enough to ensure compliance.",
+      "fix_suggestion": "Strengthen the validation step by making it a pre-condition for submit_analysis. Consider adding a SKILL-level gate agent that reads DETAIL.md and verifies section counts before allowing Phase 4 to proceed. Also explicitly state: 'In sub-agent context, {module_id} refers to the cone ID (e.g., body_updates), NOT the task_id (e.g., task_001).'",
+      "fix_category": "skill_doc",
+      "root_cause": "both"
+    }
+  ],
+  "overall_verdict": "HAS_FAILURES",
+  "pass_count": 23,
+  "total": 31,
+  "critical_failures": [
+    "R5 — 83/106 file blocks missing sections (数据流 34, 核心接口 35, 依赖关系 1)",
+    "R5b — all modules below 80% file block coverage per Appendix G literal counts",
+    "R7 — YAML front matter missing in 6/7 DETAIL files",
+    "P3 — Phase 3 quality gate failed (70 missing sections)",
+    "S2 — Template not followed: no YAML, wrong module marker IDs",
+    "S3 — Step 4 post-write validation skipped across large modules"
+  ],
+  "skill_defects": [
+    "S2 — Skill ambiguity: {module_id} in sub-agent context could be confused with task_id; not explicitly distinguished",
+    "S5 — No explicit quality gate between Phase 3 and Phase 4 that blocks progression when sections are missing",
+    "S6 — Step 4 validation is described as MANDATORY but not enforced as a precondition for submit_analysis; large modules skipped it"
+  ],
+  "fix_priority": [
+    {
+      "id": "R5/P3/S3",
+      "fix_category": "skill_doc",
+      "target_file": ".agents/skills/codebase-explorer/phases/phase3-detail.md",
+      "suggested_fix": "Add a post-completion gate BEFORE submit_analysis: 'STOP — run self-check now. Count <!-- file:xxx --> markers, then count 功能概述/数据流/核心接口/依赖关系 headers. If any count is lower than file block count, you MUST add the missing sections before calling submit_analysis. Incomplete DETAIL.md + submit_analysis = corrupted state that cannot be fixed without re-running.'",
+      "expected_impact": "Fixes R5, P3, S3, S5, S6 — the largest cluster of failures all stem from sub-agents bypassing the validation step"
+    },
+    {
+      "id": "R7/S2",
+      "fix_category": "skill_doc",
+      "target_file": ".agents/skills/codebase-explorer/phases/phase3-detail.md (DETAIL Agent Prompt Template section)",
+      "suggested_fix": "In the DETAIL agent prompt template, add prominently at the top: 'FIRST LINE of DETAIL.md must be the YAML front matter block below. Copy it exactly.' Then provide a filled example with actual values. Also add: 'IMPORTANT: In the <!-- module:XXX --> marker, XXX is your module_id (e.g., body_updates), NOT your task_id (e.g., task_001). Check the module_id in your task context.'",
+      "expected_impact": "Fixes R7, S2 — YAML front matter and module ID marker consistency"
+    },
+    {
+      "id": "R5b",
+      "fix_category": "skill_doc",
+      "target_file": ".agents/skills/codebase-explorer/references/QUALITY_STANDARDS.md",
+      "suggested_fix": "Clarify that directory-level file blocks (<!-- file:docs_src/body/ -->) are acceptable for tutorial/example directories. Update R5b coverage calculation to use state.json source_file_coverage_percent (93.5%) rather than file_block/expected_files ratio, which does not account for directory grouping. If individual file blocks are required, add this constraint explicitly.",
+      "expected_impact": "Fixes R5b definition ambiguity; aligns verification script with actual documentation approach"
+    },
+    {
+      "id": "S6",
+      "fix_category": "skill_doc",
+      "target_file": ".agents/skills/codebase-explorer/SKILL.md",
+      "suggested_fix": "Add a Phase 3 completion check in main agent responsibilities: 'After all sub-agents complete, before Phase 4: read each DETAIL.md and verify section counts. For any module with missing sections, dispatch a fix agent with only the affected file paths.' This makes validation a main-agent responsibility, not just a sub-agent responsibility.",
+      "expected_impact": "Fixes S6 — adds a systemic safeguard so one sub-agent's failure to self-validate doesn't silently propagate"
+    }
+  ],
+  "summary": "Output achieves 93.5% source file coverage (well above the 80% gate) and all 4 phases executed correctly. MCP data quality, INDEX assembly, and document design quality all pass. The critical gap is section completeness: 83/106 documented file blocks are missing 数据流 and/or 核心接口 sections — a direct violation of the MANDATORY Step 4 post-write validation that sub-agents were required to perform. This single failure (skipped validation) cascades into R5, P3, S3, S5, and S6 failures. Secondary issues: 6/7 DETAIL files lack YAML front matter and use task IDs instead of module IDs in HTML markers. Root cause is split between agent errors (ignoring explicit validation instructions) and Skill ambiguity (task_id vs module_id not distinguished; no main-agent quality gate blocking Phase 4 progression). Priority fix: strengthen phase3-detail.md to tie submit_analysis to a verified section count."
+}

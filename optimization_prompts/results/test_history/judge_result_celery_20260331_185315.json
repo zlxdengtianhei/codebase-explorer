@@ -1,0 +1,261 @@
+{
+  "mcp_data_quality": [
+    {
+      "id": "R1",
+      "verdict": "PASS",
+      "evidence": "Appendix A confirms get_modules(summary) returns only metadata fields (name, file_count, token_count, layer, depends_on) with explicit note 'modules array contains NO file path lists, NO function names.' Verified against actual 03_feature_cones.json structure in Appendix C.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R2",
+      "verdict": "PASS",
+      "evidence": "Appendix C shows 06_function_deps.json is non-empty with 273 files having deps. Contains source_function -> target_function cross-file calls, e.g., `main` in celery/__main__.py calls `maybe_patch_concurrency` in celery/__init__.py. R17 in Appendix E: PASS.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R3",
+      "verdict": "PASS",
+      "evidence": "Appendix A documents that summary mode returns only module metadata with no file path lists. The response shape shown has compact metadata-only structure. No full path listings in the modules array.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R4",
+      "verdict": "PASS",
+      "evidence": "DETAIL.md YAML headers show varying token_budget values (e.g., annotations: 26240, security: 22516, __main__: 50000) computed as max(5000, min(50000, module_token_count * 4)). state.json has source_file_coverage_percent = 81.6% demonstrating budget-aware processing. SKILL.md documents the formula.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R9",
+      "verdict": "PASS",
+      "evidence": "03_feature_cones.json in Appendix C contains 'strategy_used: feature_cone'. Appendix A states 'src/graph/strategies.py defines GroupingStrategy Protocol + FeatureConeStrategy.' The field exists and a protocol is in place for swapping strategies.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R10",
+      "verdict": "PASS",
+      "evidence": "Module 'azureblockblob' groups celery/backends/azureblockblob.py, celery/bootsteps.py, celery/worker/autoscale.py, celery/worker/components.py, celery/worker/consumer/* — spanning backends/, worker/, and consumer/ directories. Module 'asynpool' groups celery/concurrency/*, celery/loaders/*, celery/worker/heartbeat.py across multiple directories. Clear cross-directory grouping.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    }
+  ],
+  "pipeline_protocol": [
+    {
+      "id": "R5",
+      "verdict": "FAIL",
+      "evidence": "Appendix G authoritative data: total_complete_blocks=282/315. annotations module has file_blocks=33 but 依赖关系 count=13 (missing: {依赖关系: 20}). Root cause: 20 file blocks in annotations/DETAIL.md use Japanese `依赖関係` (U+95A2 U+4FC2) instead of Chinese `依赖关系` (U+5173 U+7CFB), causing section_counter to miss them. ANY module with ANY missing section = FAIL.",
+      "fix_suggestion": "Edit .codebase-docs/annotations/DETAIL.md and replace all occurrences of Japanese `依赖関係` with Chinese `依赖关系`. Approximately 20 file blocks (empty __init__.py, example files) are affected.",
+      "fix_category": "agent_behavior"
+    },
+    {
+      "id": "R5b",
+      "verdict": "PASS",
+      "evidence": "Appendix G shows all modules meet >= 80% file coverage: testing-test_canvas 11/13 (84.6%), testing-test_loops 21/23 (91.3%), all others 100%. No module documents fewer than 80% of its expected files.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R6",
+      "verdict": "PASS",
+      "evidence": "Compared security module: INDEX.md summary 'Implements Celery's message-signing serializer subsystem using RSA/PSS cryptography...' matches security/DETAIL.md index-fragment content verbatim (only display name was updated to 'Message Signing & X.509 Certificate Management'). __main__ module: INDEX token count 40681 matches DETAIL fragment. Content is consistent; only display headings were renamed in Phase 4.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R7",
+      "verdict": "PASS",
+      "evidence": "Appendix B DETAIL files all have: YAML front matter, `<!-- module:{id} -->`, `<!-- file:xxx -->`, `<!-- end:file:xxx -->`, `<!-- index-fragment:xxx -->`. INDEX.md has YAML front matter, Mermaid graph, `<!-- module-index:xxx -->` blocks. Appendix E R10/R11/R16 all PASS (24/24 each).",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R8",
+      "verdict": "PASS",
+      "evidence": "SKILL.md and phase4-index.md document doc_operation supporting: update_index, move_detail, merge_modules, reorder_modules, split_module (list_module_files). Execution log confirms doc_operation('update_index') was called. Phase 4 docs explicitly cover reorganization without manual text editing.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "P1",
+      "verdict": "PASS",
+      "evidence": "Appendix E R1 PASS: '.codebase-analysis/ exists with 7 JSON files (incl. 06_function_deps.json)'. state.json shows status: 'analysis_complete'. Execution log: 'Phase 1: analyze_codebase() — Louvain community detection, 13-task manifest, 392 source files indexed'.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "P2",
+      "verdict": "PASS",
+      "evidence": "Execution log confirms Phase 2 validation was executed: coverage gate checked (81.6% > 80%), no single-file cone issues requiring remediation. The agent proceeded to Phase 3 only after validation. Coverage met the hard-stop requirement.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "P3",
+      "verdict": "FAIL",
+      "evidence": "Appendix G: total_missing_sections = {依赖关系: 20}. The annotations module sub-agent wrote Japanese `依赖関係` for 20 file blocks (mostly empty namespace packages and example files). The post-write validation (Step 4 of the three-step protocol) explicitly requires detecting and fixing Japanese kanji — this was not executed. 282/315 complete = 89.5%, not 100%.",
+      "fix_suggestion": "Fix annotations/DETAIL.md by replacing Japanese `依赖関係` with Chinese `依赖关系`. Strengthen sub-agent prompt to include explicit grep check in Step 4 post-write validation.",
+      "fix_category": "agent_behavior"
+    },
+    {
+      "id": "P4",
+      "verdict": "PASS",
+      "evidence": "INDEX.md exists in Appendix B with all 24 modules, Mermaid graph, module-index blocks, and [→ DETAIL] links. Execution log: 'doc_operation(update_index) assembled INDEX from 24 fragments; all module headings renamed from raw module_ids to functional descriptions.' R2 and R7 in Appendix E both PASS.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    }
+  ],
+  "doc_quality": [
+    {
+      "id": "V1",
+      "verdict": "PASS",
+      "evidence": "Three module name examples from INDEX.md: 'Message Signing & X.509 Certificate Management' (answers: what security capability?), 'CLI Entry Points & Application Launchers' (answers: how do users invoke Celery?), 'Result Store Backend Implementations' (answers: what storage options exist?). None are directory names.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V2",
+      "verdict": "PASS",
+      "evidence": "Appendix A confirms MCP get_modules(summary) returns only structural metadata. The detailed narrative descriptions ('Implements Celery's message-signing serializer subsystem...') in DETAIL.md are agent-authored, not MCP output. Clear separation verified.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V3",
+      "verdict": "PASS",
+      "evidence": "INDEX.md security summary: 'provides setup_security() as the user-facing entry point, a SecureSerializer that wraps any kombu serializer with sign-on-send and verify-on-receive...' — sufficient to decide whether to read the security DETAIL. All modules have >= 1 meaningful sentence with key entry points named.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V4",
+      "verdict": "PASS",
+      "evidence": "INDEX.md Mermaid graph has 90+ edges (e.g., n6 -->|dep w=2| n1). DETAIL dependency sections cite specific functions: 'celery/__init__.py :: maybe_patch_concurrency — called by main() to conditionally patch eventlet/gevent before CLI dispatch', 'celery/bin/celery.py :: main — the Click-based CLI root imported lazily'. Describes purpose, not just 'A imports B'.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V5",
+      "verdict": "PASS",
+      "evidence": "INDEX → DETAIL → file path chain: `<!-- module-index:security -->` → `[→ DETAIL](security/DETAIL.md)` → `<!-- file:celery/security/__init__.py -->`. YAML front matter in all files. Mermaid graph present. HTML comment markers are machine-parseable. R16/R10/R11 all PASS in Appendix E.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V6",
+      "verdict": "PASS",
+      "evidence": "state.json in Appendix C shows all tasks complete with output_files paths. JSON analysis files exist (R1 PASS). Execution log: 'submit_analysis called for all 12 completed tasks'. source_files_covered list in state.json has 320+ entries.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V7",
+      "verdict": "PASS",
+      "evidence": "Execution log confirms Phase 4 review: 'all module headings renamed from raw module_ids to functional descriptions; Mermaid graph node labels updated to match.' Phase 4 explicitly checks module coherence and uses doc_operation for reorganization if needed.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V8",
+      "verdict": "PASS",
+      "evidence": "Module 'celery' (module_id) groups backends/rpc.py, worker/consumer/delayed_delivery.py, and worker/loops.py — functionally coherent as 'low-level infrastructure bridging broker, result backends, and worker execution'. Module 'azureblockblob' groups cloud backends with the full consumer pipeline bootsteps — correlated by shared worker lifecycle concerns.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V9",
+      "verdict": "PASS",
+      "evidence": "token_budget values in DETAIL.md YAML: annotations=26240, security=22516, __main__=50000, celery=33452, contrib=16412. These vary proportionally with module size (max(5000, min(50000, token_count*4))). Small modules get larger-than-literal budgets; large modules are capped at 50000.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V10",
+      "verdict": "PASS",
+      "evidence": "INDEX security entry is 2 sentences with key entry points. DETAIL security has per-file analysis across 7 files with full 4-section breakdowns including code-level signatures. Content boundaries are clear: INDEX has summary + Mermaid, DETAIL has file-level implementation details. No large verbatim blocks copied between both.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    }
+  ],
+  "skill_effectiveness": [
+    {
+      "id": "S1",
+      "verdict": "PASS",
+      "evidence": "Execution log explicitly lists all 4 phases in order: Phase 1 (analyze_codebase), Phase 2 (validation coverage gate), Phase 3 (12 background sub-agents in 3 parallel rounds), Phase 4 (update_index + module renaming). No phases skipped, no extra phantom phases. 15 turns, consistent with 4-phase protocol.",
+      "fix_suggestion": "",
+      "fix_category": "",
+      "root_cause": "agent_error"
+    },
+    {
+      "id": "S2",
+      "verdict": "FAIL",
+      "evidence": "23/24 modules have all required markers and section headers. annotations/DETAIL.md has 20 file blocks using Japanese `依赖関係` (U+95A2 U+4FC2) instead of the required Chinese `依赖关系` (U+5173 U+7CFB) specified in DOC_TEMPLATES.md. The template explicitly states 'WARNING: 依赖关系 uses Chinese characters. Do NOT use Japanese 依赖関係.' The header format deviation causes section counters to miss these blocks.",
+      "fix_suggestion": "Fix annotations/DETAIL.md: sed-replace `依赖関係` with `依赖关系`. Add explicit Unicode codepoint check in sub-agent Step 4 post-write validation.",
+      "fix_category": "agent_behavior",
+      "root_cause": "agent_error"
+    },
+    {
+      "id": "S3",
+      "verdict": "FAIL",
+      "evidence": "Step 4 (post-write validation) of the three-step protocol explicitly requires: 'All four section headers use Chinese characters 依赖关系 (NOT Japanese 依赖関係). If Japanese kanji 関係 is found, fix it immediately.' The annotations sub-agent wrote Japanese kanji in 20 file blocks and did NOT execute this correction step. get_function_deps was likely called (Step 2 executed), but Step 4 was skipped or performed incorrectly.",
+      "fix_suggestion": "Sub-agent prompts should include a mandatory grep check: `grep -c '依赖関係' DETAIL.md` must return 0 before task is considered complete. If > 0, auto-fix before submitting.",
+      "fix_category": "agent_behavior",
+      "root_cause": "agent_error"
+    },
+    {
+      "id": "S4",
+      "verdict": "PASS",
+      "evidence": "MCP tool calls visible in execution log used correct parameter signatures: analyze_codebase(path=...), get_modules(module_id=..., output_dir=...), get_function_deps(file=..., output_dir=...), doc_operation(operation='update_index', output_dir=...), submit_analysis(task_id=..., detail_paths=[...], output_dir=...). No wrong parameter names detected. state.json shows all 12 tasks complete, indicating MCP calls succeeded.",
+      "fix_suggestion": "",
+      "fix_category": "",
+      "root_cause": "agent_error"
+    },
+    {
+      "id": "S5",
+      "verdict": "FAIL",
+      "evidence": "QUALITY_STANDARDS.md Phase Gate Criteria requires 'All file blocks have all required sections.' Appendix G: 282/315 complete (89.5%), with 20 missing 依赖关系 in annotations. Source file coverage >= 80% is met (81.6%). The section completeness gate is not fully met.",
+      "fix_suggestion": "Fix annotations/DETAIL.md Japanese kanji issue. After fix, 302/315 blocks will be complete (the remaining 13 legitimate incompletions are from testing-test_canvas 2/13 and testing-test_loops 2/23 undocumented files, which are acceptable under R5b >= 80% file coverage rule).",
+      "fix_category": "agent_behavior",
+      "root_cause": "agent_error"
+    },
+    {
+      "id": "S6",
+      "verdict": "PASS",
+      "evidence": "The Skill documentation is unambiguous: it warns about Japanese kanji in 4 separate locations (DOC_TEMPLATES.md, phase3-detail.md twice, SKILL.md checklist). 23/24 modules were documented correctly. The single failure in annotations is an agent execution error (not reading/following the warning), not a Skill defect or ambiguity. The Skill was self-sufficient — the agent simply deviated on one module.",
+      "fix_suggestion": "",
+      "fix_category": "agent_behavior",
+      "root_cause": "agent_error"
+    }
+  ],
+  "overall_verdict": "HAS_FAILURES",
+  "pass_count": 26,
+  "total": 31,
+  "critical_failures": [
+    "R5",
+    "P3",
+    "S2",
+    "S3",
+    "S5"
+  ],
+  "skill_defects": [],
+  "fix_priority": [
+    {
+      "id": "R5/P3/S2/S3/S5",
+      "fix_category": "agent_behavior",
+      "target_file": "test_repos/celery/.codebase-docs/annotations/DETAIL.md",
+      "suggested_fix": "Replace all 20 occurrences of Japanese `依赖関係` (関係 = U+95A2 U+4FC2) with Chinese `依赖关系` (关系 = U+5173 U+7CFB). This single file edit resolves all 5 failures simultaneously. Command: `sed -i 's/依赖関係/依赖关系/g' .codebase-docs/annotations/DETAIL.md`",
+      "expected_impact": "Fixes R5 (section completeness), P3 (DETAIL generation quality), S2 (template adherence), S3 (step 4 post-write validation), S5 (quality standards met). Raises complete block count from 282/315 to 302/315."
+    },
+    {
+      "id": "S3 (systemic)",
+      "fix_category": "skill_doc",
+      "target_file": ".agents/skills/codebase-explorer/phases/phase3-detail.md",
+      "suggested_fix": "Add a mandatory shell verification command in Step 4 post-write validation: 'Run: grep -c \"依赖関係\" DETAIL.md — result MUST be 0. If > 0, halt and fix before proceeding. Use this exact grep to catch Japanese vs Chinese kanji confusion.' This makes the check executable, not just descriptive.",
+      "expected_impact": "Prevents future annotations-type failures where the agent writes Japanese kanji and skips correction. Would have caught all 20 violations before submission."
+    }
+  ],
+  "summary": "26/31 requirements pass. All failures trace to a single root cause: the sub-agent responsible for the `annotations` module wrote Japanese `依赖関係` (U+95A2 U+4FC2) in 20 file blocks instead of the required Chinese `依赖关系` (U+5173 U+7CFB), and skipped the Step 4 post-write validation that would have caught and fixed this. The Skill documentation is clear and warns about this exact mistake in 4 separate locations — this is a pure agent execution error, not a Skill defect. A single sed command on annotations/DETAIL.md resolves all 5 failures. All other 23 modules (including complex 33-file and 25-file modules) are fully compliant. The overall architecture documentation is of high quality with functional module names, specific dependency citations, meaningful summaries, and 81.6% source file coverage."
+}

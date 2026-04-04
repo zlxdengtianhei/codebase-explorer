@@ -1,0 +1,262 @@
+{
+  "mcp_data_quality": [
+    {
+      "id": "R1",
+      "verdict": "PASS",
+      "evidence": "Appendix A: get_modules(summary) shape shows modules array with only {module_id, name, file_count, token_count, layer, depends_on}. No function names or signatures. Appendix C 03_feature_cones.json confirms MCP output is structural only (file lists, token counts, cone metadata).",
+      "fix_suggestion": null,
+      "fix_category": null
+    },
+    {
+      "id": "R2",
+      "verdict": "PASS",
+      "evidence": "Appendix C 06_function_deps.json exists with 23 files analyzed. Contains source_function -> target_function cross-file call relationships, e.g., create_app -> {Flask (src/flask/app.py), from_mapping (src/flask/config.py), route (src/flask/sansio/scaffold.py)}. Appendix E R17 PASS confirms file non-empty.",
+      "fix_suggestion": null,
+      "fix_category": null
+    },
+    {
+      "id": "R3",
+      "verdict": "PASS",
+      "evidence": "Appendix A summary response shape shows only metadata array — no file path listings per module. 03_feature_cones.json contains file path lists (separate artifact, not returned by get_modules summary). The summary response structure has ~6 fields per module entry, well within 3KB.",
+      "fix_suggestion": null,
+      "fix_category": null
+    },
+    {
+      "id": "R4",
+      "verdict": "PASS",
+      "evidence": "Appendix B DETAIL.md YAML headers show token_budget computed per module: conf=10856 (2714*4), js_example=22652 (5663*4), task_app=27328 (6832*4), matching the formula max(5000, min(50000, token_count*4)). Phase 3 agent prompt template in Appendix F includes explicit token budget check before each file read.",
+      "fix_suggestion": null,
+      "fix_category": null
+    },
+    {
+      "id": "R9",
+      "verdict": "PASS",
+      "evidence": "Appendix C 03_feature_cones.json contains top-level 'strategy_used': 'feature_cone'. Appendix A states GroupingStrategy Protocol exists in src/graph/strategies.py with FeatureConeStrategy. get_modules(summary) response includes 'grouping': {'strategy_used': 'feature_cone', 'available_strategies': ['feature_cone']}.",
+      "fix_suggestion": null,
+      "fix_category": null
+    },
+    {
+      "id": "R10",
+      "verdict": "PASS",
+      "evidence": "Appendix C 03_feature_cones.json shows conf module contains files from docs/, examples/celery/, examples/tutorial/flaskr/ — three distinct directories. task_app mixes src/flask/ with examples/celery/src/task_app/. Module grouping clearly differs from directory structure.",
+      "fix_suggestion": null,
+      "fix_category": null
+    }
+  ],
+  "pipeline_protocol": [
+    {
+      "id": "R5",
+      "verdict": "PASS",
+      "evidence": "All three DETAIL.md files contain all four sections for every file. Spot-check: conf/DETAIL.md auth.py has substantive 功能概述 ('Authentication blueprint... Provides login_required decorator'), specific 数据流 (before_each_request → session read → g.user), concrete 核心接口 (login_required(view)->Callable, register()->Response), enriched 依赖关系 ('Calls examples/tutorial/flaskr/db.py get_db() in load_logged_in_user'). Content is non-hollow.",
+      "fix_suggestion": null,
+      "fix_category": null
+    },
+    {
+      "id": "R6",
+      "verdict": "PASS",
+      "evidence": "Appendix D: 'doc_operation(update_index) assembled INDEX.md from 3 fragments'. INDEX.md conf module summary matches verbatim with index-fragment:conf in conf/DETAIL.md ('A heterogeneous module grouping the Sphinx documentation build configuration... Key entry points: create_app(), login_required, get_db()'). js_example and task_app fragments similarly match.",
+      "fix_suggestion": null,
+      "fix_category": null
+    },
+    {
+      "id": "R7",
+      "verdict": "PASS",
+      "evidence": "All DETAIL.md files have: YAML front matter (module_id, module_name, file_count, generated_at, token_budget), <!-- module:xxx --> opening, <!-- file:xxx --> per file, <!-- index-fragment:xxx -->, <!-- end:{module_id} -->, <!-- codebase-explorer: end -->. INDEX.md has YAML front matter, Mermaid graph, <!-- module-index:xxx --> and <!-- end-module-index:xxx --> for all 3 modules.",
+      "fix_suggestion": null,
+      "fix_category": null
+    },
+    {
+      "id": "R8",
+      "verdict": "PASS",
+      "evidence": "Appendix D Phase 4: doc_operation('update_index') called for INDEX assembly; doc_operation('move_detail') available for reorganization; doc_operation('reorder_modules') referenced in phase4-index.md Step 3. SKILL.md lists all 5 operation types: update_index, move_detail, merge_modules, reorder_modules, split_module (list files). Reorganization does not require manual text editing.",
+      "fix_suggestion": null,
+      "fix_category": null
+    },
+    {
+      "id": "P1",
+      "verdict": "PASS",
+      "evidence": "Appendix D Phase 1: 'analyze_codebase processed 35 files, found 3 feature cones, 103,818 chars'. Appendix E R1 PASS: '.codebase-analysis/ exists with 7 JSON files (incl. 06_function_deps.json)'. state.json shows status: 'analysis_complete'.",
+      "fix_suggestion": null,
+      "fix_category": null
+    },
+    {
+      "id": "P2",
+      "verdict": "PASS",
+      "evidence": "Appendix D Phase 2: 'All checks passed: 3 modules, 19 files assigned, all fields complete. No oversized modules (largest: task_app at 6,832 tokens).' get_modules(summary) was called after analyze_codebase and before DETAIL generation, per sequential phase ordering in execution log.",
+      "fix_suggestion": null,
+      "fix_category": null
+    },
+    {
+      "id": "P3",
+      "verdict": "PASS",
+      "evidence": "Appendix D Phase 3: three sequential modules processed. Execution log confirms get_modules(module_id) called per module. Dependency sections reference specific function names from get_function_deps output (e.g., 'Calls src/flask/cli.py AppGroup (class_usage)' in task_app/blueprints.py). Different file sections contain genuinely different content — not template-identical.",
+      "fix_suggestion": null,
+      "fix_category": null
+    },
+    {
+      "id": "P4",
+      "verdict": "PASS",
+      "evidence": "Appendix D Phase 4: 'doc_operation(update_index) assembled INDEX.md from 3 fragments with Mermaid graph'. INDEX.md exists with all 3 <!-- module-index --> blocks. state.json task_002 shows status: 'complete' for INDEX.md.",
+      "fix_suggestion": null,
+      "fix_category": null
+    }
+  ],
+  "doc_quality": [
+    {
+      "id": "V1",
+      "verdict": "PASS",
+      "evidence": "Phase 4 renamed all three modules to functional descriptions: 'Class-Based Views, Signals, Types & Celery Integration', 'JSON Serialization, Logging & JavaScript Demo', 'Tutorial App, Auth & Docs Configuration'. These answer 'what can this codebase do?' rather than reflecting directory names or entry-point file names.",
+      "fix_suggestion": null,
+      "fix_category": null
+    },
+    {
+      "id": "V2",
+      "verdict": "PASS",
+      "evidence": "Appendix A: get_modules returns only structural metadata (name, file_count, token_count, layer, depends_on). 03_feature_cones.json contains no descriptions. All semantic content (功能概述, 数据流, 核心接口, 依赖关系) was written by the Agent after reading source code files via the Read tool.",
+      "fix_suggestion": null,
+      "fix_category": null
+    },
+    {
+      "id": "V3",
+      "verdict": "PASS",
+      "evidence": "INDEX.md module summaries are substantive: conf module lists 'Key entry points: create_app(), login_required, get_db(), init_app()'; js_example names 'DefaultJSONProvider, TaggedJSONSerializer, create_logger()'; task_app names 'View.as_view(), MethodView, Blueprint, create_app() (Celery example)'. Each summary enables a reader to decide which DETAIL to open.",
+      "fix_suggestion": null,
+      "fix_category": null
+    },
+    {
+      "id": "V4",
+      "verdict": "PASS",
+      "evidence": "INDEX.md contains Mermaid graph with 4 edges (n1→n0 w=8, n2→n0 w=7, n3→n0 w=20). DETAIL dependency sections name specific function calls with purpose: 'Calls examples/tutorial/flaskr/db.py get_db() in load_logged_in_user, register, and login to obtain the per-request SQLite connection.' This satisfies 'A calls B.foo() to accomplish X' pattern.",
+      "fix_suggestion": null,
+      "fix_category": null
+    },
+    {
+      "id": "V5",
+      "verdict": "PASS",
+      "evidence": "All documents use structured HTML comment markers (<!-- module:x -->, <!-- file:x -->, <!-- module-index:x -->), YAML front matter, and parseable Mermaid. Navigation chain: INDEX.md → [→ DETAIL](module_id/DETAIL.md) → <!-- file:{filepath} --> → absolute source file path is fully traceable.",
+      "fix_suggestion": null,
+      "fix_category": null
+    },
+    {
+      "id": "V6",
+      "verdict": "PASS",
+      "evidence": "Appendix C state.json exists tracking progress. 06_function_deps.json, 03_feature_cones.json, and other JSON analysis files persist in .codebase-analysis/. Appendix D: 'Submitted task_001 via submit_analysis' and task_002 submitted after INDEX assembly. state.json shows all tasks 'complete' with output_files listed.",
+      "fix_suggestion": null,
+      "fix_category": null
+    },
+    {
+      "id": "V7",
+      "verdict": "PASS",
+      "evidence": "Appendix D Phase 4 includes explicit review step: 'Renamed non-functional module headings to functional descriptions', 'Reordered modules: core infrastructure first', 'Re-ran update_index, applied name edits'. Phase 4 instructions in Appendix F describe Steps 2a/2b/2c review criteria and reorganization via move_detail/reorder_modules.",
+      "fix_suggestion": null,
+      "fix_category": null
+    },
+    {
+      "id": "V8",
+      "verdict": "PASS",
+      "evidence": "Feature cone grouping produces cross-directory functional groupings (V10 evidence). Cross-module dependencies are explicitly noted via Mermaid graph in INDEX.md and via specific function-call entries in 依赖关系 sections. E.g., flaskr/auth.py dependencies trace to src/flask/sansio/scaffold.py and src/flask/templating.py.",
+      "fix_suggestion": null,
+      "fix_category": null
+    },
+    {
+      "id": "V9",
+      "verdict": "PASS",
+      "evidence": "DETAIL YAML front matter shows per-module budget scaling: conf=10856 (2714*4), js_example=22652 (5663*4), task_app=27328 (6832*4). Formula max(5000, min(50000, module_token_count*4)) is documented in phase3-detail.md agent prompt template and reflected in actual token_budget values.",
+      "fix_suggestion": null,
+      "fix_category": null
+    },
+    {
+      "id": "V10",
+      "verdict": "PASS",
+      "evidence": "INDEX.md contains only the 2-3 sentence index-fragment summaries. DETAIL.md contains full per-file analysis (Purpose/DataFlow/KeyInterfaces/Dependencies). The index-fragment text in DETAIL and INDEX is the same by design (extracted verbatim), but this is the only overlap — no large file-analysis blocks appear in INDEX.",
+      "fix_suggestion": null,
+      "fix_category": null
+    }
+  ],
+  "skill_effectiveness": [
+    {
+      "id": "S1",
+      "verdict": "PASS",
+      "evidence": "Appendix D execution log shows all 4 phases executed in order: Phase 1 (analyze_codebase), Phase 2 (validation), Phase 3 (3 DETAIL files), Phase 4 (INDEX assembly + rename + reorder). No phases skipped, no phantom phases invented. Matches SKILL.md 4-Phase Pipeline exactly.",
+      "fix_suggestion": null,
+      "fix_category": null,
+      "root_cause": null
+    },
+    {
+      "id": "S2",
+      "verdict": "FAIL",
+      "evidence": "js_example/DETAIL.md and task_app/DETAIL.md use Japanese kanji '依赖関係' in the Dependencies section header instead of Chinese '依赖关系' as specified. Affects all 14 file sections in these two DETAIL files. Only conf/DETAIL.md uses the correct '依赖关系'. phase3-detail.md Style Constraints explicitly states: 'Keep Chinese names in section headers (功能概述, 数据流, 核心接口, 依赖关系) exactly as written.'",
+      "fix_suggestion": "No Skill change needed — instruction is clear. In future runs, the agent must use '依赖关系' (Chinese 关系 U+5173 U+7CFB) not '依赖関係' (Japanese 関係 U+95A2 U+4FC2). Consider adding a character-encoding note or example in DOC_TEMPLATES.md to make the distinction visually explicit.",
+      "fix_category": "skill_doc",
+      "root_cause": "agent_error"
+    },
+    {
+      "id": "S3",
+      "verdict": "PASS",
+      "evidence": "Appendix D: 'For each file: read source → write four sections → query get_function_deps(file=X)' — three-step order confirmed. DETAIL 依赖关系 sections contain specific function names traceable to 06_function_deps.json (e.g., 'celery_init_app → src/flask/app.py app_context' appears in both JSON and task_app DETAIL). Index-fragments appear at end of each DETAIL file after all file sections.",
+      "fix_suggestion": null,
+      "fix_category": null,
+      "root_cause": null
+    },
+    {
+      "id": "S4",
+      "verdict": "PASS",
+      "evidence": "Appendix D confirms successful MCP tool calls: analyze_codebase, get_modules (summary and per-module), get_function_deps, doc_operation with operations update_index/move_detail/reorder_modules, submit_analysis. All tool calls produced expected outputs (JSON files, DETAIL files, INDEX.md). No evidence of parameter name errors causing tool failures.",
+      "fix_suggestion": null,
+      "fix_category": null,
+      "root_cause": null
+    },
+    {
+      "id": "S5",
+      "verdict": "FAIL",
+      "evidence": "Appendix C state.json: 'source_file_coverage_percent': 54.285714 (19 documented files / 35 total). QUALITY_STANDARDS.md Phase Gate requires >= 80%. The 16 infrastructure_files listed in 03_feature_cones.json (src/flask/cli.py, app.py, config.py, sansio/scaffold.py, etc.) were never documented. QUALITY_STANDARDS.md explicitly states: 'If they push coverage below 80%, create an infrastructure pseudo-module to document them.' No infrastructure pseudo-module was created.",
+      "fix_suggestion": "Create an 'infrastructure' pseudo-module DETAIL.md covering the 16 infrastructure files. This alone would raise coverage from 54% to 100% (35/35). The Phase 2 validation step must explicitly check get_progress() source_file_coverage_percent against the 80% threshold before proceeding to Phase 3.",
+      "fix_category": "skill_doc",
+      "root_cause": "both"
+    },
+    {
+      "id": "S6",
+      "verdict": "FAIL",
+      "evidence": "Appendix D Phase 2: 'Coverage per Skill formula: 100% (19/19 cone-assigned files)' — agent computed coverage as cone_files/cone_files=100%, not total_source_files as defined in QUALITY_STANDARDS.md. Root Skill defect: SKILL.md Phase 2 describes 'Coverage check (all files assigned to a module)' — this phrasing implies checking that cone assignment is complete (19/19), not that total source coverage >= 80%. The Phase 2 gate formula (module_files / total_analyzed including infrastructure) is only documented in QUALITY_STANDARDS.md, a separate reference file the agent did not consult during Phase 2. The SKILL.md master file does not reference QUALITY_STANDARDS.md in Phase 2 description.",
+      "fix_suggestion": "Add explicit coverage formula to SKILL.md Phase 2 description: 'Coverage check: call get_progress(), verify source_file_coverage_percent >= 80%. If below 80%, plan infrastructure pseudo-module before Phase 3. See QUALITY_STANDARDS.md §Phase Gate 2→3.' Remove ambiguous 'all files assigned to a module' phrasing.",
+      "fix_category": "skill_doc",
+      "root_cause": "skill_defect"
+    }
+  ],
+  "overall_verdict": "HAS_FAILURES",
+  "pass_count": 27,
+  "total": 30,
+  "critical_failures": [
+    "S5",
+    "S6",
+    "S2"
+  ],
+  "skill_defects": [
+    "S5",
+    "S6"
+  ],
+  "fix_priority": [
+    {
+      "id": "S6",
+      "fix_category": "skill_doc",
+      "target_file": ".agents/skills/codebase-explorer/SKILL.md",
+      "suggested_fix": "In Phase 2 description, replace 'Coverage check (all files assigned to a module)' with: 'Coverage check: call get_progress() and verify source_file_coverage_percent >= 80% (documented_files / total_source_files including infrastructure). If below 80%, create an infrastructure pseudo-module for undocumented high-centrality files before proceeding. See QUALITY_STANDARDS.md §Phase Gate 2→3 for the exact formula.' Add a callout box: 'Infrastructure files are NOT automatically assigned to cones — they lower coverage silently.'",
+      "expected_impact": "Fixes S5 (agent will create infrastructure pseudo-module), S6 (formula no longer ambiguous), raises coverage from 54% to 100%"
+    },
+    {
+      "id": "S5",
+      "fix_category": "skill_doc",
+      "target_file": ".agents/skills/codebase-explorer/phases/phase2-validation.md",
+      "suggested_fix": "Add explicit Phase 2 validation step: '4. Coverage gate: total_analyzed = get_modules().total_files + infrastructure.file_count. If source_file_coverage_percent < 80%, add infrastructure pseudo-module task to Phase 3 task list before continuing.' Include a worked example showing 19/35 = 54% failing and requiring infrastructure pseudo-module.",
+      "expected_impact": "Prevents silent infrastructure file omission; ensures S5 coverage gate is enforced before Phase 3"
+    },
+    {
+      "id": "S2",
+      "fix_category": "skill_doc",
+      "target_file": ".agents/skills/codebase-explorer/references/DOC_TEMPLATES.md",
+      "suggested_fix": "In the Style Constraints section, add a visual callout: '⚠️ ENCODING: Section header must use Chinese characters: 依赖关系 (U+4F9D U+8D56 U+5173 U+7CFB). Do NOT use Japanese kanji 依赖関係 (U+4F9D U+8D56 U+95A2 U+4FC2). They look similar but are different characters.' Also add a copy-paste reference block of all four headers in the correct encoding.",
+      "expected_impact": "Fixes S2 template adherence; prevents encoding confusion in future runs for the two DETAIL files that used Japanese kanji"
+    }
+  ],
+  "summary": "27/30 PASS. The pipeline executed correctly end-to-end with high-quality documentation output. The three failures are: (1) S6/S5 [critical]: SKILL.md Phase 2 uses ambiguous phrasing 'all files assigned to a module' which caused the agent to compute coverage as 19/19 cone-files=100% instead of 19/35 total=54%. The 16 infrastructure files were never documented, leaving actual coverage at 54.3% — well below the 80% gate. The fix is a one-line SKILL.md clarification pointing to the QUALITY_STANDARDS.md formula. (2) S2 [minor]: 2 of 3 DETAIL files use Japanese kanji 依赖関係 instead of Chinese 依赖关系 in section headers, violating the explicit 'keep exactly as written' style constraint. The highest-impact single fix is updating SKILL.md Phase 2 to reference source_file_coverage_percent from get_progress() directly — this would resolve both S5 and S6 and increase coverage from 54% to 100% on rerun."
+}

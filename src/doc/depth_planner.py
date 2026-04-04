@@ -69,6 +69,9 @@ SPLIT_FILL_RATIO = 0.8
 INFRA_CONTEXT_TOKENS = 2_000
 """Token budget reserved per task for infrastructure context summaries."""
 
+MAX_FILES_PER_TASK = 30
+"""Maximum number of exclusive files per task before triggering a split."""
+
 
 def _collect_cone_files(cone_data: dict) -> list[str]:
     """Return all exclusive files from a cone data dict (immutable helper)."""
@@ -122,7 +125,8 @@ def _split_cone_by_dag_layer(
     def _file_sort_key(fp: str) -> tuple[int, int]:
         """(negative layer, negative tokens) so highest layer / largest come first."""
         layer = -1  # default: unknown
-        for layer_idx, layer_files in layers_within.items():
+        items = layers_within.items() if isinstance(layers_within, dict) else enumerate(layers_within)
+        for layer_idx, layer_files in items:
             if fp in layer_files:
                 layer = int(layer_idx)
                 break
@@ -256,7 +260,8 @@ def build_task_manifest(
         shared_deps = list(cone_data.get("shared_deps", []))
         exclusive_files = _collect_cone_files(cone_data)
 
-        if cone_tokens > usable_budget:
+        cone_file_count = len(exclusive_files)
+        if cone_tokens > usable_budget or cone_file_count > MAX_FILES_PER_TASK:
             # Case A: Oversized cone -- split by DAG layer
             n_parts = math.ceil(
                 cone_tokens / (usable_budget * SPLIT_FILL_RATIO),
@@ -273,7 +278,8 @@ def build_task_manifest(
             # Case B: Try to fit into an existing open bin (First Fit)
             placed = False
             for b in open_bins:
-                if b["remaining"] >= cone_tokens:
+                bin_file_count = len(b["files"]) + cone_file_count
+                if b["remaining"] >= cone_tokens and bin_file_count <= MAX_FILES_PER_TASK:
                     b["cone_ids"].append(cone_id)
                     b["used_tokens"] += cone_tokens
                     b["remaining"] -= cone_tokens

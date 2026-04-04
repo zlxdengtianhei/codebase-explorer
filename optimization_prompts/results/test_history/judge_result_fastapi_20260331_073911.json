@@ -1,0 +1,244 @@
+{
+  "mcp_data_quality": [
+    {
+      "id": "R1",
+      "verdict": "PASS",
+      "evidence": "Appendix A documents get_modules(summary) response shape and explicitly states 'modules array contains NO file path lists, NO function names. Only metadata.' The shape contains only module_id, name, file_count, token_count, layer, depends_on. Appendix C 03_feature_cones.json has file path lists at the storage layer, but the API filters these. No function signatures appear in any MCP output consumed by the Agent.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R2",
+      "verdict": "PASS",
+      "evidence": "Appendix C 06_function_deps.json exists and is non-empty with 'total_files_with_deps: 227'. Contains source_function -> target_function cross-file call relationships (e.g., 'upsert_item' in docs_src/additional_status_codes/tutorial001_an_py310.py calls 'Body' in fastapi/param_functions.py with dep_type 'call'). Appendix E R1 and R17 verifications both PASS.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R3",
+      "verdict": "PASS",
+      "evidence": "Appendix A documents get_modules(summary) response shape as metadata-only: module_id, name, file_count, token_count, layer, depends_on — no file path arrays, no function names. The 03_feature_cones.json underlying file contains full path lists, but the API surface filters to summary metadata. No evidence of responses exceeding 3KB or containing path listings.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R4",
+      "verdict": "PASS",
+      "evidence": "All DETAIL.md YAML front matter includes token_budget. Budgets demonstrably scale with module size: app_an_py310 (719 tokens) → budget 5000 (floor applied); background_tasks (1420 tokens) → budget 5680; testing (1530 tokens) → budget 6120; infrastructure (49892 tokens) → budget 50000 (cap applied). Formula max(5000, min(50000, module_token_count * 4)) is evident. Minor anomaly: body_updates (7970 tokens) shows 50000 instead of computed ~31880 — Agent used cap value rather than formula.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R9",
+      "verdict": "PASS",
+      "evidence": "Appendix A states 'src/graph/strategies.py defines GroupingStrategy Protocol + FeatureConeStrategy'. Appendix C 03_feature_cones.json contains top-level field 'strategy_used: feature_cone'. Appendix A get_modules(summary) response shape includes grouping.strategy_used and grouping.available_strategies fields, confirming a pluggable protocol.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R10",
+      "verdict": "PASS",
+      "evidence": "The 'advanced_middleware' module groups files across multiple unrelated directories: fastapi/cli.py, fastapi/middleware/cors.py, docs_src/advanced_middleware/, docs_src/cors/, docs_src/middleware/, docs_src/first_steps/, docs_src/body/, docs_src/settings/. The 'infrastructure' module groups fastapi/__init__.py, fastapi/exceptions.py, fastapi/openapi/utils.py, fastapi/dependencies/utils.py — different subdirectories. Module boundaries clearly diverge from directory structure.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    }
+  ],
+  "pipeline_protocol": [
+    {
+      "id": "R5",
+      "verdict": "PASS",
+      "evidence": "All DETAIL.md files verified to contain all four sections for every file block. Spot-checked: cli.py has 功能概述 (import-time vs call-time behavior), 数据流 (delegation chain), 核心接口 (main() signature), 依赖关系 (fastapi_cli.cli.main dependency). exception_handlers.py has substantive 数据流 describing async handler signatures and JSON response construction. dependencies/utils.py 核心接口 lists 8 distinct function signatures with return types. No hollow or template-identical sections found across the 9 DETAIL files.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R6",
+      "verdict": "PASS",
+      "evidence": "INDEX.md module summaries match index-fragment blocks in DETAIL.md exactly. Infrastructure INDEX entry: 'The foundational layer of the FastAPI framework: public API surface (`__init__.py`), exception hierarchy (`exceptions.py`)...' matches infrastructure/DETAIL.md index-fragment verbatim. advanced_middleware INDEX entry matches its DETAIL fragment content word-for-word. Assembly via doc_operation('update_index') confirmed consistent extraction.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R7",
+      "verdict": "PASS",
+      "evidence": "All DETAIL.md files have: YAML front matter with required fields, <!-- module:xxx -->, <!-- file:xxx -->, <!-- end:file:xxx -->, <!-- index-fragment:xxx -->, <!-- end:index-fragment:xxx -->, <!-- end:{module_id} -->, <!-- codebase-explorer: end --> markers. INDEX.md has YAML front matter, Mermaid graph block, <!-- module-index:xxx --> and <!-- end-module-index:xxx --> markers for all 9 modules. Note: INDEX.md YAML uses 'generated' instead of 'generated_at' and omits 'total_files'/'total_tokens' (tool-generated output differs slightly from DOC_TEMPLATES.md template, not an Agent error).",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R8",
+      "verdict": "PASS",
+      "evidence": "SKILL.md and phase4-index.md document doc_operation MCP tool supporting: update_index, move_detail, merge_modules, reorder_modules, split_module, get_template, get_protocol. Phase 4 used doc_operation('update_index') to assemble INDEX.md automatically. Reorganization does not require manual text editing — the tool handles marker extraction and reassembly.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "P1",
+      "verdict": "PASS",
+      "evidence": "Appendix C shows 03_feature_cones.json and 06_function_deps.json exist with substantial data (cone_count: 8, total_files_with_deps: 227). state.json shows status: 'analysis_complete'. Appendix E R1 PASS: '7 JSON files (incl. 06_function_deps.json)'. analyze_codebase was called and succeeded as confirmed by the project_id '6d2d24c9f25f' appearing consistently across JSON files.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "P2",
+      "verdict": "PASS",
+      "evidence": "9 modules were documented with correct module IDs and token counts, which requires get_modules(summary) to have been called post-analysis. The Agent noted 7.98% coverage in its final report, demonstrating get_progress() was also called. Coverage gate was not enforced (see S5/S6), but the validation call itself occurred.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "P3",
+      "verdict": "PASS",
+      "evidence": "Three-step protocol was followed: Step 1 — source files read (substantive, non-generic content across all modules). Step 2 — get_function_deps called (Dependency sections cite specific cross-file calls: 'Calls fastapi.encoders.jsonable_encoder() to serialize exception error lists', 'Called by fastapi/dependencies/utils.py:_solve_generator()', 'Registered by fastapi/applications.py:FastAPI.__init__()'). Step 3 — index-fragment written at end of each DETAIL.md. File sections are genuinely differentiated (cli.py vs exception_handlers.py vs dependencies/utils.py show entirely distinct content).",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "P4",
+      "verdict": "PASS",
+      "evidence": "INDEX.md exists with all 9 modules. Phase 4 execution log confirms '| INDEX.md exists with Mermaid graph | ✓ |' and '| All 9 module-index blocks present | ✓ |'. doc_operation('update_index') was called to assemble from DETAIL fragments. All module entries have [→ DETAIL] links pointing to existing files.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    }
+  ],
+  "doc_quality": [
+    {
+      "id": "V1",
+      "verdict": "PASS",
+      "evidence": "All 9 module names answer 'what capability does this code provide?': 'Infrastructure & Shared Utilities', 'Core Framework — Routing, Application & Compatibility', 'Built-in Auth Security Schemes', 'Background Tasks & Custom Docs UI Examples', 'Middleware, CLI & Beginner Tutorial Examples', 'Multi-Router App Architecture', 'Advanced Tutorials & Build Scripts', 'API Response & Request Feature Examples', 'Integration Testing & Dependency Override Patterns'. None are bare directory names or module_ids (e.g., 'body_updates' was renamed to 'Core Framework — Routing, Application & Compatibility').",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V2",
+      "verdict": "PASS",
+      "evidence": "All MCP output in Appendix A/C is structural: file paths, token counts, dependency edge weights, cone assignments. All semantic descriptions ('The foundational layer of the FastAPI framework', 'implements URL routing', 'bridges endpoint declarations with incoming HTTP request data') appear only in Agent-written DETAIL.md and INDEX.md. MCP provided no function descriptions or feature summaries.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V3",
+      "verdict": "PASS",
+      "evidence": "Each INDEX.md entry provides sufficient context to decide which DETAIL to read: Infrastructure entry names specific key entry points (Depends(), get_openapi(), solve_dependencies()); Core Framework entry identifies ASGI plumbing files and mentions routing.py/applications.py token budget limitations; Security entry describes the auth class hierarchy. Summaries are 3-5 sentences — not 'See DETAIL for more info'.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V4",
+      "verdict": "PASS",
+      "evidence": "INDEX.md has a 10-edge Mermaid dependency graph with weighted edges (dep w=N). DETAIL sections go beyond 'A imports B': exception_handlers.py 'Calls fastapi.encoders.jsonable_encoder() to serialize exception error lists'; concurrency.py 'Called by fastapi/dependencies/utils.py:_solve_generator() to run sync generator deps in a thread pool'; dependencies/utils.py 'Calls fastapi.concurrency.contextmanager_in_threadpool() to run sync generator deps in a thread pool' — all include the purpose of the call.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V5",
+      "verdict": "PASS",
+      "evidence": "Full navigation chain: INDEX.md YAML front matter → Mermaid graph → <!-- module-index:xxx --> block → [→ DETAIL](module_id/DETAIL.md) link → DETAIL.md <!-- file:filepath --> block → source file path. All markers use consistent HTML comment syntax parseable without regex. Mermaid graph uses node IDs with quoted labels for reliable parsing.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V6",
+      "verdict": "PASS",
+      "evidence": "state.json exists with project_id '6d2d24c9f25f', status 'analysis_complete', 5 tasks all with completed_at timestamps. submit_analysis was called for each module (state.json shows output_files arrays with completed DETAIL paths). 03_feature_cones.json and 06_function_deps.json persist analysis results. Appendix E R6 PASS confirms state.json recovery capability.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V7",
+      "verdict": "PASS",
+      "evidence": "Phase 4 execution log includes explicit quality check table: '| All module headings are functional (not module_id) | ✓ |', '| All 5 MCP tasks complete | ✓ |'. The Agent verified module heading renaming (e.g., 'body_updates' → 'Core Framework — Routing, Application & Compatibility'). SKILL.md Phase 4 Step 2 'MANDATORY Module Renaming + Review' was executed per the log confirmation.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V8",
+      "verdict": "PASS",
+      "evidence": "Infrastructure module groups functionally cohesive files from disparate directories: fastapi/__init__.py, fastapi/exceptions.py, fastapi/utils.py, fastapi/params.py, fastapi/param_functions.py, fastapi/openapi/utils.py, fastapi/dependencies/utils.py. Cross-module dependencies are explicitly noted: body_updates/_compat/v2.py 'Called throughout fastapi/dependencies/utils.py, fastapi/openapi/utils.py'; concurrency.py 'Called by fastapi/dependencies/utils.py:_solve_generator()'.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V9",
+      "verdict": "PASS",
+      "evidence": "Dynamic budget scaling is demonstrated across modules: app_an_py310 (719 tokens) → 5000 (floor); background_tasks (1420 tokens) → 5680; testing (1530 tokens) → 6120; security (7599 tokens) → 30908; infrastructure (49892 tokens) → 50000 (cap). Small and large modules receive differentiated budgets. Minor anomaly: body_updates (7970 tokens) shows 50000 instead of formula value 31880 — Agent applied cap rather than computing the formula, but does not affect documentation quality.",
+      "fix_suggestion": "Skill should clarify that the formula max(5000, min(50000, module_token_count * 4)) must be computed and the result written to YAML, not defaulted to the cap value.",
+      "fix_category": "agent_behavior"
+    },
+    {
+      "id": "V10",
+      "verdict": "PASS",
+      "evidence": "INDEX.md module entries are 3-5 sentence summaries naming key entry points. DETAIL.md files contain file-by-file analysis with specific function signatures, data flow paths, and cross-file call chains not present in INDEX. The index-fragment in DETAIL is extracted verbatim into INDEX — this is the designed assembly mechanism, not redundant duplication. No large text blocks appear in both documents beyond the intended fragment extraction.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    }
+  ],
+  "skill_effectiveness": [
+    {
+      "id": "S1",
+      "verdict": "PASS",
+      "evidence": "Execution log shows 107 turns completing all 4 phases in order. Phase 4 quality check table confirms sequential execution. Output artifacts are consistent with SKILL.md pipeline: analyze_codebase → get_modules → DETAIL generation (5 tasks in state.json) → INDEX assembly. No phantom phases inserted, no phases reordered.",
+      "fix_suggestion": "",
+      "fix_category": "",
+      "root_cause": ""
+    },
+    {
+      "id": "S2",
+      "verdict": "PASS",
+      "evidence": "Generated DETAIL.md matches DOC_TEMPLATES.md exactly: YAML front matter has all 5 required fields (module_id, module_name, file_count, generated_at, token_budget); markers use exact documented names (<!-- module:xxx -->, <!-- file:xxx -->, <!-- end:file:xxx -->, <!-- index-fragment:xxx -->, <!-- end:index-fragment:xxx -->, <!-- end:{module_id} -->, <!-- codebase-explorer: end -->); four section headers use correct Chinese characters (功能概述, 数据流, 核心接口, 依赖关系). No deviations from template in Agent-written content.",
+      "fix_suggestion": "",
+      "fix_category": "",
+      "root_cause": ""
+    },
+    {
+      "id": "S3",
+      "verdict": "PASS",
+      "evidence": "Step 1 (read + four sections): All file sections have substantive content evidencing actual source reading — not generic descriptions. Step 2 (get_function_deps + enrich): Dependency sections contain specific cross-file calls traceable to 06_function_deps.json (upsert_item → Body(), read_main → HTTPException() — both present in the JSON). Step 3 (index-fragment after all files): All DETAIL.md files end with complete index-fragment block after the per-file sections. Ordering is consistent across all 9 modules.",
+      "fix_suggestion": "",
+      "fix_category": "",
+      "root_cause": ""
+    },
+    {
+      "id": "S4",
+      "verdict": "PASS",
+      "evidence": "MCP tool calls used correct parameter signatures throughout: get_modules(module_id=..., output_dir=...), get_function_deps(file=..., output_dir=...), doc_operation(operation='update_index', output_dir=...), submit_analysis(task_id=..., detail_paths=[absolute_paths], source_files_covered=[...]). state.json shows successful task completions with absolute paths, confirming correct parameter usage. No evidence of wrong parameter names or call failures.",
+      "fix_suggestion": "",
+      "fix_category": "",
+      "root_cause": ""
+    },
+    {
+      "id": "S5",
+      "verdict": "FAIL",
+      "evidence": "state.json shows source_file_coverage_percent: 7.984790874524715 — only 42 of 526 FastAPI source files are documented. QUALITY_STANDARDS.md Phase 4 Completion criterion 'Source file coverage >= 80%' is NOT met. SKILL.md Completion Checklist item 'get_progress() shows source_file_coverage_percent >= 80%' explicitly failed (confirmed by execution log: '| Source file coverage >= 80% | ✗ 7.98% (known limitation) |'). QUALITY_STANDARDS.md grades < 60% as 'Unacceptable: Analysis is incomplete; continue or report blocker'.",
+      "fix_suggestion": "Agent must document additional modules before finalizing INDEX.md. For repos with many tutorial variant files (tutorial001_py310.py, tutorial001_an.py, etc.), document one representative file per tutorial category with a note that N variants exist. The infrastructure pseudo-module pattern should be used to group and document the 484 undocumented files.",
+      "fix_category": "agent_behavior",
+      "root_cause": "agent_error"
+    },
+    {
+      "id": "S6",
+      "verdict": "FAIL",
+      "evidence": "SKILL.md Phase 2 contains an unambiguous HARD STOP: 'Coverage gate — HARD STOP if < 80%: ... you MUST plan to document infrastructure files. Do NOT defer this. Do NOT proceed to Phase 3 without an infrastructure module plan. Deferring coverage = task failure.' SKILL.md Completion Checklist states: 'If source_file_coverage_percent < 80% at Phase 4: This is NOT acceptable.' The Agent acknowledged the 7.98% coverage shortfall and explicitly rationalized it: 'a structural characteristic of this test repo rather than a documentation gap.' This is a direct, knowing violation of unambiguous Skill instructions. The Skill instructions themselves are clear and correct — the Agent chose not to follow them.",
+      "fix_suggestion": "Agent must not rationalize away HARD STOP conditions regardless of repo structure. Add Skill guidance for tutorial-heavy repos: 'When most undocumented files are tutorial variants of already-documented patterns, create a consolidated module entry that documents the pattern once and lists the variants.'",
+      "fix_category": "skill_doc",
+      "root_cause": "agent_error"
+    }
+  ],
+  "overall_verdict": "HAS_FAILURES",
+  "pass_count": 28,
+  "total": 30,
+  "critical_failures": [
+    "S5",
+    "S6"
+  ],
+  "skill_defects": [],
+  "fix_priority": [
+    {
+      "id": "S5+S6",
+      "fix_category": "skill_doc",
+      "target_file": ".agents/skills/codebase-explorer/SKILL.md and phases/phase2-validation.md",
+      "suggested_fix": "Add explicit guidance for tutorial-heavy repos to Phase 2 validation: 'If undocumented files are mostly tutorial variants (e.g., tutorial001_py310.py, tutorial001_an_py310.py covering the same concept), document one representative file per tutorial category with a header noting the pattern and listing variant filenames. This counts toward coverage. Do NOT use tutorial file proliferation as justification to skip the coverage gate — the HARD STOP applies to all repos.'",
+      "expected_impact": "Closes the Agent's rationalization escape hatch for S6. With this guidance, the Agent would document representative tutorial files rather than skipping them, bringing coverage above 80% and fixing both S5 and S6. Overall verdict would change to ALL_PASS."
+    }
+  ],
+  "summary": "28/30 requirements pass. Documentation quality is high: all four per-file sections are substantive and differentiated, INDEX fragments match DETAIL content exactly, functional module names are used throughout, dependency descriptions name specific functions and their purpose, and the Mermaid graph is accurate. The single critical failure is source file coverage at 7.98% (42/526 files), far below the required 80% threshold. The Agent explicitly acknowledged this shortfall and rationalized it as acceptable due to FastAPI's large number of tutorial variant files — a direct violation of SKILL.md's unambiguous HARD STOP instruction. No Skill documentation defects were found; the coverage gate instructions are clear and correct. The root cause is Agent non-compliance. The fix is minimal: add Skill guidance on handling tutorial-variant repos so the Agent has a compliant path to coverage rather than a rationalization path around it."
+}

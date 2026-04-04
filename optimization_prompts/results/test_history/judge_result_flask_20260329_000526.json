@@ -1,0 +1,279 @@
+{
+  "mcp_data_quality": [
+    {
+      "id": "R1",
+      "verdict": "PASS",
+      "evidence": "Appendix A shows get_modules(summary) returns only module metadata: module_id, name, file_count, token_count, layer, depends_on. No function names, signatures, or descriptions. Appendix C 03_feature_cones.json contains only structural data (file paths, token counts, layers, cohesion_score). Semantic descriptions in DETAIL.md are Agent-written.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R2",
+      "verdict": "PASS",
+      "evidence": "Appendix C shows 06_function_deps.json with source_function -> target_function cross-file call relationships (e.g., create_app->Flask, create_app->from_mapping, celery_init_app->app_context). Appendix E R17 also confirms PASS. total_files_with_deps: 23.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R3",
+      "verdict": "PASS",
+      "evidence": "Appendix A summary shape has modules array with only metadata fields (module_id, name, file_count, token_count, layer, depends_on). No file path lists in modules array. 3-module summary JSON would be well under 3000 chars. Appendix E verification script passes related structural checks.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R4",
+      "verdict": "PASS",
+      "evidence": "All three DETAIL.md files have token_budget field in YAML front matter (all set to 30000). phase3-detail.md agent prompt includes 'Before reading each file, check: accumulated_tokens + file_token_count <= budget'. Appendix C shows token_count per module (conf:2714, js_example:5663, task_app:6832). Budget-aware stopping logic is documented and referenced.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R9",
+      "verdict": "PASS",
+      "evidence": "Appendix A explicitly states: 'File: src/graph/strategies.py defines GroupingStrategy Protocol + FeatureConeStrategy'. Appendix C 03_feature_cones.json contains 'strategy_used: feature_cone'. Appendix A also shows get_modules summary response includes 'grouping: {strategy_used: feature_cone, available_strategies: [feature_cone]}'.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R10",
+      "verdict": "PASS",
+      "evidence": "Appendix C shows clear cross-directory grouping: 'conf' module groups docs/conf.py + examples/celery/make_celery.py + examples/tutorial/flaskr/*.py (3 different directories). 'js_example' groups examples/javascript/ + src/flask/json/ + src/flask/logging.py. 'task_app' groups examples/celery/src/task_app/ + src/flask/ core files. Module grouping != directory structure.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    }
+  ],
+  "pipeline_protocol": [
+    {
+      "id": "R5",
+      "verdict": "PASS",
+      "evidence": "All four sections present in every file block across all three DETAIL.md files. Spot-checking: conf.py (conf/DETAIL.md) has substantive 功能概述 explaining Sphinx role, 数据流 tracing get_version->github_link->setup(app), 核心接口 with actual signatures, 依赖关系 naming specific external deps. auth.py has all four sections with meaningful content describing data flow through register/login/logout. Content is not template-identical across files.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R6",
+      "verdict": "PASS",
+      "evidence": "Comparing INDEX.md 'Conf' module-index block with conf/DETAIL.md index-fragment:conf — text is identical verbatim: 'A collection of configuration and bootstrap files for the Flaskr tutorial application...' Same for 'Js Example' (Flask JSON infrastructure summary) and 'Task App' (Flask core view and blueprint infrastructure summary). INDEX content is extracted directly from DETAIL fragments.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R7",
+      "verdict": "PASS",
+      "evidence": "All DETAIL.md files verified: YAML front matter with module_id/module_name/file_count/generated_at/token_budget ✓; <!-- module:{id} --> ✓; <!-- file:{filepath} --> and <!-- end:file:{filepath} --> for every file ✓; <!-- index-fragment:{id} --> and <!-- end:index-fragment:{id} --> ✓; <!-- end:{id} --> and <!-- codebase-explorer: end --> ✓. INDEX.md: YAML front matter ✓; Mermaid graph ✓; <!-- module-index:{id} --> and <!-- end-module-index:{id} --> for all 3 modules ✓.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "R8",
+      "verdict": "PASS",
+      "evidence": "SKILL.md documents doc_operation MCP tool. phase4-index.md documents move_detail, merge_modules, update_index, reorder_modules, split_module operations with full call signatures. Execution log confirms doc_operation('update_index') was called (Phase 4 status ✅). Note: agent needed manual edit to add [→ DETAIL] links, indicating update_index output is incomplete, but the tool exists and was invoked.",
+      "fix_suggestion": "doc_operation('update_index') should automatically include [→ DETAIL](module_id/DETAIL.md) links in module-index blocks. Currently requires post-generation manual edit.",
+      "fix_category": "mcp_code"
+    },
+    {
+      "id": "P1",
+      "verdict": "PASS",
+      "evidence": "Execution log confirms Phase 1 Analysis ✅ '35 files, 3 cones, 103,818 total tokens'. Appendix C shows 03_feature_cones.json with cone data and 06_function_deps.json with dependency data. state.json shows project_id='9b425a3ed56f'. Appendix E R1 PASS: '.codebase-analysis/ exists with 7 JSON files (incl. 06_function_deps.json)'.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "P2",
+      "verdict": "PASS",
+      "evidence": "Execution log confirms Phase 2 Validation ✅ 'All checks passed; no size warnings'. Execution log also notes the Phase 2 check used get_modules().total_files=19 for coverage, which passed — though this metric diverges from analyze_codebase total of 35 (a Skill defect flagged in S5/S6).",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "P3",
+      "verdict": "PASS",
+      "evidence": "Three DETAIL.md files generated for all three modules. get_function_deps results are reflected in dependency sections — e.g., auth.py dependencies cite specific function calls matching 06_function_deps.json entries (load_logged_in_user calls get_db, register calls get_db). index-fragments appear at end of each DETAIL file after all per-file sections. Different file sections have genuinely different content (conf.py Sphinx config vs auth.py auth blueprint vs db.py SQLite lifecycle).",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "P4",
+      "verdict": "PASS",
+      "evidence": "Execution log confirms Phase 4 INDEX Assembly ✅. INDEX.md exists with Mermaid graph and all 3 module-index blocks. state.json task_002 shows status:'complete' for INDEX.md. Appendix E confirms R2 PASS (INDEX.md >500 bytes), R7 PASS (Mermaid), R12 PASS (3 module-index markers). Note: [→ DETAIL] links required manual edit after update_index.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    }
+  ],
+  "doc_quality": [
+    {
+      "id": "V1",
+      "verdict": "FAIL",
+      "evidence": "Module names are 'Conf', 'Js Example', 'Task App'. Critical check: do these answer 'what can this codebase do?'. 'Conf' describes a category of files (configuration/bootstrap), not a user-facing capability. 'Js Example' names an example application, not a functional capability. 'Task App' is better but still reflects the Celery example app name rather than a Flask capability (e.g., 'Async Task Processing'). Phase 4 note in phase4-index.md acknowledges: 'module IDs come from 03_feature_cones.json' and names cannot be changed via MCP.",
+      "fix_suggestion": "Feature cone entry-point-derived IDs like 'conf' produce poor functional names. The Skill should instruct Phase 4 to rename modules in INDEX display headers (even if module_id stays the same) to functional names like 'App Bootstrap & Config', 'JSON Infrastructure', 'Views & Async Tasks'. DOC_TEMPLATES.md should clarify that the MODULE NAME in INDEX headers is a semantic label, not required to match module_id.",
+      "fix_category": "skill_doc"
+    },
+    {
+      "id": "V2",
+      "verdict": "PASS",
+      "evidence": "MCP outputs (Appendix C: 03_feature_cones.json, 06_function_deps.json) contain only structural data: file paths, token counts, layers, cohesion scores, function call graphs. No descriptions, summaries, or semantic content. All descriptions in DETAIL.md and INDEX.md are Agent-written based on source code reading.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V3",
+      "verdict": "PASS",
+      "evidence": "Each module summary in INDEX.md provides substantive context. 'Conf' lists key entry points (create_app, get_db, login_required) and describes its scope. 'Js Example' explains JSON infrastructure + JS demo patterns. 'Task App' covers class-based views, Blueprint, Celery integration. Each summary is sufficient to decide 'should I read this DETAIL for my task?'",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V4",
+      "verdict": "PASS",
+      "evidence": "INDEX.md contains Mermaid graph with dependency edges (n1->n0, n2->n0, n3->n0 with weights). DETAIL dependency sections cite specific function+purpose: 'Calls `examples/tutorial/flaskr/db.py.get_db()` in `load_logged_in_user`, `register`, and `login` to retrieve the per-request database connection.' Not just 'imports db'. db.py: 'Calls `src/flask/cli.py.command()` (via `@click.command`) to register `init_db_command` as a CLI command.' Pattern consistently 'calls X.function() to accomplish Y'.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V5",
+      "verdict": "PASS",
+      "evidence": "HTML comment markers throughout (<!-- file:xxx -->, <!-- end:file:xxx -->, <!-- module:xxx -->, <!-- module-index:xxx -->) are machine-parseable. YAML front matter in all documents. Mermaid graph in INDEX.md uses labeled node syntax. INDEX->DETAIL traceability via [→ DETAIL] links (manually added). DETAIL->source via <!-- file:{filepath} --> markers with exact repo-relative paths.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V6",
+      "verdict": "PASS",
+      "evidence": "state.json exists tracking full project state (project_id, path, status, tasks with output_files and timestamps). Analysis JSON files persist (03_feature_cones.json, 06_function_deps.json shown in Appendix C). Appendix E R6 PASS: 'state.json >= 50% tasks complete'. submit_analysis was called as evidenced by state.json task completion records.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V7",
+      "verdict": "PASS",
+      "evidence": "Phase 4 includes explicit review steps: Step 2 (Review Module Organization) checks module naming, misplacements, and ordering. Execution log final quality check shows a checklist was evaluated. The agent identified and reported the 54.3% coverage issue in the final quality check rather than silently completing.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V8",
+      "verdict": "PASS",
+      "evidence": "Feature cone algorithm groups files by dependency reachability from entry points, not purely by directory. Cross-module dependencies are explicitly noted: db.py lists 'Called by `examples/tutorial/flaskr/auth.py`' and 'Called by `examples/tutorial/flaskr/__init__.py`'. Views.py (task_app) explicitly calls out task dispatch to tasks.py within the same module. Note: 'conf' module has cohesion_score 0.1667 (very low), indicating imperfect functional grouping, but cross-references prevent files from being truly 'scattered with no cross-references'.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    },
+    {
+      "id": "V9",
+      "verdict": "FAIL",
+      "evidence": "All three DETAIL.md files have identical token_budget: 30000 regardless of module size. conf module has 2714 source tokens, js_example has 5663, task_app has 6832. The budget doesn't scale: a 15-30% budget would give conf ~407-814 tokens, not 30000. QUALITY_STANDARDS.md Phase Gate Criteria for Phase 3->4 has no budget-scaling requirement. The Skill documentation provides no formula for dynamic budget calculation.",
+      "fix_suggestion": "Add to phase3-detail.md: 'Calculate token budget as max(5000, module_token_count * 3) with a ceiling of 50000. This ensures small modules get a floor for quality while large modules get proportional budget.' Update DOC_TEMPLATES.md to show budget as a computed value, not a fixed constant.",
+      "fix_category": "skill_doc"
+    },
+    {
+      "id": "V10",
+      "verdict": "PASS",
+      "evidence": "INDEX.md contains only the index-fragment blocks (~3 sentences per module + key entry points). DETAIL.md contains full per-file analysis (功能概述, 数据流, 核心接口, 依赖关系). The index-fragment appearing in both is by design (assembly mechanism). No large content blocks are duplicated. Per-file section content in DETAIL is absent from INDEX entirely.",
+      "fix_suggestion": "",
+      "fix_category": ""
+    }
+  ],
+  "skill_effectiveness": [
+    {
+      "id": "S1",
+      "verdict": "PASS",
+      "evidence": "Execution log shows all 4 phases executed in order: Phase 1 ✅ Analysis, Phase 2 ✅ Validation, Phase 3 ✅ DETAIL Generation, Phase 4 ✅ INDEX Assembly. No phases skipped or reordered. Execution summary table confirms each phase with explicit status.",
+      "fix_suggestion": "",
+      "fix_category": "",
+      "root_cause": "agent_error"
+    },
+    {
+      "id": "S2",
+      "verdict": "PASS",
+      "evidence": "DETAIL.md structure matches DOC_TEMPLATES.md: YAML front matter fields (module_id, module_name, file_count, generated_at, token_budget) ✓; section headers (####) ✓; markers (<!-- module:-->, <!-- file:-->, <!-- end:file:-->, <!-- index-fragment:-->) ✓. INDEX.md: YAML front matter, Mermaid block, module-index markers. Minor: INDEX YAML missing total_files/total_tokens vs template, but core structure matches. Closing markers use <!-- end:{id} --> consistent with phase3-detail.md template.",
+      "fix_suggestion": "Minor: DOC_TEMPLATES.md INDEX template shows total_files and total_tokens in YAML front matter but actual output omits them. Add these fields to update_index output or remove them from the template to eliminate inconsistency.",
+      "fix_category": "skill_doc",
+      "root_cause": "skill_defect"
+    },
+    {
+      "id": "S3",
+      "verdict": "PASS",
+      "evidence": "Dependency sections in DETAIL reflect get_function_deps data: auth.py lists exact function-level calls (load_logged_in_user->get_db, register->get_db, login->get_db) matching 06_function_deps.json structure. index-fragments appear after all per-file sections in each DETAIL file, confirming Step 3 was executed last. Step 2 (get_function_deps enrichment) is evidenced by cross-file function naming specificity vs. what could be inferred from source reading alone.",
+      "fix_suggestion": "",
+      "fix_category": "",
+      "root_cause": "agent_error"
+    },
+    {
+      "id": "S4",
+      "verdict": "FAIL",
+      "evidence": "Execution log explicitly notes: 'submit_analysis rejected relative paths — required absolute paths.' The phase3-detail.md agent prompt template shows: 'detail_paths=[\".codebase-docs/{module_id}/DETAIL.md\"]' — a relative path format. The actual MCP tool requires absolute paths. This is a direct Skill documentation error causing the agent to use wrong parameter values on first attempt.",
+      "fix_suggestion": "In phase3-detail.md DETAIL Agent Prompt Template, change example call to use absolute paths: 'detail_paths=[\"{output_dir}/{module_id}/DETAIL.md\"]' and add a note: 'All file paths in submit_analysis must be absolute paths. Use the project root from analyze_codebase response to construct absolute paths.'",
+      "fix_category": "skill_doc",
+      "root_cause": "skill_defect"
+    },
+    {
+      "id": "S5",
+      "verdict": "FAIL",
+      "evidence": "Source file coverage is 54.3% (19/35 files) per state.json and execution log, well below the 80% threshold in QUALITY_STANDARDS.md Phase 4 Completion criteria. The 16 infrastructure files (src/flask/app.py, src/flask/cli.py, src/flask/sansio/*.py, etc.) were not assigned to any feature cone module. Phase 2 gate check passed because it used get_modules().total_files=19 (cone files only), not analyze_codebase total=35. The Phase 2->3 gate criterion 'All source files are assigned to a module' was not met but went undetected.",
+      "fix_suggestion": "Phase 2 gate check must compare get_modules().total_files against the files_analyzed count from analyze_codebase response (or from 03_feature_cones.json total). Add to phase2-validation.md: 'If infrastructure_files list in 03_feature_cones.json is non-empty, these files are NOT assigned to any module. Add them to coverage denominator and flag if coverage < 80%.' Consider adding an 'infrastructure' pseudo-module for high-centrality shared files.",
+      "fix_category": "skill_doc",
+      "root_cause": "skill_defect"
+    },
+    {
+      "id": "S6",
+      "verdict": "FAIL",
+      "evidence": "Execution log documents three deviations requiring improvisation: (1) 'update_index did not add [→ DETAIL] links — required manual edit to satisfy Phase 4 quality check' — Skill implied update_index produces complete INDEX but it doesn't add DETAIL links; (2) 'Phase 2 coverage check uses get_modules().total_files (19), but Phase 4 coverage uses analyze_codebase total (35) — these metrics diverge, causing a false-green in Phase 2 and below-threshold result in Phase 4' — Skill documentation doesn't resolve this metric ambiguity; (3) 'submit_analysis rejected relative paths — required absolute paths' — documented in S4. Three distinct Skill defects caused agent deviations.",
+      "fix_suggestion": "Address all three root defects: (1) Document that update_index does NOT add [→ DETAIL] links and agent must add them manually, OR fix MCP to add them; (2) Clarify in phase2-validation.md that coverage denominator = files_analyzed from analyze_codebase (total source files), not get_modules().total_files; (3) Fix path format in submit_analysis examples (see S4).",
+      "fix_category": "skill_doc",
+      "root_cause": "skill_defect"
+    }
+  ],
+  "overall_verdict": "HAS_FAILURES",
+  "pass_count": 25,
+  "total": 30,
+  "critical_failures": [
+    "S5 — source file coverage 54.3% is far below 80% threshold; Phase 2 gate check false-greenlit 16 infrastructure files",
+    "S6 — three distinct Skill defects caused agent improvisation (missing DETAIL links, metric divergence, path format)",
+    "V1 — module names ('Conf', 'Js Example', 'Task App') are entry-point-derived, not functional capability descriptions",
+    "V9 — fixed token_budget: 30000 for all modules regardless of size; no dynamic scaling",
+    "S4 — submit_analysis rejects relative paths but Skill template uses relative path format"
+  ],
+  "skill_defects": [
+    "S4 — submit_analysis path format: template shows relative paths, tool requires absolute",
+    "S5 — Phase 2 gate check uses wrong denominator (cone files only vs. all source files); infrastructure files not flagged as unassigned",
+    "S6 — update_index omits [→ DETAIL] links (undocumented); coverage metric ambiguity causes false-green Phase 2; path format error (duplicate of S4)"
+  ],
+  "fix_priority": [
+    {
+      "id": "S5",
+      "fix_category": "skill_doc",
+      "target_file": ".agents/skills/codebase-explorer/phases/phase2-validation.md",
+      "suggested_fix": "Add explicit check: compare get_modules().total_files against 03_feature_cones.json top-level file count (exclusive_files + shared_deps across all cones). Add 'infrastructure_files' from 03_feature_cones.json to the coverage denominator. Fail Phase 2->3 gate if coverage < 80% at this point. Consider requiring agent to create an 'Infrastructure' module for high-centrality files when coverage would otherwise be < 80%.",
+      "expected_impact": "Fixes S5 (coverage false-green), partially fixes S6 (metric divergence), would have caught 16 undocumented files at Phase 2 instead of discovering at Phase 4"
+    },
+    {
+      "id": "S6-links",
+      "fix_category": "mcp_code",
+      "target_file": "src/doc_ops/ (update_index implementation)",
+      "suggested_fix": "update_index operation should automatically append '[→ DETAIL]({module_id}/DETAIL.md)' to each module-index block in INDEX.md. The DETAIL.md path is deterministic from module_id and should not require manual post-editing.",
+      "expected_impact": "Fixes S6 deviation 1 (manual [→ DETAIL] link edit), improves V5 (AI-friendly traceable paths), reduces agent improvisation"
+    },
+    {
+      "id": "S4",
+      "fix_category": "skill_doc",
+      "target_file": ".agents/skills/codebase-explorer/phases/phase3-detail.md",
+      "suggested_fix": "In the DETAIL Agent Prompt Template submit_analysis call example, replace relative paths '.codebase-docs/{module_id}/DETAIL.md' with '{absolute_output_dir}/{module_id}/DETAIL.md'. Add note: 'All MCP tool file path arguments must be absolute paths. Use the codebase path from analyze_codebase to construct absolute paths.'",
+      "expected_impact": "Fixes S4 (parameter error), partially fixes S6 deviation 3, prevents agent from encountering rejection error"
+    },
+    {
+      "id": "V1",
+      "fix_category": "skill_doc",
+      "target_file": ".agents/skills/codebase-explorer/phases/phase4-index.md",
+      "suggested_fix": "Add Step 2d: 'Rename modules in INDEX display headers. The module_id cannot be changed, but the ## heading and bold name in each module-index block should be replaced with a functional name describing what the code does. Example: cone_id=conf → display name=\"App Bootstrap & Config\". Add a mapping comment <!-- module-id:conf --> after the heading to preserve traceability.'",
+      "expected_impact": "Fixes V1 (functional module naming), improves V3 (progressive disclosure), makes INDEX more useful as entry point"
+    },
+    {
+      "id": "V9",
+      "fix_category": "skill_doc",
+      "target_file": ".agents/skills/codebase-explorer/phases/phase3-detail.md",
+      "suggested_fix": "Replace 'Token budget upper limit' in agent prompt template with computed value: 'token_budget = max(5000, min(50000, module_token_count * 4))'. Document formula in QUALITY_STANDARDS.md under Coverage Standards section. Each sub-agent should receive a module-specific budget, not a global constant.",
+      "expected_impact": "Fixes V9 (dynamic budget scaling), better aligns documentation depth with module complexity"
+    }
+  ],
+  "summary": "25/30 pass. The biggest gap is coverage: 16 infrastructure files (src/flask/app.py, cli.py, sansio/*.py etc.) account for 46% of the codebase and were never documented because the Phase 2 gate check uses the wrong denominator (cone files only, not total analyzed files). This caused a false-green at Phase 2 and a 54.3% coverage failure at Phase 4. Three other Skill defects caused agent improvisation: (1) update_index doesn't add [→ DETAIL] links requiring manual edit; (2) submit_analysis requires absolute paths but template shows relative; (3) coverage metric ambiguity. Fix priority: patch Phase 2 validation to check infrastructure_files coverage first, then fix update_index to emit DETAIL links automatically, then fix submit_analysis path format documentation."
+}

@@ -1,0 +1,95 @@
+{
+  "project_id": "9b425a3ed56f",
+  "path": "/Users/lexuanzhang/code/codebase-explorer/test_repos/flask",
+  "created_at": "2026-03-31T12:39:18.563489+00:00",
+  "status": "analysis_complete",
+  "tasks": {
+    "task_001": {
+      "status": "complete",
+      "created_at": "2026-03-31T12:39:18.563489+00:00",
+      "output_files": [
+        {
+          "path": "/Users/lexuanzhang/code/codebase-explorer/test_repos/flask/.codebase-docs/task_app/DETAIL.md",
+          "type": "detail",
+          "status": "complete"
+        },
+        {
+          "path": "/Users/lexuanzhang/code/codebase-explorer/test_repos/flask/.codebase-docs/js_example/DETAIL.md",
+          "type": "detail",
+          "status": "complete"
+        },
+        {
+          "path": "/Users/lexuanzhang/code/codebase-explorer/test_repos/flask/.codebase-docs/conf/DETAIL.md",
+          "type": "detail",
+          "status": "complete"
+        },
+        {
+          "path": "/Users/lexuanzhang/code/codebase-explorer/test_repos/flask/.codebase-docs/infrastructure/DETAIL.md",
+          "type": "detail",
+          "status": "complete"
+        }
+      ],
+      "completed_at": "2026-03-31T12:53:43.963633+00:00"
+    },
+    "task_002": {
+      "status": "complete",
+      "created_at": "2026-03-31T12:39:18.563489+00:00",
+      "output_files": [
+        {
+          "path": "/Users/lexuanzhang/code/codebase-explorer/test_repos/flask/.codebase-docs/INDEX.md",
+          "type": "detail",
+          "status": "complete"
+        }
+      ],
+      "completed_at": "2026-03-31T12:54:36.786349+00:00"
+    }
+  },
+  "documentation": {
+    "output_dir": "/Users/lexuanzhang/code/codebase-explorer/test_repos/flask/.codebase-analysis",
+    "index_written": true,
+    "details_written": 5,
+    "snippets_written": 0,
+    "total_planned": 2,
+    "source_files_covered": [
+      "src/flask/json/tag.py",
+      "examples/celery/src/task_app/tasks.py",
+      "src/flask/app.py",
+      "src/flask/__main__.py",
+      "src/flask/sansio/blueprints.py",
+      "src/flask/config.py",
+      "examples/tutorial/flaskr/blog.py",
+      "src/flask/sessions.py",
+      "src/flask/testing.py",
+      "examples/javascript/js_example/__init__.py",
+      "src/flask/helpers.py",
+      "src/flask/templating.py",
+      "examples/tutorial/flaskr/__init__.py",
+      "src/flask/views.py",
+      "src/flask/logging.py",
+      "examples/tutorial/flaskr/auth.py",
+      "src/flask/__init__.py",
+      "src/flask/ctx.py",
+      "docs/conf.py",
+      "examples/javascript/js_example/views.py",
+      "src/flask/cli.py",
+      "src/flask/json/__init__.py",
+      "src/flask/blueprints.py",
+      "src/flask/signals.py",
+      "src/flask/json/provider.py",
+      "examples/tutorial/flaskr/db.py",
+      "examples/celery/src/task_app/views.py",
+      "src/flask/globals.py",
+      "examples/celery/src/task_app/__init__.py",
+      "src/flask/wrappers.py",
+      "examples/celery/make_celery.py",
+      "src/flask/sansio/app.py",
+      "src/flask/typing.py",
+      "src/flask/debughelpers.py",
+      "src/flask/sansio/scaffold.py"
+    ],
+    "source_file_coverage_percent": 100.0
+  },
+  "metadata": {
+    "last_updated_at": "2026-03-31T12:54:36.786383+00:00"
+  }
+}
