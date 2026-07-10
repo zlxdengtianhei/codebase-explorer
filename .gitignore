@@ -1,0 +1,12 @@
+# Local-only / generated (added at in-repo migration; original tree had no .gitignore)
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+.cc_test_logs/
+claude_mcp_list.txt
+.claude/
+.DS_Store
+experiments/**/node_modules/
+experiments/**/.work/

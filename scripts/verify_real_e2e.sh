@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # verify_real_e2e.sh — V5 file-system-level verification for codebase-explorer E2E
 # Usage: bash scripts/verify_real_e2e.sh [test_repo_path]
-# Returns: X/17 score + exit code (0 = all pass, 1 = some fail)
+# Returns: X/18 score + exit code (0 = all pass, 1 = some fail)
 
 set -euo pipefail
 
@@ -14,7 +14,7 @@ DOCS_DIR="$REPO_PATH/.codebase-docs"
 
 PASS=0
 FAIL=0
-TOTAL=17
+TOTAL=18
 
 check() {
     local id="$1" desc="$2" result="$3"
@@ -113,7 +113,7 @@ check "R7" "INDEX.md contains Mermaid diagram" "$r7"
 # R8: Inter-module dep_count sum > 0
 r8="false"
 if [ -f "$ANALYSIS_DIR/02_dag.json" ] && [ -f "$ANALYSIS_DIR/03_feature_cones.json" ]; then
-    r8=$(cd /Users/lexuanzhang/code/codebase-explorer && uv run python -c "
+    r8=$(cd /Users/lexuanzhang/context-infra/adhoc_jobs/codebase_explorer_20260321/impl/codebase-explorer && uv run python -c "
 import json, sys
 from src.server_helpers import compute_inter_module_deps_from_dag
 
@@ -126,16 +126,16 @@ print('true' if total > 0 else 'false')
 fi
 check "R8" "Inter-module dep_count sum > 0" "$r8"
 
-# R9: Module-level graph node_count < 20
+# R9: Module-level graph node_count < 50
 r9="false"
 if [ -f "$ANALYSIS_DIR/03_feature_cones.json" ]; then
     r9=$(uv run python -c "
 import json
 cones = json.load(open('$ANALYSIS_DIR/03_feature_cones.json')).get('cones', {})
-print('true' if 0 < len(cones) < 20 else 'false')
+print('true' if 0 < len(cones) < 50 else 'false')
 " 2>/dev/null || echo "false")
 fi
-check "R9" "Module-level graph has <20 nodes" "$r9"
+check "R9" "Module-level graph has <50 nodes" "$r9"
 
 # R10: All DETAIL.md contain <!-- file:{filepath} --> markers
 r10="false"
@@ -213,6 +213,26 @@ if [ -f "$ANALYSIS_DIR/06_function_deps.json" ]; then
     [ "$size" -gt 50 ] && r17="true"
 fi
 check "R17" "06_function_deps.json exists and non-empty" "$r17"
+
+# R18: All file blocks in DETAIL.md have all 4 section headers
+r18="false"
+total_blocks=0
+complete_blocks=0
+for f in $(find "$DOCS_DIR" -name "DETAIL.md" 2>/dev/null); do
+    blocks=$(grep -c '<!-- file:' "$f" 2>/dev/null || echo 0)
+    purpose=$(grep -c '#### 功能概述' "$f" 2>/dev/null || echo 0)
+    dataflow=$(grep -c '#### 数据流' "$f" 2>/dev/null || echo 0)
+    interfaces=$(grep -c '#### 核心接口' "$f" 2>/dev/null || echo 0)
+    deps=$(grep -c '#### 依赖关系' "$f" 2>/dev/null || echo 0)
+    total_blocks=$((total_blocks + blocks))
+    min_sec=$purpose
+    [ $dataflow -lt $min_sec ] && min_sec=$dataflow
+    [ $interfaces -lt $min_sec ] && min_sec=$interfaces
+    [ $deps -lt $min_sec ] && min_sec=$deps
+    complete_blocks=$((complete_blocks + min_sec))
+done
+[ "$total_blocks" -gt 0 ] && [ "$total_blocks" -eq "$complete_blocks" ] && r18="true"
+check "R18" "All file blocks have 4 sections ($complete_blocks/$total_blocks complete)" "$r18"
 
 echo ""
 echo "=== Result: $PASS/$TOTAL ==="

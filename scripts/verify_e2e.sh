@@ -2,7 +2,7 @@
 # E2E 验证脚本：运行 codebase-explorer MCP 分析 + LLM Judge 评判
 # 用于 autoresearch 循环的 Verify 步骤
 set -e
-cd /Users/lexuanzhang/code/codebase-explorer
+cd /Users/lexuanzhang/context-infra/adhoc_jobs/codebase_explorer_20260321/impl/codebase-explorer
 mkdir -p .cc_test_logs
 
 # Step 1: 跑 codebase-explorer MCP 分析 scrapy
@@ -26,7 +26,7 @@ env -u CLAUDECODE claude \
   --no-session-persistence \
   --model haiku \
   --setting-sources "" \
-  --mcp-config '{"mcpServers":{"codebase-explorer":{"command":".venv/bin/python","args":["-m","src.server"],"cwd":"/Users/lexuanzhang/code/codebase-explorer"}}}' \
+  --mcp-config '{"mcpServers":{"codebase-explorer":{"command":".venv/bin/python","args":["-m","src.server"],"cwd":"/Users/lexuanzhang/context-infra/adhoc_jobs/codebase_explorer_20260321/impl/codebase-explorer"}}}' \
   --allowedTools "mcp__codebase-explorer" \
   > .cc_test_logs/e2e_result.json 2> .cc_test_logs/e2e_debug.log
 

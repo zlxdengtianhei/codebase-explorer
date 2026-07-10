@@ -41,5 +41,4 @@ tests/test_scoring_harness.py
 tests/test_semantic_hints.py
 tests/test_server_helpers.py
 tests/test_state.py
-tests/test_tree_builder.py
 tests/test_weighted_graph.py
