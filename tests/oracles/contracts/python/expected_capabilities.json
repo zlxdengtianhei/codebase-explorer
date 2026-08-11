@@ -1,0 +1,80 @@
+{
+  "document_type": "expected_capabilities",
+  "contract_version": 2,
+  "language": "python",
+  "axes_are_independent": true,
+  "cells": {
+    "syntax": {
+      "availability": "available",
+      "semantic_tier": "resolved",
+      "verification_status": "unverified",
+      "required_for_core": true,
+      "passing_assertion": "Every planned .py unit reaches indexed, parse_error or excluded with exact spans.",
+      "failure_rule": "Any unit vanishes or a syntax error becomes empty success.",
+      "rationale": "AST syntax and locations are independently testable."
+    },
+    "imports": {
+      "availability": "available",
+      "semantic_tier": "resolved",
+      "verification_status": "unverified",
+      "required_for_core": true,
+      "passing_assertion": "Absolute, relative and alias imports match expected facts.",
+      "failure_rule": "Name-only guesses or stale removed imports fail.",
+      "rationale": "Fixture imports are static."
+    },
+    "exports": {
+      "availability": "available",
+      "semantic_tier": "resolved",
+      "verification_status": "unverified",
+      "required_for_core": true,
+      "passing_assertion": "__all__ exports only Alias and entry.",
+      "failure_rule": "All declarations exported or listed export omitted fails.",
+      "rationale": "Explicit __all__ is exact."
+    },
+    "names": {
+      "availability": "available",
+      "semantic_tier": "resolved",
+      "verification_status": "unverified",
+      "required_for_core": true,
+      "passing_assertion": "Three same functions retain distinct qualified identities.",
+      "failure_rule": "Scope collision or file-only identity fails.",
+      "rationale": "Lexical scope is explicit."
+    },
+    "calls": {
+      "availability": "available",
+      "semantic_tier": "heuristic",
+      "verification_status": "unverified",
+      "required_for_core": true,
+      "passing_assertion": "Exact, dataflow-bounded, ambiguous, unresolved and external calls keep their statuses.",
+      "failure_rule": "Text match promoted to resolved or unknown call omitted fails.",
+      "rationale": "Python AST alone cannot resolve all dynamic dispatch."
+    },
+    "types": {
+      "availability": "available",
+      "semantic_tier": "heuristic",
+      "verification_status": "unverified",
+      "required_for_core": false,
+      "passing_assertion": "Declared annotations and inheritance are emitted without compiler claims.",
+      "failure_rule": "Runtime/compiler-grade type resolution advertised fails.",
+      "rationale": "Fixture annotations support bounded facts only."
+    },
+    "frameworks": {
+      "availability": "unavailable",
+      "semantic_tier": "syntax_only",
+      "verification_status": "cannot_judge",
+      "required_for_core": false,
+      "passing_assertion": "No framework capability is advertised.",
+      "failure_rule": "Generic syntax success promoted to framework support fails.",
+      "rationale": "No named framework rule is frozen."
+    },
+    "incremental": {
+      "availability": "unavailable",
+      "semantic_tier": "syntax_only",
+      "verification_status": "cannot_judge",
+      "required_for_core": false,
+      "passing_assertion": "Mutation forces stale/full rebuild and never claims incremental.",
+      "failure_rule": "Silent stale reuse or incremental advertisement fails.",
+      "rationale": "P1A freezes mutation truth, not an incremental implementation."
+    }
+  }
+}

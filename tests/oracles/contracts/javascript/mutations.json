@@ -1,0 +1,784 @@
+{
+  "document_type": "mutations",
+  "contract_version": 2,
+  "language": "javascript",
+  "anti_cheat_rule": "The product under test must not write or regenerate expected values.",
+  "mutations": {
+    "js.replace_call": {
+      "path": "src/index.js",
+      "operation": "replace_exact_text",
+      "old_text": "export function dynamic(obj) { return obj.run(); }",
+      "new_text": "export function dynamic(obj) { return implSame(); }",
+      "expected_verdict": "stale",
+      "rationale": "Old dynamic edge disappears and new alias edge appears. Every preserved fact is frozen at its full post-mutation coordinate; later facts include the exact cumulative byte shift.",
+      "span_delta": {
+        "line_delta": 0,
+        "byte_delta": 1
+      },
+      "removed_facts": {
+        "js.call.dynamic": {
+          "kind": "call",
+          "path": "src/index.js",
+          "subject": "src/index.dynamic",
+          "target": null,
+          "resolution_status": "ambiguous",
+          "resolution_method": "heuristic",
+          "candidates": [
+            "src/base.Base.run",
+            "src/impl.Worker.run"
+          ],
+          "rationale": "Dynamic receiver remains ambiguous.",
+          "span": {
+            "byte_offset": 265,
+            "byte_length": 50,
+            "line": 11,
+            "column": 0,
+            "text": "export function dynamic(obj) { return obj.run(); }"
+          },
+          "attributes": {
+            "import_kind": "none",
+            "export_kind": "none",
+            "dynamic": false,
+            "wildcard": false
+          }
+        }
+      },
+      "created_facts": {
+        "js.call.dynamic.changed": {
+          "kind": "call",
+          "path": "src/index.js",
+          "span": {
+            "byte_offset": 265,
+            "byte_length": 51,
+            "line": 11,
+            "column": 0,
+            "text": "export function dynamic(obj) { return implSame(); }"
+          },
+          "subject": "src/index.dynamic",
+          "target": "src/impl.same",
+          "resolution_status": "resolved",
+          "resolution_method": "exact",
+          "candidates": [
+            "src/impl.same"
+          ],
+          "attributes": {
+            "import_kind": "none",
+            "export_kind": "none",
+            "dynamic": false,
+            "wildcard": false
+          },
+          "rationale": "Mutation-created call edge with independently recomputed span."
+        }
+      },
+      "unchanged_facts": {
+        "js.import.alias": {
+          "kind": "import",
+          "path": "src/index.js",
+          "subject": "src/index.Alias",
+          "target": "src/impl.Worker",
+          "resolution_status": "resolved",
+          "resolution_method": "exact",
+          "candidates": [
+            "src/impl.Worker"
+          ],
+          "rationale": "Alias target identity retained.",
+          "span": {
+            "byte_offset": 0,
+            "byte_length": 62,
+            "line": 1,
+            "column": 0,
+            "text": "import { Worker as Alias, same as implSame } from \"./impl.js\";"
+          },
+          "attributes": {
+            "import_kind": "alias",
+            "export_kind": "none",
+            "dynamic": false,
+            "wildcard": false
+          }
+        },
+        "js.export.alias": {
+          "kind": "export",
+          "path": "src/index.js",
+          "subject": "src/index",
+          "target": "src/impl.Worker",
+          "resolution_status": "resolved",
+          "resolution_method": "exact",
+          "candidates": [
+            "src/impl.Worker"
+          ],
+          "rationale": "Alias is re-exported.",
+          "span": {
+            "byte_offset": 63,
+            "byte_length": 17,
+            "line": 2,
+            "column": 0,
+            "text": "export { Alias };"
+          },
+          "attributes": {
+            "import_kind": "none",
+            "export_kind": "named",
+            "dynamic": false,
+            "wildcard": false
+          }
+        },
+        "js.export.base": {
+          "kind": "export",
+          "path": "src/index.js",
+          "subject": "src/index",
+          "target": "src/base.Base",
+          "resolution_status": "resolved",
+          "resolution_method": "exact",
+          "candidates": [
+            "src/base.Base"
+          ],
+          "rationale": "Direct re-export.",
+          "span": {
+            "byte_offset": 81,
+            "byte_length": 33,
+            "line": 3,
+            "column": 0,
+            "text": "export { Base } from \"./base.js\";"
+          },
+          "attributes": {
+            "import_kind": "none",
+            "export_kind": "named",
+            "dynamic": false,
+            "wildcard": false
+          }
+        },
+        "js.symbol.same.index": {
+          "kind": "symbol",
+          "path": "src/index.js",
+          "subject": "src/index.same",
+          "target": null,
+          "resolution_status": "resolved",
+          "resolution_method": "exact",
+          "candidates": [
+            "src/index.same"
+          ],
+          "rationale": "Scope-qualified same-name identity.",
+          "span": {
+            "byte_offset": 115,
+            "byte_length": 42,
+            "line": 4,
+            "column": 0,
+            "text": "export function same() { return \"index\"; }"
+          },
+          "attributes": {
+            "import_kind": "none",
+            "export_kind": "none",
+            "dynamic": false,
+            "wildcard": false
+          }
+        },
+        "js.call.worker.run": {
+          "kind": "call",
+          "path": "src/index.js",
+          "subject": "src/index.entry",
+          "target": null,
+          "resolution_status": "ambiguous",
+          "resolution_method": "heuristic",
+          "candidates": [
+            "src/base.Base.run",
+            "src/impl.Worker.run"
+          ],
+          "rationale": "Untyped parameter prevents exact resolution.",
+          "span": {
+            "byte_offset": 190,
+            "byte_length": 15,
+            "line": 6,
+            "column": 0,
+            "text": "  worker.run();"
+          },
+          "attributes": {
+            "import_kind": "none",
+            "export_kind": "none",
+            "dynamic": false,
+            "wildcard": false
+          }
+        },
+        "js.call.missing": {
+          "kind": "call",
+          "path": "src/index.js",
+          "subject": "src/index.entry",
+          "target": null,
+          "resolution_status": "unresolved",
+          "resolution_method": "search_fallback",
+          "candidates": [],
+          "rationale": "No binding exists.",
+          "span": {
+            "byte_offset": 206,
+            "byte_length": 12,
+            "line": 7,
+            "column": 0,
+            "text": "  missing();"
+          },
+          "attributes": {
+            "import_kind": "none",
+            "export_kind": "none",
+            "dynamic": false,
+            "wildcard": false
+          }
+        },
+        "js.call.console": {
+          "kind": "call",
+          "path": "src/index.js",
+          "subject": "src/index.entry",
+          "target": "runtime.console.log",
+          "resolution_status": "external",
+          "resolution_method": "heuristic",
+          "candidates": [
+            "runtime.console.log"
+          ],
+          "rationale": "Runtime global is external.",
+          "span": {
+            "byte_offset": 219,
+            "byte_length": 22,
+            "line": 8,
+            "column": 0,
+            "text": "  console.log(worker);"
+          },
+          "attributes": {
+            "import_kind": "none",
+            "export_kind": "none",
+            "dynamic": false,
+            "wildcard": false
+          }
+        },
+        "js.call.impl_same": {
+          "kind": "call",
+          "path": "src/index.js",
+          "span": {
+            "byte_offset": 242,
+            "byte_length": 20,
+            "line": 9,
+            "column": 0,
+            "text": "  return implSame();"
+          },
+          "subject": "src/index.entry",
+          "target": "src/impl.same",
+          "resolution_status": "resolved",
+          "resolution_method": "exact",
+          "candidates": [
+            "src/impl.same"
+          ],
+          "attributes": {
+            "import_kind": "none",
+            "export_kind": "none",
+            "dynamic": false,
+            "wildcard": false
+          },
+          "rationale": "Frozen independent oracle fact."
+        }
+      }
+    },
+    "js.corrupt_span": {
+      "path": "src/index.js",
+      "operation": "corrupt_span",
+      "old_text": "  missing();",
+      "new_text": "  missing();",
+      "expected_verdict": "fail",
+      "rationale": "Source witness is byte-identical (actual source byte/line delta 0). This operation removes exactly one valid oracle fact and creates one uniquely keyed corrupted fact whose oracle byte_offset and line are each +1; verifier must reject its evidence-to-source mapping.",
+      "span_delta": {
+        "line_delta": 1,
+        "byte_delta": 1
+      },
+      "removed_facts": {
+        "js.call.missing": {
+          "kind": "call",
+          "path": "src/index.js",
+          "subject": "src/index.entry",
+          "target": null,
+          "resolution_status": "unresolved",
+          "resolution_method": "search_fallback",
+          "candidates": [],
+          "rationale": "No binding exists.",
+          "span": {
+            "byte_offset": 206,
+            "byte_length": 12,
+            "line": 7,
+            "column": 0,
+            "text": "  missing();"
+          },
+          "attributes": {
+            "import_kind": "none",
+            "export_kind": "none",
+            "dynamic": false,
+            "wildcard": false
+          }
+        }
+      },
+      "created_facts": {
+        "js.call.missing.corrupted": {
+          "kind": "call",
+          "path": "src/index.js",
+          "subject": "src/index.entry",
+          "target": null,
+          "resolution_status": "unresolved",
+          "resolution_method": "search_fallback",
+          "candidates": [],
+          "rationale": "Intentional oracle-fact corruption: source bytes are unchanged; byte_offset and line are each exactly one greater than the removed valid fact, so evidence-to-source replay must fail.",
+          "span": {
+            "byte_offset": 207,
+            "byte_length": 12,
+            "line": 8,
+            "column": 0,
+            "text": "  missing();"
+          },
+          "attributes": {
+            "import_kind": "none",
+            "export_kind": "none",
+            "dynamic": false,
+            "wildcard": false
+          }
+        }
+      },
+      "unchanged_facts": {
+        "js.import.alias": {
+          "kind": "import",
+          "path": "src/index.js",
+          "subject": "src/index.Alias",
+          "target": "src/impl.Worker",
+          "resolution_status": "resolved",
+          "resolution_method": "exact",
+          "candidates": [
+            "src/impl.Worker"
+          ],
+          "rationale": "Alias target identity retained.",
+          "span": {
+            "byte_offset": 0,
+            "byte_length": 62,
+            "line": 1,
+            "column": 0,
+            "text": "import { Worker as Alias, same as implSame } from \"./impl.js\";"
+          },
+          "attributes": {
+            "import_kind": "alias",
+            "export_kind": "none",
+            "dynamic": false,
+            "wildcard": false
+          }
+        },
+        "js.export.alias": {
+          "kind": "export",
+          "path": "src/index.js",
+          "subject": "src/index",
+          "target": "src/impl.Worker",
+          "resolution_status": "resolved",
+          "resolution_method": "exact",
+          "candidates": [
+            "src/impl.Worker"
+          ],
+          "rationale": "Alias is re-exported.",
+          "span": {
+            "byte_offset": 63,
+            "byte_length": 17,
+            "line": 2,
+            "column": 0,
+            "text": "export { Alias };"
+          },
+          "attributes": {
+            "import_kind": "none",
+            "export_kind": "named",
+            "dynamic": false,
+            "wildcard": false
+          }
+        },
+        "js.export.base": {
+          "kind": "export",
+          "path": "src/index.js",
+          "subject": "src/index",
+          "target": "src/base.Base",
+          "resolution_status": "resolved",
+          "resolution_method": "exact",
+          "candidates": [
+            "src/base.Base"
+          ],
+          "rationale": "Direct re-export.",
+          "span": {
+            "byte_offset": 81,
+            "byte_length": 33,
+            "line": 3,
+            "column": 0,
+            "text": "export { Base } from \"./base.js\";"
+          },
+          "attributes": {
+            "import_kind": "none",
+            "export_kind": "named",
+            "dynamic": false,
+            "wildcard": false
+          }
+        },
+        "js.symbol.same.index": {
+          "kind": "symbol",
+          "path": "src/index.js",
+          "subject": "src/index.same",
+          "target": null,
+          "resolution_status": "resolved",
+          "resolution_method": "exact",
+          "candidates": [
+            "src/index.same"
+          ],
+          "rationale": "Scope-qualified same-name identity.",
+          "span": {
+            "byte_offset": 115,
+            "byte_length": 42,
+            "line": 4,
+            "column": 0,
+            "text": "export function same() { return \"index\"; }"
+          },
+          "attributes": {
+            "import_kind": "none",
+            "export_kind": "none",
+            "dynamic": false,
+            "wildcard": false
+          }
+        },
+        "js.call.worker.run": {
+          "kind": "call",
+          "path": "src/index.js",
+          "subject": "src/index.entry",
+          "target": null,
+          "resolution_status": "ambiguous",
+          "resolution_method": "heuristic",
+          "candidates": [
+            "src/base.Base.run",
+            "src/impl.Worker.run"
+          ],
+          "rationale": "Untyped parameter prevents exact resolution.",
+          "span": {
+            "byte_offset": 190,
+            "byte_length": 15,
+            "line": 6,
+            "column": 0,
+            "text": "  worker.run();"
+          },
+          "attributes": {
+            "import_kind": "none",
+            "export_kind": "none",
+            "dynamic": false,
+            "wildcard": false
+          }
+        },
+        "js.call.console": {
+          "kind": "call",
+          "path": "src/index.js",
+          "subject": "src/index.entry",
+          "target": "runtime.console.log",
+          "resolution_status": "external",
+          "resolution_method": "heuristic",
+          "candidates": [
+            "runtime.console.log"
+          ],
+          "rationale": "Runtime global is external.",
+          "span": {
+            "byte_offset": 219,
+            "byte_length": 22,
+            "line": 8,
+            "column": 0,
+            "text": "  console.log(worker);"
+          },
+          "attributes": {
+            "import_kind": "none",
+            "export_kind": "none",
+            "dynamic": false,
+            "wildcard": false
+          }
+        },
+        "js.call.dynamic": {
+          "kind": "call",
+          "path": "src/index.js",
+          "subject": "src/index.dynamic",
+          "target": null,
+          "resolution_status": "ambiguous",
+          "resolution_method": "heuristic",
+          "candidates": [
+            "src/base.Base.run",
+            "src/impl.Worker.run"
+          ],
+          "rationale": "Dynamic receiver remains ambiguous.",
+          "span": {
+            "byte_offset": 265,
+            "byte_length": 50,
+            "line": 11,
+            "column": 0,
+            "text": "export function dynamic(obj) { return obj.run(); }"
+          },
+          "attributes": {
+            "import_kind": "none",
+            "export_kind": "none",
+            "dynamic": false,
+            "wildcard": false
+          }
+        },
+        "js.call.impl_same": {
+          "kind": "call",
+          "path": "src/index.js",
+          "span": {
+            "byte_offset": 242,
+            "byte_length": 20,
+            "line": 9,
+            "column": 0,
+            "text": "  return implSame();"
+          },
+          "subject": "src/index.entry",
+          "target": "src/impl.same",
+          "resolution_status": "resolved",
+          "resolution_method": "exact",
+          "candidates": [
+            "src/impl.same"
+          ],
+          "attributes": {
+            "import_kind": "none",
+            "export_kind": "none",
+            "dynamic": false,
+            "wildcard": false
+          },
+          "rationale": "Frozen independent oracle fact."
+        }
+      }
+    },
+    "js.remove_backend": {
+      "path": "src/index.js",
+      "operation": "force_unsupported",
+      "old_text": "export function entry(worker) {",
+      "new_text": "export function entry(worker) {",
+      "expected_verdict": "unavailable",
+      "rationale": "Unavailable backend cannot become empty success.",
+      "span_delta": {
+        "line_delta": 0,
+        "byte_delta": 0
+      },
+      "removed_facts": {
+        "js.call.worker.run": {
+          "kind": "call",
+          "path": "src/index.js",
+          "subject": "src/index.entry",
+          "target": null,
+          "resolution_status": "ambiguous",
+          "resolution_method": "heuristic",
+          "candidates": [
+            "src/base.Base.run",
+            "src/impl.Worker.run"
+          ],
+          "rationale": "Untyped parameter prevents exact resolution.",
+          "span": {
+            "byte_offset": 190,
+            "byte_length": 15,
+            "line": 6,
+            "column": 0,
+            "text": "  worker.run();"
+          },
+          "attributes": {
+            "import_kind": "none",
+            "export_kind": "none",
+            "dynamic": false,
+            "wildcard": false
+          }
+        }
+      },
+      "created_facts": {},
+      "unchanged_facts": {
+        "js.import.alias": {
+          "kind": "import",
+          "path": "src/index.js",
+          "subject": "src/index.Alias",
+          "target": "src/impl.Worker",
+          "resolution_status": "resolved",
+          "resolution_method": "exact",
+          "candidates": [
+            "src/impl.Worker"
+          ],
+          "rationale": "Alias target identity retained.",
+          "span": {
+            "byte_offset": 0,
+            "byte_length": 62,
+            "line": 1,
+            "column": 0,
+            "text": "import { Worker as Alias, same as implSame } from \"./impl.js\";"
+          },
+          "attributes": {
+            "import_kind": "alias",
+            "export_kind": "none",
+            "dynamic": false,
+            "wildcard": false
+          }
+        },
+        "js.export.alias": {
+          "kind": "export",
+          "path": "src/index.js",
+          "subject": "src/index",
+          "target": "src/impl.Worker",
+          "resolution_status": "resolved",
+          "resolution_method": "exact",
+          "candidates": [
+            "src/impl.Worker"
+          ],
+          "rationale": "Alias is re-exported.",
+          "span": {
+            "byte_offset": 63,
+            "byte_length": 17,
+            "line": 2,
+            "column": 0,
+            "text": "export { Alias };"
+          },
+          "attributes": {
+            "import_kind": "none",
+            "export_kind": "named",
+            "dynamic": false,
+            "wildcard": false
+          }
+        },
+        "js.export.base": {
+          "kind": "export",
+          "path": "src/index.js",
+          "subject": "src/index",
+          "target": "src/base.Base",
+          "resolution_status": "resolved",
+          "resolution_method": "exact",
+          "candidates": [
+            "src/base.Base"
+          ],
+          "rationale": "Direct re-export.",
+          "span": {
+            "byte_offset": 81,
+            "byte_length": 33,
+            "line": 3,
+            "column": 0,
+            "text": "export { Base } from \"./base.js\";"
+          },
+          "attributes": {
+            "import_kind": "none",
+            "export_kind": "named",
+            "dynamic": false,
+            "wildcard": false
+          }
+        },
+        "js.symbol.same.index": {
+          "kind": "symbol",
+          "path": "src/index.js",
+          "subject": "src/index.same",
+          "target": null,
+          "resolution_status": "resolved",
+          "resolution_method": "exact",
+          "candidates": [
+            "src/index.same"
+          ],
+          "rationale": "Scope-qualified same-name identity.",
+          "span": {
+            "byte_offset": 115,
+            "byte_length": 42,
+            "line": 4,
+            "column": 0,
+            "text": "export function same() { return \"index\"; }"
+          },
+          "attributes": {
+            "import_kind": "none",
+            "export_kind": "none",
+            "dynamic": false,
+            "wildcard": false
+          }
+        },
+        "js.call.missing": {
+          "kind": "call",
+          "path": "src/index.js",
+          "subject": "src/index.entry",
+          "target": null,
+          "resolution_status": "unresolved",
+          "resolution_method": "search_fallback",
+          "candidates": [],
+          "rationale": "No binding exists.",
+          "span": {
+            "byte_offset": 206,
+            "byte_length": 12,
+            "line": 7,
+            "column": 0,
+            "text": "  missing();"
+          },
+          "attributes": {
+            "import_kind": "none",
+            "export_kind": "none",
+            "dynamic": false,
+            "wildcard": false
+          }
+        },
+        "js.call.console": {
+          "kind": "call",
+          "path": "src/index.js",
+          "subject": "src/index.entry",
+          "target": "runtime.console.log",
+          "resolution_status": "external",
+          "resolution_method": "heuristic",
+          "candidates": [
+            "runtime.console.log"
+          ],
+          "rationale": "Runtime global is external.",
+          "span": {
+            "byte_offset": 219,
+            "byte_length": 22,
+            "line": 8,
+            "column": 0,
+            "text": "  console.log(worker);"
+          },
+          "attributes": {
+            "import_kind": "none",
+            "export_kind": "none",
+            "dynamic": false,
+            "wildcard": false
+          }
+        },
+        "js.call.dynamic": {
+          "kind": "call",
+          "path": "src/index.js",
+          "subject": "src/index.dynamic",
+          "target": null,
+          "resolution_status": "ambiguous",
+          "resolution_method": "heuristic",
+          "candidates": [
+            "src/base.Base.run",
+            "src/impl.Worker.run"
+          ],
+          "rationale": "Dynamic receiver remains ambiguous.",
+          "span": {
+            "byte_offset": 265,
+            "byte_length": 50,
+            "line": 11,
+            "column": 0,
+            "text": "export function dynamic(obj) { return obj.run(); }"
+          },
+          "attributes": {
+            "import_kind": "none",
+            "export_kind": "none",
+            "dynamic": false,
+            "wildcard": false
+          }
+        },
+        "js.call.impl_same": {
+          "kind": "call",
+          "path": "src/index.js",
+          "span": {
+            "byte_offset": 242,
+            "byte_length": 20,
+            "line": 9,
+            "column": 0,
+            "text": "  return implSame();"
+          },
+          "subject": "src/index.entry",
+          "target": "src/impl.same",
+          "resolution_status": "resolved",
+          "resolution_method": "exact",
+          "candidates": [
+            "src/impl.same"
+          ],
+          "attributes": {
+            "import_kind": "none",
+            "export_kind": "none",
+            "dynamic": false,
+            "wildcard": false
+          },
+          "rationale": "Frozen independent oracle fact."
+        }
+      }
+    }
+  }
+}

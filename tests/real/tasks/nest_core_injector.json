@@ -1,0 +1,234 @@
+{
+  "document_type": "downstream_task",
+  "contract_version": 2,
+  "task_id": "nest-core-injector.dependencies",
+  "repository_snapshot": {
+    "repo_id": "nest_core_injector",
+    "url": "https://github.com/nestjs/nest.git",
+    "commit": "5df8d9d41a98fd7f587b2e043a12b3d5109971e4",
+    "tree": "de9edaba6d249b0a987b7bd191febb13e57d02e9",
+    "source_roots": {
+      "packages/core/injector": "0c65d58e1d57c762e5ba7017827ecff1e9eb6c81"
+    }
+  },
+  "consumer": "independent TypeScript dependency-injection architecture consumer",
+  "positive_budgets": [
+    4096,
+    8192
+  ],
+  "required_facts": {
+    "fact_01": {
+      "claim": "InstanceLoader is the bounded dependency-instantiation owner.",
+      "path": "packages/core/injector/instance-loader.ts",
+      "span": {
+        "byte_offset": 546,
+        "byte_length": 27,
+        "line": 11,
+        "column": 0,
+        "text": "export class InstanceLoader"
+      },
+      "source_text_sha256": "830fb6509726adab3baf4b2d47b01c5f5e0ef52db72f872d0ba2b7fac5653aa5",
+      "evidence_id": "ev_nest_core_injector_01",
+      "expected_relations": [
+        {
+          "relation_id": "rel_nest_core_injector_01",
+          "kind": "owns",
+          "source": "InstanceLoader is the bounded dependency-instantiation owner.",
+          "target": "packages/core/injector/instance-loader.ts",
+          "status": "resolved",
+          "evidence_ids": [
+            "ev_nest_core_injector_01"
+          ]
+        }
+      ],
+      "rationale": "Exact primary-Git source anchor from accepted replacement research."
+    },
+    "fact_02": {
+      "claim": "Dependency creation enters createInstancesOfDependencies.",
+      "path": "packages/core/injector/instance-loader.ts",
+      "span": {
+        "byte_offset": 957,
+        "byte_length": 43,
+        "line": 25,
+        "column": 2,
+        "text": "public async createInstancesOfDependencies("
+      },
+      "source_text_sha256": "1dfb411874f755ba00cdf205410febf75e281e335d39bed0629eb780ecd22b86",
+      "evidence_id": "ev_nest_core_injector_02",
+      "expected_relations": [
+        {
+          "relation_id": "rel_nest_core_injector_02",
+          "kind": "owns",
+          "source": "Dependency creation enters createInstancesOfDependencies.",
+          "target": "packages/core/injector/instance-loader.ts",
+          "status": "resolved",
+          "evidence_ids": [
+            "ev_nest_core_injector_02"
+          ]
+        }
+      ],
+      "rationale": "Exact primary-Git source anchor from accepted replacement research."
+    },
+    "fact_03": {
+      "claim": "Provider instantiation delegates to Injector.loadProvider.",
+      "path": "packages/core/injector/instance-loader.ts",
+      "span": {
+        "byte_offset": 2518,
+        "byte_length": 50,
+        "line": 74,
+        "column": 8,
+        "text": "await this.injector.loadProvider(item, moduleRef);"
+      },
+      "source_text_sha256": "69909dc5ca0d50abfcf02d8b5ed803b453cb3772d6c20aab69fa6e8054930463",
+      "evidence_id": "ev_nest_core_injector_03",
+      "expected_relations": [
+        {
+          "relation_id": "rel_nest_core_injector_03",
+          "kind": "call",
+          "source": "Provider instantiation delegates to Injector.loadProvider.",
+          "target": "packages/core/injector/injector.ts#Injector.loadProvider",
+          "status": "resolved",
+          "evidence_ids": [
+            "ev_nest_core_injector_03"
+          ]
+        }
+      ],
+      "rationale": "Exact primary-Git source anchor from accepted replacement research."
+    },
+    "fact_04": {
+      "claim": "Injector.loadProvider is the target method definition.",
+      "path": "packages/core/injector/injector.ts",
+      "span": {
+        "byte_offset": 7402,
+        "byte_length": 26,
+        "line": 276,
+        "column": 2,
+        "text": "public async loadProvider("
+      },
+      "source_text_sha256": "3a20bc36176241c249d07994fedcaf30f77b61e93dc06ae6e3ec292b2c45bbd1",
+      "evidence_id": "ev_nest_core_injector_04",
+      "expected_relations": [
+        {
+          "relation_id": "rel_nest_core_injector_04",
+          "kind": "owns",
+          "source": "Injector.loadProvider is the target method definition.",
+          "target": "packages/core/injector/injector.ts",
+          "status": "resolved",
+          "evidence_ids": [
+            "ev_nest_core_injector_04"
+          ]
+        }
+      ],
+      "rationale": "Exact primary-Git source anchor from accepted replacement research."
+    },
+    "fact_05": {
+      "claim": "The injector creates an anonymous runtime class extending ModuleRef.",
+      "path": "packages/core/injector/module.ts",
+      "span": {
+        "byte_offset": 16014,
+        "byte_length": 32,
+        "line": 605,
+        "column": 4,
+        "text": "return class extends ModuleRef {"
+      },
+      "source_text_sha256": "24b5866618d32da6e80c41676a10982c5578c61c716f55073e93b049b19d9955",
+      "evidence_id": "ev_nest_core_injector_05",
+      "expected_relations": [
+        {
+          "relation_id": "rel_nest_core_injector_05",
+          "kind": "inherits",
+          "source": "The injector creates an anonymous runtime class extending ModuleRef.",
+          "target": "ModuleRef",
+          "status": "ambiguous",
+          "evidence_ids": [
+            "ev_nest_core_injector_05"
+          ]
+        }
+      ],
+      "rationale": "Exact primary-Git source anchor from accepted replacement research."
+    },
+    "fact_06": {
+      "claim": "A circular/self dependency lookup enters an explicit UnknownDependenciesException path.",
+      "path": "packages/core/injector/injector.ts",
+      "span": {
+        "byte_offset": 18567,
+        "byte_length": 39,
+        "line": 613,
+        "column": 6,
+        "text": "throw new UnknownDependenciesException("
+      },
+      "source_text_sha256": "13643c187266e83049c2e07714e332d637abea05e7f69fe96d11ef9ceb291150",
+      "evidence_id": "ev_nest_core_injector_06",
+      "expected_relations": [
+        {
+          "relation_id": "rel_nest_core_injector_06",
+          "kind": "call",
+          "source": "A circular/self dependency lookup enters an explicit UnknownDependenciesException path.",
+          "target": "UnknownDependenciesException",
+          "status": "unresolved",
+          "evidence_ids": [
+            "ev_nest_core_injector_06"
+          ]
+        }
+      ],
+      "rationale": "Exact primary-Git source anchor from accepted replacement research."
+    }
+  },
+  "expectations": {
+    "relation_status_counts": {
+      "resolved": 4,
+      "ambiguous": 1,
+      "unresolved": 1,
+      "external": 0,
+      "unsupported": 0
+    },
+    "required_evidence_ids": [
+      "ev_nest_core_injector_01",
+      "ev_nest_core_injector_02",
+      "ev_nest_core_injector_03",
+      "ev_nest_core_injector_04",
+      "ev_nest_core_injector_05",
+      "ev_nest_core_injector_06"
+    ],
+    "cursor_chain": [
+      {
+        "budget": 4096,
+        "page": 1,
+        "must_continue": true
+      },
+      {
+        "budget": 8192,
+        "page": 2,
+        "must_continue": false
+      }
+    ],
+    "interruption": {
+      "required": false,
+      "expected_outcome": "not_applicable"
+    },
+    "universe_partition": {
+      "roots": [
+        "packages/core/injector"
+      ],
+      "eligible_languages": [
+        "typescript"
+      ],
+      "expected_states": [
+        "indexed",
+        "parse_error",
+        "excluded"
+      ],
+      "cross_language_edges": "not_applicable"
+    }
+  },
+  "forbidden_facts": [
+    "Treat runtime tokens as exact targets without evidence",
+    "Treat anonymous runtime classes as ordinary named symbols",
+    "Expand roots into tests or platform adapters",
+    "Infer Express or Sentry roles from repository dependencies"
+  ],
+  "pass_rule": "All six exact spans, typed relations, counts, evidence IDs and cursor pages reconstruct at the locked snapshot; dynamic uncertainty remains explicit.",
+  "fail_rule": "Any span, hash, relation count, evidence ID, root, cursor, or dynamic status mismatch is fail.",
+  "cannot_judge_rule": "Exact locked snapshot, bounded root, TypeScript backend, continuation reconstruction, or independent evaluator unavailable.",
+  "changed_decision": "Consumer can distinguish dependency-instantiation ownership, direct calls, dynamic inheritance and unresolved error boundaries."
+}

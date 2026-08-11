@@ -1,0 +1,315 @@
+{
+  "candidate": "typescript_compiler_api",
+  "typescript_version": "5.9.3",
+  "root": "/Users/lexuanzhang/context-infra/adhoc_jobs/codebase_explorer_20260321/impl/codebase-explorer/experiments/typescript_resolver_spike/.work/nest",
+  "config_path": "/Users/lexuanzhang/context-infra/adhoc_jobs/codebase_explorer_20260321/impl/codebase-explorer/experiments/typescript_resolver_spike/.work/nest.injector.tsconfig.json",
+  "root_file_count": 30,
+  "program_source_file_count": 169,
+  "elapsed_ms": 2951.60325,
+  "rss_bytes": 260702208,
+  "heap_used_bytes": 106363384,
+  "facts": {},
+  "diagnostic_count": 213,
+  "diagnostics": [
+    {
+      "code": 2307,
+      "category": "Error",
+      "path": "packages/core/adapters/http-adapter.ts",
+      "message": "Cannot find module '@nestjs/common' or its corresponding type declarations."
+    },
+    {
+      "code": 2307,
+      "category": "Error",
+      "path": "packages/core/adapters/http-adapter.ts",
+      "message": "Cannot find module '@nestjs/common/interfaces' or its corresponding type declarations."
+    },
+    {
+      "code": 2307,
+      "category": "Error",
+      "path": "packages/core/adapters/http-adapter.ts",
+      "message": "Cannot find module '@nestjs/common/interfaces/nest-application-options.interface' or its corresponding type declarations."
+    },
+    {
+      "code": 2307,
+      "category": "Error",
+      "path": "packages/core/application-config.ts",
+      "message": "Cannot find module '@nestjs/common' or its corresponding type declarations."
+    },
+    {
+      "code": 2307,
+      "category": "Error",
+      "path": "packages/core/application-config.ts",
+      "message": "Cannot find module '@nestjs/common/interfaces' or its corresponding type declarations."
+    },
+    {
+      "code": 2307,
+      "category": "Error",
+      "path": "packages/core/constants.ts",
+      "message": "Cannot find module '@nestjs/common/constants' or its corresponding type declarations."
+    },
+    {
+      "code": 2307,
+      "category": "Error",
+      "path": "packages/core/discovery/discoverable-meta-host-collection.ts",
+      "message": "Cannot find module '@nestjs/common' or its corresponding type declarations."
+    },
+    {
+      "code": 2307,
+      "category": "Error",
+      "path": "packages/core/errors/exceptions/invalid-class-scope.exception.ts",
+      "message": "Cannot find module '@nestjs/common/interfaces' or its corresponding type declarations."
+    },
+    {
+      "code": 2307,
+      "category": "Error",
+      "path": "packages/core/errors/exceptions/invalid-class-scope.exception.ts",
+      "message": "Cannot find module '@nestjs/common/utils/shared.utils' or its corresponding type declarations."
+    },
+    {
+      "code": 2307,
+      "category": "Error",
+      "path": "packages/core/errors/exceptions/undefined-forwardref.exception.ts",
+      "message": "Cannot find module '@nestjs/common' or its corresponding type declarations."
+    },
+    {
+      "code": 2307,
+      "category": "Error",
+      "path": "packages/core/errors/messages.ts",
+      "message": "Cannot find module '@nestjs/common' or its corresponding type declarations."
+    },
+    {
+      "code": 2307,
+      "category": "Error",
+      "path": "packages/core/errors/messages.ts",
+      "message": "Cannot find module '@nestjs/common/utils/shared.utils' or its corresponding type declarations."
+    },
+    {
+      "code": 2731,
+      "category": "Error",
+      "path": "packages/core/errors/messages.ts",
+      "message": "Implicit conversion of a 'symbol' to a 'string' will fail at runtime. Consider wrapping this expression in 'String(...)'."
+    },
+    {
+      "code": 2731,
+      "category": "Error",
+      "path": "packages/core/errors/messages.ts",
+      "message": "Implicit conversion of a 'symbol' to a 'string' will fail at runtime. Consider wrapping this expression in 'String(...)'."
+    },
+    {
+      "code": 2307,
+      "category": "Error",
+      "path": "packages/core/exceptions/base-exception-filter-context.ts",
+      "message": "Cannot find module '@nestjs/common/constants' or its corresponding type declarations."
+    },
+    {
+      "code": 2307,
+      "category": "Error",
+      "path": "packages/core/exceptions/base-exception-filter-context.ts",
+      "message": "Cannot find module '@nestjs/common/interfaces' or its corresponding type declarations."
+    },
+    {
+      "code": 2307,
+      "category": "Error",
+      "path": "packages/core/exceptions/base-exception-filter-context.ts",
+      "message": "Cannot find module '@nestjs/common/interfaces/exceptions/exception-filter.interface' or its corresponding type declarations."
+    },
+    {
+      "code": 2307,
+      "category": "Error",
+      "path": "packages/core/exceptions/base-exception-filter-context.ts",
+      "message": "Cannot find module '@nestjs/common/utils/shared.utils' or its corresponding type declarations."
+    },
+    {
+      "code": 2307,
+      "category": "Error",
+      "path": "packages/core/exceptions/base-exception-filter-context.ts",
+      "message": "Cannot find module 'iterare' or its corresponding type declarations."
+    },
+    {
+      "code": 2339,
+      "category": "Error",
+      "path": "packages/core/exceptions/base-exception-filter-context.ts",
+      "message": "Property 'getMetadata' does not exist on type 'typeof Reflect'."
+    },
+    {
+      "code": 2307,
+      "category": "Error",
+      "path": "packages/core/exceptions/base-exception-filter.ts",
+      "message": "Cannot find module '@nestjs/common' or its corresponding type declarations."
+    },
+    {
+      "code": 2307,
+      "category": "Error",
+      "path": "packages/core/exceptions/base-exception-filter.ts",
+      "message": "Cannot find module '@nestjs/common/utils/shared.utils' or its corresponding type declarations."
+    },
+    {
+      "code": 2339,
+      "category": "Error",
+      "path": "packages/core/exceptions/base-exception-filter.ts",
+      "message": "Property 'getResponse' does not exist on type 'T'."
+    },
+    {
+      "code": 2339,
+      "category": "Error",
+      "path": "packages/core/exceptions/base-exception-filter.ts",
+      "message": "Property 'getStatus' does not exist on type 'T'."
+    },
+    {
+      "code": 2339,
+      "category": "Error",
+      "path": "packages/core/exceptions/base-exception-filter.ts",
+      "message": "Property 'getStatus' does not exist on type 'T'."
+    },
+    {
+      "code": 2307,
+      "category": "Error",
+      "path": "packages/core/exceptions/exceptions-handler.ts",
+      "message": "Cannot find module '@nestjs/common' or its corresponding type declarations."
+    },
+    {
+      "code": 2307,
+      "category": "Error",
+      "path": "packages/core/exceptions/exceptions-handler.ts",
+      "message": "Cannot find module '@nestjs/common/interfaces/exceptions/exception-filter-metadata.interface' or its corresponding type declarations."
+    },
+    {
+      "code": 2307,
+      "category": "Error",
+      "path": "packages/core/exceptions/exceptions-handler.ts",
+      "message": "Cannot find module '@nestjs/common/interfaces/features/arguments-host.interface' or its corresponding type declarations."
+    },
+    {
+      "code": 2307,
+      "category": "Error",
+      "path": "packages/core/exceptions/exceptions-handler.ts",
+      "message": "Cannot find module '@nestjs/common/utils/select-exception-filter-metadata.util' or its corresponding type declarations."
+    },
+    {
+      "code": 2307,
+      "category": "Error",
+      "path": "packages/core/exceptions/exceptions-handler.ts",
+      "message": "Cannot find module '@nestjs/common/utils/shared.utils' or its corresponding type declarations."
+    },
+    {
+      "code": 2307,
+      "category": "Error",
+      "path": "packages/core/exceptions/external-exception-filter-context.ts",
+      "message": "Cannot find module '@nestjs/common/constants' or its corresponding type declarations."
+    },
+    {
+      "code": 2307,
+      "category": "Error",
+      "path": "packages/core/exceptions/external-exception-filter-context.ts",
+      "message": "Cannot find module '@nestjs/common/interfaces' or its corresponding type declarations."
+    },
+    {
+      "code": 2307,
+      "category": "Error",
+      "path": "packages/core/exceptions/external-exception-filter-context.ts",
+      "message": "Cannot find module '@nestjs/common/interfaces/exceptions' or its corresponding type declarations."
+    },
+    {
+      "code": 2307,
+      "category": "Error",
+      "path": "packages/core/exceptions/external-exception-filter-context.ts",
+      "message": "Cannot find module '@nestjs/common/utils/shared.utils' or its corresponding type declarations."
+    },
+    {
+      "code": 2307,
+      "category": "Error",
+      "path": "packages/core/exceptions/external-exception-filter-context.ts",
+      "message": "Cannot find module 'iterare' or its corresponding type declarations."
+    },
+    {
+      "code": 2307,
+      "category": "Error",
+      "path": "packages/core/exceptions/external-exception-filter.ts",
+      "message": "Cannot find module '@nestjs/common' or its corresponding type declarations."
+    },
+    {
+      "code": 2307,
+      "category": "Error",
+      "path": "packages/core/exceptions/external-exceptions-handler.ts",
+      "message": "Cannot find module '@nestjs/common/interfaces/exceptions' or its corresponding type declarations."
+    },
+    {
+      "code": 2307,
+      "category": "Error",
+      "path": "packages/core/exceptions/external-exceptions-handler.ts",
+      "message": "Cannot find module '@nestjs/common/interfaces/features/arguments-host.interface' or its corresponding type declarations."
+    },
+    {
+      "code": 2307,
+      "category": "Error",
+      "path": "packages/core/exceptions/external-exceptions-handler.ts",
+      "message": "Cannot find module '@nestjs/common/utils/select-exception-filter-metadata.util' or its corresponding type declarations."
+    },
+    {
+      "code": 2307,
+      "category": "Error",
+      "path": "packages/core/exceptions/external-exceptions-handler.ts",
+      "message": "Cannot find module '@nestjs/common/utils/shared.utils' or its corresponding type declarations."
+    },
+    {
+      "code": 2307,
+      "category": "Error",
+      "path": "packages/core/guards/guards-consumer.ts",
+      "message": "Cannot find module '@nestjs/common' or its corresponding type declarations."
+    },
+    {
+      "code": 2307,
+      "category": "Error",
+      "path": "packages/core/guards/guards-consumer.ts",
+      "message": "Cannot find module '@nestjs/common/interfaces' or its corresponding type declarations."
+    },
+    {
+      "code": 2307,
+      "category": "Error",
+      "path": "packages/core/guards/guards-consumer.ts",
+      "message": "Cannot find module '@nestjs/common/utils/shared.utils' or its corresponding type declarations."
+    },
+    {
+      "code": 2307,
+      "category": "Error",
+      "path": "packages/core/guards/guards-consumer.ts",
+      "message": "Cannot find module 'rxjs' or its corresponding type declarations."
+    },
+    {
+      "code": 2307,
+      "category": "Error",
+      "path": "packages/core/guards/guards-context-creator.ts",
+      "message": "Cannot find module '@nestjs/common' or its corresponding type declarations."
+    },
+    {
+      "code": 2307,
+      "category": "Error",
+      "path": "packages/core/guards/guards-context-creator.ts",
+      "message": "Cannot find module '@nestjs/common/constants' or its corresponding type declarations."
+    },
+    {
+      "code": 2307,
+      "category": "Error",
+      "path": "packages/core/guards/guards-context-creator.ts",
+      "message": "Cannot find module '@nestjs/common/interfaces' or its corresponding type declarations."
+    },
+    {
+      "code": 2307,
+      "category": "Error",
+      "path": "packages/core/guards/guards-context-creator.ts",
+      "message": "Cannot find module '@nestjs/common/utils/shared.utils' or its corresponding type declarations."
+    },
+    {
+      "code": 2307,
+      "category": "Error",
+      "path": "packages/core/guards/guards-context-creator.ts",
+      "message": "Cannot find module 'iterare' or its corresponding type declarations."
+    },
+    {
+      "code": 2307,
+      "category": "Error",
+      "path": "packages/core/helpers/context-creator.ts",
+      "message": "Cannot find module '@nestjs/common/interfaces' or its corresponding type declarations."
+    }
+  ]
+}

@@ -1,0 +1,74 @@
+{
+  "candidate": "typescript_compiler_api",
+  "typescript_version": "5.9.3",
+  "root": "/Users/lexuanzhang/context-infra/adhoc_jobs/codebase_explorer_20260321/impl/codebase-explorer/experiments/typescript_resolver_spike/.work/fixture",
+  "config_path": "/Users/lexuanzhang/context-infra/adhoc_jobs/codebase_explorer_20260321/impl/codebase-explorer/experiments/typescript_resolver_spike/.work/fixture/tsconfig.json",
+  "root_file_count": 7,
+  "program_source_file_count": 70,
+  "elapsed_ms": 635.6855,
+  "rss_bytes": 226131968,
+  "heap_used_bytes": 82477848,
+  "facts": {
+    "ts.type.runner.run": {
+      "observed": true,
+      "target": "string",
+      "resolution_method": "compiler",
+      "span": {
+        "path": "src/base.ts",
+        "byte_offset": 26,
+        "byte_length": 16,
+        "line": 2,
+        "column": 0,
+        "text": "  run(): string;"
+      }
+    },
+    "ts.implements.worker": {
+      "observed": true,
+      "target": {
+        "name": "\"/Users/lexuanzhang/context-infra/adhoc_jobs/codebase_explorer_20260321/impl/codebase-explorer/experiments/typescript_resolver_spike/.work/fixture/src/base\".Runner",
+        "path": "src/base.ts"
+      },
+      "resolution_method": "compiler",
+      "span": {
+        "path": "src/impl.ts",
+        "byte_offset": 38,
+        "byte_length": 39,
+        "line": 2,
+        "column": 0,
+        "text": "export class Worker implements Runner {"
+      }
+    },
+    "ts.call.worker.run": {
+      "observed": true,
+      "target": {
+        "name": "\"/Users/lexuanzhang/context-infra/adhoc_jobs/codebase_explorer_20260321/impl/codebase-explorer/experiments/typescript_resolver_spike/.work/fixture/src/base\".Runner.run",
+        "path": "src/base.ts"
+      },
+      "receiver_type": "Runner",
+      "resolution_method": "compiler",
+      "span": {
+        "path": "src/index.ts",
+        "byte_offset": 232,
+        "byte_length": 15,
+        "line": 6,
+        "column": 0,
+        "text": "  worker.run();"
+      }
+    }
+  },
+  "diagnostic_count": 2,
+  "diagnostics": [
+    {
+      "code": 1110,
+      "category": "Error",
+      "path": "src/broken.ts",
+      "message": "Type expected."
+    },
+    {
+      "code": 2304,
+      "category": "Error",
+      "path": "src/index.ts",
+      "message": "Cannot find name 'missing'."
+    }
+  ]
+}

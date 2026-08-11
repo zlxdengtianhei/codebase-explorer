@@ -1,0 +1,22 @@
+{
+  "schema_version": "2.0",
+  "project": {
+    "id": "fixture-project",
+    "root_path": "/tmp/fixture",
+    "analyzed_at": "2026-08-11T08:00:00+00:00",
+    "analysis_status": "complete"
+  },
+  "tasks": {
+    "task-1": {
+      "type": "single",
+      "status": "complete",
+      "output_files": [{"path": "docs/a.md", "status": "complete"}]
+    }
+  },
+  "documentation": {
+    "source_files_covered": ["a.py"],
+    "source_file_coverage_percent": 100.0,
+    "index_written": true
+  },
+  "metadata": {"completion_marker_seen": true}
+}

@@ -22,10 +22,12 @@ from src.parser.codebase import (
     FileInfo,
     FunctionInfo,
     GraphSitterError,
+    RequestedLanguageUnavailableError,
     UnsupportedLanguageError,
     _USE_FALLBACK,
     parse_project,
 )
+from src.parser.backend import FailureCode
 from src.parser.language_detect import (
     SUPPORTED_LANGUAGES,
     LanguageProfile,
@@ -482,26 +484,41 @@ class TestCodebaseParserASTFallback:
 
     @patch("src.parser.codebase.CodebaseParser._init_codebase", return_value=_USE_FALLBACK)
     def test_fallback_syntax_error_file(self, _mock_init: MagicMock, tmp_path: Path) -> None:
-        """A file with a SyntaxError is still recorded (but with empty names)."""
+        """Malformed Python remains a typed terminal parse failure."""
         _write(tmp_path / "bad.py", "def broken(\n")
-        snap = CodebaseParser().parse(str(tmp_path), languages=["python"])
 
-        assert len(snap.files) == 1
-        assert snap.files[0].function_names == ()
-        assert snap.files[0].class_names == ()
-        assert snap.files[0].line_count > 0
+        with pytest.raises(RequestedLanguageUnavailableError) as caught:
+            CodebaseParser().parse(str(tmp_path), languages=["python"])
+
+        error = caught.value
+        assert tuple(failure.code for failure in error.failures) == (
+            FailureCode.PARSE_ERROR,
+        )
+        assert tuple(failure.language for failure in error.failures) == ("python",)
+        assert error.handshake is not None
+        assert error.handshake.requested_languages == ("python",)
+        assert error.handshake.detected_languages == ("python",)
+        assert error.handshake.successfully_parsed_languages == ()
 
     @patch("src.parser.codebase.CodebaseParser._init_codebase", return_value=_USE_FALLBACK)
-    def test_fallback_skips_non_python_language(
+    def test_fallback_requested_language_without_source_fails(
         self, _mock_init: MagicMock, tmp_path: Path,
     ) -> None:
-        """Non-python language with fallback should produce an empty snapshot."""
+        """An explicit request with no eligible source cannot return success."""
         _write(tmp_path / "app.ts", "const x = 1;\n")
-        parser = CodebaseParser()
-        snap = parser.parse(str(tmp_path), languages=["typescript"])
 
-        assert len(snap.files) == 0
-        assert snap.total_lines == 0
+        with pytest.raises(RequestedLanguageUnavailableError) as caught:
+            CodebaseParser().parse(str(tmp_path), languages=["python"])
+
+        error = caught.value
+        assert tuple(failure.code for failure in error.failures) == (
+            FailureCode.SOURCE_UNAVAILABLE,
+        )
+        assert tuple(failure.language for failure in error.failures) == ("python",)
+        assert error.handshake is not None
+        assert error.handshake.requested_languages == ("python",)
+        assert error.handshake.detected_languages == ("typescript",)
+        assert error.handshake.successfully_parsed_languages == ()
 
     @patch("src.parser.codebase.CodebaseParser._init_codebase", return_value=_USE_FALLBACK)
     def test_fallback_function_parameters(self, _mock_init: MagicMock, tmp_path: Path) -> None:
@@ -812,22 +829,17 @@ class TestParseProjectConvenience:
 
 
 class TestCodebaseParserInitCodebase:
-    """Tests for _init_codebase handling of codegen import."""
+    """Ambient codegen state cannot bypass explicit registry selection."""
 
-    def test_fallback_sentinel_returned_when_codegen_missing(self) -> None:
-        """When codegen is not importable, _init_codebase returns _USE_FALLBACK."""
+    def test_missing_ambient_codegen_uses_registry_backend(self) -> None:
         parser = CodebaseParser()
         with patch.dict("sys.modules", {"codegen": None}):
-            # Force ImportError by making the import fail
-            with patch(
-                "builtins.__import__",
-                side_effect=_make_import_error_for("codegen"),
-            ):
-                result = parser._init_codebase("/some/path", "python")
-                assert result is _USE_FALLBACK
+            result = parser._init_codebase("/some/path", "python")
+        assert result is not None
+        assert result is not _USE_FALLBACK
+        assert result.health.backend_id == "python_ast"
 
-    def test_returns_none_on_generic_exception(self) -> None:
-        """When codegen exists but init raises, _init_codebase returns None."""
+    def test_injected_ambient_codegen_is_not_executed(self) -> None:
         mock_codebase_cls = MagicMock(side_effect=RuntimeError("init failed"))
         mock_codegen = MagicMock()
         mock_codegen.Codebase = mock_codebase_cls
@@ -835,20 +847,6 @@ class TestCodebaseParserInitCodebase:
         parser = CodebaseParser()
         with patch.dict("sys.modules", {"codegen": mock_codegen}):
             result = parser._init_codebase("/some/path", "python")
-            assert result is None
-
-
-# ===========================================================================
-# Helper for patching imports
-# ===========================================================================
-
-_real_import = __builtins__.__import__ if hasattr(__builtins__, "__import__") else __import__
-
-
-def _make_import_error_for(module_name: str):
-    """Return an __import__ replacement that raises ImportError for one module."""
-    def _custom_import(name, *args, **kwargs):
-        if name == module_name:
-            raise ImportError(f"No module named '{module_name}'")
-        return _real_import(name, *args, **kwargs)
-    return _custom_import
+        assert result is not None
+        assert result.health.backend_id == "python_ast"
+        mock_codebase_cls.assert_not_called()

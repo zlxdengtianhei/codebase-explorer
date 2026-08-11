@@ -1,0 +1,64 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "$id":"https://codebase-explorer.local/schemas/oracle-review-receipt-2.json",
+  "title":"Independent oracle review receipt, including immutable failed v1 history",
+  "oneOf":[{"$ref":"#/$defs/historical_failed_v1"},{"$ref":"#/$defs/review_v2"}],
+  "$defs": {
+    "sha256":{"type":"string","pattern":"^[0-9a-f]{64}$"},
+    "check": {
+      "type":"object","additionalProperties":false,
+      "required":["object","review_class","independent_check","verdict","evidence_paths"],
+      "properties": {
+        "object":{"type":"string","minLength":1},
+        "review_class":{"enum":["implementation","requirement","evidence","closure","cross-domain"]},
+        "independent_check":{"type":"string","minLength":1},
+        "verdict":{"enum":["worked","worked_partially","did_not_work","cannot_judge"]},
+        "evidence_paths":{"type":"array","minItems":1,"items":{"type":"string","minLength":1}}
+      }
+    },
+    "common": {
+      "type":"object",
+      "required":["schema_version","review_id","oracle_contract_hashes","oracle_author","reviewer","reviewer_channel","forbidden_reads","checks","verdict","counterexample_or_residual","reviewed_at","named_consumer"],
+      "properties": {
+        "schema_version":{"type":"integer"}, "review_id":{"type":"string","pattern":"^[a-z0-9_.-]+$"},
+        "oracle_contract_hashes":{"type":"object","minProperties":1,"additionalProperties":{"$ref":"#/$defs/sha256"}},
+        "oracle_author":{"type":"string","minLength":1}, "reviewer":{"type":"string","minLength":1,"not":{"const":"CBE-R001-REPAIR-P1A"}},
+        "reviewer_channel":{"type":"string","minLength":1},
+        "forbidden_reads":{"type":"array","minItems":1,"items":{"type":"string","minLength":1}},
+        "verdict":{"enum":["pass","fail","cannot_judge"]}, "counterexample_or_residual":{"type":"string","minLength":1},
+        "reviewed_at":{"type":"string","format":"date-time"}, "named_consumer":{"const":"P3/P4 adapter dispatch gate"}
+      }
+    },
+    "historical_failed_v1": {
+      "allOf":[
+        {"$ref":"#/$defs/common"},
+        {"type":"object","additionalProperties":false,
+         "required":["schema_version","review_id","oracle_contract_hashes","oracle_author","reviewer","reviewer_channel","forbidden_reads","checks","verdict","counterexample_or_residual","reviewed_at","named_consumer"],
+         "properties": {
+           "schema_version":{"const":1}, "review_id":true,"oracle_contract_hashes":true,"oracle_author":true,"reviewer":true,"reviewer_channel":true,"forbidden_reads":true,
+           "checks":{"type":"array","minItems":1,"items":{"$ref":"#/$defs/check"}},
+           "verdict":{"enum":["fail","cannot_judge"]}, "counterexample_or_residual":true,"reviewed_at":true,"named_consumer":true
+         }}
+      ]
+    },
+    "review_v2": {
+      "allOf":[
+        {"$ref":"#/$defs/common"},
+        {"type":"object","additionalProperties":false,
+         "required":["schema_version","review_id","oracle_contract_hashes","oracle_author","reviewer","reviewer_channel","forbidden_reads","checks","verdict","claim_ceiling","counterexample_or_residual","reviewed_at","named_consumer"],
+         "properties": {
+           "schema_version":{"const":2}, "review_id":true,"oracle_contract_hashes":true,"oracle_author":true,"reviewer":true,"reviewer_channel":true,"forbidden_reads":true,
+           "checks":{"type":"object","minProperties":5,"propertyNames":{"pattern":"^[a-z0-9_.-]+$"},"additionalProperties":{"$ref":"#/$defs/check"}},
+           "verdict":{"enum":["pass","fail","cannot_judge"]},
+           "claim_ceiling":{"enum":["fixture_adapter_dispatch_allowed","repair_required","cannot_judge"]},
+           "counterexample_or_residual":true,"reviewed_at":true,"named_consumer":true
+         },
+         "allOf":[
+           {"if":{"properties":{"verdict":{"const":"pass"}}},"then":{"properties":{"claim_ceiling":{"const":"fixture_adapter_dispatch_allowed"},"checks":{"additionalProperties":{"allOf":[{"$ref":"#/$defs/check"},{"properties":{"verdict":{"const":"worked"}}}]}}}}},
+           {"if":{"properties":{"verdict":{"const":"fail"}}},"then":{"properties":{"claim_ceiling":{"const":"repair_required"}}}},
+           {"if":{"properties":{"verdict":{"const":"cannot_judge"}}},"then":{"properties":{"claim_ceiling":{"const":"cannot_judge"}}}}
+         ]}
+      ]
+    }
+  }
+}

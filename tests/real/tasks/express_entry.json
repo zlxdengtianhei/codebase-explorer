@@ -1,0 +1,124 @@
+{
+  "document_type": "downstream_task",
+  "contract_version": 2,
+  "task_id": "express.entry",
+  "consumer": "independent JavaScript architecture consumer",
+  "positive_budgets": [
+    4096,
+    8192
+  ],
+  "required_facts": {
+    "fact_01": {
+      "claim": "Express application construction starts at createApplication.",
+      "path": "lib/express.js",
+      "span": {
+        "byte_offset": 660,
+        "byte_length": 30,
+        "line": 36,
+        "column": 0,
+        "text": "function createApplication() {"
+      },
+      "source_text_sha256": "343e496d568bbff1a48c5a33d56f77afdecbb2c24bbb536f57b9ca05d7319c8e",
+      "rationale": "Frozen application construction anchor.",
+      "evidence_id": "ev_express_01",
+      "expected_relations": [
+        {
+          "relation_id": "rel_express_01",
+          "kind": "owns",
+          "source": "express",
+          "target": "lib/express.js",
+          "status": "resolved",
+          "evidence_ids": [
+            "ev_express_01"
+          ]
+        }
+      ]
+    },
+    "fact_02": {
+      "claim": "Application initialization boundary is app.init.",
+      "path": "lib/application.js",
+      "span": {
+        "byte_offset": 1183,
+        "byte_length": 28,
+        "line": 59,
+        "column": 0,
+        "text": "app.init = function init() {"
+      },
+      "source_text_sha256": "3b5b1760213c20fe57b101cd806cf2d3c7a2202f629cb471e2a7b32008cefbfc",
+      "rationale": "Frozen initialization anchor.",
+      "evidence_id": "ev_express_02",
+      "expected_relations": [
+        {
+          "relation_id": "rel_express_02",
+          "kind": "owns",
+          "source": "express",
+          "target": "lib/application.js",
+          "status": "resolved",
+          "evidence_ids": [
+            "ev_express_02"
+          ]
+        }
+      ]
+    }
+  },
+  "forbidden_facts": [
+    "Dynamic middleware targets marked exact without evidence",
+    "Tests counted as lib source roots"
+  ],
+  "pass_rule": "Both spans and conservative dynamic-call statuses returned; no forbidden facts.",
+  "fail_rule": "Missing span, dynamic call over-resolution or source-root drift.",
+  "cannot_judge_rule": "Exact checkout or evaluator unavailable.",
+  "changed_decision": "Consumer can distinguish application construction from initialization.",
+  "repository_snapshot": {
+    "repo_id": "express",
+    "url": "https://github.com/expressjs/express.git",
+    "commit": "a3714473feb3d2908add734d340e7755fd85e0a3",
+    "tree": "134de344af9d2e7785aae9a991d02fd85b404bcf",
+    "source_roots": {
+      "lib": "85926e3cefdc1e97fd85309c444023261559f605"
+    }
+  },
+  "expectations": {
+    "relation_status_counts": {
+      "resolved": 2,
+      "ambiguous": 0,
+      "unresolved": 0,
+      "external": 0,
+      "unsupported": 0
+    },
+    "required_evidence_ids": [
+      "ev_express_01",
+      "ev_express_02"
+    ],
+    "cursor_chain": [
+      {
+        "budget": 4096,
+        "page": 1,
+        "must_continue": true
+      },
+      {
+        "budget": 8192,
+        "page": 2,
+        "must_continue": false
+      }
+    ],
+    "interruption": {
+      "required": false,
+      "expected_outcome": "not_applicable"
+    },
+    "universe_partition": {
+      "roots": [
+        "lib"
+      ],
+      "eligible_languages": [
+        "javascript"
+      ],
+      "expected_states": [
+        "indexed",
+        "parse_error",
+        "excluded"
+      ],
+      "cross_language_edges": "not_applicable"
+    }
+  }
+}

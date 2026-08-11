@@ -1,0 +1,80 @@
+{
+  "document_type": "expected_capabilities",
+  "contract_version": 2,
+  "language": "typescript",
+  "axes_are_independent": true,
+  "cells": {
+    "syntax": {
+      "availability": "available",
+      "semantic_tier": "resolved",
+      "verification_status": "unverified",
+      "required_for_core": true,
+      "passing_assertion": "Every planned .ts unit reaches indexed, parse_error or excluded with exact spans.",
+      "failure_rule": "Any unit vanishes or syntax error becomes empty success.",
+      "rationale": "Parser syntax is independently testable."
+    },
+    "imports": {
+      "availability": "available",
+      "semantic_tier": "resolved",
+      "verification_status": "unverified",
+      "required_for_core": true,
+      "passing_assertion": "Value and type-only imports retain targets and kind.",
+      "failure_rule": "Type-only import counted as runtime value edge fails.",
+      "rationale": "Fixture distinguishes both forms."
+    },
+    "exports": {
+      "availability": "available",
+      "semantic_tier": "resolved",
+      "verification_status": "unverified",
+      "required_for_core": true,
+      "passing_assertion": "Alias and type re-exports match exactly.",
+      "failure_rule": "Re-export omission or all declarations exported fails.",
+      "rationale": "Exports are explicit."
+    },
+    "names": {
+      "availability": "available",
+      "semantic_tier": "resolved",
+      "verification_status": "unverified",
+      "required_for_core": true,
+      "passing_assertion": "Three same functions retain distinct scope ids.",
+      "failure_rule": "Collision or file-only identity fails.",
+      "rationale": "Module scopes are explicit."
+    },
+    "calls": {
+      "availability": "available",
+      "semantic_tier": "resolved",
+      "verification_status": "unverified",
+      "required_for_core": true,
+      "passing_assertion": "Typed direct call resolves while any/missing/external retain distinct status.",
+      "failure_rule": "Any receiver promoted or missing call omitted fails.",
+      "rationale": "Compiler-backed conditions are required for resolved tier."
+    },
+    "types": {
+      "availability": "available",
+      "semantic_tier": "resolved",
+      "verification_status": "unverified",
+      "required_for_core": false,
+      "passing_assertion": "Interface, type import, implements and return facts match.",
+      "failure_rule": "Syntax-only backend advertised as resolved fails.",
+      "rationale": "Requires compatible TypeScript toolchain."
+    },
+    "frameworks": {
+      "availability": "unavailable",
+      "semantic_tier": "syntax_only",
+      "verification_status": "cannot_judge",
+      "required_for_core": false,
+      "passing_assertion": "No framework capability advertised.",
+      "failure_rule": "Generic TypeScript success promoted to framework support fails.",
+      "rationale": "No named framework fixture."
+    },
+    "incremental": {
+      "availability": "unavailable",
+      "semantic_tier": "syntax_only",
+      "verification_status": "cannot_judge",
+      "required_for_core": false,
+      "passing_assertion": "Mutation forces stale/full rebuild and never claims incremental.",
+      "failure_rule": "Silent stale reuse or incremental advertisement fails.",
+      "rationale": "No incremental backend frozen."
+    }
+  }
+}

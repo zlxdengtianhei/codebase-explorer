@@ -1,23 +1,40 @@
-"""Codebase parsing layer wrapping graph-sitter (codegen) API.
+"""Legacy snapshot compatibility boundary over the parser backend registry.
 
 Provides immutable data structures and a unified interface for parsing
 Python, TypeScript, and JavaScript codebases.
 
-When graph-sitter (codegen) is not installed, a lightweight fallback
-parser based on Python's built-in ``ast`` module is used automatically.
+When graph-sitter is unavailable or incompatible, a lightweight fallback
+parser based on Python's built-in ``ast`` module is selected explicitly.
 The fallback supports Python files only and provides best-effort import
 resolution, function/class extraction, and character counts.
 """
 from __future__ import annotations
 
 import ast
+import hashlib
 import logging
 import os
-import sys
 from dataclasses import dataclass
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-from src.parser.language_detect import detect_languages, is_supported_language
+from src.ir import EntityKind, SourceUnit, SourceUnitState, deterministic_entity_id
+from src.parser.adapters.registry import (
+    BackendRegistry,
+    BackendSelection,
+    default_backend_registry,
+)
+from src.parser.backend import (
+    BackendHealth,
+    FailureCode,
+    PythonAstBackend,
+    SyntaxArtifact,
+    TypedFailure,
+)
+from src.parser.language_detect import detect_language, detect_languages, is_supported_language
+
+if TYPE_CHECKING:
+    from src.capabilities import CapabilityHandshake
 
 logger = logging.getLogger(__name__)
 
@@ -30,8 +47,35 @@ class GraphSitterError(Exception):
 class CodebaseParseError(GraphSitterError):
     """Raised when graph-sitter fails to parse the codebase."""
 
+    def __init__(
+        self,
+        message: str,
+        failures: tuple[TypedFailure, ...] = (),
+        handshake: CapabilityHandshake | None = None,
+    ) -> None:
+        self.failures = failures
+        self.handshake = handshake
+        super().__init__(message)
+
 class UnsupportedLanguageError(GraphSitterError):
     """Raised when an unsupported language is requested."""
+
+
+class RequestedLanguageUnavailableError(CodebaseParseError):
+    """Raised when an explicit language request cannot be fulfilled."""
+
+    def __init__(
+        self,
+        failures: tuple[TypedFailure, ...],
+        handshake: CapabilityHandshake,
+    ) -> None:
+        self.failures = failures
+        self.handshake = handshake
+        reasons = "; ".join(
+            f"{failure.language} ({failure.code.value}: {failure.message})"
+            for failure in failures
+        )
+        super().__init__(f"Requested languages unavailable: {reasons}", failures, handshake)
 
 
 # -- Immutable data models --------------------------------------------------
@@ -79,13 +123,16 @@ class CodebaseSnapshot:
     classes: tuple[ClassInfo, ...]
     languages_detected: tuple[str, ...]
     total_lines: int
+    requested_languages: tuple[str, ...] = ()
+    successfully_parsed_languages: tuple[str, ...] = ()
+    failures: tuple[TypedFailure, ...] = ()
+    handshake: CapabilityHandshake | None = None
 
 
 # -- Sentinel for AST fallback ----------------------------------------------
 
 _USE_FALLBACK = object()
-"""Returned by ``_init_codebase`` when codegen is not importable, signalling
-the caller to use the built-in AST fallback parser."""
+"""Test-only token that routes an injected initializer result to the registry."""
 
 _EXCLUDED_DIRS = frozenset({
     ".venv", "venv", "node_modules", "__pycache__", ".git",
@@ -98,6 +145,9 @@ _EXCLUDED_DIRS = frozenset({
 
 class CodebaseParser:
     """Wraps graph-sitter Codebase API for code analysis."""
+
+    def __init__(self, *, registry: BackendRegistry | None = None) -> None:
+        self._registry = registry or default_backend_registry()
 
     def parse(self, path: str, languages: list[str] | None = None) -> CodebaseSnapshot:
         """Parse a codebase and return an immutable snapshot.
@@ -116,42 +166,93 @@ class CodebaseParser:
         if not root.is_dir():
             raise CodebaseParseError(f"Path is not a directory: {path}")
 
-        resolved = self._resolve_languages(str(root), languages)
+        profile = detect_languages(str(root))
+        detected = tuple(sorted(profile.languages.keys()))
+        if languages is None:
+            if profile.primary_language == "unsupported":
+                raise UnsupportedLanguageError(
+                    f"No supported language files found in {root}"
+                )
+            resolved = list(detected)
+        else:
+            resolved = list(dict.fromkeys(self._resolve_languages(str(root), languages)))
+        explicit_request = languages is not None
+        requested = tuple(dict.fromkeys(resolved)) if explicit_request else ()
         all_files: list[FileInfo] = []
         all_funcs: list[FunctionInfo] = []
         all_cls: list[ClassInfo] = []
         total_lines = 0
+        parsed: list[str] = []
+        failures: list[TypedFailure] = []
 
         for lang in resolved:
             logger.info("Parsing %s files in %s", lang, root)
-            codebase = self._init_codebase(str(root), lang)
-            if codebase is _USE_FALLBACK:
-                # codegen not importable -- fall back to built-in ast module
-                if lang == "python":
-                    files, funcs, classes, lines = self._fallback_parse_python(str(root))
-                    all_files.extend(files)
-                    all_funcs.extend(funcs)
-                    all_cls.extend(classes)
-                    total_lines += lines
-                else:
-                    logger.warning("No AST fallback available for %s; skipping", lang)
+            selection = self._init_codebase(str(root), lang)
+            if selection is _USE_FALLBACK:
+                selection = self._registry.select_with_health(
+                    lang, root=root, semantic_tier="heuristic"
+                )
+            if selection is None:
+                failures.append(self._unavailable_failure(str(root), lang))
                 continue
-            if codebase is None:
-                # codegen available but failed for this language -- skip it
+            if not isinstance(selection, BackendSelection):
+                failures.append(TypedFailure(
+                    code=FailureCode.BACKEND_ERROR,
+                    message=f"registry returned an invalid selection for {lang}",
+                    backend_id="none",
+                    language=lang,
+                ))
                 continue
-            files, funcs, classes, lines = self._extract(codebase, lang)
+            files, funcs, classes, lines, language_failures = (
+                self._parse_backend_language(root, lang, selection)
+            )
             all_files.extend(files)
             all_funcs.extend(funcs)
             all_cls.extend(classes)
             total_lines += lines
+            failures.extend(language_failures)
+            if files and not language_failures:
+                parsed.append(lang)
+
+        from src.capabilities import build_capability_handshake
+
+        failure_tuple = tuple(failures)
+        handshake = build_capability_handshake(
+            registry=self._registry,
+            root=root,
+            requested_languages=requested,
+            detected_languages=detected,
+            successfully_parsed_languages=tuple(parsed),
+            failures=failure_tuple,
+            receipt_id="runtime-unverified",
+        )
+        if explicit_request and failures:
+            raise RequestedLanguageUnavailableError(failure_tuple, handshake)
+        residual_codes = {
+            FailureCode.BACKEND_UNAVAILABLE,
+            FailureCode.INCOMPATIBLE_API,
+            FailureCode.UNSUPPORTED_LANGUAGE,
+        }
+        if failures and (
+            not parsed or any(failure.code not in residual_codes for failure in failures)
+        ):
+            raise CodebaseParseError(
+                "; ".join(failure.message for failure in failures),
+                failure_tuple,
+                handshake,
+            )
 
         return CodebaseSnapshot(
             root_path=str(root),
             files=tuple(all_files),
             functions=tuple(all_funcs),
             classes=tuple(all_cls),
-            languages_detected=tuple(resolved),
+            languages_detected=detected,
             total_lines=total_lines,
+            requested_languages=requested,
+            successfully_parsed_languages=tuple(parsed),
+            failures=failure_tuple,
+            handshake=handshake,
         )
 
     def get_file_content(self, filepath: str) -> str:
@@ -179,64 +280,195 @@ class CodebaseParser:
             )
         return list(profile.languages.keys())
 
-    def _init_codebase(self, root: str, language: str) -> object | None:
-        """Initialise a graph-sitter Codebase; returns None on failure.
+    def _init_codebase(self, root: str, language: str) -> BackendSelection | None:
+        """Select the project backend exclusively through the registry."""
+        return self._registry.select_with_health(language, root=root)
 
-        Returns ``_USE_FALLBACK`` when codegen is not importable, signalling
-        the caller to use the built-in AST fallback parser.  Returns ``None``
-        when codegen is importable but fails at runtime for this language.
-        """
-        try:
-            from codegen import Codebase  # graph-sitter package
-        except ImportError:
-            logger.info(
-                "graph-sitter (codegen) not available; using AST fallback for %s",
-                language,
-            )
-            return _USE_FALLBACK
-        try:
-            return Codebase(root, language=language)
-        except RecursionError:
-            logger.warning("RecursionError for %s; raising limit and retrying", language)
-            original = sys.getrecursionlimit()
-            sys.setrecursionlimit(max(original, 5000))
+    def _parse_backend_language(
+        self,
+        root: Path,
+        language: str,
+        selection: BackendSelection,
+    ) -> tuple[
+        list[FileInfo],
+        list[FunctionInfo],
+        list[ClassInfo],
+        int,
+        list[TypedFailure],
+    ]:
+        """Run the selected backend for every eligible source before conversion."""
+        backend = selection.backend
+        health = selection.health
+        paths = self._eligible_source_paths(root, language)
+        if not paths:
+            return [], [], [], 0, [TypedFailure(
+                code=FailureCode.SOURCE_UNAVAILABLE,
+                message=f"no eligible {language} source files under {root}",
+                backend_id=health.backend_id,
+                language=language,
+            )]
+
+        units, failures = self._source_units(root, language, health, paths)
+        artifacts: list[SyntaxArtifact] = []
+        for unit in units:
             try:
-                return Codebase(root, language=language)
-            except Exception as exc:  # noqa: BLE001
-                logger.error("Failed to parse %s after retry: %s", language, exc)
-                return None
-            finally:
-                sys.setrecursionlimit(original)
-        except Exception as exc:  # noqa: BLE001
-            logger.error("Failed to init codebase for %s: %s", language, exc)
-            return None
+                result = backend.parse(unit)
+            except Exception as exc:  # backend contract boundary
+                failures.append(TypedFailure(
+                    code=FailureCode.BACKEND_ERROR,
+                    message=(
+                        f"{health.backend_id} raised while parsing "
+                        f"{unit.path}: {exc}"
+                    ),
+                    backend_id=health.backend_id,
+                    language=language,
+                ))
+                continue
+            if isinstance(result, TypedFailure):
+                failures.append(result)
+            elif (
+                isinstance(result, SyntaxArtifact)
+                and result.source_unit == unit
+                and result.language == unit.language
+            ):
+                artifacts.append(result)
+            else:
+                mismatch = (
+                    isinstance(result, SyntaxArtifact)
+                    and result.language != unit.language
+                )
+                failures.append(TypedFailure(
+                    code=FailureCode.BACKEND_ERROR,
+                    message=(
+                        f"backend returned artifact/source language mismatch for {unit.path}"
+                        if mismatch
+                        else f"backend returned an invalid parse result for {unit.path}"
+                    ),
+                    backend_id=health.backend_id,
+                    language=language,
+                ))
 
-    def _extract(
-        self, codebase: object, language: str,
-    ) -> tuple[list[FileInfo], list[FunctionInfo], list[ClassInfo], int]:
+        if isinstance(backend, PythonAstBackend):
+            included = frozenset(artifact.source_unit.path for artifact in artifacts)
+            files, funcs, classes, lines = self._fallback_parse_python(
+                str(root), included_paths=included
+            )
+            return files, funcs, classes, lines, failures
+
         files: list[FileInfo] = []
-        funcs: list[FunctionInfo] = []
-        classes: list[ClassInfo] = []
-        total_lines = 0
-        for sf in codebase.files:  # type: ignore[attr-defined]
-            fi = self._extract_file(sf, language)
-            if fi is not None:
-                files.append(fi)
-                total_lines += fi.line_count
-        for fn in codebase.functions:  # type: ignore[attr-defined]
-            fi = self._extract_function(fn)
-            if fi is not None:
-                funcs.append(fi)
-        for cl in codebase.classes:  # type: ignore[attr-defined]
-            ci = self._extract_class(cl)
-            if ci is not None:
-                classes.append(ci)
-        return files, funcs, classes, total_lines
+        for artifact in artifacts:
+            path = root / artifact.source_unit.path
+            try:
+                source = path.read_text(encoding="utf-8")
+            except (OSError, UnicodeError) as exc:
+                failures.append(TypedFailure(
+                    code=FailureCode.SOURCE_UNAVAILABLE,
+                    message=f"cannot convert {artifact.source_unit.path}: {exc}",
+                    backend_id=artifact.backend_id,
+                    language=language,
+                ))
+                continue
+            files.append(FileInfo(
+                filepath=artifact.source_unit.path,
+                language=language,
+                line_count=source.count("\n") + 1 if source else 0,
+                function_names=(),
+                class_names=(),
+                import_sources=(),
+                char_count=len(source),
+            ))
+        return files, [], [], sum(item.line_count for item in files), failures
+
+    def _eligible_source_paths(self, root: Path, language: str) -> tuple[Path, ...]:
+        return tuple(sorted(
+            path
+            for path in root.rglob("*")
+            if path.is_file()
+            and detect_language(str(path)) == language
+            and not any(part in _EXCLUDED_DIRS for part in path.relative_to(root).parts)
+        ))
+
+    def _source_units(
+        self,
+        root: Path,
+        language: str,
+        health: BackendHealth,
+        paths: tuple[Path, ...],
+    ) -> tuple[list[SourceUnit], list[TypedFailure]]:
+        readable: list[tuple[str, str]] = []
+        failures: list[TypedFailure] = []
+        for path in paths:
+            relative = path.relative_to(root).as_posix()
+            try:
+                content = path.read_text(encoding="utf-8")
+            except (OSError, UnicodeError) as exc:
+                failures.append(TypedFailure(
+                    code=FailureCode.SOURCE_UNAVAILABLE,
+                    message=f"cannot read {relative}: {exc}",
+                    backend_id=health.backend_id,
+                    language=language,
+                ))
+                continue
+            readable.append((relative, hashlib.sha256(content.encode("utf-8")).hexdigest()))
+
+        manifest = "\n".join(f"{path}:{digest}" for path, digest in readable)
+        revision = "rev_" + hashlib.sha256(manifest.encode("utf-8")).hexdigest()
+        units = [
+            SourceUnit(
+                id=deterministic_entity_id(revision, path, EntityKind.SOURCE_UNIT, path),
+                source_revision_id=revision,
+                path=path,
+                language=language,
+                content_hash=digest,
+                state=SourceUnitState.DISCOVERED,
+                backend_id=health.backend_id,
+                backend_version=health.backend_version,
+            )
+            for path, digest in readable
+        ]
+        return units, failures
+
+    def _unavailable_failure(self, root: str, language: str) -> TypedFailure:
+        health = self._registry.health(root=root)
+        incompatible = tuple(item for item in health if item.status == "incompatible")
+        if incompatible:
+            item = incompatible[0]
+            return TypedFailure(
+                code=FailureCode.INCOMPATIBLE_API,
+                message=item.limitations[0],
+                backend_id=item.backend_id,
+                language=language,
+                details=item.limitations,
+            )
+        errors = tuple(item for item in health if item.status == "error")
+        if errors:
+            item = errors[0]
+            return TypedFailure(
+                code=FailureCode.BACKEND_ERROR,
+                message=item.limitations[0],
+                backend_id=item.backend_id,
+                language=language,
+                details=item.limitations,
+            )
+        return TypedFailure(
+            code=FailureCode.BACKEND_UNAVAILABLE,
+            message=f"no healthy registered backend for {language}",
+            backend_id="none",
+            language=language,
+            details=tuple(
+                limitation
+                for item in health
+                for limitation in item.limitations
+            ),
+        )
 
     # -- AST fallback parser --------------------------------------------------
 
     def _fallback_parse_python(
-        self, root: str,
+        self,
+        root: str,
+        *,
+        included_paths: frozenset[str] | None = None,
     ) -> tuple[list[FileInfo], list[FunctionInfo], list[ClassInfo], int]:
         """Parse Python files using the built-in ``ast`` module.
 
@@ -252,6 +484,10 @@ class CodebaseParser:
         py_files = sorted(
             f for f in root_path.rglob("*.py")
             if not any(part in _EXCLUDED_DIRS for part in f.relative_to(root_path).parts)
+            and (
+                included_paths is None
+                or f.relative_to(root_path).as_posix() in included_paths
+            )
         )
 
         # Build a module-name → filepath lookup for import resolution
@@ -523,81 +759,6 @@ class CodebaseParser:
             )
         except Exception:  # noqa: BLE001
             return None
-
-    # -- graph-sitter extraction helpers ------------------------------------
-
-    def _extract_file(self, sf: object, language: str) -> FileInfo | None:
-        try:
-            filepath = str(sf.filepath)  # type: ignore[attr-defined]
-            content = sf.source  # type: ignore[attr-defined]
-            line_count = content.count("\n") + 1 if content else 0
-            func_names = tuple(f.name for f in getattr(sf, "functions", []))
-            class_names = tuple(c.name for c in getattr(sf, "classes", []))
-            import_sources: list[str] = []
-            for imp in getattr(sf, "imports", []):
-                resolved = getattr(imp, "resolved_symbol", None)
-                if resolved is not None:
-                    rf = getattr(resolved, "file", None)
-                    if rf is not None:
-                        import_sources.append(str(rf.filepath))
-            return FileInfo(
-                filepath=filepath, language=language, line_count=line_count,
-                function_names=func_names, class_names=class_names,
-                import_sources=tuple(import_sources),
-            )
-        except Exception:  # noqa: BLE001
-            logger.warning("Failed to extract file info; skipping", exc_info=True)
-            return None
-
-    def _extract_function(self, fn: object) -> FunctionInfo | None:
-        try:
-            name = fn.name  # type: ignore[attr-defined]
-            filepath = str(fn.filepath)  # type: ignore[attr-defined]
-            start_line = getattr(fn, "start_point", (0,))[0]
-            end_line = getattr(fn, "end_point", (0,))[0]
-            params = tuple(p.name for p in getattr(fn, "parameters", []))
-            rt = getattr(fn, "return_type", None)
-            return_type = str(rt) if rt is not None else None
-            calls: list[str] = []
-            for call in getattr(fn, "function_calls", []):
-                fd = getattr(call, "function_definition", None)
-                if fd is not None:
-                    calls.append(fd.name)
-            deps: list[str] = []
-            for dep in getattr(fn, "dependencies", []):
-                dp = getattr(dep, "filepath", None)
-                if dp is not None:
-                    deps.append(str(dp))
-            return FunctionInfo(
-                name=name, filepath=filepath,
-                start_line=start_line, end_line=end_line,
-                parameters=params, return_type=return_type,
-                calls=tuple(calls), dependencies=tuple(deps),
-            )
-        except Exception:  # noqa: BLE001
-            logger.warning("Failed to extract function info; skipping", exc_info=True)
-            return None
-
-    def _extract_class(self, cl: object) -> ClassInfo | None:
-        try:
-            name = cl.name  # type: ignore[attr-defined]
-            filepath = str(cl.filepath)  # type: ignore[attr-defined]
-            start_line = getattr(cl, "start_point", (0,))[0]
-            end_line = getattr(cl, "end_point", (0,))[0]
-            methods = tuple(m.name for m in getattr(cl, "methods", []))
-            supers = getattr(cl, "superclasses", None)
-            base_classes = tuple(b.name for b in supers) if supers is not None else ()
-            subclasses = tuple(s.name for s in getattr(cl, "subclasses", []))
-            return ClassInfo(
-                name=name, filepath=filepath,
-                start_line=start_line, end_line=end_line,
-                methods=methods, base_classes=base_classes,
-                subclasses=subclasses,
-            )
-        except Exception:  # noqa: BLE001
-            logger.warning("Failed to extract class info; skipping", exc_info=True)
-            return None
-
 
 # -- Convenience function ---------------------------------------------------
 

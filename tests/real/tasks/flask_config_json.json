@@ -1,0 +1,124 @@
+{
+  "document_type": "downstream_task",
+  "contract_version": 2,
+  "task_id": "flask.config-json",
+  "consumer": "independent architecture consumer at frozen host version",
+  "positive_budgets": [
+    4096,
+    12288
+  ],
+  "required_facts": {
+    "fact_01": {
+      "claim": "Flask application class is defined in src/flask/app.py.",
+      "path": "src/flask/app.py",
+      "span": {
+        "byte_offset": 3608,
+        "byte_length": 17,
+        "line": 109,
+        "column": 0,
+        "text": "class Flask(App):"
+      },
+      "source_text_sha256": "ea98efbbf970d40dfaf456746f3e95b0acbcf7ba8993ad1178b82e9ed30c325e",
+      "rationale": "Primary application construction anchor.",
+      "evidence_id": "ev_flask_01",
+      "expected_relations": [
+        {
+          "relation_id": "rel_flask_01",
+          "kind": "owns",
+          "source": "flask",
+          "target": "src/flask/app.py",
+          "status": "resolved",
+          "evidence_ids": [
+            "ev_flask_01"
+          ]
+        }
+      ]
+    },
+    "fact_02": {
+      "claim": "Default JSON provider is a JSONProvider subclass.",
+      "path": "src/flask/json/provider.py",
+      "span": {
+        "byte_offset": 3966,
+        "byte_length": 40,
+        "line": 124,
+        "column": 0,
+        "text": "class DefaultJSONProvider(JSONProvider):"
+      },
+      "source_text_sha256": "6a1e57bff4596473323d523729d97c4c28caf2d93b2b5bc679891c47a43f3587",
+      "rationale": "Frozen JSON implementation boundary.",
+      "evidence_id": "ev_flask_02",
+      "expected_relations": [
+        {
+          "relation_id": "rel_flask_02",
+          "kind": "owns",
+          "source": "flask",
+          "target": "src/flask/json/provider.py",
+          "status": "resolved",
+          "evidence_ids": [
+            "ev_flask_02"
+          ]
+        }
+      ]
+    }
+  },
+  "forbidden_facts": [
+    "Treat tests or generated docs as source truth",
+    "Claim configuration and JSON are the same class without a typed path"
+  ],
+  "pass_rule": "All required facts map to exact source spans and typed import/call paths; no forbidden fact; independent evaluator pass.",
+  "fail_rule": "Any required fact missing/mis-spanned, forbidden fact asserted, or budget chain loses evidence.",
+  "cannot_judge_rule": "Locked source cannot be materialized exactly or evaluator lacks the source spans.",
+  "changed_decision": "Consumer can choose the Flask application/configuration and JSON-provider extension points.",
+  "repository_snapshot": {
+    "repo_id": "flask",
+    "url": "https://github.com/pallets/flask.git",
+    "commit": "4cae5d8e411b1e69949d8fae669afeacbd3e5908",
+    "tree": "135aed7f169f75a1823354ca8535dc736cc4c6e8",
+    "source_roots": {
+      "src/flask": "96291dd0e5f9bd19c797908f3d9c399077293e47"
+    }
+  },
+  "expectations": {
+    "relation_status_counts": {
+      "resolved": 2,
+      "ambiguous": 0,
+      "unresolved": 0,
+      "external": 0,
+      "unsupported": 0
+    },
+    "required_evidence_ids": [
+      "ev_flask_01",
+      "ev_flask_02"
+    ],
+    "cursor_chain": [
+      {
+        "budget": 4096,
+        "page": 1,
+        "must_continue": true
+      },
+      {
+        "budget": 12288,
+        "page": 2,
+        "must_continue": false
+      }
+    ],
+    "interruption": {
+      "required": false,
+      "expected_outcome": "not_applicable"
+    },
+    "universe_partition": {
+      "roots": [
+        "src/flask"
+      ],
+      "eligible_languages": [
+        "python"
+      ],
+      "expected_states": [
+        "indexed",
+        "parse_error",
+        "excluded"
+      ],
+      "cross_language_edges": "not_applicable"
+    }
+  }
+}

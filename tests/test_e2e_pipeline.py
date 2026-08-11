@@ -617,7 +617,7 @@ class TestStep6JsonOutputFiles:
     """Verify the content and structure of each JSON output file."""
 
     def test_all_json_files_created(self, pipeline_outputs: dict) -> None:
-        """All 5 JSON files + state.json should exist."""
+        """All six immutable analysis artifacts should exist."""
         out = pipeline_outputs["output_path"]
         expected_files = [
             "01_structure.json",
@@ -625,7 +625,7 @@ class TestStep6JsonOutputFiles:
             "03_feature_cones.json",
             "04_file_tokens.json",
             "05_task_manifest.json",
-            "state.json",
+            "06_function_deps.json",
         ]
         for fname in expected_files:
             assert (out / fname).exists(), f"Missing output file: {fname}"
@@ -765,51 +765,36 @@ class TestStep6JsonOutputFiles:
     # -- state.json ---
 
     def test_state_json_project_id(self, pipeline_outputs: dict) -> None:
-        """state.json should contain the correct project_id."""
+        """The artifact helper must not create a second mutable state authority."""
         out = pipeline_outputs["output_path"]
-        state = read_state(out / "state.json")
-        assert state is not None
-        assert state["project_id"] == pipeline_outputs["project_id"]
-
-    def test_state_json_status(self, pipeline_outputs: dict) -> None:
-        """state.json status should be 'analysis_complete'."""
-        out = pipeline_outputs["output_path"]
-        state = read_state(out / "state.json")
-        assert state is not None
-        assert state["status"] == "analysis_complete"
-
-    def test_state_json_tasks_match_manifest(self, pipeline_outputs: dict) -> None:
-        """state.json task entries should match 05_task_manifest tasks."""
-        out = pipeline_outputs["output_path"]
-        state = read_state(out / "state.json")
-        manifest = pipeline_outputs["task_manifest"]
-        assert state is not None
-        state_task_ids = set(state["tasks"].keys())
-        manifest_task_ids = set(manifest["tasks"].keys())
-        assert state_task_ids == manifest_task_ids, (
-            f"State tasks {state_task_ids} != manifest tasks {manifest_task_ids}"
+        assert read_state(out / "state.json") is None
+        assert pipeline_outputs["project_id"] == project_id_from_path(
+            str(pipeline_outputs["snapshot"].root_path)
         )
 
-    def test_state_json_tasks_all_pending(self, pipeline_outputs: dict) -> None:
-        """All tasks in state.json should initially be 'pending'."""
+    def test_state_json_status(self, pipeline_outputs: dict) -> None:
+        """Direct artifact writes leave lifecycle activation to the caller."""
         out = pipeline_outputs["output_path"]
-        state = read_state(out / "state.json")
-        assert state is not None
-        for task_id, task in state["tasks"].items():
-            assert task["status"] == "pending", (
-                f"Task {task_id} should be 'pending', got '{task['status']}'"
-            )
+        assert read_state(out / "state.json") is None
+
+    def test_state_json_tasks_match_manifest(self, pipeline_outputs: dict) -> None:
+        """The immutable manifest, not a helper-written state file, owns task seeds."""
+        out = pipeline_outputs["output_path"]
+        manifest = pipeline_outputs["task_manifest"]
+        disk_manifest = json.loads((out / "05_task_manifest.json").read_text())
+        assert set(disk_manifest["tasks"]) == set(manifest["tasks"])
+        assert read_state(out / "state.json") is None
+
+    def test_state_json_tasks_all_pending(self, pipeline_outputs: dict) -> None:
+        """The helper returns no mutable task authority at the artifact layer."""
+        out = pipeline_outputs["output_path"]
+        assert read_state(out / "state.json") is None
+        assert pipeline_outputs["task_manifest"]["tasks"]
 
     def test_state_json_documentation_section(self, pipeline_outputs: dict) -> None:
-        """state.json should have a documentation section with initial values."""
+        """Documentation counters are initialized only by the lifecycle owner."""
         out = pipeline_outputs["output_path"]
-        state = read_state(out / "state.json")
-        assert state is not None
-        doc = state.get("documentation", {})
-        assert doc["index_written"] is False
-        assert doc["details_written"] == 0
-        assert doc["snippets_written"] == 0
-        assert doc["source_file_coverage_percent"] == 0.0
+        assert read_state(out / "state.json") is None
 
 
 # ---------------------------------------------------------------------------

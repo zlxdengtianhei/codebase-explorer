@@ -1,0 +1,628 @@
+{
+  "document_type": "expected_ir",
+  "contract_version": 2,
+  "ir_protocol": "cbe-ir/1",
+  "language": "javascript",
+  "fixture_root": "tests/fixtures/languages/javascript",
+  "content_rule": "UTF-8; join content_lines with LF and append one LF",
+  "files": {
+    "src/base.js": {
+      "language": "javascript",
+      "expected_state": "indexed",
+      "content_lines": [
+        "export class Base {",
+        "  run() { throw new Error(\"abstract\"); }",
+        "}",
+        "export function same() { return \"base\"; }"
+      ],
+      "trailing_newline": true,
+      "content_sha256": "1216022009344f7857543ce49dc269488963d6f8c76e691ef41085cc7af15774",
+      "rationale": "Base class and same-name export."
+    },
+    "src/impl.js": {
+      "language": "javascript",
+      "expected_state": "indexed",
+      "content_lines": [
+        "import { Base } from \"./base.js\";",
+        "export class Worker extends Base {",
+        "  run() { return \"ok\"; }",
+        "}",
+        "export function same() { return \"impl\"; }"
+      ],
+      "trailing_newline": true,
+      "content_sha256": "7e289c4a952c06b0c45df646ce7e494008446cd474fe44e6b9f6edd841ac7cfc",
+      "rationale": "ES import, inheritance and same-name symbol."
+    },
+    "src/index.js": {
+      "language": "javascript",
+      "expected_state": "indexed",
+      "content_lines": [
+        "import { Worker as Alias, same as implSame } from \"./impl.js\";",
+        "export { Alias };",
+        "export { Base } from \"./base.js\";",
+        "export function same() { return \"index\"; }",
+        "export function entry(worker) {",
+        "  worker.run();",
+        "  missing();",
+        "  console.log(worker);",
+        "  return implSame();",
+        "}",
+        "export function dynamic(obj) { return obj.run(); }"
+      ],
+      "trailing_newline": true,
+      "content_sha256": "ee26535830005317188679cda8f9cc36e1206b2f1b7522b1242515420f1ab8d4",
+      "rationale": "Alias/re-export and conservative untyped calls."
+    },
+    "src/broken.js": {
+      "language": "javascript",
+      "expected_state": "parse_error",
+      "content_lines": [
+        "export function broken( {"
+      ],
+      "trailing_newline": true,
+      "content_sha256": "a3fb1bf706e21f00ff73d9143b409bc650fc8c59d1f35d5e1a9e349f7c2d721c",
+      "rationale": "Syntax error remains explicit."
+    },
+    "vendor/ignored.js": {
+      "language": "javascript",
+      "expected_state": "excluded",
+      "content_lines": [
+        "export const vendorOnly = 1;"
+      ],
+      "trailing_newline": true,
+      "content_sha256": "58896a315cbc0003548f36bebbbd94e98fc961a37b51513d8d6f38bf921d4fb1",
+      "rationale": "Vendor exclusion."
+    },
+    "generated/output.js": {
+      "language": "javascript",
+      "expected_state": "excluded",
+      "content_lines": [
+        "export const generatedOnly = 2;"
+      ],
+      "trailing_newline": true,
+      "content_sha256": "4ec4625d1881be8b06c7119a4c0a51450162715f8adfcd5be005e318a771e299",
+      "rationale": "Generated exclusion."
+    },
+    "src/éclair.js": {
+      "language": "javascript",
+      "expected_state": "indexed",
+      "content_lines": [
+        "export const dessert = \"éclair\";"
+      ],
+      "trailing_newline": true,
+      "content_sha256": "e35f2058d9488fc9dec008864598956fa250874c4f6251b85c0a0664d280ead7",
+      "rationale": "Unicode path and content."
+    },
+    "src/dynamic.js": {
+      "language": "javascript",
+      "expected_state": "indexed",
+      "content_lines": [
+        "export * from \"./impl.js\";",
+        "export async function load(name) { return import(name); }",
+        "const dynamicExports = {};",
+        "Object.assign(dynamicExports, globalThis.RUNTIME_EXPORTS);",
+        "export default dynamicExports;"
+      ],
+      "trailing_newline": true,
+      "content_sha256": "b2cf725117757e4f9d8bf04f873a2011609d638a2d4c3b1c3be661db0611cdc7",
+      "rationale": "Dynamic/wildcard JavaScript constructs."
+    },
+    "src/legacy.cjs": {
+      "language": "javascript",
+      "expected_state": "unsupported",
+      "content_lines": [
+        "module.exports = require(name);"
+      ],
+      "trailing_newline": true,
+      "content_sha256": "2ab5ada4db1cedc4588634760eb0ab38c6420b7761095cd0208bca7d79db9a60",
+      "rationale": "Dynamic CommonJS boundary remains explicitly unsupported."
+    }
+  },
+  "expected_facts": {
+    "js.symbol.base": {
+      "kind": "symbol",
+      "path": "src/base.js",
+      "subject": "src/base.Base",
+      "target": null,
+      "resolution_status": "resolved",
+      "resolution_method": "exact",
+      "candidates": [
+        "src/base.Base"
+      ],
+      "rationale": "Explicit exported class.",
+      "span": {
+        "byte_offset": 0,
+        "byte_length": 19,
+        "line": 1,
+        "column": 0,
+        "text": "export class Base {"
+      },
+      "attributes": {
+        "import_kind": "none",
+        "export_kind": "none",
+        "dynamic": false,
+        "wildcard": false
+      }
+    },
+    "js.type.base.run": {
+      "kind": "type",
+      "path": "src/base.js",
+      "subject": "src/base.Base.run",
+      "target": "dynamic",
+      "resolution_status": "unsupported",
+      "resolution_method": "heuristic",
+      "candidates": [],
+      "rationale": "Plain JS has no declared return type; syntax support must not become type support.",
+      "span": {
+        "byte_offset": 20,
+        "byte_length": 40,
+        "line": 2,
+        "column": 0,
+        "text": "  run() { throw new Error(\"abstract\"); }"
+      },
+      "attributes": {
+        "import_kind": "none",
+        "export_kind": "none",
+        "dynamic": false,
+        "wildcard": false
+      }
+    },
+    "js.import.base": {
+      "kind": "import",
+      "path": "src/impl.js",
+      "subject": "src/impl",
+      "target": "src/base.Base",
+      "resolution_status": "resolved",
+      "resolution_method": "exact",
+      "candidates": [
+        "src/base.Base"
+      ],
+      "rationale": "Explicit ES import.",
+      "span": {
+        "byte_offset": 0,
+        "byte_length": 33,
+        "line": 1,
+        "column": 0,
+        "text": "import { Base } from \"./base.js\";"
+      },
+      "attributes": {
+        "import_kind": "relative",
+        "export_kind": "none",
+        "dynamic": false,
+        "wildcard": false
+      }
+    },
+    "js.inherits.worker": {
+      "kind": "inherits",
+      "path": "src/impl.js",
+      "subject": "src/impl.Worker",
+      "target": "src/base.Base",
+      "resolution_status": "resolved",
+      "resolution_method": "exact",
+      "candidates": [
+        "src/base.Base"
+      ],
+      "rationale": "Extends clause resolves imported base.",
+      "span": {
+        "byte_offset": 34,
+        "byte_length": 34,
+        "line": 2,
+        "column": 0,
+        "text": "export class Worker extends Base {"
+      },
+      "attributes": {
+        "import_kind": "none",
+        "export_kind": "none",
+        "dynamic": false,
+        "wildcard": false
+      }
+    },
+    "js.import.alias": {
+      "kind": "import",
+      "path": "src/index.js",
+      "subject": "src/index.Alias",
+      "target": "src/impl.Worker",
+      "resolution_status": "resolved",
+      "resolution_method": "exact",
+      "candidates": [
+        "src/impl.Worker"
+      ],
+      "rationale": "Alias target identity retained.",
+      "span": {
+        "byte_offset": 0,
+        "byte_length": 62,
+        "line": 1,
+        "column": 0,
+        "text": "import { Worker as Alias, same as implSame } from \"./impl.js\";"
+      },
+      "attributes": {
+        "import_kind": "alias",
+        "export_kind": "none",
+        "dynamic": false,
+        "wildcard": false
+      }
+    },
+    "js.export.alias": {
+      "kind": "export",
+      "path": "src/index.js",
+      "subject": "src/index",
+      "target": "src/impl.Worker",
+      "resolution_status": "resolved",
+      "resolution_method": "exact",
+      "candidates": [
+        "src/impl.Worker"
+      ],
+      "rationale": "Alias is re-exported.",
+      "span": {
+        "byte_offset": 63,
+        "byte_length": 17,
+        "line": 2,
+        "column": 0,
+        "text": "export { Alias };"
+      },
+      "attributes": {
+        "import_kind": "none",
+        "export_kind": "named",
+        "dynamic": false,
+        "wildcard": false
+      }
+    },
+    "js.export.base": {
+      "kind": "export",
+      "path": "src/index.js",
+      "subject": "src/index",
+      "target": "src/base.Base",
+      "resolution_status": "resolved",
+      "resolution_method": "exact",
+      "candidates": [
+        "src/base.Base"
+      ],
+      "rationale": "Direct re-export.",
+      "span": {
+        "byte_offset": 81,
+        "byte_length": 33,
+        "line": 3,
+        "column": 0,
+        "text": "export { Base } from \"./base.js\";"
+      },
+      "attributes": {
+        "import_kind": "none",
+        "export_kind": "named",
+        "dynamic": false,
+        "wildcard": false
+      }
+    },
+    "js.symbol.same.index": {
+      "kind": "symbol",
+      "path": "src/index.js",
+      "subject": "src/index.same",
+      "target": null,
+      "resolution_status": "resolved",
+      "resolution_method": "exact",
+      "candidates": [
+        "src/index.same"
+      ],
+      "rationale": "Scope-qualified same-name identity.",
+      "span": {
+        "byte_offset": 115,
+        "byte_length": 42,
+        "line": 4,
+        "column": 0,
+        "text": "export function same() { return \"index\"; }"
+      },
+      "attributes": {
+        "import_kind": "none",
+        "export_kind": "none",
+        "dynamic": false,
+        "wildcard": false
+      }
+    },
+    "js.call.worker.run": {
+      "kind": "call",
+      "path": "src/index.js",
+      "subject": "src/index.entry",
+      "target": null,
+      "resolution_status": "ambiguous",
+      "resolution_method": "heuristic",
+      "candidates": [
+        "src/base.Base.run",
+        "src/impl.Worker.run"
+      ],
+      "rationale": "Untyped parameter prevents exact resolution.",
+      "span": {
+        "byte_offset": 190,
+        "byte_length": 15,
+        "line": 6,
+        "column": 0,
+        "text": "  worker.run();"
+      },
+      "attributes": {
+        "import_kind": "none",
+        "export_kind": "none",
+        "dynamic": false,
+        "wildcard": false
+      }
+    },
+    "js.call.missing": {
+      "kind": "call",
+      "path": "src/index.js",
+      "subject": "src/index.entry",
+      "target": null,
+      "resolution_status": "unresolved",
+      "resolution_method": "search_fallback",
+      "candidates": [],
+      "rationale": "No binding exists.",
+      "span": {
+        "byte_offset": 206,
+        "byte_length": 12,
+        "line": 7,
+        "column": 0,
+        "text": "  missing();"
+      },
+      "attributes": {
+        "import_kind": "none",
+        "export_kind": "none",
+        "dynamic": false,
+        "wildcard": false
+      }
+    },
+    "js.call.console": {
+      "kind": "call",
+      "path": "src/index.js",
+      "subject": "src/index.entry",
+      "target": "runtime.console.log",
+      "resolution_status": "external",
+      "resolution_method": "heuristic",
+      "candidates": [
+        "runtime.console.log"
+      ],
+      "rationale": "Runtime global is external.",
+      "span": {
+        "byte_offset": 219,
+        "byte_length": 22,
+        "line": 8,
+        "column": 0,
+        "text": "  console.log(worker);"
+      },
+      "attributes": {
+        "import_kind": "none",
+        "export_kind": "none",
+        "dynamic": false,
+        "wildcard": false
+      }
+    },
+    "js.call.dynamic": {
+      "kind": "call",
+      "path": "src/index.js",
+      "subject": "src/index.dynamic",
+      "target": null,
+      "resolution_status": "ambiguous",
+      "resolution_method": "heuristic",
+      "candidates": [
+        "src/base.Base.run",
+        "src/impl.Worker.run"
+      ],
+      "rationale": "Dynamic receiver remains ambiguous.",
+      "span": {
+        "byte_offset": 265,
+        "byte_length": 50,
+        "line": 11,
+        "column": 0,
+        "text": "export function dynamic(obj) { return obj.run(); }"
+      },
+      "attributes": {
+        "import_kind": "none",
+        "export_kind": "none",
+        "dynamic": false,
+        "wildcard": false
+      }
+    },
+    "js.symbol.same.base": {
+      "kind": "symbol",
+      "path": "src/base.js",
+      "span": {
+        "byte_offset": 63,
+        "byte_length": 41,
+        "line": 4,
+        "column": 0,
+        "text": "export function same() { return \"base\"; }"
+      },
+      "subject": "src/base.same",
+      "target": null,
+      "resolution_status": "resolved",
+      "resolution_method": "exact",
+      "candidates": [
+        "src/base.same"
+      ],
+      "attributes": {
+        "import_kind": "none",
+        "export_kind": "none",
+        "dynamic": false,
+        "wildcard": false
+      },
+      "rationale": "Frozen independent oracle fact."
+    },
+    "js.symbol.same.impl": {
+      "kind": "symbol",
+      "path": "src/impl.js",
+      "span": {
+        "byte_offset": 96,
+        "byte_length": 41,
+        "line": 5,
+        "column": 0,
+        "text": "export function same() { return \"impl\"; }"
+      },
+      "subject": "src/impl.same",
+      "target": null,
+      "resolution_status": "resolved",
+      "resolution_method": "exact",
+      "candidates": [
+        "src/impl.same"
+      ],
+      "attributes": {
+        "import_kind": "none",
+        "export_kind": "none",
+        "dynamic": false,
+        "wildcard": false
+      },
+      "rationale": "Frozen independent oracle fact."
+    },
+    "js.call.impl_same": {
+      "kind": "call",
+      "path": "src/index.js",
+      "span": {
+        "byte_offset": 242,
+        "byte_length": 20,
+        "line": 9,
+        "column": 0,
+        "text": "  return implSame();"
+      },
+      "subject": "src/index.entry",
+      "target": "src/impl.same",
+      "resolution_status": "resolved",
+      "resolution_method": "exact",
+      "candidates": [
+        "src/impl.same"
+      ],
+      "attributes": {
+        "import_kind": "none",
+        "export_kind": "none",
+        "dynamic": false,
+        "wildcard": false
+      },
+      "rationale": "Frozen independent oracle fact."
+    },
+    "js.export.wildcard": {
+      "kind": "export",
+      "path": "src/dynamic.js",
+      "span": {
+        "byte_offset": 0,
+        "byte_length": 26,
+        "line": 1,
+        "column": 0,
+        "text": "export * from \"./impl.js\";"
+      },
+      "subject": "src/dynamic",
+      "target": "src/impl",
+      "resolution_status": "resolved",
+      "resolution_method": "exact",
+      "candidates": [
+        "src/impl"
+      ],
+      "attributes": {
+        "import_kind": "none",
+        "export_kind": "wildcard",
+        "dynamic": false,
+        "wildcard": true
+      },
+      "rationale": "Frozen independent oracle fact."
+    },
+    "js.import.dynamic": {
+      "kind": "import",
+      "path": "src/dynamic.js",
+      "span": {
+        "byte_offset": 27,
+        "byte_length": 57,
+        "line": 2,
+        "column": 0,
+        "text": "export async function load(name) { return import(name); }"
+      },
+      "subject": "src/dynamic.load",
+      "target": null,
+      "resolution_status": "unsupported",
+      "resolution_method": "heuristic",
+      "candidates": [],
+      "attributes": {
+        "import_kind": "dynamic",
+        "export_kind": "none",
+        "dynamic": true,
+        "wildcard": false
+      },
+      "rationale": "Frozen independent oracle fact."
+    },
+    "js.export.dynamic": {
+      "kind": "export",
+      "path": "src/dynamic.js",
+      "span": {
+        "byte_offset": 171,
+        "byte_length": 30,
+        "line": 5,
+        "column": 0,
+        "text": "export default dynamicExports;"
+      },
+      "subject": "src/dynamic",
+      "target": null,
+      "resolution_status": "ambiguous",
+      "resolution_method": "dataflow",
+      "candidates": [],
+      "attributes": {
+        "import_kind": "none",
+        "export_kind": "dynamic",
+        "dynamic": true,
+        "wildcard": false
+      },
+      "rationale": "Frozen independent oracle fact."
+    },
+    "js.call.object_assign": {
+      "kind": "call",
+      "path": "src/dynamic.js",
+      "span": {
+        "byte_offset": 112,
+        "byte_length": 58,
+        "line": 4,
+        "column": 0,
+        "text": "Object.assign(dynamicExports, globalThis.RUNTIME_EXPORTS);"
+      },
+      "subject": "src/dynamic",
+      "target": "Object.assign",
+      "resolution_status": "external",
+      "resolution_method": "exact",
+      "candidates": [
+        "Object.assign"
+      ],
+      "attributes": {
+        "import_kind": "none",
+        "export_kind": "none",
+        "dynamic": false,
+        "wildcard": false
+      },
+      "rationale": "Frozen independent oracle fact."
+    },
+    "js.unsupported.commonjs": {
+      "kind": "unsupported_construct",
+      "path": "src/legacy.cjs",
+      "span": {
+        "byte_offset": 0,
+        "byte_length": 31,
+        "line": 1,
+        "column": 0,
+        "text": "module.exports = require(name);"
+      },
+      "subject": "src/legacy",
+      "target": null,
+      "resolution_status": "unsupported",
+      "resolution_method": "heuristic",
+      "candidates": [],
+      "attributes": {
+        "import_kind": "dynamic",
+        "export_kind": "dynamic",
+        "dynamic": true,
+        "wildcard": false
+      },
+      "rationale": "Frozen independent oracle fact."
+    }
+  },
+  "forbidden_facts": [
+    "same-name functions share one id",
+    "untyped worker.run marked resolved",
+    "dynamic obj.run marked resolved",
+    "missing call omitted",
+    "console.log marked repository-local",
+    "unsupported JS types advertised resolved"
+  ],
+  "independent_authority": [
+    "runs/r001_20260810_product_completion/design/CHANGE_AND_VALIDATION_PLAN.md §§4-6",
+    "src/ir/models.py cbe-ir/1 enums and span contract",
+    "Oracle content and expected values frozen before P4 adapter code"
+  ]
+}

@@ -1,0 +1,309 @@
+{
+  "document_type": "real_oracle_lock",
+  "contract_version": 2,
+  "floating_refs_forbidden": true,
+  "repositories": {
+    "flask": {
+      "role": "primary-small-python",
+      "url": "https://github.com/pallets/flask.git",
+      "revision_state": "locked",
+      "commit": "4cae5d8e411b1e69949d8fae669afeacbd3e5908",
+      "tree": "135aed7f169f75a1823354ca8535dc736cc4c6e8",
+      "source_roots": [
+        "src/flask"
+      ],
+      "languages": [
+        "python"
+      ],
+      "required_for_core": true,
+      "clean_clone_policy": "detached full SHA; empty status; exact origin; HEAD^{tree} equals lock; content-addressed mirror allowed only with identical commit and tree",
+      "verification": {
+        "method": "git_fetch",
+        "observed_at": "2026-08-10T17:14:07Z",
+        "result": "reachable",
+        "detail": "Temporary bare repo fetched exact SHA with --depth=1 --filter=blob:none; commit and tree resolved by Git."
+      },
+      "source_root_trees": {
+        "src/flask": "96291dd0e5f9bd19c797908f3d9c399077293e47"
+      }
+    },
+    "fastapi": {
+      "role": "corroborating-python-framework",
+      "url": "https://github.com/fastapi/fastapi.git",
+      "revision_state": "locked",
+      "commit": "937d3075f9456dfcdfe2e1f6bc3b8b7b9a6c6cad",
+      "tree": "4f370d37b93e2c6cc609635e6d888c61fb8fe140",
+      "source_roots": [
+        "fastapi"
+      ],
+      "languages": [
+        "python"
+      ],
+      "required_for_core": true,
+      "clean_clone_policy": "detached full SHA; empty status; exact origin; HEAD^{tree} equals lock; content-addressed mirror allowed only with identical commit and tree",
+      "verification": {
+        "method": "git_fetch",
+        "observed_at": "2026-08-10T17:14:07Z",
+        "result": "reachable",
+        "detail": "Temporary bare repo fetched exact SHA; commit and tree resolved by Git."
+      },
+      "source_root_trees": {
+        "fastapi": "709860be1dc5dc1af044a38b2988f89e57aa810d"
+      }
+    },
+    "celery": {
+      "role": "scale-and-recovery-python",
+      "url": "https://github.com/celery/celery.git",
+      "revision_state": "locked",
+      "commit": "c35b1d5e3ab04bed018d72e736a862a8bc23ff3f",
+      "tree": "8ed1f1c208ce7e7c3a22d1a2c7366f0abf66e232",
+      "source_roots": [
+        "celery"
+      ],
+      "languages": [
+        "python"
+      ],
+      "required_for_core": true,
+      "clean_clone_policy": "detached full SHA; empty status; exact origin; HEAD^{tree} equals lock; content-addressed mirror allowed only with identical commit and tree",
+      "verification": {
+        "method": "git_fetch",
+        "observed_at": "2026-08-10T17:14:07Z",
+        "result": "reachable",
+        "detail": "Temporary bare repo fetched exact SHA; commit and tree resolved by Git."
+      },
+      "source_root_trees": {
+        "celery": "2b86a0ba790fe0dfef4c51faa40007d4f6b5818d"
+      }
+    },
+    "scrapy": {
+      "role": "package-breadth-python",
+      "url": "https://github.com/scrapy/scrapy.git",
+      "revision_state": "locked",
+      "commit": "2ce02d417a99343f630d97e6bb8def1760df1366",
+      "tree": "a709aff45deac89de3f80a49ea980b83d93b30ff",
+      "source_roots": [
+        "scrapy"
+      ],
+      "languages": [
+        "python"
+      ],
+      "required_for_core": true,
+      "clean_clone_policy": "detached full SHA; empty status; exact origin; HEAD^{tree} equals lock; content-addressed mirror allowed only with identical commit and tree",
+      "verification": {
+        "method": "git_fetch",
+        "observed_at": "2026-08-10T17:14:07Z",
+        "result": "reachable",
+        "detail": "Temporary bare repo fetched exact SHA; commit and tree resolved by Git."
+      },
+      "source_root_trees": {
+        "scrapy": "02ce31d9d8cbe2d2ad419397b3bd5f9f6bdc8e21"
+      }
+    },
+    "rich": {
+      "role": "projection-readability-python",
+      "url": "https://github.com/Textualize/rich.git",
+      "revision_state": "locked",
+      "commit": "fc41075a3206d2a5fd846c6f41c4d2becab814fa",
+      "tree": "2036dc54c2d80a424598fd0add49d576843ee2ef",
+      "source_roots": [
+        "rich"
+      ],
+      "languages": [
+        "python"
+      ],
+      "required_for_core": true,
+      "clean_clone_policy": "detached full SHA; empty status; exact origin; HEAD^{tree} equals lock; content-addressed mirror allowed only with identical commit and tree",
+      "verification": {
+        "method": "git_fetch",
+        "observed_at": "2026-08-10T17:14:07Z",
+        "result": "reachable",
+        "detail": "Temporary bare repo fetched exact SHA; commit and tree resolved by Git."
+      },
+      "source_root_trees": {
+        "rich": "4872448f650b95803d131a60d84acff9acdf9f02"
+      }
+    },
+    "nest_core_injector": {
+      "role": "typescript-core-real-repository",
+      "url": "https://github.com/nestjs/nest.git",
+      "revision_state": "locked",
+      "commit": "5df8d9d41a98fd7f587b2e043a12b3d5109971e4",
+      "tree": "de9edaba6d249b0a987b7bd191febb13e57d02e9",
+      "source_roots": [
+        "packages/core/injector"
+      ],
+      "source_root_trees": {
+        "packages/core/injector": "0c65d58e1d57c762e5ba7017827ecff1e9eb6c81"
+      },
+      "languages": [
+        "typescript"
+      ],
+      "required_for_core": true,
+      "clean_clone_policy": "detached full SHA; empty status; exact origin; HEAD^{tree} and bounded source-root tree equal lock; content-addressed mirror only with identical objects",
+      "verification": {
+        "method": "git_fetch",
+        "observed_at": "2026-08-10T17:28:58Z",
+        "result": "reachable",
+        "detail": "Independent primary Git research fetched exact SHA and verified commit, tree, bounded root tree and 30 TypeScript files."
+      }
+    },
+    "express": {
+      "role": "javascript-core-real-repository",
+      "url": "https://github.com/expressjs/express.git",
+      "revision_state": "locked",
+      "commit": "a3714473feb3d2908add734d340e7755fd85e0a3",
+      "tree": "134de344af9d2e7785aae9a991d02fd85b404bcf",
+      "source_roots": [
+        "lib"
+      ],
+      "languages": [
+        "javascript"
+      ],
+      "required_for_core": true,
+      "clean_clone_policy": "detached full SHA; empty status; exact origin; HEAD^{tree} equals lock; content-addressed mirror allowed only with identical commit and tree",
+      "verification": {
+        "method": "git_fetch",
+        "observed_at": "2026-08-10T17:14:07Z",
+        "result": "reachable",
+        "detail": "HEAD was resolved once, then its full SHA was fetched into a temporary bare repo and tree verified."
+      },
+      "source_root_trees": {
+        "lib": "85926e3cefdc1e97fd85309c444023261559f605"
+      }
+    },
+    "sentry": {
+      "role": "polyglot-core-boundary",
+      "url": "https://github.com/getsentry/sentry.git",
+      "revision_state": "locked",
+      "commit": "5c2da4a8025f18587d9ae859bdebdffe290ffc75",
+      "tree": "4f6d5772f2b34611e50729545b00ad92f216f556",
+      "source_roots": [
+        "src/sentry",
+        "static/app"
+      ],
+      "languages": [
+        "python",
+        "typescript",
+        "javascript"
+      ],
+      "required_for_core": true,
+      "clean_clone_policy": "detached full SHA; empty status; exact origin; HEAD^{tree} equals lock; content-addressed mirror allowed only with identical commit and tree",
+      "verification": {
+        "method": "git_fetch",
+        "observed_at": "2026-08-10T17:14:07Z",
+        "result": "reachable",
+        "detail": "HEAD full SHA fetched into temporary bare repo; top-level and bounded source roots verified by git ls-tree."
+      },
+      "source_root_trees": {
+        "src/sentry": "f86927d590075b7a6ea636511422374422643719",
+        "static/app": "973d2b9036d6b76a4b1d0c13aaafd093d2095ae9"
+      }
+    },
+    "sqlite": {
+      "role": "unsupported-language-failure-boundary",
+      "url": "https://github.com/sqlite/sqlite.git",
+      "revision_state": "locked",
+      "commit": "24ad808809ae04bb7db7a5060e3518e1875807a9",
+      "tree": "27a7d3d871c97a46513aa8dc94ad290a15361e70",
+      "source_roots": [
+        "src"
+      ],
+      "languages": [
+        "c"
+      ],
+      "required_for_core": true,
+      "clean_clone_policy": "detached full SHA; empty status; exact origin; HEAD^{tree} equals lock; content-addressed mirror allowed only with identical commit and tree",
+      "verification": {
+        "method": "git_fetch",
+        "observed_at": "2026-08-10T17:14:07Z",
+        "result": "reachable",
+        "detail": "HEAD full SHA fetched into temporary bare repo; src root and tree verified by Git. C remains unsupported for core."
+      },
+      "source_root_trees": {
+        "src": "71cdd3944b98ce0e4dfbddd51020199d7cd9a2ce"
+      }
+    }
+  },
+  "extension_candidates": {
+    "go_chi": {
+      "role": "go-extension-candidate",
+      "url": "https://github.com/go-chi/chi.git",
+      "revision_state": "cannot_judge",
+      "commit": null,
+      "tree": null,
+      "source_roots": [],
+      "languages": [
+        "go"
+      ],
+      "required_for_core": false,
+      "clean_clone_policy": "detached full SHA; empty status; exact origin; HEAD^{tree} equals lock; content-addressed mirror allowed only with identical commit and tree",
+      "verification": {
+        "method": "git_ls_remote",
+        "observed_at": "2026-08-10T17:14:07Z",
+        "result": "not_checked",
+        "detail": "P12 has not been authorized; no floating revision recorded."
+      },
+      "source_root_trees": {}
+    },
+    "spring_petclinic": {
+      "role": "java-extension-candidate",
+      "url": "https://github.com/spring-projects/spring-petclinic.git",
+      "revision_state": "cannot_judge",
+      "commit": null,
+      "tree": null,
+      "source_roots": [],
+      "languages": [
+        "java"
+      ],
+      "required_for_core": false,
+      "clean_clone_policy": "detached full SHA; empty status; exact origin; HEAD^{tree} equals lock; content-addressed mirror allowed only with identical commit and tree",
+      "verification": {
+        "method": "git_ls_remote",
+        "observed_at": "2026-08-10T17:14:07Z",
+        "result": "not_checked",
+        "detail": "P13 has not been authorized; no floating revision recorded."
+      },
+      "source_root_trees": {}
+    },
+    "kotlin_by_example": {
+      "role": "kotlin-extension-candidate",
+      "url": "https://github.com/JetBrains/kotlin-by-example.git",
+      "revision_state": "cannot_judge",
+      "commit": null,
+      "tree": null,
+      "source_roots": [],
+      "languages": [
+        "kotlin"
+      ],
+      "required_for_core": false,
+      "clean_clone_policy": "detached full SHA; empty status; exact origin; HEAD^{tree} equals lock; content-addressed mirror allowed only with identical commit and tree",
+      "verification": {
+        "method": "git_ls_remote",
+        "observed_at": "2026-08-10T17:14:07Z",
+        "result": "not_checked",
+        "detail": "P13 has not been authorized; no floating revision recorded."
+      },
+      "source_root_trees": {}
+    },
+    "ripgrep": {
+      "role": "rust-extension-candidate",
+      "url": "https://github.com/BurntSushi/ripgrep.git",
+      "revision_state": "cannot_judge",
+      "commit": null,
+      "tree": null,
+      "source_roots": [],
+      "languages": [
+        "rust"
+      ],
+      "required_for_core": false,
+      "clean_clone_policy": "detached full SHA; empty status; exact origin; HEAD^{tree} equals lock; content-addressed mirror allowed only with identical commit and tree",
+      "verification": {
+        "method": "git_ls_remote",
+        "observed_at": "2026-08-10T17:14:07Z",
+        "result": "not_checked",
+        "detail": "P14 has not been authorized; no floating revision recorded."
+      },
+      "source_root_trees": {}
+    }
+  }
+}

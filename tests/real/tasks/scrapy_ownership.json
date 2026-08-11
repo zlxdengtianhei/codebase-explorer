@@ -1,0 +1,151 @@
+{
+  "document_type": "downstream_task",
+  "contract_version": 2,
+  "task_id": "scrapy.ownership",
+  "consumer": "independent ownership-mapping consumer",
+  "positive_budgets": [
+    4096,
+    12288
+  ],
+  "required_facts": {
+    "fact_01": {
+      "claim": "Crawler is defined in scrapy/crawler.py.",
+      "path": "scrapy/crawler.py",
+      "span": {
+        "byte_offset": 1647,
+        "byte_length": 14,
+        "line": 56,
+        "column": 0,
+        "text": "class Crawler:"
+      },
+      "source_text_sha256": "3017ba1084b80d9771b9fa23a5771e91aeec5f7c693eac30bd45b3007bd08648",
+      "rationale": "Crawler ownership anchor.",
+      "evidence_id": "ev_scrapy_01",
+      "expected_relations": [
+        {
+          "relation_id": "rel_scrapy_01",
+          "kind": "owns",
+          "source": "scrapy",
+          "target": "scrapy/crawler.py",
+          "status": "resolved",
+          "evidence_ids": [
+            "ev_scrapy_01"
+          ]
+        }
+      ]
+    },
+    "fact_02": {
+      "claim": "ExecutionEngine is defined in scrapy/core/engine.py.",
+      "path": "scrapy/core/engine.py",
+      "span": {
+        "byte_offset": 2953,
+        "byte_length": 22,
+        "line": 101,
+        "column": 0,
+        "text": "class ExecutionEngine:"
+      },
+      "source_text_sha256": "6e9f02c396f91f581b242ab15dad4f0fcc6af9a3664ed005e100c46e0e764a62",
+      "rationale": "Engine ownership anchor.",
+      "evidence_id": "ev_scrapy_02",
+      "expected_relations": [
+        {
+          "relation_id": "rel_scrapy_02",
+          "kind": "owns",
+          "source": "scrapy",
+          "target": "scrapy/core/engine.py",
+          "status": "resolved",
+          "evidence_ids": [
+            "ev_scrapy_02"
+          ]
+        }
+      ]
+    },
+    "fact_03": {
+      "claim": "Downloader is defined in scrapy/core/downloader/__init__.py.",
+      "path": "scrapy/core/downloader/__init__.py",
+      "span": {
+        "byte_offset": 3356,
+        "byte_length": 17,
+        "line": 109,
+        "column": 0,
+        "text": "class Downloader:"
+      },
+      "source_text_sha256": "ab7fd55e532d65925528d31a57e798251566237fe21db1c91af84c4e1d9d117e",
+      "rationale": "Downloader ownership anchor.",
+      "evidence_id": "ev_scrapy_03",
+      "expected_relations": [
+        {
+          "relation_id": "rel_scrapy_03",
+          "kind": "owns",
+          "source": "scrapy",
+          "target": "scrapy/core/downloader/__init__.py",
+          "status": "resolved",
+          "evidence_ids": [
+            "ev_scrapy_03"
+          ]
+        }
+      ]
+    }
+  },
+  "forbidden_facts": [
+    "Collapse crawler, engine and downloader into one responsibility",
+    "Omit unsupported or ambiguous calls"
+  ],
+  "pass_rule": "All three ownership spans returned with ambiguous/unsupported calls enumerated and no forbidden fact.",
+  "fail_rule": "Missing span, false merge or ambiguous call promoted to resolved.",
+  "cannot_judge_rule": "Exact source or independent evaluator unavailable.",
+  "changed_decision": "Consumer can assign changes to crawler, engine or downloader boundaries.",
+  "repository_snapshot": {
+    "repo_id": "scrapy",
+    "url": "https://github.com/scrapy/scrapy.git",
+    "commit": "2ce02d417a99343f630d97e6bb8def1760df1366",
+    "tree": "a709aff45deac89de3f80a49ea980b83d93b30ff",
+    "source_roots": {
+      "scrapy": "02ce31d9d8cbe2d2ad419397b3bd5f9f6bdc8e21"
+    }
+  },
+  "expectations": {
+    "relation_status_counts": {
+      "resolved": 3,
+      "ambiguous": 0,
+      "unresolved": 0,
+      "external": 0,
+      "unsupported": 0
+    },
+    "required_evidence_ids": [
+      "ev_scrapy_01",
+      "ev_scrapy_02",
+      "ev_scrapy_03"
+    ],
+    "cursor_chain": [
+      {
+        "budget": 4096,
+        "page": 1,
+        "must_continue": true
+      },
+      {
+        "budget": 12288,
+        "page": 2,
+        "must_continue": false
+      }
+    ],
+    "interruption": {
+      "required": false,
+      "expected_outcome": "not_applicable"
+    },
+    "universe_partition": {
+      "roots": [
+        "scrapy"
+      ],
+      "eligible_languages": [
+        "python"
+      ],
+      "expected_states": [
+        "indexed",
+        "parse_error",
+        "excluded"
+      ],
+      "cross_language_edges": "not_applicable"
+    }
+  }
+}

@@ -1,0 +1,635 @@
+{
+  "document_type": "expected_ir",
+  "contract_version": 2,
+  "ir_protocol": "cbe-ir/1",
+  "language": "typescript",
+  "fixture_root": "tests/fixtures/languages/typescript",
+  "content_rule": "UTF-8; join content_lines with LF and append one LF",
+  "files": {
+    "src/base.ts": {
+      "language": "typescript",
+      "expected_state": "indexed",
+      "content_lines": [
+        "export interface Runner {",
+        "  run(): string;",
+        "}",
+        "export function same(): string {",
+        "  return \"base\";",
+        "}"
+      ],
+      "trailing_newline": true,
+      "content_sha256": "250b9390512d526530f71150a573f444fe4999fb4e2a3ff8d065015b6116d61f",
+      "rationale": "Interface, type member and same-name export."
+    },
+    "src/impl.ts": {
+      "language": "typescript",
+      "expected_state": "indexed",
+      "content_lines": [
+        "import type { Runner } from \"./base\";",
+        "export class Worker implements Runner {",
+        "  run(): string { return \"ok\"; }",
+        "}",
+        "export function same(): string { return \"impl\"; }"
+      ],
+      "trailing_newline": true,
+      "content_sha256": "c4e092de14992a6ea7ba35059aaf8cd46eb2c1ceb91feb1e443888244a8ec078",
+      "rationale": "Type import, implements and same-name export."
+    },
+    "src/index.ts": {
+      "language": "typescript",
+      "expected_state": "indexed",
+      "content_lines": [
+        "import { Worker as Alias, same as implSame } from \"./impl\";",
+        "export { Alias };",
+        "export type { Runner } from \"./base\";",
+        "export function same(): string { return \"index\"; }",
+        "export function entry(worker: import(\"./base\").Runner): string {",
+        "  worker.run();",
+        "  missing();",
+        "  console.log(worker);",
+        "  return implSame();",
+        "}",
+        "export function dynamic(obj: any) { return obj.run(); }"
+      ],
+      "trailing_newline": true,
+      "content_sha256": "9e71e677a0713d806531a0b6721e5ce9f26c6b52a754e908220d2dbd3d78e029",
+      "rationale": "Alias, re-export, inline type and call-state matrix."
+    },
+    "src/broken.ts": {
+      "language": "typescript",
+      "expected_state": "parse_error",
+      "content_lines": [
+        "export const broken: = 1;"
+      ],
+      "trailing_newline": true,
+      "content_sha256": "d0545e9bd2810c73dd1e54a1c9e2106a6f7e2e1c6be45b7683b7c540ebab0141",
+      "rationale": "Syntax error remains explicit."
+    },
+    "vendor/ignored.ts": {
+      "language": "typescript",
+      "expected_state": "excluded",
+      "content_lines": [
+        "export const vendorOnly = 1;"
+      ],
+      "trailing_newline": true,
+      "content_sha256": "58896a315cbc0003548f36bebbbd94e98fc961a37b51513d8d6f38bf921d4fb1",
+      "rationale": "Vendor exclusion."
+    },
+    "generated/output.ts": {
+      "language": "typescript",
+      "expected_state": "excluded",
+      "content_lines": [
+        "export const generatedOnly = 2;"
+      ],
+      "trailing_newline": true,
+      "content_sha256": "4ec4625d1881be8b06c7119a4c0a51450162715f8adfcd5be005e318a771e299",
+      "rationale": "Generated exclusion."
+    },
+    "src/雪.ts": {
+      "language": "typescript",
+      "expected_state": "indexed",
+      "content_lines": [
+        "export const snow = \"雪\";"
+      ],
+      "trailing_newline": true,
+      "content_sha256": "31a4a93078be1987c3517ebbaec34ebd6bb554de909cacba1455535b2bb40c02",
+      "rationale": "Unicode path and content."
+    },
+    "src/dynamic.ts": {
+      "language": "typescript",
+      "expected_state": "indexed",
+      "content_lines": [
+        "export * from \"./impl\";",
+        "export async function load(name: string) { return import(name); }",
+        "const dynamicExports: Record<string, unknown> = {};",
+        "Object.assign(dynamicExports, globalThis);",
+        "export default dynamicExports;"
+      ],
+      "trailing_newline": true,
+      "content_sha256": "4473bafc4e34a81b1e795ed1b3f7ee2e5d0b3235805e3dbaa4ff82a01cb49b5e",
+      "rationale": "Dynamic/wildcard TypeScript constructs."
+    },
+    "src/ambient.d.ts": {
+      "language": "typescript",
+      "expected_state": "unsupported",
+      "content_lines": [
+        "declare module \"virtual:*\" {",
+        "  const value: unknown;",
+        "  export = value;",
+        "}"
+      ],
+      "trailing_newline": true,
+      "content_sha256": "8b66f5e35c4da54e3af4d626000782702739288645355d778bc1ef29503414d7",
+      "rationale": "Ambient wildcard module remains explicitly unsupported."
+    }
+  },
+  "expected_facts": {
+    "ts.symbol.runner": {
+      "kind": "symbol",
+      "path": "src/base.ts",
+      "subject": "src/base.Runner",
+      "target": null,
+      "resolution_status": "resolved",
+      "resolution_method": "exact",
+      "candidates": [
+        "src/base.Runner"
+      ],
+      "rationale": "Exported interface definition.",
+      "span": {
+        "byte_offset": 0,
+        "byte_length": 25,
+        "line": 1,
+        "column": 0,
+        "text": "export interface Runner {"
+      },
+      "attributes": {
+        "import_kind": "none",
+        "export_kind": "none",
+        "dynamic": false,
+        "wildcard": false
+      }
+    },
+    "ts.type.runner.run": {
+      "kind": "type",
+      "path": "src/base.ts",
+      "subject": "src/base.Runner.run",
+      "target": "string",
+      "resolution_status": "resolved",
+      "resolution_method": "compiler",
+      "candidates": [
+        "string"
+      ],
+      "rationale": "Explicit interface return type.",
+      "span": {
+        "byte_offset": 26,
+        "byte_length": 16,
+        "line": 2,
+        "column": 0,
+        "text": "  run(): string;"
+      },
+      "attributes": {
+        "import_kind": "none",
+        "export_kind": "none",
+        "dynamic": false,
+        "wildcard": false
+      }
+    },
+    "ts.import.runner": {
+      "kind": "import",
+      "path": "src/impl.ts",
+      "subject": "src/impl",
+      "target": "src/base.Runner",
+      "resolution_status": "resolved",
+      "resolution_method": "exact",
+      "candidates": [
+        "src/base.Runner"
+      ],
+      "rationale": "Explicit type-only import.",
+      "span": {
+        "byte_offset": 0,
+        "byte_length": 37,
+        "line": 1,
+        "column": 0,
+        "text": "import type { Runner } from \"./base\";"
+      },
+      "attributes": {
+        "import_kind": "type_only",
+        "export_kind": "none",
+        "dynamic": false,
+        "wildcard": false
+      }
+    },
+    "ts.implements.worker": {
+      "kind": "implements",
+      "path": "src/impl.ts",
+      "subject": "src/impl.Worker",
+      "target": "src/base.Runner",
+      "resolution_status": "resolved",
+      "resolution_method": "compiler",
+      "candidates": [
+        "src/base.Runner"
+      ],
+      "rationale": "Implements clause is explicit.",
+      "span": {
+        "byte_offset": 38,
+        "byte_length": 39,
+        "line": 2,
+        "column": 0,
+        "text": "export class Worker implements Runner {"
+      },
+      "attributes": {
+        "import_kind": "none",
+        "export_kind": "none",
+        "dynamic": false,
+        "wildcard": false
+      }
+    },
+    "ts.import.alias": {
+      "kind": "import",
+      "path": "src/index.ts",
+      "subject": "src/index.Alias",
+      "target": "src/impl.Worker",
+      "resolution_status": "resolved",
+      "resolution_method": "exact",
+      "candidates": [
+        "src/impl.Worker"
+      ],
+      "rationale": "Alias identity retained.",
+      "span": {
+        "byte_offset": 0,
+        "byte_length": 59,
+        "line": 1,
+        "column": 0,
+        "text": "import { Worker as Alias, same as implSame } from \"./impl\";"
+      },
+      "attributes": {
+        "import_kind": "alias",
+        "export_kind": "none",
+        "dynamic": false,
+        "wildcard": false
+      }
+    },
+    "ts.export.alias": {
+      "kind": "export",
+      "path": "src/index.ts",
+      "subject": "src/index",
+      "target": "src/impl.Worker",
+      "resolution_status": "resolved",
+      "resolution_method": "exact",
+      "candidates": [
+        "src/impl.Worker"
+      ],
+      "rationale": "Local alias re-export.",
+      "span": {
+        "byte_offset": 60,
+        "byte_length": 17,
+        "line": 2,
+        "column": 0,
+        "text": "export { Alias };"
+      },
+      "attributes": {
+        "import_kind": "none",
+        "export_kind": "named",
+        "dynamic": false,
+        "wildcard": false
+      }
+    },
+    "ts.export.runner": {
+      "kind": "export",
+      "path": "src/index.ts",
+      "subject": "src/index",
+      "target": "src/base.Runner",
+      "resolution_status": "resolved",
+      "resolution_method": "exact",
+      "candidates": [
+        "src/base.Runner"
+      ],
+      "rationale": "Type re-export is distinct from value export.",
+      "span": {
+        "byte_offset": 78,
+        "byte_length": 37,
+        "line": 3,
+        "column": 0,
+        "text": "export type { Runner } from \"./base\";"
+      },
+      "attributes": {
+        "import_kind": "none",
+        "export_kind": "type_only",
+        "dynamic": false,
+        "wildcard": false
+      }
+    },
+    "ts.symbol.same.index": {
+      "kind": "symbol",
+      "path": "src/index.ts",
+      "subject": "src/index.same",
+      "target": null,
+      "resolution_status": "resolved",
+      "resolution_method": "exact",
+      "candidates": [
+        "src/index.same"
+      ],
+      "rationale": "Scope-qualified same-name symbol.",
+      "span": {
+        "byte_offset": 116,
+        "byte_length": 50,
+        "line": 4,
+        "column": 0,
+        "text": "export function same(): string { return \"index\"; }"
+      },
+      "attributes": {
+        "import_kind": "none",
+        "export_kind": "none",
+        "dynamic": false,
+        "wildcard": false
+      }
+    },
+    "ts.call.worker.run": {
+      "kind": "call",
+      "path": "src/index.ts",
+      "subject": "src/index.entry",
+      "target": "src/base.Runner.run",
+      "resolution_status": "resolved",
+      "resolution_method": "compiler",
+      "candidates": [
+        "src/base.Runner.run",
+        "src/impl.Worker.run"
+      ],
+      "rationale": "Inline imported type bounds call.",
+      "span": {
+        "byte_offset": 232,
+        "byte_length": 15,
+        "line": 6,
+        "column": 0,
+        "text": "  worker.run();"
+      },
+      "attributes": {
+        "import_kind": "none",
+        "export_kind": "none",
+        "dynamic": false,
+        "wildcard": false
+      }
+    },
+    "ts.call.missing": {
+      "kind": "call",
+      "path": "src/index.ts",
+      "subject": "src/index.entry",
+      "target": null,
+      "resolution_status": "unresolved",
+      "resolution_method": "search_fallback",
+      "candidates": [],
+      "rationale": "No binding exists.",
+      "span": {
+        "byte_offset": 248,
+        "byte_length": 12,
+        "line": 7,
+        "column": 0,
+        "text": "  missing();"
+      },
+      "attributes": {
+        "import_kind": "none",
+        "export_kind": "none",
+        "dynamic": false,
+        "wildcard": false
+      }
+    },
+    "ts.call.console": {
+      "kind": "call",
+      "path": "src/index.ts",
+      "subject": "src/index.entry",
+      "target": "lib.dom.console.log",
+      "resolution_status": "external",
+      "resolution_method": "compiler",
+      "candidates": [
+        "lib.dom.console.log"
+      ],
+      "rationale": "Standard library external call.",
+      "span": {
+        "byte_offset": 261,
+        "byte_length": 22,
+        "line": 8,
+        "column": 0,
+        "text": "  console.log(worker);"
+      },
+      "attributes": {
+        "import_kind": "none",
+        "export_kind": "none",
+        "dynamic": false,
+        "wildcard": false
+      }
+    },
+    "ts.call.dynamic": {
+      "kind": "call",
+      "path": "src/index.ts",
+      "subject": "src/index.dynamic",
+      "target": null,
+      "resolution_status": "ambiguous",
+      "resolution_method": "heuristic",
+      "candidates": [
+        "src/base.Runner.run",
+        "src/impl.Worker.run"
+      ],
+      "rationale": "any receiver cannot be advertised resolved.",
+      "span": {
+        "byte_offset": 307,
+        "byte_length": 55,
+        "line": 11,
+        "column": 0,
+        "text": "export function dynamic(obj: any) { return obj.run(); }"
+      },
+      "attributes": {
+        "import_kind": "none",
+        "export_kind": "none",
+        "dynamic": false,
+        "wildcard": false
+      }
+    },
+    "ts.symbol.same.base": {
+      "kind": "symbol",
+      "path": "src/base.ts",
+      "span": {
+        "byte_offset": 45,
+        "byte_length": 32,
+        "line": 4,
+        "column": 0,
+        "text": "export function same(): string {"
+      },
+      "subject": "src/base.same",
+      "target": null,
+      "resolution_status": "resolved",
+      "resolution_method": "exact",
+      "candidates": [
+        "src/base.same"
+      ],
+      "attributes": {
+        "import_kind": "none",
+        "export_kind": "none",
+        "dynamic": false,
+        "wildcard": false
+      },
+      "rationale": "Frozen independent oracle fact."
+    },
+    "ts.symbol.same.impl": {
+      "kind": "symbol",
+      "path": "src/impl.ts",
+      "span": {
+        "byte_offset": 113,
+        "byte_length": 49,
+        "line": 5,
+        "column": 0,
+        "text": "export function same(): string { return \"impl\"; }"
+      },
+      "subject": "src/impl.same",
+      "target": null,
+      "resolution_status": "resolved",
+      "resolution_method": "exact",
+      "candidates": [
+        "src/impl.same"
+      ],
+      "attributes": {
+        "import_kind": "none",
+        "export_kind": "none",
+        "dynamic": false,
+        "wildcard": false
+      },
+      "rationale": "Frozen independent oracle fact."
+    },
+    "ts.call.impl_same": {
+      "kind": "call",
+      "path": "src/index.ts",
+      "span": {
+        "byte_offset": 284,
+        "byte_length": 20,
+        "line": 9,
+        "column": 0,
+        "text": "  return implSame();"
+      },
+      "subject": "src/index.entry",
+      "target": "src/impl.same",
+      "resolution_status": "resolved",
+      "resolution_method": "exact",
+      "candidates": [
+        "src/impl.same"
+      ],
+      "attributes": {
+        "import_kind": "none",
+        "export_kind": "none",
+        "dynamic": false,
+        "wildcard": false
+      },
+      "rationale": "Frozen independent oracle fact."
+    },
+    "ts.export.wildcard": {
+      "kind": "export",
+      "path": "src/dynamic.ts",
+      "span": {
+        "byte_offset": 0,
+        "byte_length": 23,
+        "line": 1,
+        "column": 0,
+        "text": "export * from \"./impl\";"
+      },
+      "subject": "src/dynamic",
+      "target": "src/impl",
+      "resolution_status": "resolved",
+      "resolution_method": "exact",
+      "candidates": [
+        "src/impl"
+      ],
+      "attributes": {
+        "import_kind": "none",
+        "export_kind": "wildcard",
+        "dynamic": false,
+        "wildcard": true
+      },
+      "rationale": "Frozen independent oracle fact."
+    },
+    "ts.import.dynamic": {
+      "kind": "import",
+      "path": "src/dynamic.ts",
+      "span": {
+        "byte_offset": 24,
+        "byte_length": 65,
+        "line": 2,
+        "column": 0,
+        "text": "export async function load(name: string) { return import(name); }"
+      },
+      "subject": "src/dynamic.load",
+      "target": null,
+      "resolution_status": "unsupported",
+      "resolution_method": "heuristic",
+      "candidates": [],
+      "attributes": {
+        "import_kind": "dynamic",
+        "export_kind": "none",
+        "dynamic": true,
+        "wildcard": false
+      },
+      "rationale": "Frozen independent oracle fact."
+    },
+    "ts.export.dynamic": {
+      "kind": "export",
+      "path": "src/dynamic.ts",
+      "span": {
+        "byte_offset": 185,
+        "byte_length": 30,
+        "line": 5,
+        "column": 0,
+        "text": "export default dynamicExports;"
+      },
+      "subject": "src/dynamic",
+      "target": null,
+      "resolution_status": "ambiguous",
+      "resolution_method": "dataflow",
+      "candidates": [],
+      "attributes": {
+        "import_kind": "none",
+        "export_kind": "dynamic",
+        "dynamic": true,
+        "wildcard": false
+      },
+      "rationale": "Frozen independent oracle fact."
+    },
+    "ts.call.object_assign": {
+      "kind": "call",
+      "path": "src/dynamic.ts",
+      "span": {
+        "byte_offset": 142,
+        "byte_length": 42,
+        "line": 4,
+        "column": 0,
+        "text": "Object.assign(dynamicExports, globalThis);"
+      },
+      "subject": "src/dynamic",
+      "target": "Object.assign",
+      "resolution_status": "external",
+      "resolution_method": "exact",
+      "candidates": [
+        "Object.assign"
+      ],
+      "attributes": {
+        "import_kind": "none",
+        "export_kind": "none",
+        "dynamic": false,
+        "wildcard": false
+      },
+      "rationale": "Frozen independent oracle fact."
+    },
+    "ts.unsupported.ambient": {
+      "kind": "unsupported_construct",
+      "path": "src/ambient.d.ts",
+      "span": {
+        "byte_offset": 0,
+        "byte_length": 28,
+        "line": 1,
+        "column": 0,
+        "text": "declare module \"virtual:*\" {"
+      },
+      "subject": "virtual:*",
+      "target": null,
+      "resolution_status": "unsupported",
+      "resolution_method": "heuristic",
+      "candidates": [],
+      "attributes": {
+        "import_kind": "none",
+        "export_kind": "none",
+        "dynamic": true,
+        "wildcard": true
+      },
+      "rationale": "Frozen independent oracle fact."
+    }
+  },
+  "forbidden_facts": [
+    "type-only import counted as runtime value edge",
+    "same-name functions share one id",
+    "dynamic any call marked resolved",
+    "missing call omitted",
+    "console.log marked repository-local",
+    "excluded files indexed"
+  ],
+  "independent_authority": [
+    "runs/r001_20260810_product_completion/design/CHANGE_AND_VALIDATION_PLAN.md §§4-6",
+    "src/ir/models.py cbe-ir/1 enums and span contract",
+    "Oracle content and expected values frozen before P4 adapter code"
+  ]
+}

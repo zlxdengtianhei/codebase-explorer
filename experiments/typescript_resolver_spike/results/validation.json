@@ -1,0 +1,349 @@
+{
+  "status": "pass",
+  "check_count": 24,
+  "checks": [
+    {
+      "name": "compiler:ts.type.runner.run:observed",
+      "passed": true,
+      "detail": {
+        "observed": true,
+        "target": "string",
+        "resolution_method": "compiler",
+        "span": {
+          "path": "src/base.ts",
+          "byte_offset": 26,
+          "byte_length": 16,
+          "line": 2,
+          "column": 0,
+          "text": "  run(): string;"
+        }
+      }
+    },
+    {
+      "name": "compiler:ts.type.runner.run:span",
+      "passed": true,
+      "detail": {
+        "path": "src/base.ts",
+        "byte_offset": 26,
+        "byte_length": 16,
+        "line": 2,
+        "column": 0,
+        "text": "  run(): string;"
+      }
+    },
+    {
+      "name": "compiler-warm:ts.type.runner.run:stable",
+      "passed": true,
+      "detail": {
+        "observed": true,
+        "target": "string",
+        "resolution_method": "compiler",
+        "span": {
+          "path": "src/base.ts",
+          "byte_offset": 26,
+          "byte_length": 16,
+          "line": 2,
+          "column": 0,
+          "text": "  run(): string;"
+        }
+      }
+    },
+    {
+      "name": "compiler:ts.implements.worker:observed",
+      "passed": true,
+      "detail": {
+        "observed": true,
+        "target": {
+          "name": "\"/Users/lexuanzhang/context-infra/adhoc_jobs/codebase_explorer_20260321/impl/codebase-explorer/experiments/typescript_resolver_spike/.work/fixture/src/base\".Runner",
+          "path": "src/base.ts"
+        },
+        "resolution_method": "compiler",
+        "span": {
+          "path": "src/impl.ts",
+          "byte_offset": 38,
+          "byte_length": 39,
+          "line": 2,
+          "column": 0,
+          "text": "export class Worker implements Runner {"
+        }
+      }
+    },
+    {
+      "name": "compiler:ts.implements.worker:span",
+      "passed": true,
+      "detail": {
+        "path": "src/impl.ts",
+        "byte_offset": 38,
+        "byte_length": 39,
+        "line": 2,
+        "column": 0,
+        "text": "export class Worker implements Runner {"
+      }
+    },
+    {
+      "name": "compiler-warm:ts.implements.worker:stable",
+      "passed": true,
+      "detail": {
+        "observed": true,
+        "target": {
+          "name": "\"/Users/lexuanzhang/context-infra/adhoc_jobs/codebase_explorer_20260321/impl/codebase-explorer/experiments/typescript_resolver_spike/.work/fixture/src/base\".Runner",
+          "path": "src/base.ts"
+        },
+        "resolution_method": "compiler",
+        "span": {
+          "path": "src/impl.ts",
+          "byte_offset": 38,
+          "byte_length": 39,
+          "line": 2,
+          "column": 0,
+          "text": "export class Worker implements Runner {"
+        }
+      }
+    },
+    {
+      "name": "compiler:ts.call.worker.run:observed",
+      "passed": true,
+      "detail": {
+        "observed": true,
+        "target": {
+          "name": "\"/Users/lexuanzhang/context-infra/adhoc_jobs/codebase_explorer_20260321/impl/codebase-explorer/experiments/typescript_resolver_spike/.work/fixture/src/base\".Runner.run",
+          "path": "src/base.ts"
+        },
+        "receiver_type": "Runner",
+        "resolution_method": "compiler",
+        "span": {
+          "path": "src/index.ts",
+          "byte_offset": 232,
+          "byte_length": 15,
+          "line": 6,
+          "column": 0,
+          "text": "  worker.run();"
+        }
+      }
+    },
+    {
+      "name": "compiler:ts.call.worker.run:span",
+      "passed": true,
+      "detail": {
+        "path": "src/index.ts",
+        "byte_offset": 232,
+        "byte_length": 15,
+        "line": 6,
+        "column": 0,
+        "text": "  worker.run();"
+      }
+    },
+    {
+      "name": "compiler-warm:ts.call.worker.run:stable",
+      "passed": true,
+      "detail": {
+        "observed": true,
+        "target": {
+          "name": "\"/Users/lexuanzhang/context-infra/adhoc_jobs/codebase_explorer_20260321/impl/codebase-explorer/experiments/typescript_resolver_spike/.work/fixture/src/base\".Runner.run",
+          "path": "src/base.ts"
+        },
+        "receiver_type": "Runner",
+        "resolution_method": "compiler",
+        "span": {
+          "path": "src/index.ts",
+          "byte_offset": 232,
+          "byte_length": 15,
+          "line": 6,
+          "column": 0,
+          "text": "  worker.run();"
+        }
+      }
+    },
+    {
+      "name": "compiler:type-target",
+      "passed": true,
+      "detail": "string"
+    },
+    {
+      "name": "compiler:implements-target",
+      "passed": true,
+      "detail": {
+        "name": "\"/Users/lexuanzhang/context-infra/adhoc_jobs/codebase_explorer_20260321/impl/codebase-explorer/experiments/typescript_resolver_spike/.work/fixture/src/base\".Runner",
+        "path": "src/base.ts"
+      }
+    },
+    {
+      "name": "compiler:call-target",
+      "passed": true,
+      "detail": {
+        "name": "\"/Users/lexuanzhang/context-infra/adhoc_jobs/codebase_explorer_20260321/impl/codebase-explorer/experiments/typescript_resolver_spike/.work/fixture/src/base\".Runner.run",
+        "path": "src/base.ts"
+      }
+    },
+    {
+      "name": "compiler:receiver-type",
+      "passed": true,
+      "detail": "Runner"
+    },
+    {
+      "name": "compiler:expected-diagnostics-only",
+      "passed": true,
+      "detail": [
+        {
+          "code": 1110,
+          "category": "Error",
+          "path": "src/broken.ts",
+          "message": "Type expected."
+        },
+        {
+          "code": 2304,
+          "category": "Error",
+          "path": "src/index.ts",
+          "message": "Cannot find name 'missing'."
+        }
+      ]
+    },
+    {
+      "name": "scip:three-locations-observed",
+      "passed": true,
+      "detail": {
+        "ts.type.runner.run": {
+          "observed": true,
+          "target": "string",
+          "evidence_surface": "symbol documentation string (not a typed result field)",
+          "symbol": "scip-typescript npm . . src/`base.ts`/Runner#run().",
+          "span": {
+            "path": "src/base.ts",
+            "byte_offset": 26,
+            "byte_length": 16,
+            "line": 2,
+            "column": 0,
+            "text": "  run(): string;"
+          }
+        },
+        "ts.implements.worker": {
+          "observed": true,
+          "symbol": "scip-typescript npm . . src/`base.ts`/Runner#",
+          "evidence_surface": "identifier occurrence only; SCIP carries no implements edge for this fixture",
+          "span": {
+            "path": "src/impl.ts",
+            "byte_offset": 38,
+            "byte_length": 39,
+            "line": 2,
+            "column": 0,
+            "text": "export class Worker implements Runner {"
+          }
+        },
+        "ts.call.worker.run": {
+          "observed": true,
+          "symbol": "scip-typescript npm . . src/`base.ts`/Runner#run().",
+          "evidence_surface": "callee occurrence symbol, not an explicit call edge",
+          "span": {
+            "path": "src/index.ts",
+            "byte_offset": 232,
+            "byte_length": 15,
+            "line": 6,
+            "column": 0,
+            "text": "  worker.run();"
+          }
+        }
+      }
+    },
+    {
+      "name": "scip:type-doc-string-only",
+      "passed": true,
+      "detail": {
+        "observed": true,
+        "target": "string",
+        "evidence_surface": "symbol documentation string (not a typed result field)",
+        "symbol": "scip-typescript npm . . src/`base.ts`/Runner#run().",
+        "span": {
+          "path": "src/base.ts",
+          "byte_offset": 26,
+          "byte_length": 16,
+          "line": 2,
+          "column": 0,
+          "text": "  run(): string;"
+        }
+      }
+    },
+    {
+      "name": "scip:no-explicit-implements-edge",
+      "passed": true,
+      "detail": {
+        "observed": true,
+        "symbol": "scip-typescript npm . . src/`base.ts`/Runner#",
+        "evidence_surface": "identifier occurrence only; SCIP carries no implements edge for this fixture",
+        "span": {
+          "path": "src/impl.ts",
+          "byte_offset": 38,
+          "byte_length": 39,
+          "line": 2,
+          "column": 0,
+          "text": "export class Worker implements Runner {"
+        }
+      }
+    },
+    {
+      "name": "scip:no-explicit-call-edge",
+      "passed": true,
+      "detail": {
+        "observed": true,
+        "symbol": "scip-typescript npm . . src/`base.ts`/Runner#run().",
+        "evidence_surface": "callee occurrence symbol, not an explicit call edge",
+        "span": {
+          "path": "src/index.ts",
+          "byte_offset": 232,
+          "byte_length": 15,
+          "line": 6,
+          "column": 0,
+          "text": "  worker.run();"
+        }
+      }
+    },
+    {
+      "name": "graph-sitter:unmodified-import-fails",
+      "passed": true,
+      "detail": {
+        "exception": "ImportError",
+        "message": "cannot import name 'JSEvalException' from 'py_mini_racer._types' (/Users/lexuanzhang/context-infra/adhoc_jobs/codebase_explorer_20260321/impl/codebase-explorer/.venv/lib/python3.13/site-packages/py_mini_racer/_types.py)",
+        "status": "incompatible"
+      }
+    },
+    {
+      "name": "graph-sitter:no-three-facts",
+      "passed": true,
+      "detail": {
+        "ts.call.worker.run": {
+          "observed": false
+        },
+        "ts.implements.worker": {
+          "observed": false
+        },
+        "ts.type.runner.run": {
+          "observed": false
+        }
+      }
+    },
+    {
+      "name": "nest:locked-revision",
+      "passed": true,
+      "detail": {
+        "status": "matched",
+        "commit": "5df8d9d41a98fd7f587b2e043a12b3d5109971e4",
+        "tree": "de9edaba6d249b0a987b7bd191febb13e57d02e9",
+        "source_root_tree": "0c65d58e1d57c762e5ba7017827ecff1e9eb6c81"
+      }
+    },
+    {
+      "name": "nest:bounded-compiler-roots",
+      "passed": true,
+      "detail": 30
+    },
+    {
+      "name": "nest:bounded-scip-documents",
+      "passed": true,
+      "detail": 30
+    },
+    {
+      "name": "nest:dependency-degradation-visible",
+      "passed": true,
+      "detail": 213
+    }
+  ]
+}

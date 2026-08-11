@@ -1,0 +1,41 @@
+{
+  "analyzer_dist_present": false,
+  "analyzer_source_present": true,
+  "candidate": "installed_graph_sitter_adaptation",
+  "codebase_signature": "(repo_path: str | None = None, *, language: Union[Literal['python', 'typescript'], graph_sitter.shared.enums.programming_language.ProgrammingLanguage, NoneType] = None, projects: list[graph_sitter.codebase.config.ProjectConfig] | graph_sitter.codebase.config.ProjectConfig | None = None, config: graph_sitter.configs.models.codebase.CodebaseConfig | None = None, secrets: graph_sitter.configs.models.secrets.SecretsConfig | None = None, io: graph_sitter.codebase.io.io.IO | None = None, progress: graph_sitter.codebase.progress.progress.Progress | None = None) -> None",
+  "elapsed_ms": 5784.258542000316,
+  "facts": {
+    "ts.call.worker.run": {
+      "observed": false
+    },
+    "ts.implements.worker": {
+      "observed": false
+    },
+    "ts.type.runner.run": {
+      "observed": false
+    }
+  },
+  "peak_rss_platform_units": 113950720,
+  "public_typescript_engine_methods": [
+    "error",
+    "get_return_type",
+    "ready",
+    "reparse",
+    "start",
+    "wait_until_ready"
+  ],
+  "root": "/Users/lexuanzhang/context-infra/adhoc_jobs/codebase_explorer_20260321/impl/codebase-explorer/experiments/typescript_resolver_spike/.work/fixture",
+  "semantic_support_assessment": "public installed engine exposes function return-type lookup only; no call-target or implements-resolution result surface",
+  "shim_import": "ok",
+  "unmodified_import": {
+    "exception": "ImportError",
+    "message": "cannot import name 'JSEvalException' from 'py_mini_racer._types' (/Users/lexuanzhang/context-infra/adhoc_jobs/codebase_explorer_20260321/impl/codebase-explorer/.venv/lib/python3.13/site-packages/py_mini_racer/_types.py)",
+    "status": "incompatible"
+  },
+  "versions": {
+    "graph-sitter": "0.56.14",
+    "mini-racer": "0.14.1",
+    "tree-sitter": "0.25.2",
+    "tree-sitter-typescript": "0.23.2"
+  }
+}

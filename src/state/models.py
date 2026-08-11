@@ -9,10 +9,13 @@ V5 Architecture:
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from datetime import UTC, datetime
-from typing import Literal
+from typing import Any, Literal, Self
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator, model_validator
+
+from src.ir.models import FrozenDict, SourceUnitState, normalize_relative_path
 
 
 # ---------------------------------------------------------------------------
@@ -96,3 +99,275 @@ class StateFile(BaseModel, frozen=True):
     documentation: DocumentationMeta = Field(default_factory=DocumentationMeta)
     metadata: dict = Field(default_factory=dict)
 
+
+# ---------------------------------------------------------------------------
+# Canonical JSON V3 RunStore values
+# ---------------------------------------------------------------------------
+
+
+class StateModel(BaseModel):
+    """Fail-closed immutable base for canonical state values."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid", validate_default=True)
+
+
+class StateRevisions(StateModel):
+    """Independent revision axes; an empty value means not produced yet."""
+
+    source: str
+    index: str = ""
+    document: str = ""
+    verification: str = ""
+
+    @field_validator("source")
+    @classmethod
+    def _source_required(cls, value: str) -> str:
+        if not value:
+            raise ValueError("source revision is required")
+        return value
+
+
+class SourceProvenance(StateModel):
+    """Typed terminal-state provenance retained at the state boundary."""
+
+    failure_code: str | None = None
+    backend_id: str
+    backend_version: str
+    toolchain_conditions: tuple[str, ...] = ()
+    evidence: tuple[str, ...] = ()
+
+
+class SourceRecord(StateModel):
+    path: str
+    language: str
+    content_hash: str | None = None
+    state: SourceUnitState
+    provenance: SourceProvenance
+
+    @field_validator("path")
+    @classmethod
+    def _canonical_path(cls, value: str) -> str:
+        return normalize_relative_path(value)
+
+
+class LeaseRecord(StateModel):
+    lease_id: str
+    run_id: str
+    target: str
+    actor: str
+    expires_at: datetime
+
+    @field_validator("lease_id", "run_id", "target", "actor")
+    @classmethod
+    def _required(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("lease identity fields must be non-empty")
+        return value
+
+    @field_validator("expires_at")
+    @classmethod
+    def _aware_expiry(cls, value: datetime) -> datetime:
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise ValueError("lease expiry must be timezone-aware")
+        return value
+
+
+class ArtifactRecord(StateModel):
+    target: str
+    actor: str
+    producer: str
+    content_hash: str
+    revision_kind: Literal["index", "document", "verification"]
+    accepted_at: datetime
+
+    @field_validator("actor")
+    @classmethod
+    def _orchestrator_actor(cls, value: str) -> str:
+        if not value.startswith("orchestrator/"):
+            raise ValueError("artifact actor must be an orchestrator identity")
+        return value
+
+    @field_validator("producer")
+    @classmethod
+    def _logical_producer(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("artifact producer must be non-empty")
+        if value.startswith("orchestrator/"):
+            raise ValueError("artifact producer is logical provenance, not mutation authority")
+        return value
+
+
+class LegacyTaskProgressRecord(StateModel):
+    task_id: str
+    status: Literal["pending", "complete"] = "pending"
+    artifact_hash: str | None = None
+    details_written: int = Field(default=0, ge=0)
+    snippets_written: int = Field(default=0, ge=0)
+    completed_at: datetime | None = None
+
+    @field_validator("task_id")
+    @classmethod
+    def _task_id_required(cls, value: str) -> str:
+        if not value:
+            raise ValueError("legacy task id must be non-empty")
+        return value
+
+    @field_validator("details_written", "snippets_written", mode="before")
+    @classmethod
+    def _strict_non_negative_counter(cls, value: object) -> object:
+        if type(value) is not int or value < 0:
+            raise ValueError("legacy task counters must be non-negative integers")
+        return value
+
+    @model_validator(mode="after")
+    def _status_fields_are_consistent(self) -> Self:
+        if self.status == "pending":
+            if (
+                self.artifact_hash is not None
+                or self.details_written != 0
+                or self.snippets_written != 0
+                or self.completed_at is not None
+            ):
+                raise ValueError("pending legacy task cannot contain completion fields")
+            return self
+        if (
+            self.artifact_hash is None
+            or len(self.artifact_hash) != 64
+            or any(character not in "0123456789abcdef" for character in self.artifact_hash)
+        ):
+            raise ValueError("complete legacy task requires a lowercase SHA-256 hash")
+        if (
+            self.completed_at is None
+            or self.completed_at.tzinfo is None
+            or self.completed_at.utcoffset() is None
+        ):
+            raise ValueError("complete legacy task requires an aware completion time")
+        return self
+
+
+class LegacyProjectionMetadata(StateModel):
+    source_file_count: int = Field(ge=0)
+    source_files_covered: tuple[str, ...] = ()
+
+    @field_validator("source_file_count", mode="before")
+    @classmethod
+    def _strict_source_file_count(cls, value: object) -> object:
+        if type(value) is not int or value < 0:
+            raise ValueError("legacy source file count must be a non-negative integer")
+        return value
+
+    @field_validator("source_files_covered")
+    @classmethod
+    def _covered_values_are_strings(cls, value: tuple[str, ...]) -> tuple[str, ...]:
+        if any(not isinstance(item, str) for item in value):
+            raise ValueError("legacy covered source values must be strings")
+        if len(set(value)) != len(value):
+            raise ValueError("legacy covered source values must be unique")
+        return value
+
+
+class LegacySubmissionState(StateModel):
+    tasks: tuple[LegacyTaskProgressRecord, ...]
+    projection_metadata: LegacyProjectionMetadata
+
+    @model_validator(mode="after")
+    def _task_ids_are_unique(self) -> Self:
+        if len({task.task_id for task in self.tasks}) != len(self.tasks):
+            raise ValueError("legacy task ids must be unique")
+        return self
+
+
+class LegacySubmissionSeed(StateModel):
+    task_ids: tuple[str, ...]
+    source_file_count: int = Field(ge=0)
+
+    @field_validator("task_ids", mode="before")
+    @classmethod
+    def _task_ids_are_a_tuple(cls, value: object) -> object:
+        if not isinstance(value, tuple):
+            raise ValueError("legacy task ids must be a tuple")
+        return value
+
+    @field_validator("task_ids")
+    @classmethod
+    def _task_ids_are_valid(cls, value: tuple[str, ...]) -> tuple[str, ...]:
+        if any(not isinstance(task_id, str) or not task_id for task_id in value):
+            raise ValueError("legacy task ids must be non-empty strings")
+        if len(set(value)) != len(value):
+            raise ValueError("legacy task ids must be unique")
+        return value
+
+    @field_validator("source_file_count", mode="before")
+    @classmethod
+    def _strict_source_file_count(cls, value: object) -> object:
+        if type(value) is not int or value < 0:
+            raise ValueError("legacy source file count must be a non-negative integer")
+        return value
+
+
+class RunSnapshot(StateModel):
+    """Complete immutable JSON V3 snapshot persisted by a RunStore backend."""
+
+    schema_version: Literal["3.0"] = "3.0"
+    run_id: str
+    repo_root: str
+    store_revision: int = Field(ge=1)
+    run_state: Literal[
+        "running", "verified_full", "verified_with_residuals", "failed"
+    ] = "running"
+    revisions: StateRevisions
+    sources: tuple[SourceRecord, ...] = ()
+    leases: tuple[LeaseRecord, ...] = ()
+    artifacts: tuple[ArtifactRecord, ...] = ()
+    legacy_submission: LegacySubmissionState | None = None
+    metadata: Mapping[str, str] = Field(default_factory=dict)
+
+    @field_validator("metadata", mode="after")
+    @classmethod
+    def _freeze_metadata(cls, value: Mapping[str, str]) -> Mapping[str, str]:
+        return FrozenDict(dict(value))
+
+    @field_serializer("metadata")
+    def _serialize_metadata(self, value: Mapping[str, str]) -> dict[str, str]:
+        return dict(value.items())
+
+    @model_validator(mode="after")
+    def _consistent(self) -> Self:
+        if not self.run_id.strip():
+            raise ValueError("run_id must be non-empty")
+        if len({source.path for source in self.sources}) != len(self.sources):
+            raise ValueError("source paths must be unique")
+        if len({lease.lease_id for lease in self.leases}) != len(self.leases):
+            raise ValueError("lease ids must be unique")
+        if self.legacy_submission is not None:
+            submit_actor = "orchestrator/legacy-mcp/submit_analysis"
+            submit_producer = "legacy-mcp/submit_analysis"
+            task_by_id = {
+                task.task_id: task for task in self.legacy_submission.tasks
+            }
+            matching_artifacts = tuple(
+                artifact
+                for artifact in self.artifacts
+                if artifact.target in task_by_id
+                and artifact.actor == submit_actor
+                and artifact.producer == submit_producer
+            )
+            for task in self.legacy_submission.tasks:
+                matches = tuple(
+                    artifact
+                    for artifact in matching_artifacts
+                    if artifact.target == task.task_id
+                )
+                if task.status == "pending" and matches:
+                    raise ValueError("pending legacy task cannot have a submit artifact")
+                if task.status == "complete" and (
+                    len(matches) != 1
+                    or matches[0].content_hash != task.artifact_hash
+                    or matches[0].revision_kind != "document"
+                ):
+                    raise ValueError(
+                        "complete legacy task requires one exact matching submit artifact"
+                    )
+        if self.run_state.startswith("verified_") and not self.revisions.verification:
+            raise ValueError("verified run state requires a verification revision")
+        return self

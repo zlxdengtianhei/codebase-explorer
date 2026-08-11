@@ -1,0 +1,151 @@
+{
+  "document_type": "downstream_task",
+  "contract_version": 2,
+  "task_id": "celery.request-recovery",
+  "consumer": "independent recovery-planning consumer",
+  "positive_budgets": [
+    2048,
+    8192
+  ],
+  "required_facts": {
+    "fact_01": {
+      "claim": "Worker request execution is owned by Request.",
+      "path": "celery/worker/request.py",
+      "span": {
+        "byte_offset": 2011,
+        "byte_length": 14,
+        "line": 67,
+        "column": 0,
+        "text": "class Request:"
+      },
+      "source_text_sha256": "1d4d2afb170036e37fa65dad8d05e4fda4da43c8267b4d6e00b333350f1e3536",
+      "rationale": "Request ownership anchor.",
+      "evidence_id": "ev_celery_01",
+      "expected_relations": [
+        {
+          "relation_id": "rel_celery_01",
+          "kind": "owns",
+          "source": "celery",
+          "target": "celery/worker/request.py",
+          "status": "resolved",
+          "evidence_ids": [
+            "ev_celery_01"
+          ]
+        }
+      ]
+    },
+    "fact_02": {
+      "claim": "Pool execution boundary is execute_using_pool.",
+      "path": "celery/worker/request.py",
+      "span": {
+        "byte_offset": 10007,
+        "byte_length": 59,
+        "line": 341,
+        "column": 0,
+        "text": "    def execute_using_pool(self, pool: BasePool, **kwargs):"
+      },
+      "source_text_sha256": "1859014dc4971eb06c9625f99f63e1d2550fb176785eb414bd000f42ac39d00f",
+      "rationale": "Execution method anchor.",
+      "evidence_id": "ev_celery_02",
+      "expected_relations": [
+        {
+          "relation_id": "rel_celery_02",
+          "kind": "owns",
+          "source": "celery",
+          "target": "celery/worker/request.py",
+          "status": "resolved",
+          "evidence_ids": [
+            "ev_celery_02"
+          ]
+        }
+      ]
+    },
+    "fact_03": {
+      "claim": "Result backend boundary includes BaseBackend.",
+      "path": "celery/backends/base.py",
+      "span": {
+        "byte_offset": 37156,
+        "byte_length": 45,
+        "line": 933,
+        "column": 0,
+        "text": "class BaseBackend(Backend, SyncBackendMixin):"
+      },
+      "source_text_sha256": "5930e7f9990e01ce7784a45ba5650cddb10bad791eaff15c803d3a240b7f14f5",
+      "rationale": "Backend ownership anchor.",
+      "evidence_id": "ev_celery_03",
+      "expected_relations": [
+        {
+          "relation_id": "rel_celery_03",
+          "kind": "owns",
+          "source": "celery",
+          "target": "celery/backends/base.py",
+          "status": "resolved",
+          "evidence_ids": [
+            "ev_celery_03"
+          ]
+        }
+      ]
+    }
+  },
+  "forbidden_facts": [
+    "Treat nested fallback execute_using_pool as the sole owner",
+    "Claim interrupted query completed without cursor reconstruction"
+  ],
+  "pass_rule": "Two positive budget chains reconstruct the facts and a forced interruption resumes without duplicate/omitted evidence.",
+  "fail_rule": "Cursor loss, duplicate evidence, missing source span or forbidden fact.",
+  "cannot_judge_rule": "Exact checkout, forced interruption harness or evaluator unavailable.",
+  "changed_decision": "Consumer can separate worker request execution from result-backend responsibility and resume exploration.",
+  "repository_snapshot": {
+    "repo_id": "celery",
+    "url": "https://github.com/celery/celery.git",
+    "commit": "c35b1d5e3ab04bed018d72e736a862a8bc23ff3f",
+    "tree": "8ed1f1c208ce7e7c3a22d1a2c7366f0abf66e232",
+    "source_roots": {
+      "celery": "2b86a0ba790fe0dfef4c51faa40007d4f6b5818d"
+    }
+  },
+  "expectations": {
+    "relation_status_counts": {
+      "resolved": 3,
+      "ambiguous": 0,
+      "unresolved": 0,
+      "external": 0,
+      "unsupported": 0
+    },
+    "required_evidence_ids": [
+      "ev_celery_01",
+      "ev_celery_02",
+      "ev_celery_03"
+    ],
+    "cursor_chain": [
+      {
+        "budget": 2048,
+        "page": 1,
+        "must_continue": true
+      },
+      {
+        "budget": 8192,
+        "page": 2,
+        "must_continue": false
+      }
+    ],
+    "interruption": {
+      "required": true,
+      "expected_outcome": "resume_same_order_no_duplicate_no_omission"
+    },
+    "universe_partition": {
+      "roots": [
+        "celery"
+      ],
+      "eligible_languages": [
+        "python"
+      ],
+      "expected_states": [
+        "indexed",
+        "parse_error",
+        "excluded"
+      ],
+      "cross_language_edges": "not_applicable"
+    }
+  }
+}

@@ -1,0 +1,124 @@
+{
+  "schema_version": 1,
+  "review_id": "cbe-r001-review-p1a",
+  "oracle_contract_hashes": {
+    "tests/oracles/contract.schema.json": "6a64554d9d1faf41c880dc6533cca150d8de976d7befa94569a72799b2ea1613",
+    "tests/oracles/review_receipt.schema.json": "492cb17437f9fb0078b098be585df5cb14c8036372ab9a310b9398dd7e491fe7",
+    "tests/oracles/contracts/javascript/expected_capabilities.json": "1c16df8e9fb89f93ecd98ca114d317c365292fdd55f737a6707e95fd7aa17044",
+    "tests/oracles/contracts/javascript/expected_ir.json": "3aca664253c480276fd54030e3a2d2d9f2b4773b90b9a366273c141463198c5e",
+    "tests/oracles/contracts/javascript/mutations.json": "708e6d6ffb2bc679247941332bc3098cabc9eab038a6c9265288e17344abac0b",
+    "tests/oracles/contracts/python/expected_capabilities.json": "06742512e41cb7079fbf759bbf55c540dc0e13d6268720697f2d01bec8fac7d5",
+    "tests/oracles/contracts/python/expected_ir.json": "ffebf41cc51009bbbeb9e89545b8402aafa703a763e19732c1a8352fce90c2a4",
+    "tests/oracles/contracts/python/mutations.json": "7e3f41aab7eca16e7e7e57bc1af354a6464076d7bd4d7c9d72cd0991427996b2",
+    "tests/oracles/contracts/typescript/expected_capabilities.json": "228bc91a24f1a54724531662bb16d7f11796af6d22671ed1fbac07a725eb9833",
+    "tests/oracles/contracts/typescript/expected_ir.json": "e0d0c0b53ec0da484f3a4cc165f91c210dc94ec509f87188cec04e4fca1ec6ec",
+    "tests/oracles/contracts/typescript/mutations.json": "89cf2feef6873483e094baf4c16a041c864ff776f099a9f279482691275b3d77",
+    "tests/real/oracles.lock.json": "55a7efd683351484ca712782e5c42fdcbaf7a259eba5800d4d76d1b34f52c2ce",
+    "tests/real/tasks/celery_recovery.json": "c0c9358d5df3fbae6efa15521d85744b68848c88855c69112e6f1a2e8371b643",
+    "tests/real/tasks/express_entry.json": "f99f2c9b1e4026ce6737a1a4f77fb9f72f84d10fd35eca98d378d61ab3ac6945",
+    "tests/real/tasks/fastapi_dependencies.json": "8ee0f459bdba72e267a7871f984bc68bc6f110de431fdeb7df9e7c2bbb26f188",
+    "tests/real/tasks/flask_config_json.json": "45aab13ef99d63c3933a1e28b93383c0727d9a4bf4310178b8b9df0021febab9",
+    "tests/real/tasks/rich_projection.json": "bbc6c16625b55ea0465f7daf4189aec5cbd761d828f34a74e3d7af2a40dad5ab",
+    "tests/real/tasks/scrapy_ownership.json": "4fed683dd82f52d642e41e1bbfe7a427cdcaedcb84eefd4a129573cd35a2eadd",
+    "tests/real/tasks/sentry_polyglot.json": "484c2d11652c7ea6f5cd23e8fd1c442dcc2b7c5c4292982e2f21e957027ccb28",
+    "tests/real/tasks/sqlite_failure_boundary.json": "50982e4b51bfa5da09e7e91763edda49ea6e470b7bf9e4e4d2a3dffd359f0bdd",
+    "tests/real/tasks/typescript_node_starter.json": "4d8ce45a107a16bcbc3b28a00e1222dec0f25fb3ddcbd97c9c1e51962c9319bb"
+  },
+  "oracle_author": "CBE-R001-IMPL-P1A",
+  "reviewer": "CBE-R001-REVIEW-P1A",
+  "reviewer_channel": "Codex independent reviewer session CBE-R001-REVIEW-P1A",
+  "forbidden_reads": [
+    "CBE-R001-IMPL-P1A producer chat transcript",
+    "CBE-R001-IMPL-P1A producer final answer",
+    "producer narrative outside repository files"
+  ],
+  "checks": [
+    {
+      "object": "oracle and review schemas",
+      "review_class": "implementation",
+      "independent_check": "Both metaschemas and all 19 current instances validate, but adversarial replay proves the contract schema accepts duplicate capability universes and fact/repository ids, dangling fact/task paths, inverted spans, and locked repositories with null commit/tree. The review schema also accepts final pass while every check is did_not_work and has no claim_ceiling field.",
+      "verdict": "did_not_work",
+      "evidence_paths": [
+        "tests/oracles/contract.schema.json",
+        "tests/oracles/review_receipt.schema.json",
+        "runs/r001_20260810_product_completion/evidence/P1A_oracle_review.md#schema-adversarial-replay"
+      ]
+    },
+    {
+      "object": "Python TypeScript and JavaScript fixture truth",
+      "review_class": "requirement",
+      "independent_check": "All 36 declared spans and seven-file content hashes recompute, but each language claims three distinct same-name symbols while expected_facts freezes only one; unsupported constructs and dynamic import/export cases are absent. JavaScript also omits the promised resolved implSame call, and the TypeScript fact shape cannot record that its import is type-only.",
+      "verdict": "did_not_work",
+      "evidence_paths": [
+        "tests/oracles/contracts/python/expected_ir.json",
+        "tests/oracles/contracts/typescript/expected_ir.json",
+        "tests/oracles/contracts/javascript/expected_ir.json",
+        "tests/oracles/contracts/python/expected_capabilities.json",
+        "tests/oracles/contracts/typescript/expected_capabilities.json",
+        "tests/oracles/contracts/javascript/expected_capabilities.json",
+        "runs/r001_20260810_product_completion/design/CHANGE_AND_VALIDATION_PLAN.md#41-deterministic-fixtures"
+      ]
+    },
+    {
+      "object": "mutation controls",
+      "review_class": "evidence",
+      "independent_check": "Existing remove/unaffected references and old_text locations resolve, but every replace mutation names a created fact that has no frozen fact definition, span, target or status. Each corrupt_span control has byte-identical old_text/new_text and no delta field, so P3/P4 cannot independently reconstruct the required one-line corruption.",
+      "verdict": "did_not_work",
+      "evidence_paths": [
+        "tests/oracles/contracts/python/mutations.json",
+        "tests/oracles/contracts/typescript/mutations.json",
+        "tests/oracles/contracts/javascript/mutations.json",
+        "runs/r001_20260810_product_completion/design/CHANGE_AND_VALIDATION_PLAN.md#6-negative-controls-that-must-change-verdict-state"
+      ]
+    },
+    {
+      "object": "real repository lock and primary Git facts",
+      "review_class": "evidence",
+      "independent_check": "Fresh temporary bare fetches independently reproduced all eight locked commits and trees, nine bounded source roots, and all 19 task span texts and hashes. No producer temporary state was reused.",
+      "verdict": "worked",
+      "evidence_paths": [
+        "tests/real/oracles.lock.json",
+        "tests/real/tasks/",
+        "runs/r001_20260810_product_completion/evidence/P1A_oracle_review.md#primary-git-replay"
+      ]
+    },
+    {
+      "object": "downstream task oracle consumability",
+      "review_class": "cross-domain",
+      "independent_check": "Task files freeze valid source anchors but not the authority's expected typed paths, known/ambiguous counts, evidence-id equality, unsupported-call inventory, universe partition, cursor chain or interruption outcome. Those expectations survive only as prose pass rules, so a P11 evaluator would have to invent its own truth.",
+      "verdict": "did_not_work",
+      "evidence_paths": [
+        "tests/real/tasks/",
+        "tests/oracles/contract.schema.json#/$defs/downstream_task",
+        "runs/r001_20260810_product_completion/design/CHANGE_AND_VALIDATION_PLAN.md#42-existing-python-real-repositories",
+        "runs/r001_20260810_product_completion/design/DESIGN_INTEGRATION.md#74-real-repo-and-downstream-gate"
+      ]
+    },
+    {
+      "object": "required TypeScript real-repository role",
+      "review_class": "closure",
+      "independent_check": "A fresh git ls-remote against the named primary URL still exits 128 with Repository not found; there is no authorized SHA, tree, source root or span fact.",
+      "verdict": "cannot_judge",
+      "evidence_paths": [
+        "tests/real/oracles.lock.json#/repositories/5",
+        "tests/real/tasks/typescript_node_starter.json",
+        "runs/r001_20260810_product_completion/design/CHANGE_AND_VALIDATION_PLAN.md#43-new-language-repository-candidates"
+      ]
+    },
+    {
+      "object": "P1A fixture-contract dispatch decision",
+      "review_class": "closure",
+      "independent_check": "HIGH schema, truth-coverage, mutation and downstream-consumability defects make the current expected oracle contract unsafe as immutable adapter truth. Positive hash/span/Git checks do not offset missing or unexpressible truth.",
+      "verdict": "did_not_work",
+      "evidence_paths": [
+        "runs/r001_20260810_product_completion/evidence/P1A_oracle_review.md",
+        "runs/r001_20260810_product_completion/design/DESIGN_INTEGRATION.md#6-phase-packet-and-non-overlapping-file-ownership",
+        "runs/r001_20260810_product_completion/design/CHANGE_AND_VALIDATION_PLAN.md#packet-p1a-pre-implementation-oracle-contracts"
+      ]
+    }
+  ],
+  "verdict": "fail",
+  "counterexample_or_residual": "Claim ceiling: negative independent contract review only. P3/P4 adapter dispatch is blocked. Exact counterexamples include schema-accepted duplicate capability/fact/repository ids, inverted spans, dangling paths and locked-null revisions; a schema-valid pass receipt whose five checks all say did_not_work; missing same-name/dynamic/unsupported fixture truth; undefined mutation-created facts; and downstream tasks whose required expected relations, counts, ids and cursor outcomes are prose rather than frozen values. The required TypeScript real-repository role separately remains cannot_judge and blocks core promotion.",
+  "reviewed_at": "2026-08-10T17:27:29Z",
+  "named_consumer": "P3/P4 adapter dispatch gate"
+}

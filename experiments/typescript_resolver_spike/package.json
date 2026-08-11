@@ -1,0 +1,12 @@
+{
+  "name": "cbe-typescript-resolver-spike",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "@sourcegraph/scip-typescript": "0.4.0",
+    "typescript": "5.9.3"
+  }
+}
+

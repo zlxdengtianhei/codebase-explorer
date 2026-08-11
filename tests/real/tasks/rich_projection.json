@@ -1,0 +1,151 @@
+{
+  "document_type": "downstream_task",
+  "contract_version": 2,
+  "task_id": "rich.projection",
+  "consumer": "independent documentation consumer",
+  "positive_budgets": [
+    2048,
+    8192
+  ],
+  "required_facts": {
+    "fact_01": {
+      "claim": "Console is the rendering surface owner.",
+      "path": "rich/console.py",
+      "span": {
+        "byte_offset": 17859,
+        "byte_length": 14,
+        "line": 587,
+        "column": 0,
+        "text": "class Console:"
+      },
+      "source_text_sha256": "c40a5591225e74e6b5e646ac6002328e94bddecf7e27c92b7379cd9b7de63567",
+      "rationale": "Console class anchor.",
+      "evidence_id": "ev_rich_01",
+      "expected_relations": [
+        {
+          "relation_id": "rel_rich_01",
+          "kind": "owns",
+          "source": "rich",
+          "target": "rich/console.py",
+          "status": "resolved",
+          "evidence_ids": [
+            "ev_rich_01"
+          ]
+        }
+      ]
+    },
+    "fact_02": {
+      "claim": "Console.render is a rendering entry point.",
+      "path": "rich/console.py",
+      "span": {
+        "byte_offset": 44724,
+        "byte_length": 15,
+        "line": 1300,
+        "column": 0,
+        "text": "    def render("
+      },
+      "source_text_sha256": "42e6d7443363e5445779d3fb81577b89330d2f804080b19becbeca0b50694235",
+      "rationale": "Render method anchor.",
+      "evidence_id": "ev_rich_02",
+      "expected_relations": [
+        {
+          "relation_id": "rel_rich_02",
+          "kind": "owns",
+          "source": "rich",
+          "target": "rich/console.py",
+          "status": "resolved",
+          "evidence_ids": [
+            "ev_rich_02"
+          ]
+        }
+      ]
+    },
+    "fact_03": {
+      "claim": "Console.print is an output entry point.",
+      "path": "rich/console.py",
+      "span": {
+        "byte_offset": 58222,
+        "byte_length": 14,
+        "line": 1648,
+        "column": 0,
+        "text": "    def print("
+      },
+      "source_text_sha256": "063d4a6981160e94b363373471a19451a628655746564ffbc150c3cc2df1cb8d",
+      "rationale": "Print method anchor.",
+      "evidence_id": "ev_rich_03",
+      "expected_relations": [
+        {
+          "relation_id": "rel_rich_03",
+          "kind": "owns",
+          "source": "rich",
+          "target": "rich/console.py",
+          "status": "resolved",
+          "evidence_ids": [
+            "ev_rich_03"
+          ]
+        }
+      ]
+    }
+  },
+  "forbidden_facts": [
+    "Document evidence ids differ from IR ids",
+    "Mermaid node ids are prose-only aliases"
+  ],
+  "pass_rule": "Recursive open finds all spans and IR/document/Mermaid evidence ids are identical.",
+  "fail_rule": "Any id mismatch, missing span or silent budget truncation.",
+  "cannot_judge_rule": "Exact source, projection artifact or evaluator unavailable.",
+  "changed_decision": "Consumer can navigate rendering entry points and trust cross-projection identity.",
+  "repository_snapshot": {
+    "repo_id": "rich",
+    "url": "https://github.com/Textualize/rich.git",
+    "commit": "fc41075a3206d2a5fd846c6f41c4d2becab814fa",
+    "tree": "2036dc54c2d80a424598fd0add49d576843ee2ef",
+    "source_roots": {
+      "rich": "4872448f650b95803d131a60d84acff9acdf9f02"
+    }
+  },
+  "expectations": {
+    "relation_status_counts": {
+      "resolved": 3,
+      "ambiguous": 0,
+      "unresolved": 0,
+      "external": 0,
+      "unsupported": 0
+    },
+    "required_evidence_ids": [
+      "ev_rich_01",
+      "ev_rich_02",
+      "ev_rich_03"
+    ],
+    "cursor_chain": [
+      {
+        "budget": 2048,
+        "page": 1,
+        "must_continue": true
+      },
+      {
+        "budget": 8192,
+        "page": 2,
+        "must_continue": false
+      }
+    ],
+    "interruption": {
+      "required": false,
+      "expected_outcome": "not_applicable"
+    },
+    "universe_partition": {
+      "roots": [
+        "rich"
+      ],
+      "eligible_languages": [
+        "python"
+      ],
+      "expected_states": [
+        "indexed",
+        "parse_error",
+        "excluded"
+      ],
+      "cross_language_edges": "not_applicable"
+    }
+  }
+}

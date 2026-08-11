@@ -1,0 +1,118 @@
+{
+  "document_type": "downstream_task",
+  "contract_version": 2,
+  "task_id": "sqlite.unsupported-boundary",
+  "consumer": "independent failure-boundary consumer",
+  "positive_budgets": [
+    4096
+  ],
+  "required_facts": {
+    "fact_01": {
+      "claim": "sqlite3_initialize source unit remains discoverable even though C is unsupported.",
+      "path": "src/main.c",
+      "span": {
+        "byte_offset": 12151,
+        "byte_length": 40,
+        "line": 360,
+        "column": 0,
+        "text": "SQLITE_API int sqlite3_initialize(void){"
+      },
+      "source_text_sha256": "f72497be716d9237b2cdd9d7c1ab9faa741d04f18ade479d11913fb5ad0b3896",
+      "rationale": "Unsupported source must stay in the universe.",
+      "evidence_id": "ev_sqlite_01",
+      "expected_relations": [
+        {
+          "relation_id": "rel_sqlite_01",
+          "kind": "owns",
+          "source": "sqlite",
+          "target": "src/main.c",
+          "status": "resolved",
+          "evidence_ids": [
+            "ev_sqlite_01"
+          ]
+        }
+      ]
+    },
+    "fact_02": {
+      "claim": "sqlite3 struct source unit remains discoverable under src.",
+      "path": "src/sqliteInt.h",
+      "span": {
+        "byte_offset": 59117,
+        "byte_length": 16,
+        "line": 1686,
+        "column": 0,
+        "text": "struct sqlite3 {"
+      },
+      "source_text_sha256": "faf521cf3362fed3fc6a499821e52cab3a7f32971a51a52188fdca372c6e9bb3",
+      "rationale": "Second unsupported C anchor prevents empty-success behavior.",
+      "evidence_id": "ev_sqlite_02",
+      "expected_relations": [
+        {
+          "relation_id": "rel_sqlite_02",
+          "kind": "owns",
+          "source": "sqlite",
+          "target": "src/sqliteInt.h",
+          "status": "resolved",
+          "evidence_ids": [
+            "ev_sqlite_02"
+          ]
+        }
+      ]
+    }
+  },
+  "forbidden_facts": [
+    "Return an empty successful snapshot",
+    "Mark C files indexed by a Python/TS/JS adapter",
+    "Omit unsupported files from the denominator"
+  ],
+  "pass_rule": "All eligible src files are counted as unsupported/actionable; required anchors remain in the universe; no empty success.",
+  "fail_rule": "Any eligible file vanishes, becomes indexed by an unrelated adapter, or empty success is returned.",
+  "cannot_judge_rule": "Exact checkout or independent filesystem enumeration unavailable.",
+  "changed_decision": "Consumer can see that the repository is unsupported and which source units require a C adapter.",
+  "repository_snapshot": {
+    "repo_id": "sqlite",
+    "url": "https://github.com/sqlite/sqlite.git",
+    "commit": "24ad808809ae04bb7db7a5060e3518e1875807a9",
+    "tree": "27a7d3d871c97a46513aa8dc94ad290a15361e70",
+    "source_roots": {
+      "src": "71cdd3944b98ce0e4dfbddd51020199d7cd9a2ce"
+    }
+  },
+  "expectations": {
+    "relation_status_counts": {
+      "resolved": 2,
+      "ambiguous": 0,
+      "unresolved": 0,
+      "external": 0,
+      "unsupported": 0
+    },
+    "required_evidence_ids": [
+      "ev_sqlite_01",
+      "ev_sqlite_02"
+    ],
+    "cursor_chain": [
+      {
+        "budget": 4096,
+        "page": 1,
+        "must_continue": false
+      }
+    ],
+    "interruption": {
+      "required": false,
+      "expected_outcome": "not_applicable"
+    },
+    "universe_partition": {
+      "roots": [
+        "src"
+      ],
+      "eligible_languages": [
+        "c"
+      ],
+      "expected_states": [
+        "unsupported",
+        "excluded"
+      ],
+      "cross_language_edges": "not_applicable"
+    }
+  }
+}

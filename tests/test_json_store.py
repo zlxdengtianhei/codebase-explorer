@@ -293,8 +293,8 @@ class TestResumeFromState:
         result = resume_from_state(root)
         assert "t1" in result
 
-    def test_in_progress_with_complete_files_marked_complete(self, tmp_path: Path):
-        """In-progress task with all output files actually complete => complete."""
+    def test_in_progress_with_complete_marker_is_reset_not_inferred(self, tmp_path: Path):
+        """Legacy marker bytes cannot assign canonical completion truth."""
         # Create the output file with marker
         out_file = tmp_path / "docs" / "core.md"
         out_file.parent.mkdir(parents=True, exist_ok=True)
@@ -311,12 +311,13 @@ class TestResumeFromState:
         root = self._setup_project(tmp_path, state)
         result = resume_from_state(root)
 
-        # Task should be marked complete, not returned as pending
-        assert "t1" not in result
+        assert "t1" in result
 
         # Verify state file was updated
         updated = read_state(root / ".codebase-analysis" / "state.json")
-        assert updated["tasks"]["t1"]["status"] == "complete"
+        assert updated["tasks"]["t1"]["status"] == "pending"
+        assert updated["tasks"]["t1"]["output_files"][0]["status"] == "pending"
+        assert updated["metadata"]["state_authority"] == "legacy_v2_non_authoritative"
 
     def test_in_progress_with_incomplete_files_reset_to_pending(self, tmp_path: Path):
         """In-progress task with incomplete output files => reset to pending."""
@@ -379,7 +380,7 @@ class TestResumeFromState:
         assert "t1" in result
 
     def test_crash_recovery_multiple_in_progress(self, tmp_path: Path):
-        """Multiple in-progress tasks: one with complete files, one without."""
+        """All interrupted tasks reset; marker presence has no authority."""
         # Complete file for t1
         out1 = tmp_path / "docs" / "a.md"
         out1.parent.mkdir(parents=True, exist_ok=True)
@@ -402,8 +403,8 @@ class TestResumeFromState:
         result = resume_from_state(root)
 
         updated = read_state(root / ".codebase-analysis" / "state.json")
-        assert updated["tasks"]["t1"]["status"] == "complete"
+        assert updated["tasks"]["t1"]["status"] == "pending"
         assert updated["tasks"]["t2"]["status"] == "pending"
+        assert "t1" in result
         assert "t2" in result
         assert "t3" in result
-        assert "t1" not in result

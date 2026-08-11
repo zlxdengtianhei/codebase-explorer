@@ -1,0 +1,51 @@
+{
+  "oracle": "/Users/lexuanzhang/context-infra/adhoc_jobs/codebase_explorer_20260321/impl/codebase-explorer/tests/oracles/contracts/typescript/expected_ir.json",
+  "root": "/Users/lexuanzhang/context-infra/adhoc_jobs/codebase_explorer_20260321/impl/codebase-explorer/experiments/typescript_resolver_spike/.work/fixture",
+  "files": [
+    {
+      "path": "src/base.ts",
+      "sha256": "250b9390512d526530f71150a573f444fe4999fb4e2a3ff8d065015b6116d61f",
+      "matched": true
+    },
+    {
+      "path": "src/impl.ts",
+      "sha256": "c4e092de14992a6ea7ba35059aaf8cd46eb2c1ceb91feb1e443888244a8ec078",
+      "matched": true
+    },
+    {
+      "path": "src/index.ts",
+      "sha256": "9e71e677a0713d806531a0b6721e5ce9f26c6b52a754e908220d2dbd3d78e029",
+      "matched": true
+    },
+    {
+      "path": "src/broken.ts",
+      "sha256": "d0545e9bd2810c73dd1e54a1c9e2106a6f7e2e1c6be45b7683b7c540ebab0141",
+      "matched": true
+    },
+    {
+      "path": "vendor/ignored.ts",
+      "sha256": "58896a315cbc0003548f36bebbbd94e98fc961a37b51513d8d6f38bf921d4fb1",
+      "matched": true
+    },
+    {
+      "path": "generated/output.ts",
+      "sha256": "4ec4625d1881be8b06c7119a4c0a51450162715f8adfcd5be005e318a771e299",
+      "matched": true
+    },
+    {
+      "path": "src/\u96ea.ts",
+      "sha256": "31a4a93078be1987c3517ebbaec34ebd6bb554de909cacba1455535b2bb40c02",
+      "matched": true
+    },
+    {
+      "path": "src/dynamic.ts",
+      "sha256": "4473bafc4e34a81b1e795ed1b3f7ee2e5d0b3235805e3dbaa4ff82a01cb49b5e",
+      "matched": true
+    },
+    {
+      "path": "src/ambient.d.ts",
+      "sha256": "8b66f5e35c4da54e3af4d626000782702739288645355d778bc1ef29503414d7",
+      "matched": true
+    }
+  ]
+}

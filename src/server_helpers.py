@@ -67,6 +67,27 @@ def find_latest_project_dir() -> Path | None:
     return max(candidates, key=lambda p: p.stat().st_mtime)
 
 
+def resolve_project_dir(output_dir: str | None = None) -> Path:
+    """Resolve the current artifact generation selected by the analysis root."""
+    if output_dir:
+        p = Path(output_dir).resolve()
+        if p.exists():
+            if (p / "active-run.json").exists():
+                from src.state.run_lifecycle import resolve_active_run
+
+                return resolve_active_run(p).generation_path
+            return p
+    proj = find_latest_project_dir()
+    if not proj:
+        from mcp.server.fastmcp.exceptions import ToolError
+        raise ToolError("No project found. Run analyze_codebase first.")
+    if (proj / "active-run.json").exists():
+        from src.state.run_lifecycle import resolve_active_run
+
+        return resolve_active_run(proj).generation_path
+    return proj
+
+
 def resolve_output_dir(path: str, output_dir: str | None) -> Path:
     """Resolve output directory for analysis results."""
     if output_dir:
@@ -75,16 +96,14 @@ def resolve_output_dir(path: str, output_dir: str | None) -> Path:
 
 
 def validate_json_files_exist(output_dir: Path) -> bool:
-    """Check if all required JSON files exist."""
-    required = [
-        "01_structure.json",
-        "02_dag.json",
-        "03_feature_cones.json",
-        "04_file_tokens.json",
-        "05_task_manifest.json",
-        "06_function_deps.json",
-    ]
-    return all((output_dir / f).exists() for f in required)
+    """Return true only for a receipt-selected, integrity-valid generation."""
+    from src.state.run_lifecycle import LifecycleError, resolve_active_run
+
+    try:
+        resolve_active_run(output_dir)
+    except LifecycleError:
+        return False
+    return True
 
 
 # ---------------------------------------------------------------------------
@@ -304,6 +323,7 @@ def build_file_to_cone_map(cones: dict) -> dict[str, str]:
 def compute_inter_module_deps_from_dag(
     cones: dict,
     dag_edges: list[dict],
+    infrastructure_files: Sequence[str] | None = None,
 ) -> dict[str, set[str]]:
     """Compute inter-module dependency sets from DAG edges.
 
@@ -314,7 +334,13 @@ def compute_inter_module_deps_from_dag(
         Dict mapping cone_id → set of cone_ids it depends on.
     """
     file_to_cone = build_file_to_cone_map(cones)
-    deps: dict[str, set[str]] = {cid: set() for cid in cones}
+    for f in (infrastructure_files or []):
+        if f not in file_to_cone:
+            file_to_cone[f] = "infrastructure"
+    all_ids = set(cones.keys())
+    if infrastructure_files:
+        all_ids.add("infrastructure")
+    deps: dict[str, set[str]] = {cid: set() for cid in all_ids}
 
     for edge in dag_edges:
         src_cone = file_to_cone.get(edge["source"])
@@ -381,12 +407,12 @@ def write_analysis_outputs(
     file_details: list[dict],
     task_manifest: dict,
 ) -> dict:
-    """Write the 5 JSON files + state.json to the output directory.
+    """Write one generation's 01-06 artifacts and build its V2 projection.
 
-    Returns the state dict that was written.
+    The returned initialization projection is written create-once only after a
+    canonical V3 run has been opened and validated.  This helper never mutates
+    root V2 state.
     """
-    from src.state.json_store import atomic_write_state
-
     ts = now_iso()
 
     # 01_structure.json
@@ -520,7 +546,8 @@ def write_analysis_outputs(
         json.dumps(function_deps_data, indent=2, ensure_ascii=False), encoding="utf-8"
     )
 
-    # state.json
+    # Immutable V2 initialization projection (the lifecycle owner writes it
+    # create-once after the generation and V3 snapshot are complete).
     state = {
         "project_id": project_id,
         "path": str(resolved_path),
@@ -544,6 +571,4 @@ def write_analysis_outputs(
             "source_file_coverage_percent": 0.0,
         },
     }
-    atomic_write_state(output_path / "state.json", state)
-
     return state

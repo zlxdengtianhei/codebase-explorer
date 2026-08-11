@@ -1,0 +1,859 @@
+{
+  "document_type": "mutations",
+  "contract_version": 2,
+  "language": "python",
+  "anti_cheat_rule": "The product under test must not write or regenerate expected values.",
+  "mutations": {
+    "py.replace_call": {
+      "path": "pkg/api.py",
+      "operation": "replace_exact_text",
+      "old_text": "    return impl_same()",
+      "new_text": "    return same()",
+      "expected_verdict": "stale",
+      "rationale": "Old edge must disappear and new local edge appear. Every preserved fact is frozen at its full post-mutation coordinate; later facts include the exact cumulative byte shift.",
+      "span_delta": {
+        "line_delta": 0,
+        "byte_delta": -5
+      },
+      "removed_facts": {
+        "py.call.impl_same": {
+          "kind": "call",
+          "path": "pkg/api.py",
+          "subject": "pkg.api.entry",
+          "target": "pkg.impl.same",
+          "resolution_status": "resolved",
+          "resolution_method": "exact",
+          "candidates": [
+            "pkg.impl.same"
+          ],
+          "rationale": "Aliased function import resolves exactly despite same-name peers.",
+          "span": {
+            "byte_offset": 239,
+            "byte_length": 22,
+            "line": 11,
+            "column": 0,
+            "text": "    return impl_same()"
+          },
+          "attributes": {
+            "import_kind": "none",
+            "export_kind": "none",
+            "dynamic": false,
+            "wildcard": false
+          }
+        }
+      },
+      "created_facts": {
+        "py.call.local_same": {
+          "kind": "call",
+          "path": "pkg/api.py",
+          "span": {
+            "byte_offset": 239,
+            "byte_length": 17,
+            "line": 11,
+            "column": 0,
+            "text": "    return same()"
+          },
+          "subject": "pkg.api.entry",
+          "target": "pkg.api.same",
+          "resolution_status": "resolved",
+          "resolution_method": "exact",
+          "candidates": [
+            "pkg.api.same"
+          ],
+          "attributes": {
+            "import_kind": "none",
+            "export_kind": "none",
+            "dynamic": false,
+            "wildcard": false
+          },
+          "rationale": "Mutation-created call edge with independently recomputed span."
+        }
+      },
+      "unchanged_facts": {
+        "py.import.alias": {
+          "kind": "import",
+          "path": "pkg/api.py",
+          "subject": "pkg.api.Alias",
+          "target": "pkg.impl.Worker",
+          "resolution_status": "resolved",
+          "resolution_method": "exact",
+          "candidates": [
+            "pkg.impl.Worker"
+          ],
+          "rationale": "Alias preserves target identity.",
+          "span": {
+            "byte_offset": 23,
+            "byte_length": 33,
+            "line": 2,
+            "column": 0,
+            "text": "from .impl import Worker as Alias"
+          },
+          "attributes": {
+            "import_kind": "alias",
+            "export_kind": "none",
+            "dynamic": false,
+            "wildcard": false
+          }
+        },
+        "py.export.alias": {
+          "kind": "export",
+          "path": "pkg/api.py",
+          "subject": "pkg.api",
+          "target": "pkg.impl.Worker",
+          "resolution_status": "resolved",
+          "resolution_method": "exact",
+          "candidates": [
+            "pkg.impl.Worker"
+          ],
+          "rationale": "Explicit __all__ exports alias.",
+          "span": {
+            "byte_offset": 93,
+            "byte_length": 28,
+            "line": 4,
+            "column": 0,
+            "text": "__all__ = [\"Alias\", \"entry\"]"
+          },
+          "attributes": {
+            "import_kind": "none",
+            "export_kind": "named",
+            "dynamic": false,
+            "wildcard": false
+          }
+        },
+        "py.symbol.same.api": {
+          "kind": "symbol",
+          "path": "pkg/api.py",
+          "subject": "pkg.api.same",
+          "target": null,
+          "resolution_status": "resolved",
+          "resolution_method": "exact",
+          "candidates": [
+            "pkg.api.same"
+          ],
+          "rationale": "Same local name has a scope-qualified identity distinct from base and impl.",
+          "span": {
+            "byte_offset": 122,
+            "byte_length": 18,
+            "line": 5,
+            "column": 0,
+            "text": "def same() -> str:"
+          },
+          "attributes": {
+            "import_kind": "none",
+            "export_kind": "none",
+            "dynamic": false,
+            "wildcard": false
+          }
+        },
+        "py.call.worker.run": {
+          "kind": "call",
+          "path": "pkg/api.py",
+          "subject": "pkg.api.entry",
+          "target": "pkg.base.Base.run",
+          "resolution_status": "resolved",
+          "resolution_method": "dataflow",
+          "candidates": [
+            "pkg.base.Base.run",
+            "pkg.impl.Worker.run"
+          ],
+          "rationale": "Parameter annotation gives a bounded target; implementation remains a candidate.",
+          "span": {
+            "byte_offset": 190,
+            "byte_length": 16,
+            "line": 8,
+            "column": 0,
+            "text": "    worker.run()"
+          },
+          "attributes": {
+            "import_kind": "none",
+            "export_kind": "none",
+            "dynamic": false,
+            "wildcard": false
+          }
+        },
+        "py.call.missing": {
+          "kind": "call",
+          "path": "pkg/api.py",
+          "subject": "pkg.api.entry",
+          "target": null,
+          "resolution_status": "unresolved",
+          "resolution_method": "search_fallback",
+          "candidates": [],
+          "rationale": "No definition or import exists.",
+          "span": {
+            "byte_offset": 207,
+            "byte_length": 13,
+            "line": 9,
+            "column": 0,
+            "text": "    missing()"
+          },
+          "attributes": {
+            "import_kind": "none",
+            "export_kind": "none",
+            "dynamic": false,
+            "wildcard": false
+          }
+        },
+        "py.call.print": {
+          "kind": "call",
+          "path": "pkg/api.py",
+          "subject": "pkg.api.entry",
+          "target": "builtins.print",
+          "resolution_status": "external",
+          "resolution_method": "exact",
+          "candidates": [
+            "builtins.print"
+          ],
+          "rationale": "Built-in call is external, not a repository symbol.",
+          "span": {
+            "byte_offset": 221,
+            "byte_length": 17,
+            "line": 10,
+            "column": 0,
+            "text": "    print(worker)"
+          },
+          "attributes": {
+            "import_kind": "none",
+            "export_kind": "none",
+            "dynamic": false,
+            "wildcard": false
+          }
+        },
+        "py.call.dynamic": {
+          "kind": "call",
+          "path": "pkg/api.py",
+          "subject": "pkg.api.dynamic",
+          "target": null,
+          "resolution_status": "ambiguous",
+          "resolution_method": "heuristic",
+          "candidates": [
+            "pkg.base.Base.run",
+            "pkg.impl.Worker.run"
+          ],
+          "rationale": "Untyped receiver cannot be promoted to resolved.",
+          "span": {
+            "byte_offset": 275,
+            "byte_length": 20,
+            "line": 13,
+            "column": 0,
+            "text": "    return obj.run()"
+          },
+          "attributes": {
+            "import_kind": "none",
+            "export_kind": "none",
+            "dynamic": false,
+            "wildcard": false
+          }
+        },
+        "py.import.impl_same": {
+          "kind": "import",
+          "path": "pkg/api.py",
+          "span": {
+            "byte_offset": 57,
+            "byte_length": 35,
+            "line": 3,
+            "column": 0,
+            "text": "from .impl import same as impl_same"
+          },
+          "subject": "pkg.api.impl_same",
+          "target": "pkg.impl.same",
+          "resolution_status": "resolved",
+          "resolution_method": "exact",
+          "candidates": [
+            "pkg.impl.same"
+          ],
+          "attributes": {
+            "import_kind": "alias",
+            "export_kind": "none",
+            "dynamic": false,
+            "wildcard": false
+          },
+          "rationale": "Frozen independent oracle fact."
+        },
+        "py.export.entry": {
+          "kind": "export",
+          "path": "pkg/api.py",
+          "span": {
+            "byte_offset": 93,
+            "byte_length": 28,
+            "line": 4,
+            "column": 0,
+            "text": "__all__ = [\"Alias\", \"entry\"]"
+          },
+          "subject": "pkg.api",
+          "target": "pkg.api.entry",
+          "resolution_status": "resolved",
+          "resolution_method": "exact",
+          "candidates": [
+            "pkg.api.entry"
+          ],
+          "attributes": {
+            "import_kind": "none",
+            "export_kind": "named",
+            "dynamic": false,
+            "wildcard": false
+          },
+          "rationale": "Frozen independent oracle fact."
+        }
+      }
+    },
+    "py.corrupt_span": {
+      "path": "pkg/api.py",
+      "operation": "corrupt_span",
+      "old_text": "    missing()",
+      "new_text": "    missing()",
+      "expected_verdict": "fail",
+      "rationale": "Source witness is byte-identical (actual source byte/line delta 0). This operation removes exactly one valid oracle fact and creates one uniquely keyed corrupted fact whose oracle byte_offset and line are each +1; verifier must reject its evidence-to-source mapping.",
+      "span_delta": {
+        "line_delta": 1,
+        "byte_delta": 1
+      },
+      "removed_facts": {
+        "py.call.missing": {
+          "kind": "call",
+          "path": "pkg/api.py",
+          "subject": "pkg.api.entry",
+          "target": null,
+          "resolution_status": "unresolved",
+          "resolution_method": "search_fallback",
+          "candidates": [],
+          "rationale": "No definition or import exists.",
+          "span": {
+            "byte_offset": 207,
+            "byte_length": 13,
+            "line": 9,
+            "column": 0,
+            "text": "    missing()"
+          },
+          "attributes": {
+            "import_kind": "none",
+            "export_kind": "none",
+            "dynamic": false,
+            "wildcard": false
+          }
+        }
+      },
+      "created_facts": {
+        "py.call.missing.corrupted": {
+          "kind": "call",
+          "path": "pkg/api.py",
+          "subject": "pkg.api.entry",
+          "target": null,
+          "resolution_status": "unresolved",
+          "resolution_method": "search_fallback",
+          "candidates": [],
+          "rationale": "Intentional oracle-fact corruption: source bytes are unchanged; byte_offset and line are each exactly one greater than the removed valid fact, so evidence-to-source replay must fail.",
+          "span": {
+            "byte_offset": 208,
+            "byte_length": 13,
+            "line": 10,
+            "column": 0,
+            "text": "    missing()"
+          },
+          "attributes": {
+            "import_kind": "none",
+            "export_kind": "none",
+            "dynamic": false,
+            "wildcard": false
+          }
+        }
+      },
+      "unchanged_facts": {
+        "py.import.alias": {
+          "kind": "import",
+          "path": "pkg/api.py",
+          "subject": "pkg.api.Alias",
+          "target": "pkg.impl.Worker",
+          "resolution_status": "resolved",
+          "resolution_method": "exact",
+          "candidates": [
+            "pkg.impl.Worker"
+          ],
+          "rationale": "Alias preserves target identity.",
+          "span": {
+            "byte_offset": 23,
+            "byte_length": 33,
+            "line": 2,
+            "column": 0,
+            "text": "from .impl import Worker as Alias"
+          },
+          "attributes": {
+            "import_kind": "alias",
+            "export_kind": "none",
+            "dynamic": false,
+            "wildcard": false
+          }
+        },
+        "py.export.alias": {
+          "kind": "export",
+          "path": "pkg/api.py",
+          "subject": "pkg.api",
+          "target": "pkg.impl.Worker",
+          "resolution_status": "resolved",
+          "resolution_method": "exact",
+          "candidates": [
+            "pkg.impl.Worker"
+          ],
+          "rationale": "Explicit __all__ exports alias.",
+          "span": {
+            "byte_offset": 93,
+            "byte_length": 28,
+            "line": 4,
+            "column": 0,
+            "text": "__all__ = [\"Alias\", \"entry\"]"
+          },
+          "attributes": {
+            "import_kind": "none",
+            "export_kind": "named",
+            "dynamic": false,
+            "wildcard": false
+          }
+        },
+        "py.symbol.same.api": {
+          "kind": "symbol",
+          "path": "pkg/api.py",
+          "subject": "pkg.api.same",
+          "target": null,
+          "resolution_status": "resolved",
+          "resolution_method": "exact",
+          "candidates": [
+            "pkg.api.same"
+          ],
+          "rationale": "Same local name has a scope-qualified identity distinct from base and impl.",
+          "span": {
+            "byte_offset": 122,
+            "byte_length": 18,
+            "line": 5,
+            "column": 0,
+            "text": "def same() -> str:"
+          },
+          "attributes": {
+            "import_kind": "none",
+            "export_kind": "none",
+            "dynamic": false,
+            "wildcard": false
+          }
+        },
+        "py.call.worker.run": {
+          "kind": "call",
+          "path": "pkg/api.py",
+          "subject": "pkg.api.entry",
+          "target": "pkg.base.Base.run",
+          "resolution_status": "resolved",
+          "resolution_method": "dataflow",
+          "candidates": [
+            "pkg.base.Base.run",
+            "pkg.impl.Worker.run"
+          ],
+          "rationale": "Parameter annotation gives a bounded target; implementation remains a candidate.",
+          "span": {
+            "byte_offset": 190,
+            "byte_length": 16,
+            "line": 8,
+            "column": 0,
+            "text": "    worker.run()"
+          },
+          "attributes": {
+            "import_kind": "none",
+            "export_kind": "none",
+            "dynamic": false,
+            "wildcard": false
+          }
+        },
+        "py.call.print": {
+          "kind": "call",
+          "path": "pkg/api.py",
+          "subject": "pkg.api.entry",
+          "target": "builtins.print",
+          "resolution_status": "external",
+          "resolution_method": "exact",
+          "candidates": [
+            "builtins.print"
+          ],
+          "rationale": "Built-in call is external, not a repository symbol.",
+          "span": {
+            "byte_offset": 221,
+            "byte_length": 17,
+            "line": 10,
+            "column": 0,
+            "text": "    print(worker)"
+          },
+          "attributes": {
+            "import_kind": "none",
+            "export_kind": "none",
+            "dynamic": false,
+            "wildcard": false
+          }
+        },
+        "py.call.impl_same": {
+          "kind": "call",
+          "path": "pkg/api.py",
+          "subject": "pkg.api.entry",
+          "target": "pkg.impl.same",
+          "resolution_status": "resolved",
+          "resolution_method": "exact",
+          "candidates": [
+            "pkg.impl.same"
+          ],
+          "rationale": "Aliased function import resolves exactly despite same-name peers.",
+          "span": {
+            "byte_offset": 239,
+            "byte_length": 22,
+            "line": 11,
+            "column": 0,
+            "text": "    return impl_same()"
+          },
+          "attributes": {
+            "import_kind": "none",
+            "export_kind": "none",
+            "dynamic": false,
+            "wildcard": false
+          }
+        },
+        "py.call.dynamic": {
+          "kind": "call",
+          "path": "pkg/api.py",
+          "subject": "pkg.api.dynamic",
+          "target": null,
+          "resolution_status": "ambiguous",
+          "resolution_method": "heuristic",
+          "candidates": [
+            "pkg.base.Base.run",
+            "pkg.impl.Worker.run"
+          ],
+          "rationale": "Untyped receiver cannot be promoted to resolved.",
+          "span": {
+            "byte_offset": 280,
+            "byte_length": 20,
+            "line": 13,
+            "column": 0,
+            "text": "    return obj.run()"
+          },
+          "attributes": {
+            "import_kind": "none",
+            "export_kind": "none",
+            "dynamic": false,
+            "wildcard": false
+          }
+        },
+        "py.import.impl_same": {
+          "kind": "import",
+          "path": "pkg/api.py",
+          "span": {
+            "byte_offset": 57,
+            "byte_length": 35,
+            "line": 3,
+            "column": 0,
+            "text": "from .impl import same as impl_same"
+          },
+          "subject": "pkg.api.impl_same",
+          "target": "pkg.impl.same",
+          "resolution_status": "resolved",
+          "resolution_method": "exact",
+          "candidates": [
+            "pkg.impl.same"
+          ],
+          "attributes": {
+            "import_kind": "alias",
+            "export_kind": "none",
+            "dynamic": false,
+            "wildcard": false
+          },
+          "rationale": "Frozen independent oracle fact."
+        },
+        "py.export.entry": {
+          "kind": "export",
+          "path": "pkg/api.py",
+          "span": {
+            "byte_offset": 93,
+            "byte_length": 28,
+            "line": 4,
+            "column": 0,
+            "text": "__all__ = [\"Alias\", \"entry\"]"
+          },
+          "subject": "pkg.api",
+          "target": "pkg.api.entry",
+          "resolution_status": "resolved",
+          "resolution_method": "exact",
+          "candidates": [
+            "pkg.api.entry"
+          ],
+          "attributes": {
+            "import_kind": "none",
+            "export_kind": "named",
+            "dynamic": false,
+            "wildcard": false
+          },
+          "rationale": "Frozen independent oracle fact."
+        }
+      }
+    },
+    "py.remove_backend": {
+      "path": "pkg/api.py",
+      "operation": "force_unsupported",
+      "old_text": "def entry(worker: Base) -> str:",
+      "new_text": "def entry(worker: Base) -> str:",
+      "expected_verdict": "unavailable",
+      "rationale": "Missing backend cannot produce empty success.",
+      "span_delta": {
+        "line_delta": 0,
+        "byte_delta": 0
+      },
+      "removed_facts": {
+        "py.call.worker.run": {
+          "kind": "call",
+          "path": "pkg/api.py",
+          "subject": "pkg.api.entry",
+          "target": "pkg.base.Base.run",
+          "resolution_status": "resolved",
+          "resolution_method": "dataflow",
+          "candidates": [
+            "pkg.base.Base.run",
+            "pkg.impl.Worker.run"
+          ],
+          "rationale": "Parameter annotation gives a bounded target; implementation remains a candidate.",
+          "span": {
+            "byte_offset": 190,
+            "byte_length": 16,
+            "line": 8,
+            "column": 0,
+            "text": "    worker.run()"
+          },
+          "attributes": {
+            "import_kind": "none",
+            "export_kind": "none",
+            "dynamic": false,
+            "wildcard": false
+          }
+        }
+      },
+      "created_facts": {},
+      "unchanged_facts": {
+        "py.import.alias": {
+          "kind": "import",
+          "path": "pkg/api.py",
+          "subject": "pkg.api.Alias",
+          "target": "pkg.impl.Worker",
+          "resolution_status": "resolved",
+          "resolution_method": "exact",
+          "candidates": [
+            "pkg.impl.Worker"
+          ],
+          "rationale": "Alias preserves target identity.",
+          "span": {
+            "byte_offset": 23,
+            "byte_length": 33,
+            "line": 2,
+            "column": 0,
+            "text": "from .impl import Worker as Alias"
+          },
+          "attributes": {
+            "import_kind": "alias",
+            "export_kind": "none",
+            "dynamic": false,
+            "wildcard": false
+          }
+        },
+        "py.export.alias": {
+          "kind": "export",
+          "path": "pkg/api.py",
+          "subject": "pkg.api",
+          "target": "pkg.impl.Worker",
+          "resolution_status": "resolved",
+          "resolution_method": "exact",
+          "candidates": [
+            "pkg.impl.Worker"
+          ],
+          "rationale": "Explicit __all__ exports alias.",
+          "span": {
+            "byte_offset": 93,
+            "byte_length": 28,
+            "line": 4,
+            "column": 0,
+            "text": "__all__ = [\"Alias\", \"entry\"]"
+          },
+          "attributes": {
+            "import_kind": "none",
+            "export_kind": "named",
+            "dynamic": false,
+            "wildcard": false
+          }
+        },
+        "py.symbol.same.api": {
+          "kind": "symbol",
+          "path": "pkg/api.py",
+          "subject": "pkg.api.same",
+          "target": null,
+          "resolution_status": "resolved",
+          "resolution_method": "exact",
+          "candidates": [
+            "pkg.api.same"
+          ],
+          "rationale": "Same local name has a scope-qualified identity distinct from base and impl.",
+          "span": {
+            "byte_offset": 122,
+            "byte_length": 18,
+            "line": 5,
+            "column": 0,
+            "text": "def same() -> str:"
+          },
+          "attributes": {
+            "import_kind": "none",
+            "export_kind": "none",
+            "dynamic": false,
+            "wildcard": false
+          }
+        },
+        "py.call.missing": {
+          "kind": "call",
+          "path": "pkg/api.py",
+          "subject": "pkg.api.entry",
+          "target": null,
+          "resolution_status": "unresolved",
+          "resolution_method": "search_fallback",
+          "candidates": [],
+          "rationale": "No definition or import exists.",
+          "span": {
+            "byte_offset": 207,
+            "byte_length": 13,
+            "line": 9,
+            "column": 0,
+            "text": "    missing()"
+          },
+          "attributes": {
+            "import_kind": "none",
+            "export_kind": "none",
+            "dynamic": false,
+            "wildcard": false
+          }
+        },
+        "py.call.print": {
+          "kind": "call",
+          "path": "pkg/api.py",
+          "subject": "pkg.api.entry",
+          "target": "builtins.print",
+          "resolution_status": "external",
+          "resolution_method": "exact",
+          "candidates": [
+            "builtins.print"
+          ],
+          "rationale": "Built-in call is external, not a repository symbol.",
+          "span": {
+            "byte_offset": 221,
+            "byte_length": 17,
+            "line": 10,
+            "column": 0,
+            "text": "    print(worker)"
+          },
+          "attributes": {
+            "import_kind": "none",
+            "export_kind": "none",
+            "dynamic": false,
+            "wildcard": false
+          }
+        },
+        "py.call.impl_same": {
+          "kind": "call",
+          "path": "pkg/api.py",
+          "subject": "pkg.api.entry",
+          "target": "pkg.impl.same",
+          "resolution_status": "resolved",
+          "resolution_method": "exact",
+          "candidates": [
+            "pkg.impl.same"
+          ],
+          "rationale": "Aliased function import resolves exactly despite same-name peers.",
+          "span": {
+            "byte_offset": 239,
+            "byte_length": 22,
+            "line": 11,
+            "column": 0,
+            "text": "    return impl_same()"
+          },
+          "attributes": {
+            "import_kind": "none",
+            "export_kind": "none",
+            "dynamic": false,
+            "wildcard": false
+          }
+        },
+        "py.call.dynamic": {
+          "kind": "call",
+          "path": "pkg/api.py",
+          "subject": "pkg.api.dynamic",
+          "target": null,
+          "resolution_status": "ambiguous",
+          "resolution_method": "heuristic",
+          "candidates": [
+            "pkg.base.Base.run",
+            "pkg.impl.Worker.run"
+          ],
+          "rationale": "Untyped receiver cannot be promoted to resolved.",
+          "span": {
+            "byte_offset": 280,
+            "byte_length": 20,
+            "line": 13,
+            "column": 0,
+            "text": "    return obj.run()"
+          },
+          "attributes": {
+            "import_kind": "none",
+            "export_kind": "none",
+            "dynamic": false,
+            "wildcard": false
+          }
+        },
+        "py.import.impl_same": {
+          "kind": "import",
+          "path": "pkg/api.py",
+          "span": {
+            "byte_offset": 57,
+            "byte_length": 35,
+            "line": 3,
+            "column": 0,
+            "text": "from .impl import same as impl_same"
+          },
+          "subject": "pkg.api.impl_same",
+          "target": "pkg.impl.same",
+          "resolution_status": "resolved",
+          "resolution_method": "exact",
+          "candidates": [
+            "pkg.impl.same"
+          ],
+          "attributes": {
+            "import_kind": "alias",
+            "export_kind": "none",
+            "dynamic": false,
+            "wildcard": false
+          },
+          "rationale": "Frozen independent oracle fact."
+        },
+        "py.export.entry": {
+          "kind": "export",
+          "path": "pkg/api.py",
+          "span": {
+            "byte_offset": 93,
+            "byte_length": 28,
+            "line": 4,
+            "column": 0,
+            "text": "__all__ = [\"Alias\", \"entry\"]"
+          },
+          "subject": "pkg.api",
+          "target": "pkg.api.entry",
+          "resolution_status": "resolved",
+          "resolution_method": "exact",
+          "candidates": [
+            "pkg.api.entry"
+          ],
+          "attributes": {
+            "import_kind": "none",
+            "export_kind": "named",
+            "dynamic": false,
+            "wildcard": false
+          },
+          "rationale": "Frozen independent oracle fact."
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,124 @@
+{
+  "document_type": "downstream_task",
+  "contract_version": 2,
+  "task_id": "fastapi.dependencies",
+  "consumer": "independent architecture consumer at frozen host version",
+  "positive_budgets": [
+    4096,
+    12288
+  ],
+  "required_facts": {
+    "fact_01": {
+      "claim": "get_dependant is the public-declaration dependency graph construction anchor.",
+      "path": "fastapi/dependencies/utils.py",
+      "span": {
+        "byte_offset": 9596,
+        "byte_length": 18,
+        "line": 286,
+        "column": 0,
+        "text": "def get_dependant("
+      },
+      "source_text_sha256": "7c608d648b0699ec1f716b815572a837615feb9c74991afad923311ab53b4461",
+      "rationale": "Frozen dependency declaration entry.",
+      "evidence_id": "ev_fastapi_01",
+      "expected_relations": [
+        {
+          "relation_id": "rel_fastapi_01",
+          "kind": "owns",
+          "source": "fastapi",
+          "target": "fastapi/dependencies/utils.py",
+          "status": "resolved",
+          "evidence_ids": [
+            "ev_fastapi_01"
+          ]
+        }
+      ]
+    },
+    "fact_02": {
+      "claim": "solve_dependencies is an async solving boundary.",
+      "path": "fastapi/dependencies/utils.py",
+      "span": {
+        "byte_offset": 21976,
+        "byte_length": 29,
+        "line": 598,
+        "column": 0,
+        "text": "async def solve_dependencies("
+      },
+      "source_text_sha256": "3a3345d1c1f872e607648e451f58d7aa4568442d159f63d6c15fc14dcfc31203",
+      "rationale": "Frozen solver anchor.",
+      "evidence_id": "ev_fastapi_02",
+      "expected_relations": [
+        {
+          "relation_id": "rel_fastapi_02",
+          "kind": "owns",
+          "source": "fastapi",
+          "target": "fastapi/dependencies/utils.py",
+          "status": "resolved",
+          "evidence_ids": [
+            "ev_fastapi_02"
+          ]
+        }
+      ]
+    }
+  },
+  "forbidden_facts": [
+    "Mark every name match between the two functions resolved",
+    "Omit ambiguous edges"
+  ],
+  "pass_rule": "Both spans and bounded known/ambiguous edge counts are returned; no forbidden fact; independent evaluator pass.",
+  "fail_rule": "Missing span, collapsed ambiguity, zero positive budget, or unsupported prose-only answer.",
+  "cannot_judge_rule": "Exact locked source or evaluator unavailable.",
+  "changed_decision": "Consumer can navigate from dependency declaration analysis to runtime dependency solving.",
+  "repository_snapshot": {
+    "repo_id": "fastapi",
+    "url": "https://github.com/fastapi/fastapi.git",
+    "commit": "937d3075f9456dfcdfe2e1f6bc3b8b7b9a6c6cad",
+    "tree": "4f370d37b93e2c6cc609635e6d888c61fb8fe140",
+    "source_roots": {
+      "fastapi": "709860be1dc5dc1af044a38b2988f89e57aa810d"
+    }
+  },
+  "expectations": {
+    "relation_status_counts": {
+      "resolved": 2,
+      "ambiguous": 0,
+      "unresolved": 0,
+      "external": 0,
+      "unsupported": 0
+    },
+    "required_evidence_ids": [
+      "ev_fastapi_01",
+      "ev_fastapi_02"
+    ],
+    "cursor_chain": [
+      {
+        "budget": 4096,
+        "page": 1,
+        "must_continue": true
+      },
+      {
+        "budget": 12288,
+        "page": 2,
+        "must_continue": false
+      }
+    ],
+    "interruption": {
+      "required": false,
+      "expected_outcome": "not_applicable"
+    },
+    "universe_partition": {
+      "roots": [
+        "fastapi"
+      ],
+      "eligible_languages": [
+        "python"
+      ],
+      "expected_states": [
+        "indexed",
+        "parse_error",
+        "excluded"
+      ],
+      "cross_language_edges": "not_applicable"
+    }
+  }
+}

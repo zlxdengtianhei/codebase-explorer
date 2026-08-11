@@ -1,0 +1,128 @@
+{
+  "document_type": "downstream_task",
+  "contract_version": 2,
+  "task_id": "sentry.polyglot-boundary",
+  "consumer": "independent polyglot architecture consumer",
+  "positive_budgets": [
+    8192,
+    16384
+  ],
+  "required_facts": {
+    "fact_01": {
+      "claim": "Python State class exists under the bounded Python root.",
+      "path": "src/sentry/app.py",
+      "span": {
+        "byte_offset": 167,
+        "byte_length": 19,
+        "line": 10,
+        "column": 0,
+        "text": "class State(local):"
+      },
+      "source_text_sha256": "a80d1248d5e4eff78a0c577f9b98def0540398dd99810107ef019e967fc3dc73",
+      "rationale": "Python-side source root anchor.",
+      "evidence_id": "ev_sentry_01",
+      "expected_relations": [
+        {
+          "relation_id": "rel_sentry_01",
+          "kind": "owns",
+          "source": "sentry",
+          "target": "src/sentry/app.py",
+          "status": "resolved",
+          "evidence_ids": [
+            "ev_sentry_01"
+          ]
+        }
+      ]
+    },
+    "fact_02": {
+      "claim": "TypeScript Main function exists under the bounded frontend root.",
+      "path": "static/app/main.tsx",
+      "span": {
+        "byte_offset": 1613,
+        "byte_length": 24,
+        "line": 32,
+        "column": 0,
+        "text": "export function Main() {"
+      },
+      "source_text_sha256": "969df6a54988130e8831580f2963cda14706e481cac2d2950b7ef1040ffe4cb0",
+      "rationale": "TypeScript-side source root anchor.",
+      "evidence_id": "ev_sentry_02",
+      "expected_relations": [
+        {
+          "relation_id": "rel_sentry_02",
+          "kind": "owns",
+          "source": "sentry",
+          "target": "static/app/main.tsx",
+          "status": "resolved",
+          "evidence_ids": [
+            "ev_sentry_02"
+          ]
+        }
+      ]
+    }
+  },
+  "forbidden_facts": [
+    "Infer a resolved cross-language edge from matching names",
+    "Expand source roots to the unbounded whole monorepo"
+  ],
+  "pass_rule": "Both bounded language roots are partitioned, facts span-grounded, and cross-language edges remain explicitly unsupported unless proven.",
+  "fail_rule": "Missing source unit, unbounded scan claim or guessed cross-language resolution.",
+  "cannot_judge_rule": "Exact checkout, either bounded root or evaluator unavailable.",
+  "changed_decision": "Consumer can plan Python/frontend work without invented cross-language coupling.",
+  "repository_snapshot": {
+    "repo_id": "sentry",
+    "url": "https://github.com/getsentry/sentry.git",
+    "commit": "5c2da4a8025f18587d9ae859bdebdffe290ffc75",
+    "tree": "4f6d5772f2b34611e50729545b00ad92f216f556",
+    "source_roots": {
+      "src/sentry": "f86927d590075b7a6ea636511422374422643719",
+      "static/app": "973d2b9036d6b76a4b1d0c13aaafd093d2095ae9"
+    }
+  },
+  "expectations": {
+    "relation_status_counts": {
+      "resolved": 2,
+      "ambiguous": 0,
+      "unresolved": 0,
+      "external": 0,
+      "unsupported": 0
+    },
+    "required_evidence_ids": [
+      "ev_sentry_01",
+      "ev_sentry_02"
+    ],
+    "cursor_chain": [
+      {
+        "budget": 8192,
+        "page": 1,
+        "must_continue": true
+      },
+      {
+        "budget": 16384,
+        "page": 2,
+        "must_continue": false
+      }
+    ],
+    "interruption": {
+      "required": false,
+      "expected_outcome": "not_applicable"
+    },
+    "universe_partition": {
+      "roots": [
+        "src/sentry",
+        "static/app"
+      ],
+      "eligible_languages": [
+        "python",
+        "typescript",
+        "javascript"
+      ],
+      "expected_states": [
+        "indexed",
+        "parse_error",
+        "excluded"
+      ],
+      "cross_language_edges": "explicitly_unsupported"
+    }
+  }
+}

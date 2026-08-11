@@ -1,0 +1,125 @@
+{
+  "schema_version": 2,
+  "review_id": "p1a-review-v3",
+  "oracle_contract_hashes": {
+    "tests/oracles/contract.schema.json": "41dfe40f5f577bcd16479645dd355102224ea92e10b3ef610480b70071bc6d49",
+    "tests/oracles/review_receipt.schema.json": "24e37dbf38492670d5bd148b28de1f645136abe95e363e3e08edd8a2a222870f",
+    "tests/oracles/contracts/python/expected_ir.json": "aee98c728ef5b0cd82d43f3ef80295274df88381b0e32dfbc6fa0bdda4c59f31",
+    "tests/oracles/contracts/python/expected_capabilities.json": "9858da036415120c5608defedf348eae7d5a730fcca27ea9f5c5a4f3df87bde1",
+    "tests/oracles/contracts/python/mutations.json": "ae6363781163d8070f18ebf6c9e3fadba3726b2706199d6599bc91aa45a07132",
+    "tests/oracles/contracts/typescript/expected_ir.json": "bff387072c728012d0b79eff7fac8e483498a5b2cda01115c81ed473d21e37bd",
+    "tests/oracles/contracts/typescript/expected_capabilities.json": "7235a4aab124148c35bea15b1db5de263cd74b1d3350cb431c8a29b178263f9b",
+    "tests/oracles/contracts/typescript/mutations.json": "4ad7f76ee77d67f179fb926387aba240dabcd4ee2b73258e752c7b7bf3c28b29",
+    "tests/oracles/contracts/javascript/expected_ir.json": "b7ac27dded05cfbab076e23921c2637387607167e8886d2b50cb843af09200fd",
+    "tests/oracles/contracts/javascript/expected_capabilities.json": "b2ce564788484331af2573dc88ce08351dca6f048817cb0731c17203f9309dea",
+    "tests/oracles/contracts/javascript/mutations.json": "ff6361505977e849ab26746a35d1cc2a6b0b5b381ffbc513b8b1ba8168456c05",
+    "tests/real/oracles.lock.json": "81c2dc174890ef542d7cfe2841e8408b3b0f5d255b97a6d1bec44d90f5611a84",
+    "tests/real/tasks/celery_recovery.json": "0fbf67e040fb4aeaa66dfff03412b9fa431d27ef0e65ff21bc043b2165247fce",
+    "tests/real/tasks/express_entry.json": "3da7242d085fcd0e77c94d59eb017758993009dca412eb84ba31d7096e5a43b6",
+    "tests/real/tasks/fastapi_dependencies.json": "77aeb53b675bfa254693ff999db16d2fa12b1bd759d0ed9c9b6b303f5944dad4",
+    "tests/real/tasks/flask_config_json.json": "cfbbfd4fcb63bc86300422d6f414b9e5eaf2a91f5eacecfbf449fbe4065f6c78",
+    "tests/real/tasks/nest_core_injector.json": "0092e900bdc29eff875e1a7d76f662ffb558c9850d88c6dd249e629cc9ef1278",
+    "tests/real/tasks/rich_projection.json": "db4b2872513c2be16a8c62470ca7c4bed8b2e1ab87c99e829bd2e9b593eab7da",
+    "tests/real/tasks/scrapy_ownership.json": "272fce369593b297750a93dbb4a01b237a6beb81be67ea6495e00f55538a202b",
+    "tests/real/tasks/sentry_polyglot.json": "2830e1b85204d8294d69fad3e651b2ebf09d865535e86649017198213f403e12",
+    "tests/real/tasks/sqlite_failure_boundary.json": "7e794bf8204298f3381beb3713497bb483bef543b062c516530af90da38c0dc2"
+  },
+  "oracle_author": "CBE-R001-IMPL-P1A",
+  "reviewer": "CBE-R001-REVIEW-P1A-V3",
+  "reviewer_channel": "Codex fresh independent reviewer session CBE-R001-REVIEW-P1A-V3",
+  "forbidden_reads": [
+    "CBE-R001-IMPL-P1A producer chat transcript",
+    "CBE-R001-IMPL-P1A producer final answer",
+    "CBE-R001-REPAIR-P1A repair chat transcript",
+    "CBE-R001-REPAIR-P1A repair final answer",
+    "CBE-R001-REPAIR-P1A-R2 repair chat transcript",
+    "CBE-R001-REPAIR-P1A-R2 repair final answer",
+    "agent status tools and task chats"
+  ],
+  "checks": {
+    "schema_and_layered_integrity": {
+      "object": "oracle schemas and all current instances",
+      "review_class": "implementation",
+      "independent_check": "Both Draft 2020-12 metaschemas validate; all 19 current contract instances and both immutable failed review receipts validate. Fresh adversarial samples show invalid fact keys, locked-null revisions, and pass receipts containing failed checks are rejected by schema, while dangling paths, duplicate relation ids, relation-count mismatches, cursor mismatches, and universe-root mismatches are accepted only at the JSON-Schema layer and rejected by independent cross-document checks.",
+      "verdict": "worked",
+      "evidence_paths": [
+        "tests/oracles/contract.schema.json",
+        "tests/oracles/review_receipt.schema.json",
+        "runs/r001_20260810_product_completion/evidence/P1A_oracle_review_v3.md#schema-and-adversarial-replay"
+      ]
+    },
+    "fixture_truth": {
+      "object": "Python, TypeScript, and JavaScript canonical fixture truth",
+      "review_class": "evidence",
+      "independent_check": "Reconstruction from content_lines with LF and the declared final newline reproduces 27 file hashes and all 62 fact spans. Each language has three distinct scope-qualified same-name symbols, all eight capability cells, import/export/call truth, all five resolution statuses, unsupported constructs, parse errors, exclusions, and Unicode paths/content.",
+      "verdict": "worked",
+      "evidence_paths": [
+        "tests/oracles/contracts/python/expected_ir.json",
+        "tests/oracles/contracts/typescript/expected_ir.json",
+        "tests/oracles/contracts/javascript/expected_ir.json",
+        "runs/r001_20260810_product_completion/evidence/P1A_oracle_review_v3.md#fixture-truth-replay"
+      ]
+    },
+    "mutation_controls": {
+      "object": "all nine replace, corrupt-span, and force-unsupported controls",
+      "review_class": "evidence",
+      "independent_check": "Every old_text occurs exactly once. Complete post-mutation replay accounts for 9 removed, 6 created, and 75 unchanged fact snapshots. The sole shifted baseline fact, py.call.dynamic, moves from byte 280 to 275 after the -5 Python replacement and matches the mutated bytes. Each corrupt-span control keeps source bytes unchanged, creates one uniquely keyed fact at +1 byte/+1 line, and that fact is rejected by evidence-to-source replay.",
+      "verdict": "worked",
+      "evidence_paths": [
+        "tests/oracles/contracts/python/mutations.json",
+        "tests/oracles/contracts/typescript/mutations.json",
+        "tests/oracles/contracts/javascript/mutations.json",
+        "runs/r001_20260810_product_completion/evidence/P1A_oracle_review_v3.md#all-nine-mutation-replay"
+      ]
+    },
+    "task_and_lock_integrity": {
+      "object": "real-repository lock, task snapshots, relation counts, cursors, and universe expectations",
+      "review_class": "cross-domain",
+      "independent_check": "All nine task snapshots exactly equal their keyed lock entries. Across 25 required facts, relation ids and evidence ids are globally unique, status counts recompute, cursor budgets equal the positive budgets with ordered terminating pages, Celery alone freezes the required interruption outcome, and universe roots/languages match the locked repository roots/languages. Nine required roles are locked; four extension candidates remain explicit cannot_judge and are outside the P1A adapter-dispatch claim.",
+      "verdict": "worked",
+      "evidence_paths": [
+        "tests/real/oracles.lock.json",
+        "tests/real/tasks",
+        "runs/r001_20260810_product_completion/evidence/P1A_oracle_review_v3.md#task-and-lock-replay"
+      ]
+    },
+    "fresh_primary_git": {
+      "object": "all nine locked primary Git repositories and all 25 task spans",
+      "review_class": "evidence",
+      "independent_check": "Fresh temporary bare repositories fetched every locked full SHA from its locked primary URL. All nine commits, nine whole-tree ids, ten bounded source-root tree ids, and all 25 task span byte slices, hashes, lines, columns, and root containment checks match. This includes Nest's six replacement-role spans plus Sentry, SQLite, Celery, Flask, FastAPI, Express, Rich, and Scrapy.",
+      "verdict": "worked",
+      "evidence_paths": [
+        "tests/real/oracles.lock.json",
+        "tests/real/tasks/nest_core_injector.json",
+        "runs/r001_20260810_product_completion/evidence/P1A_oracle_review_v3.md#fresh-primary-git-replay"
+      ]
+    },
+    "role_boundary": {
+      "object": "oracle-author, reviewer, adapter, and extension-role boundary",
+      "review_class": "requirement",
+      "independent_check": "The fresh reviewer wrote only this receipt, its evidence report, and the required skill-discovery receipt; it did not edit oracle truth, read producer/repair chats or final answers, or inspect status tools. Passing P1A freezes fixture and real-role truth for P3/P4 consumption; it does not evaluate an adapter or promote core, and four optional extension roles remain cannot_judge.",
+      "verdict": "worked",
+      "evidence_paths": [
+        "runs/r001_20260810_product_completion/prompts/review_p1a_oracles_v3.md",
+        "contexts/runtime/skill_discovery/CBE-R001-REVIEW-P1A-V3.json",
+        "runs/r001_20260810_product_completion/evidence/P1A_oracle_review_v3.md#claim-boundary"
+      ]
+    },
+    "dispatch_gate": {
+      "object": "P1A oracle contract adapter-dispatch decision",
+      "review_class": "closure",
+      "independent_check": "No HIGH or critical oracle defect remains after independent schema, byte, mutation, cross-document, and primary-Git replay. The repaired current hashes therefore clear the bounded P1A fixture contract for P3/P4 adapter dispatch. Downstream adapter behavior, backend availability, task execution, host integration, and core release remain untested by this review.",
+      "verdict": "worked",
+      "evidence_paths": [
+        "runs/r001_20260810_product_completion/design/DESIGN_INTEGRATION.md#6-phasepacket-与非重叠文件所有权",
+        "runs/r001_20260810_product_completion/design/CHANGE_AND_VALIDATION_PLAN.md#4-frozen-validation-inputs-and-revision-policy",
+        "runs/r001_20260810_product_completion/evidence/P1A_oracle_review_v3.md#verdict"
+      ]
+    }
+  },
+  "verdict": "pass",
+  "claim_ceiling": "fixture_adapter_dispatch_allowed",
+  "counterexample_or_residual": "No HIGH or critical defect was found in the reviewed P1A revision. P3/P4 may consume the frozen oracle contract. This pass is bounded to oracle readiness: it does not claim any adapter, parser, backend, MCP, host, downstream task, or core-release success. Go, Java, Kotlin, and Rust real-repository extension candidates remain explicit cannot_judge until their separately authorized oracle reviews.",
+  "reviewed_at": "2026-08-10T18:21:36Z",
+  "named_consumer": "P3/P4 adapter dispatch gate"
+}

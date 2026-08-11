@@ -203,9 +203,92 @@ _REQUIRED_FILES = [
 
 class TestValidateJsonFilesExist:
     def test_all_present(self, tmp_path: Path):
-        for f in _REQUIRED_FILES:
-            (tmp_path / f).write_text("{}")
-        assert validate_json_files_exist(tmp_path) is True
+        import hashlib
+        from datetime import UTC, datetime, timedelta
+
+        from src.state.json_store import JsonRunStore
+        from src.state.migrate_v2_v3 import write_v2_rollback_projection
+        from src.state.models import LegacySubmissionSeed
+        from src.state.run_lifecycle import (
+            ROUTE_KEYS,
+            ActiveRunReceipt,
+            analysis_input_fingerprint,
+            artifact_manifest,
+            legacy_seed_sha256,
+            promote_active_receipt,
+            publish_generation,
+        )
+
+        bare_root = tmp_path / "bare"
+        bare_root.mkdir()
+        for filename in _REQUIRED_FILES:
+            (bare_root / filename).write_text("{}")
+        assert validate_json_files_exist(bare_root) is False
+
+        repo = tmp_path / "repo"
+        repo.mkdir()
+        (repo / "app.py").write_text("VALUE = 1\n")
+        analysis_root = tmp_path / "analysis"
+        stage = analysis_root / ".staging" / "run-a"
+        stage.mkdir(parents=True)
+        for index, filename in enumerate(_REQUIRED_FILES, start=1):
+            (stage / filename).write_text(json.dumps({"index": index}) + "\n")
+
+        seed = LegacySubmissionSeed(task_ids=("task-1",), source_file_count=1)
+        store = JsonRunStore(stage / "state-v3.json")
+        now = datetime.now(UTC)
+        bootstrap = store.issue_bootstrap_lease(
+            run_id="run-a",
+            actor="orchestrator/legacy-mcp/analyze_codebase",
+            ttl=timedelta(hours=1),
+            now=now,
+        )
+        begun = store.begin_run(
+            run_id="run-a",
+            repo_root=repo,
+            requested_languages=("python",),
+            actor=bootstrap.actor,
+            lease_id=bootstrap.lease_id,
+            expected_revision=0,
+            product_output_roots=(analysis_root,),
+            route_keys=ROUTE_KEYS,
+            legacy_submission_seed=seed,
+            initial_metadata={"project_id": "project-a"},
+            now=now,
+        )
+        generation = publish_generation(analysis_root, stage, "run-a")
+        projection = {
+            "project_id": "project-a",
+            "path": str(repo),
+            "status": "analysis_complete",
+            "tasks": {"task-1": {"status": "pending"}},
+            "documentation": {"output_dir": str(analysis_root)},
+        }
+        write_v2_rollback_projection(
+            analysis_root / "state.json", projection, snapshot=begun.snapshot
+        )
+        fingerprint = analysis_input_fingerprint(
+            languages=("python",), exclude_paths=(), include_tests=False
+        )
+        receipt = ActiveRunReceipt(
+            activation_generation=1,
+            run_id="run-a",
+            generation_path=".runs/run-a",
+            state_path=".runs/run-a/state-v3.json",
+            repo_root=str(repo.resolve()),
+            analysis_input_fingerprint=fingerprint,
+            source_revision=begun.snapshot.revisions.source,
+            v2_sha256=hashlib.sha256(
+                (analysis_root / "state.json").read_bytes()
+            ).hexdigest(),
+            artifacts=artifact_manifest(generation),
+            legacy_seed_sha256=legacy_seed_sha256(seed),
+            route_keys=ROUTE_KEYS,
+        )
+        promote_active_receipt(
+            analysis_root, receipt, expected_prior_hash="", expected_generation=0
+        )
+        assert validate_json_files_exist(analysis_root) is True
 
     def test_none_present(self, tmp_path: Path):
         assert validate_json_files_exist(tmp_path) is False
@@ -708,7 +791,8 @@ class TestWriteAnalysisOutputs:
 
         for f in _REQUIRED_FILES:
             assert (output / f).exists(), f"{f} was not written"
-        assert (output / "state.json").exists()
+        assert not (output / "state.json").exists()
+        assert state["status"] == "analysis_complete"
 
     def test_state_structure(self, tmp_path: Path):
         output = tmp_path / "out"
