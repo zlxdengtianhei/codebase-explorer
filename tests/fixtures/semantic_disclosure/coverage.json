@@ -1,0 +1,10 @@
+{
+  "meta": {
+    "format": 3
+  },
+  "files": {
+    "a.py": {
+      "executed_lines": [1, 2, 9, 10, 13, 14]
+    }
+  }
+}

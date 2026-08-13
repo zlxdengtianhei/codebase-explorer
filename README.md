@@ -1,105 +1,148 @@
 # Codebase Explorer
 
-一个本地运行的 MCP Server + Agent Skill，用于分析 Python/TypeScript/JavaScript 代码库结构并生成渐进式披露的架构文档。
+Codebase Explorer 是本地 MCP Server 与 Agent Skill。它把代码库解析为依赖图和全量符号清单，
+再由 Codex 按依赖顺序生成函数级语义解释，持久化覆盖账，渲染渐进式文档，并交给独立 Codex
+reviewer 抽样复核。
 
-## Features
+当前 server 的真实导出面为 14 个工具。工具名由
+`await mcp.list_tools()` 现算，skill 契约测试负责阻止两边再次漂移。
 
-- **语义级代码分析**: 使用 graph-sitter 进行跨文件依赖分析
-- **智能模块分组**: Louvain 社区检测自动发现模块边界
-- **动态文档深度**: 文档层级由模块复杂度自动决定（1-5层）
-- **15 个 MCP 工具**: 完整的索引、分析、预算控制、文档生成工具链
-- **Agent Skill**: 兼容 Claude Code / Codex / OpenCode / Gemini CLI
-- **本地运行**: 完全本地，不依赖外部服务
+## 产物
 
-## Quick Start
+```text
+<repo>/
+├── .codebase-analysis/
+│   ├── active_run.json
+│   ├── semantic_ledger.json
+│   ├── semantic_events.jsonl
+│   └── semantic_reviews/
+└── .codebase-docs/
+    ├── INDEX.md
+    └── <module>/DETAIL.md
+```
 
-### Installation
+文档提供四个逻辑层级：
+
+1. INDEX：项目入口、模块导航、Mermaid 依赖图；
+2. module DETAIL：一个功能模块的文件和关系；
+3. file section：文件职责与符号清单；
+4. symbol block：函数、方法和类的语义解释。
+
+canonical truth 是 `semantic_ledger.json`。Markdown 是可重建投影，不是第二份人工真源。
+
+## 当前能力边界
+
+- 结构分析：Python、TypeScript、JavaScript。
+- 函数级语义清单和解释：目前为 Python。
+- 覆盖率：`get_semantic_progress` 从源码清单独立复算静态符号覆盖。
+- 运行时 coverage 导入：当前 14-tool API 尚未暴露，因此本版不能声称按真实执行热度排阅读顺序。
+- E2E pytest：只证明管道连通、事务原子和重连恢复；真实语义质量由 Codex 生产与独立 review 证明。
+
+## 快速开始
+
+完整的 Claude Code、Codex 和 OpenCode 接线见 [INSTALL.md](INSTALL.md)。
 
 ```bash
-pip install -e .
-# 或
-uv pip install -e .
+uv sync
+uv run python -m src.server
 ```
 
-详细安装指南（MCP Server 配置、Agent Skill 安装、多客户端适配）请参见 [INSTALL.md](INSTALL.md)。
+把仓内 skill 同步到 Claude Code 的全局 skill 目录：
 
-### As MCP Server
-
-配置 `.mcp.json`:
-
-```json
-{
-  "mcpServers": {
-    "codebase-explorer": {
-      "command": "python",
-      "args": ["-m", "src.server"],
-      "transport": "stdio"
-    }
-  }
-}
+```bash
+mkdir -p ~/.claude/skills/codebase-explorer
+rsync -a --delete \
+  .agents/skills/codebase-explorer/ \
+  ~/.claude/skills/codebase-explorer/
 ```
 
-### As Agent Skill
+源路径末尾的 `/` 很重要。它复制目录内容，避免生成
+`codebase-explorer/codebase-explorer/` 自套娃。
 
-将 `.agents/skills/codebase-explorer/` 复制到你的项目中。
+## 核验 14 个真实工具
 
-## Usage
+```bash
+uv run python - <<'PY'
+import asyncio
+from src.server import mcp
 
-### 5-Phase Workflow
+tools = asyncio.run(mcp.list_tools())
+print(len(tools))
+print("\n".join(tool.name for tool in tools))
+PY
+```
 
-1. **Index**: `index_codebase(path)` — 解析代码库
-2. **Plan**: `get_modules()` → `create_analysis_plan()` → `plan_doc_structure()` — 规划分析
-3. **Analyze**: `get_next_batch()` → `submit_analysis()` 循环 — 分析模块
-4. **Generate**: `generate_doc()` 按文档树 — 生成文档
-5. **Validate**: 运行验证脚本 — 检查质量
+应输出：
 
-### Dynamic Depth
+```text
+14
+analyze_codebase
+get_semantic_progress
+claim_semantic_batch
+submit_semantic_batch
+get_semantic_review_batch
+submit_semantic_review
+get_structure
+get_modules
+get_function_deps
+doc_operation
+get_dependency_graph
+get_progress
+get_file_tokens
+submit_analysis
+```
 
-文档深度由三维指标自动决定：
+## 运行语义闭环
 
-- 结构深度（子包数量）
-- 复杂度深度（函数/类/行数加权）
-- Token 深度（估算 token 数）
+Agent 按 [.agents/skills/codebase-explorer/SKILL.md](.agents/skills/codebase-explorer/SKILL.md)
+执行四个阶段：
 
-小模块（< 200行，< 10组件）→ depth 1
-大模块（> 800行，> 20组件）→ depth 2-5
+1. `analyze_codebase` 建结构、依赖图、符号清单和 canonical ledger；
+2. 循环 `claim_semantic_batch` / `submit_semantic_batch`，直到静态符号覆盖 100%；
+3. `doc_operation(operation="render_semantic_docs")` 从 ledger 重建 INDEX/DETAIL；
+4. `get_semantic_review_batch` / `submit_semantic_review` 做 blind review，若要求修订则回到第 2 步。
 
-| Depth | Meaning | When Applied |
-|-------|---------|-------------|
-| 0 | Summary only | Merged into parent (< 100 LOC, < 5 functions) |
-| 1 | OVERVIEW only | Small modules (< 500 LOC) |
-| 2 | OVERVIEW + DETAIL | Medium modules (500-2000 LOC) |
-| 3 | Three-level nesting | Complex modules (2000+ LOC, subpackages) |
-| 4 | Four-level nesting | Large subsystems (5000+ LOC) |
-| 5 | Maximum depth | Framework-scale modules (10000+ LOC) |
+所有后续调用都要传 `analyze_codebase` 返回的绝对 `output_dir`。MCP host 必须通过
+`CODEX_THREAD_ID` 暴露真实 Codex exec session；claim 从该可信进程状态取得 lease owner，
+submit 再到 `$CODEX_HOME/sessions` 自动定位唯一对应的 rollout。调用者不传 actor 或路径；
+rollout 内的最终结构化 proof 必须与提交 payload 逐字等价。
 
-## MCP Tools (15)
+## 测试
 
-| Category | Tools |
-|----------|-------|
-| Indexing | `index_codebase`, `get_modules`, `get_module_detail`, `get_dependency_graph` |
-| Budget | `estimate_module_tokens`, `create_analysis_plan`, `check_budget_status` |
-| Tasks | `get_next_batch`, `submit_analysis`, `get_analysis_status` |
-| Checkpoint | `save_checkpoint`, `load_checkpoint`, `get_cross_ref_context` |
-| Docs | `plan_doc_structure`, `generate_doc` |
+```bash
+uv run pytest -q \
+  tests/test_skill_contract.py \
+  tests/real/test_semantic_disclosure_e2e.py
+```
+
+`test_skill_contract.py` 会在 skill 与 server 工具名漂移时变红。
+`test_semantic_disclosure_e2e.py` 在临时仓库上走真实 MCP transport，验证失败提交不改
+ledger/docs，以及保存的 lease packet 可在客户端重连后继续提交。
+
+## 项目结构
+
+```text
+src/
+├── server.py
+├── parser/
+├── graph/
+├── semantic/
+├── state/
+├── budget/
+└── doc/
+
+.agents/skills/codebase-explorer/
+├── SKILL.md
+├── phases/
+└── references/
+```
 
 ## Requirements
 
-- Python >= 3.11
-- Dependencies: mcp, codegen (graph-sitter), networkx, python-louvain, jinja2, aiosqlite, pydantic
-
-## Project Structure
-
-```
-src/
-├── server.py          # MCP Server entry (15 tools)
-├── parser/            # Graph-sitter code parsing
-├── graph/             # Dependency graph + Louvain grouping
-├── state/             # SQLite state management
-├── budget/            # Token estimation + budget control
-├── doc/               # Dynamic depth planner + doc generation
-└── templates/         # Jinja2 templates (index, overview, detail)
-```
+- Python 3.12 或 3.13
+- uv
+- MCP host：Claude Code、Codex 或 OpenCode
+- 真实语义生产和 review 使用 Codex session
 
 ## License
 

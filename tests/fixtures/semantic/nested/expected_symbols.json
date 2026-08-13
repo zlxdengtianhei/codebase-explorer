@@ -1,0 +1,10 @@
+[
+  "a.py::decorate",
+  "a.py::decorate.wrapper",
+  "a.py::decorated",
+  "a.py::multiline_decorated",
+  "a.py::Outer",
+  "a.py::Outer.Inner",
+  "a.py::Outer.Inner.method",
+  "a.py::Outer.Inner.method.closure"
+]

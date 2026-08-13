@@ -1,18 +1,25 @@
-"""Codebase Explorer MCP Server -- FastMCP entry point with 9 tools (V5).
+"""Codebase Explorer MCP Server -- FastMCP entry point with 14 tools (V5).
 
 V5 Architecture:
 - No SQLite (replaced with JSON state file)
 - No Jinja2 templates (docs written by LLM agents)
-- 9 tools: analyze_codebase, get_structure, get_modules, get_function_deps,
+- 14 tools: analyze_codebase, get_structure, get_modules, get_function_deps,
   doc_operation, get_dependency_graph, get_progress, get_file_tokens, submit_analysis
+  plus semantic progress, dependency-ready batch claim/submit, and blind review.
 - Feature Cone based grouping (replaces Louvain as primary)
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
+import os
 import re
+import uuid
 from contextlib import asynccontextmanager
+from dataclasses import asdict
+from datetime import UTC, datetime, timedelta
+from functools import lru_cache
 from pathlib import Path
 from typing import Annotated, Literal
 
@@ -27,21 +34,65 @@ from src.doc.depth_planner import build_task_manifest
 from src.graph.feature_cone import extract_feature_cones, FeatureCone
 from src.graph.strategies import get_strategy, list_strategies
 from src.graph.weighted_graph import build_weighted_dependency_graph
+from src.ir import (
+    EntityKind,
+    Relation,
+    SourceUnit,
+    SourceUnitState,
+    Symbol,
+    deterministic_entity_id,
+)
+from src.parser.adapters.base import FileIR
+from src.parser.adapters.python import PythonLanguageAdapter
+from src.parser.backend import PythonAstBackend, SyntaxArtifact
 from src.parser.codebase import CodebaseParser, CodebaseParseError
+from src.semantic.inventory import enumerate_python_files, enumerate_semantic_inventory
+from src.semantic.service import (
+    REVIEW_VERDICT_RELPATH,
+    SemanticReviewError,
+    SemanticService,
+    SemanticServiceError,
+    SemanticSubmissionError,
+)
 from src.server_helpers import (
     build_graph_from_dag,
     build_module_level_graph,
     compute_cone_layers,
     compute_inter_module_deps_from_dag,
-    find_latest_project_dir,
     now_iso,
     project_id_from_path,
     render_mermaid,
     resolve_output_dir,
-    validate_json_files_exist,
+    resolve_project_dir,
     write_analysis_outputs,
 )
-from src.state.json_store import atomic_write_state, read_state, update_task_status
+from src.state.json_store import (
+    JsonRunStore,
+    RecoveryError,
+    RunStoreError,
+    read_state,
+)
+from src.state.migrate_v2_v3 import write_v2_rollback_projection
+from src.state.models import LegacySubmissionSeed
+from src.state.run_lifecycle import (
+    ACTIVE_RECEIPT_NAME,
+    ROUTE_KEYS,
+    ActiveRunReceipt,
+    LifecycleCacheMiss,
+    LifecycleConflict,
+    LifecycleError,
+    active_receipt_hash,
+    analysis_input_fingerprint,
+    artifact_manifest,
+    legacy_seed_sha256,
+    promote_active_receipt,
+    publish_generation,
+    read_active_receipt,
+    recover_interrupted_initial_activation,
+    resolve_active_run,
+    stage_v2_recovery_projection,
+    V2_RECOVERY_PROJECTION_SHA_KEY,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -79,6 +130,232 @@ def _lc(ctx):
 def _parser(ctx) -> CodebaseParser:
     """Get parser from context."""
     return _lc(ctx)["parser"]
+
+
+def _analysis_root_for_generation(project_dir: Path) -> Path:
+    """Map ``.runs/<run>`` back to its analysis root without guessing a run."""
+
+    if project_dir.parent.name == ".runs":
+        return project_dir.parent.parent
+    return project_dir
+
+
+def _semantic_repo_root(output_dir: str | None = None) -> Path:
+    """Resolve a canonical repository root without confusing it with a run."""
+
+    if output_dir is not None:
+        if not output_dir.strip():
+            raise ToolError("Analysis directory must be a non-empty path or null")
+        requested = Path(output_dir).expanduser()
+        if not requested.exists():
+            raise ToolError(f"Analysis directory does not exist: {requested}")
+        if requested.is_symlink():
+            raise ToolError("Semantic tools reject symlinked analysis paths")
+    selected = resolve_project_dir(output_dir)
+    analysis_root = _analysis_root_for_generation(selected).resolve()
+    if analysis_root.is_symlink() or analysis_root.name != ".codebase-analysis":
+        raise ToolError("Semantic tools require a canonical .codebase-analysis directory")
+
+    receipt_path = analysis_root / ACTIVE_RECEIPT_NAME
+    if receipt_path.is_file():
+        try:
+            active = resolve_active_run(analysis_root)
+        except LifecycleError as exc:
+            raise ToolError(f"Canonical analysis lifecycle is corrupt: {exc}") from exc
+        if selected.parent.name == ".runs" and selected.resolve() != active.generation_path.resolve():
+            raise ToolError("The requested generation is not the active canonical run")
+        repo_root = Path(active.receipt.repo_root).resolve()
+        if Path(active.snapshot.repo_root).resolve() != repo_root:
+            raise ToolError("Active receipt and state disagree about repository root")
+    else:
+        state_path = analysis_root / "state.json"
+        try:
+            state = read_state(state_path)
+        except (OSError, ValueError, json.JSONDecodeError) as exc:
+            raise ToolError(f"Cannot resolve semantic repository root: {exc}") from exc
+        raw_root = state.get("path")
+        if not isinstance(raw_root, str) or not raw_root:
+            raise ToolError("Legacy analysis state does not identify its repository root")
+        repo_root = Path(raw_root).resolve()
+
+    if not repo_root.is_dir() or analysis_root != repo_root / ".codebase-analysis":
+        raise ToolError("Analysis root and repository root fail the semantic identity check")
+    return repo_root
+
+
+def _python_semantic_ir(repo_root: Path) -> tuple[tuple[Symbol, ...], tuple[Relation, ...]]:
+    """Normalize probe-visible Python source into the C1/C2 IR bridge."""
+
+    inventory = enumerate_semantic_inventory(repo_root)
+    return _python_semantic_ir_cached(repo_root.as_posix(), inventory.source_revision)
+
+
+@lru_cache(maxsize=8)
+def _python_semantic_ir_cached(
+    repo_root_text: str,
+    source_revision: str,
+) -> tuple[tuple[Symbol, ...], tuple[Relation, ...]]:
+    repo_root = Path(repo_root_text)
+    ir_revision = "rev_" + hashlib.sha256(source_revision.encode("utf-8")).hexdigest()
+    backend = PythonAstBackend(root=repo_root)
+    adapter = PythonLanguageAdapter(repo_root)
+    symbols = []
+    relations = []
+    for path in enumerate_python_files(repo_root):
+        relative = path.relative_to(repo_root).as_posix()
+        try:
+            source = path.read_text(encoding="utf-8")
+        except (OSError, UnicodeError):
+            continue
+        unit = SourceUnit(
+            id=deterministic_entity_id(
+                ir_revision,
+                relative,
+                EntityKind.SOURCE_UNIT,
+                relative,
+            ),
+            source_revision_id=ir_revision,
+            path=relative,
+            language="python",
+            content_hash=hashlib.sha256(source.encode("utf-8")).hexdigest(),
+            state=SourceUnitState.DISCOVERED,
+            backend_id=backend.backend_id,
+            backend_version=backend.backend_version,
+        )
+        artifact = backend.parse(unit)
+        if not isinstance(artifact, SyntaxArtifact):
+            continue
+        normalized = adapter.normalize(artifact)
+        if not isinstance(normalized, FileIR):
+            continue
+        symbols.extend(normalized.symbols)
+        relations.extend(normalized.relations)
+    return tuple(symbols), tuple(relations)
+
+
+def _semantic_module_map(repo_root: Path) -> dict[str, str]:
+    """Project the canonical feature-cone partition onto unique file owners."""
+
+    analysis_root = repo_root / ".codebase-analysis"
+    if (analysis_root / ACTIVE_RECEIPT_NAME).is_file():
+        try:
+            cones_path = resolve_active_run(analysis_root).generation_path / "03_feature_cones.json"
+        except LifecycleError as exc:
+            raise ToolError(f"Cannot load canonical module partition: {exc}") from exc
+    else:
+        cones_path = analysis_root / "03_feature_cones.json"
+    if not cones_path.is_file():
+        return {}
+    try:
+        payload = json.loads(cones_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ToolError(f"Canonical module partition is corrupt: {exc}") from exc
+    cones = payload.get("cones")
+    infrastructure = payload.get("infrastructure_files", [])
+    if not isinstance(cones, dict) or not isinstance(infrastructure, list):
+        raise ToolError("Canonical module partition has an invalid shape")
+    owners: dict[str, str] = {}
+    for module_id, cone in sorted(cones.items()):
+        files = cone.get("exclusive_files") if isinstance(cone, dict) else None
+        if not isinstance(module_id, str) or not isinstance(files, list):
+            raise ToolError("Canonical module partition has an invalid cone")
+        for path in files:
+            if not isinstance(path, str):
+                raise ToolError("Canonical module partition contains a non-string path")
+            prior = owners.get(path)
+            if prior is not None and prior != module_id:
+                raise ToolError(f"File has two exclusive semantic modules: {path}")
+            owners[path] = module_id
+    for path in infrastructure:
+        if not isinstance(path, str):
+            raise ToolError("Canonical infrastructure partition contains a non-string path")
+        owners.setdefault(path, "shared_infrastructure")
+    return owners
+
+
+def _semantic_service(repo_root: Path) -> SemanticService:
+    symbols, relations = _python_semantic_ir(repo_root)
+    return SemanticService(
+        repo_root,
+        ir_symbols=symbols,
+        relations=relations,
+        module_by_file=_semantic_module_map(repo_root),
+    )
+
+
+def _semantic_summary(service: SemanticService, ledger) -> dict:
+    return {
+        "ledger_path": str(service.store.path),
+        "docs_dir": str(service.repo_root / ".codebase-docs"),
+        "source_revision": ledger.source_revision,
+        "totals": ledger.totals.model_dump(mode="json"),
+        "coverage_percent": ledger.coverage_percent,
+    }
+
+
+def _bootstrap_semantic(repo_root: Path) -> dict:
+    try:
+        service = _semantic_service(repo_root)
+        ledger = service.bootstrap_semantic()
+    except (SemanticServiceError, OSError, ValueError) as exc:
+        raise ToolError(f"Semantic bootstrap failed: {exc}") from exc
+    return _semantic_summary(service, ledger)
+
+
+def _packet_payload(packet) -> dict | None:
+    if packet is None:
+        return None
+    payload = asdict(packet)
+    payload["lease_expires_at"] = packet.lease_expires_at.isoformat()
+    return payload
+
+
+HOST_SESSION_ENV_REGISTRY = (
+    ("codex", "CODEX_THREAD_ID"),
+    ("claude", "CLAUDE_CODE_SESSION_ID"),
+    ("generic", "CBE_HOST_SESSION_ID"),
+)
+
+
+def _trusted_host_session_id() -> str:
+    """Read host identity from server process state, never MCP input."""
+
+    for host_kind, variable in HOST_SESSION_ENV_REGISTRY:
+        value = os.environ.get(variable, "").strip()
+        if value:
+            return f"{host_kind}:{value}"
+    accepted = ", ".join(variable for _, variable in HOST_SESSION_ENV_REGISTRY)
+    raise ToolError(
+        "Semantic production requires a trusted host session identity from "
+        f"server process environment. Accepted variables, in priority order: {accepted}"
+    )
+
+
+def _ready_semantic_service(output_dir: str | None) -> SemanticService:
+    repo_root = _semantic_repo_root(output_dir)
+    service = _semantic_service(repo_root)
+    if not service.store.path.is_file():
+        raise ToolError("Semantic ledger not found. Run analyze_codebase first.")
+    return service
+
+
+def _render_paths(repo_root: Path) -> dict:
+    docs_dir = repo_root / ".codebase-docs"
+    return {
+        "index_path": str(docs_dir / "INDEX.md"),
+        "detail_paths": [str(path) for path in sorted(docs_dir.rglob("DETAIL.md"))],
+    }
+
+
+def _route_parent(snapshot, *, target: str, actor: str):
+    matches = tuple(
+        lease
+        for lease in snapshot.leases
+        if lease.target == target and lease.actor == actor
+    )
+    if len(matches) != 1:
+        raise ToolError(f"Canonical route parent is unavailable for {actor}")
+    return matches[0]
 
 
 # ---------------------------------------------------------------------------
@@ -131,28 +408,112 @@ async def analyze_codebase(
 
     output_path = resolve_output_dir(str(resolved_path), output_dir)
     project_id = project_id_from_path(str(resolved_path))
+    requested_languages = tuple(languages or ())
+    input_fingerprint = analysis_input_fingerprint(
+        languages=requested_languages,
+        exclude_paths=tuple(exclude_paths or ()),
+        include_tests=include_tests,
+    )
 
-    # Check cache
-    if not force_reindex and validate_json_files_exist(output_path):
-        logger.info(f"[analyze_codebase] Cache hit for {resolved_path}")
-        return {
-            "status": "success",
-            "project_id": project_id,
-            "output_dir": str(output_path),
-            "cached": True,
-            "message": "Using cached analysis results",
-            "files": {
-                "01_structure": str(output_path / "01_structure.json"),
-                "02_dag": str(output_path / "02_dag.json"),
-                "03_feature_cones": str(output_path / "03_feature_cones.json"),
-                "04_file_tokens": str(output_path / "04_file_tokens.json"),
-                "05_task_manifest": str(output_path / "05_task_manifest.json"),
-            },
-            "state_file": str(output_path / "state.json"),
-        }
+    prior_receipt = None
+    if (output_path / ACTIVE_RECEIPT_NAME).exists():
+        try:
+            active = resolve_active_run(
+                output_path,
+                expected_repo_root=resolved_path,
+                expected_input_fingerprint=input_fingerprint,
+                require_fresh_source=True,
+                require_unexpired_routes=True,
+            )
+        except LifecycleCacheMiss:
+            active = None
+        except LifecycleError as exc:
+            raise ToolError(f"Canonical analysis lifecycle is corrupt: {exc}") from exc
+        prior_receipt = read_active_receipt(output_path)
+        if active is not None and not force_reindex:
+            generation = active.generation_path
+            logger.info("[analyze_codebase] Canonical cache hit for %s", resolved_path)
+            semantic = _bootstrap_semantic(resolved_path)
+            return {
+                "status": "success",
+                "project_id": project_id,
+                "output_dir": str(output_path),
+                "cached": True,
+                "message": "Using cached analysis results",
+                "files": {
+                    "01_structure": str(generation / "01_structure.json"),
+                    "02_dag": str(generation / "02_dag.json"),
+                    "03_feature_cones": str(generation / "03_feature_cones.json"),
+                    "04_file_tokens": str(generation / "04_file_tokens.json"),
+                    "05_task_manifest": str(generation / "05_task_manifest.json"),
+                },
+                "state_file": str(output_path / "state.json"),
+                "canonical_state_file": str(active.state_path),
+                "run_id": active.receipt.run_id,
+                "active_run_receipt": str(output_path / ACTIVE_RECEIPT_NAME),
+                "semantic": semantic,
+            }
+    else:
+        generations = output_path / ".runs"
+        if generations.exists() and any(generations.iterdir()):
+            try:
+                active = recover_interrupted_initial_activation(
+                    output_path,
+                    expected_repo_root=resolved_path,
+                    expected_input_fingerprint=input_fingerprint,
+                )
+            except LifecycleError as exc:
+                raise ToolError(
+                    f"Canonical generations exist without a recoverable active receipt: {exc}"
+                ) from exc
+            prior_receipt = active.receipt
+            if not force_reindex:
+                generation = active.generation_path
+                semantic = _bootstrap_semantic(resolved_path)
+                return {
+                    "status": "success",
+                    "project_id": project_id,
+                    "output_dir": str(output_path),
+                    "cached": True,
+                    "message": "Using recovered cached analysis results",
+                    "files": {
+                        "01_structure": str(generation / "01_structure.json"),
+                        "02_dag": str(generation / "02_dag.json"),
+                        "03_feature_cones": str(generation / "03_feature_cones.json"),
+                        "04_file_tokens": str(generation / "04_file_tokens.json"),
+                        "05_task_manifest": str(generation / "05_task_manifest.json"),
+                    },
+                    "state_file": str(output_path / "state.json"),
+                    "canonical_state_file": str(active.state_path),
+                    "run_id": active.receipt.run_id,
+                    "active_run_receipt": str(output_path / ACTIVE_RECEIPT_NAME),
+                    "semantic": semantic,
+                }
+        legacy_v2 = output_path / "state.json"
+        legacy_artifacts = tuple(output_path / name for name in (
+            "01_structure.json", "02_dag.json", "03_feature_cones.json",
+            "04_file_tokens.json", "05_task_manifest.json", "06_function_deps.json",
+        ))
+        if legacy_v2.exists():
+            try:
+                legacy = json.loads(legacy_v2.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError) as exc:
+                raise ToolError(f"Legacy V2 state is corrupt: {exc}") from exc
+            if legacy.get("project_id") != project_id or Path(
+                legacy.get("path", "")
+            ).resolve() != resolved_path:
+                raise ToolError("Legacy V2 state does not match the requested project/root")
+            if not all(path.is_file() for path in legacy_artifacts):
+                raise ToolError("Legacy V2 output is incomplete and cannot be upgraded safely")
+        elif any(path.exists() for path in legacy_artifacts):
+            raise ToolError("Legacy artifacts exist without a V2 lineage anchor")
 
-    # Ensure output directory exists
+    # Ensure output directory exists.  All new bytes remain unselected until
+    # the same-directory generation publish and selector CAS complete.
     output_path.mkdir(parents=True, exist_ok=True)
+    run_id = f"run-{uuid.uuid4().hex}"
+    staging_path = output_path / ".staging" / run_id
+    staging_path.mkdir(parents=True, exist_ok=False)
 
     # Step 1: Parse codebase
     logger.info(f"[analyze_codebase] Parsing {resolved_path}...")
@@ -354,8 +715,8 @@ async def analyze_codebase(
     task_manifest = build_task_manifest(cone_dicts, file_tokens)
 
     # Step 6: Write JSON files + state.json
-    write_analysis_outputs(
-        output_path=output_path,
+    v2_projection = write_analysis_outputs(
+        output_path=staging_path,
         project_id=project_id,
         resolved_path=resolved_path,
         snapshot=snapshot,
@@ -368,25 +729,289 @@ async def analyze_codebase(
         file_details=file_details,
         task_manifest=task_manifest,
     )
+    # The helper writes into a transient generation staging directory, while
+    # the immutable rollback projection must retain the stable analysis root.
+    v2_projection["documentation"]["output_dir"] = str(output_path)
+    v2_recovery_projection_sha = stage_v2_recovery_projection(
+        staging_path, v2_projection
+    )
+
+    seed = LegacySubmissionSeed(
+        task_ids=tuple(task_manifest.get("tasks", {}).keys()),
+        source_file_count=len(snapshot.files),
+    )
+    store = JsonRunStore(staging_path / "state-v3.json")
+    begin_actor = "orchestrator/legacy-mcp/analyze_codebase"
+    now = datetime.now(UTC)
+    bootstrap = store.issue_bootstrap_lease(
+        run_id=run_id,
+        actor=begin_actor,
+        ttl=timedelta(days=1),
+        now=now,
+    )
+    begin = store.begin_run(
+        run_id=run_id,
+        repo_root=resolved_path,
+        requested_languages=tuple(languages or snapshot.languages_detected),
+        actor=begin_actor,
+        lease_id=bootstrap.lease_id,
+        expected_revision=0,
+        exclude_globs=tuple(exclude_paths or ()),
+        product_output_roots=(output_path,),
+        route_keys=ROUTE_KEYS,
+        legacy_submission_seed=seed,
+        initial_metadata={
+            "project_id": project_id,
+            "analysis_root": str(output_path),
+            "analysis_input_fingerprint": input_fingerprint,
+            V2_RECOVERY_PROJECTION_SHA_KEY: v2_recovery_projection_sha,
+        },
+        now=now,
+    )
+    # Reopen before publish so an incomplete V3 never reaches the selector.
+    JsonRunStore(staging_path / "state-v3.json").snapshot()
+    generation = publish_generation(output_path, staging_path, run_id)
+    snapshot_v3 = JsonRunStore(generation / "state-v3.json").snapshot()
+
+    v2_path = output_path / "state.json"
+    if not v2_path.exists():
+        write_v2_rollback_projection(v2_path, v2_projection, snapshot=snapshot_v3)
+    v2_hash = hashlib.sha256(v2_path.read_bytes()).hexdigest()
+    prior_hash = active_receipt_hash(output_path)
+    prior_generation = prior_receipt.activation_generation if prior_receipt else 0
+    receipt = ActiveRunReceipt(
+        activation_generation=prior_generation + 1,
+        run_id=run_id,
+        generation_path=f".runs/{run_id}",
+        state_path=f".runs/{run_id}/state-v3.json",
+        repo_root=str(resolved_path),
+        analysis_input_fingerprint=input_fingerprint,
+        source_revision=snapshot_v3.revisions.source,
+        v2_sha256=v2_hash,
+        artifacts=artifact_manifest(generation),
+        legacy_seed_sha256=legacy_seed_sha256(seed),
+        route_keys=ROUTE_KEYS,
+        prior_receipt_sha256=prior_hash,
+    )
+    try:
+        promote_active_receipt(
+            output_path,
+            receipt,
+            expected_prior_hash=prior_hash,
+            expected_generation=prior_generation,
+        )
+    except LifecycleConflict as exc:
+        raise ToolError(f"Canonical activation conflict: {exc}") from exc
 
     logger.info(f"[analyze_codebase] Analysis complete. Output: {output_path}")
+    semantic = _bootstrap_semantic(resolved_path)
 
     return {
         "status": "success",
         "project_id": project_id,
         "output_dir": str(output_path),
+        "cached": False,
         "files_analyzed": len(snapshot.files),
         "feature_cones_found": len(cones),
         "task_count": len(task_manifest.get("tasks", {})),
         "total_tokens": sum(file_tokens.values()),
         "files": {
-            "01_structure": str(output_path / "01_structure.json"),
-            "02_dag": str(output_path / "02_dag.json"),
-            "03_feature_cones": str(output_path / "03_feature_cones.json"),
-            "04_file_tokens": str(output_path / "04_file_tokens.json"),
-            "05_task_manifest": str(output_path / "05_task_manifest.json"),
+            "01_structure": str(generation / "01_structure.json"),
+            "02_dag": str(generation / "02_dag.json"),
+            "03_feature_cones": str(generation / "03_feature_cones.json"),
+            "04_file_tokens": str(generation / "04_file_tokens.json"),
+            "05_task_manifest": str(generation / "05_task_manifest.json"),
         },
         "state_file": str(output_path / "state.json"),
+        "canonical_state_file": str(generation / "state-v3.json"),
+        "run_id": run_id,
+        "active_run_receipt": str(output_path / ACTIVE_RECEIPT_NAME),
+        "semantic": semantic,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Tools 1b-1f: semantic lifecycle and independent review
+# ---------------------------------------------------------------------------
+
+
+@mcp.tool(annotations={"readOnlyHint": False})
+async def get_semantic_progress(
+    output_dir: Annotated[
+        str | None,
+        Field(description="Path to the canonical .codebase-analysis directory."),
+    ] = None,
+) -> dict:
+    """Recompute semantic coverage from source truth and the canonical ledger."""
+
+    service = _ready_semantic_service(output_dir)
+    try:
+        progress = service.get_semantic_progress()
+    except (SemanticServiceError, OSError, ValueError, RuntimeError) as exc:
+        raise ToolError(f"Cannot read semantic progress: {exc}") from exc
+    return {
+        "status": "success",
+        "output_dir": str(service.repo_root / ".codebase-analysis"),
+        "ledger_path": str(service.store.path),
+        "docs_dir": str(service.repo_root / ".codebase-docs"),
+        **progress,
+    }
+
+
+@mcp.tool(annotations={"readOnlyHint": False})
+async def claim_semantic_batch(
+    max_context_tokens: Annotated[
+        int,
+        Field(description="Host context window used for deterministic packet budgeting."),
+    ],
+    lease_seconds: Annotated[
+        int,
+        Field(description="Exclusive lease lifetime in seconds."),
+    ] = 900,
+    output_dir: Annotated[
+        str | None,
+        Field(description="Path to the canonical .codebase-analysis directory."),
+    ] = None,
+) -> dict:
+    """Claim one dependency-ready, replayable semantic source packet."""
+
+    service = _ready_semantic_service(output_dir)
+    try:
+        packet = service.claim_semantic_batch(
+            actor=_trusted_host_session_id(),
+            max_context_tokens=max_context_tokens,
+            lease_seconds=lease_seconds,
+        )
+    except (SemanticServiceError, OSError, ValueError, RuntimeError) as exc:
+        raise ToolError(f"Cannot claim semantic batch: {exc}") from exc
+    return {
+        "status": "success",
+        "packet": _packet_payload(packet),
+        "done": packet is None,
+    }
+
+
+@mcp.tool(annotations={"readOnlyHint": False})
+async def submit_semantic_batch(
+    batch_id: Annotated[str, Field(description="Claimed semantic batch identity.")],
+    source_revision: Annotated[
+        str,
+        Field(description="Exact source revision copied from the claimed packet."),
+    ],
+    explanations: Annotated[
+        list[dict],
+        Field(description="Full batch explanations as {symbol_id, text} objects."),
+    ],
+    residuals: Annotated[
+        list[dict] | None,
+        Field(description="Optional terminal residuals as {symbol_id, reason} objects."),
+    ] = None,
+    output_dir: Annotated[
+        str | None,
+        Field(description="Path to the canonical .codebase-analysis directory."),
+    ] = None,
+) -> dict:
+    """Atomically accept one full batch into ledger and readable documents."""
+
+    explanation_map: dict[str, str] = {}
+    for item in explanations:
+        if not isinstance(item, dict) or set(item) != {"symbol_id", "text"}:
+            raise ToolError("Each explanation must contain only symbol_id and text")
+        symbol_id = item["symbol_id"]
+        text = item["text"]
+        if not isinstance(symbol_id, str) or not isinstance(text, str):
+            raise ToolError("Explanation symbol_id and text must be strings")
+        if symbol_id in explanation_map:
+            raise ToolError(f"Duplicate explanation symbol_id: {symbol_id}")
+        explanation_map[symbol_id] = text
+
+    residual_map: dict[str, str] = {}
+    for item in residuals or []:
+        if not isinstance(item, dict) or set(item) != {"symbol_id", "reason"}:
+            raise ToolError("Each residual must contain only symbol_id and reason")
+        symbol_id = item["symbol_id"]
+        reason = item["reason"]
+        if not isinstance(symbol_id, str) or not isinstance(reason, str):
+            raise ToolError("Residual symbol_id and reason must be strings")
+        if symbol_id in residual_map:
+            raise ToolError(f"Duplicate residual symbol_id: {symbol_id}")
+        residual_map[symbol_id] = reason
+
+    service = _ready_semantic_service(output_dir)
+    try:
+        ledger = service.submit_semantic_batch(
+            batch_id=batch_id,
+            actor=_trusted_host_session_id(),
+            source_revision=source_revision,
+            explanations=explanation_map,
+            residuals=residual_map,
+        )
+        accepted = service.get_semantic_submission_result(batch_id)
+        progress = service.get_semantic_progress()
+    except (SemanticSubmissionError, SemanticServiceError, OSError, ValueError, RuntimeError) as exc:
+        raise ToolError(f"Semantic batch rejected: {exc}") from exc
+    return {
+        "status": "success",
+        "accepted_symbol_ids": accepted["explanation_symbol_ids"],
+        "residual_symbol_ids": accepted["residual_symbol_ids"],
+        "ledger_path": str(service.store.path),
+        "render": _render_paths(service.repo_root),
+        "progress": progress,
+        "source_revision": ledger.source_revision,
+        "batch_released": True,
+    }
+
+
+@mcp.tool(annotations={"readOnlyHint": False})
+async def get_semantic_review_batch(
+    output_dir: Annotated[
+        str | None,
+        Field(description="Path to the canonical .codebase-analysis directory."),
+    ] = None,
+) -> dict:
+    """Create a deterministic blind sample without exposing producer metadata."""
+
+    service = _ready_semantic_service(output_dir)
+    try:
+        packet = service.get_semantic_review_batch()
+    except (SemanticReviewError, SemanticServiceError, OSError, ValueError, RuntimeError) as exc:
+        raise ToolError(f"Cannot create semantic review batch: {exc}") from exc
+    return {"status": "success", **packet}
+
+
+@mcp.tool(annotations={"readOnlyHint": False})
+async def submit_semantic_review(
+    review_batch_id: Annotated[
+        str,
+        Field(
+            description=(
+                "Opaque batch receipt returned by get_semantic_review_batch; "
+                "the server owns independent reviewer dispatch and identity."
+            )
+        ),
+    ],
+    output_dir: Annotated[
+        str | None,
+        Field(description="Path to the canonical .codebase-analysis directory."),
+    ] = None,
+) -> dict:
+    """Dispatch an isolated Codex reviewer and atomically consume its verdict."""
+
+    service = _ready_semantic_service(output_dir)
+    try:
+        result = service.submit_semantic_review(
+            review_batch_id=review_batch_id,
+        )
+        progress = service.get_semantic_progress()
+    except (SemanticReviewError, SemanticServiceError, OSError, ValueError, RuntimeError) as exc:
+        raise ToolError(f"Semantic review rejected: {exc}") from exc
+    revisions = list(result["revision_symbol_ids"])
+    return {
+        "status": "revision_required" if revisions else "accepted",
+        "reviewer_session_id": result["reviewer_session_id"],
+        "artifact_path": result["verdict_path"],
+        "revision_symbol_ids": revisions,
+        "progress": progress,
     }
 
 
@@ -400,6 +1025,8 @@ async def get_structure(
     module: Annotated[str | None, Field(description="Module/cone name")] = None,
     file: Annotated[str | None, Field(description="File path")] = None,
     function: Annotated[str | None, Field(description="Function name")] = None,
+    detail: Annotated[bool, Field(description="Include per-file function_names, class_names, import_sources")] = False,
+    output_dir: Annotated[str | None, Field(description="Path to .codebase-analysis/ dir. Auto-detects if omitted.")] = None,
 ) -> dict:
     """Query code structure from 01_structure.json.
 
@@ -409,10 +1036,7 @@ async def get_structure(
     - function: Get function signature and dependencies
     - None: Return project summary
     """
-    # Find the latest project directory
-    project_dir = find_latest_project_dir()
-    if not project_dir:
-        raise ToolError("No project found. Run analyze_codebase first.")
+    project_dir = resolve_project_dir(output_dir)
 
     structure_path = project_dir / "01_structure.json"
     if not structure_path.exists():
@@ -463,14 +1087,21 @@ async def get_structure(
             f for f in files if f["filepath"] in cone.get("exclusive_files", [])
         ]
 
+        # When detail=False, strip verbose per-file fields for slim response
+        if not detail:
+            module_files = [
+                {k: v for k, v in f.items() if k not in ("function_names", "class_names", "import_sources")}
+                for f in module_files
+            ]
+
         return {
             "status": "success",
             "query_type": "module",
             "module_name": module,
             "files": module_files,
             "file_count": len(module_files),
-            "total_functions": sum(len(f.get("function_names", [])) for f in module_files),
-            "total_classes": sum(len(f.get("class_names", [])) for f in module_files),
+            "total_functions": sum(len(f.get("function_names", [])) for f in files if f["filepath"] in cone.get("exclusive_files", [])),
+            "total_classes": sum(len(f.get("class_names", [])) for f in files if f["filepath"] in cone.get("exclusive_files", [])),
         }
 
     # Mode: File query
@@ -543,6 +1174,7 @@ async def get_modules(
         str | None,
         Field(description="Module ID for detail view. None = summary of all modules."),
     ] = None,
+    output_dir: Annotated[str | None, Field(description="Path to .codebase-analysis/ dir. Auto-detects if omitted.")] = None,
 ) -> dict:
     """Query functional modules in V5 format.
 
@@ -552,9 +1184,7 @@ async def get_modules(
 
     Use summary first to get module IDs, then detail for specific modules.
     """
-    project_dir = find_latest_project_dir()
-    if not project_dir:
-        raise ToolError("No project found. Run analyze_codebase first.")
+    project_dir = resolve_project_dir(output_dir)
 
     cones_path = project_dir / "03_feature_cones.json"
     if not cones_path.exists():
@@ -562,7 +1192,7 @@ async def get_modules(
 
     cones_data = json.loads(cones_path.read_text(encoding="utf-8"))
     cones = cones_data.get("cones", {})
-    infra_files = cones_data.get("infrastructure", [])
+    infra_files = cones_data.get("infrastructure_files", [])
 
     # Load file tokens
     tokens_path = project_dir / "04_file_tokens.json"
@@ -597,7 +1227,9 @@ async def get_modules(
             dag_data = json.loads(dag_path.read_text(encoding="utf-8"))
             dag_edges = dag_data.get("edges", [])
 
-        inter_module_deps = compute_inter_module_deps_from_dag(cones, dag_edges)
+        inter_module_deps = compute_inter_module_deps_from_dag(
+            cones, dag_edges, infrastructure_files=infra_files,
+        )
 
         modules = []
         total_dep_edges = 0
@@ -624,15 +1256,9 @@ async def get_modules(
             "total_tokens": total_tokens,
             "grouping": {
                 "strategy_used": "feature_cone",
-                "available_strategies": list_strategies(),
-                "interface": "GroupingStrategy protocol",
-                "config": "Set CODEBASE_EXPLORER_STRATEGY env var to switch algorithm",
             },
             "token_budget": {
-                "total_project_tokens": total_tokens,
                 "budget_limit": 100_000,
-                "within_budget": total_tokens <= 100_000,
-                "stop_condition": "Modules exceeding budget are split into sub-tasks in task_manifest",
             },
             "inter_module_deps": {
                 "total_edges": total_dep_edges,
@@ -642,10 +1268,30 @@ async def get_modules(
             "infrastructure": {
                 "file_count": len(infra_files),
                 "token_count": infra_tokens,
+                "files": infra_files,
             },
         }
 
     # --- Detail mode (specific module_id) ---
+
+    # Handle infrastructure pseudo-module
+    if module_id == "infrastructure":
+        infra_tokens = sum(file_tokens.get(f, 0) for f in infra_files)
+        infra_with_tokens = [
+            {"filepath": f, "token_count": file_tokens.get(f, 0)}
+            for f in infra_files
+        ]
+        return {
+            "status": "success",
+            "module_id": "infrastructure",
+            "name": "Infrastructure & Shared Utilities",
+            "layer": 0,
+            "depends_on": [],
+            "files": infra_with_tokens,
+            "internal_layers": [],
+            "token_count": infra_tokens,
+        }
+
     cone = cones.get(module_id)
     if not cone:
         raise ToolError(f"Module '{module_id}' not found")
@@ -668,7 +1314,9 @@ async def get_modules(
             cone_files, dag_data.get("nodes", []), dag_edges,
         )
 
-    inter_module_deps = compute_inter_module_deps_from_dag(cones, dag_edges)
+    inter_module_deps = compute_inter_module_deps_from_dag(
+        cones, dag_edges, infrastructure_files=infra_files,
+    )
     deps = sorted(inter_module_deps.get(module_id, set()))
 
     return {
@@ -695,6 +1343,7 @@ async def get_function_deps(
         str | None,
         Field(description="Optional: limit results to within-module dependencies"),
     ] = None,
+    output_dir: Annotated[str | None, Field(description="Path to .codebase-analysis/ dir. Auto-detects if omitted.")] = None,
 ) -> dict:
     """Get cross-file function-level dependencies for a specific file.
 
@@ -703,9 +1352,7 @@ async def get_function_deps(
 
     Use this when writing DETAIL docs to describe dependency relationships.
     """
-    project_dir = find_latest_project_dir()
-    if not project_dir:
-        raise ToolError("No project found. Run analyze_codebase first.")
+    project_dir = resolve_project_dir(output_dir)
 
     deps_path = project_dir / "06_function_deps.json"
     if not deps_path.exists():
@@ -763,11 +1410,13 @@ async def doc_operation(
     operation: Annotated[
         Literal[
             "get_template", "get_protocol",
+            "render_semantic_docs",
             "move_detail", "merge_modules", "split_module", "list_module_files",
             "update_index", "reorder_modules",
         ],
         Field(description=(
             "Operation: 'get_template'/'get_protocol' for format info, "
+            "'render_semantic_docs' to repair the semantic projection, "
             "'move_detail'/'merge_modules'/'split_module'/'list_module_files'/"
             "'update_index'/'reorder_modules' for doc editing"
         )),
@@ -787,12 +1436,16 @@ async def doc_operation(
     params: Annotated[
         dict | None, Field(description="Additional parameters (for move_detail block-level: source_module, target_module, filepath)"),
     ] = None,
+    output_dir: Annotated[str | None, Field(description="Path to .codebase-analysis/ dir. Auto-detects if omitted.")] = None,
 ) -> dict:
     """Documentation operations for DETAIL/INDEX generation and Phase 5 reorganization.
 
     Read-only operations:
     - get_template: Returns DETAIL format with four sections per file
     - get_protocol: Returns the three-step documentation protocol
+
+    Semantic projection repair:
+    - render_semantic_docs: Rebuild four-layer docs from the canonical ledger
 
     Editing operations (Phase 5 -- doc reorganization without manual text editing):
     - move_detail: Move a file block from one module's DETAIL.md to another's
@@ -807,6 +1460,7 @@ async def doc_operation(
             "module_id: {module_id}\n"
             "module_name: {module_name}\n"
             "file_count: N\n"
+            "token_budget: {budget}\n"
             "generated_at: {timestamp}\n"
             "---\n"
             "\n"
@@ -817,16 +1471,16 @@ async def doc_operation(
             "### {filename}\n"
             "<!-- file:{filepath} -->\n"
             "\n"
-            "#### Purpose\n"
+            "#### 功能概述 (Purpose)\n"
             "[What this file does and why it exists]\n"
             "\n"
-            "#### Data Flow\n"
+            "#### 数据流 (Data Flow)\n"
             "[How data enters, transforms, and exits this file]\n"
             "\n"
-            "#### Key Interfaces\n"
+            "#### 核心接口 (Key Interfaces)\n"
             "[Important functions/classes with signatures and brief descriptions]\n"
             "\n"
-            "#### Dependencies\n"
+            "#### 依赖关系 (Dependencies)\n"
             "[Cross-file dependencies with specific function names and purposes]\n"
             "\n"
             "<!-- end:file:{filepath} -->\n"
@@ -851,10 +1505,10 @@ async def doc_operation(
                 "index_fragment_end": "<!-- end:index-fragment:{module_id} -->",
             },
             "sections_per_file": [
-                "#### Purpose",
-                "#### Data Flow",
-                "#### Key Interfaces",
-                "#### Dependencies",
+                "#### 功能概述 (Purpose)",
+                "#### 数据流 (Data Flow)",
+                "#### 核心接口 (Key Interfaces)",
+                "#### 依赖关系 (Dependencies)",
             ],
             "index_template": {
                 "yaml_front_matter": (
@@ -912,13 +1566,32 @@ async def doc_operation(
             },
         }
 
-    # --- CRUD operations for Phase 5 doc reorganization ---
-    project_dir = find_latest_project_dir()
-    if not project_dir:
-        raise ToolError("No project found. Run analyze_codebase first.")
+    if operation == "render_semantic_docs":
+        repo_root = _semantic_repo_root(output_dir)
+        try:
+            service = _semantic_service(repo_root)
+            result = service.render_semantic_docs()
+        except (SemanticServiceError, OSError, ValueError) as exc:
+            raise ToolError(f"Semantic document repair failed: {exc}") from exc
+        return {
+            "status": "success",
+            "operation": "render_semantic_docs",
+            "repaired": True,
+            **dict(result),
+        }
 
-    state_path = project_dir / "state.json"
-    state = read_state(state_path) if state_path.exists() else {}
+    # --- CRUD operations for Phase 5 doc reorganization ---
+    project_dir = resolve_project_dir(output_dir)
+    analysis_root = _analysis_root_for_generation(project_dir)
+    canonical_state_path = project_dir / "state-v3.json"
+    canonical_snapshot = None
+    if canonical_state_path.exists():
+        canonical_snapshot = JsonRunStore(canonical_state_path).snapshot()
+        state = {"path": canonical_snapshot.repo_root}
+        state_path = analysis_root / "state.json"
+    else:
+        state_path = project_dir / "state.json"
+        state = read_state(state_path) if state_path.exists() else {}
 
     # Resolve doc_dir: sibling of .codebase-analysis -> .codebase-docs
     analysis_dir = Path(state.get("path", "")) if state.get("path") else project_dir.parent
@@ -1201,6 +1874,7 @@ async def doc_operation(
             fragments_content.append(f"## {heading}")
             if frag:
                 fragments_content.append(frag)
+            fragments_content.append(f"[→ DETAIL]({mid}/DETAIL.md)")
             fragments_content.append(f"<!-- end-module-index:{mid} -->")
             fragments_content.append("")
 
@@ -1223,6 +1897,42 @@ async def doc_operation(
         doc_index["index_path"] = "INDEX.md"
         doc_index["module_count"] = len(sorted_module_ids)
         _save_doc_index()
+
+        if canonical_snapshot is not None:
+            actor = "orchestrator/legacy-mcp/doc_operation:update_index"
+            producer = "legacy-mcp/doc_operation:update_index"
+            store = JsonRunStore(canonical_state_path)
+            parent = _route_parent(
+                canonical_snapshot,
+                target="capability:route-parent:doc_operation:update_index",
+                actor=actor,
+            )
+            try:
+                leased = store.lease_task(
+                    run_id=canonical_snapshot.run_id,
+                    target="index",
+                    actor=actor,
+                    lease_id=parent.lease_id,
+                    expected_revision=canonical_snapshot.store_revision,
+                )
+                index_bytes = index_path.read_bytes()
+                store.submit_artifact(
+                    run_id=canonical_snapshot.run_id,
+                    target="index",
+                    actor=actor,
+                    producer=producer,
+                    lease_id=leased.lease.lease_id,
+                    expected_revision=leased.snapshot.store_revision,
+                    artifact_bytes=index_bytes,
+                    artifact_hash=hashlib.sha256(index_bytes).hexdigest(),
+                    revision_kind="document",
+                )
+            except RunStoreError as exc:
+                raise ToolError(
+                    f"Canonical update-index state commit failed for run "
+                    f"{canonical_snapshot.run_id} at revision "
+                    f"{canonical_snapshot.store_revision}; regenerate after refreshing: {exc}"
+                ) from exc
 
         return {
             "status": "success",
@@ -1271,6 +1981,7 @@ async def get_dependency_graph(
     hops: Annotated[
         int, Field(description="N-hop neighbors for scope=file (default 1)")
     ] = 1,
+    output_dir: Annotated[str | None, Field(description="Path to .codebase-analysis/ dir. Auto-detects if omitted.")] = None,
 ) -> dict:
     """Generate Mermaid dependency graph from 02_dag.json.
 
@@ -1287,9 +1998,7 @@ async def get_dependency_graph(
 
     logger.info("[DEP-GRAPH] Generating dependency graph scope=%s", scope)
 
-    project_dir = find_latest_project_dir()
-    if not project_dir:
-        raise ToolError("No project found. Run analyze_codebase first.")
+    project_dir = resolve_project_dir(output_dir)
 
     dag_path = project_dir / "02_dag.json"
     if not dag_path.exists():
@@ -1435,38 +2144,47 @@ async def get_progress(
     project_id: Annotated[
         str | None, Field(description="Project ID. None = latest project.")
     ] = None,
+    output_dir: Annotated[str | None, Field(description="Path to .codebase-analysis/ dir. Auto-detects if omitted.")] = None,
 ) -> dict:
-    """Query task completion status from state.json."""
-    project_dir = find_latest_project_dir()
-    if not project_dir:
-        raise ToolError("No project found. Run analyze_codebase first.")
-
-    state_path = project_dir / "state.json"
+    """Project the existing progress shape from the selected canonical V3 run."""
+    project_dir = resolve_project_dir(output_dir)
+    state_path = project_dir / "state-v3.json"
     if not state_path.exists():
-        raise ToolError(f"State file not found: {state_path}")
+        raise ToolError(f"Canonical state file not found: {state_path}")
+    try:
+        snapshot = JsonRunStore(state_path).snapshot()
+    except RecoveryError as exc:
+        raise ToolError(f"Failed to read canonical state: {exc}") from exc
+    legacy = snapshot.legacy_submission
+    if legacy is None:
+        raise ToolError("Canonical legacy progress is not initialized")
 
-    state = read_state(state_path)
-    if not state:
-        raise ToolError("Failed to read state file")
-
-    tasks = state.get("tasks", {})
-    total = len(tasks)
-    pending = sum(1 for t in tasks.values() if t.get("status") == "pending")
-    in_progress = sum(1 for t in tasks.values() if t.get("status") == "in_progress")
-    complete = sum(1 for t in tasks.values() if t.get("status") == "complete")
-    failed = sum(1 for t in tasks.values() if t.get("status") == "failed")
+    total = len(legacy.tasks)
+    pending = sum(1 for task in legacy.tasks if task.status == "pending")
+    complete = sum(1 for task in legacy.tasks if task.status == "complete")
+    in_progress = 0
+    failed = 0
 
     progress_percent = (complete / total * 100) if total > 0 else 0.0
 
-    next_pending = [
-        tid for tid, t in tasks.items() if t.get("status") == "pending"
-    ][:10]  # Limit to 10
-
-    doc_info = state.get("documentation", {})
+    next_pending = [task.task_id for task in legacy.tasks if task.status == "pending"][:10]
+    completed = tuple(task for task in legacy.tasks if task.status == "complete")
+    metadata = legacy.projection_metadata
+    coverage = (
+        len(metadata.source_files_covered) / metadata.source_file_count * 100
+        if metadata.source_file_count
+        else 0.0
+    )
+    index_written = any(
+        artifact.target == "index"
+        and artifact.actor == "orchestrator/legacy-mcp/doc_operation:update_index"
+        and artifact.producer == "legacy-mcp/doc_operation:update_index"
+        for artifact in snapshot.artifacts
+    )
 
     return {
         "status": "success",
-        "project_id": state.get("project_id"),
+        "project_id": snapshot.metadata.get("project_id"),
         "tasks": {
             "total": total,
             "pending": pending,
@@ -1476,14 +2194,12 @@ async def get_progress(
             "progress_percent": round(progress_percent, 2),
         },
         "documentation": {
-            "output_dir": doc_info.get("output_dir", ""),
-            "index_written": doc_info.get("index_written", False),
-            "details_written": doc_info.get("details_written", 0),
-            "snippets_written": doc_info.get("snippets_written", 0),
-            "total_planned": doc_info.get("total_planned", 0),
-            "source_file_coverage_percent": doc_info.get(
-                "source_file_coverage_percent", 0.0
-            ),
+            "output_dir": snapshot.metadata.get("analysis_root", ""),
+            "index_written": index_written,
+            "details_written": sum(task.details_written for task in completed),
+            "snippets_written": sum(task.snippets_written for task in completed),
+            "total_planned": total,
+            "source_file_coverage_percent": coverage,
         },
         "next_pending_tasks": next_pending,
     }
@@ -1500,11 +2216,10 @@ async def get_file_tokens(
     module: Annotated[
         str | None, Field(description="Module/cone ID. None = all modules.")
     ] = None,
+    output_dir: Annotated[str | None, Field(description="Path to .codebase-analysis/ dir. Auto-detects if omitted.")] = None,
 ) -> dict:
     """Query file token estimates from 04_file_tokens.json."""
-    project_dir = find_latest_project_dir()
-    if not project_dir:
-        raise ToolError("No project found. Run analyze_codebase first.")
+    project_dir = resolve_project_dir(output_dir)
 
     tokens_path = project_dir / "04_file_tokens.json"
     if not tokens_path.exists():
@@ -1513,13 +2228,17 @@ async def get_file_tokens(
     tokens_data = json.loads(tokens_path.read_text(encoding="utf-8"))
     files = tokens_data.get("files", [])
 
-    # Mode: All files
+    # Mode: All files — return top 20 by token count + summary
     if not file and not module:
+        sorted_files = sorted(files, key=lambda f: f.get("estimated_tokens", 0), reverse=True)
+        top_files = sorted_files[:20]
         return {
             "status": "success",
             "total_tokens": tokens_data.get("total_tokens", 0),
             "file_count": tokens_data.get("file_count", 0),
-            "files": files,
+            "top_files": top_files,
+            "showing": min(20, len(files)),
+            "hint": "Use module= to see all files in a specific module." if len(files) > 20 else None,
         }
 
     # Mode: Single file
@@ -1595,18 +2314,23 @@ async def submit_analysis(
     project_id: Annotated[
         str | None, Field(description="Project ID. None = latest.")
     ] = None,
+    output_dir: Annotated[str | None, Field(description="Path to .codebase-analysis/ dir. Auto-detects if omitted.")] = None,
 ) -> dict:
-    """Submit analysis completion and update state.json.
+    """Submit one legacy analysis through the canonical atomic V3 ingress.
 
     Called by DETAIL Agent after writing documentation files.
-    Atomically updates task status and coverage metrics.
+    Atomically updates task, artifact and legacy projection inputs.
     """
-    project_dir = find_latest_project_dir()
-    if not project_dir:
-        raise ToolError("No project found. Run analyze_codebase first.")
-
-    state_path = project_dir / "state.json"
-    project_root = project_dir.parent  # .codebase-analysis sits inside the project
+    project_dir = resolve_project_dir(output_dir)
+    state_path = project_dir / "state-v3.json"
+    if not state_path.exists():
+        raise ToolError(f"Canonical state file not found: {state_path}")
+    store = JsonRunStore(state_path)
+    try:
+        snapshot = store.snapshot()
+    except RecoveryError as exc:
+        raise ToolError(f"Canonical state is unavailable: {exc}") from exc
+    project_root = Path(snapshot.repo_root).parent
 
     # Verify files exist, validate paths are within project directory, and append end marker
     end_marker = "\n<!-- codebase-explorer: end -->\n"
@@ -1620,62 +2344,64 @@ async def submit_analysis(
         if "<!-- codebase-explorer: end -->" not in content:
             p.write_text(content + end_marker, encoding="utf-8")
 
-    # Update task status
-    output_files = [
-        {"path": p, "type": "detail", "status": "complete"}
-        for p in detail_paths
-    ] + [
-        {"path": p, "type": "snippet", "status": "complete"}
-        for p in snippet_paths
-    ]
-
-    state = update_task_status(
-        state_path,
-        task_id,
-        status="complete",
-        output_files=output_files,
+    receipt_payload = {
+        "schema": "cbe-legacy-submission-receipt-1",
+        "task_id": task_id,
+        "tokens_used": tokens_used,
+        "detail_files": [
+            {"path": path, "sha256": hashlib.sha256(Path(path).read_bytes()).hexdigest()}
+            for path in detail_paths
+        ],
+        "snippet_files": [
+            {"path": path, "sha256": hashlib.sha256(Path(path).read_bytes()).hexdigest()}
+            for path in snippet_paths
+        ],
+    }
+    receipt_bytes = (
+        json.dumps(receipt_payload, sort_keys=True, separators=(",", ":")) + "\n"
+    ).encode("utf-8")
+    actor = "orchestrator/legacy-mcp/submit_analysis"
+    parent = _route_parent(
+        snapshot,
+        target="capability:route-parent:submit_analysis",
+        actor=actor,
     )
-
-    # Update documentation metrics
-    doc = state.get("documentation", {})
-    doc["details_written"] = doc.get("details_written", 0) + len(detail_paths)
-    doc["snippets_written"] = doc.get("snippets_written", 0) + len(snippet_paths)
-
-    if source_files_covered:
-        existing = set(doc.get("source_files_covered", []))
-        existing.update(source_files_covered)
-        doc["source_files_covered"] = list(existing)
-
-        # Recalculate coverage
-        structure_path = project_dir / "01_structure.json"
-        if structure_path.exists():
-            structure = json.loads(structure_path.read_text(encoding="utf-8"))
-            total_files = structure.get("file_count", 0)
-            if total_files > 0:
-                doc["source_file_coverage_percent"] = (
-                    len(existing) / total_files * 100
-                )
-
-    state["documentation"] = doc
-    atomic_write_state(state_path, state)
-
-    # Calculate remaining tasks
-    tasks = state.get("tasks", {})
-    remaining = sum(
-        1
-        for t in tasks.values()
-        if t.get("status") in ("pending", "in_progress")
-    )
-    complete = sum(1 for t in tasks.values() if t.get("status") == "complete")
-    total = len(tasks)
-    progress = (complete / total * 100) if total > 0 else 0.0
+    try:
+        leased = store.lease_task(
+            run_id=snapshot.run_id,
+            target=task_id,
+            actor=actor,
+            lease_id=parent.lease_id,
+            expected_revision=snapshot.store_revision,
+        )
+        submitted = store.submit_legacy_analysis(
+            run_id=snapshot.run_id,
+            task_id=task_id,
+            actor=actor,
+            producer="legacy-mcp/submit_analysis",
+            lease_id=leased.lease.lease_id,
+            expected_revision=leased.snapshot.store_revision,
+            artifact_bytes=receipt_bytes,
+            artifact_hash=hashlib.sha256(receipt_bytes).hexdigest(),
+            details_written=len(detail_paths),
+            snippets_written=len(snippet_paths),
+            source_files_covered=tuple(source_files_covered or ()),
+        )
+    except RunStoreError as exc:
+        current_revision = store.snapshot().store_revision
+        raise ToolError(
+            f"Canonical submit failed for run {snapshot.run_id}; "
+            f"expected_revision={snapshot.store_revision}, "
+            f"current_revision={current_revision}; refresh progress and retry: {exc}"
+        ) from exc
+    projection = submitted.projection
 
     return {
-        "status": "success",
-        "task_id": task_id,
-        "tasks_remaining": remaining,
-        "progress_percent": round(progress, 2),
-        "source_file_coverage_percent": doc.get("source_file_coverage_percent", 0.0),
+        "status": projection.status,
+        "task_id": projection.task_id,
+        "tasks_remaining": projection.tasks_remaining,
+        "progress_percent": projection.progress_percent,
+        "source_file_coverage_percent": projection.source_file_coverage_percent,
     }
 
 

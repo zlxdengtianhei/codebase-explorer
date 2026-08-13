@@ -1,93 +1,68 @@
-# Phase 2: Auto-Validation (No LLM Required)
+# Phase 2: Semantic Production and Coverage Loop
 
-> **When to read this file:** Phase 1 analysis is complete and you need to validate the MCP output before spawning documentation agents.
->
-> **Entry conditions:** `analyze_codebase` has completed successfully. `03_feature_cones.json` and `06_function_deps.json` exist.
+## Claim
 
----
-
-**Purpose:** Rule-based sanity checks on MCP output. No LLM needed — these are
-deterministic checks. The goal is to catch problems early before spending agent
-context on documentation generation.
-
-**Input:** `get_modules()` summary response
-
-**Time:** < 30 seconds (reading one API response)
-
----
-
-## Validation Checks
-
-Run all checks against `get_modules()` output. No tool calls beyond that are needed.
-
-### Check 1: Module Size Warning (token_count > 50k)
-
-```
-For each module in get_modules().modules:
-  if module.token_count > 50000:
-    WARN: "Module {module_id} has {token_count} tokens — may cause context overflow in Phase 3"
-    Recommendation: Document in two passes (first N/2 files, then remaining files)
+```text
+progress = get_semantic_progress(output_dir=output_dir)
+packet = claim_semantic_batch(
+  max_context_tokens=host_context_window,
+  lease_seconds=900,
+  output_dir=output_dir
+)
 ```
 
-Hard limit: A single DETAIL agent should not receive more than 80,000 tokens of source to read.
+The MCP host reads the lease owner from trusted server process environment in
+this priority order: `CODEX_THREAD_ID`, `CLAUDE_CODE_SESSION_ID`, then
+`CBE_HOST_SESSION_ID`. It stores `codex:`, `claude:`, or `generic:` with the
+value. Identity is never accepted as an MCP argument.
 
-### Check 2: Single-File Module Flag
+Persist the returned packet until it is accepted. A reconnect does not erase the
+lease or packet identity.
 
-```
-For each module in get_modules().modules:
-  if module.file_count == 1:
-    NOTE: "Module {module_id} has only 1 file"
-    If token_count < 2000: consider documenting together with a neighboring module
-```
+## Interpret
 
-Single-file modules are valid — this is only a flag, not an error.
+For each packet symbol, use the supplied source and dependency context. The
+explanation must cover:
 
-### Check 3: Coverage (All Files Assigned)
+- what the symbol does and why it exists in this repository;
+- inputs, outputs, state mutation, I/O, and failure behavior;
+- callers, callees, cycle peers, and other dependencies that change its meaning;
+- source-grounded distinctions from similarly named symbols.
 
-```
-total_files_in_modules = sum(m.file_count for m in modules)
-infrastructure_files = get_modules().infrastructure.file_count
-total_accounted = total_files_in_modules + infrastructure_files
+Use `get_function_deps`, `get_structure`, and scoped
+`get_dependency_graph` only to fill unresolved context. Do not use names or
+signatures alone as the explanation.
 
-If total_accounted < get_modules().total_files:
-  WARN: "{unaccounted} source files are not assigned to any module"
-  Action: These files will not be documented — acceptable if they are auto-generated
-```
+## Submit Atomically
 
-### Check 4: Field Completeness
-
-```
-For each module in get_modules().modules:
-  Required fields: module_id, name, file_count, token_count, layer
-  If any field is missing or 0:
-    WARN: "Module {module_id} missing field {field_name}"
-    Action: Re-run analyze_codebase(force_reindex=true)
-```
-
----
-
-## Validation Report Format
-
-After running all checks, produce a brief summary:
-
-```
-Phase 2 Validation:
-- Total modules: {N}
-- Total files: {N}
-- Total tokens: {N}
-- PASS: All modules have required fields
-- PASS: Source file coverage: {N}/{N} files assigned
-- WARN: Module "large_module" has 75,000 tokens (split into two passes)
-- NOTE: 3 single-file modules found (acceptable)
-
-Proceeding to Phase 3.
+```text
+submit_semantic_batch(
+  batch_id=packet["batch_id"],
+  source_revision=packet["source_revision"],
+  explanations=[{"symbol_id": id, "text": text}, ...],
+  residuals=[],
+  output_dir=output_dir
+)
 ```
 
----
+The server dispatches a tool-free Codex producer after the call. Callers do not
+submit an identity, event stream, or rollout path. The server-owned producer
+re-reads the source packet and drafts, returns the authoritative complete
+partition, and is recorded in the ledger as `codex:<thread-id>`.
 
-## Exit Condition
+The explanations and allowed terminal residuals must cover the complete packet.
+On rejection, retry the same complete packet while its lease is valid. Do not
+split it into partial submissions.
 
-Phase 2 is complete when all checks have been run and findings have been noted.
-Warnings do not block Phase 3 — they inform how Phase 3 should be executed.
+## Loop Gate
 
-**Next step:** Proceed to [Phase 3: DETAIL Generation](./phase3-detail.md).
+Repeat until independently recomputed progress reports:
+
+```text
+coverage_percent == 100.0
+uncovered_symbols == []
+stale_symbols == []
+```
+
+Any terminal residual keeps its symbol uncovered. Report it as an explicit
+product gap; it is not equivalent to 100% coverage.

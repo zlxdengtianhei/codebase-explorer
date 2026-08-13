@@ -7,6 +7,7 @@ within each topological layer.
 from __future__ import annotations
 
 import logging
+import hashlib
 from collections import defaultdict
 from dataclasses import dataclass
 
@@ -32,6 +33,26 @@ class AnalysisPlan:
     module_metrics: dict[str, ModuleMetrics]
     has_cycles: bool
     cycle_info: tuple[tuple[str, ...], ...] | None
+
+
+@dataclass(frozen=True)
+class DependencySCC:
+    """One stable component in a caller-to-callee dependency graph."""
+
+    scc_id: str
+    members: tuple[str, ...]
+    caller_scc_ids: tuple[str, ...]
+    callee_scc_ids: tuple[str, ...]
+    is_cycle: bool
+
+
+@dataclass(frozen=True)
+class DependencyFirstSCCPlan:
+    """Callee-first SCC layers without changing the caller-to-callee edges."""
+
+    layers: tuple[tuple[DependencySCC, ...], ...]
+    components: tuple[DependencySCC, ...]
+    component_by_node: dict[str, str]
 
 
 # ---------------------------------------------------------------------------
@@ -84,6 +105,74 @@ def topological_order(
     )
 
     return layers
+
+
+def dependency_first_scc_layers(graph: nx.DiGraph) -> DependencyFirstSCCPlan:
+    """Condense ``caller -> callee`` edges and return callee-first layers.
+
+    NetworkX's normal topological order starts at nodes with no predecessors,
+    which is caller-first for this edge convention.  This helper deliberately
+    drains components with no remaining *successors* so downstream semantic
+    consumers see dependencies before dependants.  Existing module ordering
+    APIs retain their historic behavior.
+    """
+
+    if not isinstance(graph, nx.DiGraph):
+        raise TypeError("graph must be a networkx.DiGraph")
+    if any(not isinstance(node, str) or not node for node in graph.nodes):
+        raise ValueError("dependency graph nodes must be non-empty strings")
+    if graph.number_of_nodes() == 0:
+        return DependencyFirstSCCPlan(layers=(), components=(), component_by_node={})
+
+    condensed = nx.condensation(graph)
+    stable_id_by_node: dict[int, str] = {}
+    members_by_node: dict[int, tuple[str, ...]] = {}
+    component_by_node: dict[str, str] = {}
+    for node, attributes in condensed.nodes(data=True):
+        members = tuple(sorted(str(member) for member in attributes.get("members", ())))
+        framed = "\x00".join(members).encode("utf-8")
+        stable_id = "scc_" + hashlib.sha256(framed).hexdigest()[:16]
+        stable_id_by_node[node] = stable_id
+        members_by_node[node] = members
+        component_by_node.update({member: stable_id for member in members})
+
+    components_by_node: dict[int, DependencySCC] = {}
+    for node in condensed.nodes:
+        members = members_by_node[node]
+        is_self_cycle = len(members) == 1 and graph.has_edge(members[0], members[0])
+        components_by_node[node] = DependencySCC(
+            scc_id=stable_id_by_node[node],
+            members=members,
+            caller_scc_ids=tuple(
+                sorted(stable_id_by_node[item] for item in condensed.predecessors(node))
+            ),
+            callee_scc_ids=tuple(
+                sorted(stable_id_by_node[item] for item in condensed.successors(node))
+            ),
+            is_cycle=len(members) > 1 or is_self_cycle,
+        )
+
+    layers: list[tuple[DependencySCC, ...]] = []
+    remaining = set(condensed.nodes)
+    while remaining:
+        current = {
+            node
+            for node in remaining
+            if not any(successor in remaining for successor in condensed.successors(node))
+        }
+        if not current:
+            raise RuntimeError("condensation graph unexpectedly contains a cycle")
+        layers.append(
+            tuple(sorted((components_by_node[node] for node in current), key=lambda item: item.scc_id))
+        )
+        remaining -= current
+
+    components = tuple(sorted(components_by_node.values(), key=lambda item: item.scc_id))
+    return DependencyFirstSCCPlan(
+        layers=tuple(layers),
+        components=components,
+        component_by_node=dict(sorted(component_by_node.items())),
+    )
 
 
 def compute_pagerank(
