@@ -1,11 +1,12 @@
 # Codebase Explorer 安装与运行
 
-这份文档从空白宿主开始，把现有 stdio MCP server 和语义 skill 接到 Claude Code、Codex 或
-OpenCode。安装只让工具可发现；完整产品运行还要走 analyze、语义生产、render、review 四阶段。
+这份文档从空白宿主开始，把现有 stdio MCP server 和语义 skill 接到 Claude Code、Codex、
+OpenCode 或读 `~/.agents/skills` 的宿主（含 Grok）。安装只让工具可发现；完整产品运行还要走
+analyze、语义生产、render、review 四阶段。
 
 ## 1. 前置条件
 
-- Python 3.12 或 3.13
+- Python 3.12 或 3.13（本 checkout 的 `.python-version` 钉的是 3.13.11；`pyproject.toml` 上界 `<3.14`）
 - [uv](https://docs.astral.sh/uv/)
 - 一个本地 Codebase Explorer checkout
 
@@ -20,6 +21,10 @@ OpenCode。安装只让工具可发现；完整产品运行还要走 analyze、�
 ```text
 /Users/lexuanzhang/context-infra/adhoc_jobs/codebase_explorer_20260321/impl/codebase-explorer
 ```
+
+仓内 `.mcp.json` 用同一绝对路径启动 stdio server。Skill 真源是
+`.agents/skills/codebase-explorer/`。只复制 skill、不把 MCP server 挂到**当前正在用的那个宿主**，
+不算安装完成。
 
 ## 2. 安装依赖并预检 server
 
@@ -42,6 +47,10 @@ PY
 
 ## 3. 安装 Agent Skill
 
+仓内真源是一份。每个会读 skill 的宿主各有一份拷贝，必须逐字节相同。
+**不要用 `scripts/install-skill.sh`**：它默认只写 `~/.claude/skills`，且目标目录已存在时
+`cp -r` 会套娃出 `codebase-explorer/codebase-explorer/`。一律用下面的 `rsync`。
+
 ### Claude Code
 
 ```bash
@@ -51,7 +60,21 @@ rsync -a --delete \
   ~/.claude/skills/codebase-explorer/
 ```
 
+### Agents / Grok（`~/.agents/skills`）
+
+Grok Build 与部分 agent 宿主读的是这个目录，不是 `~/.codex/skills`。
+
+```bash
+mkdir -p ~/.agents/skills/codebase-explorer
+rsync -a --delete \
+  /absolute/path/to/codebase-explorer/.agents/skills/codebase-explorer/ \
+  ~/.agents/skills/codebase-explorer/
+```
+
 ### Codex
+
+Codex 文档路径是 `~/.codex/skills`。若本机 Codex 实际读的是 `~/.agents/skills`，
+上一节已经覆盖；两套都装也可以，但内容必须与仓内真源一致。
 
 ```bash
 mkdir -p ~/.codex/skills/codebase-explorer
@@ -60,11 +83,14 @@ rsync -a --delete \
   ~/.codex/skills/codebase-explorer/
 ```
 
-复制命令的源目录带末尾 `/`。验证没有重复套娃：
+复制命令的源目录带末尾 `/`。验证没有重复套娃，并且两份活拷贝一致：
 
 ```bash
 test -f ~/.claude/skills/codebase-explorer/SKILL.md
 test ! -e ~/.claude/skills/codebase-explorer/codebase-explorer
+test -f ~/.agents/skills/codebase-explorer/SKILL.md
+test ! -e ~/.agents/skills/codebase-explorer/codebase-explorer
+diff -ru ~/.agents/skills/codebase-explorer ~/.claude/skills/codebase-explorer
 ```
 
 ## 4. 挂载 MCP Server
@@ -158,7 +184,10 @@ tool_timeout_sec = 120
 
 ## 5. 宿主侧 discovery
 
-修改配置后重启宿主。
+修改配置后重启宿主。Skill 文件出现在 `~/.claude/skills` / `~/.agents/skills` **不等于**
+MCP 已连接。本 checkout 的活 MCP 挂载是实现目录里的 `.mcp.json`（以及同目录
+`opencode.json`）。在 monorepo 根目录打开宿主时，根上没有 `.mcp.json`，user-scope 也必须
+单独登记，否则宿主看不到这 14 个工具。
 
 ```bash
 claude mcp get codebase-explorer
@@ -171,7 +200,8 @@ NO_COLOR=1 opencode mcp list
 ```
 
 成功判据：server 状态 connected，宿主显示 README 中列出的 14 个工具。只看到 skill 文件不算
-MCP 已连接；只看到 MCP server 而 skill 仍列旧工具也不算可用。
+MCP 已连接；只看到 MCP server 而 skill 仍列旧工具也不算可用。`claude mcp list` 在部分环境
+会长时间无输出，不要把它当成唯一判据；以 §2 的 `await mcp.list_tools()` 和下面的五连调用为准。
 
 ## 6. 契约测试
 
@@ -189,9 +219,58 @@ uv run pytest -q tests/test_skill_contract.py
 diff -ru \
   /absolute/path/to/codebase-explorer/.agents/skills/codebase-explorer \
   ~/.claude/skills/codebase-explorer
+diff -ru \
+  /absolute/path/to/codebase-explorer/.agents/skills/codebase-explorer \
+  ~/.agents/skills/codebase-explorer
 ```
 
-空输出代表全局 skill 与仓内真源一致。
+空输出代表活拷贝与仓内真源一致。
+
+### 6.1 接线五连（不经宿主、直接 stdio）
+
+不依赖 Claude/Codex user-scope 是否已登记。对一个至少 3 个 Python 文件的目录：
+
+```bash
+cd /absolute/path/to/codebase-explorer
+uv run python - <<'PY'
+import asyncio, json, time
+from pathlib import Path
+from mcp import ClientSession, StdioServerParameters
+from mcp.client.stdio import stdio_client
+
+impl = Path("/absolute/path/to/codebase-explorer")
+spec = json.loads((impl / ".mcp.json").read_text())
+server = spec["mcpServers"]["codebase-explorer"]
+params = StdioServerParameters(command=server["command"], args=server["args"], cwd=str(impl))
+repo = Path("/absolute/path/to/small-python-repo")
+
+async def main():
+    async with stdio_client(params) as (read, write):
+        async with ClientSession(read, write) as session:
+            await session.initialize()
+            tools = await session.list_tools()
+            print("list_tools", len(tools.tools), [t.name for t in tools.tools])
+            async def call(name, args):
+                t0 = time.perf_counter()
+                result = await session.call_tool(name, args)
+                text = result.content[0].text
+                payload = json.loads(text)
+                print(name, round((time.perf_counter()-t0)*1000, 1), "ms", payload.get("status"))
+                return payload
+            analyzed = await call("analyze_codebase", {"path": str(repo), "force_reindex": True})
+            root = analyzed["output_dir"]
+            await call("get_structure", {"output_dir": root})
+            await call("get_modules", {"output_dir": root})
+            await call("get_dependency_graph", {"scope": "project", "output_dir": root})
+            progress = await call("get_semantic_progress", {"output_dir": root})
+            print("coverage", progress.get("coverage_percent"), "symbols", progress.get("totals"))
+
+asyncio.run(main())
+PY
+```
+
+成功判据：`list_tools` 长度为 14 且名称与 README 一致；五次调用 `status=success`。
+这只证明接线，不证明语义生产完成（完成契约见 §7 / §9）。
 
 ## 7. 第一次真实运行
 
