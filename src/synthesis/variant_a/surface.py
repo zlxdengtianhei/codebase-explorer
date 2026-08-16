@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import ast
 import hashlib
+import sys
 from collections.abc import Mapping
 from pathlib import Path
 
@@ -14,6 +15,11 @@ from src.semantic.models import SemanticLedger, SemanticModel
 
 
 SURFACE_SCHEMA = "cbe-public-surface-1"
+# n7d §4.2: chase ImportFrom / star a bounded depth; cycle via seen set.
+REEEXPORT_MAX_DEPTH = 3
+# Acceptance names for the B2 INDEX noise gate (n7d §4.3 / n7fix T2).
+# Production filtering is stdlib + in-repo, not this denylist.
+INDEX_NOISE_NAMES = frozenset({"t", "sys", "ContextVar", "LocalProxy"})
 
 
 def _file_digest(path: Path) -> str:
@@ -72,39 +78,6 @@ class PublicSurface(SemanticModel):
         return edges
 
 
-def _top_level_exported_names(tree: ast.Module) -> list[str]:
-    all_names: list[str] | None = None
-    collected: list[str] = []
-    for node in tree.body:
-        if isinstance(node, ast.Assign):
-            for target in node.targets:
-                if isinstance(target, ast.Name) and target.id == "__all__":
-                    if isinstance(node.value, (ast.List, ast.Tuple)):
-                        all_names = [
-                            elt.value
-                            for elt in node.value.elts
-                            if isinstance(elt, ast.Constant) and isinstance(elt.value, str)
-                        ]
-                elif isinstance(target, ast.Name) and not target.id.startswith("_"):
-                    collected.append(target.id)
-        elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
-            if not node.target.id.startswith("_"):
-                collected.append(node.target.id)
-        elif isinstance(node, ast.ImportFrom):
-            if node.module == "__future__":
-                continue
-            for alias in node.names:
-                if alias.name == "*":
-                    continue
-                collected.append(alias.asname or alias.name)
-        elif isinstance(node, ast.Import):
-            for alias in node.names:
-                collected.append(alias.asname or alias.name.split(".")[0])
-    if all_names is not None:
-        return list(dict.fromkeys(n for n in all_names if not n.startswith("_")))
-    return list(dict.fromkeys(n for n in collected if not n.startswith("_")))
-
-
 def _star_import_modules(tree: ast.Module) -> tuple[tuple[int, str | None], ...]:
     found: list[tuple[int, str | None]] = []
     for node in tree.body:
@@ -137,24 +110,50 @@ def _resolve_relative_module(source_path: str, level: int, module: str | None) -
     parts = Path(source_path).parts
     if not parts:
         return None
+    # Directory of the file is the current package for both ``__init__.py`` and
+    # sibling modules. Extra dots climb parents: ``from ..json import dumps``
+    # in ``json/tag.py`` is level=2 → climb 1 out of ``json/`` then append json.
     dir_parts = list(parts[:-1])
     pkg_parts = dir_parts
     if level:
-        if Path(source_path).name == "__init__.py":
-            climb = level - 1
-        else:
-            climb = level
+        climb = level - 1
         if climb > len(pkg_parts):
             return None
         pkg_parts = pkg_parts[: len(pkg_parts) - climb] if climb else pkg_parts
     if module:
         pkg_parts = [*pkg_parts, *module.split(".")]
     if not pkg_parts:
-        return None
+        # `from . import json` at a repo-root package: current package is "".
+        return "" if level else None
     return "/".join(pkg_parts)
 
 
+def _join_mod(package: str, child: str) -> str:
+    child_path = child.replace(".", "/")
+    if not package:
+        return child_path
+    return f"{package}/{child_path}"
+
+
+def _imported_module_path(
+    source_path: str,
+    level: int,
+    module: str | None,
+    imported: str,
+) -> str | None:
+    """Slash-separated module path, including ``from . import json`` → current pkg + json."""
+
+    base = _resolve_relative_module(source_path, level, module)
+    if module is None and level > 0:
+        if base is None:
+            return None
+        return _join_mod(base, imported)
+    return base
+
+
 def _candidate_files(repo_root: Path, module_path: str) -> tuple[str, ...]:
+    if not module_path or module_path.startswith("/") or module_path.endswith("/"):
+        return ()
     py_file = f"{module_path}.py"
     init_file = f"{module_path}/__init__.py"
     found: list[str] = []
@@ -163,6 +162,90 @@ def _candidate_files(repo_root: Path, module_path: str) -> tuple[str, ...]:
     if (repo_root / init_file).is_file():
         found.append(init_file)
     return tuple(found)
+
+
+def _stdlib_top_level(module: str | None) -> bool:
+    if not module:
+        return False
+    top = module.lstrip(".").split(".")[0]
+    return top in sys.stdlib_module_names
+
+
+def _is_repo_local_import(
+    repo_root: Path,
+    source_path: str,
+    level: int,
+    module: str | None,
+    imported: str,
+) -> bool:
+    """True iff this import binds a name from a module that exists in the repo.
+
+    Absolute stdlib imports (``import typing as t``, ``from contextvars import ContextVar``)
+    are never in-repo, even when the package has a colliding filename such as ``typing.py``.
+    Relative imports (``from .typing import X``) are in-repo when the file exists.
+    Third-party absolute imports (``from werkzeug.local import LocalProxy``) are not.
+    """
+
+    if level == 0 and _stdlib_top_level(module):
+        return False
+    target = _imported_module_path(source_path, level, module, imported)
+    if not target:
+        return False
+    return bool(_candidate_files(repo_root, target))
+
+
+def _keep_import_name(
+    repo_root: Path,
+    source_path: str,
+    level: int,
+    module: str | None,
+    imported: str,
+) -> bool:
+    return _is_repo_local_import(repo_root, source_path, level, module, imported)
+
+
+def _top_level_exported_names(
+    tree: ast.Module,
+    *,
+    repo_root: Path,
+    source_path: str,
+) -> list[str]:
+    all_names: list[str] | None = None
+    collected: list[str] = []
+    for node in tree.body:
+        if isinstance(node, ast.Assign):
+            for target in node.targets:
+                if isinstance(target, ast.Name) and target.id == "__all__":
+                    if isinstance(node.value, (ast.List, ast.Tuple)):
+                        all_names = [
+                            elt.value
+                            for elt in node.value.elts
+                            if isinstance(elt, ast.Constant) and isinstance(elt.value, str)
+                        ]
+                elif isinstance(target, ast.Name) and not target.id.startswith("_"):
+                    collected.append(target.id)
+        elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
+            if not node.target.id.startswith("_"):
+                collected.append(node.target.id)
+        elif isinstance(node, ast.ImportFrom):
+            if node.module == "__future__":
+                continue
+            for alias in node.names:
+                if alias.name == "*":
+                    continue
+                if not _keep_import_name(repo_root, source_path, node.level, node.module, alias.name):
+                    continue
+                collected.append(alias.asname or alias.name)
+        elif isinstance(node, ast.Import):
+            for alias in node.names:
+                if not _keep_import_name(
+                    repo_root, source_path, 0, alias.name, alias.name.split(".")[-1]
+                ):
+                    continue
+                collected.append(alias.asname or alias.name.split(".")[0])
+    if all_names is not None:
+        return list(dict.fromkeys(n for n in all_names if not n.startswith("_")))
+    return list(dict.fromkeys(n for n in collected if not n.startswith("_")))
 
 
 def _index_symbols(ledger: SemanticLedger) -> dict[tuple[str, str], list[str]]:
@@ -174,6 +257,105 @@ def _index_symbols(ledger: SemanticLedger) -> dict[tuple[str, str], list[str]]:
     return index
 
 
+def _module_level_ids(
+    symbol_index: Mapping[tuple[str, str], list[str]],
+    path: str,
+    name: str,
+) -> list[str]:
+    """Hits whose unqualified qualified_name is exactly ``name`` (not ``Client.get``)."""
+
+    hits = symbol_index.get((path, name), [])
+    return [sid for sid in dict.fromkeys(hits) if sid.split("::", 1)[-1] == name]
+
+
+def _load_tree(
+    repo_root: Path,
+    relative: str,
+    cache: dict[str, ast.Module | None],
+) -> ast.Module | None:
+    if relative in cache:
+        return cache[relative]
+    path = repo_root / relative
+    try:
+        tree = ast.parse(path.read_text(encoding="utf-8", errors="replace"), filename=relative)
+    except (OSError, SyntaxError):
+        cache[relative] = None
+        return None
+    if not isinstance(tree, ast.Module):
+        cache[relative] = None
+        return None
+    cache[relative] = tree
+    return tree
+
+
+def _chase_definition(
+    *,
+    start_files: tuple[str, ...],
+    name: str,
+    repo_root: Path,
+    ledger: SemanticLedger,
+    symbol_index: Mapping[tuple[str, str], list[str]],
+    ast_cache: dict[str, ast.Module | None],
+    max_depth: int = REEEXPORT_MAX_DEPTH,
+) -> tuple[tuple[str, ...], str, str]:
+    """Follow ImportFrom / star until a module-level ledger symbol, or the last hop."""
+
+    seen: set[tuple[str, str]] = set()
+    last_path = start_files[0] if start_files else ""
+
+    def visit(path: str, lookup: str, depth: int) -> tuple[str, ...]:
+        nonlocal last_path
+        if not path or depth > max_depth or (path, lookup) in seen:
+            return ()
+        seen.add((path, lookup))
+        last_path = path
+        hits = tuple(_module_level_ids(symbol_index, path, lookup))
+        if hits:
+            return hits
+        tree = _load_tree(repo_root, path, ast_cache)
+        if tree is None:
+            return ()
+        local = _import_bindings(tree).get(lookup)
+        if local is not None:
+            level, module, imported = local
+            target = _imported_module_path(path, level, module, imported)
+            if target is None:
+                return ()
+            files = _candidate_files(repo_root, target)
+            for nxt in files:
+                found = visit(nxt, imported, depth + 1)
+                if found:
+                    return found
+            return ()
+        for level, module in _star_import_modules(tree):
+            target = _resolve_relative_module(path, level, module)
+            if target is None:
+                continue
+            files = _candidate_files(repo_root, target)
+            for nxt in files:
+                found = visit(nxt, lookup, depth + 1)
+                if found:
+                    return found
+        return ()
+
+    found: tuple[str, ...] = ()
+    for start in start_files:
+        found = visit(start, name, 0)
+        if found:
+            break
+    if found:
+        def_path = ledger.symbols[found[0]].path if found[0] in ledger.symbols else last_path
+        return found, "", def_path
+    if not start_files:
+        return (), f"module-level name {name} is not a FunctionDef/ClassDef", ""
+    reason = (
+        f"unresolved after reexport chase; last hop {last_path}"
+        if last_path
+        else f"module-level name {name} is not a FunctionDef/ClassDef"
+    )
+    return (), reason, last_path
+
+
 def resolve_name(
     *,
     source_path: str,
@@ -182,41 +364,50 @@ def resolve_name(
     repo_root: Path,
     ledger: SemanticLedger,
     symbol_index: Mapping[tuple[str, str], list[str]],
+    ast_cache: dict[str, ast.Module | None] | None = None,
 ) -> tuple[tuple[str, ...], str, str]:
+    cache = ast_cache if ast_cache is not None else {}
+    cache.setdefault(source_path, tree)
+
     local = _import_bindings(tree).get(name)
     if local is not None:
         level, module, imported = local
-        target_mod = _resolve_relative_module(source_path, level, module)
+        target_mod = _imported_module_path(source_path, level, module, imported)
         if target_mod is None:
             return (), f"cannot resolve import module for {name}", ""
         files = _candidate_files(repo_root, target_mod)
-        hits: list[str] = []
-        for path in files:
-            hits.extend(symbol_index.get((path, imported), []))
-        unique = tuple(dict.fromkeys(hits))
-        if unique:
-            return unique, "", files[0] if files else ""
-        return (), f"import {name} resolved to {files or target_mod} with no lexical symbol", files[0] if files else ""
+        if not files:
+            return (), f"import {name} resolved to {target_mod} with no lexical symbol", ""
+        return _chase_definition(
+            start_files=files,
+            name=imported,
+            repo_root=repo_root,
+            ledger=ledger,
+            symbol_index=symbol_index,
+            ast_cache=cache,
+        )
 
-    same_file = tuple(dict.fromkeys(symbol_index.get((source_path, name), [])))
+    same_file = tuple(_module_level_ids(symbol_index, source_path, name))
     if same_file:
         return same_file, "", source_path
 
-    star_hits: list[str] = []
     star_files: list[str] = []
     for level, module in _star_import_modules(tree):
         target_mod = _resolve_relative_module(source_path, level, module)
         if target_mod is None:
             continue
-        files = _candidate_files(repo_root, target_mod)
-        star_files.extend(files)
-        for path in files:
-            star_hits.extend(symbol_index.get((path, name), []))
-    unique_star = tuple(dict.fromkeys(star_hits))
-    if unique_star:
-        first = ledger.symbols[unique_star[0]].path if unique_star[0] in ledger.symbols else (star_files[0] if star_files else "")
-        return unique_star, "", first
-    return (), f"module-level name {name} is not a FunctionDef/ClassDef", star_files[0] if star_files else ""
+        star_files.extend(_candidate_files(repo_root, target_mod))
+    unique_files = tuple(dict.fromkeys(star_files))
+    if not unique_files:
+        return (), f"module-level name {name} is not a FunctionDef/ClassDef", ""
+    return _chase_definition(
+        start_files=unique_files,
+        name=name,
+        repo_root=repo_root,
+        ledger=ledger,
+        symbol_index=symbol_index,
+        ast_cache=cache,
+    )
 
 
 def extract_public_surface(
@@ -228,6 +419,7 @@ def extract_public_surface(
     bindings: list[SurfaceBinding] = []
     file_hashes: dict[str, str] = {}
     seen: set[str] = set()
+    ast_cache: dict[str, ast.Module | None] = {}
 
     for path in enumerate_python_files(root):
         relative = path.relative_to(root).as_posix()
@@ -238,7 +430,8 @@ def extract_public_surface(
             continue
         if not isinstance(tree, ast.Module):
             continue
-        names = _top_level_exported_names(tree)
+        ast_cache[relative] = tree
+        names = _top_level_exported_names(tree, repo_root=root, source_path=relative)
         if not names:
             continue
         file_hashes[relative] = _file_digest(path)
@@ -254,6 +447,7 @@ def extract_public_surface(
                 repo_root=root,
                 ledger=ledger,
                 symbol_index=symbol_index,
+                ast_cache=ast_cache,
             )
             bindings.append(
                 SurfaceBinding(
@@ -285,11 +479,12 @@ def coerce_surface(value: PublicSurface | Mapping[str, object] | None) -> Public
 
 
 def oracle_init_exports(repo_root: str | Path) -> tuple[tuple[str, str], ...]:
-    """Names the frozen N1 oracle will look for (any ``__init__.py``, ``ast.walk``).
+    """Names the frozen N1 oracle will look for (any ``__init__.py``).
 
-    The overlay itself stays top-level-only so ``os``/``sys`` imported inside a
-    helper do not become citeable surface ids. INDEX still has to *mention*
-    those names or N1 drops them.
+    Import bindings enter the denominator only when the imported module is in
+    this repo. Stdlib aliases (``sys``, ``import typing as t``) and third-party
+    re-exports (``from contextvars import ContextVar``) stay out. ``__all__``
+    strings and assignments remain, so a name explicitly published still counts.
     """
 
     root = Path(repo_root)
@@ -308,9 +503,17 @@ def oracle_init_exports(repo_root: str | Path) -> tuple[tuple[str, str], ...]:
             if isinstance(node, ast.ImportFrom):
                 if node.module == "__future__":
                     continue
-                names.extend(a.asname or a.name for a in node.names if a.name != "*")
+                for alias in node.names:
+                    if alias.name == "*":
+                        continue
+                    if not _keep_import_name(root, rel, node.level, node.module, alias.name):
+                        continue
+                    names.append(alias.asname or alias.name)
             elif isinstance(node, ast.Import):
-                names.extend(a.asname or a.name.split(".")[0] for a in node.names)
+                for alias in node.names:
+                    if not _keep_import_name(root, rel, 0, alias.name, alias.name.split(".")[-1]):
+                        continue
+                    names.append(alias.asname or alias.name.split(".")[0])
             elif isinstance(node, ast.Assign):
                 for target in node.targets:
                     if isinstance(target, ast.Name) and target.id == "__all__":
@@ -330,15 +533,21 @@ def oracle_init_exports(repo_root: str | Path) -> tuple[tuple[str, str], ...]:
     return tuple(found)
 
 
+def index_noise_names(names: set[str] | tuple[str, ...] | list[str]) -> tuple[str, ...]:
+    """B2 gate: the four INDEX noise names that must be absent after the fix."""
+
+    return tuple(sorted(INDEX_NOISE_NAMES.intersection(names)))
+
+
 def entry_bindings(surface: PublicSurface) -> tuple[SurfaceBinding, ...]:
     """Names the oracle's N1 first-screen check will look for.
 
     The oracle enumerates ``__init__.py`` exports. We project the shallowest
     ``__init__.py`` plus ``globals.py`` so ``request`` / ``g`` still appear.
+    Stdlib / third-party import bindings are already dropped by
+    ``extract_public_surface``; this function does not re-add them.
     """
 
-    # Oracle N1 denominators are names found in any ``__init__.py``. Project
-    # those first so ``sys`` imported by a nested init still appears.
     inits = [item.path for item in surface.bindings if Path(item.path).name == "__init__.py"]
     root_dir = ""
     if inits:
