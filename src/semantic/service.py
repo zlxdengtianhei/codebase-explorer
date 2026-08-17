@@ -136,10 +136,27 @@ def _default_renderer(
     ledger: SemanticLedger,
     *,
     graph: nx.DiGraph | None = None,
+    partition_path: str | Path | None = None,
+    names_path: str | Path | None = None,
+    consume_partition: bool = True,
 ) -> Mapping[str, object]:
-    from src.semantic.render import render_semantic_docs
+    from src.semantic.render import (
+        discover_names_path,
+        discover_partition_path,
+        render_semantic_docs,
+    )
 
-    return render_semantic_docs(repo_root, ledger, graph=graph)
+    root = Path(repo_root)
+    chosen = Path(partition_path) if partition_path is not None else discover_partition_path(root)
+    names = Path(names_path) if names_path is not None else discover_names_path(root, chosen)
+    return render_semantic_docs(
+        repo_root,
+        ledger,
+        graph=graph,
+        partition_path=chosen,
+        names_path=names,
+        consume_partition=consume_partition,
+    )
 
 
 def _utc(value: datetime) -> datetime:
@@ -224,6 +241,7 @@ class SemanticService:
         producer_runner: ProducerRunner | None = None,
         review_runner: ReviewRunner | None = None,
         clock: Callable[[], datetime] | None = None,
+        consume_partition: bool = True,
     ) -> None:
         self.store = SemanticLedgerStore(repo_root)
         self.repo_root = self.store.repo_root
@@ -235,7 +253,8 @@ class SemanticService:
             for relation in relations
         )
         self.module_by_file = dict(module_by_file or {})
-        self.renderer: Renderer = renderer or _default_renderer
+        self.consume_partition = consume_partition
+        self.renderer: Renderer = renderer or self._bound_default_renderer
         self.producer_runner: ProducerRunner = (
             producer_runner or self._run_codex_producer
         )
@@ -246,6 +265,32 @@ class SemanticService:
 
     def _now(self) -> datetime:
         return _utc(self._clock())
+
+    def _bound_default_renderer(
+        self,
+        repo_root: str | Path,
+        ledger: SemanticLedger,
+        *,
+        graph: nx.DiGraph | None = None,
+    ) -> Mapping[str, object]:
+        """Render docs; look up L2 partition on the real repo, not the staging root."""
+
+        from src.semantic.render import (
+            discover_names_path,
+            discover_partition_path,
+            render_semantic_docs,
+        )
+
+        partition = discover_partition_path(self.repo_root)
+        names = discover_names_path(self.repo_root, partition)
+        return render_semantic_docs(
+            repo_root,
+            ledger,
+            graph=graph,
+            partition_path=partition,
+            names_path=names,
+            consume_partition=self.consume_partition,
+        )
 
     def _safe_repo_artifact(
         self,

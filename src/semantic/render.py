@@ -11,7 +11,7 @@ import unicodedata
 import uuid
 from collections import Counter
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 import networkx as nx
@@ -41,6 +41,36 @@ _GENERATED_HEADER = "<!-- generated:codebase-explorer-semantic-docs -->"
 _NON_SLUG = re.compile(r"[^a-z0-9]+")
 _symbol_anchor = symbol_anchor
 
+GROUPING_L2 = "l2_partition"
+GROUPING_CONE = "feature_cone_module_id"
+DIRSEED_HUMAN = "公共面到不了，按目录回退"
+LEVEL_ARCHITECTURE = "整体架构"
+LEVEL_MODULE = "功能模块"
+LEVEL_CODE = "具体代码"
+_PARTITION_RELATIVE = (
+    Path(".codebase-analysis") / "partition.json",
+    Path("partition.json"),
+)
+
+
+@dataclass(frozen=True)
+class _ClusterPageMeta:
+    cluster_id: str
+    seed_kind: str
+    kind: str
+    fallback_reason: str | None
+    reason_codes: tuple[tuple[str, str], ...]
+    member_paths: tuple[str, ...]
+
+    @property
+    def is_dirseed(self) -> bool:
+        return (
+            self.seed_kind == "directory"
+            or self.kind == "directory_fallback"
+            or self.cluster_id.startswith("dirseed--")
+            or bool(self.fallback_reason)
+        )
+
 
 @dataclass(frozen=True)
 class _Projection:
@@ -50,6 +80,151 @@ class _Projection:
     conflicts_by_file: Mapping[str, tuple[str, ...]]
     ordered_fresh_ids: tuple[str, ...]
     dependency_edges: tuple[tuple[str, str], ...]
+    grouping_mode: str = GROUPING_CONE
+    grouping_reason: str = ""
+    cluster_meta_by_module: Mapping[str, _ClusterPageMeta] | None = None
+
+
+def discover_partition_path(repo_root: str | Path) -> Path | None:
+    """Return the first existing production partition.json under repo_root."""
+
+    root = Path(repo_root)
+    for relative in _PARTITION_RELATIVE:
+        candidate = root / relative
+        if candidate.is_file():
+            return candidate
+    return None
+
+
+def discover_names_path(
+    repo_root: str | Path,
+    partition_path: Path | None = None,
+) -> Path | None:
+    """Optional L2 name map sitting next to partition.json."""
+
+    candidates: list[Path] = []
+    if partition_path is not None:
+        candidates.append(partition_path.with_name("l2_result.json"))
+        name = partition_path.name
+        if name.startswith("partition_") and name.endswith(".json"):
+            candidates.append(
+                partition_path.with_name("l2_result_" + name[len("partition_") :])
+            )
+    candidates.append(Path(repo_root) / ".codebase-analysis" / "l2_result.json")
+    for path in candidates:
+        if path.is_file():
+            return path
+    return None
+
+
+def resolve_partition_source(
+    repo_root: Path,
+    *,
+    partition_path: str | Path | None,
+    consume_partition: bool,
+) -> tuple[Path | None, str, str]:
+    """Pick L2 vs feature-cone grouping. Fallback is an explicit named branch."""
+
+    if not consume_partition:
+        reason = (
+            "模块划分来源：feature-cone `module_id`。"
+            "这是显式回退分支：消费开关 `consume_partition=false`，本树不读 L2 分区。"
+        )
+        return None, GROUPING_CONE, reason
+    explicit = Path(partition_path) if partition_path is not None else None
+    if explicit is not None:
+        if explicit.is_file():
+            reason = (
+                "模块划分来源：L2 共享签名分区。"
+                f"本树已消费 `{explicit.name}`，页面按簇组织，不再按 feature-cone `module_id`。"
+            )
+            return explicit, GROUPING_L2, reason
+        reason = (
+            "模块划分来源：feature-cone `module_id`。"
+            "这是显式回退分支：调用方指定了 partition_path，但该路径不是可读文件。"
+        )
+        return None, GROUPING_CONE, reason
+    discovered = discover_partition_path(repo_root)
+    if discovered is not None:
+        reason = (
+            "模块划分来源：L2 共享签名分区。"
+            f"本树已消费 `{discovered.as_posix()}`，页面按簇组织，不再按 feature-cone `module_id`。"
+        )
+        return discovered, GROUPING_L2, reason
+    reason = (
+        "模块划分来源：feature-cone `module_id`。"
+        "这是显式回退分支：仓库内没有 partition.json，未消费 L2 分区。"
+    )
+    return None, GROUPING_CONE, reason
+
+
+def _load_partition_meta(partition_path: Path) -> dict[str, _ClusterPageMeta]:
+    """Read seed_kind / fallback_reason / reason_code that Cluster does not carry."""
+
+    data = json.loads(partition_path.read_text(encoding="utf-8"))
+    if not isinstance(data, dict):
+        return {}
+    absorbed: dict[str, tuple[str, str]] = {}
+    for key in ("dirseed_absorbed", "unassigned_before_dirseed", "unassigned"):
+        rows = data.get(key) or ()
+        if not isinstance(rows, list):
+            continue
+        for row in rows:
+            if not isinstance(row, dict):
+                continue
+            path = str(row.get("path") or "").strip()
+            if not path or path in absorbed:
+                continue
+            code = str(row.get("reason_code") or "").strip()
+            human = str(row.get("reason") or "").strip()
+            absorbed[path] = (code, human)
+    out: dict[str, _ClusterPageMeta] = {}
+    for raw in data.get("candidates") or ():
+        if not isinstance(raw, dict):
+            continue
+        cluster_id = str(raw.get("cluster_id") or "").strip()
+        files = tuple(
+            str(item) for item in (raw.get("member_paths") or ()) if str(item).strip()
+        )
+        if not cluster_id or not files:
+            continue
+        codes: list[tuple[str, str]] = []
+        seen: set[str] = set()
+        for path in files:
+            pair = absorbed.get(path)
+            if pair is None or not pair[0] or pair[0] in seen:
+                continue
+            seen.add(pair[0])
+            codes.append(pair)
+        fallback = raw.get("fallback_reason")
+        out[cluster_id] = _ClusterPageMeta(
+            cluster_id=cluster_id,
+            seed_kind=str(raw.get("seed_kind") or ""),
+            kind=str(raw.get("kind") or ""),
+            fallback_reason=str(fallback) if fallback else None,
+            reason_codes=tuple(codes),
+            member_paths=files,
+        )
+    return out
+
+
+def _format_reason_codes(codes: Sequence[tuple[str, str]]) -> str:
+    if not codes:
+        return ""
+    parts: list[str] = []
+    for code, human in codes:
+        if human:
+            parts.append(f"`{code}`（{human}）")
+        else:
+            parts.append(f"`{code}`")
+    return "reason_code：" + "；".join(parts)
+
+
+def _dirseed_sentence(meta: _ClusterPageMeta) -> str:
+    codes = _format_reason_codes(meta.reason_codes)
+    if codes:
+        return f"{DIRSEED_HUMAN}。{codes}。"
+    return f"{DIRSEED_HUMAN}。"
 
 
 def _coerce_ledger(ledger: SemanticLedger | Mapping[str, object]) -> SemanticLedger:
@@ -136,7 +311,12 @@ def _dependency_edges(
     return tuple(sorted(edges))
 
 
-def _build_projection(ledger: SemanticLedger, graph: nx.DiGraph | None) -> _Projection:
+def _projection_from_module_id(
+    ledger: SemanticLedger,
+    graph: nx.DiGraph | None,
+    *,
+    grouping_reason: str,
+) -> _Projection:
     module_by_file, conflicts, display_by_module = _file_module_assignments(ledger)
     files_by_module = {
         module: tuple(sorted(path for path, owner in module_by_file.items() if owner == module))
@@ -149,7 +329,88 @@ def _build_projection(ledger: SemanticLedger, graph: nx.DiGraph | None) -> _Proj
         conflicts_by_file=conflicts,
         ordered_fresh_ids=_ordered_fresh_ids(ledger),
         dependency_edges=_dependency_edges(ledger, graph),
+        grouping_mode=GROUPING_CONE,
+        grouping_reason=grouping_reason,
+        cluster_meta_by_module={},
     )
+
+
+def _projection_from_partition(
+    ledger: SemanticLedger,
+    graph: nx.DiGraph | None,
+    *,
+    partition_path: Path,
+    names_path: Path | None,
+    grouping_reason: str,
+) -> _Projection:
+    from src.synthesis.variant_b.clusters import build_clusters
+
+    edges = set(_dependency_edges(ledger, graph))
+    clusters = build_clusters(
+        ledger,
+        edges,
+        partition_path=partition_path,
+        names_path=names_path,
+    )
+    meta_by_id = _load_partition_meta(partition_path)
+    module_by_file: dict[str, str] = {}
+    display_by_module: dict[str, str] = {}
+    files_by_module: dict[str, tuple[str, ...]] = {}
+    cluster_meta_by_module: dict[str, _ClusterPageMeta] = {}
+    for cluster in clusters:
+        slug = cluster.slug
+        display_by_module[slug] = cluster.display
+        files_by_module[slug] = tuple(cluster.files)
+        loaded = meta_by_id.get(cluster.cluster_id)
+        cluster_meta_by_module[slug] = loaded or _ClusterPageMeta(
+            cluster_id=cluster.cluster_id,
+            seed_kind="",
+            kind="",
+            fallback_reason=None,
+            reason_codes=(),
+            member_paths=tuple(cluster.files),
+        )
+        for path in cluster.files:
+            module_by_file.setdefault(path, slug)
+    for path in ledger.files:
+        module_by_file.setdefault(path, "unclassified")
+    if any(owner == "unclassified" for owner in module_by_file.values()):
+        leftovers = tuple(
+            sorted(path for path, owner in module_by_file.items() if owner == "unclassified")
+        )
+        files_by_module.setdefault("unclassified", leftovers)
+        display_by_module.setdefault("unclassified", "unclassified")
+    return _Projection(
+        module_by_file=module_by_file,
+        display_by_module=display_by_module,
+        files_by_module=files_by_module,
+        conflicts_by_file={},
+        ordered_fresh_ids=_ordered_fresh_ids(ledger),
+        dependency_edges=_dependency_edges(ledger, graph),
+        grouping_mode=GROUPING_L2,
+        grouping_reason=grouping_reason,
+        cluster_meta_by_module=cluster_meta_by_module,
+    )
+
+
+def _build_projection(
+    ledger: SemanticLedger,
+    graph: nx.DiGraph | None,
+    *,
+    partition_path: Path | None,
+    names_path: Path | None,
+    grouping_mode: str,
+    grouping_reason: str,
+) -> _Projection:
+    if grouping_mode == GROUPING_L2 and partition_path is not None:
+        return _projection_from_partition(
+            ledger,
+            graph,
+            partition_path=partition_path,
+            names_path=names_path,
+            grouping_reason=grouping_reason,
+        )
+    return _projection_from_module_id(ledger, graph, grouping_reason=grouping_reason)
 
 
 _SENTENCE_END_CN = frozenset("。！？")
@@ -352,9 +613,7 @@ def _build_index_page(
             group_key="fixed",
             name="intro",
             one_liner="",
-            lines=(
-                "这份项目级入口由 semantic ledger 确定性派生。沿模块链接进入文件目录，再读取每个 fresh 函数、方法或类的可寻址解释块。",
-            ),
+            lines=_index_intro_lines(projection),
         ),
         PageUnit(
             unit_id="overview",
@@ -387,6 +646,9 @@ def _build_index_page(
         total, fresh, stale = _module_stats(ledger, projection, module)
         display = projection.display_by_module[module]
         summary = _module_summary(ledger, projection, module)
+        meta = (projection.cluster_meta_by_module or {}).get(module)
+        if meta is not None and meta.is_dirseed:
+            summary = _dirseed_sentence(meta) + summary
         target = f"{module}/{DETAIL_LEAF_NAME}"
         units.append(
             PageUnit(
@@ -1104,7 +1366,12 @@ def _build_file_unit(
     all_ids = sorted(symbol_id for symbol_id, item in ledger.symbols.items() if item.path == path)
     fresh_ids = [item for item in projection.ordered_fresh_ids if item in set(all_ids)]
     residuals = {item.symbol_id: item.reason for item in ledger.residuals}
-    header = [f"## `{path}`", ""]
+    header = [
+        f"## `{path}`",
+        "",
+        f"当前粒度：**{LEVEL_CODE}**。上级是本页的功能模块；再上一级是整体架构（根 INDEX）。",
+        "",
+    ]
     file_meta = _file_inbound_lines(
         path, all_ids, inbound, dups, has_fresh_blocks=bool(fresh_ids)
     )
@@ -1193,6 +1460,36 @@ def _build_detail_page(
     display = projection.display_by_module[module]
     file_edges = _file_dependency_edges(ledger, projection, module)
     mermaid = MermaidGenerator().generate_dependency_mermaid(file_edges, scope="module")
+    meta = (projection.cluster_meta_by_module or {}).get(module)
+    overview_lines: list[str] = [
+        "## 模块概览",
+        "",
+        _module_summary(ledger, projection, module),
+        "",
+        f"本模块包含 {len(files)} 个文件、{total} 个符号；{fresh} 个 fresh、{stale} 个 stale、"
+        f"{uncovered} 个未覆盖，模块覆盖率 {coverage}%。",
+    ]
+    if meta is not None:
+        overview_lines.extend(
+            [
+                "",
+                f"<!-- cluster:{meta.cluster_id} -->",
+                f"- 簇 id：`{meta.cluster_id}`",
+            ]
+        )
+        if meta.is_dirseed:
+            overview_lines.extend(
+                [
+                    "",
+                    "## 为什么这些文件在一起",
+                    "",
+                    "这些文件不是按公共面可达闭包切出来的功能组。"
+                    f"{DIRSEED_HUMAN}，所以它们才出现在同一页。",
+                    f"- {_dirseed_sentence(meta)}",
+                ]
+            )
+            if meta.fallback_reason:
+                overview_lines.append(f"- 分区记录的回退说明：{meta.fallback_reason}")
     units: list[PageUnit] = [
         PageUnit(
             unit_id=f"{module}:overview",
@@ -1200,14 +1497,7 @@ def _build_detail_page(
             group_key="overview",
             name="overview",
             one_liner="",
-            lines=(
-                "## 模块概览",
-                "",
-                _module_summary(ledger, projection, module),
-                "",
-                f"本模块包含 {len(files)} 个文件、{total} 个符号；{fresh} 个 fresh、{stale} 个 stale、"
-                f"{uncovered} 个未覆盖，模块覆盖率 {coverage}%。",
-            ),
+            lines=tuple(overview_lines),
         ),
         PageUnit(
             unit_id=f"{module}:diagram-heading",
@@ -1249,6 +1539,94 @@ def _build_detail_page(
     )
 
 
+def _index_intro_lines(projection: _Projection) -> tuple[str, ...]:
+    lines = [
+        "这份项目级入口由 semantic ledger 确定性派生。"
+        "沿模块链接进入文件目录，再读取每个 fresh 函数、方法或类的可寻址解释块。"
+        f"本页处在：**{LEVEL_ARCHITECTURE}**（分级：{LEVEL_CODE} / {LEVEL_MODULE} / {LEVEL_ARCHITECTURE}）。"
+        f"上级：无。下级：{LEVEL_MODULE}页（下方模块入口）。再下一层是各模块页里的{LEVEL_CODE}。"
+        f"{projection.grouping_reason}"
+    ]
+    if projection.grouping_mode == GROUPING_L2 and "unclassified" not in projection.files_by_module:
+        lines.append(
+            f"无未归类文件。{DIRSEED_HUMAN}；这些文件进了 dirseed 簇，原 reason_code 写在对应功能模块页。"
+        )
+    return tuple(lines)
+
+
+def _hierarchy_unit(page: Page, child_relpaths: Sequence[str]) -> PageUnit:
+    name = Path(page.relpath).name
+    if page.parent_relpath is None:
+        level = LEVEL_ARCHITECTURE
+        parent_txt = (
+            f"上级：无。本页是文档树根，处在「{LEVEL_CODE} → {LEVEL_MODULE} → {LEVEL_ARCHITECTURE}」的{LEVEL_ARCHITECTURE}。"
+        )
+        child_txt = (
+            f"下级：{LEVEL_MODULE}页（本页「模块」列表中的链接）。再下一层是各模块页里的{LEVEL_CODE}（文件与符号块）。"
+        )
+    elif name.startswith("PART-"):
+        level = LEVEL_CODE
+        parent_txt = (
+            f"上级：{LEVEL_MODULE}（[{page.parent_title}](@@PAGE:{page.parent_relpath}@@)）。"
+            f"再上一级是{LEVEL_ARCHITECTURE}（根 INDEX）。"
+        )
+        child_txt = f"下级：本页内的{LEVEL_CODE}（文件标题与符号解释块）。没有更细的文档页。"
+    elif page.kind == "detail" or name == DETAIL_LEAF_NAME:
+        level = LEVEL_MODULE
+        parent_txt = (
+            f"上级：{LEVEL_ARCHITECTURE}（[{page.parent_title}](@@PAGE:{page.parent_relpath}@@)）。"
+        )
+        if child_relpaths:
+            child_txt = (
+                f"下级：分页后的{LEVEL_CODE}子页，以及本页内尚未下沉的{LEVEL_CODE}（文件与符号块）。"
+            )
+        else:
+            child_txt = f"下级：本页内的{LEVEL_CODE}（各文件标题与符号解释块）。没有再下一层文档页。"
+    else:
+        level = LEVEL_MODULE
+        parent_txt = (
+            f"上级：[{page.parent_title}](@@PAGE:{page.parent_relpath}@@)"
+            f"（{LEVEL_ARCHITECTURE}或其上一层索引）。"
+        )
+        child_txt = f"下级：{LEVEL_MODULE}详情页或更细的索引页。"
+    lines = (
+        "## 当前层级",
+        "",
+        f"本页处在：**{level}**（分级：{LEVEL_CODE} / {LEVEL_MODULE} / {LEVEL_ARCHITECTURE}）。",
+        parent_txt,
+        child_txt,
+        "",
+    )
+    return PageUnit(
+        unit_id=f"{page.relpath}:hierarchy",
+        kind="fixed",
+        group_key="fixed",
+        name="hierarchy",
+        one_liner="",
+        lines=lines,
+    )
+
+
+def _annotate_hierarchy(pages: Mapping[str, Page]) -> dict[str, Page]:
+    children: dict[str, list[str]] = {}
+    for page in pages.values():
+        if page.parent_relpath:
+            children.setdefault(page.parent_relpath, []).append(page.relpath)
+    for relpath in children:
+        children[relpath].sort()
+    out: dict[str, Page] = {}
+    for relpath, page in pages.items():
+        if any(unit.unit_id.endswith(":hierarchy") for unit in page.units):
+            out[relpath] = page
+            continue
+        if page.parent_relpath is None:
+            out[relpath] = page
+            continue
+        unit = _hierarchy_unit(page, children.get(relpath, ()))
+        out[relpath] = replace(page, units=(unit, *page.units))
+    return out
+
+
 def _replace_docs_tree(repo_root: Path, documents: Mapping[Path, str]) -> None:
     target = repo_root / DOCS_RELDIR
     if target.is_symlink() or (target.exists() and not target.is_dir()):
@@ -1286,6 +1664,9 @@ def render_semantic_docs(
     detail_max_lines: int | None = None,
     detail_max_blocks: int | None = None,
     reverse_index: ReverseIndex | Mapping[str, object] | None = None,
+    partition_path: str | Path | None = None,
+    names_path: str | Path | None = None,
+    consume_partition: bool = True,
 ) -> dict[str, object]:
     """Write a recursively layered doc tree and return its paths plus hop stats."""
 
@@ -1310,7 +1691,22 @@ def render_semantic_docs(
         )
     inbound = resolve_inbound_view(root, model, reverse_index)
     dups = build_duplicate_index(root, model, inbound)
-    projection = _build_projection(model, graph)
+    chosen_partition, grouping_mode, grouping_reason = resolve_partition_source(
+        root,
+        partition_path=partition_path,
+        consume_partition=consume_partition,
+    )
+    resolved_names = Path(names_path) if names_path is not None else discover_names_path(
+        root, chosen_partition
+    )
+    projection = _build_projection(
+        model,
+        graph,
+        partition_path=chosen_partition,
+        names_path=resolved_names,
+        grouping_mode=grouping_mode,
+        grouping_reason=grouping_reason,
+    )
     index_page = _build_index_page(root, model, projection, dups)
     layers = assign_dag_layers(tuple(model.symbols), projection.dependency_edges)
     pages = {index_page.relpath: index_page}
@@ -1326,6 +1722,7 @@ def render_semantic_docs(
             repo_root=root,
         )
         pages[detail.relpath] = detail
+    pages = _annotate_hierarchy(pages)
     layered = split_until_fit(pages, budget)
     rendered = finalize_pages(layered, budget)
     hops = measure_symbol_hops(rendered, sorted(model.symbols))
@@ -1353,4 +1750,7 @@ def render_semantic_docs(
         "page_count": sum(1 for relpath in rendered if relpath.endswith(".md")),
         "max_page_hops": hops["max_page_hops"],
         "rate_le_3": hops["rate_le_3"],
+        "grouping_mode": projection.grouping_mode,
+        "partition_consumed": projection.grouping_mode == GROUPING_L2,
+        "grouping_reason": projection.grouping_reason,
     }
