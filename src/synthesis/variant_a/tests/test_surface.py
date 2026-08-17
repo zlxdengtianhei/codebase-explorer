@@ -213,7 +213,12 @@ def test_b1_unresolved_uses_last_hop_not_first_star(tmp_path) -> None:
     assert ghost.resolved_symbol_ids == ()
     assert ghost.target_path != "_api.py"
     assert ghost.target_path == "_later/empty.py"
-    assert "unresolved after reexport chase" in ghost.unresolved_reason
+    # Chase ran out of hops on a file that is not the Ghost module.
+    # Semantic split (not a copied string): this is chase-failed, not "landed on a package".
+    assert ghost.unresolved_reason.startswith("reexport chase failed")
+    assert "last hop _later/empty.py" in ghost.unresolved_reason
+    assert Path(ghost.target_path).stem != "Ghost"
+    assert "package/module with no ledger symbol" not in ghost.unresolved_reason
 
 
 def test_b1_negative_control_old_first_star_would_be_red(tmp_path) -> None:
@@ -259,7 +264,8 @@ def test_b2_stdlib_and_thirdparty_imports_leave_index(tmp_path) -> None:
     ledger = _flask_ledger(tmp_path)
     surface = extract_public_surface(tmp_path, ledger)
     names = _index_names(surface, tmp_path)
-    assert index_noise_names(names) == ()
+    # Repo-aware: flask-like `json` is a local package, not stdlib noise.
+    assert index_noise_names(names, repo_root=tmp_path, ledger=ledger) == ()
     for noise in INDEX_NOISE_NAMES:
         assert noise not in names
     assert "request" in names
@@ -288,6 +294,48 @@ def test_b2_negative_control_reinjecting_sys_turns_gate_red() -> None:
     assert index_noise_names(polluted) == ("sys",)
 
 
+def test_b2_gate_flags_unseen_stdlib_names_not_just_denylist() -> None:
+    """Verifier counterexample: a four-name denylist cannot go red on ``os``.
+
+    This test is the thing that turns red if someone restores
+    ``INDEX_NOISE_NAMES.intersection``.
+    """
+
+    keep = {"Flask", "request", "jsonify", "get", "Client"}
+    assert index_noise_names(keep) == ()
+    assert index_noise_names({"Flask", "request", "os"}) == ("os",)
+    unseen = (
+        "os",
+        "typing",
+        "json",
+        "re",
+        "collections",
+        "warnings",
+        "annotations",
+        "TYPE_CHECKING",
+        "pathlib",
+        "functools",
+        "itertools",
+    )
+    for noise in unseen:
+        flagged = index_noise_names(keep | {noise})
+        assert noise in flagged, (noise, flagged)
+        assert set(flagged).isdisjoint(keep), (noise, flagged)
+
+
+def test_b2_gate_with_repo_uses_keep_import_criterion(tmp_path) -> None:
+    """Same predicate as ``_is_repo_local_import``: local json package stays; ``os`` does not."""
+
+    _flask_like(tmp_path)
+    ledger = _flask_ledger(tmp_path)
+    keep = {"Flask", "request", "jsonify", "json"}
+    assert index_noise_names(keep, repo_root=tmp_path, ledger=ledger) == ()
+    for noise in ("os", "sys", "t", "ContextVar", "LocalProxy", "werkzeug"):
+        flagged = index_noise_names(keep | {noise}, repo_root=tmp_path, ledger=ledger)
+        assert noise in flagged, (noise, flagged)
+        assert set(flagged).isdisjoint(keep), (noise, flagged)
+
+
 def test_t3_root_from_dot_import_json_resolves_to_package(tmp_path) -> None:
     _flask_like(tmp_path)
     ledger = _flask_ledger(tmp_path)
@@ -296,7 +344,38 @@ def test_t3_root_from_dot_import_json_resolves_to_package(tmp_path) -> None:
     surface = extract_public_surface(tmp_path, ledger)
     hit = _root_binding(surface, "json")
     assert hit.target_path == "json/__init__.py"
+    assert hit.resolved_symbol_ids == ()
     assert "cannot resolve" not in hit.unresolved_reason
+    # Chase landed on the json package; ledger has no FunctionDef/ClassDef named json.
+    assert "package/module with no ledger symbol" in hit.unresolved_reason
+    assert "reexport chase failed" not in hit.unresolved_reason
+    assert Path(hit.target_path).parent.name == "json"
+
+
+def test_unresolved_reason_distinguishes_chase_fail_from_module_target(tmp_path) -> None:
+    """Negative control: the two D12 labels must not collapse to one string."""
+
+    chase_root = tmp_path / "chase"
+    pkg_root = tmp_path / "pkg"
+    _write(chase_root / "__init__.py", "from ._api import *\nfrom ._later import *\n\n__all__ = ['Ghost']\n")
+    _write(chase_root / "_api.py", "def get():\n    return 1\n")
+    _write(chase_root / "_later" / "__init__.py", "from .empty import *\n")
+    _write(chase_root / "_later" / "empty.py", "x = 1\n")
+    chase_ledger = make_ledger(
+        chase_root,
+        [make_symbol("_api.py", "get", kind=SemanticSymbolKind.FUNCTION)],
+        extra_files=["__init__.py", "_later/__init__.py", "_later/empty.py"],
+    )
+    chase_reason = _root_binding(extract_public_surface(chase_root, chase_ledger), "Ghost").unresolved_reason
+
+    _flask_like(pkg_root)
+    pkg_reason = _root_binding(extract_public_surface(pkg_root, _flask_ledger(pkg_root)), "json").unresolved_reason
+
+    assert chase_reason != pkg_reason
+    assert chase_reason.startswith("reexport chase failed")
+    assert "package/module with no ledger symbol" in pkg_reason
+    assert "package/module with no ledger symbol" not in chase_reason
+    assert "reexport chase failed" not in pkg_reason
 
 
 def test_t3_negative_control_old_resolver_is_none() -> None:

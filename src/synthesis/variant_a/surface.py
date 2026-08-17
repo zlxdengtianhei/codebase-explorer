@@ -5,7 +5,8 @@ from __future__ import annotations
 import ast
 import hashlib
 import sys
-from collections.abc import Mapping
+import __future__
+from collections.abc import Iterable, Mapping
 from pathlib import Path
 
 from pydantic import Field
@@ -17,9 +18,21 @@ from src.semantic.models import SemanticLedger, SemanticModel
 SURFACE_SCHEMA = "cbe-public-surface-1"
 # n7d §4.2: chase ImportFrom / star a bounded depth; cycle via seen set.
 REEEXPORT_MAX_DEPTH = 3
-# Acceptance names for the B2 INDEX noise gate (n7d §4.3 / n7fix T2).
-# Production filtering is stdlib + in-repo, not this denylist.
+# Historical n7fix T2 dropped names. Not the B2 gate predicate — the gate is
+# ``index_noise_names`` (same in-repo criterion as ``_is_repo_local_import``).
 INDEX_NOISE_NAMES = frozenset({"t", "sys", "ContextVar", "LocalProxy"})
+_STDLIB_EXPORT_HOMES = (
+    "typing",
+    "types",
+    "contextvars",
+    "collections.abc",
+    "dataclasses",
+    "enum",
+    "abc",
+    "functools",
+    "collections",
+)
+_STDLIB_CAPWORD_EXPORTS: frozenset[str] | None = None
 
 
 def _file_digest(path: Path) -> str:
@@ -348,11 +361,12 @@ def _chase_definition(
         return found, "", def_path
     if not start_files:
         return (), f"module-level name {name} is not a FunctionDef/ClassDef", ""
-    reason = (
-        f"unresolved after reexport chase; last hop {last_path}"
-        if last_path
-        else f"module-level name {name} is not a FunctionDef/ClassDef"
-    )
+    if last_path and last_path in start_files and _path_is_imported_module(last_path, name):
+        reason = f"import target is a package/module with no ledger symbol; last hop {last_path}"
+    elif last_path:
+        reason = f"reexport chase failed; last hop {last_path}"
+    else:
+        reason = f"module-level name {name} is not a FunctionDef/ClassDef"
     return (), reason, last_path
 
 
@@ -533,10 +547,146 @@ def oracle_init_exports(repo_root: str | Path) -> tuple[tuple[str, str], ...]:
     return tuple(found)
 
 
-def index_noise_names(names: set[str] | tuple[str, ...] | list[str]) -> tuple[str, ...]:
-    """B2 gate: the four INDEX noise names that must be absent after the fix."""
+def _path_is_imported_module(path: str, name: str) -> bool:
+    """True iff ``path`` is the file that implements module ``name``."""
 
-    return tuple(sorted(INDEX_NOISE_NAMES.intersection(names)))
+    if not path or not name:
+        return False
+    parts = Path(path)
+    if parts.name == "__init__.py":
+        return parts.parent.name == name
+    return parts.stem == name
+
+
+def _stdlib_capword_exports() -> frozenset[str]:
+    """Public CapWords / ALL_CAPS names from stdlib modules typically ``from X import``-ed."""
+
+    global _STDLIB_CAPWORD_EXPORTS
+    if _STDLIB_CAPWORD_EXPORTS is not None:
+        return _STDLIB_CAPWORD_EXPORTS
+    found: set[str] = set()
+    for mod_name in _STDLIB_EXPORT_HOMES:
+        try:
+            mod = __import__(mod_name, fromlist=["*"])
+        except ImportError:
+            continue
+        exported = getattr(mod, "__all__", None)
+        names = exported if exported is not None else (item for item in dir(mod) if not item.startswith("_"))
+        for item in names:
+            if not item or item.startswith("_"):
+                continue
+            if item.isupper() or (item[0].isupper() and item.isidentifier()):
+                found.add(item)
+    _STDLIB_CAPWORD_EXPORTS = frozenset(found)
+    return _STDLIB_CAPWORD_EXPORTS
+
+
+def _is_external_unqualified_name(name: str) -> bool:
+    """Names-only half of the B2 gate: provably not a repo symbol without a tree.
+
+    A name is external if it is a stdlib top-level module, a ``__future__``
+    feature, or a CapWords/ALL_CAPS export of a stdlib typing-like module.
+    Application names (``Flask``, ``request``, ``jsonify``) stay off this list.
+    """
+
+    if not name or name.startswith("_"):
+        return False
+    if _stdlib_top_level(name):
+        return True
+    if name in __future__.all_feature_names:
+        return True
+    return name in _stdlib_capword_exports()
+
+
+def _repo_local_surface_names(
+    repo_root: Path,
+    ledger: SemanticLedger | None = None,
+) -> set[str]:
+    """Names production would treat as in-repo (same criterion as ``_is_repo_local_import``).
+
+    Local = module-level def / assignment / ``__all__`` publication, or an
+    import ``_keep_import_name`` would keep. Stdlib aliases (``import typing as t``)
+    and third-party imports (``from werkzeug.local import LocalProxy``) stay out
+    even when a colliding filename exists.
+    """
+
+    repo_root = Path(repo_root).expanduser().resolve()
+    local: set[str] = set()
+    if ledger is not None:
+        for record in ledger.symbols.values():
+            tail = record.qualified_name.rsplit(".", 1)[-1]
+            if tail and not tail.startswith("_"):
+                local.add(tail)
+    for path in enumerate_python_files(repo_root):
+        relative = path.relative_to(repo_root).as_posix()
+        try:
+            tree = ast.parse(path.read_text(encoding="utf-8", errors="replace"), filename=relative)
+        except (OSError, SyntaxError):
+            continue
+        if not isinstance(tree, ast.Module):
+            continue
+        for node in tree.body:
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                if not node.name.startswith("_"):
+                    local.add(node.name)
+            elif isinstance(node, ast.Assign):
+                for target in node.targets:
+                    if not isinstance(target, ast.Name):
+                        continue
+                    if target.id == "__all__" and isinstance(node.value, (ast.List, ast.Tuple)):
+                        for elt in node.value.elts:
+                            if isinstance(elt, ast.Constant) and isinstance(elt.value, str):
+                                if elt.value and not elt.value.startswith("_"):
+                                    local.add(elt.value)
+                    elif target.id != "__all__" and not target.id.startswith("_"):
+                        local.add(target.id)
+            elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
+                if not node.target.id.startswith("_"):
+                    local.add(node.target.id)
+            elif isinstance(node, ast.ImportFrom):
+                if node.module == "__future__":
+                    continue
+                for alias in node.names:
+                    if alias.name == "*":
+                        continue
+                    if not _keep_import_name(repo_root, relative, node.level, node.module, alias.name):
+                        continue
+                    kept = alias.asname or alias.name
+                    if kept and not kept.startswith("_"):
+                        local.add(kept)
+            elif isinstance(node, ast.Import):
+                for alias in node.names:
+                    if not _keep_import_name(
+                        repo_root, relative, 0, alias.name, alias.name.split(".")[-1]
+                    ):
+                        continue
+                    kept = alias.asname or alias.name.split(".")[0]
+                    if kept and not kept.startswith("_"):
+                        local.add(kept)
+    return local
+
+
+def index_noise_names(
+    names: set[str] | tuple[str, ...] | list[str] | Iterable[str],
+    *,
+    repo_root: str | Path | None = None,
+    ledger: SemanticLedger | None = None,
+) -> tuple[str, ...]:
+    """B2 gate: INDEX names that are not repo-local symbols.
+
+    Same criterion as production ``_is_repo_local_import``, not a four-name
+    denylist. With ``repo_root``, a name is noise iff it is absent from the
+    in-repo surface (defs, assignments, ``__all__``, kept imports). Without a
+    repo, a name is noise iff it is a stdlib module, ``__future__`` feature, or
+    stdlib CapWords export — so injecting ``os`` / ``TYPE_CHECKING`` turns red
+    even when those strings were never enumerated.
+    """
+
+    pending = {name for name in names if name and not str(name).startswith("_")}
+    if repo_root is not None:
+        local = _repo_local_surface_names(Path(repo_root).expanduser().resolve(), ledger)
+        return tuple(sorted(name for name in pending if name not in local))
+    return tuple(sorted(name for name in pending if _is_external_unqualified_name(name)))
 
 
 def entry_bindings(surface: PublicSurface) -> tuple[SurfaceBinding, ...]:
