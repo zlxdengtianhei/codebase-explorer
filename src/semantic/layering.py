@@ -36,6 +36,10 @@ _PAGE_TOKEN = re.compile(r"@@PAGE:([^@]+)@@")
 _SYM_TOKEN = re.compile(r"@@SYM:([^@]+)@@")
 _SKIP_SCHEMES = ("http://", "https://", "mailto:")
 _RUNAWAY_SPLITS = 100_000
+# Negative-control switch for the scale-cell M1/M2 layering (r005).
+# Env overrides the budget field so render.py (owned by partw) can be flipped
+# without editing it. 0/false/off/no restores the pre-fix abort behaviour.
+SCALE_LAYERING_ENV = "CBE_SCALE_LAYERING"
 
 # Named sink directories for INDEX groups (N-10: surface is one instance).
 _GROUP_HOME = {
@@ -63,9 +67,25 @@ class LayerBudget:
     detail_max_lines: int = DEFAULT_DETAIL_MAX_LINES
     detail_max_blocks: int = DEFAULT_DETAIL_MAX_BLOCKS
     max_nav_ratio: float = DEFAULT_MAX_NAV_RATIO
+    scale_layering: bool = True
 
     def max_lines(self, kind: str) -> int:
         return self.index_max_lines if kind == "index" else self.detail_max_lines
+
+
+def scale_layering_enabled(budget: LayerBudget | None = None) -> bool:
+    """Whether M1 suffix split + M2 nav-ratio layering are on.
+
+    ``CBE_SCALE_LAYERING`` wins when set, so a process can negative-control
+    ``render_semantic_docs`` without touching render.py.
+    """
+
+    raw = os.environ.get(SCALE_LAYERING_ENV)
+    if raw is not None:
+        return raw.strip().lower() not in {"0", "false", "off", "no"}
+    if budget is None:
+        return True
+    return budget.scale_layering
 
 
 @dataclass(frozen=True)
@@ -349,7 +369,14 @@ def _heading_unit(group_key: str, heading: str) -> PageUnit:
     )
 
 
-def _nav_unit(name: str, one_liner: str, target: str, group_key: str) -> PageUnit:
+def _nav_unit(
+    name: str,
+    one_liner: str,
+    target: str,
+    group_key: str,
+    budget: LayerBudget | None = None,
+) -> PageUnit:
+    del budget
     return PageUnit(
         unit_id=f"nav:{target}",
         kind="nav",
@@ -361,11 +388,49 @@ def _nav_unit(name: str, one_liner: str, target: str, group_key: str) -> PageUni
     )
 
 
-def _group_units(page: Page, key: str) -> tuple[PageUnit, ...]:
+def _enrich_nav_shaped_unit(unit: PageUnit) -> PageUnit:
+    """Attach a non-nav 职责 line after cluster/surface entry rows (M2a / SEM-09).
+
+    Only ``entry`` units are enriched. Mechanical ``nav`` rows created by a
+    split stay one line so a tight INDEX budget (e.g. 40) still shrinks.
+    """
+
+    if unit.kind != "entry":
+        return unit
+    lines = _flatten_lines(unit.lines)
+    if not lines or any(line.startswith("- 职责：") for line in lines):
+        return unit
+    blurb = (unit.one_liner or "").strip() or "完整内容在子页保留，无删减。"
+    new_lines: list[str] = []
+    added = False
+    for line in lines:
+        new_lines.append(line)
+        if _NAV_LINE.match(line) and not line.startswith("↑ ["):
+            new_lines.append(f"- 职责：{blurb}")
+            added = True
+    if not added:
+        return unit
+    return replace(unit, lines=tuple(new_lines))
+
+
+def _enrich_page(page: Page) -> Page:
+    return replace(page, units=tuple(_enrich_nav_shaped_unit(unit) for unit in page.units))
+
+
+def _group_units(page: Page, key: str, *, include_nav: bool = False) -> tuple[PageUnit, ...]:
+    if include_nav:
+        return tuple(unit for unit in page.units if unit.group_key == key and unit.kind == "nav")
     return tuple(unit for unit in page.units if unit.group_key == key and unit.kind not in {"heading", "nav"})
 
 
-def _insert_navs(page: Page, group_key: str, navs: Sequence[PageUnit], *, drop_body: bool) -> Page:
+def _insert_navs(
+    page: Page,
+    group_key: str,
+    navs: Sequence[PageUnit],
+    *,
+    drop_body: bool,
+    drop_nav: bool = False,
+) -> Page:
     new_units: list[PageUnit] = []
     inserted = False
     for unit in page.units:
@@ -374,6 +439,11 @@ def _insert_navs(page: Page, group_key: str, navs: Sequence[PageUnit], *, drop_b
             continue
         if unit.kind == "heading":
             new_units.append(unit)
+            continue
+        if unit.kind == "nav" and drop_nav:
+            if not inserted:
+                new_units.extend(navs)
+                inserted = True
             continue
         if unit.kind == "nav" and not drop_body:
             new_units.append(unit)
@@ -425,17 +495,25 @@ def _make_child(
     )
 
 
-def _chrome_counts(page: Page, *, exclude_group: str | None = None) -> tuple[int, int]:
+def _chrome_counts(
+    page: Page,
+    *,
+    exclude_group: str | None = None,
+    exclude_nav: bool = False,
+) -> tuple[int, int]:
     if exclude_group is None:
         return _line_classes(page)
-    probe = replace(
-        page,
-        units=tuple(
-            unit
-            for unit in page.units
-            if not (unit.group_key == exclude_group and unit.kind not in {"heading", "nav"})
-        ),
-    )
+
+    def keep(unit: PageUnit) -> bool:
+        if unit.group_key != exclude_group:
+            return True
+        if unit.kind == "heading":
+            return True
+        if unit.kind == "nav":
+            return not exclude_nav
+        return False
+
+    probe = replace(page, units=tuple(unit for unit in page.units if keep(unit)))
     return _line_classes(probe)
 
 
@@ -447,9 +525,15 @@ def _largest_sinkable_group(page: Page) -> str | None:
         if unit.group_key == "fixed":
             continue
         sizes[unit.group_key] += len(iter_unit_lines(unit))
-    if not sizes:
+    if sizes:
+        return max(sizes, key=lambda key: (sizes[key], key))
+    nav_sizes: dict[str, int] = defaultdict(int)
+    for unit in page.units:
+        if unit.kind == "nav":
+            nav_sizes[unit.group_key] += len(iter_unit_lines(unit))
+    if not nav_sizes:
         return None
-    return max(sizes, key=lambda key: (sizes[key], key))
+    return max(nav_sizes, key=lambda key: (nav_sizes[key], key))
 
 
 def _partition(items: Sequence[PageUnit], groups: int) -> list[tuple[PageUnit, ...]]:
@@ -484,27 +568,47 @@ def _group_label(group_key: str, chunk: Sequence[PageUnit], index: int, total: i
     return f"{first}–{last}", f"{len(chunk)} 条入口，完整内容在子页，无删减。"
 
 
-def _explode_file_unit(unit: PageUnit, budget: LayerBudget) -> list[PageUnit]:
-    symbols = iter_symbol_units(unit)
-    if not symbols:
-        return [unit]
-    max_blocks = max(1, budget.detail_max_blocks)
-    if unit_block_count(unit) <= max_blocks and len(iter_unit_lines(unit)) <= budget.detail_max_lines:
-        return [unit]
-    chunks: list[PageUnit] = []
-    for start in range(0, len(symbols), max_blocks):
-        piece = symbols[start : start + max_blocks]
-        header = [
-            f"## `{unit.name}`" + ("（续）" if start else ""),
-            "",
-            "### 文件语义目录",
-            "",
-        ]
+_SUFFIX_ID_LINE = re.compile(r"^- `([^`]+)`：")
+
+
+def _split_lines_at_boundaries(lines: Sequence[str], max_lines: int) -> list[tuple[str, ...]]:
+    """Split on line boundaries only. Never cuts a line; never drops a line."""
+
+    flat = _flatten_lines(lines)
+    if not flat:
+        return []
+    cap = max(1, max_lines)
+    chunks: list[list[str]] = []
+    current: list[str] = []
+    for line in flat:
+        if current and len(current) >= cap:
+            chunks.append(current)
+            current = []
+        current.append(line)
+    if current:
+        chunks.append(current)
+    return [tuple(chunk) for chunk in chunks]
+
+
+def _suffix_symbol_ids(lines: Sequence[str]) -> tuple[str, ...]:
+    found: list[str] = []
+    for line in lines:
+        marked = _SYMBOL_MARK.findall(line)
+        if marked:
+            found.extend(marked)
+            continue
+        match = _SUFFIX_ID_LINE.match(line)
+        if match:
+            found.append(match.group(1))
+    return tuple(found)
+
+
 def _file_chunk(
     unit: PageUnit,
     piece: Sequence[PageUnit],
     *,
     start: int,
+    suffix_lines: Sequence[str] = (),
 ) -> PageUnit:
     header = [
         f"## `{unit.name}`" + ("（续）" if start else ""),
@@ -526,11 +630,13 @@ def _file_chunk(
         symbol_ids=tuple(sid for symbol in piece for sid in symbol.symbol_ids),
         block_count=len(piece),
         children=tuple(piece),
-        suffix_lines=unit.suffix_lines if start == 0 else (),
+        suffix_lines=tuple(suffix_lines),
     )
 
 
-def _explode_file_unit(unit: PageUnit, budget: LayerBudget) -> list[PageUnit]:
+def _explode_file_unit_legacy(unit: PageUnit, budget: LayerBudget) -> list[PageUnit]:
+    """Pre-r005 scale behaviour: suffix-only units (no symbol children) are a no-op."""
+
     symbols = iter_symbol_units(unit)
     if not symbols:
         return [unit]
@@ -546,15 +652,100 @@ def _explode_file_unit(unit: PageUnit, budget: LayerBudget) -> list[PageUnit]:
     while start < len(symbols):
         take = 0
         while start + take < len(symbols) and take < block_cap:
-            candidate = _file_chunk(unit, symbols[start : start + take + 1], start=start)
+            candidate = _file_chunk(
+                unit,
+                symbols[start : start + take + 1],
+                start=start,
+                suffix_lines=unit.suffix_lines if start == 0 else (),
+            )
             if take > 0 and len(iter_unit_lines(candidate)) > line_cap:
                 break
             take += 1
         if take == 0:
             take = 1
-        chunks.append(_file_chunk(unit, symbols[start : start + take], start=start))
+        chunks.append(
+            _file_chunk(
+                unit,
+                symbols[start : start + take],
+                start=start,
+                suffix_lines=unit.suffix_lines if start == 0 else (),
+            )
+        )
         start += take
     return chunks
+
+
+def _explode_file_unit(unit: PageUnit, budget: LayerBudget) -> list[PageUnit]:
+    if not scale_layering_enabled(budget):
+        return _explode_file_unit_legacy(unit, budget)
+
+    symbols = iter_symbol_units(unit)
+    suffix = _flatten_lines(unit.suffix_lines)
+    # Leave chrome for DETAIL/PART header + uplink + possible overview residue.
+    line_cap = max(1, budget.detail_max_lines - 32)
+    block_cap = max(1, budget.detail_max_blocks)
+    if (
+        unit_block_count(unit) <= block_cap
+        and len(iter_unit_lines(unit)) <= line_cap
+    ):
+        return [unit]
+
+    chunks: list[PageUnit] = []
+    if symbols:
+        start = 0
+        while start < len(symbols):
+            take = 0
+            while start + take < len(symbols) and take < block_cap:
+                candidate = _file_chunk(
+                    unit, symbols[start : start + take + 1], start=start, suffix_lines=()
+                )
+                if take > 0 and len(iter_unit_lines(candidate)) > line_cap:
+                    break
+                take += 1
+            if take == 0:
+                take = 1
+            chunks.append(
+                _file_chunk(unit, symbols[start : start + take], start=start, suffix_lines=())
+            )
+            start += take
+    else:
+        header_lines = _flatten_lines(unit.lines)
+        if header_lines:
+            for index, piece in enumerate(_split_lines_at_boundaries(header_lines, line_cap)):
+                chunks.append(
+                    replace(
+                        unit,
+                        unit_id=f"{unit.unit_id}:header:{index}",
+                        lines=piece,
+                        children=(),
+                        suffix_lines=(),
+                        symbol_ids=(),
+                        block_count=0,
+                    )
+                )
+
+    if suffix:
+        suffix_cap = max(1, line_cap - 4)
+        for index, piece in enumerate(_split_lines_at_boundaries(suffix, suffix_cap)):
+            heading = (
+                f"## `{unit.name}`" + ("（未覆盖续）" if index or symbols else "（未覆盖）"),
+                "",
+            )
+            chunks.append(
+                PageUnit(
+                    unit_id=f"{unit.unit_id}:suffix:{index}",
+                    kind="file",
+                    group_key=unit.group_key,
+                    name=unit.name,
+                    one_liner=f"未覆盖符号续 {index + 1}，无删减。",
+                    lines=heading,
+                    suffix_lines=piece,
+                    symbol_ids=_suffix_symbol_ids(piece),
+                    block_count=0,
+                )
+            )
+
+    return chunks or [unit]
 
 
 def _pack_detail_units(units: Sequence[PageUnit], budget: LayerBudget) -> list[tuple[PageUnit, ...]]:
@@ -611,6 +802,10 @@ def _split_index(page: Page, budget: LayerBudget, occupied: set[str]) -> tuple[P
     if group_key is None:
         raise LayeringError(f"index {page.relpath} is over budget but has no sinkable group")
     body = list(_group_units(page, group_key))
+    sinking_navs = False
+    if not body:
+        body = list(_group_units(page, group_key, include_nav=True))
+        sinking_navs = bool(body)
     if not body:
         raise LayeringError(f"index {page.relpath} group {group_key!r} is empty")
     # A single entry whose lines exceed the INDEX cap cannot be partitioned
@@ -631,7 +826,9 @@ def _split_index(page: Page, budget: LayerBudget, occupied: set[str]) -> tuple[P
                 )
             )
     body = sliced
-    chrome_content, reserved_nav = _chrome_counts(page, exclude_group=group_key)
+    chrome_content, reserved_nav = _chrome_counts(
+        page, exclude_group=group_key, exclude_nav=sinking_navs
+    )
     capacity = _nav_capacity(
         chrome_content,
         budget.index_max_lines,
@@ -648,14 +845,14 @@ def _split_index(page: Page, budget: LayerBudget, occupied: set[str]) -> tuple[P
     home = _GROUP_HOME.get(group_key)
     # Named root groups (surface / residual / diagram / module) always sink
     # to their home page; the child splits further if it is still over budget.
-    if home and page.relpath == "INDEX.md":
+    if home and page.relpath == "INDEX.md" and not sinking_navs:
         target, title, blurb = home
         target = _unique_relpath(target, occupied)
         occupied.add(target)
         child = _make_child(page, target, title, group_key, body, kind="index")
         children.append(child)
-        navs.append(_nav_unit(title, blurb, target, group_key))
-        parent = _insert_navs(page, group_key, navs, drop_body=True)
+        navs.append(_nav_unit(title, blurb, target, group_key, budget))
+        parent = _insert_navs(page, group_key, navs, drop_body=True, drop_nav=sinking_navs)
         return _finish(parent, children)
 
     body_lines = sum(len(iter_unit_lines(unit)) for unit in body)
@@ -679,7 +876,13 @@ def _split_index(page: Page, budget: LayerBudget, occupied: set[str]) -> tuple[P
             target = _next_group_index(directory, occupied)
         occupied.add(target)
         child = _make_child(page, target, title, group_key, body, kind="index")
-        parent = _insert_navs(page, group_key, [_nav_unit(title, blurb, target, group_key)], drop_body=True)
+        parent = _insert_navs(
+            page,
+            group_key,
+            [_nav_unit(title, blurb, target, group_key, budget)],
+            drop_body=True,
+            drop_nav=sinking_navs,
+        )
         return _finish(parent, [child])
 
     for index, chunk in enumerate(groups):
@@ -687,8 +890,8 @@ def _split_index(page: Page, budget: LayerBudget, occupied: set[str]) -> tuple[P
         target = _next_group_index(directory, occupied)
         occupied.add(target)
         children.append(_make_child(page, target, title, group_key, chunk, kind="index"))
-        navs.append(_nav_unit(title, blurb, target, group_key))
-    parent = _insert_navs(page, group_key, navs, drop_body=True)
+        navs.append(_nav_unit(title, blurb, target, group_key, budget))
+    parent = _insert_navs(page, group_key, navs, drop_body=True, drop_nav=sinking_navs)
     return _finish(parent, children)
 
 
@@ -703,35 +906,58 @@ def _split_detail(page: Page, budget: LayerBudget, occupied: set[str]) -> tuple[
         return _split_index(page, budget, occupied)
 
     movable = [unit for unit in body if unit.kind != "nav"]
-    bins = _pack_detail_units(movable, budget)
-    if len(bins) <= 1:
-        # Single bin still over: explode files and pack again.
-        exploded: list[PageUnit] = []
-        for unit in movable:
-            exploded.extend(_explode_file_unit(unit, budget))
-        bins = _pack_detail_units(exploded, budget)
+    exploded: list[PageUnit] = []
+    for unit in movable:
+        exploded.extend(_explode_file_unit(unit, budget))
+    bins = _pack_detail_units(exploded, budget)
+    if len(bins) <= 1 and len(exploded) > 1:
         # Packer ignores overview/diagram chrome. If several file units still
         # share one bin, force a 2-way PART so inbound lines cannot stall A1.
-        if len(bins) <= 1 and len(exploded) > 1:
-            bins = _partition(exploded, 2)
-    if len(bins) <= 1:
+        bins = _partition(exploded, 2)
+    if not bins:
+        raise LayeringError(
+            f"detail {page.relpath} cannot split further without cutting content "
+            f"(lines={len(render_page_lines(page))} blocks={page_block_count(page)})"
+        )
+    if len(bins) <= 1 and not scale_layering_enabled(budget):
         raise LayeringError(
             f"detail {page.relpath} cannot split further without cutting content "
             f"(lines={len(render_page_lines(page))} blocks={page_block_count(page)})"
         )
 
     directory = _dir_of(page.relpath)
-    first, rest = bins[0], bins[1:]
+    first: tuple[PageUnit, ...] = bins[0]
+    rest: list[tuple[PageUnit, ...]] = list(bins[1:])
+    # Chrome (overview / diagram / page header) can push a single fitting
+    # suffix unit over A1. Demote the first bin onto a PART instead of aborting.
+    if scale_layering_enabled(budget):
+        probe = replace(page, units=tuple(fixed) + first)
+        if page_over_budget(probe, budget):
+            rest = [first, *rest]
+            first = ()
+    if not rest and page_over_budget(replace(page, units=tuple(fixed) + first), budget):
+        raise LayeringError(
+            f"detail {page.relpath} cannot split further without cutting content "
+            f"(lines={len(render_page_lines(page))} blocks={page_block_count(page)})"
+        )
+
     children: list[Page] = []
     navs: list[PageUnit] = []
-    for index, chunk in enumerate(rest, start=2):
-        target = _next_part(directory, occupied, start=index)
+    part_number = 2
+    for chunk in rest:
+        target = _next_part(directory, occupied, start=part_number)
         occupied.add(target)
-        title = f"{page.title} PART {index}"
+        title = f"{page.title} PART {part_number}"
         blurb = f"{sum(unit_block_count(unit) for unit in chunk)} 个符号块，完整内容在子页，无删减。"
         child = _make_child(page, target, title, "part", chunk, kind="detail")
         children.append(child)
-        navs.append(_nav_unit(f"PART {index}", blurb, target, "part"))
+        navs.append(_nav_unit(f"PART {part_number}", blurb, target, "part", budget))
+        part_number += 1
+    if not children:
+        raise LayeringError(
+            f"detail {page.relpath} cannot split further without cutting content "
+            f"(lines={len(render_page_lines(page))} blocks={page_block_count(page)})"
+        )
     parent_units = list(fixed)
     if navs:
         parent_units.append(_heading_unit("part", "分页"))
@@ -750,6 +976,8 @@ def split_until_fit(
 
     budget = budget or LayerBudget()
     result = dict(pages)
+    if scale_layering_enabled(budget):
+        result = {relpath: _enrich_page(page) for relpath, page in result.items()}
     pending: deque[str] = deque(result)
     splits = 0
     while pending:
@@ -777,6 +1005,52 @@ def split_until_fit(
             pending.append(child.relpath)
         if page_over_budget(parent, budget):
             pending.appendleft(parent.relpath)
+        splits += 1
+        if splits > _RUNAWAY_SPLITS:
+            raise LayeringError(
+                "recursive split did not terminate; nav rows themselves may have blown the page budget"
+            )
+    if not scale_layering_enabled(budget):
+        return result
+    for relpath in list(result):
+        result[relpath] = _pad_for_nav_ratio(result[relpath], budget)
+    pending_nav: deque[str] = deque(
+        relpath
+        for relpath, page in result.items()
+        if _nav_ratio(render_page_lines(page)) > budget.max_nav_ratio + 1e-9
+    )
+    while pending_nav:
+        relpath = pending_nav.popleft()
+        page = result.get(relpath)
+        if page is None:
+            continue
+        page = _pad_for_nav_ratio(page, budget)
+        result[relpath] = page
+        if _nav_ratio(render_page_lines(page)) <= budget.max_nav_ratio + 1e-9:
+            continue
+        before_lines = len(render_page_lines(page))
+        before_blocks = page_block_count(page)
+        try:
+            if page.kind == "detail":
+                parent, children = _split_detail(page, budget, set(result))
+            else:
+                parent, children = _split_index(page, budget, set(result))
+        except LayeringError:
+            continue
+        if not children:
+            continue
+        after_lines = len(render_page_lines(parent))
+        after_blocks = page_block_count(parent)
+        if after_lines >= before_lines and after_blocks >= before_blocks:
+            continue
+        result[parent.relpath] = _pad_for_nav_ratio(parent, budget)
+        for child in children:
+            if child.relpath in result:
+                raise LayeringError(f"child path collision: {child.relpath}")
+            result[child.relpath] = _pad_for_nav_ratio(child, budget)
+            pending_nav.append(child.relpath)
+        if _nav_ratio(render_page_lines(result[parent.relpath])) > budget.max_nav_ratio + 1e-9:
+            pending_nav.appendleft(parent.relpath)
         splits += 1
         if splits > _RUNAWAY_SPLITS:
             raise LayeringError(
@@ -1066,6 +1340,8 @@ def finalize_pages(
     """Render, resolve links, stamp line-range anchors, then enforce invariants."""
 
     budget = budget or LayerBudget()
+    if scale_layering_enabled(budget):
+        pages = {relpath: _pad_for_nav_ratio(page, budget) for relpath, page in pages.items()}
     documents = _stamp_and_resolve(pages)
     children: dict[str, set[str]] = defaultdict(set)
     for page in pages.values():
