@@ -6,8 +6,10 @@ import fcntl
 import json
 import os
 import tempfile
+import uuid
 from collections.abc import Iterator
 from contextlib import contextmanager
+from datetime import UTC, datetime
 from pathlib import Path
 
 from pydantic import ValidationError
@@ -18,9 +20,22 @@ from src.semantic.inventory import (
     reconcile_semantic_ledger,
 )
 from src.semantic.models import SemanticExplanation, SemanticLedger, revalidate_semantic_ledger
+from src.semantic.models import (
+    LEGACY_LEDGER_SCHEMA,
+    ArtifactManifestV1,
+    ArtifactStateV1,
+    CommitReceiptV1,
+    LEDGER_SCHEMA,
+    LegacyImportStateV3,
+    ReviewStateV3,
+    canonical_json_bytes,
+    hash_bytes,
+)
 
 
 LEDGER_RELPATH = Path(".codebase-analysis/semantic_ledger.json")
+COMMIT_RECEIPT_RELPATH = Path(".codebase-analysis/semantic_commit_receipt.json")
+TRANSACTION_JOURNAL_RELPATH = Path(".codebase-analysis/semantic_transaction_journal.json")
 
 
 class SemanticStoreError(RuntimeError):
@@ -37,6 +52,14 @@ class LedgerExistsError(SemanticStoreError):
 
 class LedgerCorruptError(SemanticStoreError):
     pass
+
+
+class LegacyLedgerMigrationRequired(SemanticStoreError):
+    """A v2 ledger was read and must be migrated by SemanticService."""
+
+    def __init__(self, raw: dict[str, object]) -> None:
+        super().__init__("legacy semantic ledger requires service migration")
+        self.raw = raw
 
 
 class SemanticLedgerStore:
@@ -62,6 +85,7 @@ class SemanticLedgerStore:
                 ir_symbols=ir_symbols,
             )
             ledger = reconcile_semantic_ledger(inventory)
+            ledger = ledger.model_copy(update={"ledger_revision": 0})
             self._atomic_write(ledger)
             return ledger
 
@@ -85,6 +109,11 @@ class SemanticLedgerStore:
                 ir_symbols=ir_symbols,
             )
             ledger = reconcile_semantic_ledger(inventory, previous)
+            if previous is not None:
+                changed = ledger.model_dump(mode="json") != previous.model_dump(mode="json")
+                ledger = ledger.model_copy(
+                    update={"ledger_revision": previous.ledger_revision + (1 if changed else 0)}
+                )
             self._atomic_write(ledger)
             return ledger
 
@@ -125,6 +154,12 @@ class SemanticLedgerStore:
                     explanation_overrides=explanations,
                     order_override=tuple(dict.fromkeys((*current.order, *ledger.order))),
                 )
+            if current is not None:
+                reconciled = reconciled.model_copy(
+                    update={"ledger_revision": current.ledger_revision + 1}
+                )
+            else:
+                reconciled = reconciled.model_copy(update={"ledger_revision": 0})
             self._atomic_write(reconciled)
             return reconciled
 
@@ -165,27 +200,96 @@ class SemanticLedgerStore:
         except OSError as exc:
             raise SemanticStoreError(f"cannot read semantic ledger {self.path}: {exc}") from exc
         try:
-            raw = json.loads(payload)
+            raw = json.loads(payload, object_pairs_hook=self._strict_object)
+            if isinstance(raw, dict) and raw.get("schema") == LEGACY_LEDGER_SCHEMA:
+                raise LegacyLedgerMigrationRequired(raw)
             return SemanticLedger.model_validate(raw)
         except (json.JSONDecodeError, ValidationError, TypeError, ValueError) as exc:
             raise LedgerCorruptError(
                 f"semantic ledger is corrupt or contract-incompatible: {self.path}: {exc}"
             ) from exc
 
+    @staticmethod
+    def _strict_object(pairs: list[tuple[str, object]]) -> dict[str, object]:
+        value: dict[str, object] = {}
+        for key, item in pairs:
+            if key in value:
+                raise ValueError(f"duplicate JSON object key: {key}")
+            value[key] = item
+        return value
+
+    def legacy_projection(
+        self,
+        raw: dict[str, object],
+        *,
+        inventory=None,
+    ) -> SemanticLedger:
+        """Purely project one v2 payload into a revision-zero v3 candidate.
+
+        Persistence, migration receipts, events, and the v2->v3 commit point
+        belong to ``SemanticService._commit_projection``.  This method never
+        writes a byte and is safe to call while preparing that transaction.
+        """
+
+        inventory = inventory or enumerate_semantic_inventory(self.repo_root)
+        overrides: dict[str, SemanticExplanation | None] = {}
+        rows = raw.get("symbols")
+        if isinstance(rows, dict):
+            for symbol_id, value in rows.items():
+                if symbol_id not in inventory.symbols or not isinstance(value, dict):
+                    continue
+                try:
+                    old_symbol = inventory.symbols[symbol_id].model_copy(
+                        update={"explanation": value.get("explanation")}
+                    )
+                    explanation = value.get("explanation")
+                    if isinstance(explanation, dict):
+                        legacy_explanation = dict(explanation)
+                        if "producer_session_id" not in legacy_explanation:
+                            legacy_explanation["producer_session_id"] = legacy_explanation.pop(
+                                "producer", "generic:legacy"
+                            )
+                        parsed = SemanticExplanation.model_validate(legacy_explanation)
+                        if parsed.explained_content_hash == inventory.symbols[symbol_id].content_hash:
+                            overrides[symbol_id] = parsed.model_copy(
+                                update={
+                                    "producer_session_id": parsed.producer,
+                                    "provenance": "legacy_revalidated",
+                                    "legacy_fact_sha256": hash_bytes(canonical_json_bytes(explanation)),
+                                }
+                            )
+                except (ValidationError, TypeError, ValueError):
+                    continue
+        candidate = reconcile_semantic_ledger(
+            inventory,
+            explanation_overrides=overrides,
+        )
+        legacy_root = self.repo_root / ".codebase-analysis" / "legacy-l1"
+        closed = LegacyImportStateV3(
+            status="closed",
+            scan_root=legacy_root.as_posix(),
+            reason_codes=("NO_LEGACY_FILES",),
+            migration_receipt_sha256=None,
+        )
+        candidate = candidate.model_copy(
+            update={"ledger_revision": 0, "review": ReviewStateV3(), "legacy_import": closed}
+        )
+        return candidate
+
+    def ledger_sha256(self) -> str:
+        """Return the hash of the exact persisted ledger bytes."""
+
+        try:
+            return hash_bytes(self.path.read_bytes())
+        except OSError as exc:
+            raise SemanticStoreError(f"cannot hash semantic ledger {self.path}: {exc}") from exc
+
     def _atomic_write(self, ledger: SemanticLedger) -> None:
         try:
             ledger = revalidate_semantic_ledger(ledger)
         except Exception as exc:
             raise SemanticStoreError(f"refusing to persist an invalid ledger: {exc}") from exc
-        encoded = (
-            json.dumps(
-                ledger.model_dump(mode="json", round_trip=True, warnings="error"),
-                ensure_ascii=False,
-                sort_keys=True,
-                separators=(",", ":"),
-            )
-            + "\n"
-        ).encode("utf-8")
+        encoded = canonical_json_bytes(ledger)
         self._ensure_storage_dir()
         descriptor, temporary = tempfile.mkstemp(
             dir=self.path.parent,
@@ -199,6 +303,62 @@ class SemanticLedgerStore:
                 os.fsync(stream.fileno())
             os.replace(temporary, self.path)
             directory_descriptor = os.open(self.path.parent, os.O_RDONLY)
+            try:
+                os.fsync(directory_descriptor)
+            finally:
+                os.close(directory_descriptor)
+            self._write_commit_receipt(ledger, hash_bytes(encoded))
+        except BaseException:
+            try:
+                os.unlink(temporary)
+            except FileNotFoundError:
+                pass
+            raise
+
+    def _write_commit_receipt(self, ledger: SemanticLedger, ledger_sha256: str) -> None:
+        prior_hash: str | None = None
+        receipt_path = self.repo_root / COMMIT_RECEIPT_RELPATH
+        if receipt_path.is_file():
+            try:
+                prior_hash = hash_bytes(receipt_path.read_bytes())
+            except OSError:
+                prior_hash = None
+        manifest = ArtifactManifestV1(
+            entries=(
+                ArtifactStateV1(
+                    path=LEDGER_RELPATH.as_posix(),
+                    kind="file",
+                    sha256=ledger_sha256,
+                    size_bytes=len(canonical_json_bytes(ledger)),
+                ),
+            )
+        )
+        receipt = CommitReceiptV1(
+            transaction_id="semantic_tx_" + uuid.uuid4().hex + uuid.uuid4().hex,
+            ledger_revision=ledger.ledger_revision,
+            ledger_sha256=ledger_sha256,
+            source_revision_id=ledger.source_revision,
+            semantic_schema=LEDGER_SCHEMA,
+            semantic_schema_sha256=ledger.bindings.semantic_schema_sha256,
+            edge_snapshot_sha256=ledger.bindings.edge_snapshot_sha256,
+            artifact_manifest=manifest,
+            artifact_manifest_sha256=hash_bytes(canonical_json_bytes(manifest)),
+            prior_commit_receipt_sha256=prior_hash,
+            committed_at=datetime.now(UTC),
+        )
+        payload = canonical_json_bytes(receipt)
+        target = self.repo_root / COMMIT_RECEIPT_RELPATH
+        target.parent.mkdir(parents=True, exist_ok=True)
+        descriptor, temporary = tempfile.mkstemp(
+            dir=target.parent, prefix=f".{target.name}.", suffix=".tmp"
+        )
+        try:
+            with os.fdopen(descriptor, "wb") as stream:
+                stream.write(payload)
+                stream.flush()
+                os.fsync(stream.fileno())
+            os.replace(temporary, target)
+            directory_descriptor = os.open(target.parent, os.O_RDONLY)
             try:
                 os.fsync(directory_descriptor)
             finally:

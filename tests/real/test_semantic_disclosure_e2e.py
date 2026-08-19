@@ -309,7 +309,7 @@ async def test_semantic_disclosure_pipeline_is_atomic_and_recoverable_after_reco
             )
         )
         producers = {
-            symbol["explanation"]["producer"]
+            symbol["explanation"]["producer_session_id"]
             for symbol in ledger["symbols"].values()
             if symbol["explanation"] is not None
         }

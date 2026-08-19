@@ -325,12 +325,23 @@ def _semantic_service(repo_root: Path) -> SemanticService:
 
 
 def _semantic_summary(service: SemanticService, ledger) -> dict:
+    progress = service.get_semantic_progress()
     return {
         "ledger_path": str(service.store.path),
         "docs_dir": str(service.repo_root / ".codebase-docs"),
         "source_revision": ledger.source_revision,
+        "source_revision_id": ledger.bindings.source_revision_id,
+        "ledger_revision": ledger.ledger_revision,
+        "ledger_sha256": progress["ledger_sha256"],
+        "semantic_schema": ledger.schema,
+        "semantic_schema_sha256": ledger.bindings.semantic_schema_sha256,
+        "bindings": ledger.bindings.model_dump(mode="json", round_trip=True),
         "totals": ledger.totals.model_dump(mode="json"),
         "coverage_percent": ledger.coverage_percent,
+        "review": ledger.review.model_dump(mode="json", round_trip=True),
+        "legacy_import_status": ledger.legacy_import.status,
+        "product_complete": progress["product_complete"],
+        "render_pending": progress["render_pending"],
     }
 
 
@@ -348,6 +359,9 @@ def _packet_payload(packet) -> dict | None:
         return None
     payload = asdict(packet)
     payload["lease_expires_at"] = packet.lease_expires_at.isoformat()
+    payload["source_revision_id"] = packet.source_revision_id
+    payload["claim_revision"] = packet.claim_revision
+    payload["symbol_bindings"] = packet.symbol_bindings
     return payload
 
 
@@ -947,6 +961,26 @@ async def submit_semantic_batch(
         list[dict] | None,
         Field(description="Optional terminal residuals as {symbol_id, reason} objects."),
     ] = None,
+    ledger_revision: Annotated[
+        int | None,
+        Field(description="Expected ledger revision copied from the claimed packet."),
+    ] = None,
+    semantic_schema: Annotated[
+        str | None,
+        Field(description="Expected semantic schema copied from the claimed packet."),
+    ] = None,
+    edge_snapshot_sha256: Annotated[
+        str | None,
+        Field(description="Expected edge snapshot hash copied from the claimed packet."),
+    ] = None,
+    claim_generation_id: Annotated[
+        str | None,
+        Field(description="Generation binding copied from the claimed packet."),
+    ] = None,
+    packet_sha256: Annotated[
+        str | None,
+        Field(description="Packet hash copied from the claimed packet."),
+    ] = None,
     output_dir: Annotated[
         str | None,
         Field(description="Path to the canonical .codebase-analysis directory."),
@@ -986,6 +1020,11 @@ async def submit_semantic_batch(
             source_revision=source_revision,
             explanations=explanation_map,
             residuals=residual_map,
+            ledger_revision=ledger_revision,
+            semantic_schema=semantic_schema,
+            edge_snapshot_sha256=edge_snapshot_sha256,
+            claim_generation_id=claim_generation_id,
+            packet_sha256=packet_sha256,
         )
         accepted = service.get_semantic_submission_result(batch_id)
         progress = service.get_semantic_progress()
@@ -999,6 +1038,10 @@ async def submit_semantic_batch(
         "render": _render_paths(service.repo_root),
         "progress": progress,
         "source_revision": ledger.source_revision,
+        "source_revision_id": ledger.bindings.source_revision_id,
+        "ledger_revision": ledger.ledger_revision,
+        "semantic_schema": ledger.schema,
+        "edge_snapshot_sha256": ledger.bindings.edge_snapshot_sha256,
         "batch_released": True,
     }
 

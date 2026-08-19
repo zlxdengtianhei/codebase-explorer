@@ -6,6 +6,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import networkx as nx
+import pytest
 
 from src.graph.ordering import dependency_first_scc_layers
 from src.ir import (
@@ -271,6 +272,27 @@ def test_claim_persists_packet_and_exclusive_lease_for_process_recovery(tmp_path
     )
     assert reclaimed is not None
     assert reclaimed.lease_owner == "codex-b"
+
+
+def test_expired_reclaim_advances_generation_and_rejects_old_packet(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    (tmp_path / "app.py").write_text("def value():\n    return 1\n", encoding="utf-8")
+    store = SemanticLedgerStore(tmp_path)
+    store.create()
+    now = datetime(2026, 8, 13, 1, 0, tzinfo=UTC)
+    scheduler = SemanticScheduler.from_store(store)
+    first = scheduler.claim_semantic_batch(
+        lease_owner="codex-a", max_context_tokens=8_000, lease_seconds=1, now=now
+    )
+    assert first is not None
+    second = SemanticScheduler.from_store(store).claim_semantic_batch(
+        lease_owner="codex-a", max_context_tokens=8_000, lease_seconds=60, now=now + timedelta(seconds=2)
+    )
+    assert second is not None
+    assert second.batch_id != first.batch_id
+    assert second.claim_generation > first.claim_generation
+    assert second.claim_generation_id != first.claim_generation_id
+    with pytest.raises(Exception, match="generation"):
+        SemanticScheduler.from_store(store).assert_packet_current(first)
 
 
 def test_fresh_callee_unlocks_its_caller_from_reopened_store(tmp_path) -> None:  # type: ignore[no-untyped-def]

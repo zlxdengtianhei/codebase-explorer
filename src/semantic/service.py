@@ -9,6 +9,8 @@ to symbol identities or producer metadata.
 from __future__ import annotations
 
 import ast
+import errno
+import fcntl
 import hashlib
 import json
 import os
@@ -19,6 +21,7 @@ import textwrap
 import uuid
 from collections import defaultdict
 from collections.abc import Callable, Iterable, Iterator, Mapping
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -46,11 +49,22 @@ from src.semantic.l1_packet import (
     signature_line,
 )
 from src.semantic.models import (
+    EDGE_PROTOCOL_IDS,
+    EDGE_PROTOCOL_SHA256,
+    DispatchLivenessLockV1,
+    DispatchReservationHandleV1,
     PENDING_EXPLANATION_REASON,
     SemanticExplanation,
     SemanticLedger,
     SemanticResidual,
+    LegacyImportStateV3,
+    ReviewStateV3,
+    ReviewDispatchReservationV1,
+    SubmissionDispatchReservationV1,
+    SubmissionCommitV3,
     SemanticSymbolKind,
+    canonical_json_bytes,
+    hash_json,
     revalidate_semantic_ledger,
 )
 from src.semantic.scheduler import (
@@ -58,7 +72,7 @@ from src.semantic.scheduler import (
     SemanticBatchPacket,
     SemanticScheduler,
 )
-from src.semantic.store import SemanticLedgerStore
+from src.semantic.store import LegacyLedgerMigrationRequired, SemanticLedgerStore
 
 
 REVIEW_PACKET_RELPATH = Path(".codebase-analysis/semantic_review_packet.json")
@@ -77,6 +91,9 @@ REVIEW_ACCEPTANCE_RECEIPT_RELPATH = Path(
 REVIEW_EVENTS_RELPATH = Path(
     ".codebase-analysis/semantic_reviews/codex_events.jsonl"
 )
+MIGRATION_RECEIPT_RELPATH = Path(
+    ".codebase-analysis/semantic_migration_receipt.json"
+)
 REVIEW_DISPATCH_RELPATH = Path(
     ".codebase-analysis/semantic_reviews/dispatch_reservation.json"
 )
@@ -89,6 +106,9 @@ TRANSACTION_BACKUP_RELDIR = Path(
 SEMANTIC_EVENTS_RELPATH = Path(".codebase-analysis/semantic_events.jsonl")
 SEMANTIC_SUBMISSION_RECEIPTS_RELDIR = Path(
     ".codebase-analysis/semantic_submissions"
+)
+SEMANTIC_SUBMISSION_EVENTS_RELDIR = Path(
+    ".codebase-analysis/semantic_submission_events"
 )
 SEMANTIC_SUBMISSION_DISPATCH_RELDIR = Path(
     ".codebase-analysis/semantic_submission_dispatch"
@@ -117,6 +137,25 @@ ReviewRunner = Callable[
     tuple[object, Mapping[str, object]],
 ]
 ProducerRunner = ReviewRunner
+
+
+@dataclass
+class _DispatchReservationRuntime:
+    record: SubmissionDispatchReservationV1 | ReviewDispatchReservationV1
+    handle: DispatchReservationHandleV1
+    lock_fd: int
+
+    @property
+    def dispatch_id(self) -> str:
+        return self.record.dispatch_id
+
+    @property
+    def reservation_token(self) -> str:
+        return self.record.reservation_token
+
+    @property
+    def dispatch_generation_id(self) -> str:
+        return self.record.dispatch_generation_id
 
 
 class SemanticServiceError(RuntimeError):
@@ -480,8 +519,27 @@ class SemanticService:
             self.repo_root,
             ir_symbols=self.ir_symbols,
         )
+        edge_rows = sorted(
+            [
+                (
+                    relation.model_dump(mode="json", round_trip=True, warnings="error")
+                    if hasattr(relation, "model_dump")
+                    else relation
+                )
+                for relation in self.relations
+            ],
+            key=canonical_json_bytes,
+        )
+        edge_snapshot_sha256 = hash_json(edge_rows)
+        edge_relation_count = len(edge_rows)
         if not self.module_by_file:
-            return inventory
+            return SemanticInventory(
+                **{
+                    **inventory.__dict__,
+                    "edge_snapshot_sha256": edge_snapshot_sha256,
+                    "edge_relation_count": edge_relation_count,
+                }
+            )
         symbols = {
             symbol_id: record.model_copy(
                 update={"module_id": self.module_by_file.get(record.path)}
@@ -496,6 +554,8 @@ class SemanticService:
             diagnostics=inventory.diagnostics,
             file_revisions=inventory.file_revisions,
             file_out_edge_revisions=inventory.file_out_edge_revisions,
+            edge_snapshot_sha256=edge_snapshot_sha256,
+            edge_relation_count=edge_relation_count,
         )
 
     def _scheduler_snapshot(self) -> SemanticScheduler:
@@ -503,6 +563,8 @@ class SemanticService:
         inventory = self._inventory()
         if inventory.source_revision != ledger.source_revision:
             raise SemanticServiceError("source changed; reconcile semantic state first")
+        if inventory.edge_snapshot_sha256 != ledger.bindings.edge_snapshot_sha256:
+            raise SemanticServiceError("edge snapshot changed; reconcile semantic state first")
         return SemanticScheduler(
             inventory,
             ledger,
@@ -530,9 +592,94 @@ class SemanticService:
 
         if ir_symbols is not None and tuple(ir_symbols) != self.ir_symbols:
             raise ValueError("IR symbols are fixed when SemanticService is constructed")
-        expected = self.store.reopen() if self.store.path.exists() else None
+        expected: SemanticLedger | None = None
+        legacy_raw: dict[str, object] | None = None
+        if self.store.path.exists():
+            try:
+                expected = self.store.reopen()
+            except LegacyLedgerMigrationRequired as exc:
+                legacy_raw = exc.raw
         inventory = self._inventory()
-        candidate = reconcile_semantic_ledger(inventory, expected)
+        migration_artifacts: dict[Path, object] = {}
+        migration_event: Mapping[str, object] | None = None
+        migrating_legacy = legacy_raw is not None
+        if legacy_raw is not None:
+            candidate = self.store.legacy_projection(legacy_raw, inventory=inventory)
+            now = self._now()
+            subject = candidate.model_copy(
+                update={
+                    "legacy_import": candidate.legacy_import.model_copy(
+                        update={"migration_receipt_sha256": None}
+                    )
+                }
+            )
+            migration_receipt = {
+                "schema": "cbe-semantic-legacy-import/1",
+                "ledger_revision_before": 0,
+                "ledger_revision_after": 0,
+                "ledger_subject_sha256_after": hash_json(subject),
+                "status": "closed",
+                "scan_root": candidate.legacy_import.scan_root,
+                "source_sha256": dict(candidate.legacy_import.source_sha256),
+                "file_results": {
+                    key: value.model_dump(mode="json")
+                    for key, value in candidate.legacy_import.file_results.items()
+                },
+                "imported_symbol_ids": list(candidate.legacy_import.imported_symbol_ids),
+                "duplicate_symbol_ids": list(candidate.legacy_import.duplicate_symbol_ids),
+                "rejected_symbol_ids": list(candidate.legacy_import.rejected_symbol_ids),
+                "reason_codes": list(candidate.legacy_import.reason_codes),
+                "imported_count": candidate.legacy_import.imported_count,
+                "duplicate_count": candidate.legacy_import.duplicate_count,
+                "rejected_count": candidate.legacy_import.rejected_count,
+                "invalid_file_count": candidate.legacy_import.invalid_file_count,
+                "conflict_count": candidate.legacy_import.conflict_count,
+                "created_at": now.isoformat().replace("+00:00", "Z"),
+            }
+            migration_receipt_hash = _sha256_bytes(canonical_json_bytes(migration_receipt))
+            candidate = candidate.model_copy(
+                update={
+                    "legacy_import": candidate.legacy_import.model_copy(
+                        update={
+                            "scanned_at": now,
+                            "migration_receipt_sha256": migration_receipt_hash,
+                        }
+                    )
+                }
+            )
+            migration_artifacts[MIGRATION_RECEIPT_RELPATH] = migration_receipt
+            migration_event = self._event_row(
+                "migrate",
+                ledger_revision_before=0,
+                ledger_revision_after=0,
+                source_revision_id=candidate.source_revision,
+                semantic_schema=candidate.schema,
+                edge_snapshot_sha256=candidate.bindings.edge_snapshot_sha256,
+                outcome="committed",
+                reason_code="V2_REVIEW_REQUIRES_V3_REVIEW",
+            )
+        else:
+            candidate = reconcile_semantic_ledger(inventory, expected)
+        # The first v3 bootstrap closes an empty, bounded legacy scan.  The
+        # client never reads legacy files; this deterministic marker prevents
+        # a later appearance of a second completion authority.
+        if candidate.legacy_import.status == "open":
+            legacy_root = self.repo_root / ".codebase-analysis" / "legacy-l1"
+            legacy_paths = tuple(
+                path
+                for path in sorted(legacy_root.glob("L1_LEDGER_*.json"))
+                if path.is_file() and not path.is_symlink()
+            ) if legacy_root.is_dir() else ()
+            if not legacy_paths:
+                candidate = candidate.model_copy(
+                    update={
+                        "legacy_import": LegacyImportStateV3(
+                            status="closed",
+                            scan_root=legacy_root.as_posix(),
+                            reason_codes=("NO_LEGACY_FILES",),
+                        )
+                    }
+                )
         candidate = self._with_module_projection(candidate)
         persist_file_out_edge_revisions(inventory.repo_root, inventory.file_out_edge_revisions)
         scheduler = SemanticScheduler(
@@ -545,6 +692,9 @@ class SemanticService:
             expected=expected,
             candidate=candidate,
             graph=scheduler.graph,
+            artifact_payloads=migration_artifacts,
+            event_row=migration_event,
+            migration_from_legacy=migrating_legacy,
             allow_equivalent_bootstrap=True,
         )
         return candidate
@@ -565,19 +715,52 @@ class SemanticService:
         inventory = self._inventory()
         if inventory.source_revision != ledger.source_revision:
             raise SemanticServiceError("source changed; reconcile semantic state first")
+        if inventory.edge_snapshot_sha256 != ledger.bindings.edge_snapshot_sha256:
+            raise SemanticServiceError("edge snapshot changed; reconcile semantic state first")
         projection = derive_static_coverage(inventory, ledger)
+        bindings = ledger.bindings.model_dump(mode="json", round_trip=True)
+        ledger_sha256 = self.store.ledger_sha256()
+        review_receipt_valid = self._current_review_verdict_exists(ledger)
+        docs_current = self._docs_match_canonical_projection(ledger)
+        binding_current = (
+            ledger.bindings.source_revision_id == inventory.source_revision
+            and ledger.bindings.edge_snapshot_sha256 == inventory.edge_snapshot_sha256
+            and ledger.bindings.edge_relation_count == inventory.edge_relation_count
+            and ledger.bindings.symbol_inventory_sha256
+            == hash_json(
+                [
+                    [symbol_id, symbol.content_hash]
+                    for symbol_id, symbol in sorted(inventory.symbols.items())
+                ]
+            )
+        )
+        product_complete = bool(
+            ledger.product_complete
+            and review_receipt_valid
+            and docs_current
+            and binding_current
+            and not self._artifact_exists(TRANSACTION_JOURNAL_RELPATH)
+        )
         return {
             "repo_root": ledger.repo_root,
             "source_revision": ledger.source_revision,
+            "source_revision_id": ledger.bindings.source_revision_id,
+            "ledger_revision": ledger.ledger_revision,
+            "ledger_sha256": ledger_sha256,
+            "bindings": bindings,
             "totals": projection.totals.model_dump(mode="json"),
             "coverage_percent": projection.coverage_percent,
+            "coverage_accounted": projection.totals == ledger.totals,
             "uncovered_symbols": list(projection.uncovered_symbols),
             "stale_symbols": list(projection.stale_symbol_ids),
             "residuals": [item.model_dump(mode="json") for item in ledger.residuals],
-            "review_verdict_present": self._current_review_verdict_exists(ledger),
+            "review_verdict_present": review_receipt_valid,
+            "review": ledger.review.model_dump(mode="json"),
+            "legacy_import_status": ledger.legacy_import.status,
+            "product_complete": product_complete,
             "render_pending": (
                 self._artifact_exists(TRANSACTION_JOURNAL_RELPATH)
-                or not self._docs_match_canonical_projection(ledger)
+                or not docs_current
             ),
         }
 
@@ -613,7 +796,12 @@ class SemanticService:
         scheduler = self._scheduler_snapshot()
         with self.store._locked():
             current = self.store._read_unlocked()
-            if current.source_revision != scheduler.ledger.source_revision:
+            if (
+                current.source_revision != scheduler.ledger.source_revision
+                or current.ledger_revision != scheduler.ledger.ledger_revision
+                or current.bindings.edge_snapshot_sha256
+                != scheduler.ledger.bindings.edge_snapshot_sha256
+            ):
                 raise SemanticServiceError(
                     "semantic state changed before batch claim"
                 )
@@ -637,6 +825,13 @@ class SemanticService:
                             batch_id=packet.batch_id,
                             lease_owner=packet.lease_owner,
                             source_revision=packet.source_revision,
+                            source_revision_id=packet.source_revision_id,
+                            ledger_revision=packet.ledger_revision,
+                            semantic_schema=packet.semantic_schema,
+                            edge_snapshot_sha256=packet.edge_snapshot_sha256,
+                            claim_generation=packet.claim_generation,
+                            claim_generation_id=packet.claim_generation_id,
+                            packet_sha256=packet.packet_sha256,
                             symbol_ids=[item.symbol_id for item in packet.symbols],
                         ),
                     )
@@ -715,10 +910,20 @@ class SemanticService:
         source_revision: str,
         explanations: Mapping[str, str],
         residuals: Mapping[str, str] | None = None,
+        ledger_revision: int | None = None,
+        semantic_schema: str | None = None,
+        edge_snapshot_sha256: str | None = None,
+        claim_generation_id: str | None = None,
+        packet_sha256: str | None = None,
     ) -> SemanticLedger:
         """Validate and atomically accept every item in one leased batch."""
 
-        reservation = self._reserve_submission_dispatch(batch_id)
+        try:
+            reservation = self._reserve_submission_dispatch(batch_id)
+        except SemanticSubmissionError:
+            raise
+        except SemanticServiceError as exc:
+            raise SemanticSubmissionError(str(exc)) from exc
         try:
             return self._submit_reserved_semantic_batch(
                 batch_id=batch_id,
@@ -726,6 +931,11 @@ class SemanticService:
                 source_revision=source_revision,
                 explanations=explanations,
                 residuals=residuals,
+                ledger_revision=ledger_revision,
+                semantic_schema=semantic_schema,
+                edge_snapshot_sha256=edge_snapshot_sha256,
+                claim_generation_id=claim_generation_id,
+                packet_sha256=packet_sha256,
             )
         finally:
             self._release_submission_dispatch(batch_id, reservation)
@@ -738,6 +948,11 @@ class SemanticService:
         source_revision: str,
         explanations: Mapping[str, str],
         residuals: Mapping[str, str] | None,
+        ledger_revision: int | None = None,
+        semantic_schema: str | None = None,
+        edge_snapshot_sha256: str | None = None,
+        claim_generation_id: str | None = None,
+        packet_sha256: str | None = None,
     ) -> SemanticLedger:
         """Run one producer and commit while its server-side reservation is held."""
 
@@ -765,6 +980,23 @@ class SemanticService:
             raise SemanticSubmissionError("batch lease is missing or expired")
         if not isinstance(actor, str) or actor.strip() != packet.lease_owner:
             raise SemanticSubmissionError("semantic batch lease owner mismatch")
+        try:
+            scheduler.assert_packet_current(packet, now=self._now())
+        except Exception as exc:
+            raise SemanticSubmissionError("claim generation mismatch") from exc
+        if ledger_revision is not None and ledger_revision != packet.ledger_revision:
+            raise SemanticSubmissionError("claim ledger revision mismatch")
+        if semantic_schema is not None and semantic_schema != packet.semantic_schema:
+            raise SemanticSubmissionError("semantic schema mismatch")
+        if (
+            edge_snapshot_sha256 is not None
+            and edge_snapshot_sha256 != packet.edge_snapshot_sha256
+        ):
+            raise SemanticSubmissionError("edge snapshot mismatch")
+        if claim_generation_id is not None and claim_generation_id != packet.claim_generation_id:
+            raise SemanticSubmissionError("claim generation mismatch")
+        if packet_sha256 is not None and packet_sha256 != packet.packet_sha256:
+            raise SemanticSubmissionError("packet hash mismatch")
         producer_packet = self._producer_packet(
             packet,
             explanations=explanations,
@@ -818,6 +1050,7 @@ class SemanticService:
                 explained_content_hash=packet_symbol.content_hash,
                 cited_symbol_ids=citations,
                 producer=producer_thread_id,
+                producer_session_id=producer_thread_id,
                 created_at=created_at,
             )
         overrides.update({symbol_id: None for symbol_id in residual_reasons})
@@ -847,6 +1080,36 @@ class SemanticService:
             source_revision=candidate.source_revision,
             symbol_ids=list(appended_order),
         )
+        producer_events_bytes = b"".join(_json_bytes(event) for event in producer_events)
+        producer_events_path = (
+            SEMANTIC_SUBMISSION_EVENTS_RELDIR
+            / f"{hashlib.sha256(batch_id.encode('utf-8')).hexdigest()}.jsonl"
+        )
+        submission_commit = SubmissionCommitV3(
+            batch_id=batch_id,
+            claim_generation_id=packet.claim_generation_id,
+            claim_revision=packet.ledger_revision,
+            committed_revision=expected.ledger_revision + 1,
+            source_revision_id=candidate.source_revision,
+            edge_snapshot_sha256=candidate.bindings.edge_snapshot_sha256,
+            packet_sha256=packet.packet_sha256,
+            producer_session_id=producer_thread_id,
+            explanation_symbol_ids=tuple(sorted(explanation_texts)),
+            residual_symbol_ids=tuple(sorted(residual_reasons)),
+            producer_runner_kind="codex",
+            producer_events_path=producer_events_path.as_posix(),
+            producer_events_sha256=_sha256_bytes(producer_events_bytes),
+            committed_at=created_at,
+        )
+        accepted_submissions = dict(expected.accepted_submissions)
+        accepted_submissions[batch_id] = submission_commit
+        candidate = candidate.model_copy(
+            update={
+                "ledger_revision": expected.ledger_revision + 1,
+                "accepted_submissions": accepted_submissions,
+            }
+        )
+        candidate = revalidate_semantic_ledger(candidate)
         submission_receipt = {
             "batch_id": batch_id,
             "source_revision": candidate.source_revision,
@@ -854,12 +1117,21 @@ class SemanticService:
             "producer_session_id": producer_thread_id,
             "explanation_symbol_ids": sorted(explanation_texts),
             "residual_symbol_ids": sorted(residual_reasons),
+            "claim_generation_id": packet.claim_generation_id,
+            "claim_revision": packet.ledger_revision,
+            "committed_revision": candidate.ledger_revision,
+            "packet_sha256": packet.packet_sha256,
+            "producer_events_path": producer_events_path.as_posix(),
+            "producer_events_sha256": _sha256_bytes(producer_events_bytes),
         }
         self._commit_projection(
             expected=expected,
             candidate=candidate,
             graph=projected.graph,
-            artifact_payloads={submission_receipt_path: submission_receipt},
+            artifact_payloads={
+                submission_receipt_path: submission_receipt,
+                producer_events_path: producer_events_bytes,
+            },
             event_row=event_row,
             consume_once=(
                 submission_receipt_path,
@@ -913,6 +1185,13 @@ class SemanticService:
         return {
             "batch_id": packet.batch_id,
             "source_revision": packet.source_revision,
+            "source_revision_id": packet.source_revision_id,
+            "ledger_revision": packet.ledger_revision,
+            "semantic_schema": packet.semantic_schema,
+            "edge_snapshot_sha256": packet.edge_snapshot_sha256,
+            "claim_generation": packet.claim_generation,
+            "claim_generation_id": packet.claim_generation_id,
+            "packet_sha256": packet.packet_sha256,
             "l1_symbols": self._l1_rows_from_batch(packet),
             "symbols": [
                 {
@@ -1161,21 +1440,169 @@ class SemanticService:
         return SEMANTIC_SUBMISSION_DISPATCH_RELDIR / f"{digest}.json"
 
     @staticmethod
-    def _process_is_alive(pid: object) -> bool:
-        if type(pid) is not int or pid < 1:
-            return False
-        try:
-            os.kill(pid, 0)
-        except ProcessLookupError:
-            return False
-        except PermissionError:
-            return True
-        return True
+    def _dispatch_lock_relative(relative: Path) -> Path:
+        return Path(relative.as_posix() + ".lock")
 
-    def _reserve_submission_dispatch(self, batch_id: str) -> str:
+    @staticmethod
+    def _dispatch_id_sha256(dispatch_id: str) -> str:
+        return _sha256_bytes(dispatch_id.encode("utf-8"))
+
+    @staticmethod
+    def _dispatch_generation_id(
+        *,
+        dispatch_kind: str,
+        dispatch_id: str,
+        binding: str,
+        reservation_token: str,
+        owner_pid: int,
+        liveness_lock_path: str,
+    ) -> str:
+        frame = "\0".join(
+            (
+                "cbe-semantic-dispatch-generation/1",
+                dispatch_kind,
+                dispatch_id,
+                binding,
+                reservation_token,
+                str(owner_pid),
+                liveness_lock_path,
+            )
+        )
+        return "dispatchgen_" + hashlib.sha256(frame.encode("utf-8")).hexdigest()
+
+    @staticmethod
+    def _reservation_payload_hash(record: object) -> str:
+        payload = record.model_dump(mode="json")
+        payload["reservation_payload_sha256"] = None
+        return _sha256_bytes(canonical_json_bytes(payload))
+
+    @staticmethod
+    def _lock_payload_hash(lock: DispatchLivenessLockV1) -> str:
+        return _sha256_bytes(canonical_json_bytes(lock))
+
+    def _dispatch_error(
+        self,
+        kind: str,
+        code: str,
+        message: str,
+    ) -> SemanticServiceError:
+        error_type = SemanticSubmissionError if kind == "submission" else SemanticReviewError
+        return error_type(f"{code}: {message}")
+
+    def _parse_dispatch_record(
+        self,
+        target: Path,
+        *,
+        kind: str,
+    ) -> SubmissionDispatchReservationV1 | ReviewDispatchReservationV1:
+        try:
+            raw = json.loads(
+                target.read_text(encoding="utf-8"),
+                object_pairs_hook=self._strict_object,
+            )
+            model = (
+                SubmissionDispatchReservationV1
+                if kind == "submission"
+                else ReviewDispatchReservationV1
+            )
+            return model.model_validate(raw)
+        except Exception as exc:
+            raise self._dispatch_error(kind, "DISPATCH_RESERVATION_CORRUPT", "reservation bytes are invalid") from exc
+
+    @staticmethod
+    def _strict_object(pairs: list[tuple[str, object]]) -> dict[str, object]:
+        result: dict[str, object] = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError(f"duplicate reservation key: {key}")
+            result[key] = value
+        return result
+
+    def _open_dispatch_lock(self, lock_path: Path, *, kind: str) -> int:
+        flags = os.O_RDWR | os.O_CREAT
+        if hasattr(os, "O_NOFOLLOW"):
+            flags |= os.O_NOFOLLOW
+        try:
+            fd = os.open(lock_path, flags, 0o600)
+        except OSError as exc:
+            raise self._dispatch_error(kind, "DISPATCH_RESERVATION_LIVENESS_UNKNOWN", str(exc)) from exc
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except OSError as exc:
+            os.close(fd)
+            if exc.errno in (errno.EACCES, errno.EAGAIN):
+                raise self._dispatch_error(
+                    kind,
+                    "DISPATCH_ALREADY_IN_PROGRESS",
+                    "dispatch is already in progress",
+                ) from exc
+            raise self._dispatch_error(kind, "DISPATCH_RESERVATION_LIVENESS_UNKNOWN", str(exc)) from exc
+        return fd
+
+    @staticmethod
+    def _write_lock_payload(fd: int, payload: bytes) -> None:
+        os.ftruncate(fd, 0)
+        os.lseek(fd, 0, os.SEEK_SET)
+        view = memoryview(payload)
+        while view:
+            written = os.write(fd, view)
+            view = view[written:]
+        os.fsync(fd)
+
+    def _read_lock_payload(
+        self,
+        fd: int,
+        *,
+        kind: str,
+    ) -> DispatchLivenessLockV1 | None:
+        os.lseek(fd, 0, os.SEEK_SET)
+        payload = os.read(fd, 1_000_000)
+        if not payload.strip():
+            return None
+        try:
+            raw = json.loads(payload.decode("utf-8"), object_pairs_hook=self._strict_object)
+            return DispatchLivenessLockV1.model_validate(raw)
+        except Exception as exc:
+            raise self._dispatch_error(kind, "DISPATCH_RESERVATION_CORRUPT", "liveness lock bytes are invalid") from exc
+
+    def _reservation_handle(
+        self,
+        record: SubmissionDispatchReservationV1 | ReviewDispatchReservationV1,
+        *,
+        relative: Path,
+        lock_fd: int,
+    ) -> _DispatchReservationRuntime:
+        return _DispatchReservationRuntime(
+            record=record,
+            handle=DispatchReservationHandleV1(
+                dispatch_kind=record.dispatch_kind,
+                path=relative.as_posix(),
+                dispatch_id=record.dispatch_id,
+                reservation_token=record.reservation_token,
+                dispatch_generation_id=record.dispatch_generation_id,
+                reservation_payload_sha256=record.reservation_payload_sha256,
+            ),
+            lock_fd=lock_fd,
+        )
+
+    def _reserve_submission_dispatch(self, batch_id: str) -> _DispatchReservationRuntime:
         if not isinstance(batch_id, str) or not batch_id.strip():
             raise SemanticSubmissionError("batch_id must be non-empty")
-        token = uuid.uuid4().hex
+        self._assert_not_consumed(
+            relative=self._submission_receipt_path(batch_id),
+            identity_field="batch_id",
+            identity=batch_id,
+            error_type=SemanticSubmissionError,
+            message="semantic batch has already been submitted",
+        )
+        scheduler = self._scheduler_snapshot()
+        packet = scheduler.recover_batch(batch_id, now=self._now())
+        if packet is None:
+            raise SemanticSubmissionError("CLAIM_GENERATION_MISMATCH: batch lease is expired or missing")
+        relative = self._submission_dispatch_path(batch_id)
+        target = self._safe_repo_artifact(relative, create_parent=True)
+        lock_relative = self._dispatch_lock_relative(relative)
+        lock_path = self._safe_repo_artifact(lock_relative, create_parent=True)
         with self.store._locked():
             self._assert_not_consumed(
                 relative=self._submission_receipt_path(batch_id),
@@ -1184,36 +1611,124 @@ class SemanticService:
                 error_type=SemanticSubmissionError,
                 message="semantic batch has already been submitted",
             )
-            target = self._safe_repo_artifact(
-                self._submission_dispatch_path(batch_id),
-                create_parent=True,
-            )
-            if target.exists():
-                reservation = self._read_json_object(target)
-                if self._process_is_alive(reservation.get("pid")):
-                    raise SemanticSubmissionError(
-                        "semantic batch submission is already in progress"
+            prior = self._parse_dispatch_record(target, kind="submission") if target.exists() else None
+            lock_fd = self._open_dispatch_lock(lock_path, kind="submission")
+            try:
+                lock_prior = self._read_lock_payload(lock_fd, kind="submission")
+                if prior is not None:
+                    expected_lock = DispatchLivenessLockV1(
+                        dispatch_id=prior.dispatch_id,
+                        reservation_token=prior.reservation_token,
+                        dispatch_generation_id=prior.dispatch_generation_id,
                     )
-            _atomic_write_json(
-                target,
-                {"batch_id": batch_id, "pid": os.getpid(), "token": token},
-            )
-        return token
+                    if (
+                        lock_prior is None
+                        or lock_prior != expected_lock
+                        or prior.liveness_lock_payload_sha256 != self._lock_payload_hash(expected_lock)
+                        or prior.dispatch_id != batch_id
+                        or prior.dispatch_id_sha256 != self._dispatch_id_sha256(batch_id)
+                        or self._reservation_payload_hash(prior) != prior.reservation_payload_sha256
+                    ):
+                        raise self._dispatch_error(
+                            "submission", "DISPATCH_RESERVATION_CORRUPT", "reservation binding is invalid"
+                        )
+                token = uuid.uuid4().hex + uuid.uuid4().hex
+                generation = self._dispatch_generation_id(
+                    dispatch_kind="submission",
+                    dispatch_id=batch_id,
+                    binding=packet.claim_generation_id,
+                    reservation_token=token,
+                    owner_pid=os.getpid(),
+                    liveness_lock_path=lock_relative.as_posix(),
+                )
+                lock_payload = DispatchLivenessLockV1(
+                    dispatch_id=batch_id,
+                    reservation_token=token,
+                    dispatch_generation_id=generation,
+                )
+                record = SubmissionDispatchReservationV1(
+                    dispatch_id=batch_id,
+                    dispatch_id_sha256=self._dispatch_id_sha256(batch_id),
+                    claim_generation_id=packet.claim_generation_id,
+                    lease_owner=packet.lease_owner,
+                    bound_ledger_revision=packet.ledger_revision,
+                    source_revision_id=packet.source_revision,
+                    edge_snapshot_sha256=packet.edge_snapshot_sha256,
+                    reservation_token=token,
+                    dispatch_generation_id=generation,
+                    owner_pid=os.getpid(),
+                    liveness_lock_path=lock_relative.as_posix(),
+                    liveness_lock_payload_sha256=self._lock_payload_hash(lock_payload),
+                    reserved_at=self._now(),
+                    reservation_payload_sha256="sha256:" + "0" * 64,
+                )
+                record = record.model_copy(
+                    update={"reservation_payload_sha256": self._reservation_payload_hash(record)}
+                )
+                self._write_lock_payload(lock_fd, canonical_json_bytes(lock_payload))
+                _atomic_write_json(target, record.model_dump(mode="json"))
+                return self._reservation_handle(record, relative=relative, lock_fd=lock_fd)
+            except BaseException:
+                os.close(lock_fd)
+                raise
 
-    def _release_submission_dispatch(self, batch_id: str, token: str) -> None:
-        with self.store._locked():
-            target = self._safe_repo_artifact(
-                self._submission_dispatch_path(batch_id),
-                create_parent=False,
-            )
-            if not target.exists():
-                return
-            reservation = self._read_json_object(target)
-            if (
-                reservation.get("batch_id") == batch_id
-                and reservation.get("token") == token
-            ):
+    def _release_submission_dispatch(
+        self,
+        batch_id: str,
+        reservation: _DispatchReservationRuntime | str,
+    ) -> None:
+        self._release_dispatch(
+            kind="submission",
+            dispatch_id=batch_id,
+            relative=self._submission_dispatch_path(batch_id),
+            reservation=reservation,
+        )
+
+    def _release_dispatch(
+        self,
+        *,
+        kind: str,
+        dispatch_id: str,
+        relative: Path,
+        reservation: _DispatchReservationRuntime | str,
+    ) -> None:
+        runtime = reservation if isinstance(reservation, _DispatchReservationRuntime) else None
+        token = runtime.reservation_token if runtime is not None else reservation
+        generation = runtime.dispatch_generation_id if runtime is not None else None
+        payload_hash = (
+            runtime.record.reservation_payload_sha256 if runtime is not None else None
+        )
+        target = self._safe_repo_artifact(relative, create_parent=False)
+        lock_relative = self._dispatch_lock_relative(relative)
+        lock_path = self._safe_repo_artifact(lock_relative, create_parent=False)
+        error_type = SemanticSubmissionError if kind == "submission" else SemanticReviewError
+        try:
+            with self.store._locked():
+                if not target.exists():
+                    if self._artifact_exists(
+                        self._submission_receipt_path(dispatch_id)
+                        if kind == "submission"
+                        else REVIEW_ACCEPTANCE_RECEIPT_RELPATH
+                    ):
+                        return
+                    raise error_type("DISPATCH_RESERVATION_LOST: reservation is missing")
+                record = self._parse_dispatch_record(target, kind=kind)
+                if (
+                    record.dispatch_id != dispatch_id
+                    or record.reservation_token != token
+                    or (generation is not None and record.dispatch_generation_id != generation)
+                    or (payload_hash is not None and record.reservation_payload_sha256 != payload_hash)
+                ):
+                    raise error_type("DISPATCH_RESERVATION_NOT_OWNER: replacement owner is active")
                 target.unlink()
+                if lock_path.exists():
+                    lock_path.unlink()
+        finally:
+            if runtime is not None:
+                try:
+                    fcntl.flock(runtime.lock_fd, fcntl.LOCK_UN)
+                finally:
+                    os.close(runtime.lock_fd)
 
     def _validate_submission(
         self,
@@ -1318,6 +1833,30 @@ class SemanticService:
         inventory = self._inventory()
         if inventory.source_revision != ledger.source_revision:
             raise SemanticReviewError("source changed; reconcile before creating review packet")
+        if ledger.review.status == "pending":
+            if not (
+                self._artifact_exists(REVIEW_PACKET_RELPATH)
+                and self._artifact_exists(REVIEW_HIDDEN_MAP_RELPATH)
+                and self._artifact_exists(REVIEW_BATCH_RECEIPT_RELPATH)
+            ):
+                raise SemanticReviewError("pending review artifacts are incomplete")
+            packet = self._safe_read_json_object(REVIEW_PACKET_RELPATH)
+            hidden = self._safe_read_json_object(REVIEW_HIDDEN_MAP_RELPATH)
+            receipt = self._safe_read_json_object(REVIEW_BATCH_RECEIPT_RELPATH)
+            self._validate_review_binding(
+                review_batch_id=ledger.review.review_batch_id or "",
+                packet=packet,
+                hidden=hidden,
+                receipt=receipt,
+                ledger=ledger,
+            )
+            samples = packet.get("samples")
+            if not isinstance(samples, list):
+                raise SemanticReviewError("persisted review packet samples are invalid")
+            return {
+                "review_batch_id": ledger.review.review_batch_id,
+                "samples": samples,
+            }
         candidates = self._review_candidates(ledger)
         if not candidates:
             raise SemanticReviewError("no fresh Python callable is available for review")
@@ -1342,20 +1881,41 @@ class SemanticService:
         packet: dict[str, object] = {"samples": samples}
         packet_hash = _sha256_bytes(_json_bytes(packet))
         hidden_hash = _sha256_bytes(_json_bytes(hidden))
+        subject_hash = hash_json(ledger.review.model_dump(mode="json"))
+        pending_revision = ledger.ledger_revision + 1
         batch_id = _sha256_bytes(
             (
-                f"{_REVIEW_SEED}\0{fingerprint}\0{packet_hash}\0{hidden_hash}"
+                f"{_REVIEW_SEED}\0{ledger.source_revision}\0{pending_revision}\0"
+                f"{subject_hash}\0{packet_hash}\0{hidden_hash}"
             ).encode("utf-8")
+        )
+        pending_review = ReviewStateV3(
+            status="pending",
+            review_batch_id=batch_id,
+            bound_ledger_revision=pending_revision,
+            bound_subject_sha256=subject_hash,
+            packet_sha256=packet_hash,
+            hidden_map_sha256=hidden_hash,
+        )
+        candidate = revalidate_semantic_ledger(
+            ledger.model_copy(
+                update={
+                    "ledger_revision": pending_revision,
+                    "review": pending_review,
+                }
+            )
         )
         receipt = {
             "review_batch_id": batch_id,
-            "ledger_fingerprint": fingerprint,
+            "ledger_fingerprint": self._ledger_fingerprint(candidate),
             "packet_sha256": packet_hash,
             "hidden_map_sha256": hidden_hash,
+            "bound_ledger_revision": pending_revision,
+            "bound_subject_sha256": subject_hash,
         }
         self._commit_projection(
             expected=ledger,
-            candidate=ledger,
+            candidate=candidate,
             graph=None,
             artifact_payloads={
                 REVIEW_PACKET_RELPATH: packet,
@@ -1387,7 +1947,7 @@ class SemanticService:
                     "path": symbol.path,
                     "source": source,
                     "explanation": symbol.explanation.text,
-                    "producer": symbol.explanation.producer,
+                    "producer": symbol.explanation.producer_session_id,
                     "stratum": "\0".join(
                         (
                             symbol.module_id or "unclassified",
@@ -1487,11 +2047,13 @@ class SemanticService:
             selected_by_stratum[stratum] += 1
         return selected
 
-    def _reserve_review_dispatch(self, review_batch_id: str) -> None:
+    def _reserve_review_dispatch(self, review_batch_id: str) -> _DispatchReservationRuntime:
         """Acquire a server-owned lease before invoking an external reviewer."""
 
         if not isinstance(review_batch_id, str) or not review_batch_id.strip():
             raise SemanticReviewError("review_batch_id must be non-empty")
+        relative = REVIEW_DISPATCH_RELPATH
+        lock_relative = self._dispatch_lock_relative(relative)
         with self.store._locked():
             accepted = self._safe_repo_artifact(
                 REVIEW_ACCEPTANCE_RECEIPT_RELPATH,
@@ -1509,39 +2071,87 @@ class SemanticService:
                     # acceptance receipt. Permit a fresh independent review of
                     # the still-bound packet and replace all evidence atomically.
                     accepted.unlink()
-            target = self._safe_repo_artifact(
-                REVIEW_DISPATCH_RELPATH,
-                create_parent=True,
-            )
-            now = self._now()
-            if target.exists():
-                reservation = self._read_json_object(target)
-                if self._process_is_alive(reservation.get("pid")):
-                    raise SemanticReviewError(
-                        "review batch dispatch is already in progress"
+            current = self.store._read_unlocked()
+            if current.review.status != "pending" or current.review.review_batch_id != review_batch_id:
+                raise SemanticReviewError("review batch binding is not pending for this batch")
+            target = self._safe_repo_artifact(relative, create_parent=True)
+            lock_path = self._safe_repo_artifact(lock_relative, create_parent=True)
+            prior = self._parse_dispatch_record(target, kind="review") if target.exists() else None
+            lock_fd = self._open_dispatch_lock(lock_path, kind="review")
+            try:
+                lock_prior = self._read_lock_payload(lock_fd, kind="review")
+                if prior is not None:
+                    expected_lock = DispatchLivenessLockV1(
+                        dispatch_id=prior.dispatch_id,
+                        reservation_token=prior.reservation_token,
+                        dispatch_generation_id=prior.dispatch_generation_id,
                     )
-            _atomic_write_json(
-                target,
-                {
-                    "review_batch_id": review_batch_id,
-                    "pid": os.getpid(),
-                    "reserved_at": now.isoformat().replace("+00:00", "Z"),
-                },
-            )
+                    if (
+                        lock_prior is None
+                        or lock_prior != expected_lock
+                        or prior.liveness_lock_payload_sha256 != self._lock_payload_hash(expected_lock)
+                        or prior.dispatch_id != review_batch_id
+                        or prior.dispatch_id_sha256 != self._dispatch_id_sha256(review_batch_id)
+                        or prior.bound_ledger_revision != current.review.bound_ledger_revision
+                        or prior.bound_subject_sha256 != current.review.bound_subject_sha256
+                        or self._reservation_payload_hash(prior) != prior.reservation_payload_sha256
+                    ):
+                        raise self._dispatch_error(
+                            "review", "DISPATCH_RESERVATION_CORRUPT", "reservation binding is invalid"
+                        )
+                token = uuid.uuid4().hex + uuid.uuid4().hex
+                binding = (
+                    f"{current.review.bound_ledger_revision}\0"
+                    f"{current.review.bound_subject_sha256}"
+                )
+                generation = self._dispatch_generation_id(
+                    dispatch_kind="review",
+                    dispatch_id=review_batch_id,
+                    binding=binding,
+                    reservation_token=token,
+                    owner_pid=os.getpid(),
+                    liveness_lock_path=lock_relative.as_posix(),
+                )
+                lock_payload = DispatchLivenessLockV1(
+                    dispatch_id=review_batch_id,
+                    reservation_token=token,
+                    dispatch_generation_id=generation,
+                )
+                record = ReviewDispatchReservationV1(
+                    dispatch_id=review_batch_id,
+                    dispatch_id_sha256=self._dispatch_id_sha256(review_batch_id),
+                    bound_ledger_revision=current.review.bound_ledger_revision or 0,
+                    bound_subject_sha256=current.review.bound_subject_sha256 or _sha256_bytes(b""),
+                    reservation_token=token,
+                    dispatch_generation_id=generation,
+                    owner_pid=os.getpid(),
+                    liveness_lock_path=lock_relative.as_posix(),
+                    liveness_lock_payload_sha256=self._lock_payload_hash(lock_payload),
+                    reserved_at=self._now(),
+                    reservation_payload_sha256="sha256:" + "0" * 64,
+                )
+                record = record.model_copy(
+                    update={"reservation_payload_sha256": self._reservation_payload_hash(record)}
+                )
+                self._write_lock_payload(lock_fd, canonical_json_bytes(lock_payload))
+                _atomic_write_json(target, record.model_dump(mode="json"))
+                return self._reservation_handle(record, relative=relative, lock_fd=lock_fd)
+            except BaseException:
+                os.close(lock_fd)
+                raise
 
-    def _release_review_dispatch(self, review_batch_id: str) -> None:
+    def _release_review_dispatch(
+        self,
+        review_batch_id: str,
+        reservation: _DispatchReservationRuntime | str,
+    ) -> None:
         """Release only the matching dispatch reservation."""
-
-        with self.store._locked():
-            target = self._safe_repo_artifact(
-                REVIEW_DISPATCH_RELPATH,
-                create_parent=False,
-            )
-            if not target.exists():
-                return
-            reservation = self._read_json_object(target)
-            if reservation.get("review_batch_id") == review_batch_id:
-                target.unlink()
+        self._release_dispatch(
+            kind="review",
+            dispatch_id=review_batch_id,
+            relative=REVIEW_DISPATCH_RELPATH,
+            reservation=reservation,
+        )
 
     def submit_semantic_review(
         self,
@@ -1550,11 +2160,11 @@ class SemanticService:
     ) -> dict[str, object]:
         """Dispatch a blind Codex reviewer and consume its bound verdict."""
 
-        self._reserve_review_dispatch(review_batch_id)
+        reservation = self._reserve_review_dispatch(review_batch_id)
         try:
             return self._submit_reserved_semantic_review(review_batch_id)
         finally:
-            self._release_review_dispatch(review_batch_id)
+            self._release_review_dispatch(review_batch_id, reservation)
 
     def _submit_reserved_semantic_review(
         self,
@@ -1635,13 +2245,45 @@ class SemanticService:
             graph = projected.graph
         if graph is None:
             graph = self._scheduler_snapshot().graph
+        docs_fingerprint = self._projected_docs_fingerprint(candidate, graph)
+        verdict_sha256 = _sha256_bytes(_json_bytes(artifact))
+        events_sha256 = _sha256_bytes(event_evidence)
+        producer_sessions_sha256 = hash_json(sorted(producers))
+        review_state = ReviewStateV3(
+            status="revision_required" if revision_ids else "accepted",
+            review_batch_id=review_batch_id,
+            bound_ledger_revision=expected.ledger_revision,
+            bound_subject_sha256=expected.review.bound_subject_sha256,
+            packet_sha256=expected.review.packet_sha256,
+            hidden_map_sha256=expected.review.hidden_map_sha256,
+            reviewer_session_id=reviewer_thread_id,
+            producer_session_ids_sha256=producer_sessions_sha256,
+            verdict_sha256=verdict_sha256,
+            reviewer_runner_kind="codex",
+            reviewer_events_path=REVIEW_EVENTS_RELPATH.as_posix(),
+            reviewer_events_sha256=events_sha256,
+            docs_fingerprint=docs_fingerprint,
+            revision_symbol_ids=tuple(revision_ids),
+            committed_at=self._now(),
+        )
+        candidate = revalidate_semantic_ledger(
+            candidate.model_copy(
+                update={
+                    "ledger_revision": expected.ledger_revision + 1,
+                    "review": review_state,
+                }
+            )
+        )
         acceptance = {
             "review_batch_id": review_batch_id,
             "ledger_fingerprint": self._ledger_fingerprint(candidate),
-            "verdict_sha256": _sha256_bytes(_json_bytes(artifact)),
-            "events_sha256": _sha256_bytes(event_evidence),
-            "docs_fingerprint": self._projected_docs_fingerprint(candidate, graph),
+            "verdict_sha256": verdict_sha256,
+            "events_sha256": events_sha256,
+            "docs_fingerprint": docs_fingerprint,
             "reviewer_session_id": reviewer_thread_id,
+            "bound_ledger_revision": expected.ledger_revision,
+            "bound_subject_sha256": expected.review.bound_subject_sha256,
+            "producer_session_ids_sha256": producer_sessions_sha256,
         }
         event_row = self._event_row(
             "review_submit",
@@ -1683,26 +2325,28 @@ class SemanticService:
         receipt: Mapping[str, object],
         ledger: SemanticLedger,
     ) -> None:
+        review = ledger.review
+        if review.status != "pending" or review.review_batch_id != review_batch_id:
+            raise SemanticReviewError("review batch binding is not pending for this batch")
         fingerprint = self._ledger_fingerprint(ledger)
         packet_hash = _sha256_bytes(_json_bytes(packet))
         hidden_hash = _sha256_bytes(_json_bytes(hidden))
-        calculated = _sha256_bytes(
-            (
-                f"{_REVIEW_SEED}\0{fingerprint}\0{packet_hash}\0{hidden_hash}"
-            ).encode("utf-8")
-        )
         expected = {
-            "review_batch_id": calculated,
+            "review_batch_id": review_batch_id,
             "ledger_fingerprint": fingerprint,
             "packet_sha256": packet_hash,
             "hidden_map_sha256": hidden_hash,
+            "bound_ledger_revision": review.bound_ledger_revision,
+            "bound_subject_sha256": review.bound_subject_sha256,
         }
-        if dict(receipt) != expected or review_batch_id != calculated:
+        if dict(receipt) != expected:
             raise SemanticReviewError(
                 "review batch binding is stale, replayed, or artifact-mismatched"
             )
 
     def _current_review_verdict_exists(self, ledger: SemanticLedger) -> bool:
+        if ledger.review.status != "accepted":
+            return False
         if not self._artifact_exists(REVIEW_VERDICT_RELPATH):
             return False
         if not self._artifact_exists(REVIEW_ACCEPTANCE_RECEIPT_RELPATH):
@@ -1714,12 +2358,18 @@ class SemanticService:
         events = self._safe_read_bytes(REVIEW_EVENTS_RELPATH)
         return (
             isinstance(receipt.get("review_batch_id"), str)
+            and receipt.get("review_batch_id") == ledger.review.review_batch_id
+            and receipt.get("bound_ledger_revision") == ledger.review.bound_ledger_revision
             and receipt.get("ledger_fingerprint") == self._ledger_fingerprint(ledger)
+            and receipt.get("verdict_sha256") == ledger.review.verdict_sha256
             and receipt.get("verdict_sha256") == _sha256_bytes(_json_bytes(verdict))
+            and receipt.get("events_sha256") == ledger.review.reviewer_events_sha256
             and receipt.get("events_sha256") == _sha256_bytes(events)
+            and receipt.get("docs_fingerprint") == ledger.review.docs_fingerprint
             and receipt.get("docs_fingerprint") == _docs_fingerprint(self.repo_root)
             and isinstance(receipt.get("reviewer_session_id"), str)
             and receipt.get("reviewer_session_id") == verdict.get("reviewer_session_id")
+            and receipt.get("reviewer_session_id") == ledger.review.reviewer_session_id
         )
 
     def _projected_docs_fingerprint(
@@ -1966,6 +2616,7 @@ class SemanticService:
         ]
         | None = None,
         lease_guard: tuple[SemanticScheduler, SemanticBatchPacket] | None = None,
+        migration_from_legacy: bool = False,
         allow_equivalent_bootstrap: bool = False,
     ) -> None:
         """Publish projections under a durable rollback journal."""
@@ -2020,7 +2671,15 @@ class SemanticService:
                         error_type=error_type,
                         message=message,
                     )
-                current = self.store._read_unlocked() if self.store.path.exists() else None
+                if self.store.path.exists():
+                    try:
+                        current = self.store._read_unlocked()
+                    except LegacyLedgerMigrationRequired:
+                        if not migration_from_legacy:
+                            raise
+                        current = None
+                else:
+                    current = None
                 current_inventory = self._inventory()
                 if current_inventory.source_revision != candidate.source_revision:
                     raise SemanticServiceError(
@@ -2082,6 +2741,12 @@ class SemanticService:
                             os.replace(actual_docs, displaced)
                         os.replace(staged_docs, actual_docs)
                         self._transaction_checkpoint("after_docs_publish")
+                        self.store._atomic_write(candidate)
+                        self._transaction_checkpoint("after_ledger_publish")
+                    elif candidate != expected:
+                        # Review/import state transitions are canonical ledger
+                        # mutations even when their readable docs projection is
+                        # intentionally left untouched.
                         self.store._atomic_write(candidate)
                         self._transaction_checkpoint("after_ledger_publish")
                     for relative, staged in staged_artifacts.items():
@@ -2220,7 +2885,12 @@ class SemanticService:
         state_path = self.repo_root / SCHEDULER_STATE_RELPATH
         if not state_path.exists() or not self.store.path.exists():
             return
-        scheduler = self._scheduler_snapshot()
+        try:
+            scheduler = self._scheduler_snapshot()
+        except LegacyLedgerMigrationRequired:
+            # A v2 ledger has no scheduler authority until bootstrap performs
+            # the service-owned migration transaction.
+            return
         with self.store._locked():
             events_path = self._safe_repo_artifact(
                 SEMANTIC_EVENTS_RELPATH,
@@ -2255,7 +2925,10 @@ class SemanticService:
                         batch_id: packet
                         for batch_id, packet in packets.items()
                         if batch_id in evidenced
-                    }
+                    },
+                    next_generation=scheduler._next_generation(
+                        scheduler._read_state_unlocked()
+                    ),
                 )
         self._append_event(
             "recovery",

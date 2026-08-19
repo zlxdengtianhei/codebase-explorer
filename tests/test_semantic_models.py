@@ -56,9 +56,50 @@ def test_empty_ledger_has_probe_schema_and_zero_percent_coverage(tmp_path) -> No
         coverage_percent=0.0,
     )
     dumped = ledger.model_dump(mode="json")
-    assert dumped["schema"] == "cbe-semantic-ledger-2"
+    assert dumped["schema"] == "cbe-semantic-ledger/3"
     assert dumped["files"]["empty.py"] == {"status": "no_symbols", "reason": ""}
     assert dumped["coverage_percent"] == 0.0
+
+
+def test_v3_ledger_exposes_one_binding_namespace_and_completion_is_derived(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    ledger = SemanticLedger(
+        repo_root=tmp_path.as_posix(),
+        source_revision=_hash("revision"),
+        files={"empty.py": SemanticFileRecord(status=FileStatus.NO_SYMBOLS)},
+        symbols={},
+        totals=SemanticTotals(symbols=0, explained=0, stale=0, uncovered=0, residual=0),
+        coverage_percent=0.0,
+    )
+    dumped = ledger.model_dump(mode="json")
+    assert dumped["schema"] == "cbe-semantic-ledger/3"
+    assert ledger.bindings.source_revision_id.startswith("rev_")
+    assert ledger.bindings.edge_protocol_ids == {
+        "inbound": "cbe-inbound-call/1",
+        "ir": "cbe-ir/3",
+        "reverse": "cbe-reverse-edges/3",
+    }
+    assert ledger.product_complete is False
+
+
+def test_v3_payload_without_bindings_is_rejected(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    with pytest.raises(ValidationError, match="bindings"):
+        SemanticLedger.model_validate(
+            {
+                "schema": "cbe-semantic-ledger/3",
+                "ledger_revision": 0,
+                "repo_root": tmp_path.as_posix(),
+                "files": {},
+                "symbols": {},
+                "order": [],
+                "residuals": [],
+                "accepted_submissions": {},
+                "review": {"status": "none"},
+                "legacy_import": {"status": "open", "scan_root": tmp_path.as_posix()},
+                "totals": {"symbols": 0, "explained": 0, "stale": 0, "uncovered": 0, "residual": 0},
+                "coverage_percent": 0.0,
+                "uncovered_symbols": [],
+            }
+        )
 
 
 def test_stale_is_derived_only_from_the_two_content_hashes(tmp_path) -> None:  # type: ignore[no-untyped-def]

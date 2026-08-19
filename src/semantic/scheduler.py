@@ -9,6 +9,7 @@ import math
 import os
 import tempfile
 import uuid
+import hashlib
 from contextlib import contextmanager
 from dataclasses import asdict, dataclass, replace
 from datetime import UTC, datetime, timedelta
@@ -32,16 +33,19 @@ from src.semantic.inventory import (
     reconcile_semantic_ledger,
 )
 from src.semantic.models import (
+    LEDGER_SCHEMA,
     PENDING_EXPLANATION_REASON,
     SemanticLedger,
     SemanticSymbolRecord,
     revalidate_semantic_ledger,
+    canonical_json_bytes,
+    hash_bytes,
 )
 from src.semantic.store import SemanticLedgerStore
 
 
 SCHEDULER_STATE_RELPATH = Path(".codebase-analysis/semantic_scheduler_state.json")
-SCHEDULER_STATE_SCHEMA = "cbe-semantic-scheduler-1"
+SCHEDULER_STATE_SCHEMA = "cbe-semantic-scheduler-state/2"
 DEFAULT_RESPONSE_RESERVE_TOKENS = 512
 
 
@@ -96,6 +100,43 @@ class SemanticBatchPacket:
     symbols: tuple[SemanticPacketSymbol, ...]
     token_estimate: PacketTokenEstimate
     oversize: bool
+    ledger_revision: int = 0
+    semantic_schema: str = LEDGER_SCHEMA
+    edge_snapshot_sha256: str = "sha256:" + "0" * 64
+    claim_generation: int = 1
+    claim_generation_id: str = "claimgen_" + "0" * 64
+    packet_sha256: str = "sha256:" + "0" * 64
+
+    @property
+    def source_revision_id(self) -> str:
+        """V3 name for the retained compatibility ``source_revision`` field."""
+
+        return self.source_revision
+
+    @property
+    def claim_revision(self) -> int:
+        """Ledger revision against which this packet was claimed."""
+
+        return self.ledger_revision
+
+    @property
+    def symbol_bindings(self) -> tuple[dict[str, str], ...]:
+        """Canonical packet bindings used by the generation identity."""
+
+        return tuple(
+            {
+                "symbol_id": symbol.symbol_id,
+                "content_hash": symbol.content_hash,
+                "dependency_context_sha256": hash_bytes(
+                    canonical_json_bytes(symbol.callee_explanations)
+                ),
+            }
+            for symbol in sorted(self.symbols, key=lambda item: item.symbol_id)
+        )
+
+    @property
+    def schema(self) -> str:
+        return "cbe-semantic-batch/3"
 
 
 def _qualified_parent(symbol_id: str) -> str | None:
@@ -278,6 +319,8 @@ class SemanticScheduler:
             raise ValueError("inventory and ledger belong to different repositories")
         if inventory.source_revision != ledger.source_revision:
             raise ValueError("inventory and ledger source revisions differ")
+        if inventory.edge_snapshot_sha256 != ledger.bindings.edge_snapshot_sha256:
+            raise ValueError("inventory and ledger edge snapshots differ")
         if set(inventory.symbols) != set(ledger.symbols):
             raise ValueError("inventory and ledger symbol denominators differ")
         self.inventory = inventory
@@ -411,6 +454,7 @@ class SemanticScheduler:
         with self._state_lock():
             state = self._read_state_unlocked()
             packets = self._live_packets(state, timestamp)
+            next_generation = self._next_generation(state)
             leased_symbols = {
                 symbol.symbol_id
                 for packet in packets.values()
@@ -430,7 +474,7 @@ class SemanticScheduler:
                     available = candidates
                     break
             if selected_component is None:
-                self._write_state_unlocked(packets)
+                self._write_state_unlocked(packets, next_generation=next_generation)
                 return None
 
             packet = self._build_packet(
@@ -439,9 +483,13 @@ class SemanticScheduler:
                 lease_owner=lease_owner.strip(),
                 lease_expires_at=timestamp + timedelta(seconds=lease_seconds),
                 max_context_tokens=max_context_tokens,
+                claim_generation=next_generation,
             )
             packets[packet.batch_id] = packet
-            self._write_state_unlocked(packets)
+            self._write_state_unlocked(
+                packets,
+                next_generation=next_generation + 1,
+            )
             return packet
 
     def recover_batch(
@@ -456,22 +504,40 @@ class SemanticScheduler:
         with self._state_lock():
             state = self._read_state_unlocked()
             packets = self._live_packets(state, timestamp)
-            self._write_state_unlocked(packets)
+            self._write_state_unlocked(
+                packets,
+                next_generation=self._next_generation(state),
+            )
             return packets.get(batch_id)
 
-    def release_batch(self, batch_id: str, *, lease_owner: str) -> bool:
+    def release_batch(
+        self,
+        batch_id: str,
+        *,
+        lease_owner: str,
+        claim_generation: int | None = None,
+    ) -> bool:
         """Release a lease only for its owning actor."""
 
         with self._state_lock():
-            packets = self._live_packets(self._read_state_unlocked(), datetime.now(UTC))
+            state = self._read_state_unlocked()
+            packets = self._live_packets(state, datetime.now(UTC))
             packet = packets.get(batch_id)
             if packet is None:
-                self._write_state_unlocked(packets)
+                self._write_state_unlocked(
+                    packets,
+                    next_generation=self._next_generation(state),
+                )
                 return False
             if packet.lease_owner != lease_owner:
                 raise SemanticSchedulerError("lease owner mismatch")
+            if claim_generation is not None and packet.claim_generation != claim_generation:
+                raise SemanticSchedulerError("claim generation mismatch")
             del packets[batch_id]
-            self._write_state_unlocked(packets)
+            self._write_state_unlocked(
+                packets,
+                next_generation=self._next_generation(state),
+            )
             return True
 
     def _build_packet(
@@ -482,6 +548,7 @@ class SemanticScheduler:
         lease_owner: str,
         lease_expires_at: datetime,
         max_context_tokens: int,
+        claim_generation: int,
     ) -> SemanticBatchPacket:
         usable = max(1, math.floor(max_context_tokens * 0.80) - 2_000)
         selected: list[SemanticPacketSymbol] = []
@@ -521,8 +588,36 @@ class SemanticScheduler:
             response_reserve_tokens=response_tokens,
             estimated_total_tokens=source_tokens + dependency_tokens + response_tokens,
         )
-        return SemanticBatchPacket(
-            batch_id="semantic_batch_" + uuid.uuid4().hex,
+        edge_snapshot = self.ledger.bindings.edge_snapshot_sha256
+        claim_revision = self.ledger.ledger_revision
+        bindings = tuple(
+            {
+                "symbol_id": symbol.symbol_id,
+                "content_hash": symbol.content_hash,
+                "dependency_context_sha256": hash_bytes(
+                    canonical_json_bytes(symbol.callee_explanations)
+                ),
+            }
+            for symbol in sorted(selected, key=lambda item: item.symbol_id)
+        )
+        claim_generation_id = self._claim_generation_id(
+            source_revision_id=self.ledger.source_revision,
+            edge_snapshot_sha256=edge_snapshot,
+            claim_revision=claim_revision,
+            claim_generation=claim_generation,
+            lease_owner=lease_owner,
+            symbol_bindings=bindings,
+        )
+        batch_id = self._batch_id(
+            source_revision_id=self.ledger.source_revision,
+            edge_snapshot_sha256=edge_snapshot,
+            claim_revision=claim_revision,
+            claim_generation_id=claim_generation_id,
+            lease_owner=lease_owner,
+            symbol_bindings=bindings,
+        )
+        packet = SemanticBatchPacket(
+            batch_id=batch_id,
             lease_owner=lease_owner,
             lease_expires_at=lease_expires_at,
             source_revision=self.ledger.source_revision,
@@ -531,7 +626,65 @@ class SemanticScheduler:
             symbols=tuple(selected),
             token_estimate=estimate,
             oversize=estimate.estimated_total_tokens > usable,
+            ledger_revision=claim_revision,
+            semantic_schema=LEDGER_SCHEMA,
+            edge_snapshot_sha256=edge_snapshot,
+            claim_generation=claim_generation,
+            claim_generation_id=claim_generation_id,
         )
+        packet_payload = self._packet_to_json(packet)
+        packet_payload["packet_sha256"] = None
+        return replace(packet, packet_sha256=hash_bytes(canonical_json_bytes(packet_payload)))
+
+    @staticmethod
+    def _claim_generation_id(
+        *,
+        source_revision_id: str,
+        edge_snapshot_sha256: str,
+        claim_revision: int,
+        claim_generation: int,
+        lease_owner: str,
+        symbol_bindings: tuple[dict[str, str], ...],
+    ) -> str:
+        frame = (
+            "cbe-claim-generation/1\0"
+            + source_revision_id
+            + "\0"
+            + edge_snapshot_sha256
+            + "\0"
+            + str(claim_revision)
+            + "\0"
+            + str(claim_generation)
+            + "\0"
+            + lease_owner
+            + "\0"
+        ).encode("utf-8") + canonical_json_bytes(list(symbol_bindings))
+        return "claimgen_" + __import__("hashlib").sha256(frame).hexdigest()
+
+    @staticmethod
+    def _batch_id(
+        *,
+        source_revision_id: str,
+        edge_snapshot_sha256: str,
+        claim_revision: int,
+        claim_generation_id: str,
+        lease_owner: str,
+        symbol_bindings: tuple[dict[str, str], ...],
+    ) -> str:
+        frame = (
+            "cbe-semantic-batch/3\0"
+            + source_revision_id
+            + "\0"
+            + edge_snapshot_sha256
+            + "\0"
+            + str(claim_revision)
+            + "\0"
+            + claim_generation_id
+            + "\0"
+            + lease_owner
+            + "\0"
+        ).encode("utf-8") + canonical_json_bytes(list(symbol_bindings))
+        return "semantic_batch_" + __import__("hashlib").sha256(frame).hexdigest()
 
     def _packet_symbol(
         self,
@@ -613,8 +766,42 @@ class SemanticScheduler:
         if self._store is None:
             return
         current = self._store.reopen()
-        if current.source_revision != self.ledger.source_revision:
+        if (
+            current.source_revision != self.ledger.source_revision
+            or current.ledger_revision != self.ledger.ledger_revision
+            or current.bindings.edge_snapshot_sha256
+            != self.ledger.bindings.edge_snapshot_sha256
+        ):
             raise SemanticSchedulerError("scheduler snapshot is stale; rebuild it from store")
+
+    @staticmethod
+    def _next_generation(state: Mapping[str, object]) -> int:
+        value = state.get("next_generation", 1)
+        if type(value) is not int or value < 1:
+            raise SemanticSchedulerError("scheduler next_generation must be an integer >= 1")
+        return value
+
+    def assert_packet_current(
+        self,
+        packet: SemanticBatchPacket,
+        *,
+        now: datetime | None = None,
+    ) -> None:
+        """Fail closed unless an exact generation-bound packet is still leased."""
+
+        with self._state_lock():
+            state = self._read_state_unlocked()
+            current = self._live_packets(state, _utc(now)).get(packet.batch_id)
+            if current is None:
+                raise SemanticSchedulerError("claim generation mismatch")
+            if (
+                current.claim_generation != packet.claim_generation
+                or current.claim_generation_id != packet.claim_generation_id
+                or current.packet_sha256 != packet.packet_sha256
+                or current.source_revision_id != packet.source_revision_id
+                or current.edge_snapshot_sha256 != packet.edge_snapshot_sha256
+            ):
+                raise SemanticSchedulerError("claim generation mismatch")
 
     def _live_packets(
         self,
@@ -630,6 +817,10 @@ class SemanticScheduler:
             if (
                 packet.batch_id == batch_id
                 and packet.source_revision == self.ledger.source_revision
+                and packet.ledger_revision == self.ledger.ledger_revision
+                and packet.semantic_schema == LEDGER_SCHEMA
+                and packet.edge_snapshot_sha256
+                == self.ledger.bindings.edge_snapshot_sha256
                 and packet.lease_expires_at > now
             ):
                 packets[batch_id] = packet
@@ -672,25 +863,82 @@ class SemanticScheduler:
                 symbols=symbols,
                 token_estimate=estimate,
                 oversize=raw["oversize"],
+                ledger_revision=raw.get("ledger_revision", 0),
+                semantic_schema=raw.get("semantic_schema", LEDGER_SCHEMA),
+                edge_snapshot_sha256=raw.get(
+                    "edge_snapshot_sha256", "sha256:" + "0" * 64
+                ),
+                claim_generation=raw.get("claim_generation", 1),
+                claim_generation_id=raw.get(
+                    "claim_generation_id", "claimgen_" + "0" * 64
+                ),
+                packet_sha256=raw.get("packet_sha256", "sha256:" + "0" * 64),
             )
         except (KeyError, TypeError, ValueError) as exc:
             raise SemanticSchedulerError(f"scheduler packet is corrupt: {exc}") from exc
 
     def _read_state_unlocked(self) -> dict[str, object]:
         if not self.state_path.exists():
-            return {"schema": SCHEDULER_STATE_SCHEMA, "packets": {}}
+            return {
+                "schema": SCHEDULER_STATE_SCHEMA,
+                "source_revision_id": self.ledger.source_revision,
+                "edge_snapshot_sha256": self.ledger.bindings.edge_snapshot_sha256,
+                "ledger_revision": self.ledger.ledger_revision,
+                "next_generation": 1,
+                "packets": {},
+            }
         try:
             payload = json.loads(self.state_path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError) as exc:
             raise SemanticSchedulerError(f"scheduler state is unreadable: {exc}") from exc
         if not isinstance(payload, dict) or payload.get("schema") != SCHEDULER_STATE_SCHEMA:
             raise SemanticSchedulerError("scheduler state schema is invalid")
+        source_revision_id = payload.get("source_revision_id", self.ledger.source_revision)
+        edge_snapshot_sha256 = payload.get(
+            "edge_snapshot_sha256", self.ledger.bindings.edge_snapshot_sha256
+        )
+        ledger_revision = payload.get("ledger_revision", self.ledger.ledger_revision)
+        if (
+            source_revision_id != self.ledger.source_revision
+            or edge_snapshot_sha256 != self.ledger.bindings.edge_snapshot_sha256
+            or ledger_revision != self.ledger.ledger_revision
+        ):
+            # A semantic commit/reconcile invalidates every prior lease.  Keep
+            # the durable monotonic generation counter, but never carry old
+            # packets into the new ledger binding.
+            next_generation = payload.get("next_generation", 1)
+            if type(next_generation) is not int or next_generation < 1:
+                raise SemanticSchedulerError("scheduler next_generation must be an integer >= 1")
+            return {
+                "schema": SCHEDULER_STATE_SCHEMA,
+                "source_revision_id": self.ledger.source_revision,
+                "edge_snapshot_sha256": self.ledger.bindings.edge_snapshot_sha256,
+                "ledger_revision": self.ledger.ledger_revision,
+                "next_generation": next_generation,
+                "packets": {},
+            }
+        payload.setdefault("source_revision_id", self.ledger.source_revision)
+        payload.setdefault("edge_snapshot_sha256", self.ledger.bindings.edge_snapshot_sha256)
+        payload.setdefault("ledger_revision", self.ledger.ledger_revision)
+        payload.setdefault("next_generation", 1)
+        self._next_generation(payload)
         return payload
 
-    def _write_state_unlocked(self, packets: Mapping[str, SemanticBatchPacket]) -> None:
+    def _write_state_unlocked(
+        self,
+        packets: Mapping[str, SemanticBatchPacket],
+        *,
+        next_generation: int,
+    ) -> None:
+        if type(next_generation) is not int or next_generation < 1:
+            raise SemanticSchedulerError("scheduler next_generation must be an integer >= 1")
         self.state_path.parent.mkdir(parents=True, exist_ok=True)
         payload = {
             "schema": SCHEDULER_STATE_SCHEMA,
+            "source_revision_id": self.ledger.source_revision,
+            "edge_snapshot_sha256": self.ledger.bindings.edge_snapshot_sha256,
+            "ledger_revision": self.ledger.ledger_revision,
+            "next_generation": next_generation,
             "packets": {
                 batch_id: self._packet_to_json(packet)
                 for batch_id, packet in sorted(packets.items())
@@ -708,6 +956,11 @@ class SemanticScheduler:
                 stream.flush()
                 os.fsync(stream.fileno())
             os.replace(temporary, self.state_path)
+            directory = os.open(self.state_path.parent, os.O_RDONLY)
+            try:
+                os.fsync(directory)
+            finally:
+                os.close(directory)
         except BaseException:
             try:
                 os.unlink(temporary)

@@ -27,6 +27,7 @@ from src.semantic.models import (
     derived_totals,
     revalidate_semantic_ledger,
     semantic_symbol_id,
+    hash_json,
 )
 
 
@@ -64,6 +65,10 @@ class SemanticInventory:
     file_revisions: Mapping[str, str] = field(default_factory=dict)
     #: `path -> sha256:<import/call 出边集合>`。图投影是否重算看这个，不看全文。
     file_out_edge_revisions: Mapping[str, str] = field(default_factory=dict)
+    #: Typed T2 edge snapshot binding.  Empty legacy fixtures use a deterministic
+    #: empty snapshot and are upgraded by the service when relations are present.
+    edge_snapshot_sha256: str = "sha256:" + "0" * 64
+    edge_relation_count: int = 0
 
 
 def enumerate_python_files(repo_root: str | Path) -> tuple[Path, ...]:
@@ -224,7 +229,7 @@ def _source_revision(rows: list[tuple[str, str]]) -> str:
         path.encode("utf-8") + b"\x00" + digest.encode("ascii")
         for path, digest in sorted(rows)
     )
-    return "sha256:" + hashlib.sha256(framed).hexdigest()
+    return "rev_" + hashlib.sha256(framed).hexdigest()
 
 
 def _ir_bridge(symbols: Iterable[Symbol]) -> dict[tuple[str, str, int, int], str]:
@@ -345,6 +350,8 @@ def enumerate_semantic_inventory(
         diagnostics=tuple(diagnostics),
         file_revisions={path: f"sha256:{digest}" for path, digest in sorted(revision_rows)},
         file_out_edge_revisions=dict(sorted(out_edge_rows.items())),
+        edge_snapshot_sha256=hash_json([]),
+        edge_relation_count=0,
     )
 
 
@@ -572,19 +579,35 @@ def reconcile_semantic_ledger(
     uncovered = tuple(sorted(set(symbols) - fresh_ids))
     totals = derived_totals(symbols, len(residuals))
     coverage = round(100.0 * totals.explained / totals.symbols, 4) if totals.symbols else 0.0
-    ledger = SemanticLedger(
-        repo_root=inventory.repo_root,
-        source_revision=inventory.source_revision,
-        file_revisions=dict(inventory.file_revisions),
-        excluded_globs=previous.excluded_globs if previous is not None else (),
-        files=files,
-        symbols=symbols,
-        order=order,
-        residuals=tuple(residuals),
-        totals=totals,
-        coverage_percent=coverage,
-        uncovered_symbols=uncovered,
+    ledger_kwargs = {
+        "repo_root": inventory.repo_root,
+        "source_revision": inventory.source_revision,
+        "file_revisions": dict(inventory.file_revisions),
+        "excluded_globs": previous.excluded_globs if previous is not None else (),
+        "files": files,
+        "symbols": symbols,
+        "order": order,
+        "residuals": tuple(residuals),
+        "totals": totals,
+        "coverage_percent": coverage,
+        "uncovered_symbols": uncovered,
+    }
+    if previous is not None:
+        ledger_kwargs["legacy_import"] = previous.legacy_import
+    ledger = SemanticLedger(**ledger_kwargs)
+    # Bind the current inventory namespace into the canonical v3 ledger.  The
+    # relation rows themselves remain owned by T2; only their hash/count binding
+    # is carried here, so this module cannot become a second edge ledger.
+    bindings = ledger.bindings.model_copy(
+        update={
+            "edge_snapshot_sha256": inventory.edge_snapshot_sha256,
+            "edge_relation_count": inventory.edge_relation_count,
+            "symbol_inventory_sha256": hash_json(
+                [[symbol_id, symbol.content_hash] for symbol_id, symbol in sorted(inventory.symbols.items())]
+            ),
+        }
     )
+    ledger = ledger.model_copy(update={"bindings": bindings})
     return revalidate_semantic_ledger(ledger)
 
 

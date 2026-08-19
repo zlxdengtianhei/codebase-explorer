@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import fcntl
 import json
 import os
 import subprocess
@@ -19,6 +20,7 @@ from src.parser.adapters.base import FileIR
 from src.parser.adapters.python import PythonLanguageAdapter
 from src.parser.backend import PythonAstBackend, SyntaxArtifact
 from src.semantic.service import (
+    REVIEW_DISPATCH_RELPATH,
     REVIEW_ACCEPTANCE_RECEIPT_RELPATH,
     REVIEW_BATCH_RECEIPT_RELPATH,
     REVIEW_HIDDEN_MAP_RELPATH,
@@ -916,6 +918,80 @@ def test_concurrent_submit_dispatches_one_server_owned_producer(tmp_path) -> Non
     assert isinstance(second, SemanticSubmissionError)
     assert "already in progress" in str(second)
     assert producer_calls == 1
+
+
+@pytest.mark.parametrize("dispatch_kind", ["submission", "review"])
+def test_dispatch_reservation_kernel_lock_is_pid_reuse_safe_for_submission_and_review(
+    tmp_path: Path,
+    dispatch_kind: str,
+) -> None:
+    """Reservations follow the kernel lock/generation, never a recyclable PID."""
+
+    _source_repo(tmp_path)
+    service = SemanticService(tmp_path, renderer=_test_renderer)
+    service.bootstrap_semantic()
+    if dispatch_kind == "submission":
+        packet = service.claim_semantic_batch(
+            actor="dispatch-test-producer", max_context_tokens=20_000
+        )
+        assert packet is not None
+        dispatch_id = packet.batch_id
+        reserve = service._reserve_submission_dispatch
+        release = service._release_submission_dispatch
+        error_type = SemanticSubmissionError
+        dispatch_path = tmp_path / service._submission_dispatch_path(dispatch_id)
+    else:
+        _explain_all(service)
+        review_packet = service.get_semantic_review_batch()
+        dispatch_id = str(review_packet["review_batch_id"])
+        reserve = service._reserve_review_dispatch
+        release = service._release_review_dispatch
+        error_type = SemanticReviewError
+        dispatch_path = tmp_path / REVIEW_DISPATCH_RELPATH
+
+    # (a) A matching PID is not liveness: releasing the kernel lock permits a
+    # fresh generation to take over, and the old handle cannot remove it.
+    first = reserve(dispatch_id)
+    first_token = first.reservation_token
+    first_generation = first.dispatch_generation_id
+    fcntl.flock(first.lock_fd, fcntl.LOCK_UN)
+    replacement = reserve(dispatch_id)
+    assert replacement.reservation_token != first_token
+    assert replacement.dispatch_generation_id != first_generation
+    replacement_bytes = dispatch_path.read_bytes()
+    with pytest.raises(error_type, match="DISPATCH_RESERVATION_NOT_OWNER"):
+        release(dispatch_id, first)
+    assert dispatch_path.read_bytes() == replacement_bytes
+    release(dispatch_id, replacement)
+
+    # (b) A live kernel lock wins even when its recorded PID is not live.
+    live = reserve(dispatch_id)
+    contender = SemanticService(tmp_path, renderer=_test_renderer)
+    with pytest.raises(error_type, match="DISPATCH_ALREADY_IN_PROGRESS"):
+        (
+            contender._reserve_submission_dispatch(dispatch_id)
+            if dispatch_kind == "submission"
+            else contender._reserve_review_dispatch(dispatch_id)
+        )
+    release(dispatch_id, live)
+
+    # (c) Corrupt token/generation/hash bytes fail closed without mutation.
+    corrupt = reserve(dispatch_id)
+    fcntl.flock(corrupt.lock_fd, fcntl.LOCK_UN)
+    original_bytes = dispatch_path.read_bytes()
+    corrupt_payload = json.loads(original_bytes)
+    corrupt_payload["reservation_token"] = "bad-token"
+    dispatch_path.write_text(json.dumps(corrupt_payload, sort_keys=True), encoding="utf-8")
+    unchanged_corrupt = dispatch_path.read_bytes()
+    with pytest.raises(error_type, match="DISPATCH_RESERVATION_CORRUPT"):
+        (
+            contender._reserve_submission_dispatch(dispatch_id)
+            if dispatch_kind == "submission"
+            else contender._reserve_review_dispatch(dispatch_id)
+        )
+    assert dispatch_path.read_bytes() == unchanged_corrupt
+    dispatch_path.write_bytes(original_bytes)
+    release(dispatch_id, corrupt)
 
 
 def test_review_packet_is_deterministic_anonymous_and_identity_gated(tmp_path) -> None:  # type: ignore[no-untyped-def]

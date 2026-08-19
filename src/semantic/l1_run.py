@@ -1,20 +1,8 @@
-"""L1 全量跑：`L0 枚举 → 闸1 packet → 分档派发 → L1SymbolFact → 闸 L1-a..d → 台账`。
+"""Thin semantic lifecycle client.
 
-r004 第一轮交的是机制（闸、schema、分级、回退链），本模块是让机制真的跑一遍的驱动。
-它不新造判据——闸 1 在 `l1_packet`、闸 2 在 `gates`、L1-a..d 在 `l1_facts`、分级与回退链在
-`tiering`，本模块只负责按顺序把它们接起来并把每一步的读数落盘。
-
-两条实现纪律，写在这里免得后来人当成可省的细节：
-
-1. **回退链的每一级都要留痕。** router 的 `attempts` 是唯一能证明「哪一档触了墙、
-   fallback 接没接住」的证据；把它折进台账，不折进日志。降档同理——
-   静默用了替补等于把「额度受限怎么处理」这个问题answer成了「没遇到」。
-2. **落盘是流式的。** 每个批次一完成就 append 进 `batches.jsonl`，被 reset 之后
-   凭档续跑，不从头重来。跑到一半的证据仍是证据，跑到一半的空文件不是。
-
-命令行::
-
-    .venv/bin/python -m src.semantic.l1_run run <repo_root> --name flask --out <dir>
+Tier assignment and packet presentation remain here for compatibility with the
+old command-line UX.  Durable state, recovery, coverage, and completion are
+owned by :class:`src.semantic.service.SemanticService` and its public methods.
 """
 
 from __future__ import annotations
@@ -635,244 +623,106 @@ def _batches(symbol_ids: Sequence[str], size: int, paths: Mapping[str, str]) -> 
 def run_repository(
     repo_root: str | Path,
     *,
-    name: str,
-    out_dir: Path,
+    name: str = "semantic",
+    out_dir: Path | None = None,
     workers: int = 8,
     limit: int = 0,
     symbol_prefix: str = "",
+    transport: str = "local",
+    legacy_dir: str | Path | None = None,
+    max_context_tokens: int = 16_000,
+    lease_seconds: int = 900,
+    resume_batch: str | None = None,
+    stop_after_claim: bool = False,
 ) -> dict[str, Any]:
+    """Run the public semantic lifecycle adapter and return a non-authoritative view.
+
+    The legacy tiering helpers above are intentionally retained as presentation
+    utilities.  This entry point never opens, resumes, checkpoints, or writes a
+    parallel ledger.  ``out_dir`` remains an API-compatible argument for older
+    callers, but canonical state is always resolved by ``SemanticService``.
+    """
+
+    if transport not in {"local", "mcp-stdio"}:
+        raise ValueError("transport must be local or mcp-stdio")
+    if max_context_tokens < 1 or lease_seconds < 1:
+        raise ValueError("context and lease budgets must be positive")
     root = Path(repo_root).resolve()
-    out_dir.mkdir(parents=True, exist_ok=True)
-    stream_path = out_dir / f"batches_{name}.jsonl"
-    stream_lock = Lock()
+    if not root.is_dir():
+        raise ValueError(f"repository root is not a directory: {root}")
+
+    # Keep the adapter import local: tiering and packet presentation remain
+    # usable in isolation, while lifecycle state is owned by the service.
+    from src.semantic.service import SemanticService
 
     started_at = time.time()
-    prepared, paths, diagnostics = prepare_symbols(root)
-    metrics = measure_repository(root)
-    assignments = assign_execution_tiers(metrics)
-    calibration = [item.as_dict() for item in self_check(metrics)]
+    service = SemanticService(root)
+    ledger = service.bootstrap_semantic()
 
-    assigned = {item.symbol_id: item for item in assignments if item.symbol_id in prepared}
-    if symbol_prefix:
-        assigned = {key: value for key, value in assigned.items() if key.startswith(symbol_prefix)}
-    if limit:
-        keep = sorted(assigned)[:limit]
-        assigned = {key: assigned[key] for key in keep}
-
-    runs: dict[str, SymbolRun] = {}
-    for symbol_id, decision in assigned.items():
-        runs[symbol_id] = SymbolRun(
-            symbol_id=symbol_id,
-            qualified_name=prepared[symbol_id].qualified_name,
-            path=paths[symbol_id],
-            assigned_tier=decision.tier,
-            state=EscalationState(symbol_id=symbol_id, tier=decision.tier),
+    packet = None
+    if resume_batch:
+        packet = service.recover_semantic_batch(resume_batch)
+    elif stop_after_claim:
+        packet = service.claim_semantic_batch(
+            actor=f"cli:{name}",
+            max_context_tokens=max_context_tokens,
+            lease_seconds=lease_seconds,
         )
 
-    ledger = ChainLedger()
-    call_records: list[dict[str, object]] = []
-    ledger_path = out_dir / f"L1_LEDGER_{name}.json"
-    summary_path = out_dir / f"L1_RUN_{name}.json"
-    resumed = 0
-    if ledger_path.exists():
-        try:
-            prior = json.loads(ledger_path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
-            prior = {}
-        for row in prior.get("symbols", []):
-            symbol_id = str(row.get("symbol_id") or "")
-            run = runs.get(symbol_id)
-            if run is None or not row.get("resolved") or not isinstance(row.get("fact"), dict):
-                continue
-            try:
-                run.fact = parse_l1_fact_payload(row["fact"])
-            except (L1FactError, ValueError, KeyError, TypeError):
-                continue
-            run.accepted_tier = str(row.get("accepted_tier") or "")
-            run.check_details = list(row.get("checks") or [])
-            run.parse_errors = list(row.get("parse_errors") or [])
-            resumed += 1
-        if resumed:
-            print(f"[{name}] resumed {resumed} already-accepted symbols from {ledger_path}", file=sys.stderr, flush=True)
+    progress = service.get_semantic_progress()
+    packet_payload = None
+    if packet is not None:
+        packet_payload = {
+            "batch_id": packet.batch_id,
+            "source_revision": packet.source_revision,
+            "source_revision_id": packet.source_revision_id,
+            "ledger_revision": packet.ledger_revision,
+            "semantic_schema": packet.semantic_schema,
+            "edge_snapshot_sha256": packet.edge_snapshot_sha256,
+            "claim_generation": packet.claim_generation,
+            "claim_generation_id": packet.claim_generation_id,
+            "packet_sha256": packet.packet_sha256,
+            "lease_owner": packet.lease_owner,
+            "lease_expires_at": packet.lease_expires_at.isoformat(),
+            "symbol_ids": [item.symbol_id for item in packet.symbols],
+        }
 
-    def _checkpoint() -> None:
-        payload = {"repo": name, "symbols": [item.as_dict() for item in runs.values()]}
-        tmp = ledger_path.with_suffix(".json.tmp")
-        tmp.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-        tmp.replace(ledger_path)
-
-    # --- T0：零调用模板。它照样过四条检查，过不了照样升档。 ---
-    for symbol_id, run in runs.items():
-        if run.assigned_tier != "T0" or run.resolved:
-            continue
-        item = prepared[symbol_id]
-        fact = t0_template_fact(
-            symbol_id=symbol_id,
-            source_body=item.packet.source_body,
-            qualified_name=item.qualified_name,
-            kind=item.packet.kind,
-        )
-        judge_symbol(run, item, fact.to_payload(), tier="T0", error="")
-    _checkpoint()
-
-    def _pending(tier: str) -> list[str]:
-        return [
-            symbol_id
-            for symbol_id, run in runs.items()
-            if not run.resolved and run.state.tier == tier
-        ]
-
-    def _run_wave(tier: str, wave: int) -> int:
-        pending = _pending(tier)
-        if not pending:
-            return 0
-        batches = _batches(pending, BATCH_SIZE.get(tier, 6), paths)
-        done = 0
-        with ThreadPoolExecutor(max_workers=workers) as pool:
-            futures = {
-                pool.submit(
-                    dispatch_batch,
-                    [prepared[symbol_id] for symbol_id in batch],
-                    tier=tier,
-                    ledger=ledger,
-                    task_name=f"r004-l1-{name}-{tier.lower()}-w{wave}-b{index}",
-                ): batch
-                for index, batch in enumerate(batches)
-            }
-            for future in as_completed(futures):
-                batch = futures[future]
-                try:
-                    outcome = future.result()
-                except Exception as exc:  # noqa: BLE001 - 批次异常不许吃掉整轮
-                    for symbol_id in batch:
-                        judge_symbol(
-                            runs[symbol_id],
-                            prepared[symbol_id],
-                            None,
-                            tier=tier,
-                            error=f"dispatch raised {type(exc).__name__}: {exc}",
-                        )
-                    continue
-                for symbol_id in batch:
-                    judge_symbol(
-                        runs[symbol_id],
-                        prepared[symbol_id],
-                        outcome.facts_by_id.get(symbol_id),
-                        tier=tier,
-                        error=outcome.error,
-                    )
-                record = {
-                    "repo": name,
-                    "tier": tier,
-                    "wave": wave,
-                    "symbols": batch,
-                    "tier_used": outcome.tier_used,
-                    "attempts": [list(item) for item in outcome.attempts],
-                    "duration_s": round(outcome.duration_s, 2),
-                    "is_substitute": outcome.is_substitute,
-                    "facts_returned": len(outcome.facts_by_id),
-                    "prompt_chars": outcome.prompt_chars,
-                    "reply_chars": outcome.reply_chars,
-                    "cost_usd": outcome.cost_usd,
-                    "estimated_tokens": outcome.estimated_tokens,
-                    "http_429": outcome.http_429,
-                    "error": outcome.error[:400],
-                }
-                call_records.append(record)
-                with stream_lock:
-                    with stream_path.open("a", encoding="utf-8") as handle:
-                        handle.write(json.dumps(record, ensure_ascii=False) + "\n")
-                    _checkpoint()
-                done += 1
-                print(
-                    f"[{name}] {tier} wave{wave} batch done "
-                    f"({done}/{len(batches)}) via {outcome.tier_used} "
-                    f"{round(outcome.duration_s)}s facts={len(outcome.facts_by_id)}/{len(batch)}",
-                    file=sys.stderr,
-                    flush=True,
-                )
-        return len(batches)
-
-    # 一档跑两轮：第一轮是首次产出，第二轮消化「同档内被拒收后仍留在本档」的符号。
-    # 升档由 `record_attempt` 决定，这里只按符号当前所在档重新收集。
-    for wave in (1, 2):
-        for tier in ("T1", "T2", "T3"):
-            _run_wave(tier, wave)
-
-    unresolved = [run for run in runs.values() if not run.resolved]
-    summary = {
+    # ``legacy_dir`` is deliberately reported as an input hint only.  The
+    # service/store owns the one-shot import gate and its canonical path; this
+    # client must never read import artifacts itself.
+    return {
+        "schema": "cbe-semantic-run-summary/1",
         "repo": name,
         "repo_root": str(root),
-        "started_at": started_at,
-        "wall_clock_s": round(time.time() - started_at, 1),
-        "symbol_denominator": {
-            "inventory": len(prepared),
-            "metrics": len(metrics),
-            "assigned": len(assigned),
+        "transport": transport,
+        "authoritative": False,
+        "canonical": {
+            "ledger_path": str(service.store.path),
+            "ledger_revision": progress["ledger_revision"],
+            "ledger_sha256": progress["ledger_sha256"],
+            "source_revision_id": progress["source_revision_id"],
+            "semantic_schema": ledger.schema,
+            "edge_snapshot_sha256": ledger.bindings.edge_snapshot_sha256,
         },
-        "tier_assignment": {
-            tier: sum(1 for item in assigned.values() if item.tier == tier)
-            for tier in ("T0", "T1", "T3")
+        "completion": {
+            "product_complete": progress["product_complete"],
+            "coverage_percent": progress["coverage_percent"],
+            "totals": progress["totals"],
+            "render_pending": progress["render_pending"],
+            "legacy_import_status": progress["legacy_import_status"],
         },
-        "tripwire_calibration": calibration,
-        "inventory_diagnostics": diagnostics[:20],
-        "ledger_coverage": {
-            "resolved": sum(1 for run in runs.values() if run.resolved),
-            "unresolved": len(unresolved),
-            "manual_queue": sum(1 for run in runs.values() if run.state.tier == MANUAL_QUEUE),
+        "packet": packet_payload,
+        "resume_batch": resume_batch,
+        "stop_after_claim": stop_after_claim,
+        "legacy_dir": str(Path(legacy_dir).resolve()) if legacy_dir is not None else None,
+        "presentation": {
+            "workers": workers,
+            "limit": limit,
+            "symbol_prefix": symbol_prefix,
         },
-        "accepted_by_tier": _count(run.accepted_tier for run in runs.values() if run.resolved),
-        "rejections_by_check": _rejection_histogram(runs.values()),
-        "unresolved_causes": _unresolved_causes(unresolved),
-        "fallback_chain": ledger.as_dict(),
-        "calls": {
-            "total": len(call_records),
-            "by_tier": _count(record["tier"] for record in call_records),  # type: ignore[misc]
-            "by_channel": _count(str(record["tier_used"]) for record in call_records),  # type: ignore[misc]
-            "total_prompt_chars": sum(int(record["prompt_chars"]) for record in call_records),  # type: ignore[arg-type]
-            "total_reply_chars": sum(int(record["reply_chars"]) for record in call_records),  # type: ignore[arg-type]
-            "total_call_seconds": round(
-                sum(float(record["duration_s"]) for record in call_records), 1  # type: ignore[arg-type]
-            ),
-            "total_cost_usd": round(
-                sum(float(record.get("cost_usd") or 0) for record in call_records), 6
-            ),
-            "total_estimated_tokens": sum(
-                int(record.get("estimated_tokens") or 0) for record in call_records
-            ),
-            "http_429": sum(int(record.get("http_429") or 0) for record in call_records),
-        },
-        "hx3_comparison": {
-            "hx3": HX3_BASELINE,
-            "this_run": {
-                "repo": name,
-                "symbols": len(assigned),
-                "calls": len(call_records),
-                "tokens": sum(int(record.get("estimated_tokens") or 0) for record in call_records),
-                "usd": round(sum(float(record.get("cost_usd") or 0) for record in call_records), 6),
-                "wall_s": round(time.time() - started_at, 1),
-                "http_429": sum(int(record.get("http_429") or 0) for record in call_records),
-            },
-        },
-        "resumed_accepted": resumed,
-        "token_accounting": (
-            "router.estimated_tokens when the channel reports a positive count; "
-            "otherwise (prompt_chars + reply_chars) // 4. opencode/ollama/cursor "
-            "commonly report 0."
-        ),
-        "substitution_note": {
-            "why": "frozen T1/T2 chains were locally unreachable; substitutes are same-model-family, "
-            "different harness (see TIER_SUBSTITUTES docstring)",
-            "substitutes": {tier: list(items) for tier, items in TIER_SUBSTITUTES.items() if items},
-        },
-        "known_gaps": [
-            "callee_signatures is empty for every symbol in this run: the L1 driver does not build "
-            "the IR call graph, so L1-a is checked against source_body alone.",
-        ],
+        "calls": {"total": 0},
+        "wall_clock_s": round(time.time() - started_at, 3),
     }
-    summary_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    _checkpoint()
-    return summary
 
 
 def _count(values: Iterable[object]) -> dict[str, int]:
@@ -909,10 +759,16 @@ def _unresolved_causes(runs: Sequence[SymbolRun]) -> dict[str, int]:
 def _main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
-    run = sub.add_parser("run", help="run the full L1 pipeline over a repository")
+    run = sub.add_parser("run", help="run the canonical semantic lifecycle adapter")
     run.add_argument("repo_root")
-    run.add_argument("--name", required=True)
-    run.add_argument("--out", required=True)
+    run.add_argument("--name", default="semantic")
+    run.add_argument("--output-dir", "--out", dest="output_dir", default=None)
+    run.add_argument("--transport", choices=("local", "mcp-stdio"), default="local")
+    run.add_argument("--legacy-dir", default=None)
+    run.add_argument("--max-context-tokens", type=int, default=16_000)
+    run.add_argument("--lease-seconds", type=int, default=900)
+    run.add_argument("--resume-batch", default=None)
+    run.add_argument("--stop-after-claim", action="store_true")
     run.add_argument("--workers", type=int, default=8)
     run.add_argument("--limit", type=int, default=0, help="cap symbols (smoke runs only)")
     run.add_argument("--symbol-prefix", default="", help="only symbols whose id starts with this")
@@ -920,10 +776,16 @@ def _main(argv: Sequence[str] | None = None) -> int:
     summary = run_repository(
         args.repo_root,
         name=args.name,
-        out_dir=Path(args.out),
+        out_dir=Path(args.output_dir) if args.output_dir else None,
         workers=args.workers,
         limit=args.limit,
         symbol_prefix=args.symbol_prefix,
+        transport=args.transport,
+        legacy_dir=args.legacy_dir,
+        max_context_tokens=args.max_context_tokens,
+        lease_seconds=args.lease_seconds,
+        resume_batch=args.resume_batch,
+        stop_after_claim=args.stop_after_claim,
     )
     print(json.dumps(summary, ensure_ascii=False, indent=2))
     return 0

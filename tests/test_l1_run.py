@@ -32,13 +32,13 @@ def test_execution_tiers_are_three_way_and_sum_to_denominator(tmp_path: Path) ->
     assert any(item.tier == "T3" for item in assigned)
 
 
-def test_t0_only_run_writes_ledger_without_router(tmp_path: Path) -> None:
+def test_local_run_uses_canonical_service_without_parallel_ledger(tmp_path: Path) -> None:
     (tmp_path / "tiny.py").write_text("def ping():\n    return 1\n", encoding="utf-8")
     out = tmp_path / "out"
     summary = run_repository(tmp_path, name="tiny", out_dir=out, workers=1)
-    assert summary["symbol_denominator"]["assigned"] == 1
-    assert summary["ledger_coverage"]["resolved"] == 1
-    assert (out / "L1_LEDGER_tiny.json").is_file()
-    assert (out / "L1_RUN_tiny.json").is_file()
+    assert summary["authoritative"] is False
+    assert summary["canonical"]["ledger_revision"] == 0
+    assert summary["completion"]["totals"]["symbols"] == 1
+    assert not (out / "L1_LEDGER_tiny.json").exists()
+    assert not (out / "L1_RUN_tiny.json").exists()
     assert summary["calls"]["total"] == 0
-    assert summary["hx3_comparison"]["hx3"]["calls"] == 247

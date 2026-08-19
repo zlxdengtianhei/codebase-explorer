@@ -4,12 +4,14 @@ from __future__ import annotations
 
 import json
 from datetime import UTC, datetime
+from pathlib import Path
 
 import pytest
 
 from src.semantic import (
     LedgerCorruptError,
     LedgerExistsError,
+    LegacyLedgerMigrationRequired,
     SemanticExplanation,
     SemanticFileRecord,
     SemanticLedger,
@@ -19,6 +21,7 @@ from src.semantic import (
     enumerate_semantic_inventory,
     reconcile_semantic_ledger,
 )
+from src.semantic.service import MIGRATION_RECEIPT_RELPATH, SEMANTIC_EVENTS_RELPATH, SemanticService
 
 
 def _write(root, text: str) -> None:  # type: ignore[no-untyped-def]
@@ -79,7 +82,7 @@ def test_store_creates_reopens_and_reconciles_probe_ledger_skeleton(tmp_path) ->
     assert created == reopened == reconciled
     assert store.path == tmp_path / ".codebase-analysis/semantic_ledger.json"
     raw = json.loads(store.path.read_text(encoding="utf-8"))
-    assert raw["schema"] == "cbe-semantic-ledger-2"
+    assert raw["schema"] == "cbe-semantic-ledger/3"
     assert set(raw["files"]) == {"app.py"}
     assert set(raw["symbols"]) == {"app.py::value"}
     assert raw["uncovered_symbols"] == ["app.py::value"]
@@ -285,3 +288,99 @@ def test_store_rejects_symlinked_analysis_directory(tmp_path) -> None:  # type: 
         store.create()
     assert not (outside / "semantic_ledger.json").exists()
     assert not (outside / "semantic_ledger.json.lock").exists()
+
+
+def test_create_publishes_hash_bound_commit_receipt_and_revision_zero(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    _write(tmp_path, "def value():\n    return 1\n")
+    store = SemanticLedgerStore(tmp_path)
+    ledger = store.create()
+    receipt_path = tmp_path / ".codebase-analysis/semantic_commit_receipt.json"
+    assert ledger.ledger_revision == 0
+    assert receipt_path.is_file()
+    receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+    assert receipt["schema"] == "cbe-semantic-commit-receipt/1"
+    assert receipt["ledger_revision"] == 0
+    assert receipt["ledger_sha256"].startswith("sha256:")
+    assert receipt["ledger_sha256"] == store.ledger_sha256()
+
+
+def test_v2_accepted_review_migrates_to_revision_zero_review_none_and_incomplete(
+    tmp_path,
+) -> None:  # type: ignore[no-untyped-def]
+    """The service, not a read-side store helper, owns the v2->v3 commit."""
+
+    _write(tmp_path, "def value():\n    return 1\n")
+    store = SemanticLedgerStore(tmp_path)
+    v3 = store.create()
+    authored = _fresh_ledger(v3)
+    symbol_id, symbol = next(iter(authored.symbols.items()))
+    explanation = symbol.explanation
+    assert explanation is not None
+    old_symbol = symbol.model_dump(mode="json")
+    old_explanation = old_symbol["explanation"]
+    assert isinstance(old_explanation, dict)
+    old_explanation["producer"] = old_explanation.pop("producer_session_id")
+    old_symbol["explanation"] = old_explanation
+    raw = {
+        "schema": "cbe-semantic-ledger-2",
+        "repo_root": authored.repo_root,
+        "source_revision": authored.source_revision,
+        "file_revisions": authored.file_revisions,
+        "excluded_globs": list(authored.excluded_globs),
+        "files": {key: value.model_dump(mode="json") for key, value in authored.files.items()},
+        "symbols": {symbol_id: old_symbol},
+        "order": [symbol_id],
+        "residuals": [],
+        "totals": authored.totals.model_dump(mode="json"),
+        "coverage_percent": authored.coverage_percent,
+        "uncovered_symbols": [],
+        "review": {
+            "status": "accepted",
+            "reviewer_session_id": "codex:old-reviewer",
+            "verdict_sha256": "sha256:" + "1" * 64,
+        },
+    }
+    store.path.write_text(json.dumps(raw, sort_keys=True), encoding="utf-8")
+    before = store.path.read_bytes()
+    with pytest.raises(LegacyLedgerMigrationRequired):
+        store.reopen()
+    assert store.path.read_bytes() == before
+
+    def renderer(root, ledger, *, graph=None):  # type: ignore[no-untyped-def]
+        del graph
+        docs = Path(root) / ".codebase-docs"
+        docs.mkdir(parents=True, exist_ok=True)
+        detail = docs / "DETAIL.md"
+        detail.write_text(
+            "# Details\n\n"
+            + "\n".join(
+                f"<!-- symbol:{item.symbol_id} -->\n{item.explanation.text}\n"
+                f"<!-- end:symbol:{item.symbol_id} -->"
+                for item in ledger.symbols.values()
+                if item.explanation is not None and item.is_fresh
+            ),
+            encoding="utf-8",
+        )
+        index = docs / "INDEX.md"
+        index.write_text("# Index\n\n[Details](DETAIL.md)\n", encoding="utf-8")
+        return {
+            "index_path": index.as_posix(),
+            "detail_paths": [detail.as_posix()],
+        }
+    service = SemanticService(tmp_path, renderer=renderer)
+    migrated = service.bootstrap_semantic()
+
+    assert migrated.ledger_revision == 0
+    assert migrated.review.status == "none"
+    assert migrated.review.bound_ledger_revision is None
+    assert migrated.product_complete is False
+    assert migrated.symbols[symbol_id].is_fresh
+    migration = json.loads((tmp_path / MIGRATION_RECEIPT_RELPATH).read_text(encoding="utf-8"))
+    assert migration["schema"] == "cbe-semantic-legacy-import/1"
+    events = [
+        json.loads(line)
+        for line in (tmp_path / SEMANTIC_EVENTS_RELPATH).read_text(encoding="utf-8").splitlines()
+    ]
+    assert [row["reason_code"] for row in events if row.get("event") == "migrate"] == [
+        "V2_REVIEW_REQUIRES_V3_REVIEW"
+    ]
