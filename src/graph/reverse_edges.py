@@ -702,13 +702,17 @@ def _reverse_symbols(
     ir_to_canonical: dict[str, str] = {}
     for canonical, group in sorted(by_canonical.items()):
         chosen = min(group, key=lambda item: item.id)
+        # ``canonical`` is a public display identity, not the revision-bound
+        # Symbol identity.  Overload declarations and property accessors can
+        # therefore share it while retaining distinct IDs and definition
+        # locators in ``by_ir``; `_target_id` validates those fields before
+        # this projection is used.
         for candidate in group:
             if (
                 candidate.path != chosen.path
                 or candidate.qualified_name != chosen.qualified_name
                 or candidate.local_name != chosen.local_name
                 or candidate.kind != chosen.kind
-                or candidate.decorators != chosen.decorators
             ):
                 raise ReverseEdgeError(f"canonical Symbol projection is ambiguous: {canonical}")
             ir_to_canonical[candidate.id] = canonical

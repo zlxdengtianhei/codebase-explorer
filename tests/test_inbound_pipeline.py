@@ -15,9 +15,23 @@ import pytest
 
 from src.ir import (
     CallOutcome,
+    CallResolution,
+    CallSiteAnchor,
+    CallSiteInventory,
+    EntityRef,
     EntityKind,
+    EvidenceSpan,
+    Provenance,
+    ProvenanceBasis,
+    Relation,
+    RepositoryEntityIdentity,
+    ResolutionMethod,
+    ResolutionStatus,
+    ReceiverShape,
     SourceUnit,
     SourceUnitState,
+    Symbol,
+    TargetEvidence,
     deterministic_entity_id,
     deserialize_model,
     serialize_model,
@@ -554,3 +568,223 @@ def test_inbound_mutation_serialized_override_removal_breaks_reverse_projection(
     with pytest.raises(AssertionError):
         _assert_fixture_oracle(symbols, mutated, inventories, mutated_index)
     _assert_fixture_oracle(symbols, relations, inventories, baseline)
+
+
+def _duplicate_symbol_inputs(
+    family: str,
+) -> tuple[tuple[Symbol, ...], tuple[Relation, ...], tuple[CallSiteInventory, ...], str, Symbol, Symbol]:
+    """Build one exact call into a duplicate-display Symbol family.
+
+    These are the two source shapes that exposed the reverse projection bug:
+    overload declarations share a function display name, while a property
+    getter and setter share a method display name.  The source-unit and
+    definition locators remain distinct so the target identity checks are
+    exercised rather than replaced with a name lookup.
+    """
+
+    if family == "flask-overload":
+        path = "src/flask/cli.py"
+        qualified_name = "src.flask.cli.locate_app"
+        local_name = "locate_app"
+        kind = "function"
+        definitions = (
+            ("python:function:src.flask.cli.locate_app:230:0", 230, ("typing.overload",)),
+            ("python:function:src.flask.cli.locate_app:236:0", 236, ("typing.overload",)),
+            ("python:function:src.flask.cli.locate_app:241:0", 241, ()),
+        )
+        owner: Symbol | None = None
+    elif family == "celery-property":
+        path = "celery/app/amqp.py"
+        qualified_name = "celery.app.amqp.AMQP.queues"
+        local_name = "queues"
+        kind = "method"
+        definitions = (
+            ("python:method:celery.app.amqp.AMQP.queues:607:4", 607, ("cached_property",)),
+            ("python:method:celery.app.amqp.AMQP.queues:612:4", 612, ("queues.setter",)),
+        )
+        owner_locator = "python:class:celery.app.amqp.AMQP:219:0"
+        owner_span = EvidenceSpan(
+            source_unit_id=deterministic_entity_id(
+                FIXTURE_REVISION, path, EntityKind.SOURCE_UNIT, path
+            ),
+            path=path,
+            start_line=219,
+            start_column=0,
+            end_line=219,
+            end_column=4,
+        )
+        owner = Symbol(
+            id=deterministic_entity_id(
+                FIXTURE_REVISION, path, EntityKind.SYMBOL, owner_locator
+            ),
+            source_revision_id=FIXTURE_REVISION,
+            source_unit_id=owner_span.source_unit_id,
+            path=path,
+            kind="class",
+            qualified_name="celery.app.amqp.AMQP",
+            local_name="AMQP",
+            definition_locator=owner_locator,
+            definition=owner_span,
+            language="python",
+            decorators=(),
+        )
+    else:  # pragma: no cover - callers use the two named product families.
+        raise AssertionError(f"unknown duplicate symbol family: {family}")
+
+    source_unit_id = deterministic_entity_id(
+        FIXTURE_REVISION, path, EntityKind.SOURCE_UNIT, path
+    )
+    duplicate_symbols = tuple(
+        Symbol(
+            id=deterministic_entity_id(
+                FIXTURE_REVISION, path, EntityKind.SYMBOL, locator
+            ),
+            source_revision_id=FIXTURE_REVISION,
+            source_unit_id=source_unit_id,
+            path=path,
+            kind=kind,
+            qualified_name=qualified_name,
+            local_name=local_name,
+            definition_locator=locator,
+            definition=EvidenceSpan(
+                source_unit_id=source_unit_id,
+                path=path,
+                start_line=line,
+                start_column=0,
+                end_line=line,
+                end_column=1,
+            ),
+            language="python",
+            decorators=decorators,
+        )
+        for locator, line, decorators in definitions
+    )
+    symbols = ((owner,) if owner is not None else ()) + duplicate_symbols
+
+    call_path = "calls.py"
+    caller_id = f"{call_path}::caller"
+    call_source_unit_id = deterministic_entity_id(
+        FIXTURE_REVISION, call_path, EntityKind.SOURCE_UNIT, call_path
+    )
+    call_span = EvidenceSpan(
+        source_unit_id=call_source_unit_id,
+        path=call_path,
+        start_line=10,
+        start_column=4,
+        end_line=10,
+        end_column=20,
+    )
+    call_locator = (
+        f"python:call:{call_span.start_line}:{call_span.start_column}:"
+        f"{call_span.end_line}:{call_span.end_column}:{caller_id}"
+    )
+    call_id = deterministic_entity_id(
+        FIXTURE_REVISION, call_path, EntityKind.RELATION, call_locator
+    )
+
+    selected, other = duplicate_symbols[0], duplicate_symbols[-1]
+
+    def _target(symbol: Symbol) -> TargetEvidence:
+        identity = RepositoryEntityIdentity(
+            ref=EntityRef(kind=EntityKind.SYMBOL, id=symbol.id),
+            source_revision_id=FIXTURE_REVISION,
+            path=symbol.path,
+            definition_locator=symbol.definition_locator,
+        )
+        return TargetEvidence(
+            target=identity,
+            provenance=(
+                Provenance(
+                    basis=ProvenanceBasis.DIRECT_LOCAL_BINDING,
+                    evidence=(symbol.definition,),
+                    source_revision_id=FIXTURE_REVISION,
+                    source_entity=identity,
+                ),
+            ),
+        )
+
+    target = _target(selected)
+    resolution = CallResolution(
+        outcome=CallOutcome.RUNTIME_EXACT,
+        receiver_shape=ReceiverShape.BARE_NAME,
+        runtime_exact_target=target,
+    )
+    relation = Relation(
+        id=call_id,
+        source_revision_id=FIXTURE_REVISION,
+        path=call_path,
+        kind="call",
+        locator=call_locator,
+        source=EntityRef(kind=EntityKind.SYMBOL, id=selected.id),
+        target=None,
+        evidence=(call_span,),
+        resolution_status=ResolutionStatus.RESOLVED,
+        resolution_method=ResolutionMethod.EXACT,
+        confidence=1.0,
+        reason="duplicate target regression",
+        candidates=(),
+        call_resolution=resolution,
+    )
+    inventory = CallSiteInventory(
+        source_revision_id=FIXTURE_REVISION,
+        source_unit_id=call_source_unit_id,
+        path=call_path,
+        language="python",
+        ast_backend_id="duplicate-regression",
+        ast_backend_version="1",
+        call_sites=(
+            CallSiteAnchor(
+                call_site_id=call_id,
+                caller_canonical_id=caller_id,
+                span=call_span,
+            ),
+        ),
+    )
+    canonical_id = (
+        f"{path}::{qualified_name.removeprefix(path[:-3].replace('/', '.') + '.') }"
+        if path.endswith(".py")
+        else f"{path}::{qualified_name}"
+    )
+    return symbols, (relation,), (inventory,), canonical_id, selected, other
+
+
+def _assert_duplicate_family_projects_exact_target(family: str) -> None:
+    symbols, relations, inventories, canonical_id, selected, other = _duplicate_symbol_inputs(family)
+    index = _index(symbols, relations, inventories)
+    payload = index.to_payload()
+    reverse_edges.validate_reverse_payload(payload)
+
+    symbol_body = payload["symbols"][canonical_id]
+    assert set(symbol_body["ir_symbol_ids"]) == {item.id for item in symbols if item.kind != "class"}
+    edge = payload["by_callee_symbol"][canonical_id][0]
+    assert edge["resolution"] == "runtime_exact"
+    assert edge["callee_id"] == canonical_id
+    via = json.loads(edge["via"])
+    assert via["provenance"][0]["source_entity_id"] == selected.id
+    assert via["provenance"][0]["source_revision_id"] == FIXTURE_REVISION
+    assert via["provenance"][0]["evidence"][0]["path"] == selected.path
+    assert selected.definition_locator != other.definition_locator
+
+    # The accepted IR identity, not the public display name, selects the
+    # target.  A same-display ref carrying the other definition locator must
+    # fail closed instead of being promoted to the selected Symbol.
+    target = relations[0].call_resolution.runtime_exact_target
+    assert target is not None
+    forged_identity = target.target.model_copy(
+        update={"definition_locator": other.definition_locator}
+    )
+    forged_target = target.model_copy(update={"target": forged_identity})
+    forged_resolution = relations[0].call_resolution.model_copy(
+        update={"runtime_exact_target": forged_target}
+    )
+    forged_relation = relations[0].model_copy(update={"call_resolution": forged_resolution})
+    with pytest.raises(reverse_edges.ReverseEdgeError, match="identity does not match"):
+        _index(symbols, (forged_relation,), inventories)
+
+
+def test_flask_overload_symbols_survive_duplicate_display_projection() -> None:
+    _assert_duplicate_family_projects_exact_target("flask-overload")
+
+
+def test_celery_getter_setter_symbols_survive_duplicate_display_projection() -> None:
+    _assert_duplicate_family_projects_exact_target("celery-property")
