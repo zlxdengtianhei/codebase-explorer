@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import re
 from datetime import UTC, datetime
 from pathlib import Path
@@ -27,6 +28,7 @@ from src.semantic.models import (
     SemanticTotals,
 )
 from src.semantic.render import render_semantic_docs
+from src.graph.reverse_edges import ReverseEdgeError
 
 _PROMISE_LXLY = re.compile(r"`[^`]+` L\d+-L\d+")
 
@@ -194,76 +196,161 @@ def _dup_repo(tmp_path: Path) -> tuple[SemanticLedger, dict[str, str], dict[str,
         coverage_percent=100.0,
         uncovered_symbols=(),
     )
+    revision = "rev_" + hashlib.sha256(b"o4r-reverse-v3").hexdigest()
+
+    def _ir_id(label: str) -> str:
+        return "ir_" + hashlib.sha256(label.encode("utf-8")).hexdigest()
+
+    def _via(role: str, path: str, line: int) -> str:
+        evidence = {
+            "end_column": 1,
+            "end_line": line,
+            "path": path,
+            "source_unit_id": _ir_id("unit:" + path),
+            "start_column": 0,
+            "start_line": line,
+        }
+        return json.dumps(
+            {
+                "provenance": [
+                    {
+                        "basis": "test",
+                        "evidence": [evidence],
+                        "source_entity_id": None,
+                        "source_revision_id": revision,
+                    }
+                ],
+                "schema": "cbe-via/1",
+                "target_role": role,
+            },
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+
+    def _edge(
+        callee: str,
+        caller: str,
+        line: int,
+        resolution: str,
+        candidates: tuple[str, ...] = (),
+        site_id: str | None = None,
+    ) -> dict[str, object]:
+        return {
+            "callee_id": callee,
+            "caller_id": caller,
+            "call_site_id": site_id or _ir_id(f"site:{callee}:{caller}:{line}:{resolution}"),
+            "kind": "call",
+            "resolution": resolution,
+            "line": line,
+            "via": _via(resolution, callee.split("::", 1)[0], line),
+            "candidate_target_ids": tuple(sorted(candidates)),
+        }
+
+    by_callee = {
+        crypto_fp.symbol_id: [
+            _edge(crypto_fp.symbol_id, "api.py::get_cached", 4, "runtime_exact")
+        ],
+        vendor_fp.symbol_id: [
+            _edge(vendor_fp.symbol_id, "api.py::hash_compat", 8, "runtime_exact")
+        ],
+        live_put.symbol_id: [
+            _edge(live_put.symbol_id, f"extra.py::fn{index}", index + 1, "runtime_exact")
+            for index in range(6)
+        ],
+        dead_put.symbol_id: [],
+        notice_v1.symbol_id: [
+            _edge(notice_v1.symbol_id, "api.py::notify_legacy", 10, "runtime_exact"),
+            _edge(
+                notice_v1.symbol_id,
+                "other.py::maybe",
+                12,
+                "lexical_base",
+                (notice_v1.symbol_id, notice_v2.symbol_id),
+                _ir_id("site:virtual:other.py::maybe:12"),
+            ),
+        ],
+        notice_v2.symbol_id: [
+            _edge(notice_v2.symbol_id, "api.py::notify_current", 11, "runtime_exact"),
+            _edge(
+                notice_v2.symbol_id,
+                "other.py::maybe",
+                12,
+                "override_candidate",
+                (notice_v1.symbol_id, notice_v2.symbol_id),
+                _ir_id("site:virtual:other.py::maybe:12"),
+            ),
+        ],
+        health.symbol_id: [],
+    }
+    by_callee.pop(dead_put.symbol_id)
+    by_callee.pop(health.symbol_id)
+    by_path: dict[str, set[str]] = {}
+    for rows in by_callee.values():
+        for row in rows:
+            by_path.setdefault(str(row["callee_id"]).split("::", 1)[0], set()).add(
+                str(row["caller_id"]).split("::", 1)[0]
+            )
+    receiver_shapes = {
+        name: 0
+        for name in (
+            "bare_name", "module_attribute", "self", "cls", "annotated_name",
+            "attribute_chain", "call_result", "subscript", "dynamic_attribute", "other",
+        )
+    }
+    receiver_shapes["bare_name"] = 10
     reverse = {
-        "schema": "cbe-reverse-edges/2",
-        "by_callee_symbol": {
-            crypto_fp.symbol_id: [
-                {
-                    "caller_id": "api.py::get_cached",
-                    "kind": "call",
-                    "resolution": "exact",
-                    "line": 4,
-                    "via": "test",
-                }
-            ],
-            vendor_fp.symbol_id: [
-                {
-                    "caller_id": "api.py::hash_compat",
-                    "kind": "call",
-                    "resolution": "exact",
-                    "line": 8,
-                    "via": "test",
-                }
-            ],
-            live_put.symbol_id: [
-                {
-                    "caller_id": "api.py::get_cached",
-                    "kind": "call",
-                    "resolution": "exact",
-                    "line": 5,
-                    "via": "test",
-                }
-            ],
-            dead_put.symbol_id: [],
-            notice_v1.symbol_id: [
-                {
-                    "caller_id": "api.py::notify_legacy",
-                    "kind": "call",
-                    "resolution": "exact",
-                    "line": 10,
-                    "via": "test",
-                }
-            ],
-            notice_v2.symbol_id: [
-                {
-                    "caller_id": "api.py::notify_current",
-                    "kind": "call",
-                    "resolution": "exact",
-                    "line": 11,
-                    "via": "test",
-                },
-                {
-                    "caller_id": "other.py::maybe",
-                    "kind": "call",
-                    "resolution": "ambiguous",
-                    "line": 12,
-                    "via": "test",
-                    "candidates": [notice_v1.symbol_id, notice_v2.symbol_id],
-                },
-            ],
-            health.symbol_id: [],
+        "schema": "cbe-reverse-edges/3",
+        "source": "cbe-ir/3 Relation(kind=call)+CallSiteInventory",
+        "source_revision_id": revision,
+        "repo": "o4r-test",
+        "coverage_boundary": {
+            "mode": "static_typed_ir_only",
+            "empty_runtime_exact_means": "no_proven_runtime_exact_static_caller",
+            "excluded_mechanisms": (
+                "dynamic_attribute", "framework_callback", "runtime_dispatch", "string_registry",
+            ),
+            "legacy_non_python_excluded": True,
+            "source_revision_id": revision,
         },
-        "symbols": {
+        "readings": {
+            "n_all_ast_calls": 11,
+            "n_call_relations": 11,
+            "n_runtime_exact": 10,
+            "n_virtual_dispatch": 1,
+            "n_external": 0,
+            "n_unresolved_or_deep": 0,
+            "reconciled": True,
+            "edges_runtime_exact": 10,
+            "edges_lexical_base": 1,
+            "edges_override_candidate": 1,
+            "receiver_shape_histogram": receiver_shapes,
+            "gap_reason_histogram": {
+                name: 0
+                for name in (
+                    "unknown_name", "untyped_receiver", "missing_lexical_member",
+                    "unsupported_union_receiver", "attribute_chain", "factory_result",
+                    "subscript_receiver", "dynamic_attribute", "dynamic_import", "exec",
+                    "decorated_callable", "ambiguous_mro", "unsupported_syntax",
+                )
+            },
+        },
+        "symbols": dict(sorted({
             record.symbol_id: {
                 "path": record.path,
                 "qualified_name": record.qualified_name,
                 "local_name": record.qualified_name,
                 "kind": record.kind.value,
-                "ir_symbol_ids": [],
+                "owner_class": None,
+                "span": record.span,
+                "ir_symbol_ids": (_ir_id("symbol:" + record.symbol_id),),
                 "decorators": ("@app.get('/health')",) if record.qualified_name == "health" else (),
             }
             for record in records
-        },
+        }.items())),
+        "by_callee_symbol": dict(sorted(by_callee.items())),
+        "by_callee_path": {path: tuple(sorted(callers)) for path, callers in sorted(by_path.items())},
+        "unresolved_sites": (),
+        "external_sites": (),
     }
     ids = {
         "crypto": crypto_fp.symbol_id,
@@ -308,17 +395,6 @@ def test_inbound_section_three_keys_and_zero_callers(tmp_path: Path) -> None:
 
 def test_ambiguous_never_mixed_and_plus_n_more(tmp_path: Path) -> None:
     ledger, ids, reverse = _dup_repo(tmp_path)
-    extra = [
-        {
-            "caller_id": f"extra.py::fn{index}",
-            "kind": "call",
-            "resolution": "exact",
-            "line": index,
-            "via": "test",
-        }
-        for index in range(6)
-    ]
-    reverse["by_callee_symbol"][ids["live"]] = extra
     render_semantic_docs(tmp_path, ledger, reverse_index=reverse)
     live = _symbol_block(_docs_blob(tmp_path), ids["live"])
     assert live.count("`extra.py::fn") == 3
@@ -421,3 +497,10 @@ def test_n7b_promise_lxly_form_also_rejected(tmp_path: Path) -> None:
     problems = collect_n7b_violations("INDEX.md", pages["INDEX.md"], pages)
     assert problems
     assert any("N7b" in item for item in problems)
+
+
+def test_reverse_v2_payload_requires_rebuild(tmp_path: Path) -> None:
+    _ledger, _ids, reverse = _dup_repo(tmp_path)
+    reverse["schema"] = "cbe-reverse-edges/2"
+    with pytest.raises(ReverseEdgeError, match="invalid cbe-reverse-edges/3"):
+        render_semantic_docs(tmp_path, _ledger, reverse_index=reverse)

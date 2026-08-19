@@ -183,7 +183,9 @@ def _semantic_repo_root(output_dir: str | None = None) -> Path:
     return repo_root
 
 
-def _python_semantic_ir(repo_root: Path) -> tuple[tuple[Symbol, ...], tuple[Relation, ...]]:
+def _python_semantic_ir(
+    repo_root: Path,
+) -> tuple[tuple[Symbol, ...], tuple[Relation, ...], tuple[object, ...]]:
     """Normalize probe-visible Python source into the C1/C2 IR bridge."""
 
     inventory = enumerate_semantic_inventory(repo_root)
@@ -194,13 +196,14 @@ def _python_semantic_ir(repo_root: Path) -> tuple[tuple[Symbol, ...], tuple[Rela
 def _python_semantic_ir_cached(
     repo_root_text: str,
     source_revision: str,
-) -> tuple[tuple[Symbol, ...], tuple[Relation, ...]]:
+) -> tuple[tuple[Symbol, ...], tuple[Relation, ...], tuple[object, ...]]:
     repo_root = Path(repo_root_text)
     ir_revision = "rev_" + hashlib.sha256(source_revision.encode("utf-8")).hexdigest()
     backend = PythonAstBackend(root=repo_root)
     adapter = PythonLanguageAdapter(repo_root)
     symbols = []
     relations = []
+    call_site_inventories = []
     for path in enumerate_python_files(repo_root):
         relative = path.relative_to(repo_root).as_posix()
         try:
@@ -230,7 +233,12 @@ def _python_semantic_ir_cached(
             continue
         symbols.extend(normalized.symbols)
         relations.extend(normalized.relations)
-    return tuple(symbols), tuple(relations)
+        if normalized.call_site_inventory is None:
+            raise ValueError(
+                f"Python normalization omitted CallSiteInventory for {relative}"
+            )
+        call_site_inventories.append(normalized.call_site_inventory)
+    return tuple(symbols), tuple(relations), tuple(call_site_inventories)
 
 
 def _semantic_module_map(repo_root: Path) -> dict[str, str]:
@@ -274,12 +282,45 @@ def _semantic_module_map(repo_root: Path) -> dict[str, str]:
 
 
 def _semantic_service(repo_root: Path) -> SemanticService:
-    symbols, relations = _python_semantic_ir(repo_root)
+    from src.graph.reverse_edges import build_reverse_index_from_ir
+
+    symbols, relations, call_site_inventories = _python_semantic_ir(repo_root)
+    reverse_index = build_reverse_index_from_ir(
+        symbols,
+        relations,
+        call_site_inventories,
+        repo=repo_root.name,
+    )
+
+    def renderer(
+        render_root: str | Path,
+        ledger,
+        *,
+        graph=None,
+    ):
+        from src.semantic.render import (
+            discover_names_path,
+            discover_partition_path,
+            render_semantic_docs,
+        )
+
+        partition = discover_partition_path(repo_root)
+        names = discover_names_path(repo_root, partition)
+        return render_semantic_docs(
+            render_root,
+            ledger,
+            graph=graph,
+            reverse_index=reverse_index,
+            partition_path=partition,
+            names_path=names,
+        )
+
     return SemanticService(
         repo_root,
         ir_symbols=symbols,
         relations=relations,
         module_by_file=_semantic_module_map(repo_root),
+        renderer=renderer,
     )
 
 

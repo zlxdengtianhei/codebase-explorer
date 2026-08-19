@@ -17,7 +17,13 @@ from pathlib import Path
 import networkx as nx
 
 from src.doc.mermaid import MermaidGenerator
-from src.graph.reverse_edges import ReverseIndex, build_reverse_index
+from src.graph.reverse_edges import (
+    ReverseIndex,
+    ReversePayloadV3,
+    ReverseResolution,
+    build_reverse_index,
+    validate_reverse_payload,
+)
 from src.semantic.layering import (
     DEFAULT_DETAIL_MAX_BLOCKS,
     DEFAULT_DETAIL_MAX_LINES,
@@ -836,16 +842,20 @@ class _CallerHit:
 
 @dataclass(frozen=True)
 class _InboundView:
-    exact: Mapping[str, tuple[_CallerHit, ...]]
-    ambiguous: Mapping[str, tuple[_CallerHit, ...]]
+    runtime_exact: Mapping[str, tuple[_CallerHit, ...]]
+    lexical_base: Mapping[str, tuple[_CallerHit, ...]]
+    override_candidates: Mapping[str, tuple[_CallerHit, ...]]
     decorated: Mapping[str, tuple[str, ...]]
     known_ids: frozenset[str]
 
-    def exact_of(self, symbol_id: str) -> tuple[_CallerHit, ...]:
-        return self.exact.get(symbol_id, ())
+    def runtime_exact_of(self, symbol_id: str) -> tuple[_CallerHit, ...]:
+        return self.runtime_exact.get(symbol_id, ())
 
-    def ambig_of(self, symbol_id: str) -> tuple[_CallerHit, ...]:
-        return self.ambiguous.get(symbol_id, ())
+    def lexical_base_of(self, symbol_id: str) -> tuple[_CallerHit, ...]:
+        return self.lexical_base.get(symbol_id, ())
+
+    def override_of(self, symbol_id: str) -> tuple[_CallerHit, ...]:
+        return self.override_candidates.get(symbol_id, ())
 
     def decorators_of(self, symbol_id: str) -> tuple[str, ...]:
         return self.decorated.get(symbol_id, ())
@@ -853,7 +863,7 @@ class _InboundView:
     def file_exact(self, path: str, symbol_ids: Sequence[str]) -> tuple[str, ...]:
         seen: list[str] = []
         for symbol_id in symbol_ids:
-            for hit in self.exact_of(symbol_id):
+            for hit in self.runtime_exact_of(symbol_id):
                 if hit.caller_id not in seen:
                     seen.append(hit.caller_id)
         return tuple(seen)
@@ -870,22 +880,20 @@ def _unique_hits(rows: Sequence[_CallerHit]) -> tuple[_CallerHit, ...]:
     return tuple(out)
 
 
-def _hits_from_rows(rows: Sequence[Mapping[str, object]], resolution: str) -> tuple[_CallerHit, ...]:
+def _hits_from_rows(rows: Sequence[object], resolution: ReverseResolution) -> tuple[_CallerHit, ...]:
     hits: list[_CallerHit] = []
     for row in rows:
-        if str(row.get("resolution") or "") != resolution:
+        if not hasattr(row, "resolution") or row.resolution is not resolution:
             continue
-        caller = str(row.get("caller_id") or "")
+        caller = str(row.caller_id or "")
         if not caller:
             continue
-        raw_cands = row.get("candidates") or ()
-        candidates = tuple(str(item) for item in raw_cands) if isinstance(raw_cands, (list, tuple)) else ()
-        line = row.get("line")
+        candidates = tuple(str(item) for item in row.candidate_target_ids)
         hits.append(
             _CallerHit(
                 caller_id=caller,
-                kind=str(row.get("kind") or "call"),
-                line=int(line) if isinstance(line, int) else 0,
+                kind="call",
+                line=row.line,
                 candidates=candidates,
             )
         )
@@ -893,71 +901,68 @@ def _hits_from_rows(rows: Sequence[Mapping[str, object]], resolution: str) -> tu
 
 
 def inbound_view_from_reverse_index(index: ReverseIndex) -> _InboundView:
-    exact: dict[str, tuple[_CallerHit, ...]] = {}
-    ambiguous: dict[str, tuple[_CallerHit, ...]] = {}
+    runtime_exact: dict[str, tuple[_CallerHit, ...]] = {}
+    lexical_base: dict[str, tuple[_CallerHit, ...]] = {}
+    override_candidates: dict[str, tuple[_CallerHit, ...]] = {}
     decorated: dict[str, tuple[str, ...]] = {}
     for symbol_id, defn in index.symbols.items():
         answer = index.callers_of(symbol_id)
-        exact[symbol_id] = _unique_hits(
-            tuple(
-                _CallerHit(edge.caller_id, edge.kind.value, edge.line, edge.candidates)
-                for edge in answer.exact
-            )
+        runtime_exact[symbol_id] = _unique_hits(
+            _hits_from_rows(answer.runtime_exact, ReverseResolution.RUNTIME_EXACT)
         )
-        ambiguous[symbol_id] = _unique_hits(
-            tuple(
-                _CallerHit(edge.caller_id, edge.kind.value, edge.line, edge.candidates)
-                for edge in answer.ambiguous
-            )
+        lexical_base[symbol_id] = _unique_hits(
+            _hits_from_rows(answer.lexical_base, ReverseResolution.LEXICAL_BASE)
+        )
+        override_candidates[symbol_id] = _unique_hits(
+            _hits_from_rows(answer.override_candidates, ReverseResolution.OVERRIDE_CANDIDATE)
         )
         if defn.decorators:
             decorated[symbol_id] = tuple(defn.decorators)
     return _InboundView(
-        exact=exact,
-        ambiguous=ambiguous,
+        runtime_exact=runtime_exact,
+        lexical_base=lexical_base,
+        override_candidates=override_candidates,
         decorated=decorated,
         known_ids=frozenset(index.symbols),
     )
 
 
 def inbound_view_from_payload(payload: Mapping[str, object]) -> _InboundView:
-    by_callee = payload.get("by_callee_symbol") or {}
-    if not isinstance(by_callee, Mapping):
-        by_callee = {}
-    symbols = payload.get("symbols") or {}
-    if not isinstance(symbols, Mapping):
-        symbols = {}
-    exact: dict[str, tuple[_CallerHit, ...]] = {}
-    ambiguous: dict[str, tuple[_CallerHit, ...]] = {}
+    model: ReversePayloadV3 = validate_reverse_payload(payload)
+    runtime_exact: dict[str, tuple[_CallerHit, ...]] = {}
+    lexical_base: dict[str, tuple[_CallerHit, ...]] = {}
+    override_candidates: dict[str, tuple[_CallerHit, ...]] = {}
     decorated: dict[str, tuple[str, ...]] = {}
-    known = set(str(key) for key in symbols)
-    for symbol_id, rows in by_callee.items():
-        sid = str(symbol_id)
-        known.add(sid)
-        if not isinstance(rows, Sequence) or isinstance(rows, (str, bytes)):
-            continue
-        typed = [row for row in rows if isinstance(row, Mapping)]
-        exact[sid] = _hits_from_rows(typed, "exact")
-        ambiguous[sid] = _hits_from_rows(typed, "ambiguous")
-        extra = next((row.get("decorators") for row in typed if isinstance(row, Mapping) and row.get("decorators")), None)
-        if extra:
-            decorated[sid] = tuple(str(item) for item in extra)
-    for symbol_id, body in symbols.items():
-        if not isinstance(body, Mapping):
-            continue
-        decos = body.get("decorators")
-        if decos:
-            decorated[str(symbol_id)] = tuple(str(item) for item in decos)
+    for symbol_id, rows in model.by_callee_symbol.items():
+        runtime_exact[symbol_id] = _unique_hits(
+            _hits_from_rows(rows, ReverseResolution.RUNTIME_EXACT)
+        )
+        lexical_base[symbol_id] = _unique_hits(
+            _hits_from_rows(rows, ReverseResolution.LEXICAL_BASE)
+        )
+        override_candidates[symbol_id] = _unique_hits(
+            _hits_from_rows(rows, ReverseResolution.OVERRIDE_CANDIDATE)
+        )
+    for symbol_id, body in model.symbols.items():
+        if body.decorators:
+            decorated[symbol_id] = tuple(body.decorators)
     return _InboundView(
-        exact=exact,
-        ambiguous=ambiguous,
+        runtime_exact=runtime_exact,
+        lexical_base=lexical_base,
+        override_candidates=override_candidates,
         decorated=decorated,
-        known_ids=frozenset(known),
+        known_ids=frozenset(model.symbols),
     )
 
 
 def _empty_inbound() -> _InboundView:
-    return _InboundView(exact={}, ambiguous={}, decorated={}, known_ids=frozenset())
+    return _InboundView(
+        runtime_exact={},
+        lexical_base={},
+        override_candidates={},
+        decorated={},
+        known_ids=frozenset(),
+    )
 
 
 def resolve_inbound_view(
@@ -1144,7 +1149,7 @@ def build_duplicate_index(
     for _local, sids in kept_names.items():
         records = {sid: ledger.symbols[sid] for sid in sids if sid in ledger.symbols}
         for sid, record in records.items():
-            if inbound.exact_of(sid):
+            if inbound.runtime_exact_of(sid):
                 continue
             if inbound.decorators_of(sid) or _source_decorators(repo_root, record):
                 continue
@@ -1152,7 +1157,7 @@ def build_duplicate_index(
             for other_id, other in records.items():
                 if other_id == sid:
                     continue
-                if not inbound.exact_of(other_id):
+                if not inbound.runtime_exact_of(other_id):
                     continue
                 if _is_override_pair(record, other):
                     continue
@@ -1204,36 +1209,56 @@ def render_inbound_section(
     *,
     repo_root: Path,
 ) -> list[str]:
-    exact = inbound.exact_of(symbol_id)
-    ambig = inbound.ambig_of(symbol_id)
+    runtime_exact = inbound.runtime_exact_of(symbol_id)
+    lexical_base = inbound.lexical_base_of(symbol_id)
+    override_candidates = inbound.override_of(symbol_id)
     decos = _symbol_decorators(repo_root, record, symbol_id, inbound)
     lines = [
         "#### 入边（静态）",
         "",
         (
-            f"- 精确 **{len(exact)}** · 歧义候选 **{len(ambig)}** · "
+            f"- runtime exact **{len(runtime_exact)}** · lexical base **{len(lexical_base)}** · "
+            f"override candidates **{len(override_candidates)}** · "
             f"装饰器注册 **{len(decos)}** · {_INBOUND_EMPTY_NOTE}"
         ),
         "",
         "**精确**",
     ]
-    if not exact:
+    lines.append("**runtime exact**")
+    if not runtime_exact:
         lines.append("- 零静态调用方")
     else:
-        lines.extend(_caller_line(hit, known_ids=inbound.known_ids, ambiguous=False) for hit in exact[:_EXACT_SHOW])
-        extra = len(exact) - _EXACT_SHOW
+        lines.extend(
+            _caller_line(hit, known_ids=inbound.known_ids, ambiguous=False)
+            for hit in runtime_exact[:_EXACT_SHOW]
+        )
+        extra = len(runtime_exact) - _EXACT_SHOW
         if extra > 0:
             lines.append(f"- +{extra} more")
-    lines.extend(["", "**歧义候选（非答案）**"])
-    if not ambig:
+    lines.extend(["", "**词法基类（非精确答案）**", "**lexical base**"])
+    if not lexical_base:
         lines.append("- （无）")
     else:
-        lines.extend(_caller_line(hit, known_ids=inbound.known_ids, ambiguous=True) for hit in ambig[:_AMBIG_SHOW])
-        extra = len(ambig) - _AMBIG_SHOW
+        lines.extend(
+            _caller_line(hit, known_ids=inbound.known_ids, ambiguous=True)
+            for hit in lexical_base[:_AMBIG_SHOW]
+        )
+        extra = len(lexical_base) - _AMBIG_SHOW
         if extra > 0:
             lines.append(f"- +{extra} more")
-    lines.extend(["", "**静态盲区**"])
-    if exact:
+    lines.extend(["", "**歧义候选（非答案）**", "**override candidates (non-answer)**"])
+    if not override_candidates:
+        lines.append("- （无）")
+    else:
+        lines.extend(
+            _caller_line(hit, known_ids=inbound.known_ids, ambiguous=True)
+            for hit in override_candidates[:_AMBIG_SHOW]
+        )
+        extra = len(override_candidates) - _AMBIG_SHOW
+        if extra > 0:
+            lines.append(f"- +{extra} more")
+    lines.extend(["", "**静态盲区**", "**static blind spot**"])
+    if runtime_exact:
         lines.append("- 否（本符号有精确入边）")
     elif decos:
         shown = "、".join(f"`+ {item}`" for item in decos[:3])
