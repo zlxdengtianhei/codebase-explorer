@@ -475,13 +475,26 @@ def test_pre_v2_crash_concurrent_restart_is_idempotent(
     assert crashed.returncode != 0
     run_id = next((out / ".runs").iterdir()).name
     durable_before = _protected(out)
+    race_dir = tmp_path / "concurrent-recovery"
+    race_dir.mkdir()
 
     with ThreadPoolExecutor(max_workers=2) as pool:
-        futures = [pool.submit(_fresh, legacy_repo, out, "cache", tmp_path) for _ in range(2)]
+        futures = [
+            pool.submit(
+                _fresh,
+                legacy_repo,
+                out,
+                "cache",
+                tmp_path,
+                race_dir=race_dir,
+            )
+            for _ in range(2)
+        ]
         recovered = [future.result()[1] for future in futures]
 
     assert {result["run_id"] for result in recovered} == {run_id}
     assert all(result["cached"] is True for result in recovered)
+    assert recovered[0]["semantic"] == recovered[1]["semantic"]
     assert resolve_active_run(out).receipt.run_id == run_id
     for path, digest in durable_before.items():
         assert _protected(out)[path] == digest

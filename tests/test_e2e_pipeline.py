@@ -6,14 +6,16 @@ Verifies the full pipeline flow:
   3. Extract feature cones via SCC + DAG
   4. Estimate tokens per file
   5. Build task manifest
-  6. Write 5 JSON files + state.json
+  6. Publish the six JSON artifacts through the active generation lifecycle
 
 Uses a realistic temporary Python project with real dependency structures.
 """
 
 from __future__ import annotations
 
+import hashlib
 import json
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -32,7 +34,19 @@ from src.server_helpers import (
     validate_json_files_exist,
     write_analysis_outputs,
 )
-from src.state.json_store import read_state
+from src.state.json_store import JsonRunStore, read_state
+from src.state.migrate_v2_v3 import write_v2_rollback_projection
+from src.state.models import LegacySubmissionSeed
+from src.state.run_lifecycle import (
+    ActiveRunReceipt,
+    ROUTE_KEYS,
+    analysis_input_fingerprint,
+    artifact_manifest,
+    legacy_seed_sha256,
+    promote_active_receipt,
+    publish_generation,
+    stage_v2_recovery_projection,
+)
 
 # ---------------------------------------------------------------------------
 # Realistic project fixture: 8 Python files with real dependency chains
@@ -199,8 +213,8 @@ def pipeline_outputs(realistic_project: Path, parsed_snapshot: CodebaseSnapshot)
     This fixture executes steps 2-6 of the pipeline (graph, cones, tokens,
     manifest, write) and returns a dict with all intermediate results.
     """
-    output_path = realistic_project / ".codebase-analysis"
-    output_path.mkdir(parents=True, exist_ok=True)
+    analysis_root = realistic_project / ".codebase-analysis"
+    analysis_root.mkdir(parents=True, exist_ok=True)
     project_id = project_id_from_path(str(realistic_project))
 
     # Step 2: Build weighted dependency graph
@@ -285,9 +299,14 @@ def pipeline_outputs(realistic_project: Path, parsed_snapshot: CodebaseSnapshot)
 
     task_manifest = build_task_manifest(cone_dicts, file_tokens)
 
-    # Step 6: Write JSON files + state.json
-    write_analysis_outputs(
-        output_path=output_path,
+    # Step 6: Write one unpublished generation, then activate it through the
+    # same receipt-linked lifecycle used by the server entrypoint.  The
+    # artifact writer deliberately has no authority to select a generation.
+    run_id = "run-e2e-pipeline"
+    staging_path = analysis_root / ".staging" / run_id
+    staging_path.mkdir(parents=True, exist_ok=False)
+    v2_projection = write_analysis_outputs(
+        output_path=staging_path,
         project_id=project_id,
         resolved_path=realistic_project,
         snapshot=parsed_snapshot,
@@ -300,9 +319,79 @@ def pipeline_outputs(realistic_project: Path, parsed_snapshot: CodebaseSnapshot)
         file_details=file_details,
         task_manifest=task_manifest,
     )
+    v2_projection["documentation"]["output_dir"] = str(analysis_root)
+    v2_recovery_projection_sha = stage_v2_recovery_projection(
+        staging_path, v2_projection
+    )
+
+    seed = LegacySubmissionSeed(
+        task_ids=tuple(task_manifest.get("tasks", {}).keys()),
+        source_file_count=len(parsed_snapshot.files),
+    )
+    actor = "orchestrator/legacy-mcp/analyze_codebase"
+    requested_languages = tuple(parsed_snapshot.languages_detected)
+    input_fingerprint = analysis_input_fingerprint(
+        languages=requested_languages,
+        exclude_paths=(),
+        include_tests=False,
+    )
+    now = datetime.now(UTC)
+    store = JsonRunStore(staging_path / "state-v3.json")
+    bootstrap = store.issue_bootstrap_lease(
+        run_id=run_id,
+        actor=actor,
+        ttl=timedelta(days=1),
+        now=now,
+    )
+    store.begin_run(
+        run_id=run_id,
+        repo_root=realistic_project,
+        requested_languages=requested_languages,
+        actor=actor,
+        lease_id=bootstrap.lease_id,
+        expected_revision=0,
+        product_output_roots=(analysis_root,),
+        route_keys=ROUTE_KEYS,
+        legacy_submission_seed=seed,
+        initial_metadata={
+            "project_id": project_id,
+            "analysis_root": str(analysis_root),
+            "analysis_input_fingerprint": input_fingerprint,
+            "v2_recovery_projection_sha256": v2_recovery_projection_sha,
+        },
+        now=now,
+    )
+    generation = publish_generation(analysis_root, staging_path, run_id)
+    snapshot_v3 = JsonRunStore(generation / "state-v3.json").snapshot()
+    write_v2_rollback_projection(
+        analysis_root / "state.json", v2_projection, snapshot=snapshot_v3
+    )
+    receipt = ActiveRunReceipt(
+        activation_generation=1,
+        run_id=run_id,
+        generation_path=f".runs/{run_id}",
+        state_path=f".runs/{run_id}/state-v3.json",
+        repo_root=str(realistic_project.resolve()),
+        analysis_input_fingerprint=input_fingerprint,
+        source_revision=snapshot_v3.revisions.source,
+        v2_sha256=hashlib.sha256(
+            (analysis_root / "state.json").read_bytes()
+        ).hexdigest(),
+        artifacts=artifact_manifest(generation),
+        legacy_seed_sha256=legacy_seed_sha256(seed),
+        route_keys=ROUTE_KEYS,
+        prior_receipt_sha256="",
+    )
+    promote_active_receipt(
+        analysis_root,
+        receipt,
+        expected_prior_hash="",
+        expected_generation=0,
+    )
 
     return {
-        "output_path": output_path,
+        "output_path": generation,
+        "analysis_root": analysis_root,
         "project_id": project_id,
         "snapshot": parsed_snapshot,
         "weighted_result": weighted_result,
@@ -632,8 +721,8 @@ class TestStep6JsonOutputFiles:
 
     def test_validate_json_files_exist_helper(self, pipeline_outputs: dict) -> None:
         """The validate_json_files_exist helper should return True."""
-        out = pipeline_outputs["output_path"]
-        assert validate_json_files_exist(out) is True
+        analysis_root = pipeline_outputs["analysis_root"]
+        assert validate_json_files_exist(analysis_root) is True
 
     # -- 01_structure.json ---
 
@@ -765,36 +854,48 @@ class TestStep6JsonOutputFiles:
     # -- state.json ---
 
     def test_state_json_project_id(self, pipeline_outputs: dict) -> None:
-        """The artifact helper must not create a second mutable state authority."""
-        out = pipeline_outputs["output_path"]
-        assert read_state(out / "state.json") is None
+        """The active receipt must link the V2 projection to this project."""
+        out = pipeline_outputs["analysis_root"]
+        state = read_state(out / "state.json")
+        assert state is not None
+        assert state["project_id"] == pipeline_outputs["project_id"]
         assert pipeline_outputs["project_id"] == project_id_from_path(
             str(pipeline_outputs["snapshot"].root_path)
         )
 
     def test_state_json_status(self, pipeline_outputs: dict) -> None:
-        """Direct artifact writes leave lifecycle activation to the caller."""
-        out = pipeline_outputs["output_path"]
-        assert read_state(out / "state.json") is None
+        """The activated V2 projection records the complete analysis status."""
+        out = pipeline_outputs["analysis_root"]
+        state = read_state(out / "state.json")
+        assert state is not None
+        assert state["status"] == "analysis_complete"
 
     def test_state_json_tasks_match_manifest(self, pipeline_outputs: dict) -> None:
-        """The immutable manifest, not a helper-written state file, owns task seeds."""
-        out = pipeline_outputs["output_path"]
+        """The active V2 projection carries the immutable task seed set."""
+        out = pipeline_outputs["analysis_root"]
+        generation = pipeline_outputs["output_path"]
         manifest = pipeline_outputs["task_manifest"]
-        disk_manifest = json.loads((out / "05_task_manifest.json").read_text())
+        disk_manifest = json.loads((generation / "05_task_manifest.json").read_text())
         assert set(disk_manifest["tasks"]) == set(manifest["tasks"])
-        assert read_state(out / "state.json") is None
+        state = read_state(out / "state.json")
+        assert state is not None
+        assert set(state["tasks"]) == set(manifest["tasks"])
 
     def test_state_json_tasks_all_pending(self, pipeline_outputs: dict) -> None:
-        """The helper returns no mutable task authority at the artifact layer."""
-        out = pipeline_outputs["output_path"]
-        assert read_state(out / "state.json") is None
-        assert pipeline_outputs["task_manifest"]["tasks"]
+        """The newly activated generation starts every task as pending."""
+        out = pipeline_outputs["analysis_root"]
+        state = read_state(out / "state.json")
+        assert state is not None
+        assert state["tasks"]
+        assert all(task["status"] == "pending" for task in state["tasks"].values())
 
     def test_state_json_documentation_section(self, pipeline_outputs: dict) -> None:
-        """Documentation counters are initialized only by the lifecycle owner."""
-        out = pipeline_outputs["output_path"]
-        assert read_state(out / "state.json") is None
+        """The lifecycle owner initializes documentation counters in V2."""
+        out = pipeline_outputs["analysis_root"]
+        state = read_state(out / "state.json")
+        assert state is not None
+        assert state["documentation"]["output_dir"] == str(out)
+        assert state["documentation"]["index_written"] is False
 
 
 # ---------------------------------------------------------------------------

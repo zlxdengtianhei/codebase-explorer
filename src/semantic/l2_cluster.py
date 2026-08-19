@@ -329,6 +329,39 @@ def apply_directory_fallback(
     return tuple(clusters), absorbed
 
 
+def compose_candidates_with_directory_fallback(
+    surface_candidates: Sequence[CandidateCluster],
+    unassigned: Sequence[UnassignedFile],
+    symbols_per_path: Mapping[str, int],
+) -> tuple[
+    tuple[CandidateCluster, ...],
+    tuple[UnassignedFile, ...],
+    dict[str, object],
+]:
+    """Append directory fallback cells and account for absorbed residuals.
+
+    Public-surface candidates remain first and keep their seed kind.  The
+    directory fallback is a bounded retreat for the residuals only; each
+    absorbed path is removed from the returned residual tuple and its reason
+    remains available through the fallback cluster's member paths.  The
+    diagnostics make the before/after accounting explicit for callers that
+    render or verify the partition.
+    """
+    fallback, absorbed = apply_directory_fallback(unassigned, symbols_per_path)
+    absorbed_paths = sorted(item.path for item in absorbed)
+    absorbed_set = set(absorbed_paths)
+    remaining = tuple(item for item in unassigned if item.path not in absorbed_set)
+    diagnostics = {
+        "applied": bool(fallback),
+        "cluster_count": len(fallback),
+        "absorbed_paths": absorbed_paths,
+        "absorbed_symbol_count": sum(candidate.symbol_count for candidate in fallback),
+        "unassigned_before": len(unassigned),
+        "unassigned_after": len(remaining),
+    }
+    return tuple(surface_candidates) + tuple(fallback), remaining, diagnostics
+
+
 def _directory_groups(
     paths: Sequence[str],
     *,

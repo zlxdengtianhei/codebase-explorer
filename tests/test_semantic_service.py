@@ -30,6 +30,8 @@ from src.semantic.service import (
     SemanticService,
     SemanticServiceError,
     SemanticSubmissionError,
+    _canonical_docs_fingerprint_payload,
+    _docs_fingerprint,
 )
 from src.semantic.scheduler import SemanticScheduler
 
@@ -346,6 +348,113 @@ def test_concurrent_bootstrap_canonical_doc_mismatch_remains_fail_closed(
     assert first.store.reopen() == first_result
     assert (tmp_path / ".codebase-docs/INDEX.md").read_text(encoding="utf-8") == (
         "# Project\n\n[unclassified](unclassified/DETAIL.md)\n"
+    )
+
+
+def test_docs_fingerprint_ignores_schema_staging_locator_mutation(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    docs = tmp_path / ".codebase-docs"
+    docs.mkdir()
+    hops_path = docs / "HOPS.json"
+    common = {
+        "invariant": "measured",
+        "trees": {
+            "repo": {
+                "docs_root": "/tmp/stage-a/.codebase-docs",
+                "distribution": {"1": 2},
+            }
+        },
+        "semantic_metadata": {"docs_root": "semantic-locator"},
+    }
+    hops_path.write_text(json.dumps(common), encoding="utf-8")
+    before = _docs_fingerprint(tmp_path)
+
+    staged = {
+        **common,
+        "trees": {
+            "repo": {
+                **common["trees"]["repo"],
+                "docs_root": "/tmp/stage-b/.codebase-docs",
+            }
+        },
+    }
+    hops_path.write_text(json.dumps(staged), encoding="utf-8")
+
+    assert _docs_fingerprint(tmp_path) == before
+
+
+def test_docs_fingerprint_detects_unrelated_docs_root_mutation(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    docs = tmp_path / ".codebase-docs"
+    docs.mkdir()
+    hops_path = docs / "HOPS.json"
+    common = {
+        "invariant": "measured",
+        "trees": {
+            "repo": {
+                "docs_root": "/tmp/stage/.codebase-docs",
+                "metadata": {"docs_root": "nested-locator-a"},
+            }
+        },
+        "semantic_metadata": {"docs_root": "semantic-locator-a"},
+    }
+    hops_path.write_text(json.dumps(common), encoding="utf-8")
+    before = _docs_fingerprint(tmp_path)
+
+    mutated = {
+        **common,
+        "semantic_metadata": {"docs_root": "semantic-locator-b"},
+    }
+    hops_path.write_text(json.dumps(mutated), encoding="utf-8")
+
+    assert _docs_fingerprint(tmp_path) != before
+
+    nested_mutated = {
+        **common,
+        "trees": {
+            "repo": {
+                **common["trees"]["repo"],
+                "metadata": {"docs_root": "nested-locator-b"},
+            }
+        },
+    }
+    hops_path.write_text(json.dumps(nested_mutated), encoding="utf-8")
+
+    assert _docs_fingerprint(tmp_path) != before
+
+
+def test_docs_fingerprint_keeps_malformed_hops_bytes_significant(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    docs = tmp_path / ".codebase-docs"
+    docs.mkdir()
+    hops_path = docs / "HOPS.json"
+
+    hops_path.write_bytes(b"{not-json")
+    before = _docs_fingerprint(tmp_path)
+    hops_path.write_bytes(b"{not-json!")
+
+    assert _docs_fingerprint(tmp_path) != before
+
+
+def test_docs_fingerprint_replaces_only_direct_locator_value_bytes() -> None:
+    direct_a = b'{"trees":{"repo":{"docs_root":"/tmp/stage-a"}}}\n'
+    direct_b = b'{"trees":{"repo":{"docs_root":"/tmp/stage-b"}}}\n'
+    assert _canonical_docs_fingerprint_payload("HOPS.json", direct_a) == (
+        _canonical_docs_fingerprint_payload("HOPS.json", direct_b)
+    )
+    leading_space_a = b' \n' + direct_a
+    leading_space_b = b' \n' + direct_b
+    assert _canonical_docs_fingerprint_payload("HOPS.json", leading_space_a) == (
+        _canonical_docs_fingerprint_payload("HOPS.json", leading_space_b)
+    )
+
+    compact = b'{"trees":{"opaque":["unknown-tree"]},"marker":1}\n'
+    reformatted = b'{ "trees": { "opaque": [ "unknown-tree" ] }, "marker": 1 }\n'
+    assert _canonical_docs_fingerprint_payload("HOPS.json", compact) != (
+        _canonical_docs_fingerprint_payload("HOPS.json", reformatted)
+    )
+
+    duplicate_a = b'{"trees":{"repo":{"docs_root":"/tmp/a","docs_root":"/tmp/b"}}}'
+    duplicate_b = b'{"trees":{"repo":{"docs_root":"/tmp/a","docs_root":"/tmp/c"}}}'
+    assert _canonical_docs_fingerprint_payload("HOPS.json", duplicate_a) != (
+        _canonical_docs_fingerprint_payload("HOPS.json", duplicate_b)
     )
 
 

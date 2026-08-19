@@ -1,0 +1,15 @@
+[submodule "test_repos/celery"]
+	path = test_repos/celery
+	url = https://github.com/celery/celery.git
+[submodule "test_repos/fastapi"]
+	path = test_repos/fastapi
+	url = https://github.com/fastapi/fastapi.git
+[submodule "test_repos/flask"]
+	path = test_repos/flask
+	url = https://github.com/pallets/flask.git
+[submodule "test_repos/rich"]
+	path = test_repos/rich
+	url = https://github.com/Textualize/rich.git
+[submodule "test_repos/scrapy"]
+	path = test_repos/scrapy
+	url = https://github.com/scrapy/scrapy.git

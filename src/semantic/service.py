@@ -18,7 +18,7 @@ import tempfile
 import textwrap
 import uuid
 from collections import defaultdict
-from collections.abc import Callable, Iterable, Mapping
+from collections.abc import Callable, Iterable, Iterator, Mapping
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -209,6 +209,122 @@ def _sha256_bytes(payload: bytes) -> str:
     return "sha256:" + hashlib.sha256(payload).hexdigest()
 
 
+_JSON_WHITESPACE = " \t\r\n"
+_CANONICAL_DOCS_ROOT_VALUE = '"<canonical-docs-root>"'
+
+
+def _strict_json_object(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    result: dict[str, object] = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError(f"duplicate JSON object key: {key}")
+        result[key] = value
+    return result
+
+
+def _reject_json_constant(value: str) -> object:
+    raise ValueError(f"non-standard JSON constant: {value}")
+
+
+def _skip_json_whitespace(text: str, index: int) -> int:
+    while index < len(text) and text[index] in _JSON_WHITESPACE:
+        index += 1
+    return index
+
+
+def _json_object_members(
+    text: str,
+    start: int,
+    decoder: json.JSONDecoder,
+) -> Iterator[tuple[str, int, int, object]]:
+    if start >= len(text) or text[start] != "{":
+        raise ValueError("expected JSON object")
+    index = _skip_json_whitespace(text, start + 1)
+    if index < len(text) and text[index] == "}":
+        return
+    while True:
+        key, key_end = decoder.raw_decode(text, index)
+        if not isinstance(key, str):
+            raise ValueError("JSON object key must be a string")
+        index = _skip_json_whitespace(text, key_end)
+        if index >= len(text) or text[index] != ":":
+            raise ValueError("expected JSON object separator")
+        value_start = _skip_json_whitespace(text, index + 1)
+        value, value_end = decoder.raw_decode(text, value_start)
+        yield key, value_start, value_end, value
+        index = _skip_json_whitespace(text, value_end)
+        if index >= len(text):
+            raise ValueError("unterminated JSON object")
+        if text[index] == "}":
+            return
+        if text[index] != ",":
+            raise ValueError("expected JSON object delimiter")
+        index = _skip_json_whitespace(text, index + 1)
+
+
+def _canonical_docs_fingerprint_payload(relative: str, payload: bytes) -> bytes:
+    """Ignore only renderer staging paths when comparing equivalent docs.
+
+    ``HOPS.json`` records the documentation root used by the renderer.  The
+    transaction stages each candidate under a fresh temporary directory, so
+    that diagnostic locator is expected to differ even when the rendered
+    semantic projection is identical.  Keep every other byte (and fail
+    closed for malformed JSON) in the comparison.
+    """
+
+    if relative != "HOPS.json":
+        return payload
+    try:
+        text = payload.decode("utf-8")
+        start = _skip_json_whitespace(text, 0)
+        decoder = json.JSONDecoder(
+            object_pairs_hook=_strict_json_object,
+            parse_constant=_reject_json_constant,
+        )
+        decoded, end = decoder.raw_decode(text, start)
+        if text[end:].strip(_JSON_WHITESPACE):
+            return payload
+        if not isinstance(decoded, dict):
+            return payload
+
+        root_members = list(_json_object_members(text, start, decoder))
+        trees_member = next(
+            (member for member in root_members if member[0] == "trees"),
+            None,
+        )
+        if trees_member is None or not isinstance(trees_member[3], dict):
+            return payload
+
+        replacements: list[tuple[int, int]] = []
+        for _, tree_start, _, tree in _json_object_members(
+            text,
+            trees_member[1],
+            decoder,
+        ):
+            if not isinstance(tree, dict):
+                continue
+            for key, value_start, value_end, _ in _json_object_members(
+                text,
+                tree_start,
+                decoder,
+            ):
+                if key == "docs_root":
+                    replacements.append((value_start, value_end))
+    except (UnicodeDecodeError, ValueError, json.JSONDecodeError):
+        return payload
+
+    if not replacements:
+        return payload
+    chunks: list[str] = []
+    cursor = 0
+    for value_start, value_end in replacements:
+        chunks.append(text[cursor:value_start])
+        chunks.append(_CANONICAL_DOCS_ROOT_VALUE)
+        cursor = value_end
+    chunks.append(text[cursor:])
+    return "".join(chunks).encode("utf-8")
+
+
 def _docs_fingerprint(repo_root: Path) -> str:
     docs = repo_root / ".codebase-docs"
     if docs.is_symlink() or not docs.is_dir():
@@ -218,8 +334,9 @@ def _docs_fingerprint(repo_root: Path) -> str:
     for path in files:
         if path.is_symlink():
             return "unsafe"
-        relative = path.relative_to(docs).as_posix().encode("utf-8")
-        payload = path.read_bytes()
+        relative_name = path.relative_to(docs).as_posix()
+        relative = relative_name.encode("utf-8")
+        payload = _canonical_docs_fingerprint_payload(relative_name, path.read_bytes())
         digest.update(len(relative).to_bytes(8, "big"))
         digest.update(relative)
         digest.update(len(payload).to_bytes(8, "big"))

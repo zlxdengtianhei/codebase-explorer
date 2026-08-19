@@ -1,28 +1,14 @@
-"""Tests for the deterministic evidence runner's L2 composition seam."""
+"""Tests for the product-owned deterministic L2 directory fallback seam."""
 from __future__ import annotations
 
-import importlib.util
-from pathlib import Path
-
-from src.semantic.l2_cluster import CandidateCluster, UnassignedFile
-
-
-RUNNER_PATH = (
-    Path(__file__).resolve().parents[3]
-    / "runs/r004_20260816_layered_architecture/evidence/clus/run_l2.py"
+from src.semantic.l2_cluster import (
+    CandidateCluster,
+    UnassignedFile,
+    compose_candidates_with_directory_fallback,
 )
 
 
-def _runner_module():
-    spec = importlib.util.spec_from_file_location("cbe_r004_l2_runner", RUNNER_PATH)
-    assert spec and spec.loader
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
 def test_runner_composes_directory_fallback_without_mixing_seed_kinds():
-    runner = _runner_module()
     surface = (
         CandidateCluster(
             cluster_id="feature--api",
@@ -38,7 +24,7 @@ def test_runner_composes_directory_fallback_without_mixing_seed_kinds():
         UnassignedFile("plugins/b.py", "unreferenced_public_module", "not reached"),
     )
 
-    candidates, remaining, fallback = runner.compose_candidates_with_directory_fallback(
+    candidates, remaining, fallback = compose_candidates_with_directory_fallback(
         surface, residual, {"plugins/a.py": 4, "plugins/b.py": 5}
     )
 
@@ -46,5 +32,37 @@ def test_runner_composes_directory_fallback_without_mixing_seed_kinds():
     assert [c.cluster_id for c in candidates] == ["feature--api", "dirseed--plugins--L0"]
     assert candidates[-1].layer_index == 0
     assert {c.seed_kind for c in candidates} == {"public_surface", "directory"}
-    assert fallback["absorbed_paths"] == ["plugins/a.py", "plugins/b.py"]
+    assert fallback["applied"] is True
     assert fallback["cluster_count"] == 1
+    assert fallback["absorbed_paths"] == ["plugins/a.py", "plugins/b.py"]
+    assert fallback["absorbed_symbol_count"] == 9
+    assert fallback["unassigned_before"] == 2
+    assert fallback["unassigned_after"] == 0
+
+
+def test_runner_composition_without_residuals_is_a_no_op():
+    surface = (
+        CandidateCluster(
+            cluster_id="feature--api",
+            kind="exclusive",
+            signature=frozenset({"api"}),
+            member_paths=("api.py",),
+            symbol_count=3,
+            signature_group_id="feature--api",
+        ),
+    )
+
+    candidates, remaining, fallback = compose_candidates_with_directory_fallback(
+        surface, (), {}
+    )
+
+    assert candidates == surface
+    assert remaining == ()
+    assert fallback == {
+        "applied": False,
+        "cluster_count": 0,
+        "absorbed_paths": [],
+        "absorbed_symbol_count": 0,
+        "unassigned_before": 0,
+        "unassigned_after": 0,
+    }
