@@ -5,7 +5,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
-from src.ir import Relation, SourceUnit, Symbol
+from src.ir import CallSiteInventory, Relation, SourceUnit, Symbol
 from src.parser.backend import SyntaxArtifact, TypedFailure
 
 
@@ -16,6 +16,7 @@ class FileIR:
     source_unit: SourceUnit
     symbols: tuple[Symbol, ...] = ()
     relations: tuple[Relation, ...] = ()
+    call_site_inventory: CallSiteInventory | None = None
 
 
 @dataclass(frozen=True)
@@ -48,4 +49,3 @@ class ResolverAdapter(ABC):
         self, file_ir: FileIR, symbol_index: SymbolIndex
     ) -> ResolutionDelta | TypedFailure:
         """Return a typed resolution delta or a typed failure."""
-

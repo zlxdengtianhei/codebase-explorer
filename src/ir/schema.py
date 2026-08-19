@@ -7,7 +7,7 @@ from typing import Any
 from src.ir.models import IR_ENTITY_MODELS
 
 
-IR_PROTOCOL_ID = "cbe-ir/2"
+IR_PROTOCOL_ID = "cbe-ir/3"
 
 
 def ir_schema() -> dict[str, Any]:
@@ -24,7 +24,7 @@ def ir_schema() -> dict[str, Any]:
         "$id": IR_PROTOCOL_ID,
         "title": "Codebase Explorer Runtime-Validated IR Envelope",
         "description": (
-            "Validates only the cbe-ir/2 transport envelope. The payload is "
+            "Validates only the cbe-ir/3 transport envelope. The payload is "
             "canonical only after runtime model validation."
         ),
         "x-cbe-validation-boundary": "envelope-only",

@@ -9,12 +9,19 @@ import networkx as nx
 
 from src.graph.ordering import dependency_first_scc_layers
 from src.ir import (
+    CallOutcome,
+    CallResolution,
     EntityKind,
     EntityRef,
     EvidenceSpan,
+    Provenance,
+    ProvenanceBasis,
+    ReceiverShape,
     Relation,
+    RepositoryEntityIdentity,
     ResolutionMethod,
     ResolutionStatus,
+    TargetEvidence,
     deterministic_entity_id,
 )
 from src.semantic.coverage import apply_runtime_coverage, load_runtime_coverage
@@ -75,8 +82,13 @@ def test_inventory_graph_keeps_duplicate_names_qualified_and_tracks_probe_edges(
 def test_resolved_ir_relation_adds_a_qualified_cross_file_edge() -> None:
     repo = FIXTURE / "cycle_repo"
     base = enumerate_semantic_inventory(repo)
-    caller_ir = "ir_" + "1" * 64
-    callee_ir = "ir_" + "2" * 64
+    revision = "rev_" + "3" * 64
+    caller_ir = deterministic_entity_id(
+        revision, "a.py", EntityKind.SYMBOL, "test:hot_caller"
+    )
+    callee_ir = deterministic_entity_id(
+        revision, "b.py", EntityKind.SYMBOL, "test:duplicate"
+    )
     symbols = dict(base.symbols)
     symbols["a.py::hot_caller"] = symbols["a.py::hot_caller"].model_copy(
         update={"ir_symbol_id": caller_ir}
@@ -91,31 +103,68 @@ def test_resolved_ir_relation_adds_a_qualified_cross_file_edge() -> None:
         symbols=symbols,
         diagnostics=base.diagnostics,
     )
-    revision = "rev_" + "3" * 64
-    unit_id = "ir_" + "4" * 64
-    relation = Relation(
-        id=deterministic_entity_id(revision, "a.py", EntityKind.RELATION, "call:13:0"),
-        source_revision_id=revision,
+    caller = "a.py::hot_caller"
+    call_span = EvidenceSpan(
+        source_unit_id=deterministic_entity_id(
+            revision, "a.py", EntityKind.SOURCE_UNIT, "a.py"
+        ),
         path="a.py",
-        kind="calls",
-        locator="call:13:0",
-        source=EntityRef(kind=EntityKind.SYMBOL, id=caller_ir),
-        target=EntityRef(kind=EntityKind.SYMBOL, id=callee_ir),
-        evidence=(
-            EvidenceSpan(
-                source_unit_id=unit_id,
-                path="a.py",
-                start_line=13,
-                start_column=0,
-                end_line=14,
-                end_column=26,
+        start_line=13,
+        start_column=0,
+        end_line=13,
+        end_column=20,
+    )
+    target_identity = RepositoryEntityIdentity(
+        ref=EntityRef(kind=EntityKind.SYMBOL, id=callee_ir),
+        source_revision_id=revision,
+        path="b.py",
+        definition_locator="test:duplicate",
+    )
+    target_evidence = TargetEvidence(
+        target=target_identity,
+        provenance=(
+            Provenance(
+                basis=ProvenanceBasis.DIRECT_LOCAL_BINDING,
+                evidence=(
+                    EvidenceSpan(
+                        source_unit_id=deterministic_entity_id(
+                            revision, "b.py", EntityKind.SOURCE_UNIT, "b.py"
+                        ),
+                        path="b.py",
+                        start_line=1,
+                        start_column=0,
+                        end_line=1,
+                        end_column=20,
+                    ),
+                ),
+                source_revision_id=revision,
+                source_entity=target_identity,
             ),
         ),
+    )
+    locator = (
+        f"python:call:{call_span.start_line}:{call_span.start_column}:"
+        f"{call_span.end_line}:{call_span.end_column}:{caller}"
+    )
+    relation = Relation(
+        id=deterministic_entity_id(revision, "a.py", EntityKind.RELATION, locator),
+        source_revision_id=revision,
+        path="a.py",
+        kind="call",
+        locator=locator,
+        source=EntityRef(kind=EntityKind.SYMBOL, id=caller_ir),
+        target=None,
+        evidence=(call_span,),
         resolution_status=ResolutionStatus.RESOLVED,
         resolution_method=ResolutionMethod.EXACT,
         confidence=1.0,
-        reason="test-qualified-resolution",
-        candidates=(EntityRef(kind=EntityKind.SYMBOL, id=callee_ir),),
+        reason="typed runtime exact test relation",
+        candidates=(),
+        call_resolution=CallResolution(
+            outcome=CallOutcome.RUNTIME_EXACT,
+            receiver_shape=ReceiverShape.BARE_NAME,
+            runtime_exact_target=target_evidence,
+        ),
     )
 
     graph = build_semantic_graph(inventory, relations=(relation,))
@@ -123,6 +172,29 @@ def test_resolved_ir_relation_adds_a_qualified_cross_file_edge() -> None:
     assert graph.edges["a.py::hot_caller", "b.py::duplicate"]["sources"] == (
         "ir_relation",
     )
+
+    virtual_relation = Relation(
+        id=relation.id,
+        source_revision_id=revision,
+        path="a.py",
+        kind="call",
+        locator=locator,
+        source=EntityRef(kind=EntityKind.SYMBOL, id=caller_ir),
+        target=None,
+        evidence=(call_span,),
+        resolution_status=ResolutionStatus.AMBIGUOUS,
+        resolution_method=ResolutionMethod.DATAFLOW,
+        confidence=0.5,
+        reason="typed virtual dispatch test relation",
+        candidates=(),
+        call_resolution=CallResolution(
+            outcome=CallOutcome.VIRTUAL_DISPATCH,
+            receiver_shape=ReceiverShape.ANNOTATED_NAME,
+            lexical_base_target=target_evidence,
+        ),
+    )
+    virtual_graph = build_semantic_graph(inventory, relations=(virtual_relation,))
+    assert ("a.py::hot_caller", "b.py::duplicate") not in virtual_graph.edges
 
 
 def test_full_order_covers_every_symbol_and_is_callee_first_for_acyclic_probe_edges(tmp_path) -> None:  # type: ignore[no-untyped-def]

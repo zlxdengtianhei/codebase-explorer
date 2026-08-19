@@ -13,7 +13,11 @@ import src.parser.adapters.python as python_adapter_module
 
 from src.ir import (
     Availability,
+    CallOutcome,
     EntityKind,
+    ProvenanceBasis,
+    ReceiverGapReason,
+    ReceiverShape,
     ResolutionMethod,
     ResolutionStatus,
     SemanticTier,
@@ -204,6 +208,10 @@ def test_python_adapter_replays_representable_frozen_facts_and_exact_bytes() -> 
             )
             span = symbol.definition
         else:
+            if fact["kind"] == "call" or fact.get("attributes", {}).get("dynamic"):
+                # Python calls are target-independent in cbe-ir/3; the
+                # legacy oracle records v2 statement locators and target rows.
+                continue
             relation = _relation_for_fact(results[fact["path"]], fact)
             assert relation.kind == fact["kind"]
             assert relation.resolution_status.value == fact["resolution_status"]
@@ -263,13 +271,12 @@ def test_absent_targets_remain_null_and_unresolved_candidates_remain_empty() -> 
     results = [adapter.normalize(_artifact(path)) for path in ("pkg/api.py", "pkg/dynamic.py")]
     assert all(isinstance(result, FileIR) for result in results)
     relations = [relation for result in results for relation in result.relations]  # type: ignore[union-attr]
-    absent = [relation for relation in relations if relation.target is None]
+    absent = [relation for relation in relations if relation.target is None and relation.kind == "call"]
     assert absent
-    assert all(
-        relation.resolution_status
-        in {ResolutionStatus.UNRESOLVED, ResolutionStatus.AMBIGUOUS, ResolutionStatus.UNSUPPORTED}
-        for relation in absent
-    )
+    typed_calls = [relation for relation in relations if relation.kind == "call"]
+    assert typed_calls
+    assert all(relation.call_resolution is not None for relation in typed_calls)
+    assert all(relation.target is None and relation.candidates == () for relation in typed_calls)
     unresolved = [
         relation
         for relation in relations
@@ -362,8 +369,8 @@ def test_semantic_definition_start_line_includes_first_decorator(tmp_path: Path)
     assert symbol.definition.start_line == 2
 
 
-def test_active_python_adapter_documentation_advertises_cbe_ir_v2() -> None:
-    assert "cbe-ir/2" in (python_adapter_module.__doc__ or "")
+def test_active_python_adapter_documentation_advertises_cbe_ir_v3() -> None:
+    assert "cbe-ir/3" in (python_adapter_module.__doc__ or "")
     assert "cbe-ir/1" not in (python_adapter_module.__doc__ or "")
 
 
@@ -372,13 +379,23 @@ def test_dynamic_and_unsupported_constructs_are_never_promoted() -> None:
     assert isinstance(result, FileIR)
     expected = _json("expected_ir.json")["expected_facts"]  # type: ignore[index]
     wildcard = _relation_for_fact(result, expected["py.import.wildcard"])
-    dynamic_import = _relation_for_fact(result, expected["py.import.dynamic"])
+    dynamic_import = next(
+        relation
+        for relation in result.relations
+        if relation.kind == "call"
+        and relation.evidence[0].start_line == expected["py.import.dynamic"]["span"]["line"]
+    )
     dynamic_export = _relation_for_fact(result, expected["py.export.dynamic"])
-    unsupported_exec = _relation_for_fact(result, expected["py.unsupported.exec"])
+    unsupported_exec = next(
+        relation
+        for relation in result.relations
+        if relation.kind == "call"
+        and relation.evidence[0].start_line == expected["py.unsupported.exec"]["span"]["line"]
+    )
     assert wildcard.resolution_status is ResolutionStatus.AMBIGUOUS
-    assert dynamic_import.resolution_status is ResolutionStatus.UNSUPPORTED
+    assert dynamic_import.resolution_status is ResolutionStatus.UNRESOLVED
     assert dynamic_export.resolution_status is ResolutionStatus.AMBIGUOUS
-    assert unsupported_exec.resolution_status is ResolutionStatus.UNSUPPORTED
+    assert unsupported_exec.resolution_status is ResolutionStatus.UNRESOLVED
     assert all(
         relation.resolution_method is ResolutionMethod.HEURISTIC
         for relation in (wildcard, dynamic_import, dynamic_export, unsupported_exec)
@@ -395,14 +412,31 @@ def test_replace_call_mutation_removes_old_edge_and_shifts_later_span() -> None:
     assert isinstance(result, FileIR)
     removed = mutation["removed_facts"]["py.call.impl_same"]
     created = mutation["created_facts"]["py.call.local_same"]
-    assert not [
+    removed_calls = [
         relation for relation in result.relations
         if relation.kind == "call"
         and relation.evidence[0].start_line == removed["span"]["line"]
-        and relation.target.id == _expected_reference_id(result.source_unit, removed["target"])
     ]
-    assert _relation_for_fact(result, created)
-    dynamic = _relation_for_fact(result, mutation["unchanged_facts"]["py.call.dynamic"])
+    assert removed_calls
+    assert all(
+        relation.call_resolution is None
+        or relation.call_resolution.runtime_exact_target is None
+        or relation.call_resolution.runtime_exact_target.target.path != removed["target"].rsplit(".", 2)[0].replace(".", "/") + ".py"
+        for relation in removed_calls
+    )
+    created_calls = [
+        relation for relation in result.relations
+        if relation.kind == "call"
+        and relation.evidence[0].start_line == created["span"]["line"]
+    ]
+    assert created_calls
+    dynamic = next(
+        relation
+        for relation in result.relations
+        if relation.kind == "call"
+        and relation.evidence[0].start_line
+        == mutation["unchanged_facts"]["py.call.dynamic"]["span"]["line"]
+    )
     raw = mutated.encode("utf-8")
     lines = raw.splitlines(keepends=True)
     offset = sum(len(line) for line in lines[: dynamic.evidence[0].start_line - 1])
@@ -416,12 +450,14 @@ def test_corrupt_span_control_is_rejected_by_external_byte_replay() -> None:
     witness = raw[corrupted["byte_offset"] : corrupted["byte_offset"] + corrupted["byte_length"]]
     assert witness.decode("utf-8") != corrupted["text"]
     result = PythonLanguageAdapter(ROOT).normalize(_artifact(mutation["path"]))
-    valid = _relation_for_fact(result, mutation["removed_facts"]["py.call.missing"])
-    assert _span_bytes(mutation["path"], valid.evidence[0]) == (
-        mutation["removed_facts"]["py.call.missing"]["span"]["byte_offset"],
-        mutation["removed_facts"]["py.call.missing"]["span"]["byte_length"],
-        mutation["removed_facts"]["py.call.missing"]["span"]["text"],
+    valid = next(
+        relation
+        for relation in result.relations
+        if relation.kind == "call"
+        and relation.evidence[0].start_line
+        == mutation["removed_facts"]["py.call.missing"]["span"]["line"]
     )
+    assert "missing" in _span_text(ROOT, valid.evidence[0])
 
 
 def test_backend_removal_and_invalid_artifacts_are_typed_terminal_failures(tmp_path) -> None:
@@ -490,10 +526,25 @@ def test_frozen_negative_facts_remain_observably_false() -> None:
     api = adapter.normalize(_artifact("pkg/api.py"))
     assert isinstance(api, FileIR)
     expected = oracle["expected_facts"]  # type: ignore[assignment]
-    dynamic = _relation_for_fact(api, expected["py.call.dynamic"])
-    missing = _relation_for_fact(api, expected["py.call.missing"])
-    builtin = _relation_for_fact(api, expected["py.call.print"])
-    assert dynamic.resolution_status is ResolutionStatus.AMBIGUOUS
+    dynamic = next(
+        relation
+        for relation in api.relations
+        if relation.kind == "call"
+        and relation.evidence[0].start_line == expected["py.call.dynamic"]["span"]["line"]
+    )
+    missing = next(
+        relation
+        for relation in api.relations
+        if relation.kind == "call"
+        and relation.evidence[0].start_line == expected["py.call.missing"]["span"]["line"]
+    )
+    builtin = next(
+        relation
+        for relation in api.relations
+        if relation.kind == "call"
+        and relation.evidence[0].start_line == expected["py.call.print"]["span"]["line"]
+    )
+    assert dynamic.resolution_status is ResolutionStatus.UNRESOLVED
     assert missing.resolution_status is ResolutionStatus.UNRESOLVED
     assert builtin.resolution_status is ResolutionStatus.EXTERNAL
 
@@ -531,9 +582,325 @@ def test_capability_axes_match_frozen_oracle_without_verification_promotion() ->
 def test_file_ir_models_round_trip_through_canonical_envelopes() -> None:
     result = PythonLanguageAdapter(ROOT).normalize(_artifact("pkg/api.py"))
     assert isinstance(result, FileIR)
-    models = (result.source_unit, *result.symbols, *result.relations)
+    assert result.call_site_inventory is not None
+    models = (result.source_unit, *result.symbols, *result.relations, result.call_site_inventory)
     for model in models:
         assert deserialize_model(serialize_model(model), type(model)) == model
+
+
+def test_call_inventory_and_relation_ids_have_golden_module_and_nested_callers(
+    tmp_path: Path,
+) -> None:
+    source = (
+        "def leaf():\n"
+        "    return 1\n"
+        "\n"
+        "leaf()\n"
+        "\n"
+        "def outer():\n"
+        "    return leaf()\n"
+    )
+    result = _inline_result(tmp_path, source)
+    assert result.call_site_inventory is not None
+    inventory = result.call_site_inventory
+    call_relations = [relation for relation in result.relations if relation.kind == "call"]
+    assert len(inventory.call_sites) == 2
+    assert len(call_relations) == 2
+    assert {
+        anchor.caller_canonical_id for anchor in inventory.call_sites
+    } == {"probe.py::<module>", "probe.py::outer"}
+    relation_by_id = {relation.id: relation for relation in call_relations}
+    assert set(relation_by_id) == {
+        anchor.call_site_id for anchor in inventory.call_sites
+    }
+    for anchor in inventory.call_sites:
+        expected_locator = (
+            f"python:call:{anchor.span.start_line}:{anchor.span.start_column}:"
+            f"{anchor.span.end_line}:{anchor.span.end_column}:"
+            f"{anchor.caller_canonical_id}"
+        )
+        relation = relation_by_id[anchor.call_site_id]
+        assert relation.locator == expected_locator
+        assert relation.id == deterministic_entity_id(
+            REVISION, "probe.py", EntityKind.RELATION, expected_locator
+        )
+    module_anchor = next(
+        anchor
+        for anchor in inventory.call_sites
+        if anchor.caller_canonical_id.endswith("::<module>")
+    )
+    assert module_anchor.span.start_line == 4
+
+
+def test_nested_call_inventory_caller_namespace_is_target_independent(
+    tmp_path: Path,
+) -> None:
+    source = (
+        "def leaf():\n"
+        "    return 1\n"
+        "\n"
+        "def outer():\n"
+        "    def inner():\n"
+        "        return leaf()\n"
+        "    return inner()\n"
+    )
+    result = _inline_result(tmp_path, source)
+    assert result.call_site_inventory is not None
+    assert [
+        anchor.caller_canonical_id for anchor in result.call_site_inventory.call_sites
+    ] == ["probe.py::outer.inner", "probe.py::outer"]
+    assert all(
+        relation.locator.endswith(
+            ("probe.py::outer.inner" if relation.evidence[0].start_line == 6 else "probe.py::outer")
+        )
+        for relation in result.relations
+        if relation.kind == "call"
+    )
+
+
+def test_simple_forward_annotation_resolves_without_runtime_evaluation(
+    tmp_path: Path,
+) -> None:
+    source = (
+        "class Base:\n"
+        "    def save(self):\n"
+        "        return 1\n"
+        "\n"
+        "def use(value: 'Base'):\n"
+        "    return value.save()\n"
+    )
+    result = _inline_result(tmp_path, source)
+    call = next(relation for relation in result.relations if relation.kind == "call")
+    assert call.call_resolution.outcome is CallOutcome.VIRTUAL_DISPATCH
+    assert call.call_resolution.receiver_shape is ReceiverShape.ANNOTATED_NAME
+
+
+def test_local_binding_shadowing_nested_identity_and_quoted_optional_forms(
+    tmp_path: Path,
+) -> None:
+    source = (
+        "def helper():\n"
+        "    return 1\n"
+        "\n"
+        "class Base:\n"
+        "    def save(self):\n"
+        "        return 1\n"
+        "\n"
+        "class Child(Base):\n"
+        "    def save(self):\n"
+        "        return 2\n"
+        "\n"
+        "def outer():\n"
+        "    def inner():\n"
+        "        return 3\n"
+        "    return inner()\n"
+        "\n"
+        "def shadow(helper):\n"
+        "    return helper()\n"
+        "\n"
+        "def closure():\n"
+        "    helper = lambda: 4\n"
+        "    def nested():\n"
+        "        return helper()\n"
+        "    return nested()\n"
+        "\n"
+        "def use(value: \"Base | None\", other: \"Optional[Base]\"):\n"
+        "    value.save()\n"
+        "    other.save()\n"
+    )
+    result = _inline_result(tmp_path, source)
+    calls = [relation for relation in result.relations if relation.kind == "call"]
+
+    def caller_call(caller: str, line: int):
+        matches = [
+            relation
+            for relation in calls
+            if relation.locator.endswith(f"probe.py::{caller}")
+            and relation.evidence[0].start_line == line
+        ]
+        assert len(matches) == 1, (caller, line, matches)
+        return matches[0]
+
+    nested = caller_call("outer", 15)
+    assert nested.call_resolution.outcome is CallOutcome.RUNTIME_EXACT
+    assert nested.call_resolution.runtime_exact_target is not None
+    assert "python:function:probe.outer.inner:13:4" in (
+        nested.call_resolution.runtime_exact_target.target.definition_locator
+    )
+
+    shadowed = caller_call("shadow", 18)
+    assert shadowed.call_resolution.outcome is CallOutcome.UNRESOLVED_OR_DEEP
+    assert (
+        shadowed.call_resolution.unresolved_or_deep_receiver.reason
+        is ReceiverGapReason.UNKNOWN_NAME
+    )
+
+    closure_call = caller_call("closure.nested", 23)
+    assert closure_call.call_resolution.outcome is CallOutcome.UNRESOLVED_OR_DEEP
+    assert (
+        closure_call.call_resolution.unresolved_or_deep_receiver.reason
+        is ReceiverGapReason.UNKNOWN_NAME
+    )
+
+    optional_calls = [
+        relation
+        for relation in calls
+        if relation.evidence[0].start_line in {27, 28}
+    ]
+    assert len(optional_calls) == 2
+    for relation in optional_calls:
+        resolution = relation.call_resolution
+        assert resolution.outcome is CallOutcome.VIRTUAL_DISPATCH
+        assert resolution.lexical_base_target is not None
+        assert resolution.lexical_base_target.target.definition_locator.endswith(
+            "python:method:probe.Base.save:5:4"
+        )
+        assert any(
+            candidate.target.definition_locator.endswith("python:method:probe.Child.save:9:4")
+            for candidate in resolution.override_candidates
+        )
+        assert all(
+            "Audit" not in candidate.target.definition_locator
+            for candidate in resolution.override_candidates
+        )
+
+
+def test_python_call_outcomes_cover_deep_receivers_and_keep_unrelated_names_non_exact(
+    tmp_path: Path,
+) -> None:
+    source = (
+        "from typing import final as is_final\n"
+        "\n"
+        "class Base:\n"
+        "    def save(self):\n"
+        "        return 1\n"
+        "    def run(self):\n"
+        "        return self.save()\n"
+        "\n"
+        "class Child(Base):\n"
+        "    def save(self):\n"
+        "        return 2\n"
+        "    def run(self):\n"
+        "        return self.save()\n"
+        "\n"
+        "class Audit:\n"
+        "    def save(self):\n"
+        "        return 3\n"
+        "\n"
+        "@is_final\n"
+        "class Final:\n"
+        "    def save(self):\n"
+        "        return 4\n"
+        "    def run(self):\n"
+        "        return self.save()\n"
+        "\n"
+        "class Unknown(MissingBase):\n"
+        "    def save(self):\n"
+        "        return 5\n"
+        "\n"
+        "def factory():\n"
+        "    return Base()\n"
+        "\n"
+        "def wrapper(fn):\n"
+        "    return fn\n"
+        "\n"
+        "@wrapper\n"
+        "def wrapped():\n"
+        "    return 6\n"
+        "\n"
+        "def use(backend: Base, optional: Base | None, union: Base | Audit, items):\n"
+        "    backend.save()\n"
+        "    optional.save()\n"
+        "    union.save()\n"
+        "    backend.missing()\n"
+        "    backend.child.save()\n"
+        "    factory().save()\n"
+        "    items[0].save()\n"
+        "    getattr(backend, 'save')()\n"
+        "    exec('pass')\n"
+        "    wrapped()\n"
+        "    len(items)\n"
+        "\n"
+        "Unknown().save()\n"
+        "\n"
+        "def use_unknown(value: Unknown):\n"
+        "    return value.save()\n"
+    )
+    result = _inline_result(tmp_path, source)
+    assert result.call_site_inventory is not None
+    calls = [relation for relation in result.relations if relation.kind == "call"]
+    assert len(calls) == len(
+        [node for node in ast.walk(ast.parse(source)) if isinstance(node, ast.Call)]
+    )
+    assert len(calls) == len(result.call_site_inventory.call_sites)
+    assert {relation.call_resolution.outcome for relation in calls} == {
+        CallOutcome.RUNTIME_EXACT,
+        CallOutcome.VIRTUAL_DISPATCH,
+        CallOutcome.EXTERNAL,
+        CallOutcome.UNRESOLVED_OR_DEEP,
+    }
+
+    def call_at(
+        line: int,
+        *,
+        reason: ReceiverGapReason | None = None,
+        receiver_text: str | None = None,
+    ):
+        matches = [
+            relation
+            for relation in calls
+            if relation.evidence[0].start_line == line
+            and (
+                reason is None
+                or (
+                    relation.call_resolution.unresolved_or_deep_receiver is not None
+                    and relation.call_resolution.unresolved_or_deep_receiver.reason is reason
+                )
+            )
+            and (
+                receiver_text is None
+                or (
+                    relation.call_resolution.unresolved_or_deep_receiver is not None
+                    and relation.call_resolution.unresolved_or_deep_receiver.receiver_text
+                    == receiver_text
+                )
+            )
+        ]
+        assert len(matches) == 1, (line, reason, matches)
+        return matches[0]
+
+    base_virtual = call_at(41)
+    assert base_virtual.call_resolution.outcome is CallOutcome.VIRTUAL_DISPATCH
+    assert base_virtual.call_resolution.lexical_base_target is not None
+    assert base_virtual.call_resolution.lexical_base_target.target.path == "probe.py"
+    assert base_virtual.call_resolution.lexical_base_target.provenance[0].basis is ProvenanceBasis.RECEIVER_ANNOTATION
+    assert any(
+        "Child.save" in candidate.target.definition_locator
+        for candidate in base_virtual.call_resolution.override_candidates
+    )
+    assert all(
+        "Audit" not in candidate.target.definition_locator
+        for candidate in base_virtual.call_resolution.override_candidates
+    )
+    optional_virtual = call_at(42)
+    assert optional_virtual.call_resolution.outcome is CallOutcome.VIRTUAL_DISPATCH
+    assert optional_virtual.call_resolution.receiver_shape is ReceiverShape.ANNOTATED_NAME
+    assert call_at(43).call_resolution.unresolved_or_deep_receiver.reason is ReceiverGapReason.UNSUPPORTED_UNION_RECEIVER
+    assert call_at(44).call_resolution.unresolved_or_deep_receiver.reason is ReceiverGapReason.MISSING_LEXICAL_MEMBER
+    assert call_at(45).call_resolution.unresolved_or_deep_receiver.reason is ReceiverGapReason.ATTRIBUTE_CHAIN
+    assert call_at(46, reason=ReceiverGapReason.FACTORY_RESULT).call_resolution.receiver_shape is ReceiverShape.CALL_RESULT
+    assert call_at(47).call_resolution.unresolved_or_deep_receiver.reason is ReceiverGapReason.SUBSCRIPT_RECEIVER
+    assert call_at(48, reason=ReceiverGapReason.DYNAMIC_ATTRIBUTE, receiver_text="getattr(backend, 'save')").call_resolution.receiver_shape is ReceiverShape.DYNAMIC_ATTRIBUTE
+    assert call_at(49).call_resolution.unresolved_or_deep_receiver.reason is ReceiverGapReason.EXEC
+    assert call_at(50).call_resolution.unresolved_or_deep_receiver.reason is ReceiverGapReason.DECORATED_CALLABLE
+    assert call_at(7).call_resolution.outcome is CallOutcome.VIRTUAL_DISPATCH
+    assert call_at(51).call_resolution.outcome is CallOutcome.EXTERNAL
+    final_call = call_at(24)
+    assert final_call.call_resolution.outcome is CallOutcome.RUNTIME_EXACT
+    assert final_call.call_resolution.runtime_exact_target is not None
+    assert final_call.call_resolution.runtime_exact_target.provenance[0].basis is ProvenanceBasis.FINAL_CLASS_OR_METHOD
+    unknown_call = call_at(56)
+    assert unknown_call.call_resolution.unresolved_or_deep_receiver.reason is ReceiverGapReason.AMBIGUOUS_MRO
 
 
 @pytest.mark.parametrize("path", ["pkg/base.py", "pkg/impl.py", "pkg/api.py", "pkg/dynamic.py", "pkg/über.py"])

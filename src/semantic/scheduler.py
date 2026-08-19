@@ -169,14 +169,32 @@ def build_semantic_graph(
         if symbol.ir_symbol_id is not None
     }
     for relation in relations:
-        if (
-            relation.kind != "calls"
-            or relation.resolution_status is not ResolutionStatus.RESOLVED
-            or relation.target is None
-        ):
-            continue
+        typed_resolution = relation.call_resolution
+        if typed_resolution is not None:
+            # Python v3 call Relations deliberately leave the legacy target
+            # field empty.  A semantic graph is a transient consumer, so it
+            # follows only the proven repository ref and never promotes the
+            # lexical/override evidence into an exact dependency.
+            if (
+                typed_resolution.outcome.value != "runtime_exact"
+                or typed_resolution.runtime_exact_target is None
+            ):
+                continue
+            target_id = typed_resolution.runtime_exact_target.target.ref.id
+        else:
+            # Keep the pre-v3 lane for legacy non-Python callers and existing
+            # semantic fixtures.  The typed branch above is intentionally
+            # exclusive, so a virtual/external/unresolved Python outcome can
+            # never fall back to Relation.target.
+            if (
+                relation.kind not in {"calls", "call"}
+                or relation.resolution_status is not ResolutionStatus.RESOLVED
+                or relation.target is None
+            ):
+                continue
+            target_id = relation.target.id
         caller = ir_to_semantic.get(relation.source.id)
-        callee = ir_to_semantic.get(relation.target.id)
+        callee = ir_to_semantic.get(target_id)
         if caller is not None and callee is not None and caller != callee:
             graph.add_edge(caller, callee, sources=("ir_relation",))
 

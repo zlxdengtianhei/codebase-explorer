@@ -1,4 +1,4 @@
-"""Truthful Python ``ast`` normalization into canonical ``cbe-ir/2`` models."""
+"""Truthful Python ``ast`` normalization into canonical ``cbe-ir/3`` models."""
 
 from __future__ import annotations
 
@@ -6,21 +6,34 @@ import ast
 import hashlib
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Mapping
+from typing import Any, Mapping
 
 from src.ir import (
     Availability,
+    CallOutcome,
+    CallResolution,
+    CallSiteAnchor,
+    CallSiteInventory,
     CapabilityCell,
     EntityKind,
     EntityRef,
     EvidenceSpan,
+    ExternalEcosystem,
+    ExternalTargetEvidence,
+    Provenance,
+    ProvenanceBasis,
+    ReceiverGap,
+    ReceiverGapReason,
+    ReceiverShape,
     Relation,
+    RepositoryEntityIdentity,
     ResolutionMethod,
     ResolutionStatus,
     SemanticTier,
     SourceUnit,
     SourceUnitState,
     Symbol,
+    TargetEvidence,
     VerificationStatus,
     deterministic_entity_id,
 )
@@ -42,6 +55,8 @@ class _Definition:
     local_name: str
     locator: str
     node: ast.AST
+    owner_class: str | None = None
+    decorator_names: tuple[str, ...] = ()
 @dataclass(frozen=True)
 class _ImportBinding:
     local_name: str
@@ -136,11 +151,21 @@ class PythonLanguageAdapter(LanguageAdapter):
                 key=lambda item: item.id,
             )
         )
+        parent = self._parent_map(current.tree)
+        function_defs = {
+            definition.node: definition
+            for definition in current.definitions
+            if definition.kind in {"function", "method"}
+        }
+        call_site_inventory = self._call_site_inventory(
+            source_unit, current, parent, function_defs
+        )
         relations = self._relations(source_unit, current, modules, definitions)
         return FileIR(
             source_unit=source_unit,
             symbols=symbols,
             relations=tuple(sorted(relations, key=lambda item: item.id)),
+            call_site_inventory=call_site_inventory,
         )
 
     @staticmethod
@@ -248,11 +273,14 @@ class PythonLanguageAdapter(LanguageAdapter):
     def _module_info(self, path: str, source: str, tree: ast.Module) -> _ModuleInfo:
         module_name = self._module_name(path)
         definitions: list[_Definition] = []
+        imports = tuple(self._import_bindings(path, tree))
+        decorator_bindings = {binding.local_name: binding for binding in imports}
 
         def walk(
             node: ast.AST,
             scope: tuple[str, ...] = (),
             enclosing_kind: str | None = None,
+            enclosing_class: str | None = None,
         ) -> None:
             for child in ast.iter_child_nodes(node):
                 if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)):
@@ -269,9 +297,14 @@ class PythonLanguageAdapter(LanguageAdapter):
                             local_name=child.name,
                             locator=self._definition_locator(kind, qualified, child),
                             node=child,
+                            owner_class=enclosing_class,
+                            decorator_names=tuple(
+                                self._canonical_decorator_name(item, decorator_bindings)
+                                for item in child.decorator_list
+                            ),
                         )
                     )
-                    walk(child, (*scope, child.name), "function")
+                    walk(child, (*scope, child.name), "function", enclosing_class)
                 elif isinstance(child, ast.ClassDef):
                     lexical = ".".join((*scope, child.name))
                     qualified = ".".join(part for part in (module_name, lexical) if part)
@@ -285,16 +318,20 @@ class PythonLanguageAdapter(LanguageAdapter):
                             local_name=child.name,
                             locator=self._definition_locator("class", qualified, child),
                             node=child,
+                            owner_class=None,
+                            decorator_names=tuple(
+                                self._canonical_decorator_name(item, decorator_bindings)
+                                for item in child.decorator_list
+                            ),
                         )
                     )
-                    walk(child, (*scope, child.name), "class")
+                    walk(child, (*scope, child.name), "class", qualified)
                 else:
                     # Match ast-based independent enumeration: definitions in
                     # control-flow blocks remain visible without changing scope.
-                    walk(child, scope, enclosing_kind)
+                    walk(child, scope, enclosing_kind, enclosing_class)
 
         walk(tree)
-        imports = tuple(self._import_bindings(path, tree))
         return _ModuleInfo(
             path=path,
             name=module_name,
@@ -335,6 +372,78 @@ class PythonLanguageAdapter(LanguageAdapter):
                     )
         return result
 
+    @staticmethod
+    def _parent_map(tree: ast.AST) -> dict[ast.AST, ast.AST]:
+        parent: dict[ast.AST, ast.AST] = {}
+        for candidate in ast.walk(tree):
+            for child in ast.iter_child_nodes(candidate):
+                parent[child] = candidate
+        return parent
+
+    @staticmethod
+    def _span_key(span: EvidenceSpan) -> tuple[int, int, int, int, str]:
+        return (
+            span.start_line,
+            span.start_column,
+            span.end_line,
+            span.end_column,
+            span.source_unit_id,
+        )
+
+    @classmethod
+    def _caller_canonical_id(
+        cls, path: str, module_name: str, owner: str | None
+    ) -> str:
+        if owner is None:
+            return f"{path}::<module>"
+        prefix = f"{module_name}." if module_name else ""
+        lexical = owner[len(prefix) :] if prefix and owner.startswith(prefix) else owner
+        return f"{path}::{lexical}"
+
+    @staticmethod
+    def _call_locator(span: EvidenceSpan, caller_id: str) -> str:
+        return (
+            f"python:call:{span.start_line}:{span.start_column}:"
+            f"{span.end_line}:{span.end_column}:{caller_id}"
+        )
+
+    def _call_site_inventory(
+        self,
+        source_unit: SourceUnit,
+        module: _ModuleInfo,
+        parent: Mapping[ast.AST, ast.AST],
+        function_defs: Mapping[ast.AST, _Definition],
+    ) -> CallSiteInventory:
+        anchors: list[CallSiteAnchor] = []
+        for call in (node for node in ast.walk(module.tree) if isinstance(node, ast.Call)):
+            span = self._node_span(source_unit, call)
+            owner = self._owner_function(call, parent, function_defs)
+            caller_id = self._caller_canonical_id(module.path, module.name, owner)
+            locator = self._call_locator(span, caller_id)
+            call_id = deterministic_entity_id(
+                source_unit.source_revision_id,
+                source_unit.path,
+                EntityKind.RELATION,
+                locator,
+            )
+            anchors.append(
+                CallSiteAnchor(
+                    call_site_id=call_id,
+                    caller_canonical_id=caller_id,
+                    span=span,
+                )
+            )
+        anchors.sort(key=lambda item: (*self._span_key(item.span), item.call_site_id))
+        return CallSiteInventory(
+            source_revision_id=source_unit.source_revision_id,
+            source_unit_id=source_unit.id,
+            path=source_unit.path,
+            language="python",
+            ast_backend_id=source_unit.backend_id,
+            ast_backend_version=source_unit.backend_version,
+            call_sites=tuple(anchors),
+        )
+
     def _relations(
         self,
         source_unit: SourceUnit,
@@ -370,10 +479,7 @@ class PythonLanguageAdapter(LanguageAdapter):
                     )
                 )
 
-        parent: dict[ast.AST, ast.AST] = {}
-        for candidate in ast.walk(module.tree):
-            for child in ast.iter_child_nodes(candidate):
-                parent[child] = candidate
+        parent = self._parent_map(module.tree)
         function_defs = {
             definition.node: definition
             for definition in module.definitions
@@ -383,55 +489,13 @@ class PythonLanguageAdapter(LanguageAdapter):
         for qualified, definition in definitions.items():
             if definition.kind == "method":
                 method_candidates.setdefault(definition.local_name, []).append(qualified)
-        call_locator_counts: dict[str, int] = {}
-
         for call in (node for node in ast.walk(module.tree) if isinstance(node, ast.Call)):
             owner = self._owner_function(call, parent, function_defs)
-            if isinstance(call.func, ast.Name) and call.func.id == "exec":
-                statement = self._statement(call, parent)
-                locator = self._next_occurrence_locator(
-                    self._relation_locator(
-                        "unsupported_construct", statement, owner or module.name, None
-                    ),
-                    call_locator_counts,
-                )
-                result.append(
-                    self._relation(
-                        source_unit, module, "unsupported_construct",
-                        locator,
-                        owner or module.name, None, statement,
-                        ResolutionStatus.UNSUPPORTED, ResolutionMethod.HEURISTIC, (),
-                        "Dynamic exec cannot be normalized as static repository facts.",
-                        definitions,
-                        evidence_node=self._call_evidence_node(call, statement),
-                    )
-                )
-                continue
-            if isinstance(call.func, ast.Name) and call.func.id == "__import__":
-                statement = self._statement(call, parent)
-                locator = self._next_occurrence_locator(
-                    self._relation_locator("import", statement, owner or module.name, None),
-                    call_locator_counts,
-                )
-                result.append(
-                    self._relation(
-                        source_unit, module, "import",
-                        locator,
-                        owner or module.name, None, statement,
-                        ResolutionStatus.UNSUPPORTED, ResolutionMethod.HEURISTIC, (),
-                        "Dynamic import target is not statically known.", definitions,
-                        evidence_node=self._call_evidence_node(call, statement),
-                    )
-                )
-                continue
-            if owner is None:
-                continue
             relation = self._call_relation(
                 source_unit, module, call, owner, parent, bindings,
-                definitions, method_candidates, call_locator_counts
+                definitions, method_candidates, modules
             )
-            if relation is not None:
-                result.append(relation)
+            result.append(relation)
         return result
 
     def _import_relations(
@@ -550,77 +614,801 @@ class PythonLanguageAdapter(LanguageAdapter):
         source_unit: SourceUnit,
         module: _ModuleInfo,
         call: ast.Call,
-        owner: str,
+        owner: str | None,
         parent: Mapping[ast.AST, ast.AST],
         bindings: Mapping[str, _ImportBinding],
         definitions: Mapping[str, _Definition],
         method_candidates: Mapping[str, list[str]],
-        locator_counts: dict[str, int],
-    ) -> Relation | None:
-        target: str | None
-        candidates: tuple[str, ...]
+        modules: Mapping[str, _ModuleInfo],
+    ) -> Relation:
+        span = self._node_span(source_unit, call)
+        caller_id = self._caller_canonical_id(module.path, module.name, owner)
+        locator = self._call_locator(span, caller_id)
+        module_by_name = {item.name: item for item in modules.values()}
+        resolution, status, method, reason = self._classify_call(
+            source_unit,
+            module,
+            call,
+            owner,
+            bindings,
+            definitions,
+            method_candidates,
+            module_by_name,
+            modules,
+        )
+        return self._relation(
+            source_unit,
+            module,
+            "call",
+            locator,
+            owner or module.name,
+            None,
+            call,
+            status,
+            method,
+            (),
+            reason,
+            definitions,
+            evidence_node=call,
+            call_resolution=resolution,
+        )
+
+    @staticmethod
+    def _function_local_bindings(definition: _Definition) -> set[str]:
+        """Return names bound by one function body, excluding nested scopes."""
+
+        node = definition.node
+        if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            return set()
+        bound: set[str] = {
+            argument.arg
+            for argument in (
+                *node.args.posonlyargs,
+                *node.args.args,
+                *node.args.kwonlyargs,
+            )
+        }
+        if node.args.vararg is not None:
+            bound.add(node.args.vararg.arg)
+        if node.args.kwarg is not None:
+            bound.add(node.args.kwarg.arg)
+        assigned: set[str] = set()
+        imported: set[str] = set()
+        global_names: set[str] = set()
+        nonlocal_names: set[str] = set()
+
+        def visit(current: ast.AST) -> None:
+            for child in ast.iter_child_nodes(current):
+                if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda)):
+                    # A nested definition is handled as a direct lexical
+                    # binding by _direct_local_binding; its body is another
+                    # scope and cannot contribute assignments here.
+                    continue
+                if isinstance(child, ast.Global):
+                    global_names.update(child.names)
+                    continue
+                if isinstance(child, ast.Nonlocal):
+                    nonlocal_names.update(child.names)
+                    continue
+                if isinstance(child, ast.Name) and isinstance(child.ctx, (ast.Store, ast.Del)):
+                    assigned.add(child.id)
+                elif isinstance(child, ast.alias):
+                    imported.add(child.asname or child.name.split(".", 1)[0])
+                elif isinstance(child, ast.ExceptHandler) and child.name:
+                    imported.add(child.name)
+                visit(child)
+
+        for statement in node.body:
+            visit(statement)
+        return (bound | assigned | imported | nonlocal_names) - global_names
+
+    @classmethod
+    def _direct_local_binding(
+        cls,
+        name: str,
+        owner: str | None,
+        definitions: Mapping[str, _Definition],
+    ) -> tuple[str | None, bool]:
+        """Resolve only a unique direct local definition, never a closure.
+
+        The old resolver searched module definitions before accounting for
+        Python's lexical bindings.  A parameter or assignment therefore
+        promoted an unrelated same-name module symbol to ``runtime_exact``.
+        This helper makes such scopes visible gaps while accepting one direct
+        nested function/class definition.  Enclosing function bindings are
+        deliberately treated as unresolved closure state.
+        """
+
+        if owner is None:
+            return None, False
+
+        def scope_state(scope: str) -> tuple[set[str], tuple[str, ...]]:
+            definition = definitions.get(scope)
+            if definition is None or definition.kind not in {"function", "method"}:
+                return set(), ()
+            prefix = f"{scope}."
+            direct = tuple(
+                sorted(
+                    qualified
+                    for qualified, candidate in definitions.items()
+                    if qualified.startswith(prefix)
+                    and "." not in qualified[len(prefix) :]
+                    and candidate.local_name == name
+                )
+            )
+            return cls._function_local_bindings(definition), direct
+
+        local_names, direct_definitions = scope_state(owner)
+        if name in local_names:
+            return None, True
+        if len(direct_definitions) == 1:
+            return direct_definitions[0], False
+        if direct_definitions:
+            return None, True
+
+        # A binding in an enclosing function is a closure.  No target identity
+        # is proven by this bounded resolver, even when a single definition is
+        # visible there; the caller must remain a visible non-exact gap.
+        ancestor = owner
+        while "." in ancestor:
+            ancestor = ancestor.rsplit(".", 1)[0]
+            definition = definitions.get(ancestor)
+            if definition is None or definition.kind not in {"function", "method"}:
+                continue
+            ancestor_names, ancestor_direct = scope_state(ancestor)
+            if name in ancestor_names or ancestor_direct:
+                return None, True
+        return None, False
+
+    def _classify_call(
+        self,
+        source_unit: SourceUnit,
+        module: _ModuleInfo,
+        call: ast.Call,
+        owner: str | None,
+        bindings: Mapping[str, _ImportBinding],
+        definitions: Mapping[str, _Definition],
+        method_candidates: Mapping[str, list[str]],
+        module_by_name: Mapping[str, _ModuleInfo],
+        modules: Mapping[str, _ModuleInfo],
+    ) -> tuple[CallResolution, ResolutionStatus, ResolutionMethod, str]:
+        call_span = self._node_span(source_unit, call)
+
+        def gap(reason: ReceiverGapReason, shape: ReceiverShape, text: str) -> tuple[CallResolution, ResolutionStatus, ResolutionMethod, str]:
+            return (
+                CallResolution(
+                    outcome=CallOutcome.UNRESOLVED_OR_DEEP,
+                    receiver_shape=shape,
+                    unresolved_or_deep_receiver=ReceiverGap(
+                        reason=reason,
+                        receiver_text=text,
+                        evidence=(call_span,),
+                    ),
+                ),
+                ResolutionStatus.UNRESOLVED,
+                ResolutionMethod.HEURISTIC,
+                f"Static resolution gap: {reason.value}.",
+            )
+
         if isinstance(call.func, ast.Name):
             name = call.func.id
-            if name in bindings:
-                target = bindings[name].target
-                status = ResolutionStatus.RESOLVED
-                method = ResolutionMethod.EXACT
-                candidates = (target,)
+            if name == "exec":
+                return gap(ReceiverGapReason.EXEC, ReceiverShape.BARE_NAME, name)
+            if name == "__import__":
+                return gap(ReceiverGapReason.DYNAMIC_IMPORT, ReceiverShape.BARE_NAME, name)
+            if name == "getattr":
+                return gap(ReceiverGapReason.DYNAMIC_ATTRIBUTE, ReceiverShape.DYNAMIC_ATTRIBUTE, name)
+            target_name, shadowed = self._direct_local_binding(name, owner, definitions)
+            if shadowed:
+                return gap(ReceiverGapReason.UNKNOWN_NAME, ReceiverShape.BARE_NAME, name)
+            basis = ProvenanceBasis.DIRECT_LOCAL_BINDING
+            if target_name is not None:
+                pass
+            elif name in bindings:
+                target_name = bindings[name].target
+                basis = ProvenanceBasis.IMPORT_BINDING
             elif f"{module.name}.{name}" in definitions:
-                target = f"{module.name}.{name}"
-                status = ResolutionStatus.RESOLVED
-                method = ResolutionMethod.EXACT
-                candidates = (target,)
+                target_name = f"{module.name}.{name}"
             elif name in _BUILTINS:
-                target = f"builtins.{name}"
-                status = ResolutionStatus.EXTERNAL
-                method = ResolutionMethod.EXACT
-                candidates = (target,)
+                external = self._external_target(
+                    source_unit,
+                    ExternalEcosystem.PYTHON_BUILTIN,
+                    f"builtins.{name}",
+                    call_span,
+                )
+                return (
+                    CallResolution(
+                        outcome=CallOutcome.EXTERNAL,
+                        receiver_shape=ReceiverShape.BARE_NAME,
+                        external_target=external,
+                    ),
+                    ResolutionStatus.EXTERNAL,
+                    ResolutionMethod.EXACT,
+                    "Built-in call is external to repository symbols.",
+                )
             else:
-                target = None
-                status = ResolutionStatus.UNRESOLVED
-                method = ResolutionMethod.SEARCH_FALLBACK
-                candidates = ()
-            statement = self._statement(call, parent)
-            locator = self._next_occurrence_locator(
-                self._relation_locator("call", statement, owner, target), locator_counts
+                return gap(ReceiverGapReason.UNKNOWN_NAME, ReceiverShape.BARE_NAME, name)
+            definition = definitions.get(target_name or "")
+            if definition is None:
+                external = self._external_target(
+                    source_unit,
+                    ExternalEcosystem.PYTHON_MODULE,
+                    target_name or name,
+                    call_span,
+                )
+                return (
+                    CallResolution(
+                        outcome=CallOutcome.EXTERNAL,
+                        receiver_shape=ReceiverShape.BARE_NAME,
+                        external_target=external,
+                    ),
+                    ResolutionStatus.EXTERNAL,
+                    ResolutionMethod.EXACT,
+                    "Imported target is outside the repository symbol index.",
+                )
+            if self._unsupported_decorator(definition):
+                return gap(
+                    ReceiverGapReason.DECORATED_CALLABLE,
+                    ReceiverShape.BARE_NAME,
+                    name,
+                )
+            target = self._target_evidence(
+                source_unit,
+                definition,
+                basis,
+                modules,
             )
-        elif isinstance(call.func, ast.Attribute) and isinstance(call.func.value, ast.Name):
-            receiver = call.func.value.id
+            return (
+                CallResolution(
+                    outcome=CallOutcome.RUNTIME_EXACT,
+                    receiver_shape=ReceiverShape.BARE_NAME,
+                    runtime_exact_target=target,
+                ),
+                ResolutionStatus.RESOLVED,
+                ResolutionMethod.EXACT,
+                "A single repository binding proves the runtime target.",
+            )
+
+        if isinstance(call.func, ast.Attribute):
             attribute = call.func.attr
-            annotation = self._parameter_annotation(owner, receiver, definitions)
-            if annotation is not None:
-                binding = bindings.get(annotation)
-                base = binding.target if binding is not None else f"{module.name}.{annotation}"
-                target = f"{base}.{attribute}"
-                candidates = (target, *tuple(
-                    item for item in sorted(method_candidates.get(attribute, ()))
-                    if item != target and self._is_subclass_method(item, base, definitions, bindings)
-                ))
-                status = ResolutionStatus.RESOLVED
-                method = ResolutionMethod.DATAFLOW
-            else:
-                target = None
-                candidates = tuple(sorted(method_candidates.get(attribute, ())))
-                status = ResolutionStatus.AMBIGUOUS
-                method = ResolutionMethod.HEURISTIC
-            statement = self._statement(call, parent)
-            locator = self._next_occurrence_locator(
-                self._relation_locator("call", statement, owner, target), locator_counts
+            receiver = call.func.value
+            if isinstance(receiver, ast.Name):
+                receiver_name = receiver.id
+                if receiver_name in {"self", "cls"}:
+                    owner_definition = definitions.get(owner or "")
+                    base = owner_definition.owner_class if owner_definition else None
+                    if base is None:
+                        return gap(
+                            ReceiverGapReason.UNTYPED_RECEIVER,
+                            ReceiverShape.SELF if receiver_name == "self" else ReceiverShape.CLS,
+                            receiver_name,
+                        )
+                    return self._virtual_call(
+                        source_unit,
+                        module,
+                        base,
+                        attribute,
+                        ReceiverShape.SELF if receiver_name == "self" else ReceiverShape.CLS,
+                        definitions,
+                        method_candidates,
+                        module_by_name,
+                        modules,
+                        call_span,
+                        final_owner=owner,
+                    )
+                annotation, unsupported_union = self._parameter_annotation_info(
+                    owner, receiver_name, definitions
+                )
+                if unsupported_union:
+                    return gap(
+                        ReceiverGapReason.UNSUPPORTED_UNION_RECEIVER,
+                        ReceiverShape.ANNOTATED_NAME,
+                        receiver_name,
+                    )
+                if annotation is not None:
+                    base = self._resolve_class_name(
+                        annotation, module, bindings, definitions, module_by_name
+                    )
+                    if base is None:
+                        return gap(
+                            ReceiverGapReason.AMBIGUOUS_MRO,
+                            ReceiverShape.ANNOTATED_NAME,
+                            receiver_name,
+                        )
+                    return self._virtual_call(
+                        source_unit,
+                        module,
+                        base,
+                        attribute,
+                        ReceiverShape.ANNOTATED_NAME,
+                        definitions,
+                        method_candidates,
+                        module_by_name,
+                        modules,
+                        call_span,
+                    )
+                binding = bindings.get(receiver_name)
+                if binding is not None and binding.target in module_by_name:
+                    target_name = f"{binding.target}.{attribute}"
+                    definition = definitions.get(target_name)
+                    if definition is not None and not self._unsupported_decorator(definition):
+                        return (
+                            CallResolution(
+                                outcome=CallOutcome.RUNTIME_EXACT,
+                                receiver_shape=ReceiverShape.MODULE_ATTRIBUTE,
+                                runtime_exact_target=self._target_evidence(
+                                    source_unit,
+                                    definition,
+                                    ProvenanceBasis.MODULE_BINDING,
+                                    modules,
+                                ),
+                            ),
+                            ResolutionStatus.RESOLVED,
+                            ResolutionMethod.EXACT,
+                            "A module alias and one repository member prove the target.",
+                        )
+                    if definition is not None:
+                        return gap(
+                            ReceiverGapReason.DECORATED_CALLABLE,
+                            ReceiverShape.MODULE_ATTRIBUTE,
+                            f"{receiver_name}.{attribute}",
+                        )
+                if binding is not None and binding.target not in definitions:
+                    return (
+                        CallResolution(
+                            outcome=CallOutcome.EXTERNAL,
+                            receiver_shape=ReceiverShape.MODULE_ATTRIBUTE,
+                            external_target=self._external_target(
+                                source_unit,
+                                ExternalEcosystem.PYTHON_MODULE,
+                                f"{binding.target}.{attribute}",
+                                call_span,
+                            ),
+                        ),
+                        ResolutionStatus.EXTERNAL,
+                        ResolutionMethod.EXACT,
+                        "Module attribute is external to the repository index.",
+                    )
+                return gap(
+                    ReceiverGapReason.UNTYPED_RECEIVER,
+                    ReceiverShape.OTHER,
+                    f"{receiver_name}.{attribute}",
+                )
+            if isinstance(receiver, ast.Attribute):
+                return gap(
+                    ReceiverGapReason.ATTRIBUTE_CHAIN,
+                    ReceiverShape.ATTRIBUTE_CHAIN,
+                    self._expr_name(receiver),
+                )
+            if isinstance(receiver, ast.Call):
+                return gap(
+                    ReceiverGapReason.FACTORY_RESULT,
+                    ReceiverShape.CALL_RESULT,
+                    ast.get_source_segment(module.source, receiver) or "call()",
+                )
+            if isinstance(receiver, ast.Subscript):
+                return gap(
+                    ReceiverGapReason.SUBSCRIPT_RECEIVER,
+                    ReceiverShape.SUBSCRIPT,
+                    ast.get_source_segment(module.source, receiver) or "subscript",
+                )
+            return gap(
+                ReceiverGapReason.UNSUPPORTED_SYNTAX,
+                ReceiverShape.OTHER,
+                ast.get_source_segment(module.source, receiver) or "receiver",
             )
-        else:
-            return None
-        reason = {
-            ResolutionStatus.RESOLVED: "Lexical or annotation-bounded evidence resolves this call.",
-            ResolutionStatus.EXTERNAL: "Built-in call is external to repository symbols.",
-            ResolutionStatus.AMBIGUOUS: "Receiver evidence leaves multiple method candidates.",
-            ResolutionStatus.UNRESOLVED: "No definition or import establishes a target.",
-        }[status]
-        return self._relation(
-            source_unit, module, "call", locator, owner, target,
-            statement, status, method, candidates, reason, definitions,
-            evidence_node=self._call_evidence_node(call, statement),
+
+        if isinstance(call.func, ast.Call):
+            if (
+                isinstance(call.func.func, ast.Name)
+                and call.func.func.id == "getattr"
+            ):
+                return gap(
+                    ReceiverGapReason.DYNAMIC_ATTRIBUTE,
+                    ReceiverShape.DYNAMIC_ATTRIBUTE,
+                    ast.get_source_segment(module.source, call.func) or "getattr()",
+                )
+            return gap(
+                ReceiverGapReason.FACTORY_RESULT,
+                ReceiverShape.CALL_RESULT,
+                ast.get_source_segment(module.source, call.func) or "call()",
+            )
+        if isinstance(call.func, ast.Subscript):
+            return gap(
+                ReceiverGapReason.SUBSCRIPT_RECEIVER,
+                ReceiverShape.SUBSCRIPT,
+                ast.get_source_segment(module.source, call.func) or "subscript",
+            )
+        return gap(
+            ReceiverGapReason.UNSUPPORTED_SYNTAX,
+            ReceiverShape.OTHER,
+            ast.get_source_segment(module.source, call.func) or "callable",
         )
+
+    def _virtual_call(
+        self,
+        source_unit: SourceUnit,
+        module: _ModuleInfo,
+        base: str,
+        attribute: str,
+        receiver_shape: ReceiverShape,
+        definitions: Mapping[str, _Definition],
+        method_candidates: Mapping[str, list[str]],
+        module_by_name: Mapping[str, _ModuleInfo],
+        modules: Mapping[str, _ModuleInfo],
+        call_span: EvidenceSpan,
+        *,
+        final_owner: str | None = None,
+    ) -> tuple[CallResolution, ResolutionStatus, ResolutionMethod, str]:
+        mro = self._c3_mro(base, definitions, module_by_name, modules)
+        if mro is None:
+            return self._gap_result(
+                source_unit,
+                call_span,
+                ReceiverGapReason.AMBIGUOUS_MRO,
+                receiver_shape,
+                base,
+            )
+        lexical_definition = next(
+            (
+                definitions.get(f"{class_name}.{attribute}")
+                for class_name in mro
+                if definitions.get(f"{class_name}.{attribute}") is not None
+            ),
+            None,
+        )
+        if lexical_definition is None:
+            return self._gap_result(
+                source_unit,
+                call_span,
+                ReceiverGapReason.MISSING_LEXICAL_MEMBER,
+                receiver_shape,
+                f"{base}.{attribute}",
+            )
+        if self._unsupported_decorator(lexical_definition):
+            return self._gap_result(
+                source_unit,
+                call_span,
+                ReceiverGapReason.DECORATED_CALLABLE,
+                receiver_shape,
+                f"{base}.{attribute}",
+            )
+        exact = (
+            self._is_final_class(base, definitions)
+            or self._is_final_definition(lexical_definition)
+            or (
+                final_owner is not None
+                and self._is_final_class(final_owner, definitions)
+            )
+        )
+        lexical_basis = (
+            ProvenanceBasis.FINAL_CLASS_OR_METHOD
+            if exact
+            else (
+                ProvenanceBasis.ENCLOSING_CLASS
+                if receiver_shape in {ReceiverShape.SELF, ReceiverShape.CLS}
+                else ProvenanceBasis.RECEIVER_ANNOTATION
+            )
+        )
+        lexical = self._target_evidence(
+            source_unit,
+            lexical_definition,
+            lexical_basis,
+            modules,
+        )
+        overrides: list[TargetEvidence] = []
+        for candidate in sorted(method_candidates.get(attribute, ())):
+            candidate_definition = definitions.get(candidate)
+            if candidate_definition is None or candidate_definition is lexical_definition:
+                continue
+            candidate_class = candidate.rsplit(".", 1)[0]
+            candidate_mro = self._c3_mro(candidate_class, definitions, module_by_name, modules)
+            if candidate_mro is None or base not in candidate_mro:
+                continue
+            if self._unsupported_decorator(candidate_definition):
+                continue
+            overrides.append(
+                self._target_evidence(
+                    source_unit,
+                    candidate_definition,
+                    ProvenanceBasis.CLASS_HIERARCHY,
+                    modules,
+                )
+            )
+        if exact:
+            return (
+                CallResolution(
+                    outcome=CallOutcome.RUNTIME_EXACT,
+                    receiver_shape=receiver_shape,
+                    runtime_exact_target=lexical,
+                ),
+                ResolutionStatus.RESOLVED,
+                ResolutionMethod.EXACT,
+                "Final class or method evidence closes virtual dispatch.",
+            )
+        overrides.sort(key=lambda item: self._target_key(item))
+        return (
+            CallResolution(
+                outcome=CallOutcome.VIRTUAL_DISPATCH,
+                receiver_shape=receiver_shape,
+                lexical_base_target=lexical,
+                override_candidates=tuple(overrides),
+            ),
+            ResolutionStatus.AMBIGUOUS,
+            ResolutionMethod.DATAFLOW,
+            "Receiver evidence identifies a lexical base but leaves virtual dispatch open.",
+        )
+
+    def _gap_result(
+        self,
+        source_unit: SourceUnit,
+        span: EvidenceSpan,
+        reason: ReceiverGapReason,
+        shape: ReceiverShape,
+        text: str,
+    ) -> tuple[CallResolution, ResolutionStatus, ResolutionMethod, str]:
+        return (
+            CallResolution(
+                outcome=CallOutcome.UNRESOLVED_OR_DEEP,
+                receiver_shape=shape,
+                unresolved_or_deep_receiver=ReceiverGap(
+                    reason=reason,
+                    receiver_text=text,
+                    evidence=(span,),
+                ),
+            ),
+            ResolutionStatus.UNRESOLVED,
+            ResolutionMethod.HEURISTIC,
+            f"Static resolution gap: {reason.value}.",
+        )
+
+    @staticmethod
+    def _target_key(target: Any) -> tuple[Any, ...]:
+        identity = target.target
+        return (
+            identity.ref.id,
+            identity.source_revision_id,
+            identity.path,
+            identity.definition_locator,
+            tuple(
+                (
+                    provenance.basis.value,
+                    provenance.source_revision_id,
+                    tuple(
+                        (
+                            span.path,
+                            span.start_line,
+                            span.start_column,
+                            span.end_line,
+                            span.end_column,
+                            span.source_unit_id,
+                        )
+                        for span in provenance.evidence
+                    ),
+                )
+                for provenance in target.provenance
+            ),
+        )
+
+    def _target_evidence(
+        self,
+        source_unit: SourceUnit,
+        definition: _Definition,
+        basis: ProvenanceBasis,
+        modules: Mapping[str, _ModuleInfo],
+    ) -> TargetEvidence:
+        target = self._repository_identity(source_unit.source_revision_id, definition)
+        definition_span = self._definition_evidence(source_unit.source_revision_id, definition)
+        provenance = Provenance(
+            basis=basis,
+            evidence=(definition_span,),
+            source_revision_id=source_unit.source_revision_id,
+            source_entity=target,
+        )
+        return TargetEvidence(target=target, provenance=(provenance,))
+
+    @staticmethod
+    def _repository_identity(source_revision_id: str, definition: _Definition) -> RepositoryEntityIdentity:
+        ref = EntityRef(
+            kind=EntityKind.SYMBOL,
+            id=deterministic_entity_id(
+                source_revision_id,
+                definition.path,
+                EntityKind.SYMBOL,
+                definition.locator,
+            ),
+        )
+        return RepositoryEntityIdentity(
+            ref=ref,
+            source_revision_id=source_revision_id,
+            path=definition.path,
+            definition_locator=definition.locator,
+        )
+
+    @staticmethod
+    def _definition_evidence(source_revision_id: str, definition: _Definition) -> EvidenceSpan:
+        node = definition.node
+        return EvidenceSpan(
+            source_unit_id=deterministic_entity_id(
+                source_revision_id,
+                definition.path,
+                EntityKind.SOURCE_UNIT,
+                definition.path,
+            ),
+            path=definition.path,
+            start_line=min(
+                [decorator.lineno for decorator in getattr(node, "decorator_list", ())]
+                + [node.lineno]
+            ),
+            start_column=node.col_offset,
+            end_line=getattr(node, "end_lineno", None) or node.lineno,
+            end_column=getattr(node, "end_col_offset", None) or node.col_offset,
+        )
+
+    def _external_target(
+        self,
+        source_unit: SourceUnit,
+        ecosystem: ExternalEcosystem,
+        qualified_name: str,
+        call_span: EvidenceSpan,
+    ) -> ExternalTargetEvidence:
+        from src.ir.models import _external_identity
+
+        normalized = ".".join(part.strip() for part in qualified_name.strip().split("."))
+        external_id = _external_identity(ecosystem, normalized, None)
+        return ExternalTargetEvidence(
+            external_id=external_id,
+            ecosystem=ecosystem,
+            qualified_name=normalized,
+            distribution=None,
+            provenance=(
+                Provenance(
+                    basis=ProvenanceBasis.DIRECT_LOCAL_BINDING,
+                    evidence=(call_span,),
+                    source_revision_id=source_unit.source_revision_id,
+                ),
+            ),
+        )
+
+    @classmethod
+    def _canonical_decorator_name(
+        cls, node: ast.AST, bindings: Mapping[str, _ImportBinding]
+    ) -> str:
+        raw = cls._expr_name(node)
+        if isinstance(node, ast.Call):
+            return raw
+        head, separator, tail = raw.partition(".")
+        binding = bindings.get(head)
+        if binding is None:
+            return raw
+        return f"{binding.target}.{tail}" if separator else binding.target
+
+    @staticmethod
+    def _decorator_name(node: ast.AST) -> str:
+        return PythonLanguageAdapter._expr_name(node)
+
+    @classmethod
+    def _unsupported_decorator(cls, definition: _Definition) -> bool:
+        allowed = {
+            "staticmethod",
+            "classmethod",
+            "final",
+            "typing.final",
+            "typing_extensions.final",
+        }
+        decorators = definition.decorator_names or tuple(
+            cls._decorator_name(item)
+            for item in getattr(definition.node, "decorator_list", ())
+        )
+        return any(item not in allowed for item in decorators)
+
+    @classmethod
+    def _is_final_definition(cls, definition: _Definition) -> bool:
+        final_names = {"final", "typing.final", "typing_extensions.final"}
+        decorators = definition.decorator_names or tuple(
+            cls._decorator_name(item)
+            for item in getattr(definition.node, "decorator_list", ())
+        )
+        return any(item in final_names for item in decorators)
+
+    @classmethod
+    def _is_final_class(cls, class_name: str, definitions: Mapping[str, _Definition]) -> bool:
+        definition = definitions.get(class_name)
+        return definition is not None and cls._is_final_definition(definition)
+
+    def _resolve_class_name(
+        self,
+        annotation: str,
+        module: _ModuleInfo,
+        bindings: Mapping[str, _ImportBinding],
+        definitions: Mapping[str, _Definition],
+        module_by_name: Mapping[str, _ModuleInfo],
+    ) -> str | None:
+        binding = bindings.get(annotation)
+        candidate = binding.target if binding is not None else (
+            annotation if annotation in definitions else f"{module.name}.{annotation}"
+        )
+        if candidate in definitions and definitions[candidate].kind == "class":
+            return candidate
+        if candidate in module_by_name:
+            return candidate
+        return None
+
+    def _class_direct_bases(
+        self,
+        class_name: str,
+        definitions: Mapping[str, _Definition],
+        module_by_name: Mapping[str, _ModuleInfo],
+    ) -> tuple[str, ...] | None:
+        definition = definitions.get(class_name)
+        if definition is None or not isinstance(definition.node, ast.ClassDef):
+            return None
+        module = next((item for item in module_by_name.values() if item.path == definition.path), None)
+        if module is None:
+            return None
+        bindings = {binding.local_name: binding for binding in module.imports}
+        bases: list[str] = []
+        for base_node in definition.node.bases:
+            name = self._expr_name(base_node)
+            binding = bindings.get(name)
+            candidate = binding.target if binding is not None else (
+                name if name in definitions else f"{module.name}.{name}"
+            )
+            if candidate not in definitions or definitions[candidate].kind != "class":
+                return None
+            bases.append(candidate)
+        return tuple(bases)
+
+    def _c3_mro(
+        self,
+        class_name: str,
+        definitions: Mapping[str, _Definition],
+        module_by_name: Mapping[str, _ModuleInfo],
+        modules: Mapping[str, _ModuleInfo],
+        _memo: dict[str, tuple[str, ...] | None] | None = None,
+        _stack: tuple[str, ...] = (),
+    ) -> tuple[str, ...] | None:
+        memo = _memo if _memo is not None else {}
+        if class_name in memo:
+            return memo[class_name]
+        if class_name in _stack:
+            memo[class_name] = None
+            return None
+        direct = self._class_direct_bases(class_name, definitions, module_by_name)
+        if direct is None:
+            memo[class_name] = None
+            return None
+        if not direct:
+            memo[class_name] = (class_name,)
+            return memo[class_name]
+        sequences: list[list[str]] = []
+        for base in direct:
+            base_mro = self._c3_mro(base, definitions, module_by_name, modules, memo, (*_stack, class_name))
+            if base_mro is None:
+                memo[class_name] = None
+                return None
+            sequences.append(list(base_mro))
+        sequences.append(list(direct))
+        result = [class_name]
+        while any(sequences):
+            candidate = next(
+                (
+                    sequence[0]
+                    for sequence in sequences
+                    if sequence
+                    and all(sequence[0] not in other[1:] for other in sequences if other)
+                ),
+                None,
+            )
+            if candidate is None:
+                memo[class_name] = None
+                return None
+            result.append(candidate)
+            for sequence in sequences:
+                if sequence and sequence[0] == candidate:
+                    sequence.pop(0)
+        memo[class_name] = tuple(result)
+        return memo[class_name]
 
     def _relation(
         self,
@@ -638,6 +1426,7 @@ class PythonLanguageAdapter(LanguageAdapter):
         definitions: Mapping[str, _Definition],
         *,
         evidence_node: ast.AST | None = None,
+        call_resolution: CallResolution | None = None,
     ) -> Relation:
         source_ref = self._entity_ref(subject, source_unit, definitions, locator, "source")
         target_ref = (
@@ -677,6 +1466,7 @@ class PythonLanguageAdapter(LanguageAdapter):
             }[status],
             reason=reason,
             candidates=candidate_refs,
+            call_resolution=call_resolution,
         )
 
     def _entity_ref(
@@ -841,19 +1631,94 @@ class PythonLanguageAdapter(LanguageAdapter):
 
     @staticmethod
     def _parameter_annotation(
-        owner: str,
+        owner: str | None,
         parameter: str,
         definitions: Mapping[str, _Definition],
     ) -> str | None:
+        annotation, unsupported_union = PythonLanguageAdapter._parameter_annotation_info(
+            owner, parameter, definitions
+        )
+        return None if unsupported_union else annotation
+
+    @staticmethod
+    def _annotation_expression(annotation: ast.AST) -> ast.AST | None:
+        if isinstance(annotation, ast.Constant) and isinstance(annotation.value, str):
+            try:
+                expression = ast.parse(annotation.value.strip(), mode="eval").body
+            except (SyntaxError, ValueError):
+                return None
+            return expression if isinstance(expression, ast.AST) else None
+        return annotation
+
+    @classmethod
+    def _annotation_arm_names(cls, annotation: ast.AST) -> list[str]:
+        expression = cls._annotation_expression(annotation)
+        if expression is None:
+            return []
+        if isinstance(expression, ast.BinOp) and isinstance(expression.op, ast.BitOr):
+            return [
+                *cls._annotation_arm_names(expression.left),
+                *cls._annotation_arm_names(expression.right),
+            ]
+        if isinstance(expression, ast.Tuple):
+            names: list[str] = []
+            for item in expression.elts:
+                names.extend(cls._annotation_arm_names(item))
+            return names
+        if isinstance(expression, ast.Constant) and expression.value is None:
+            return ["None"]
+        if isinstance(expression, ast.Constant) and isinstance(expression.value, str):
+            return [expression.value]
+        return [cls._expr_name(expression)]
+
+    @staticmethod
+    def _parameter_annotation_info(
+        owner: str | None,
+        parameter: str,
+        definitions: Mapping[str, _Definition],
+    ) -> tuple[str | None, bool]:
+        if owner is None:
+            return None, False
         definition = definitions.get(owner)
         if definition is None or not isinstance(
             definition.node, (ast.FunctionDef, ast.AsyncFunctionDef)
         ):
-            return None
-        for argument in (*definition.node.args.posonlyargs, *definition.node.args.args):
+            return None, False
+        arguments = [
+            *definition.node.args.posonlyargs,
+            *definition.node.args.args,
+            *definition.node.args.kwonlyargs,
+        ]
+        if definition.node.args.vararg is not None:
+            arguments.append(definition.node.args.vararg)
+        if definition.node.args.kwarg is not None:
+            arguments.append(definition.node.args.kwarg)
+        for argument in arguments:
             if argument.arg == parameter and argument.annotation is not None:
-                return PythonLanguageAdapter._expr_name(argument.annotation)
-        return None
+                annotation = argument.annotation
+                expression = PythonLanguageAdapter._annotation_expression(annotation)
+                if expression is None:
+                    return None, True
+                if isinstance(expression, ast.BinOp) and isinstance(expression.op, ast.BitOr):
+                    names = PythonLanguageAdapter._annotation_arm_names(expression)
+                    non_none = [
+                        item
+                        for item in names
+                        if item not in {"None", "NoneType", "types.NoneType"}
+                    ]
+                    return (non_none[0], False) if len(non_none) == 1 else (None, True)
+                if isinstance(expression, ast.Subscript) and PythonLanguageAdapter._expr_name(
+                    expression.value
+                ) in {"Optional", "typing.Optional"}:
+                    names = PythonLanguageAdapter._annotation_arm_names(expression.slice)
+                    non_none = [
+                        item
+                        for item in names
+                        if item not in {"None", "NoneType", "types.NoneType"}
+                    ]
+                    return (non_none[0], False) if len(non_none) == 1 else (None, True)
+                return PythonLanguageAdapter._expr_name(expression), False
+        return None, False
 
     @staticmethod
     def _is_subclass_method(

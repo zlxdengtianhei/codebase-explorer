@@ -7,15 +7,28 @@ from pydantic import ValidationError
 
 from src.ir import (
     Availability,
+    CallOutcome,
+    CallResolution,
+    CallSiteAnchor,
+    CallSiteInventory,
     CapabilityCell,
     ConsumerReceipt,
     EntityKind,
     EntityRef,
     EvidenceSpan,
+    ExternalEcosystem,
+    ExternalTargetEvidence,
+    Provenance,
+    ProvenanceBasis,
+    ReceiverGap,
+    ReceiverGapReason,
+    ReceiverShape,
+    RepositoryEntityIdentity,
     ReadReceipt,
     Relation,
     ResolutionMethod,
     ResolutionStatus,
+    TargetEvidence,
     RunManifest,
     RunTerminalState,
     SemanticModule,
@@ -29,6 +42,7 @@ from src.ir import (
     VerifierVerdict,
     deserialize_model,
     deterministic_entity_id,
+    reconcile_call_site_ids,
     serialize_model,
 )
 from src.ir.serialization import canonical_hash
@@ -78,7 +92,7 @@ def test_unavailable_source_unit_serializes_and_round_trips_distinctly() -> None
 
     encoded = serialize_model(unavailable)
 
-    assert b'"protocol":"cbe-ir/2"' in encoded
+    assert b'"protocol":"cbe-ir/3"' in encoded
     assert b'"state":"unavailable"' in encoded
     assert deserialize_model(encoded, SourceUnit) == unavailable
     assert unavailable.state is SourceUnitState.UNAVAILABLE
@@ -122,6 +136,670 @@ def symbol(
         language="python",
         language_attributes={"line": line},
     )
+
+
+def typed_span(
+    source_revision: SourceRevision,
+    path: str = "src/main.py",
+    *,
+    line: int = 10,
+    end_column: int = 5,
+) -> EvidenceSpan:
+    source_unit_id = deterministic_entity_id(
+        source_revision.id, path, EntityKind.SOURCE_UNIT, path
+    )
+    return EvidenceSpan(
+        source_unit_id=source_unit_id,
+        path=path,
+        start_line=line,
+        start_column=0,
+        end_line=line,
+        end_column=end_column,
+    )
+
+
+def target_evidence(
+    source_revision: SourceRevision,
+    *,
+    path: str = "src/main.py",
+    locator: str = "python:function:src.fn:1:0",
+    basis: ProvenanceBasis = ProvenanceBasis.DIRECT_LOCAL_BINDING,
+    evidence_line: int = 1,
+) -> TargetEvidence:
+    identity = RepositoryEntityIdentity(
+        ref=EntityRef(
+            kind=EntityKind.SYMBOL,
+            id=deterministic_entity_id(
+                source_revision.id, path, EntityKind.SYMBOL, locator
+            ),
+        ),
+        source_revision_id=source_revision.id,
+        path=path,
+        definition_locator=locator,
+    )
+    provenance = Provenance(
+        basis=basis,
+        evidence=(typed_span(source_revision, path, line=evidence_line),),
+        source_revision_id=source_revision.id,
+        source_entity=identity,
+    )
+    return TargetEvidence(target=identity, provenance=(provenance,))
+
+
+def typed_relation(
+    source_revision: SourceRevision,
+    resolution: CallResolution,
+    *,
+    path: str = "src/main.py",
+    line: int = 10,
+    caller: str = "src/main.py::caller",
+) -> Relation:
+    span = typed_span(source_revision, path, line=line)
+    locator = (
+        f"python:call:{span.start_line}:{span.start_column}:"
+        f"{span.end_line}:{span.end_column}:{caller}"
+    )
+    status = {
+        CallOutcome.RUNTIME_EXACT: ResolutionStatus.RESOLVED,
+        CallOutcome.VIRTUAL_DISPATCH: ResolutionStatus.AMBIGUOUS,
+        CallOutcome.EXTERNAL: ResolutionStatus.EXTERNAL,
+        CallOutcome.UNRESOLVED_OR_DEEP: ResolutionStatus.UNRESOLVED,
+    }[resolution.outcome]
+    return Relation(
+        id=deterministic_entity_id(
+            source_revision.id, path, EntityKind.RELATION, locator
+        ),
+        source_revision_id=source_revision.id,
+        path=path,
+        kind="call",
+        locator=locator,
+        source=EntityRef(kind=EntityKind.SYMBOL, id="ir_" + "1" * 64),
+        target=None,
+        evidence=(span,),
+        resolution_status=status,
+        resolution_method=(
+            ResolutionMethod.EXACT
+            if resolution.outcome in {CallOutcome.RUNTIME_EXACT, CallOutcome.EXTERNAL}
+            else ResolutionMethod.DATAFLOW
+            if resolution.outcome is CallOutcome.VIRTUAL_DISPATCH
+            else ResolutionMethod.HEURISTIC
+        ),
+        confidence={
+            CallOutcome.RUNTIME_EXACT: 1.0,
+            CallOutcome.VIRTUAL_DISPATCH: 0.5,
+            CallOutcome.EXTERNAL: 1.0,
+            CallOutcome.UNRESOLVED_OR_DEEP: 0.0,
+        }[resolution.outcome],
+        reason=f"typed {resolution.outcome.value}",
+        candidates=(),
+        call_resolution=resolution,
+    )
+
+
+def test_v3_call_outcomes_are_exhaustive_and_round_trip() -> None:
+    source_revision = revision()
+    exact = target_evidence(source_revision)
+    lexical = target_evidence(
+        source_revision,
+        locator="python:method:src.Base.save:2:4",
+        basis=ProvenanceBasis.RECEIVER_ANNOTATION,
+        evidence_line=2,
+    )
+    override = target_evidence(
+        source_revision,
+        locator="python:method:src.Child.save:3:4",
+        basis=ProvenanceBasis.CLASS_HIERARCHY,
+        evidence_line=3,
+    )
+    external = ExternalTargetEvidence(
+        external_id=(
+            "ext_"
+            + __import__("hashlib").sha256(
+                b'["python_builtin","builtins.len",null]'
+            ).hexdigest()
+        ),
+        ecosystem=ExternalEcosystem.PYTHON_BUILTIN,
+        qualified_name="builtins.len",
+        provenance=(
+            Provenance(
+                basis=ProvenanceBasis.DIRECT_LOCAL_BINDING,
+                evidence=(typed_span(source_revision),),
+                source_revision_id=source_revision.id,
+            ),
+        ),
+    )
+    gap = ReceiverGap(
+        reason=ReceiverGapReason.FACTORY_RESULT,
+        receiver_text="factory()",
+        evidence=(typed_span(source_revision),),
+    )
+    cases = (
+        CallResolution(
+            outcome=CallOutcome.RUNTIME_EXACT,
+            receiver_shape=ReceiverShape.BARE_NAME,
+            runtime_exact_target=exact,
+        ),
+        CallResolution(
+            outcome=CallOutcome.VIRTUAL_DISPATCH,
+            receiver_shape=ReceiverShape.ANNOTATED_NAME,
+            lexical_base_target=lexical,
+            override_candidates=(override,),
+        ),
+        CallResolution(
+            outcome=CallOutcome.EXTERNAL,
+            receiver_shape=ReceiverShape.BARE_NAME,
+            external_target=external,
+        ),
+        CallResolution(
+            outcome=CallOutcome.UNRESOLVED_OR_DEEP,
+            receiver_shape=ReceiverShape.CALL_RESULT,
+            unresolved_or_deep_receiver=gap,
+        ),
+    )
+    for case in cases:
+        relation = typed_relation(source_revision, case)
+        encoded = serialize_model(relation)
+        assert deserialize_model(encoded, Relation) == relation
+        assert serialize_model(deserialize_model(encoded, Relation)) == encoded
+
+
+def test_v3_call_cardinality_revision_and_legacy_boundaries_fail_closed() -> None:
+    source_revision = revision()
+    exact = target_evidence(source_revision)
+    lexical = target_evidence(
+        source_revision,
+        locator="python:method:src.Base.save:2:4",
+        basis=ProvenanceBasis.RECEIVER_ANNOTATION,
+        evidence_line=2,
+    )
+    override = target_evidence(
+        source_revision,
+        locator="python:method:src.Child.save:3:4",
+        basis=ProvenanceBasis.CLASS_HIERARCHY,
+        evidence_line=3,
+    )
+    exact_case = CallResolution(
+        outcome=CallOutcome.RUNTIME_EXACT,
+        receiver_shape=ReceiverShape.BARE_NAME,
+        runtime_exact_target=exact,
+    )
+    with pytest.raises(ValidationError, match="runtime_exact"):
+        CallResolution(
+            outcome=CallOutcome.RUNTIME_EXACT,
+            receiver_shape=ReceiverShape.BARE_NAME,
+            runtime_exact_target=exact,
+            lexical_base_target=lexical,
+        )
+    with pytest.raises(ValidationError, match="exclude the lexical base"):
+        CallResolution(
+            outcome=CallOutcome.VIRTUAL_DISPATCH,
+            receiver_shape=ReceiverShape.ANNOTATED_NAME,
+            lexical_base_target=lexical,
+            override_candidates=(lexical,),
+        )
+    ordered = (override, exact)
+    if tuple(item.target.ref.id for item in ordered) == tuple(
+        sorted(item.target.ref.id for item in ordered)
+    ):
+        ordered = (exact, override)
+    with pytest.raises(ValidationError, match="canonically ordered"):
+        CallResolution(
+            outcome=CallOutcome.VIRTUAL_DISPATCH,
+            receiver_shape=ReceiverShape.ANNOTATED_NAME,
+            lexical_base_target=lexical,
+            override_candidates=ordered,
+        )
+    with pytest.raises(ValidationError, match="requires exactly one external"):
+        CallResolution(
+            outcome=CallOutcome.EXTERNAL,
+            receiver_shape=ReceiverShape.BARE_NAME,
+            external_target=ExternalTargetEvidence(
+                external_id=(
+                    "ext_"
+                    + __import__("hashlib").sha256(
+                        b'["python_builtin","builtins.len",null]'
+                    ).hexdigest()
+                ),
+                ecosystem=ExternalEcosystem.PYTHON_BUILTIN,
+                qualified_name="builtins.len",
+                provenance=(
+                    Provenance(
+                        basis=ProvenanceBasis.DIRECT_LOCAL_BINDING,
+                        evidence=(typed_span(source_revision),),
+                        source_revision_id=source_revision.id,
+                    ),
+                ),
+            ),
+            runtime_exact_target=exact,
+        )
+    with pytest.raises(ValidationError, match=r"revision|source unit"):
+        foreign = SourceRevision(
+            repo_root="/work/repo",
+            git_commit=SHA_B,
+            exclusion_config_hash=SHA_B,
+            source_manifest_hash=SHA_C,
+        )
+        foreign_target = target_evidence(foreign)
+        typed_relation(
+            source_revision,
+            CallResolution(
+                outcome=CallOutcome.RUNTIME_EXACT,
+                receiver_shape=ReceiverShape.BARE_NAME,
+                runtime_exact_target=foreign_target,
+            ),
+        )
+    with pytest.raises(ValidationError, match="Python call relations require"):
+        Relation(
+            **{
+                **typed_relation(source_revision, exact_case).model_dump(),
+                "call_resolution": None,
+            }
+        )
+    # JS/TS remain the explicit nullable compatibility lane.
+    js = Relation(
+        id=deterministic_entity_id(
+            source_revision.id, "src/main.js", EntityKind.RELATION, "call:1"
+        ),
+        source_revision_id=source_revision.id,
+        path="src/main.js",
+        kind="call",
+        locator="call:1",
+        source=EntityRef(kind=EntityKind.SYMBOL, id="ir_" + "1" * 64),
+        target=EntityRef(kind=EntityKind.SYMBOL, id="ir_" + "2" * 64),
+        evidence=(typed_span(source_revision, "src/main.js"),),
+        resolution_status=ResolutionStatus.RESOLVED,
+        resolution_method=ResolutionMethod.EXACT,
+        confidence=1.0,
+        reason="legacy JavaScript lane",
+        candidates=(EntityRef(kind=EntityKind.SYMBOL, id="ir_" + "2" * 64),),
+        call_resolution=None,
+    )
+    assert js.call_resolution is None
+    unsupported = typed_relation(
+        source_revision,
+        CallResolution(
+            outcome=CallOutcome.UNRESOLVED_OR_DEEP,
+            receiver_shape=ReceiverShape.OTHER,
+            unresolved_or_deep_receiver=ReceiverGap(
+                reason=ReceiverGapReason.UNSUPPORTED_SYNTAX,
+                receiver_text="callable",
+                evidence=(typed_span(source_revision),),
+            ),
+        ),
+    )
+    assert Relation(
+        **{
+            **unsupported.model_dump(),
+            "resolution_status": ResolutionStatus.UNSUPPORTED,
+        }
+    ).resolution_status is ResolutionStatus.UNSUPPORTED
+
+
+def test_call_inventory_reconciliation_rejects_relation_deletion() -> None:
+    source_revision = revision()
+    span = typed_span(source_revision, line=4)
+    caller = "src/main.py::caller"
+    locator = (
+        f"python:call:{span.start_line}:{span.start_column}:"
+        f"{span.end_line}:{span.end_column}:{caller}"
+    )
+    call_id = deterministic_entity_id(
+        source_revision.id, "src/main.py", EntityKind.RELATION, locator
+    )
+    inventory = CallSiteInventory(
+        source_revision_id=source_revision.id,
+        source_unit_id=span.source_unit_id,
+        path="src/main.py",
+        language="python",
+        ast_backend_id="python_ast",
+        ast_backend_version="3.13",
+        call_sites=(
+            CallSiteAnchor(
+                call_site_id=call_id,
+                caller_canonical_id=caller,
+                span=span,
+            ),
+        ),
+    )
+    relation = typed_relation(
+        source_revision,
+        CallResolution(
+            outcome=CallOutcome.UNRESOLVED_OR_DEEP,
+            receiver_shape=ReceiverShape.BARE_NAME,
+            unresolved_or_deep_receiver=ReceiverGap(
+                reason=ReceiverGapReason.UNKNOWN_NAME,
+                receiver_text="missing",
+                evidence=(span,),
+            ),
+        ),
+        line=4,
+        caller=caller,
+    )
+    assert reconcile_call_site_ids(
+        (inventory,),
+        (relation,),
+        (inventory.source_unit_id,),
+    ) == (call_id,)
+    with pytest.raises(ValueError, match="ID set mismatch"):
+        reconcile_call_site_ids((inventory,), (), (inventory.source_unit_id,))
+
+
+def test_call_inventory_reconciliation_is_total_over_zero_call_units() -> None:
+    source_revision = revision()
+    main = unit(source_revision)
+    span = typed_span(source_revision, line=4)
+    caller = "src/main.py::caller"
+    locator = (
+        f"python:call:{span.start_line}:{span.start_column}:"
+        f"{span.end_line}:{span.end_column}:{caller}"
+    )
+    call_id = deterministic_entity_id(
+        source_revision.id, "src/main.py", EntityKind.RELATION, locator
+    )
+    inventory = CallSiteInventory(
+        source_revision_id=source_revision.id,
+        source_unit_id=main.id,
+        path=main.path,
+        language="python",
+        ast_backend_id="python_ast",
+        ast_backend_version="3.13",
+        call_sites=(
+            CallSiteAnchor(
+                call_site_id=call_id,
+                caller_canonical_id=caller,
+                span=span,
+            ),
+        ),
+    )
+    relation = typed_relation(
+        source_revision,
+        CallResolution(
+            outcome=CallOutcome.UNRESOLVED_OR_DEEP,
+            receiver_shape=ReceiverShape.BARE_NAME,
+            unresolved_or_deep_receiver=ReceiverGap(
+                reason=ReceiverGapReason.UNKNOWN_NAME,
+                receiver_text="missing",
+                evidence=(span,),
+            ),
+        ),
+        line=4,
+        caller=caller,
+    )
+    zero = main.model_copy(
+        update={
+            "id": deterministic_entity_id(
+                source_revision.id,
+                "src/zero.py",
+                EntityKind.SOURCE_UNIT,
+                "src/zero.py",
+            ),
+            "path": "src/zero.py",
+        }
+    )
+    zero_inventory = CallSiteInventory(
+        source_revision_id=source_revision.id,
+        source_unit_id=zero.id,
+        path=zero.path,
+        language="python",
+        ast_backend_id="python_ast",
+        ast_backend_version="3.13",
+        call_sites=(),
+    )
+
+    with pytest.raises(ValueError, match="cardinality mismatch"):
+        reconcile_call_site_ids(
+            (inventory,),
+            (relation,),
+            (main.id, zero.id),
+        )
+    assert reconcile_call_site_ids(
+        (inventory, zero_inventory),
+        (relation,),
+        (main.id, zero.id),
+    ) == (call_id,)
+    with pytest.raises(ValueError, match="duplicate call-site inventory source unit"):
+        reconcile_call_site_ids(
+            (inventory, inventory),
+            (relation,),
+            (main.id,),
+        )
+
+    foreign_revision = "rev_" + "9" * 64
+    foreign_path = "src/foreign.py"
+    foreign_unit_id = deterministic_entity_id(
+        foreign_revision, foreign_path, EntityKind.SOURCE_UNIT, foreign_path
+    )
+    foreign_inventory = CallSiteInventory(
+        source_revision_id=foreign_revision,
+        source_unit_id=foreign_unit_id,
+        path=foreign_path,
+        language="python",
+        ast_backend_id="python_ast",
+        ast_backend_version="3.13",
+        call_sites=(),
+    )
+    with pytest.raises(ValueError, match="foreign Python SourceUnit"):
+        reconcile_call_site_ids(
+            (inventory, foreign_inventory),
+            (relation,),
+            (main.id,),
+        )
+
+
+def test_typed_evidence_permutations_have_identical_canonical_bytes() -> None:
+    source_revision = revision()
+    target = target_evidence(source_revision)
+    first = typed_span(source_revision, line=1, end_column=2)
+    second = typed_span(source_revision, line=2, end_column=3)
+    provenance_a = Provenance(
+        basis=ProvenanceBasis.DIRECT_LOCAL_BINDING,
+        evidence=(first, second),
+        source_revision_id=source_revision.id,
+    )
+    provenance_b = Provenance(
+        basis=ProvenanceBasis.IMPORT_BINDING,
+        evidence=(second, first),
+        source_revision_id=source_revision.id,
+    )
+    ordered_target = TargetEvidence(
+        target=target.target,
+        provenance=(provenance_b, provenance_a),
+    )
+    reversed_target = TargetEvidence(
+        target=target.target,
+        provenance=(
+            Provenance(
+                basis=ProvenanceBasis.IMPORT_BINDING,
+                evidence=(first, second),
+                source_revision_id=source_revision.id,
+            ),
+            Provenance(
+                basis=ProvenanceBasis.DIRECT_LOCAL_BINDING,
+                evidence=(second, first),
+                source_revision_id=source_revision.id,
+            ),
+        ),
+    )
+    left = typed_relation(
+        source_revision,
+        CallResolution(
+            outcome=CallOutcome.RUNTIME_EXACT,
+            receiver_shape=ReceiverShape.BARE_NAME,
+            runtime_exact_target=ordered_target,
+        ),
+    )
+    right = typed_relation(
+        source_revision,
+        CallResolution(
+            outcome=CallOutcome.RUNTIME_EXACT,
+            receiver_shape=ReceiverShape.BARE_NAME,
+            runtime_exact_target=reversed_target,
+        ),
+    )
+    assert left == right
+    assert serialize_model(left) == serialize_model(right)
+
+
+def test_external_gap_and_inventory_permutations_are_canonical_or_rejected() -> None:
+    source_revision = revision()
+    first = typed_span(source_revision, line=1, end_column=2)
+    second = typed_span(source_revision, line=2, end_column=3)
+    provenance_direct = Provenance(
+        basis=ProvenanceBasis.DIRECT_LOCAL_BINDING,
+        evidence=(first, second),
+        source_revision_id=source_revision.id,
+    )
+    provenance_import = Provenance(
+        basis=ProvenanceBasis.IMPORT_BINDING,
+        evidence=(second, first),
+        source_revision_id=source_revision.id,
+    )
+    external_id = (
+        "ext_"
+        + __import__("hashlib").sha256(
+            b'["python_builtin","builtins.len",null]'
+        ).hexdigest()
+    )
+    external_left = ExternalTargetEvidence(
+        external_id=external_id,
+        ecosystem=ExternalEcosystem.PYTHON_BUILTIN,
+        qualified_name="builtins.len",
+        provenance=(provenance_import, provenance_direct),
+    )
+    external_right = ExternalTargetEvidence(
+        external_id=external_id,
+        ecosystem=ExternalEcosystem.PYTHON_BUILTIN,
+        qualified_name="builtins.len",
+        provenance=(
+            Provenance(
+                basis=ProvenanceBasis.IMPORT_BINDING,
+                evidence=(first, second),
+                source_revision_id=source_revision.id,
+            ),
+            Provenance(
+                basis=ProvenanceBasis.DIRECT_LOCAL_BINDING,
+                evidence=(second, first),
+                source_revision_id=source_revision.id,
+            ),
+        ),
+    )
+    external_relation_left = typed_relation(
+        source_revision,
+        CallResolution(
+            outcome=CallOutcome.EXTERNAL,
+            receiver_shape=ReceiverShape.BARE_NAME,
+            external_target=external_left,
+        ),
+    )
+    external_relation_right = typed_relation(
+        source_revision,
+        CallResolution(
+            outcome=CallOutcome.EXTERNAL,
+            receiver_shape=ReceiverShape.BARE_NAME,
+            external_target=external_right,
+        ),
+    )
+    assert serialize_model(external_relation_left) == serialize_model(external_relation_right)
+
+    gap_left = ReceiverGap(
+        reason=ReceiverGapReason.ATTRIBUTE_CHAIN,
+        receiver_text="backend.client",
+        evidence=(second, first),
+    )
+    gap_right = ReceiverGap(
+        reason=ReceiverGapReason.ATTRIBUTE_CHAIN,
+        receiver_text="backend.client",
+        evidence=(first, second),
+    )
+    assert gap_left == gap_right
+    gap_relation_left = typed_relation(
+        source_revision,
+        CallResolution(
+            outcome=CallOutcome.UNRESOLVED_OR_DEEP,
+            receiver_shape=ReceiverShape.ATTRIBUTE_CHAIN,
+            unresolved_or_deep_receiver=gap_left,
+        ),
+    )
+    gap_relation_right = typed_relation(
+        source_revision,
+        CallResolution(
+            outcome=CallOutcome.UNRESOLVED_OR_DEEP,
+            receiver_shape=ReceiverShape.ATTRIBUTE_CHAIN,
+            unresolved_or_deep_receiver=gap_right,
+        ),
+    )
+    assert serialize_model(gap_relation_left) == serialize_model(gap_relation_right)
+
+    source_unit = unit(source_revision)
+    anchors = []
+    for line, caller in ((1, "src/main.py::first"), (2, "src/main.py::second")):
+        span = typed_span(source_revision, line=line)
+        locator = (
+            f"python:call:{span.start_line}:{span.start_column}:"
+            f"{span.end_line}:{span.end_column}:{caller}"
+        )
+        anchors.append(
+            CallSiteAnchor(
+                call_site_id=deterministic_entity_id(
+                    source_revision.id,
+                    source_unit.path,
+                    EntityKind.RELATION,
+                    locator,
+                ),
+                caller_canonical_id=caller,
+                span=span,
+            )
+        )
+    with pytest.raises(ValidationError, match="canonically ordered"):
+        CallSiteInventory(
+            source_revision_id=source_revision.id,
+            source_unit_id=source_unit.id,
+            path=source_unit.path,
+            language="python",
+            ast_backend_id="python_ast",
+            ast_backend_version="3.13",
+            call_sites=tuple(reversed(anchors)),
+        )
+    ordered_inventory = CallSiteInventory(
+        source_revision_id=source_revision.id,
+        source_unit_id=source_unit.id,
+        path=source_unit.path,
+        language="python",
+        ast_backend_id="python_ast",
+        ast_backend_version="3.13",
+        call_sites=tuple(anchors),
+    )
+    encoded_inventory = serialize_model(ordered_inventory)
+    assert serialize_model(deserialize_model(encoded_inventory, CallSiteInventory)) == encoded_inventory
+
+
+def test_repository_and_external_target_namespaces_are_disjoint() -> None:
+    source_revision = revision()
+    with pytest.raises(ValidationError, match="must reference a Symbol"):
+        RepositoryEntityIdentity(
+            ref=EntityRef(
+                kind=EntityKind.RELATION,
+                id="ir_" + "1" * 64,
+            ),
+            source_revision_id=source_revision.id,
+            path="src/main.py",
+            definition_locator="python:relation:1",
+        )
+    with pytest.raises(ValidationError, match="external_id"):
+        ExternalTargetEvidence(
+            external_id="ir_" + "2" * 64,
+            ecosystem=ExternalEcosystem.PYTHON_BUILTIN,
+            qualified_name="builtins.len",
+            provenance=(
+                Provenance(
+                    basis=ProvenanceBasis.DIRECT_LOCAL_BINDING,
+                    evidence=(typed_span(source_revision),),
+                    source_revision_id=source_revision.id,
+                ),
+            ),
+        )
+
+
 def test_source_revision_requires_exactly_one_clean_or_dirty_identity() -> None:
     clean = revision()
     assert clean.repo_root == "/work/repo"

@@ -1,11 +1,12 @@
-"""Immutable canonical values for the ``cbe-ir/2`` protocol."""
+"""Immutable canonical values for the ``cbe-ir/3`` protocol."""
 
 from __future__ import annotations
 
 import hashlib
+import json
 import math
 import re
-from collections.abc import Iterator
+from collections.abc import Iterable, Iterator
 from enum import Enum, StrEnum
 from typing import Any, Mapping, Self
 
@@ -130,6 +131,67 @@ class EntityKind(StrEnum):
     SYMBOL = "symbol"
     RELATION = "relation"
     SEMANTIC_MODULE = "semantic_module"
+
+
+class CallOutcome(StrEnum):
+    """Mutually exclusive outcomes for one Python AST call site."""
+
+    RUNTIME_EXACT = "runtime_exact"
+    VIRTUAL_DISPATCH = "virtual_dispatch"
+    EXTERNAL = "external"
+    UNRESOLVED_OR_DEEP = "unresolved_or_deep"
+
+
+# The longer name is useful to callers that do not know the historical
+# ``ResolutionStatus`` vocabulary.  Keep both names as the same enum object so
+# a protocol consumer cannot accidentally create two incompatible vocabularies.
+ResolutionOutcome = CallOutcome
+
+
+class ReceiverShape(StrEnum):
+    BARE_NAME = "bare_name"
+    MODULE_ATTRIBUTE = "module_attribute"
+    SELF = "self"
+    CLS = "cls"
+    ANNOTATED_NAME = "annotated_name"
+    ATTRIBUTE_CHAIN = "attribute_chain"
+    CALL_RESULT = "call_result"
+    SUBSCRIPT = "subscript"
+    DYNAMIC_ATTRIBUTE = "dynamic_attribute"
+    OTHER = "other"
+
+
+class ProvenanceBasis(StrEnum):
+    DIRECT_LOCAL_BINDING = "direct_local_binding"
+    IMPORT_BINDING = "import_binding"
+    MODULE_BINDING = "module_binding"
+    ENCLOSING_CLASS = "enclosing_class"
+    RECEIVER_ANNOTATION = "receiver_annotation"
+    CLASS_HIERARCHY = "class_hierarchy"
+    FINAL_CLASS_OR_METHOD = "final_class_or_method"
+
+
+class ReceiverGapReason(StrEnum):
+    UNKNOWN_NAME = "unknown_name"
+    UNTYPED_RECEIVER = "untyped_receiver"
+    MISSING_LEXICAL_MEMBER = "missing_lexical_member"
+    UNSUPPORTED_UNION_RECEIVER = "unsupported_union_receiver"
+    ATTRIBUTE_CHAIN = "attribute_chain"
+    FACTORY_RESULT = "factory_result"
+    SUBSCRIPT_RECEIVER = "subscript_receiver"
+    DYNAMIC_ATTRIBUTE = "dynamic_attribute"
+    DYNAMIC_IMPORT = "dynamic_import"
+    EXEC = "exec"
+    DECORATED_CALLABLE = "decorated_callable"
+    AMBIGUOUS_MRO = "ambiguous_mro"
+    UNSUPPORTED_SYNTAX = "unsupported_syntax"
+
+
+class ExternalEcosystem(StrEnum):
+    PYTHON_BUILTIN = "python_builtin"
+    PYTHON_MODULE = "python_module"
+    PYTHON_DISTRIBUTION = "python_distribution"
+    UNKNOWN_EXTERNAL = "unknown_external"
 
 
 def _non_empty(value: str, field_name: str) -> str:
@@ -482,6 +544,377 @@ class Symbol(IRModel):
         return self
 
 
+def _evidence_key(span: EvidenceSpan) -> tuple[Any, ...]:
+    return (
+        span.path,
+        span.start_line,
+        span.start_column,
+        span.end_line,
+        span.end_column,
+        span.source_unit_id,
+    )
+
+
+def _source_entity_key(entity: "RepositoryEntityIdentity | None") -> tuple[Any, ...]:
+    if entity is None:
+        return (0,)
+    return (
+        1,
+        entity.ref.kind.value,
+        entity.ref.id,
+        entity.source_revision_id,
+        entity.path,
+        entity.definition_locator,
+    )
+
+
+def _provenance_key(provenance: "Provenance") -> tuple[Any, ...]:
+    return (
+        provenance.basis.value,
+        provenance.source_revision_id,
+        _source_entity_key(provenance.source_entity),
+        tuple(_evidence_key(span) for span in provenance.evidence),
+    )
+
+
+def _target_key(target: "TargetEvidence") -> tuple[Any, ...]:
+    return (
+        target.target.ref.id,
+        target.target.source_revision_id,
+        target.target.path,
+        target.target.definition_locator,
+        tuple(_provenance_key(item) for item in target.provenance),
+    )
+
+
+def _external_key(target: "ExternalTargetEvidence") -> tuple[Any, ...]:
+    return (
+        target.external_id,
+        target.ecosystem.value,
+        target.qualified_name,
+        (0,) if target.distribution is None else (1, target.distribution),
+        tuple(_provenance_key(item) for item in target.provenance),
+    )
+
+
+def _canonical_evidence(value: tuple[EvidenceSpan, ...], field_name: str) -> tuple[EvidenceSpan, ...]:
+    if not value:
+        raise ValueError(f"{field_name} requires at least one evidence span")
+    deduped = { _evidence_key(item): item for item in value }
+    return tuple(deduped[key] for key in sorted(deduped))
+
+
+class RepositoryEntityIdentity(IRModel):
+    """Recomputable identity for a repository Symbol target."""
+
+    ref: EntityRef
+    source_revision_id: str
+    path: str
+    definition_locator: str
+
+    @field_validator("source_revision_id")
+    @classmethod
+    def _revision(cls, value: str) -> str:
+        return _revision_id(value, "source_revision_id")
+
+    @field_validator("path")
+    @classmethod
+    def _path(cls, value: str) -> str:
+        return normalize_relative_path(value)
+
+    @field_validator("definition_locator")
+    @classmethod
+    def _locator(cls, value: str) -> str:
+        return _non_empty(value, "definition_locator")
+
+    @model_validator(mode="after")
+    def _identity(self) -> Self:
+        if self.ref.kind is not EntityKind.SYMBOL:
+            raise ValueError("repository target identity must reference a Symbol")
+        expected = deterministic_entity_id(
+            self.source_revision_id,
+            self.path,
+            EntityKind.SYMBOL,
+            self.definition_locator,
+        )
+        if self.ref.id != expected:
+            raise ValueError("repository target ref does not match its identity")
+        return self
+
+
+class Provenance(IRModel):
+    basis: ProvenanceBasis
+    evidence: tuple[EvidenceSpan, ...]
+    source_revision_id: str
+    source_entity: RepositoryEntityIdentity | None = None
+
+    @field_validator("source_revision_id")
+    @classmethod
+    def _revision(cls, value: str) -> str:
+        return _revision_id(value, "source_revision_id")
+
+    @model_validator(mode="after")
+    def _canonical(self) -> Self:
+        object.__setattr__(
+            self,
+            "evidence",
+            _canonical_evidence(self.evidence, "provenance evidence"),
+        )
+        if self.source_entity is not None and self.source_entity.source_revision_id != self.source_revision_id:
+            raise ValueError("provenance source entity must use the provenance revision")
+        return self
+
+
+class TargetEvidence(IRModel):
+    target: RepositoryEntityIdentity
+    provenance: tuple[Provenance, ...]
+
+    @model_validator(mode="after")
+    def _canonical(self) -> Self:
+        if not self.provenance:
+            raise ValueError("target evidence requires provenance")
+        if any(item.source_revision_id != self.target.source_revision_id for item in self.provenance):
+            raise ValueError("target evidence provenance must use the target revision")
+        deduped = {_provenance_key(item): item for item in self.provenance}
+        ordered = tuple(deduped[key] for key in sorted(deduped))
+        object.__setattr__(self, "provenance", ordered)
+        return self
+
+
+def _normalize_external_distribution(value: str | None) -> str | None:
+    if value is None:
+        return None
+    normalized = re.sub(r"[-_.]+", "-", value.strip().lower())
+    return _non_empty(normalized, "distribution")
+
+
+def _external_identity(
+    ecosystem: ExternalEcosystem,
+    qualified_name: str,
+    distribution: str | None,
+) -> str:
+    payload = json.dumps(
+        [ecosystem.value, qualified_name, distribution],
+        ensure_ascii=False,
+        allow_nan=False,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    return "ext_" + hashlib.sha256(payload).hexdigest()
+
+
+class ExternalTargetEvidence(IRModel):
+    external_id: str
+    ecosystem: ExternalEcosystem
+    qualified_name: str
+    distribution: str | None = None
+    provenance: tuple[Provenance, ...]
+
+    @field_validator("external_id")
+    @classmethod
+    def _external_id(cls, value: str) -> str:
+        normalized = _non_empty(value, "external_id")
+        if not re.fullmatch(r"ext_[0-9a-f]{64}", normalized):
+            raise ValueError("external_id must be an ext_ SHA-256 identity")
+        return normalized
+
+    @field_validator("qualified_name")
+    @classmethod
+    def _qualified_name(cls, value: str) -> str:
+        normalized = ".".join(part.strip() for part in value.strip().split("."))
+        if not normalized or any(not part for part in normalized.split(".")):
+            raise ValueError("qualified_name must be a normalized dotted name")
+        return normalized
+
+    @field_validator("distribution")
+    @classmethod
+    def _distribution(cls, value: str | None) -> str | None:
+        return _normalize_external_distribution(value)
+
+    @model_validator(mode="after")
+    def _identity_and_provenance(self) -> Self:
+        if self.ecosystem is ExternalEcosystem.PYTHON_DISTRIBUTION and self.distribution is None:
+            raise ValueError("python_distribution requires distribution")
+        if self.ecosystem is not ExternalEcosystem.PYTHON_DISTRIBUTION and self.distribution is not None:
+            raise ValueError("only python_distribution may carry distribution")
+        if self.external_id != _external_identity(self.ecosystem, self.qualified_name, self.distribution):
+            raise ValueError("external_id does not match canonical external identity")
+        if not self.provenance:
+            raise ValueError("external target evidence requires provenance")
+        revisions = {item.source_revision_id for item in self.provenance}
+        if len(revisions) != 1:
+            raise ValueError("external target provenance must use one source revision")
+        deduped = {_provenance_key(item): item for item in self.provenance}
+        object.__setattr__(self, "provenance", tuple(deduped[key] for key in sorted(deduped)))
+        return self
+
+
+class ReceiverGap(IRModel):
+    reason: ReceiverGapReason
+    receiver_text: str
+    evidence: tuple[EvidenceSpan, ...]
+
+    @field_validator("receiver_text")
+    @classmethod
+    def _receiver_text(cls, value: str) -> str:
+        return _non_empty(value, "receiver_text")
+
+    @model_validator(mode="after")
+    def _canonical(self) -> Self:
+        object.__setattr__(
+            self,
+            "evidence",
+            _canonical_evidence(self.evidence, "receiver gap evidence"),
+        )
+        return self
+
+
+class CallResolution(IRModel):
+    outcome: CallOutcome
+    receiver_shape: ReceiverShape
+    runtime_exact_target: TargetEvidence | None = None
+    lexical_base_target: TargetEvidence | None = None
+    override_candidates: tuple[TargetEvidence, ...] = ()
+    external_target: ExternalTargetEvidence | None = None
+    unresolved_or_deep_receiver: ReceiverGap | None = None
+
+    @model_validator(mode="after")
+    def _cardinality_and_order(self) -> Self:
+        has_runtime = self.runtime_exact_target is not None
+        has_lexical = self.lexical_base_target is not None
+        has_external = self.external_target is not None
+        has_gap = self.unresolved_or_deep_receiver is not None
+        if self.outcome is CallOutcome.RUNTIME_EXACT:
+            if not has_runtime or has_lexical or self.override_candidates or has_external or has_gap:
+                raise ValueError("runtime_exact requires exactly one runtime target and no other evidence")
+        elif self.outcome is CallOutcome.VIRTUAL_DISPATCH:
+            if not has_lexical or has_runtime or has_external or has_gap:
+                raise ValueError("virtual_dispatch requires one lexical base and no runtime target")
+            if any(item.target.ref.id == self.lexical_base_target.target.ref.id for item in self.override_candidates):
+                raise ValueError("virtual override candidates must exclude the lexical base")
+            ids = [item.target.ref.id for item in self.override_candidates]
+            if len(ids) != len(set(ids)):
+                raise ValueError("virtual override candidates must have unique target ids")
+            if tuple(_target_key(item) for item in self.override_candidates) != tuple(
+                sorted(_target_key(item) for item in self.override_candidates)
+            ):
+                raise ValueError("virtual override candidates must be canonically ordered")
+        elif self.outcome is CallOutcome.EXTERNAL:
+            if not has_external or has_runtime or has_lexical or self.override_candidates or has_gap:
+                raise ValueError("external requires exactly one external target")
+        elif self.outcome is CallOutcome.UNRESOLVED_OR_DEEP:
+            if not has_gap or has_runtime or has_lexical or self.override_candidates or has_external:
+                raise ValueError("unresolved_or_deep requires exactly one receiver gap")
+        else:  # pragma: no cover - StrEnum validation normally handles this.
+            raise ValueError("unknown call outcome")
+        return self
+
+
+def _call_locator_from_anchor(
+    path: str,
+    span: EvidenceSpan,
+    caller_canonical_id: str,
+) -> str:
+    return (
+        f"python:call:{span.start_line}:{span.start_column}:"
+        f"{span.end_line}:{span.end_column}:{caller_canonical_id}"
+    )
+
+
+class CallSiteAnchor(IRModel):
+    call_site_id: str
+    caller_canonical_id: str
+    span: EvidenceSpan
+
+    @field_validator("call_site_id")
+    @classmethod
+    def _call_site_id(cls, value: str) -> str:
+        return _entity_id(value, "call_site_id")
+
+    @field_validator("caller_canonical_id")
+    @classmethod
+    def _caller_id(cls, value: str) -> str:
+        return _non_empty(value, "caller_canonical_id")
+
+    @model_validator(mode="after")
+    def _locator_shape(self) -> Self:
+        if "::" not in self.caller_canonical_id:
+            raise ValueError("caller_canonical_id must use path::lexical namespace")
+        path, lexical = self.caller_canonical_id.rsplit("::", 1)
+        if normalize_relative_path(path) != self.span.path or not lexical:
+            raise ValueError("caller_canonical_id path must match call span path")
+        return self
+
+
+class CallSiteInventory(IRModel):
+    source_revision_id: str
+    source_unit_id: str
+    path: str
+    language: str
+    ast_backend_id: str
+    ast_backend_version: str
+    call_sites: tuple[CallSiteAnchor, ...] = ()
+
+    @field_validator("source_revision_id")
+    @classmethod
+    def _revision(cls, value: str) -> str:
+        return _revision_id(value, "source_revision_id")
+
+    @field_validator("source_unit_id")
+    @classmethod
+    def _source_unit_id(cls, value: str) -> str:
+        return _entity_id(value, "source_unit_id")
+
+    @field_validator("path")
+    @classmethod
+    def _path(cls, value: str) -> str:
+        return normalize_relative_path(value)
+
+    @field_validator("language", "ast_backend_id", "ast_backend_version")
+    @classmethod
+    def _text(cls, value: str, info: Any) -> str:
+        return _non_empty(value, info.field_name)
+
+    @model_validator(mode="after")
+    def _anchors(self) -> Self:
+        if self.language != "python":
+            raise ValueError("CallSiteInventory is defined only for Python")
+        expected_unit = deterministic_entity_id(
+            self.source_revision_id,
+            self.path,
+            EntityKind.SOURCE_UNIT,
+            self.path,
+        )
+        if self.source_unit_id != expected_unit:
+            raise ValueError("call inventory source_unit_id does not match its identity")
+        previous: tuple[Any, ...] | None = None
+        seen_ids: set[str] = set()
+        seen_spans: set[tuple[Any, ...]] = set()
+        for anchor in self.call_sites:
+            if anchor.span.path != self.path or anchor.span.source_unit_id != self.source_unit_id:
+                raise ValueError("call inventory anchor is bound to another source unit")
+            if anchor.call_site_id in seen_ids:
+                raise ValueError("call inventory contains duplicate call_site_id")
+            seen_ids.add(anchor.call_site_id)
+            span_key = _evidence_key(anchor.span)
+            if span_key in seen_spans:
+                raise ValueError("call inventory contains duplicate call span")
+            seen_spans.add(span_key)
+            locator = _call_locator_from_anchor(self.path, anchor.span, anchor.caller_canonical_id)
+            expected_id = deterministic_entity_id(
+                self.source_revision_id,
+                self.path,
+                EntityKind.RELATION,
+                locator,
+            )
+            if anchor.call_site_id != expected_id:
+                raise ValueError("call inventory anchor id does not match its canonical locator")
+            key = (*span_key, anchor.call_site_id)
+            if previous is not None and key < previous:
+                raise ValueError("call inventory anchors must be canonically ordered")
+            previous = key
+        return self
+
+
 class Relation(IRModel):
     id: str
     source_revision_id: str
@@ -496,6 +929,7 @@ class Relation(IRModel):
     confidence: float = Field(ge=0.0, le=1.0)
     reason: str
     candidates: tuple[EntityRef, ...]
+    call_resolution: CallResolution | None = None
 
     @field_validator("path")
     @classmethod
@@ -523,12 +957,117 @@ class Relation(IRModel):
             raise ValueError("relation requires at least one evidence span")
         if any(span.path != self.path for span in self.evidence):
             raise ValueError("relation evidence must use the relation path")
+        if self.kind == "call":
+            # Call-expression witnesses are part of the v3 canonical form;
+            # normalize/dedupe them before any typed outcome checks.  A normal
+            # parser emits one span, while this also makes replayed models
+            # deterministic under input permutation.
+            object.__setattr__(
+                self,
+                "evidence",
+                _canonical_evidence(self.evidence, "call relation evidence"),
+            )
+        if self.kind == "call":
+            extension = self.path.rsplit(".", 1)[-1].lower() if "." in self.path else ""
+            if extension in {"py", "pyi"} and self.call_resolution is None:
+                raise ValueError("Python call relations require typed call_resolution")
+            if extension in {"js", "jsx", "ts", "tsx"} and self.call_resolution is not None:
+                raise ValueError("non-Python legacy call relations must leave call_resolution null")
+            if extension not in {"py", "pyi", "js", "jsx", "ts", "tsx"}:
+                raise ValueError("call relations require a supported source extension")
+            if self.call_resolution is not None:
+                if self.target is not None or self.candidates:
+                    raise ValueError("typed call relations cannot carry legacy target/candidates")
+                for span in self.evidence:
+                    expected_unit = deterministic_entity_id(
+                        self.source_revision_id,
+                        span.path,
+                        EntityKind.SOURCE_UNIT,
+                        span.path,
+                    )
+                    if span.source_unit_id != expected_unit:
+                        raise ValueError("typed call evidence source unit is not revision-bound")
+                nested_revisions: set[str] = set()
+                for target in (
+                    self.call_resolution.runtime_exact_target,
+                    self.call_resolution.lexical_base_target,
+                    *self.call_resolution.override_candidates,
+                ):
+                    if target is not None:
+                        nested_revisions.add(target.target.source_revision_id)
+                        for provenance in target.provenance:
+                            nested_revisions.add(provenance.source_revision_id)
+                            for span in provenance.evidence:
+                                expected_unit = deterministic_entity_id(
+                                    self.source_revision_id,
+                                    span.path,
+                                    EntityKind.SOURCE_UNIT,
+                                    span.path,
+                                )
+                                if span.source_unit_id != expected_unit:
+                                    raise ValueError("typed provenance evidence source unit is not revision-bound")
+                if self.call_resolution.external_target is not None:
+                    for provenance in self.call_resolution.external_target.provenance:
+                        nested_revisions.add(provenance.source_revision_id)
+                        for span in provenance.evidence:
+                            expected_unit = deterministic_entity_id(
+                                self.source_revision_id,
+                                span.path,
+                                EntityKind.SOURCE_UNIT,
+                                span.path,
+                            )
+                            if span.source_unit_id != expected_unit:
+                                raise ValueError("typed external evidence source unit is not revision-bound")
+                if nested_revisions and nested_revisions != {self.source_revision_id}:
+                    raise ValueError("typed call evidence must use the relation source revision")
+                gap = self.call_resolution.unresolved_or_deep_receiver
+                if gap is not None:
+                    # EvidenceSpan has no revision field; its source-unit id is
+                    # nevertheless recomputable against this relation revision.
+                    for span in gap.evidence:
+                        expected_unit = deterministic_entity_id(
+                            self.source_revision_id, span.path, EntityKind.SOURCE_UNIT, span.path
+                        )
+                        if span.source_unit_id != expected_unit:
+                            raise ValueError("typed gap evidence source unit is not revision-bound")
+                expected_statuses = {
+                    CallOutcome.RUNTIME_EXACT: ResolutionStatus.RESOLVED,
+                    CallOutcome.VIRTUAL_DISPATCH: ResolutionStatus.AMBIGUOUS,
+                    CallOutcome.EXTERNAL: ResolutionStatus.EXTERNAL,
+                    CallOutcome.UNRESOLVED_OR_DEEP: {
+                        ResolutionStatus.UNRESOLVED,
+                        ResolutionStatus.UNSUPPORTED,
+                    },
+                }[self.call_resolution.outcome]
+                accepted_statuses = (
+                    expected_statuses
+                    if isinstance(expected_statuses, set)
+                    else {expected_statuses}
+                )
+                if self.resolution_status not in accepted_statuses:
+                    raise ValueError("resolution_status is not the typed call outcome compatibility label")
+                if not self.locator.startswith("python:call:"):
+                    raise ValueError("typed call locator must use the v3 Python call locator")
+                # Relation evidence and locator must encode the same target-free
+                # six-tuple.  Recompute from the suffix after the fixed prefix.
+                fields = self.locator.split(":", 6)
+                if len(fields) != 7 or fields[:2] != ["python", "call"]:
+                    raise ValueError("typed call locator has invalid v3 shape")
+                expected = f"python:call:{self.evidence[0].start_line}:{self.evidence[0].start_column}:{self.evidence[0].end_line}:{self.evidence[0].end_column}:{fields[6]}"
+                if self.locator != expected:
+                    raise ValueError("typed call locator does not match relation evidence")
+                caller_path, lexical = fields[6].rsplit("::", 1) if "::" in fields[6] else (None, None)
+                if caller_path != self.path or not lexical:
+                    raise ValueError("typed call locator caller namespace is invalid")
+        elif self.call_resolution is not None:
+            raise ValueError("only call relations may carry typed call_resolution")
+        typed_call = self.kind == "call" and self.call_resolution is not None
         target_required = {ResolutionStatus.RESOLVED, ResolutionStatus.EXTERNAL}
-        if self.resolution_status in target_required and self.target is None:
+        if not typed_call and self.resolution_status in target_required and self.target is None:
             raise ValueError(
                 f"{self.resolution_status.value} relation requires a non-null target"
             )
-        if self.resolution_status is ResolutionStatus.RESOLVED:
+        if self.resolution_status is ResolutionStatus.RESOLVED and not typed_call:
             if self.resolution_method is ResolutionMethod.SEARCH_FALLBACK:
                 raise ValueError("resolved relation cannot rely on search fallback")
             if self.target not in self.candidates:
@@ -539,6 +1078,101 @@ class Relation(IRModel):
             if self.candidates:
                 raise ValueError("unresolved relation requires empty candidates")
         return self
+
+
+def reconcile_call_site_ids(
+    inventories: Iterable[CallSiteInventory],
+    relations: Iterable[Relation],
+    expected_source_unit_ids: Iterable[str | SourceUnit] | None = None,
+) -> tuple[str, ...]:
+    """Fail closed unless independent inventory and typed-call IDs reconcile.
+
+    ``expected_source_unit_ids`` is the independent Python SourceUnit
+    denominator.  It is deliberately required by the caller (``None`` is a
+    fail-closed error): inventory rows alone cannot prove that a zero-call
+    Python file was not silently dropped.  SourceUnit objects are accepted as
+    a convenience for aggregate consumers that already own the indexed
+    source-unit carrier; strings are the corresponding identity-only form.
+    Non-Python calls stay on the explicit legacy-null lane and are excluded.
+    """
+
+    if expected_source_unit_ids is None:
+        raise ValueError("expected Python SourceUnit IDs are required for call-site reconciliation")
+    expected_values = tuple(expected_source_unit_ids)
+    expected_ids: set[str] = set()
+    expected_revisions: set[str] = set()
+    expected_paths: set[str] = set()
+    for value in expected_values:
+        if isinstance(value, SourceUnit):
+            if value.language.lower() != "python":
+                raise ValueError("call-site denominator may contain only Python SourceUnits")
+            expected_id = value.id
+            expected_revisions.add(value.source_revision_id)
+            expected_paths.add(value.path)
+        elif isinstance(value, str):
+            expected_id = value
+        else:
+            raise TypeError("expected_source_unit_ids must contain SourceUnit objects or IDs")
+        if expected_id in expected_ids:
+            raise ValueError("expected Python SourceUnit denominator contains duplicate IDs")
+        expected_ids.add(expected_id)
+
+    inventory_values = tuple(inventories)
+    relation_values = tuple(relations)
+    inventory_ids: set[str] = set()
+    inventory_units: set[str] = set()
+    inventory_paths: set[str] = set()
+    inventory_revisions: set[str] = set()
+    for inventory in inventory_values:
+        if inventory.source_unit_id in inventory_units:
+            raise ValueError("duplicate call-site inventory source unit")
+        if inventory.path in inventory_paths:
+            raise ValueError("duplicate call-site inventory path")
+        if expected_ids and inventory.source_unit_id not in expected_ids:
+            raise ValueError("call-site inventory belongs to a foreign Python SourceUnit")
+        inventory_units.add(inventory.source_unit_id)
+        inventory_paths.add(inventory.path)
+        inventory_revisions.add(inventory.source_revision_id)
+        for anchor in inventory.call_sites:
+            if anchor.call_site_id in inventory_ids:
+                raise ValueError("duplicate call-site inventory id across source units")
+            inventory_ids.add(anchor.call_site_id)
+
+    if inventory_units != expected_ids:
+        missing_inventories = sorted(expected_ids - inventory_units)
+        foreign_inventories = sorted(inventory_units - expected_ids)
+        raise ValueError(
+            "Python SourceUnit/inventory cardinality mismatch: "
+            f"missing_inventories={missing_inventories}, "
+            f"foreign_inventories={foreign_inventories}"
+        )
+    if expected_paths and len(expected_paths) != len(expected_ids):
+        raise ValueError("expected Python SourceUnit denominator contains duplicate paths")
+
+    relation_ids: set[str] = set()
+    relation_revisions: set[str] = set()
+    for relation in relation_values:
+        extension = relation.path.rsplit(".", 1)[-1].lower() if "." in relation.path else ""
+        if relation.kind != "call" or extension not in {"py", "pyi"}:
+            continue
+        if relation.call_resolution is None:
+            raise ValueError("Python call relation is missing typed call_resolution")
+        relation_revisions.add(relation.source_revision_id)
+        if relation.id in relation_ids:
+            raise ValueError("duplicate typed Python call relation id")
+        relation_ids.add(relation.id)
+
+    revisions = inventory_revisions | relation_revisions | expected_revisions
+    if len(revisions) > 1:
+        raise ValueError("call-site inventory and relations mix source revisions")
+    if inventory_ids != relation_ids:
+        missing_relations = sorted(inventory_ids - relation_ids)
+        missing_inventory = sorted(relation_ids - inventory_ids)
+        raise ValueError(
+            "call-site inventory/Relation ID set mismatch: "
+            f"missing_relations={missing_relations}, missing_inventory={missing_inventory}"
+        )
+    return tuple(sorted(inventory_ids))
 
 
 class CapabilityCell(IRModel):
@@ -791,6 +1425,7 @@ IR_ENTITY_MODELS: tuple[type[IRModel], ...] = (
     EvidenceSpan,
     EntityRef,
     Symbol,
+    CallSiteInventory,
     Relation,
     CapabilityCell,
     SemanticModule,

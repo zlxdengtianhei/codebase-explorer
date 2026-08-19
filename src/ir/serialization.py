@@ -88,7 +88,7 @@ def canonical_hash(value: Any) -> str:
 
 
 def serialize_model(model: IRModel) -> bytes:
-    """Serialize one typed model in the exact ``cbe-ir/2`` envelope."""
+    """Serialize one typed model in the exact ``cbe-ir/3`` envelope."""
 
     payload = _validated_outbound_payload(model)
     return canonical_bytes(
@@ -126,10 +126,10 @@ def deserialize_model(data: bytes | bytearray | str, model_type: type[ModelT]) -
             "invalid envelope fields: "
             f"expected {sorted(_ENVELOPE_FIELDS)}, got {sorted(actual_fields)}"
         )
-    if envelope["protocol"] == "cbe-ir/1":
+    if envelope["protocol"] in {"cbe-ir/1", "cbe-ir/2"}:
         raise CanonicalSerializationError(
-            "cbe-ir/1 payloads require replay/rebuild from source; historical "
-            "self-target values cannot be inferred as absent targets"
+            f"{envelope['protocol']} payloads require replay/rebuild from source; "
+            "historical call target fields cannot be migrated into typed v3 evidence"
         )
     if envelope["protocol"] != IR_PROTOCOL_ID:
         raise CanonicalSerializationError(

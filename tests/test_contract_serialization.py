@@ -9,6 +9,7 @@ from pydantic import ValidationError
 
 from src.ir import (
     Availability,
+    CallSiteInventory,
     CapabilityCell,
     ConsumerReceipt,
     EntityKind,
@@ -193,6 +194,15 @@ def registered_model_instances() -> tuple[IRModel, ...]:
         changed_decision="selected parser boundary",
         oracle_result=VerifierVerdict.PASS,
     )
+    inventory = CallSiteInventory(
+        source_revision_id=source_revision.id,
+        source_unit_id=unit_id,
+        path="src/main.py",
+        language="python",
+        ast_backend_id="python_ast",
+        ast_backend_version="3.13",
+        call_sites=(),
+    )
     return (
         source_revision,
         source_unit,
@@ -206,6 +216,7 @@ def registered_model_instances() -> tuple[IRModel, ...]:
         manifest,
         verification,
         consumer,
+        inventory,
     )
 
 
@@ -239,11 +250,11 @@ def test_every_registered_model_round_trips_through_the_public_contract() -> Non
         assert deserialize_model(encoded, type(model)) == model
 
 
-@pytest.mark.parametrize("protocol", ["cbe-ir/0", "cbe-ir/3", "1", ""])
+@pytest.mark.parametrize("protocol", ["cbe-ir/0", "cbe-ir/2", "1", ""])
 def test_unknown_protocol_versions_fail_closed(protocol: str) -> None:
     envelope = json.loads(serialize_model(revision()))
     envelope["protocol"] = protocol
-    with pytest.raises(CanonicalSerializationError, match="unsupported protocol"):
+    with pytest.raises(CanonicalSerializationError, match=r"unsupported protocol|replay/rebuild"):
         deserialize_model(canonical_bytes(envelope), SourceRevision)
 
 
@@ -252,7 +263,7 @@ def test_v1_envelope_is_rejected_without_self_target_inference() -> None:
     envelope["protocol"] = "cbe-ir/1"
     with pytest.raises(
         CanonicalSerializationError,
-        match=r"cbe-ir/1.*replay.*source.*self-target.*absent",
+        match=r"cbe-ir/1.*replay.*source.*typed.*v3",
     ):
         deserialize_model(canonical_bytes(envelope), SourceRevision)
 
@@ -343,7 +354,7 @@ def test_nullable_relation_target_has_schema_model_and_canonical_round_trip_pari
 
     encoded = serialize_model(unresolved)
     envelope = json.loads(encoded)
-    assert envelope["protocol"] == "cbe-ir/2"
+    assert envelope["protocol"] == "cbe-ir/3"
     assert envelope["payload"]["target"] is None
     assert deserialize_model(encoded, Relation) == unresolved
     assert serialize_model(deserialize_model(encoded, Relation)) == encoded
