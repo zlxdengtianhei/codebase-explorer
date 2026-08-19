@@ -8,6 +8,7 @@ import json
 from pathlib import Path
 
 import pytest
+from pydantic import ValidationError
 
 import src.parser.adapters.python as python_adapter_module
 
@@ -367,6 +368,104 @@ def test_semantic_definition_start_line_includes_first_decorator(tmp_path: Path)
     assert symbol.language_attributes["definition_end_line"] == 3
     # The legacy IR declaration-line evidence remains unchanged.
     assert symbol.definition.start_line == 2
+
+
+def test_decorator_carrier_normalizes_callable_heads_and_preserves_gap_identity(
+    tmp_path: Path,
+) -> None:
+    source = (
+        "from typing import final as sealed\n"
+        "import typing as t\n"
+        "\n"
+        "def wrapper(fn):\n"
+        "    return fn\n"
+        "\n"
+        "def factory(label):\n"
+        "    def decorate(fn):\n"
+        "        return fn\n"
+        "    return decorate\n"
+        "\n"
+        "@staticmethod\n"
+        "def static_fn():\n"
+        "    return 1\n"
+        "\n"
+        "@classmethod\n"
+        "def class_fn(cls):\n"
+        "    return 2\n"
+        "\n"
+        "@sealed\n"
+        "def direct_final():\n"
+        "    return 3\n"
+        "\n"
+        "@sealed()\n"
+        "def call_final():\n"
+        "    return 4\n"
+        "\n"
+        "@t.final\n"
+        "def module_final():\n"
+        "    return 5\n"
+        "\n"
+        "@wrapper\n"
+        "def wrapped():\n"
+        "    return 6\n"
+        "\n"
+        "@factory('x')\n"
+        "def factory_wrapped():\n"
+        "    return 7\n"
+        "\n"
+        "@wrapper\n"
+        "@staticmethod\n"
+        "def layered():\n"
+        "    return 8\n"
+        "\n"
+        "def caller():\n"
+        "    return direct_final(), call_final(), wrapped(), factory_wrapped()\n"
+    )
+    result = _inline_result(tmp_path, source)
+    symbols = {item.local_name: item for item in result.symbols}
+
+    assert symbols["static_fn"].decorators == ("staticmethod",)
+    assert symbols["class_fn"].decorators == ("classmethod",)
+    assert symbols["direct_final"].decorators == ("typing.final",)
+    assert symbols["call_final"].decorators == ("typing.final",)
+    assert symbols["module_final"].decorators == ("typing.final",)
+    assert symbols["wrapped"].decorators == ("wrapper",)
+    assert symbols["factory_wrapped"].decorators == ("factory",)
+    assert symbols["layered"].decorators == ("staticmethod", "wrapper")
+
+    caller_calls = sorted(
+        (
+            relation
+            for relation in result.relations
+            if relation.kind == "call" and relation.evidence[0].start_line == 46
+        ),
+        key=lambda relation: relation.evidence[0].start_column,
+    )
+    assert len(caller_calls) == 4
+    assert [
+        relation.call_resolution.outcome for relation in caller_calls[:2]
+    ] == [CallOutcome.RUNTIME_EXACT, CallOutcome.RUNTIME_EXACT]
+    assert all(
+        relation.call_resolution.unresolved_or_deep_receiver.reason
+        is ReceiverGapReason.DECORATED_CALLABLE
+        for relation in caller_calls[2:]
+    )
+
+
+def test_decorator_carrier_rejects_non_name_callable_head_without_ast_dump_identity(
+    tmp_path: Path,
+) -> None:
+    source = (
+        "def factory():\n"
+        "    return lambda fn: fn\n"
+        "\n"
+        "@factory()[\"key\"]\n"
+        "def decorated():\n"
+        "    return 1\n"
+    )
+
+    with pytest.raises(ValidationError, match="decorators"):
+        _inline_result(tmp_path, source)
 
 
 def test_active_python_adapter_documentation_advertises_cbe_ir_v3() -> None:

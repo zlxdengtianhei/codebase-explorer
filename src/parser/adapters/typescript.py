@@ -430,6 +430,7 @@ class _SyntaxBuilder:
             definition_locator=qualified,
             definition=span,
             language=self.language,
+            decorators=(),
             language_attributes={
                 "import_kind": "none",
                 "export_kind": "none",

@@ -106,6 +106,7 @@ def registered_model_instances() -> tuple[IRModel, ...]:
         definition_locator=symbol_locator,
         definition=span,
         language="python",
+        decorators=(),
         language_attributes={"async": False},
     )
     relation_locator = "call:1:0"

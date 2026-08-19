@@ -298,9 +298,8 @@ class PythonLanguageAdapter(LanguageAdapter):
                             locator=self._definition_locator(kind, qualified, child),
                             node=child,
                             owner_class=enclosing_class,
-                            decorator_names=tuple(
-                                self._canonical_decorator_name(item, decorator_bindings)
-                                for item in child.decorator_list
+                            decorator_names=self._canonical_decorator_names(
+                                child.decorator_list, decorator_bindings
                             ),
                         )
                     )
@@ -319,9 +318,8 @@ class PythonLanguageAdapter(LanguageAdapter):
                             locator=self._definition_locator("class", qualified, child),
                             node=child,
                             owner_class=None,
-                            decorator_names=tuple(
-                                self._canonical_decorator_name(item, decorator_bindings)
-                                for item in child.decorator_list
+                            decorator_names=self._canonical_decorator_names(
+                                child.decorator_list, decorator_bindings
                             ),
                         )
                     )
@@ -1274,14 +1272,31 @@ class PythonLanguageAdapter(LanguageAdapter):
     def _canonical_decorator_name(
         cls, node: ast.AST, bindings: Mapping[str, _ImportBinding]
     ) -> str:
-        raw = cls._expr_name(node)
-        if isinstance(node, ast.Call):
-            return raw
+        callable_head = node.func if isinstance(node, ast.Call) else node
+        raw = cls._expr_name(callable_head)
         head, separator, tail = raw.partition(".")
         binding = bindings.get(head)
         if binding is None:
             return raw
         return f"{binding.target}.{tail}" if separator else binding.target
+
+    @classmethod
+    def _canonical_decorator_names(
+        cls,
+        nodes: tuple[ast.expr, ...] | list[ast.expr],
+        bindings: Mapping[str, _ImportBinding],
+    ) -> tuple[str, ...]:
+        return tuple(
+            sorted({cls._canonical_decorator_name(node, bindings) for node in nodes})
+        )
+
+    @classmethod
+    def _definition_decorators(cls, definition: _Definition) -> tuple[str, ...]:
+        if definition.decorator_names:
+            return definition.decorator_names
+        return cls._canonical_decorator_names(
+            tuple(getattr(definition.node, "decorator_list", ())), {}
+        )
 
     @staticmethod
     def _decorator_name(node: ast.AST) -> str:
@@ -1296,19 +1311,13 @@ class PythonLanguageAdapter(LanguageAdapter):
             "typing.final",
             "typing_extensions.final",
         }
-        decorators = definition.decorator_names or tuple(
-            cls._decorator_name(item)
-            for item in getattr(definition.node, "decorator_list", ())
-        )
+        decorators = cls._definition_decorators(definition)
         return any(item not in allowed for item in decorators)
 
     @classmethod
     def _is_final_definition(cls, definition: _Definition) -> bool:
         final_names = {"final", "typing.final", "typing_extensions.final"}
-        decorators = definition.decorator_names or tuple(
-            cls._decorator_name(item)
-            for item in getattr(definition.node, "decorator_list", ())
-        )
+        decorators = cls._definition_decorators(definition)
         return any(item in final_names for item in decorators)
 
     @classmethod
@@ -1519,6 +1528,7 @@ class PythonLanguageAdapter(LanguageAdapter):
             definition_locator=definition.locator,
             definition=span,
             language="python",
+            decorators=definition.decorator_names,
             language_attributes={
                 "async": isinstance(definition.node, ast.AsyncFunctionDef),
                 "lexical_qualified_name": definition.lexical_qualified_name,

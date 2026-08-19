@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import PurePosixPath
 
 import pytest
@@ -45,7 +46,7 @@ from src.ir import (
     reconcile_call_site_ids,
     serialize_model,
 )
-from src.ir.serialization import canonical_hash
+from src.ir.serialization import CanonicalSerializationError, canonical_bytes, canonical_hash
 
 
 SHA_A = "a" * 64
@@ -108,6 +109,7 @@ def symbol(
     *,
     definition_locator: str,
     line: int,
+    decorators: tuple[str, ...] = (),
 ) -> Symbol:
     definition = EvidenceSpan(
         source_unit_id=source_unit.id,
@@ -134,6 +136,7 @@ def symbol(
         definition_locator=definition_locator,
         definition=definition,
         language="python",
+        decorators=decorators,
         language_attributes={"line": line},
     )
 
@@ -1030,6 +1033,7 @@ def test_evidence_span_and_symbol_enforce_order_and_definition_identity() -> Non
         definition_locator="function:module.fn:declaration-1",
         definition=span,
         language="python",
+        decorators=(),
         language_attributes={"async": True},
     )
     assert symbol.definition == span
@@ -1045,6 +1049,132 @@ def test_evidence_span_and_symbol_enforce_order_and_definition_identity() -> Non
             end_line=4,
             end_column=8,
         )
+
+
+@pytest.mark.parametrize(
+    "decorators",
+    [
+        ("wrapper", "staticmethod"),
+        ("wrapper", "wrapper"),
+        ("",),
+        ("wrapper", ""),
+        ("a..b",),
+        ("a b",),
+        ("wrapper()",),
+        ("\x00",),
+        (".leading",),
+        ("trailing.",),
+        ("a...b",),
+        ("class",),
+        ("name-name",),
+        ("name\tname",),
+    ],
+)
+def test_symbol_decorator_carrier_requires_sorted_unique_nonempty_names(
+    decorators: tuple[str, ...],
+) -> None:
+    source_revision = revision()
+    source_unit = unit(source_revision)
+    with pytest.raises(ValidationError):
+        symbol(
+            source_revision,
+            source_unit,
+            definition_locator="function:module.fn:decorator-invalid",
+            line=3,
+            decorators=decorators,
+        )
+
+
+@pytest.mark.parametrize(
+    "decorators",
+    [
+        ("local",),
+        ("_local",),
+        ("变量",),
+        ("pkg.装饰器",),
+        ("pkg._decorator",),
+    ],
+)
+def test_symbol_decorator_carrier_accepts_normalized_callable_identities(
+    decorators: tuple[str, ...],
+) -> None:
+    source_revision = revision()
+    source_unit = unit(source_revision)
+    value = symbol(
+        source_revision,
+        source_unit,
+        definition_locator="function:module.fn:decorator-valid",
+        line=3,
+        decorators=decorators,
+    )
+    assert value.decorators == decorators
+
+
+@pytest.mark.parametrize("decorator", ["a..b", "a b", "wrapper()", "\x00"])
+def test_symbol_decorator_carrier_rejects_malformed_outbound_forgery(
+    decorator: str,
+) -> None:
+    source_revision = revision()
+    source_unit = unit(source_revision)
+    canonical = symbol(
+        source_revision,
+        source_unit,
+        definition_locator="function:module.fn:decorator-forgery",
+        line=3,
+        decorators=("wrapper",),
+    )
+    forged = canonical.model_copy(update={"decorators": (decorator,)})
+    with pytest.raises(CanonicalSerializationError, match="decorators|validation"):
+        serialize_model(forged)
+
+
+def test_symbol_decorator_carrier_is_required_immutable_and_round_trips_exactly() -> None:
+    source_revision = revision()
+    source_unit = unit(source_revision)
+    undecorated = symbol(
+        source_revision,
+        source_unit,
+        definition_locator="function:module.fn:decorator-empty",
+        line=3,
+    )
+    decorated = symbol(
+        source_revision,
+        source_unit,
+        definition_locator="function:module.fn:decorator-named",
+        line=4,
+        decorators=("staticmethod", "typing.final", "wrapper"),
+    )
+
+    assert undecorated.decorators == ()
+    assert decorated.decorators == ("staticmethod", "typing.final", "wrapper")
+    with pytest.raises(ValidationError, match="frozen"):
+        decorated.decorators = ()  # type: ignore[misc]
+    mutable = decorated.model_copy(update={"decorators": ["wrapper"]})
+    with pytest.raises(CanonicalSerializationError, match="outbound"):
+        serialize_model(mutable)
+    assert serialize_model(undecorated) != serialize_model(decorated)
+    encoded = serialize_model(decorated)
+    assert deserialize_model(encoded, Symbol).decorators == decorated.decorators
+
+    payload = json.loads(encoded)
+    del payload["payload"]["decorators"]
+    with pytest.raises(CanonicalSerializationError, match="decorators|validation"):
+        deserialize_model(canonical_bytes(payload), Symbol)
+
+
+def test_symbol_decorator_carrier_rejects_missing_field_even_for_v3_payload() -> None:
+    source_revision = revision()
+    source_unit = unit(source_revision)
+    canonical = symbol(
+        source_revision,
+        source_unit,
+        definition_locator="function:module.fn:decorator-missing",
+        line=5,
+    )
+    payload = canonical.model_dump(mode="json")
+    payload.pop("decorators")
+    with pytest.raises(ValidationError, match="decorators"):
+        Symbol.model_validate(payload)
 
 
 def test_symbol_identity_uses_definition_locator_not_only_qualified_name() -> None:

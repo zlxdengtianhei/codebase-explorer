@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import keyword
 import math
 import re
 from collections.abc import Iterable, Iterator
@@ -482,6 +483,7 @@ class Symbol(IRModel):
     definition_locator: str
     definition: EvidenceSpan
     language: str
+    decorators: tuple[str, ...]
     language_attributes: Mapping[str, str | int | float | bool | None] = Field(
         default_factory=dict
     )
@@ -506,6 +508,27 @@ class Symbol(IRModel):
     @classmethod
     def _revision_id(cls, value: str) -> str:
         return _revision_id(value, "source_revision_id")
+
+    @field_validator("decorators")
+    @classmethod
+    def _decorators(cls, value: tuple[str, ...]) -> tuple[str, ...]:
+        if any(not isinstance(item, str) for item in value):
+            raise ValueError("decorator names must be strings")
+        if any(
+            not component.isidentifier() or keyword.iskeyword(component)
+            for item in value
+            for component in item.split(".")
+        ):
+            raise ValueError(
+                "decorator names must be dotted Python identifiers without keywords"
+            )
+        if any(item != item.strip() for item in value):
+            raise ValueError("decorator names must be normalized")
+        if len(value) != len(set(value)):
+            raise ValueError("decorator names must be unique")
+        if value != tuple(sorted(value)):
+            raise ValueError("decorator names must be lexically sorted")
+        return value
 
     @field_validator("source_unit_id")
     @classmethod
