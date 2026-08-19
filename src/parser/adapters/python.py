@@ -40,8 +40,8 @@ from src.ir import (
 from src.parser.adapters.base import FileIR, LanguageAdapter
 from src.parser.backend import FailureCode, SyntaxArtifact, TypedFailure
 _BUILTINS = frozenset({
-    "abs", "all", "any", "bool", "dict", "enumerate", "filter", "float", "globals",
-    "int", "isinstance", "len", "list", "map", "max", "min", "next", "object",
+    "abs", "all", "any", "bool", "dict", "enumerate", "filter", "float", "getattr",
+    "globals", "int", "isinstance", "len", "list", "map", "max", "min", "next", "object",
     "open", "print", "range", "repr", "reversed", "set", "sorted", "str", "sum",
     "super", "tuple", "type", "zip",
 })
@@ -794,8 +794,6 @@ class PythonLanguageAdapter(LanguageAdapter):
                 return gap(ReceiverGapReason.EXEC, ReceiverShape.BARE_NAME, name)
             if name == "__import__":
                 return gap(ReceiverGapReason.DYNAMIC_IMPORT, ReceiverShape.BARE_NAME, name)
-            if name == "getattr":
-                return gap(ReceiverGapReason.DYNAMIC_ATTRIBUTE, ReceiverShape.DYNAMIC_ATTRIBUTE, name)
             target_name, shadowed = self._direct_local_binding(name, owner, definitions)
             if shadowed:
                 return gap(ReceiverGapReason.UNKNOWN_NAME, ReceiverShape.BARE_NAME, name)
@@ -811,7 +809,7 @@ class PythonLanguageAdapter(LanguageAdapter):
                 external = self._external_target(
                     source_unit,
                     ExternalEcosystem.PYTHON_BUILTIN,
-                    f"builtins.{name}",
+                    name,
                     call_span,
                 )
                 return (
@@ -926,7 +924,13 @@ class PythonLanguageAdapter(LanguageAdapter):
                         call_span,
                     )
                 binding = bindings.get(receiver_name)
-                if binding is not None and binding.target in module_by_name:
+                if binding is not None and (
+                    binding.target in module_by_name
+                    or (
+                        binding.target in definitions
+                        and definitions[binding.target].kind == "class"
+                    )
+                ):
                     target_name = f"{binding.target}.{attribute}"
                     definition = definitions.get(target_name)
                     if definition is not None and not self._unsupported_decorator(definition):
@@ -937,7 +941,11 @@ class PythonLanguageAdapter(LanguageAdapter):
                                 runtime_exact_target=self._target_evidence(
                                     source_unit,
                                     definition,
-                                    ProvenanceBasis.MODULE_BINDING,
+                                    (
+                                        ProvenanceBasis.MODULE_BINDING
+                                        if binding.target in module_by_name
+                                        else ProvenanceBasis.IMPORT_BINDING
+                                    ),
                                     modules,
                                 ),
                             ),
@@ -1334,9 +1342,19 @@ class PythonLanguageAdapter(LanguageAdapter):
         module_by_name: Mapping[str, _ModuleInfo],
     ) -> str | None:
         binding = bindings.get(annotation)
-        candidate = binding.target if binding is not None else (
-            annotation if annotation in definitions else f"{module.name}.{annotation}"
-        )
+        if binding is not None:
+            candidate = binding.target
+        else:
+            head, separator, tail = annotation.partition(".")
+            module_binding = bindings.get(head)
+            if module_binding is not None and separator:
+                candidate = f"{module_binding.target}.{tail}"
+            else:
+                candidate = (
+                    annotation
+                    if annotation in definitions
+                    else f"{module.name}.{annotation}"
+                )
         if candidate in definitions and definitions[candidate].kind == "class":
             return candidate
         if candidate in module_by_name:
@@ -1636,6 +1654,15 @@ class PythonLanguageAdapter(LanguageAdapter):
             current = parent[current]
             definition = definitions.get(current)
             if definition is not None:
+                if isinstance(current, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    decorator_root = node
+                    while (
+                        decorator_root in parent
+                        and parent[decorator_root] is not current
+                    ):
+                        decorator_root = parent[decorator_root]
+                    if decorator_root in current.decorator_list:
+                        continue
                 return definition.qualified_name
         return None
 

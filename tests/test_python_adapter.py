@@ -39,6 +39,9 @@ from src.parser.codebase import CodebaseParser
 ROOT = Path(__file__).parent / "fixtures" / "languages" / "python"
 ORACLE_ROOT = Path(__file__).parent / "oracles" / "contracts" / "python"
 REVISION = "rev_" + "7" * 64
+INBOUND_ROOT = Path(__file__).parent / "fixtures" / "inbound_protocol"
+INBOUND_ORACLE = json.loads((INBOUND_ROOT / "oracle.json").read_text(encoding="utf-8"))
+INBOUND_REVISION = str(INBOUND_ORACLE["source_revision_id"])
 
 
 def _json(name: str) -> dict[str, object]:
@@ -96,6 +99,28 @@ def _inline_result(tmp_path: Path, source: str, *, path: str = "probe.py") -> Fi
     artifact = PythonAstBackend(root=tmp_path).parse(unit)
     assert isinstance(artifact, SyntaxArtifact)
     result = PythonLanguageAdapter(tmp_path).normalize(artifact)
+    assert isinstance(result, FileIR)
+    return result
+
+
+def _inbound_result(path: str) -> FileIR:
+    source = (INBOUND_ROOT / path).read_text(encoding="utf-8")
+    backend = PythonAstBackend(root=INBOUND_ROOT)
+    unit = SourceUnit(
+        id=deterministic_entity_id(
+            INBOUND_REVISION, path, EntityKind.SOURCE_UNIT, path
+        ),
+        source_revision_id=INBOUND_REVISION,
+        path=path,
+        language="python",
+        content_hash=hashlib.sha256(source.encode("utf-8")).hexdigest(),
+        state=SourceUnitState.DISCOVERED,
+        backend_id=backend.backend_id,
+        backend_version=backend.backend_version,
+    )
+    artifact = backend.parse(unit)
+    assert isinstance(artifact, SyntaxArtifact)
+    result = PythonLanguageAdapter(INBOUND_ROOT).normalize(artifact)
     assert isinstance(result, FileIR)
     return result
 
@@ -1006,3 +1031,183 @@ def test_python_call_outcomes_cover_deep_receivers_and_keep_unrelated_names_non_
 def test_normalization_is_repeatable(path: str) -> None:
     adapter = PythonLanguageAdapter(ROOT)
     assert adapter.normalize(_artifact(path)) == adapter.normalize(_artifact(path))
+
+
+def test_decorator_factory_call_uses_enclosing_scope_caller_and_locator() -> None:
+    result = _inbound_result("base.py")
+    relation = next(
+        item
+        for item in result.relations
+        if item.kind == "call"
+        and item.evidence[0].start_line == 143
+        and item.evidence[0].start_column == 1
+    )
+
+    assert relation.locator == (
+        "python:call:143:1:143:30:base.py::<module>"
+    )
+    assert relation.id == (
+        "ir_59e11dc41577d1cd82fccbd2371eb158ceb6ff4a8e4b16bd1e2af12c86f6e981"
+    )
+
+
+def test_imported_class_attribute_calls_resolve_identity_preserving_members_exactly() -> None:
+    result = _inbound_result("calls.py")
+    calls = {
+        relation.evidence[0].start_line: relation
+        for relation in result.relations
+        if relation.kind == "call"
+        and relation.evidence[0].start_line in {104, 108}
+    }
+
+    assert set(calls) == {104, 108}
+    assert all(
+        relation.call_resolution.outcome is CallOutcome.RUNTIME_EXACT
+        and relation.call_resolution.receiver_shape is ReceiverShape.MODULE_ATTRIBUTE
+        for relation in calls.values()
+    )
+    assert calls[104].call_resolution.runtime_exact_target.target.ref.id == (
+        "ir_9f0bcacbfaad82409ecbf79e427a2fd8013448bc8ec5e8e2c6942719f8b637ca"
+    )
+    assert calls[108].call_resolution.runtime_exact_target.target.ref.id == (
+        "ir_33eb984e49e2ee41374d31f41a39a94f4e5d76d5b97f8f88535ab691300411ae"
+    )
+
+
+def test_imported_qualified_annotation_resolves_virtual_base_and_overrides() -> None:
+    result = _inbound_result("calls.py")
+    relation = next(
+        item
+        for item in result.relations
+        if item.kind == "call" and item.evidence[0].start_line == 48
+    )
+    resolution = relation.call_resolution
+
+    assert resolution.outcome is CallOutcome.VIRTUAL_DISPATCH
+    assert resolution.receiver_shape is ReceiverShape.ANNOTATED_NAME
+    assert resolution.lexical_base_target.target.ref.id == (
+        "ir_7bd6ffc99115ef545ca542476d7298a8102180b25c2f6bd3c65191ec11b31d14"
+    )
+    assert tuple(
+        candidate.target.ref.id for candidate in resolution.override_candidates
+    ) == (
+        "ir_beb8c525bd76d2cced8db9b1cf6d94a2c927dd6004acb699f2bdb0006757254a",
+    )
+
+
+def test_nested_getattr_keeps_inner_builtin_external_and_outer_dynamic_gap() -> None:
+    result = _inbound_result("calls.py")
+    calls = {
+        (relation.evidence[0].start_column, relation.evidence[0].end_column): relation
+        for relation in result.relations
+        if relation.kind == "call" and relation.evidence[0].start_line == 80
+    }
+    inner = calls[(11, 32)]
+    outer = calls[(11, 34)]
+
+    assert inner.call_resolution.outcome is CallOutcome.EXTERNAL
+    assert inner.call_resolution.receiver_shape is ReceiverShape.BARE_NAME
+    assert inner.call_resolution.external_target.external_id == (
+        "ext_22a6192b71a0b3c3180ccc5ab21f8d626e2f774ee807880eb820432279801921"
+    )
+    assert outer.call_resolution.outcome is CallOutcome.UNRESOLVED_OR_DEEP
+    assert outer.call_resolution.receiver_shape is ReceiverShape.DYNAMIC_ATTRIBUTE
+    assert (
+        outer.call_resolution.unresolved_or_deep_receiver.reason
+        is ReceiverGapReason.DYNAMIC_ATTRIBUTE
+    )
+
+
+def test_builtin_external_identity_uses_frozen_bare_qualified_name() -> None:
+    result = _inbound_result("calls.py")
+    relation = next(
+        item
+        for item in result.relations
+        if item.kind == "call" and item.evidence[0].start_line == 92
+    )
+    external = relation.call_resolution.external_target
+
+    assert relation.call_resolution.outcome is CallOutcome.EXTERNAL
+    assert external.ecosystem.value == "python_builtin"
+    assert external.qualified_name == "len"
+    assert external.distribution is None
+    assert external.external_id == (
+        "ext_0e3cf4e3a1175c6ad4ac9f716bad0126bb6f4f642a3be06aa9dd1243398d6c7c"
+    )
+
+
+def test_adapter_to_frozen_oracle_matches_all_45_call_sites_exactly() -> None:
+    results = {
+        path: _inbound_result(path)
+        for path in ("base.py", "calls.py", "zero_calls.py")
+    }
+    expected_rows = {
+        row["site_key"]: row for row in INBOUND_ORACLE["call_sites"]
+    }
+    actual_rows: dict[str, dict[str, object]] = {}
+
+    for path, file_ir in results.items():
+        assert file_ir.call_site_inventory is not None
+        anchors = file_ir.call_site_inventory.call_sites
+        relations = {
+            relation.id: relation
+            for relation in file_ir.relations
+            if relation.kind == "call"
+        }
+        assert {anchor.call_site_id for anchor in anchors} == set(relations)
+        for anchor in anchors:
+            relation = relations[anchor.call_site_id]
+            resolution = relation.call_resolution
+            assert resolution is not None
+            span = anchor.span
+            assert relation.path == path
+            assert relation.source_revision_id == INBOUND_REVISION
+            assert span.path == path
+            assert span.source_unit_id == file_ir.source_unit.id
+            site_key = (
+                f"{span.path}:{span.start_line}:{span.start_column}:"
+                f"{span.end_line}:{span.end_column}"
+            )
+            actual_rows[site_key] = {
+                "site_key": site_key,
+                "path": relation.path,
+                "span": {
+                    "path": span.path,
+                    "start_line": span.start_line,
+                    "start_column": span.start_column,
+                    "end_line": span.end_line,
+                    "end_column": span.end_column,
+                },
+                "caller_id": anchor.caller_canonical_id,
+                "receiver_shape": resolution.receiver_shape.value,
+                "outcome": resolution.outcome.value,
+                "runtime_exact_target_id": (
+                    resolution.runtime_exact_target.target.ref.id
+                    if resolution.runtime_exact_target is not None
+                    else None
+                ),
+                "lexical_base_target_id": (
+                    resolution.lexical_base_target.target.ref.id
+                    if resolution.lexical_base_target is not None
+                    else None
+                ),
+                "override_candidate_ids": [
+                    candidate.target.ref.id
+                    for candidate in resolution.override_candidates
+                ],
+                "external_identity": (
+                    resolution.external_target.external_id
+                    if resolution.external_target is not None
+                    else None
+                ),
+                "gap_reason": (
+                    resolution.unresolved_or_deep_receiver.reason.value
+                    if resolution.unresolved_or_deep_receiver is not None
+                    else None
+                ),
+            }
+
+    assert len(actual_rows) == 45
+    assert len(expected_rows) == 45
+    assert set(actual_rows) == set(expected_rows)
+    assert actual_rows == expected_rows
