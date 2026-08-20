@@ -34,6 +34,8 @@ from src.semantic.service import (
     SemanticSubmissionError,
     _canonical_docs_fingerprint_payload,
     _docs_fingerprint,
+    _json_bytes,
+    _sha256_bytes,
 )
 from src.semantic.scheduler import SemanticScheduler
 
@@ -1644,3 +1646,280 @@ service.submit_semantic_batch(
     assert {row["event"] for row in events} >= {"claim", "recovery"}
     assert all(row["event"] != "submit" for row in events)
     assert recovered.recover_semantic_batch(packet.batch_id) == packet
+
+
+def _repaired_review_history(tmp_path):  # type: ignore[no-untyped-def]
+    """Create one canonical revision-required review followed by accepted repairs."""
+
+    _source_repo(tmp_path)
+    service = SemanticService(tmp_path, renderer=_test_renderer)
+    service.bootstrap_semantic()
+    _explain_all(service)
+    first = service.get_semantic_review_batch()
+    verdict = _sufficient_verdict(first)
+    verdict["samples"][0]["verdicts"]["dependencies"] = {
+        "decision": "部分",
+        "reason": "该解释未覆盖一个可核验的依赖关系。",
+    }
+    _install_review_runner(service, verdict, reviewer="first-independent-reviewer")
+    submitted = service.submit_semantic_review(review_batch_id=first["review_batch_id"])
+    assert submitted["revision_symbol_ids"]
+    _explain_all(service, producer="repair-producer-thread")
+    return service
+
+
+def _fixed_review_verdict(
+    packet: dict[str, object],
+    *,
+    blind_fail: set[str] | None = None,
+    fixed_decisions: dict[str, str] | None = None,
+) -> dict[str, object]:
+    verdict = _sufficient_verdict(packet)
+    for row in verdict["samples"]:
+        if row["sample"] in (blind_fail or set()):
+            row["verdicts"]["dependencies"] = {
+                "decision": "部分",
+                "reason": "该解释未覆盖一个可核验的依赖关系。",
+            }
+    verdict["fixed_target_results"] = [
+        {
+            "symbol_id": target["symbol_id"],
+            "decision": (fixed_decisions or {}).get(target["symbol_id"], "PASS"),
+            "reason": "固定目标的源码与解释已经独立核验。",
+        }
+        for target in packet.get("fixed_targets", [])
+    ]
+    return verdict
+
+
+def _review_state_bytes(root: Path) -> dict[str, bytes | None]:
+    relatives = (
+        Path(".codebase-analysis/semantic_ledger.json"),
+        REVIEW_PACKET_RELPATH,
+        REVIEW_HIDDEN_MAP_RELPATH,
+        REVIEW_BATCH_RECEIPT_RELPATH,
+        REVIEW_VERDICT_RELPATH,
+        REVIEW_ACCEPTANCE_RECEIPT_RELPATH,
+        SEMANTIC_EVENTS_RELPATH,
+    )
+    return {
+        relative.as_posix(): (
+            (root / relative).read_bytes() if (root / relative).exists() else None
+        )
+        for relative in relatives
+    }
+
+
+def test_repaired_revision_targets_are_packet_bound_fixed_targets(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    service = _repaired_review_history(tmp_path)
+
+    packet = service.get_semantic_review_batch()
+
+    fixed_targets = packet["fixed_targets"]
+    assert fixed_targets == sorted(fixed_targets, key=lambda row: row["symbol_id"])
+    assert fixed_targets
+    assert all(set(row) == {"symbol_id", "source", "explanation"} for row in fixed_targets)
+    assert all(
+        "producer" not in row and "producer_session_id" not in row
+        for row in fixed_targets
+    )
+    hidden = json.loads((tmp_path / REVIEW_HIDDEN_MAP_RELPATH).read_text(encoding="utf-8"))
+    assert all("producer_session_id" in row for row in hidden.values())
+
+
+def test_fixed_target_failures_union_with_blind_failures_and_invalidate_reverse_closure(
+    tmp_path,
+) -> None:  # type: ignore[no-untyped-def]
+    service = _repaired_review_history(tmp_path)
+    packet = service.get_semantic_review_batch()
+    blind_sample = packet["samples"][0]["sample"]
+    fixed_ids = sorted(row["symbol_id"] for row in packet["fixed_targets"])
+    fixed_failures = {symbol_id: "FAIL" for symbol_id in fixed_ids[:2]}
+    verdict = _fixed_review_verdict(
+        packet,
+        blind_fail={blind_sample},
+        fixed_decisions=fixed_failures,
+    )
+    _install_review_runner(service, verdict, reviewer="union-independent-reviewer")
+
+    accepted = service.submit_semantic_review(review_batch_id=packet["review_batch_id"])
+
+    hidden = json.loads((tmp_path / REVIEW_HIDDEN_MAP_RELPATH).read_text(encoding="utf-8"))
+    expected_blind = {
+        hidden[blind_sample]["symbol_id"],
+    }
+    expected = sorted(expected_blind | set(fixed_failures))
+    assert accepted["revision_symbol_ids"] == expected
+    assert service.store.reopen().review.revision_symbol_ids == tuple(expected)
+    assert all(
+        service.store.reopen().symbols[symbol_id].explanation is None
+        for symbol_id in expected
+    )
+
+
+def test_fixed_target_verdict_rejects_missing_extra_duplicate_and_unbound_ids_atomically(
+    tmp_path,
+) -> None:  # type: ignore[no-untyped-def]
+    service = _repaired_review_history(tmp_path)
+    packet = service.get_semantic_review_batch()
+    fixed = packet["fixed_targets"]
+    assert fixed
+    valid = _fixed_review_verdict(packet)
+    variants = []
+    variants.append({**valid, "fixed_target_results": valid["fixed_target_results"][:-1]})
+    variants.append(
+        {
+            **valid,
+            "fixed_target_results": [
+                *valid["fixed_target_results"],
+                {"symbol_id": "caller-injected", "decision": "PASS", "reason": "x"},
+            ],
+        }
+    )
+    variants.append(
+        {
+            **valid,
+            "fixed_target_results": [
+                *valid["fixed_target_results"],
+                {**valid["fixed_target_results"][0]},
+            ],
+        }
+    )
+    variants.append(
+        {
+            **valid,
+            "fixed_target_results": [
+                {
+                    **row,
+                    "symbol_id": "unbound::symbol",
+                }
+                if index == 0
+                else row
+                for index, row in enumerate(valid["fixed_target_results"])
+            ],
+        }
+    )
+    for malformed in variants:
+        before = _review_state_bytes(tmp_path)
+        _install_review_runner(service, malformed, reviewer="malformed-independent-reviewer")
+        with pytest.raises(SemanticReviewError):
+            service.submit_semantic_review(review_batch_id=packet["review_batch_id"])
+        assert _review_state_bytes(tmp_path) == before
+
+
+def test_fixed_target_packet_tampering_and_stale_inventory_fail_closed(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    service = _repaired_review_history(tmp_path)
+    packet = service.get_semantic_review_batch()
+    packet_path = tmp_path / REVIEW_PACKET_RELPATH
+    original = packet_path.read_bytes()
+    tampered = json.loads(original)
+    tampered["fixed_targets"][0]["explanation"] += " tampered"
+    packet_path.write_text(json.dumps(tampered), encoding="utf-8")
+    _install_review_runner(service, _fixed_review_verdict(packet), reviewer="tamper-reviewer")
+    before = _review_state_bytes(tmp_path)
+    with pytest.raises(SemanticReviewError, match="binding"):
+        service.submit_semantic_review(review_batch_id=packet["review_batch_id"])
+    after = _review_state_bytes(tmp_path)
+    assert after[".codebase-analysis/semantic_ledger.json"] == before[
+        ".codebase-analysis/semantic_ledger.json"
+    ]
+    packet_path.write_bytes(original)
+
+    source = (tmp_path / "app.py").read_text(encoding="utf-8")
+    (tmp_path / "app.py").write_text(source + "\n# stale source\n", encoding="utf-8")
+    before_stale = _review_state_bytes(tmp_path)
+    with pytest.raises(SemanticReviewError):
+        service.submit_semantic_review(review_batch_id=packet["review_batch_id"])
+    assert _review_state_bytes(tmp_path) == before_stale
+
+
+def test_fixed_target_producer_cannot_be_reviewer(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    service = _repaired_review_history(tmp_path)
+    packet = service.get_semantic_review_batch()
+    target_id = packet["fixed_targets"][0]["symbol_id"]
+    producer = service.store.reopen().symbols[target_id].explanation.producer_session_id
+    _install_review_runner(
+        service,
+        _fixed_review_verdict(packet),
+        reviewer=producer.removeprefix("codex:"),
+    )
+
+    with pytest.raises(SemanticReviewError, match="different"):
+        service.submit_semantic_review(review_batch_id=packet["review_batch_id"])
+
+
+def test_legacy_pending_review_is_superseded_by_fixed_target_bound_batch(
+    tmp_path, monkeypatch
+) -> None:  # type: ignore[no-untyped-def]
+    service = _repaired_review_history(tmp_path)
+    original_derive = getattr(SemanticService, "_derive_fixed_targets")
+    monkeypatch.setattr(
+        service,
+        "_derive_fixed_targets",
+        lambda _ledger, _inventory: ([], {}),
+    )
+    legacy = service.get_semantic_review_batch()
+    monkeypatch.setattr(service, "_derive_fixed_targets", original_derive.__get__(service))
+
+    upgraded = SemanticService(tmp_path, renderer=_test_renderer)
+    fresh = upgraded.get_semantic_review_batch()
+
+    assert fresh["review_batch_id"] != legacy["review_batch_id"]
+    assert fresh["fixed_targets"]
+    with pytest.raises(SemanticReviewError):
+        upgraded.submit_semantic_review(review_batch_id=legacy["review_batch_id"])
+
+
+def test_fixed_target_packet_hash_covers_target_rows(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    service = _repaired_review_history(tmp_path)
+    packet = service.get_semantic_review_batch()
+    packet_hash = service.store.reopen().review.packet_sha256
+    altered = json.loads(json.dumps(packet))
+    altered["fixed_targets"][0]["source"] += "\n# altered"
+    assert packet_hash != _sha256_bytes(_json_bytes(altered))
+
+
+def test_latest_empty_review_submit_resets_prior_fixed_target_derivation(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    service = _repaired_review_history(tmp_path)
+    packet = service.get_semantic_review_batch()
+    _install_review_runner(
+        service,
+        _fixed_review_verdict(packet),
+        reviewer="empty-reset-independent-reviewer",
+    )
+    service.submit_semantic_review(review_batch_id=packet["review_batch_id"])
+
+    next_packet = service.get_semantic_review_batch()
+
+    assert "fixed_targets" not in next_packet
+
+
+def test_duplicate_repair_submit_event_batch_ids_fail_closed_before_symbol_dedup(
+    tmp_path,
+) -> None:  # type: ignore[no-untyped-def]
+    service = _repaired_review_history(tmp_path)
+    events_path = tmp_path / SEMANTIC_EVENTS_RELPATH
+    rows = [
+        json.loads(line)
+        for line in events_path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    latest_revision_index = max(
+        index for index, row in enumerate(rows) if row["event"] == "review_submit"
+    )
+    repair_submit = next(
+        row for row in rows[latest_revision_index + 1 :] if row["event"] == "submit"
+    )
+    events_path.write_bytes(events_path.read_bytes() + _json_bytes(repair_submit))
+    before = _review_state_bytes(tmp_path)
+    detail_path = tmp_path / ".codebase-docs/unclassified/DETAIL.md"
+    before_detail = detail_path.read_bytes()
+
+    with pytest.raises(SemanticReviewError, match="duplicate"):
+        service.get_semantic_review_batch()
+
+    after = _review_state_bytes(tmp_path)
+    assert after[".codebase-analysis/semantic_ledger.json"] == before[
+        ".codebase-analysis/semantic_ledger.json"
+    ]
+    assert detail_path.read_bytes() == before_detail

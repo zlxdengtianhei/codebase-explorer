@@ -118,6 +118,7 @@ _REVIEW_CRITERIA = frozenset(
     {"function", "role", "io_side_effects", "dependencies"}
 )
 _REVIEW_DECISIONS = frozenset({"充分", "部分", "不充分", "判不了"})
+_FIXED_TARGET_DECISIONS = frozenset({"PASS", "FAIL"})
 _ALLOWED_RESIDUAL_CODES = frozenset(
     {
         "SYNTAX_ERROR_FILE",
@@ -1827,12 +1828,13 @@ class SemanticService:
         return revalidate_semantic_ledger(ledger.model_copy(update={"residuals": residuals}))
 
     def get_semantic_review_batch(self) -> dict[str, object]:
-        """Persist and return a deterministic blind sample of fresh callables."""
+        """Persist and return a deterministic blind sample plus server-fixed targets."""
 
         ledger = self.store.reopen()
         inventory = self._inventory()
         if inventory.source_revision != ledger.source_revision:
             raise SemanticReviewError("source changed; reconcile before creating review packet")
+        fixed_targets, _fixed_producers = self._derive_fixed_targets(ledger, inventory)
         if ledger.review.status == "pending":
             if not (
                 self._artifact_exists(REVIEW_PACKET_RELPATH)
@@ -1850,18 +1852,34 @@ class SemanticService:
                 receipt=receipt,
                 ledger=ledger,
             )
+            self._validate_review_samples(packet, hidden, ledger, inventory)
+            persisted_fixed = packet.get("fixed_targets")
+            if fixed_targets and persisted_fixed != fixed_targets:
+                if persisted_fixed is None:
+                    return self._supersede_pending_review(
+                        ledger=ledger,
+                        packet=packet,
+                        hidden=hidden,
+                        fixed_targets=fixed_targets,
+                    )
+                raise SemanticReviewError("persisted fixed targets do not match canonical history")
+            if not fixed_targets and persisted_fixed is not None:
+                raise SemanticReviewError("persisted fixed targets are no longer canonical")
             samples = packet.get("samples")
             if not isinstance(samples, list):
                 raise SemanticReviewError("persisted review packet samples are invalid")
-            return {
+            result: dict[str, object] = {
                 "review_batch_id": ledger.review.review_batch_id,
                 "samples": samples,
             }
+            if fixed_targets:
+                result["fixed_targets"] = fixed_targets
+            return result
         candidates = self._review_candidates(ledger)
-        if not candidates:
+        if not candidates and not fixed_targets:
             raise SemanticReviewError("no fresh Python callable is available for review")
         fingerprint = self._ledger_fingerprint(ledger)
-        selected = self._stratified_sample(candidates, fingerprint=fingerprint)
+        selected = self._stratified_sample(candidates, fingerprint=fingerprint) if candidates else []
 
         samples: list[dict[str, str]] = []
         hidden: dict[str, dict[str, str]] = {}
@@ -1878,7 +1896,27 @@ class SemanticService:
                 "symbol_id": candidate["symbol_id"],
                 "producer_session_id": candidate["producer"],
             }
+        return self._persist_review_batch(
+            ledger=ledger,
+            samples=samples,
+            hidden=hidden,
+            fixed_targets=fixed_targets,
+            ledger_fingerprint=fingerprint,
+        )
+
+    def _persist_review_batch(
+        self,
+        *,
+        ledger: SemanticLedger,
+        samples: list[dict[str, str]],
+        hidden: dict[str, dict[str, str]],
+        fixed_targets: list[dict[str, str]],
+        ledger_fingerprint: str | None = None,
+        supersedes_review_batch_id: str | None = None,
+    ) -> dict[str, object]:
         packet: dict[str, object] = {"samples": samples}
+        if fixed_targets:
+            packet["fixed_targets"] = fixed_targets
         packet_hash = _sha256_bytes(_json_bytes(packet))
         hidden_hash = _sha256_bytes(_json_bytes(hidden))
         subject_hash = hash_json(ledger.review.model_dump(mode="json"))
@@ -1913,6 +1951,12 @@ class SemanticService:
             "bound_ledger_revision": pending_revision,
             "bound_subject_sha256": subject_hash,
         }
+        event_payload: dict[str, object] = {
+            "review_batch_id": batch_id,
+            "ledger_fingerprint": ledger_fingerprint or self._ledger_fingerprint(ledger),
+        }
+        if supersedes_review_batch_id is not None:
+            event_payload["supersedes_review_batch_id"] = supersedes_review_batch_id
         self._commit_projection(
             expected=ledger,
             candidate=candidate,
@@ -1923,13 +1967,148 @@ class SemanticService:
                 REVIEW_BATCH_RECEIPT_RELPATH: receipt,
             },
             rewrite_projection=False,
-            event_row=self._event_row(
-                "review_batch",
-                review_batch_id=batch_id,
-                ledger_fingerprint=fingerprint,
-            ),
+            event_row=self._event_row("review_batch", **event_payload),
         )
-        return {"review_batch_id": batch_id, "samples": samples}
+        result: dict[str, object] = {
+            "review_batch_id": batch_id,
+            "samples": samples,
+        }
+        if fixed_targets:
+            result["fixed_targets"] = fixed_targets
+        return result
+
+    def _supersede_pending_review(
+        self,
+        *,
+        ledger: SemanticLedger,
+        packet: Mapping[str, object],
+        hidden: Mapping[str, object],
+        fixed_targets: list[dict[str, str]],
+    ) -> dict[str, object]:
+        samples = packet.get("samples")
+        if not isinstance(samples, list):
+            raise SemanticReviewError("persisted review packet samples are invalid")
+        normalized_hidden: dict[str, dict[str, str]] = {}
+        for sample, value in hidden.items():
+            if not isinstance(value, dict):
+                raise SemanticReviewError("hidden review map has an invalid shape")
+            normalized_hidden[sample] = dict(value)
+        return self._persist_review_batch(
+            ledger=ledger,
+            samples=[dict(sample) for sample in samples if isinstance(sample, dict)],
+            hidden=normalized_hidden,
+            fixed_targets=fixed_targets,
+            supersedes_review_batch_id=ledger.review.review_batch_id,
+        )
+
+    def _read_semantic_event_rows(self) -> list[dict[str, object]]:
+        target = self._safe_repo_artifact(SEMANTIC_EVENTS_RELPATH, create_parent=False)
+        if not target.exists():
+            return []
+        try:
+            rows: list[dict[str, object]] = []
+            for raw in target.read_text(encoding="utf-8").splitlines():
+                if not raw.strip():
+                    continue
+                value = json.loads(raw)
+                if not isinstance(value, dict):
+                    raise ValueError("event row must be an object")
+                rows.append(value)
+            return rows
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError, ValueError) as exc:
+            raise SemanticReviewError("semantic event history is unreadable") from exc
+
+    def _derive_fixed_targets(
+        self,
+        ledger: SemanticLedger,
+        inventory: SemanticInventory,
+    ) -> tuple[list[dict[str, str]], dict[str, str]]:
+        """Derive repaired symbols from the canonical review/submit event sequence."""
+
+        rows = self._read_semantic_event_rows()
+        latest_review_index: int | None = None
+        latest_review_has_revisions = False
+        for index, row in enumerate(rows):
+            if row.get("event") != "review_submit":
+                continue
+            raw_ids = row.get("revision_symbol_ids", [])
+            if not isinstance(raw_ids, list) or any(
+                not isinstance(symbol_id, str) for symbol_id in raw_ids
+            ):
+                raise SemanticReviewError("review history revision IDs are invalid")
+            if raw_ids and raw_ids != sorted(set(raw_ids)):
+                raise SemanticReviewError("review history revision IDs are not sorted/unique")
+            # An authoritative empty review clears the prior repair lane.
+            latest_review_index = index
+            latest_review_has_revisions = bool(raw_ids)
+        if latest_review_index is None or not latest_review_has_revisions:
+            return [], {}
+        next_batch_index = next(
+            (
+                index
+                for index in range(latest_review_index + 1, len(rows))
+                if rows[index].get("event") == "review_batch"
+            ),
+            len(rows),
+        )
+        commits: list[SubmissionCommitV3] = []
+        seen_submit_batch_ids: set[str] = set()
+        for row in rows[latest_review_index + 1 : next_batch_index]:
+            if row.get("event") != "submit":
+                continue
+            batch_id = row.get("batch_id")
+            if not isinstance(batch_id, str) or not batch_id:
+                raise SemanticReviewError("repair submit history batch ID is invalid")
+            if batch_id in seen_submit_batch_ids:
+                raise SemanticReviewError("duplicate repair submit event/batch ID")
+            seen_submit_batch_ids.add(batch_id)
+            commit = ledger.accepted_submissions.get(batch_id)
+            if commit is None:
+                raise SemanticReviewError("repair submit history is not bound to an accepted submission")
+            raw_symbol_ids = row.get("symbol_ids")
+            if not isinstance(raw_symbol_ids, list) or any(
+                not isinstance(symbol_id, str) for symbol_id in raw_symbol_ids
+            ):
+                raise SemanticReviewError("repair submit history symbol IDs are invalid")
+            if len(set(raw_symbol_ids)) != len(raw_symbol_ids):
+                raise SemanticReviewError("repair submit history symbol IDs are duplicated")
+            commit_ids = tuple(commit.explanation_symbol_ids)
+            if commit_ids != tuple(sorted(set(commit_ids))):
+                raise SemanticReviewError("accepted repair symbol IDs are not sorted/unique")
+            if set(raw_symbol_ids) != set(commit_ids):
+                raise SemanticReviewError("repair submit history is not bound to its accepted submission")
+            if commit.source_revision_id != ledger.source_revision:
+                raise SemanticReviewError("accepted repair submission source revision is stale")
+            if commit.edge_snapshot_sha256 != ledger.bindings.edge_snapshot_sha256:
+                raise SemanticReviewError("accepted repair submission edge binding is stale")
+            if commit_ids:
+                commits.append(commit)
+        latest_by_symbol: dict[str, SubmissionCommitV3] = {}
+        for commit in commits:
+            for symbol_id in commit.explanation_symbol_ids:
+                latest_by_symbol[symbol_id] = commit
+        if not latest_by_symbol:
+            return [], {}
+        producers: dict[str, str] = {}
+        targets: list[dict[str, str]] = []
+        for symbol_id in sorted(latest_by_symbol):
+            commit = latest_by_symbol[symbol_id]
+            if symbol_id not in inventory.symbols:
+                raise SemanticReviewError("fixed target is not present in the current inventory")
+            symbol = ledger.symbols.get(symbol_id)
+            if symbol is None or not symbol.is_fresh or symbol.explanation is None:
+                raise SemanticReviewError("fixed target is not fresh and explained")
+            if symbol.explanation.producer_session_id != commit.producer_session_id:
+                raise SemanticReviewError("fixed target is not bound to its accepted producer")
+            producers[symbol_id] = commit.producer_session_id
+            targets.append(
+                {
+                    "symbol_id": symbol_id,
+                    "source": self._source_body(symbol.path, symbol.span),
+                    "explanation": symbol.explanation.text,
+                }
+            )
+        return targets, producers
 
     def _review_candidates(self, ledger: SemanticLedger) -> list[dict[str, str]]:
         candidates: list[dict[str, str]] = []
@@ -2192,7 +2371,7 @@ class SemanticService:
             receipt=receipt,
             ledger=expected,
         )
-        self._validate_review_inputs(packet, hidden, expected)
+        fixed_producers = self._validate_review_inputs(packet, hidden, expected)
         runner_result = self.review_runner(packet)
         if not isinstance(runner_result, tuple) or len(runner_result) != 2:
             raise SemanticReviewError("review runner must return (events, verdict)")
@@ -2205,15 +2384,29 @@ class SemanticService:
             )
         )
         producers = {value["producer_session_id"] for value in hidden.values()}
+        producers.update(fixed_producers.values())
         if reviewer_thread_id in producers:
             raise SemanticReviewError("reviewer thread must be different from every producer")
-        decisions = self._validate_verdict(verdict, expected_samples=set(hidden))
+        decisions, fixed_decisions = self._validate_verdict(
+            verdict,
+            expected_samples=set(hidden),
+            expected_fixed_targets=set(fixed_producers),
+        )
         revision_samples = {
             sample
             for sample, sample_verdicts in decisions.items()
             if any(item["decision"] != "充分" for item in sample_verdicts.values())
         }
-        revision_ids = sorted(hidden[sample]["symbol_id"] for sample in revision_samples)
+        revision_ids = {
+            hidden[sample]["symbol_id"]
+            for sample in revision_samples
+        }
+        revision_ids.update(
+            symbol_id
+            for symbol_id, result in fixed_decisions.items()
+            if result["decision"] == "FAIL"
+        )
+        revision_ids = sorted(revision_ids)
         artifact = dict(verdict)
         artifact["reviewer_session_id"] = reviewer_thread_id.strip()
         event_evidence = b"".join(_json_bytes(event) for event in reviewer_events)
@@ -2405,6 +2598,8 @@ class SemanticService:
     def _run_codex_reviewer(
         packet: Mapping[str, object],
     ) -> tuple[object, Mapping[str, object]]:
+        fixed_targets = packet.get("fixed_targets")
+        has_fixed_targets = isinstance(fixed_targets, list) and bool(fixed_targets)
         schema = {
             "type": "object",
             "additionalProperties": False,
@@ -2446,12 +2641,32 @@ class SemanticService:
                 }
             },
         }
+        if has_fixed_targets:
+            schema["required"] = ["samples", "fixed_target_results"]
+            schema["properties"]["fixed_target_results"] = {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "required": ["symbol_id", "decision", "reason"],
+                    "properties": {
+                        "symbol_id": {"type": "string", "minLength": 1},
+                        "decision": {"type": "string", "enum": ["PASS", "FAIL"]},
+                        "reason": {"type": "string", "minLength": 1},
+                    },
+                },
+            }
         prompt = (
             "你是独立语义 reviewer。stdin 每项只有匿名序号、函数源码和函数解释。"
             "逐项判断这段解释与源码是否相符：行为、输入输出与副作用、失败条件、依赖关系。"
             "解释里凡是超出该函数源码可核验范围的断言，判为不充分，并在理由里逐字引出那一句。"
             "每条只能写充分、部分、不充分、判不了，并给一句具体理由。不得调用任何工具。"
         )
+        if has_fixed_targets:
+            prompt += (
+                "另外逐项判断 fixed_targets 中每个 symbol_id 的源码与解释；"
+                "每个固定目标必须输出 fixed_target_results 中唯一一条 PASS 或 FAIL 及一句理由。"
+            )
         # 闸 2 同样管 reviewer：它手里连 path 都没有，此前却被要求判「系统角色」，
         # 于是它只能判这句话读起来像不像一句角色陈述——评委恒绿的语义层实例。
         assert_prompt_dispatchable(prompt, subject="semantic reviewer prompt")
@@ -2519,9 +2734,34 @@ class SemanticService:
         packet: Mapping[str, object],
         hidden: Mapping[str, object],
         ledger: SemanticLedger,
+    ) -> dict[str, str]:
+        if set(packet) not in ({"samples"}, {"samples", "fixed_targets"}):
+            raise SemanticReviewError(
+                "review packet must contain samples and optional fixed targets"
+            )
+        if not isinstance(packet["samples"], list):
+            raise SemanticReviewError("review packet samples must be an array")
+        inventory = self._inventory()
+        if inventory.source_revision != ledger.source_revision:
+            raise SemanticReviewError("review inventory is stale")
+        self._validate_review_samples(packet, hidden, ledger, inventory)
+        fixed_targets = packet.get("fixed_targets", [])
+        if not isinstance(fixed_targets, list):
+            raise SemanticReviewError("review fixed targets must be an array")
+        derived_targets, fixed_producers = self._derive_fixed_targets(ledger, inventory)
+        if not derived_targets and "fixed_targets" in packet:
+            raise SemanticReviewError("blind-only review packets must not carry fixed targets")
+        if fixed_targets != derived_targets:
+            raise SemanticReviewError("review fixed targets are stale or caller-injected")
+        return fixed_producers
+
+    def _validate_review_samples(
+        self,
+        packet: Mapping[str, object],
+        hidden: Mapping[str, object],
+        ledger: SemanticLedger,
+        inventory: SemanticInventory,
     ) -> None:
-        if set(packet) != {"samples"} or not isinstance(packet["samples"], list):
-            raise SemanticReviewError("review packet must contain only a samples array")
         sample_ids: list[str] = []
         for sample in packet["samples"]:
             if not isinstance(sample, dict) or set(sample) != {
@@ -2559,14 +2799,23 @@ class SemanticService:
             ):
                 raise SemanticReviewError("review packet no longer matches canonical state")
 
+        if inventory.source_revision != ledger.source_revision:
+            raise SemanticReviewError("review inventory is stale")
+
     @staticmethod
     def _validate_verdict(
         verdict: Mapping[str, object],
         *,
         expected_samples: set[str],
-    ) -> dict[str, dict[str, dict[str, str]]]:
-        if not isinstance(verdict, Mapping) or set(verdict) != {"samples"}:
-            raise SemanticReviewError("verdict must contain only a samples array")
+        expected_fixed_targets: set[str] | None = None,
+    ) -> tuple[
+        dict[str, dict[str, dict[str, str]]],
+        dict[str, dict[str, str]],
+    ]:
+        fixed_ids = expected_fixed_targets or set()
+        expected_keys = {"samples", "fixed_target_results"} if fixed_ids else {"samples"}
+        if not isinstance(verdict, Mapping) or set(verdict) != expected_keys:
+            raise SemanticReviewError("verdict shape does not match the bound review packet")
         samples = verdict["samples"]
         if not isinstance(samples, list):
             raise SemanticReviewError("verdict samples must be an array")
@@ -2596,7 +2845,42 @@ class SemanticService:
                 }
         if set(parsed) != expected_samples:
             raise SemanticReviewError("verdict must cover every sample exactly once")
-        return parsed
+        fixed_results: dict[str, dict[str, str]] = {}
+        if fixed_ids:
+            raw_fixed = verdict["fixed_target_results"]
+            if not isinstance(raw_fixed, list):
+                raise SemanticReviewError("fixed target verdicts must be an array")
+            for item in raw_fixed:
+                if not isinstance(item, dict) or set(item) != {
+                    "symbol_id",
+                    "decision",
+                    "reason",
+                }:
+                    raise SemanticReviewError("fixed target verdict shape is invalid")
+                symbol_id = item["symbol_id"]
+                decision = item["decision"]
+                reason = item["reason"]
+                if not isinstance(symbol_id, str) or symbol_id in fixed_results:
+                    raise SemanticReviewError(
+                        "fixed target verdict identities must be unique strings"
+                    )
+                if decision not in _FIXED_TARGET_DECISIONS:
+                    raise SemanticReviewError(
+                        "fixed target decision is outside the legal enum"
+                    )
+                if not isinstance(reason, str) or not reason.strip() or "\n" in reason:
+                    raise SemanticReviewError(
+                        "fixed target reason must be one non-empty line"
+                    )
+                fixed_results[symbol_id] = {
+                    "decision": decision,
+                    "reason": reason.strip(),
+                }
+            if set(fixed_results) != fixed_ids:
+                raise SemanticReviewError(
+                    "fixed target verdict must cover every target exactly once"
+                )
+        return parsed, fixed_results
 
     def _commit_projection(
         self,
