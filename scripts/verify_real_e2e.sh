@@ -113,7 +113,7 @@ check "R7" "INDEX.md contains Mermaid diagram" "$r7"
 # R8: Inter-module dep_count sum > 0
 r8="false"
 if [ -f "$ANALYSIS_DIR/02_dag.json" ] && [ -f "$ANALYSIS_DIR/03_feature_cones.json" ]; then
-    r8=$(cd /Users/lexuanzhang/context-infra/adhoc_jobs/codebase_explorer_20260321/impl/codebase-explorer && uv run python -c "
+    r8=$(cd "$(cd "$(dirname "$0")/.." && pwd)" && uv run python -c "
 import json, sys
 from src.server_helpers import compute_inter_module_deps_from_dag
 

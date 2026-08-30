@@ -47,7 +47,9 @@ from src.semantic.tiering import (
 )
 
 
-WORKSPACE_ROOT: Final = Path("/Users/lexuanzhang/context-infra")
+WORKSPACE_ROOT: Final = Path(
+    os.environ.get("CBE_ROUTER_WORKSPACE", str(Path.home() / "context-infra"))
+)
 ROUTER_PYTHON: Final = os.environ.get(
     "PYTHON3_BIN",
     str(WORKSPACE_ROOT / ".venv/bin/python"),

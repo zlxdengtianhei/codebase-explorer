@@ -16,13 +16,9 @@ analyze、语义生产、render、review 四阶段。
 /absolute/path/to/codebase-explorer
 ```
 
-代表实现目录。当前 context-infra checkout 的真实路径是：
+代表实现目录，即本仓 clone 后的根目录。
 
-```text
-/Users/lexuanzhang/context-infra/adhoc_jobs/codebase_explorer_20260321/impl/codebase-explorer
-```
-
-仓内 `.mcp.json` 用同一绝对路径启动 stdio server。Skill 真源是
+仓内 `.mcp.json` 以相对目录 `.` 启动 stdio server；若你的 MCP host 从其他工作目录启动，把 `--directory` 换成本仓 clone 的绝对路径。Skill 真源是
 `.agents/skills/codebase-explorer/`。只复制 skill、不把 MCP server 挂到**当前正在用的那个宿主**，
 不算安装完成。
 

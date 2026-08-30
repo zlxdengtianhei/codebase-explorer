@@ -1,2 +1,0 @@
-+ /Users/lexuanzhang/context-infra/adhoc_jobs/codebase_explorer_20260321/impl/codebase-explorer/experiments/typescript_resolver_spike/.work/fixture (335ms)
-done /Users/lexuanzhang/context-infra/adhoc_jobs/codebase_explorer_20260321/impl/codebase-explorer/experiments/typescript_resolver_spike/results/fixture.scip

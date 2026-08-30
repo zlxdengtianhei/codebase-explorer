@@ -10,6 +10,7 @@ import json
 import re
 import shutil
 import subprocess
+import os
 from pathlib import Path
 
 from src.semantic.models import SemanticLedger
@@ -19,7 +20,7 @@ from src.synthesis.variant_b.text import first_sentence, one_liner, tail
 
 _IDENT = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
 _PROSE_MARK = re.compile(r"<<<PROSE>>>(.*?)<<<END>>>", re.S)
-REPO = Path("/Users/lexuanzhang/context-infra")
+REPO = Path(os.environ.get("CBE_ROUTER_WORKSPACE", str(Path.home() / "context-infra")))
 PYTHON = "python3"
 
 

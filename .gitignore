@@ -10,3 +10,4 @@ claude_mcp_list.txt
 .DS_Store
 experiments/**/node_modules/
 experiments/**/.work/
+.codebase-analysis/

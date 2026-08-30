@@ -1,9 +1,0 @@
-iteration	commit_hash	pass_count	status	description
-0	489cf04	0	baseline	no V5 tools exist
-1	2342d54	5	keep	add get_modules tool with summary/detail modes
-2	0addb6c	6	keep	add get_function_deps tool + persist function dep data
-3	08053d2	9	keep	improve function dep extraction + fix judge script
-4	ed04664	11	keep	wire GroupingStrategy + token budget + fix E2E file selection
-5	38334bf	15	keep	compact summary + doc_operation tool (get_template/get_protocol)
-6	c3b3619	16	keep	add CRUD ops to doc_operation + restore depends_on + stabilize E2E
-7	306d31b	16	keep	compact summary <3KB (dep_count) + fix E2E prompt + 3x stable 16/16
