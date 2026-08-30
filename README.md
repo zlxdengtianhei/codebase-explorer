@@ -36,7 +36,8 @@ $ uv run pytest -q tests/test_skill_contract.py tests/test_server_helpers.py
 106 passed in 5.66s
 ```
 `test_skill_contract.py` 在 skill 与 server 工具名漂移时变红；`test_server_helpers.py` 覆盖确定性辅助。
-全量收集 1108 测试，其中依赖 semantic-service 的测试因一个已知 import 缺陷在收集期报错（见诚实边界）。
+ir/3 恢复后全量收集 1235 测试：1213 passed / 5 skipped / 17 failed（**开发树读数**：产自 monorepo 开发谱系 commit 3fcb3da42c，该谱系正在向本仓同步；本仓当前快照的实测见上一段 106 passed），
+17 个失败均证明先存或环境（16 个因 test_repos 离盘、1 个 e2e 在恢复前沙箱同现；见诚实边界与 r008 护航回执）。
 
 ### 第一米 MCP 接线（2026-08-30 本轮真实证据）
 真实 MCP stdio 会话调用 `analyze_codebase` 跑通 flask，server `codebase-explorer/1.26.0` 暴露 14 工具，
@@ -57,6 +58,21 @@ $ python3 c5_multilayer_renderer.py ... --max-depth 2
 {"depth_capped_events": [{"layer":"L2","file":"json/tag.py","symbol_count":44,"decision":"DEPTH_CAPPED"}, ...]}
 ```
 
+### celery 分批 materialize（2026-08-30 本轮真实证据，C5 part2）
+
+对 celery（HEAD `c35b1d5e`，closed world 161 文件 / 3258 符号）跑通「claim → 整批校验 → 提交」真缝分批 materialize：
+driver 回放 r007 冻结的 160 个真实 LLM 解释（logs_v3 public/responses，153 份响应），72 个符号经 72 批提交落进 canonical 台账，
+台账 explained 33 → 105（105/3258 ≈ 3.2%，为原读数的 3.2 倍），driver 正常收敛
+（`claim None after 37312 claims: no unleased non-fresh candidates`），stdout 末行 `[PASS] explained 77 -> 105`（该轮 77→105，战役累计 33→105）。
+
+- 以下为**开发树运行证据**（monorepo r008 运行，关键文件已 vendor 进本仓 docs/evidence/）：canonical 台账 `celery_c35b1d5e/closed_world_161/.codebase-analysis/semantic_ledger.json`
+  （种子由 r007 `snapshot/CELERY_REV24_LEDGER.json` rebind repo_root 而来：store.commit 对 repo_root 有机械守卫，台账迁 canonical 新家；
+  before=33 对齐与 rebind 记录见 [docs/evidence/c5_celery_before_snapshot.md](docs/evidence/c5_celery_before_snapshot.md)）
+- 逐批证据：[docs/evidence/c5_celery_materialize_log.jsonl](docs/evidence/c5_celery_materialize_log.jsonl)（72 条 batch_committed + run_end 汇总）；before=33 对齐记录：[docs/evidence/c5_celery_before_snapshot.md](docs/evidence/c5_celery_before_snapshot.md)
+- 残差：160 个预计算符号落册 72 个；其余 88 个中，10 个所在 SCC 批混有非目标符号（被「整批全目标才提交」机制排除），
+  78 个所在批全为目标符号但依赖前沿尚未就绪（终态 scheduler state 中未进入 live packet），随依赖落册可在后续批次认领；
+  剩余 3153 个符号未覆盖，待后续批次。
+
 ### 竞品对标读数（可复算）
 r003 round4 用预先冻结的确定性判据量入口页导航（一条命令可复算）：
 
@@ -73,11 +89,12 @@ r003 round4 用预先冻结的确定性判据量入口页导航（一条命令�
 
 - **语义解释仅 Python**。TypeScript/JavaScript 仅 `syntax_only` 影子分析，未通。
 - **大仓尚未全量打通**。flask 415/415、httpx 521/521 全符号真解释（历史，r002 首达、r006 独立门放行）；
-  celery 停在 33/3258（约 1%），django、sqlalchemy 等大仓从未有语义生产。本轮 C5 只做 flask 多层原型 + 守卫触发演示，
-  celery 分批 materialize（after>33）阻塞于一个 import 缺陷的修复（见下）。
-- **已知 import 缺陷（影响 semantic-service 测试与 celery materialize）**：`src/graph/reverse_edges.py` 期望 cbe-ir/3
-  的 5 个类型（CallOutcome 等），但当前 `src/ir` 仍是 cbe-ir/2，import 失败。确定性分析流水线（C4 第一米）不受影响，
-  semantic-service 链受影响。修复 = 推广已暂停的 ir/3 semantic 分支，是后续工作。
+  celery 本轮 materialize 管道已打通，explained 33 → 105（105/3258 ≈ 3.2%，证据见上「测试结果」节），
+  剩余 3153 个符号待后续批次；django、sqlalchemy 等大仓仍从未有语义生产。
+- **ir/3 import 缺陷已修复（2026-08-30，commit 3fcb3da42c）**：`src/ir` 升到 cbe-ir/3（恢复暂停分支 ac7f5d5b65 的
+  26 个 src + 13 个 tests 文件，逐 blob 一致），`reverse_edges` 期望的 5 个类型（CallOutcome 等）import 恢复，
+  semantic-service 链打通，celery materialize 的前置阻塞解除。残差：`l2_cluster`/`l2_status` 仍 dormant
+  （依赖分支 file_cards → feature_cone 危险区，缓行）。
 - **独立 review 的隔离贡献尚无隔离测量证据**：reviewer 信息不对称是设计要求（防 LLM verifier confirmation bias），
   但其相对非对称 review 的增量贡献尚未隔离测出。
 - **消费形态必须检索式，禁常驻注入**：两项独立研究（ETH n=138、Khatri n=288）在常驻注入形态下零/负效应。
