@@ -1,6 +1,0 @@
-[
-  "cycle.py::a",
-  "cycle.py::b",
-  "cycle.py::c",
-  "cycle.py::self_recursive"
-]
