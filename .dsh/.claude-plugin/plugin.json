@@ -1,8 +1,0 @@
-{
-  "name": "codebase-explorer",
-  "description": "Generate a navigable, source-grounded documentation map of a repository; the host agent dispatches one subagent per module on your subscription.",
-  "version": "2.1.0",
-  "author": {"name": "zlxdengtianhei"},
-  "homepage": "https://github.com/zlxdengtianhei/codebase-explorer",
-  "license": "MIT"
-}
