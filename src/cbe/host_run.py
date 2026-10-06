@@ -133,9 +133,19 @@ def _task(task_id: str, kind: str, module: int | None = None, **extra: Any) -> d
             "seconds": None, "output": None, "usage": [], **extra}
 
 
-def _modules(state: dict[str, Any]) -> list[gen.Module]:
-    files = {row["path"]: gen.SourceFile(row["path"], "", row["tokens"], row["digest"],
-                                         list(row["signatures"]))
+def _read_source(state: dict[str, Any], row: dict[str, Any]) -> str:
+    raw = (Path(state["repo"]) / row["path"]).read_bytes()
+    if hashlib.sha256(raw).hexdigest() != row["digest"]:
+        raise HostRunError(f"source changed since plan: {row['path']}; start a new plan")
+    return raw.decode("utf-8")
+
+
+def _modules(state: dict[str, Any], *, source_of: int | None = None) -> list[gen.Module]:
+    """Rebuild the modules from the run state. State keeps digests, not text, so the source
+    of module ``source_of`` is read back from the repository (checked against its digest)."""
+    wanted = set(state["modules"][source_of]["files"]) if source_of is not None else set()
+    files = {row["path"]: gen.SourceFile(row["path"], _read_source(state, row) if row["path"] in wanted else "",
+                                         row["tokens"], row["digest"], list(row["signatures"]))
              for row in state["files"]}
     return [gen.Module(row["number"], [files[path] for path in row["files"]], row["bucket"],
                        row["title"], set(row["depends_on"]))
@@ -293,9 +303,9 @@ def _labels(state: dict[str, Any], task_id: str) -> dict[str, str]:
 
 def _body(run_dir: Path, state: dict[str, Any], task: dict[str, Any], *, embed: bool) -> tuple[str, str]:
     """Return (rules, task body). ``embed`` puts source in the prompt for tool-free completions."""
-    modules = _modules(state)
-    source_root = None if embed else Path(state["repo"])
     kind = task["kind"]
+    modules = _modules(state, source_of=task["module"] if embed and kind in {"module", "repair", "review"} else None)
+    source_root = None if embed else Path(state["repo"])
     if kind == "names":
         return NO_FILE_RULES, gen._name_prompt(modules)
     if kind in {"module", "repair"}:
@@ -547,6 +557,10 @@ def _summary(state: dict[str, Any]) -> dict[str, Any]:
     run = state["run_dir"]
     if state["status"] == "complete":
         action = f"done; open {run}/docs/INDEX.md, then run `cbe host cost --run-dir {run}`"
+    elif state["status"] == "partial" and state.get("partial_reason"):
+        action = (f"partial: {state['partial_reason']} ({state.get('partial_detail', '')}); "
+                  "the pages were not written from the source, so do not trust them. Fix the cause, then "
+                  "start a new run")
     elif state["status"] == "partial":
         again = (f"`cbe generate {state['repo']} --resume --run-dir {run}`" if state.get("driver") == "script"
                  else f"`cbe host resume --run-dir {run}` and continue with `cbe host next`")
@@ -700,7 +714,8 @@ def _render(run_dir: Path, state: dict[str, Any]) -> None:
     state.pop("render_error", None)
     for row, entry in zip(state["modules"], catalog["modules"]):
         row["page"] = f"docs/{entry['page']}"
-    complete = all(task["status"] == "done" for task in state["tasks"].values())
+    reason = state.get("partial_reason")
+    complete = all(task["status"] == "done" for task in state["tasks"].values()) and not reason
     state["status"], state["rendered"] = ("complete" if complete else "partial"), True
     if not complete and not all(_settled(state, task) for task in state["tasks"].values()):
         state["status"] = "running"
@@ -712,6 +727,8 @@ def _render(run_dir: Path, state: dict[str, Any]) -> None:
                "wall_seconds": round(time.time() - _epoch(state["created_at"]), 3),
                "run_dir": str(run_dir), "index": str(run_dir / "docs" / "INDEX.md"),
                "subagent_tasks": sum(task["attempts"] for task in state["tasks"].values())}
+    if reason:
+        summary["partial_reason"], summary["partial_detail"] = reason, state.get("partial_detail", "")
     _write_json(run_dir / "summary.json", summary)
     state["verify"] = verify_state(run_dir, state)
     _event(run_dir, "render", f"{summary['published_pages']} pages, status {state['status']}"
@@ -785,6 +802,30 @@ def render(run_dir: Path) -> dict[str, Any]:
         return {"index": str(run_dir / "docs" / "INDEX.md"), "status": state["status"], "verify": state["verify"]}
 
 
+def source_sent_tokens(state: dict[str, Any]) -> int:
+    """Source tokens sent to the model at least once: the modules with a module task attempt."""
+    tokens = {row["path"]: row["tokens"] for row in state["files"]}
+    return sum(tokens[path] for row in state["modules"]
+               if _module_task(state, row["number"])["attempts"] > 0 for path in row["files"])
+
+
+def mark_partial(run_dir: Path, reason: str | None, detail: str = "") -> None:
+    """Keep a finished run from reading "complete" when something outside the tasks says it is not.
+
+    Set or clear ``reason``; the summary, STATUS.md and the render status follow it."""
+    with _locked(run_dir) as state:
+        if state.get("partial_reason") == reason and state.get("partial_detail", "") == detail:
+            return
+        if reason:
+            state["partial_reason"], state["partial_detail"] = reason, detail
+            _event(run_dir, "partial", f"{reason}: {detail}", reason=reason)
+        else:
+            state.pop("partial_reason", None)
+            state.pop("partial_detail", None)
+        if state.get("rendered"):
+            _render(run_dir, state)
+
+
 def finish(run_dir: Path) -> dict[str, Any]:
     """Make sure the docs reflect the current state; return the run summary."""
     with _locked(run_dir) as state:
@@ -802,6 +843,8 @@ def _status_markdown(state: dict[str, Any]) -> str:
     lines = ["# CBE run status", "",
              f"Run `{state['run_tag']}` · status **{state['status']}** · updated {state['updated_at']} · "
              f"review {state['review']} · jobs {state['jobs']} · host {state['host']}", "",
+             *([f"**Partial: {state['partial_reason']}** · {state.get('partial_detail', '')}", ""]
+               if state.get("partial_reason") else []),
              "Counts: " + ", ".join(f"{key} {value}" for key, value in sorted(counts.items())), "",
              "| Task | Module | State | Attempts | Seconds | Output | Note |", "|---|---|---|---:|---:|---|---|"]
     for task in sorted(state["tasks"].values(), key=lambda row: (ORDER[row["kind"]], row["module"] or 0)):
