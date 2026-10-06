@@ -334,3 +334,41 @@ def test_failed_overview_falls_back_and_is_retried_on_its_own(tmp_path: Path) ->
     state = json.loads((run_dir / "host" / "state.json").read_text())
     assert state["status"] == "complete"
     assert "generated mechanically" not in (run_dir / "docs" / "INDEX.md").read_text()
+
+
+def test_script_prompt_embeds_source_and_host_task_lists_paths(tmp_path: Path) -> None:
+    repo = _repo(tmp_path)
+    (repo / "src" / "pkg" / "empty.py").write_text("", encoding="utf-8")
+    run_dir = tmp_path / "run"
+    host_run.plan(repo, run_dir, review="none", host="opencode", driver="script")
+    state = json.loads((run_dir / "host" / "state.json").read_text(encoding="utf-8"))
+    batch = host_run.next_tasks(run_dir, limit=1)
+    assert [item["task"] for item in batch["tasks"]] == ["names"]
+    Path(batch["tasks"][0]["output_file"]).write_text(
+        json.dumps(_answer({"kind": "names"}, host_run.completion_prompt(run_dir, "names"))), encoding="utf-8")
+    assert host_run.submit(run_dir, "names")["accepted"]
+    checked = 0
+    for item in host_run.next_tasks(run_dir)["tasks"]:
+        module = state["modules"][int(item["task"].split("_")[1]) - 1]
+        script = host_run.completion_prompt(run_dir, item["task"])
+        hosted = Path(item["prompt_file"]).read_text(encoding="utf-8")
+        for path in module["files"]:
+            text = (repo / path).read_text(encoding="utf-8")
+            if text:
+                assert text in script, f"script prompt for {item['task']} lacks the body of {path}"
+            # Host mode hands over absolute paths, never the text.
+            assert str(repo / path) in hosted
+            if text:
+                assert text not in hosted
+                checked += 1
+    assert checked >= 3  # every non-empty file of the repository was compared
+
+
+def test_script_prompt_refuses_changed_source(tmp_path: Path) -> None:
+    repo = _repo(tmp_path)
+    run_dir = tmp_path / "run"
+    host_run.plan(repo, run_dir, review="none", host="opencode", driver="script")
+    (repo / "src" / "pkg" / "jobs.py").write_text("changed = 1\n", encoding="utf-8")
+    with pytest.raises(host_run.HostRunError, match="source changed"):
+        for number in range(len(json.loads((run_dir / "host" / "state.json").read_text())["modules"])):
+            host_run.completion_prompt(run_dir, f"module_{number + 1}")

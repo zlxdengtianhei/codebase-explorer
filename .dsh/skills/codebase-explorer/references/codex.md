@@ -5,7 +5,7 @@
 Install the CLI (pinned), then the skill:
 
 ```sh
-uv tool install --python 3.13 'https://github.com/zlxdengtianhei/codebase-explorer/archive/refs/tags/v2.1.0.zip'
+uv tool install --python 3.13 'https://github.com/zlxdengtianhei/codebase-explorer/archive/refs/tags/v2.1.1.zip'
 "$(uv tool dir --bin)/cbe-install" install --host codex --scope project   # .agents/skills/codebase-explorer
 ```
 

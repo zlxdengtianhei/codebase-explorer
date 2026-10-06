@@ -10,7 +10,7 @@ Codebase Explorer (CBE) generates a navigable map of a repository: a two-level I
 Requires Python 3.12 or 3.13 and [uv](https://docs.astral.sh/uv/getting-started/installation/). Install the isolated CBE command, pinned to a release tag, with one shell line:
 
 ```sh
-uv tool install --python 3.13 'https://github.com/zlxdengtianhei/codebase-explorer/archive/refs/tags/v2.1.0.zip'
+uv tool install --python 3.13 'https://github.com/zlxdengtianhei/codebase-explorer/archive/refs/tags/v2.1.1.zip'
 ```
 
 Replace `v2.1.0` with the tag you want; a commit archive (`.../archive/<commit>.zip`) pins just as firmly. The release archive does not include the `test_repos` submodules. Installing from `main` (`https://github.com/zlxdengtianhei/codebase-explorer/archive/refs/heads/main.zip`) follows the newest commit instead. `cbe --version` prints the installed version.
@@ -88,6 +88,8 @@ RUN=/absolute/path/to/your/local/run
 
 The host-driven `host` path supports any harness whose agent can start subagents and run shell commands; Claude Code and Codex are documented. The script-driven `generate` path supports OpenCode and Devin CLI.
 
+Version 2.1.1 fixes `cbe generate` (OpenCode and Devin): 2.1.0 sent the model only file paths, so every page was written from names alone while the run still reported `complete`. The script driver again embeds each module's source text; `cbe host` still hands paths to subagents that read the files. `generate` now also marks a run `partial` with the reason `source_not_delivered` (in `summary.json`, `STATUS.md`, and `progress.log`) when the model reports under half as many input tokens (cache reads included) as the source it was sent. Delete 2.1.0 script-driver runs and regenerate them.
+
 Version 2.1.0 removed the older `analyze` / `native-next` / `native-record` workflow, its about 50 subcommands, and the `cbe-mcp` and `cbe-http` adapters. Runs made with them cannot be continued by 2.1.0. Their last version is commit `c58f4e2` (release 2.0.0); install that commit's archive to keep using them.
 
 The optional agent skill can still be installed for discovery and guidance:
@@ -101,7 +103,7 @@ Choose the host and project in the installer. The generated docs are separate fr
 To upgrade the installed command, reinstall with the new tag:
 
 ```sh
-uv tool install --reinstall --python 3.13 'https://github.com/zlxdengtianhei/codebase-explorer/archive/refs/tags/v2.1.0.zip'
+uv tool install --reinstall --python 3.13 'https://github.com/zlxdengtianhei/codebase-explorer/archive/refs/tags/v2.1.1.zip'
 ```
 
 To develop from a checkout, run `uv sync --python 3.13 --group dev` and `uv run pytest -q`. The package uses the MIT license in [LICENSE](LICENSE).

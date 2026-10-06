@@ -724,6 +724,28 @@ def _cost(run_dir: Path, *, host: str = "opencode") -> dict[str, Any]:
             "usage_complete": known, "seconds": round(sum(float(row["seconds"]) for row in rows), 3)}
 
 
+# A script completion has no file tools, so the model must have been sent the source text. If the
+# model reports far fewer input tokens than the source it was sent, it never saw the code.
+DELIVERY_FLOOR = 0.5
+
+
+def _delivery_problem(run_dir: Path, csv_path: Path) -> tuple[str | None, str]:
+    """Return ("source_not_delivered", detail) when reported input is under half the source sent."""
+    if not csv_path.is_file():
+        return None, ""
+    state = json.loads((run_dir / "host" / "state.json").read_text(encoding="utf-8"))
+    from cbe import host_run
+    sent = host_run.source_sent_tokens(state)
+    with csv_path.open(newline="", encoding="utf-8") as stream:
+        rows = list(csv.DictReader(stream))
+    # Cached input still reached the model, so count it; calls without usage add nothing.
+    reported = sum(int(row[field]) for row in rows for field in ("input_tokens", "cache_tokens") if row[field])
+    if sent <= 0 or not any(row["input_tokens"] for row in rows) or reported >= DELIVERY_FLOOR * sent:
+        return None, ""
+    return "source_not_delivered", (f"model-reported input {reported} tokens is under "
+                                    f"{int(DELIVERY_FLOOR * 100)}% of the {sent} source tokens sent")
+
+
 def _csv_task(task_id: str, review: str) -> str:
     """Keep calls.csv task names comparable with earlier script runs."""
     if task_id == "names":
@@ -820,8 +842,9 @@ def generate(repo: Path, run_dir: Path, *, model: str, config: Path | None = Non
                     _mark_result(csv_path, csv_task, item["attempt"], "normalized")
     if stopped:
         host_run.release(run_dir)
-    result = host_run.finish(run_dir)
     cost = _cost(run_dir, host=host) if csv_path.is_file() else {"calls": 0}
+    host_run.mark_partial(run_dir, *_delivery_problem(run_dir, csv_path))
+    result = host_run.finish(run_dir)
     summary = {**result, "status": result.get("status", "partial"),
                "stopped": stopped, "wall_seconds": round(time.monotonic() - started, 3),
                "run_dir": str(run_dir), "index": str(run_dir / "docs" / "INDEX.md"),

@@ -293,3 +293,69 @@ def test_generate_renders_partial_run_and_resume_finishes_pending_parts(tmp_path
     assert code == 0 and second["status"] == "complete" and second["pending"] == []
     assert seen[0] == "module_2" and "system_overview" in seen  # the overview is redone to cover module_2
     assert "pending" not in (run_dir / "docs" / "INDEX.md").read_text(encoding="utf-8").split("## Subsystems")[0]
+
+
+def _tiny_repo(tmp_path):
+    repo = tmp_path / "repo"
+    (repo / "src" / "pkg").mkdir(parents=True)
+    (repo / "tests").mkdir()
+    (repo / "src" / "pkg" / "jobs.py").write_text(
+        "def reserve_run(value):\n    if value < 0:\n        raise ValueError('negative')\n    return value\n",
+        encoding="utf-8")
+    (repo / "tests" / "test_jobs.py").write_text(
+        "from pkg.jobs import reserve_run\n\ndef test_reserve():\n    assert reserve_run(1) == 1\n",
+        encoding="utf-8")
+    return repo
+
+
+def _scripted_model(monkeypatch, *, input_tokens: int, prompts: dict[str, str]):
+    from cbe.headless_completion import _csv_row
+
+    def fake_invoke(**kwargs):
+        task = kwargs["task"]
+        prompts[task] = kwargs["prompt"]
+        if task == "module_names":
+            rows = json.loads(kwargs["prompt"].split("Modules:\n", 1)[1])
+            value = {"names": [{"module": row["module"], "title": f"Area {row['module']}"} for row in rows]}
+        elif task.startswith("module_"):
+            value = {"summary": "Reserves work.", "flow": "Checks input.",
+                     "test_coverage": "Covers reserve." if "test_jobs.py" in kwargs["prompt"] else "",
+                     "key_behaviors": [], "uncertainties": []}
+        elif task == "sample_review":
+            value = {"decision": "accepted", "issues": []}
+        else:
+            value = {"overview": "A tiny package.", "maintenance_navigation": "Open a module page."}
+        _csv_row(kwargs["csv_path"], {"task": task, "attempt": kwargs["attempt"], "input_tokens": input_tokens,
+                                      "output_tokens": 2, "cache_tokens": 0, "result": "ok", "seconds": 0.01})
+        return Completion(value, None, json.dumps(value), {"input": input_tokens, "output": 2, "cache": 0}, 0.01)
+
+    monkeypatch.setattr(generator, "invoke", fake_invoke)
+
+
+def test_script_driver_sends_the_source_text_of_every_module_file(tmp_path, monkeypatch) -> None:
+    repo = _tiny_repo(tmp_path)
+    prompts: dict[str, str] = {}
+    _scripted_model(monkeypatch, input_tokens=1_000, prompts=prompts)
+    result = generator.generate(repo, tmp_path / "run", model="example/model", jobs=2)
+    assert result["status"] == "complete" and "partial_reason" not in result
+    bodies = {path: (repo / path).read_text(encoding="utf-8") for path in ("src/pkg/jobs.py", "tests/test_jobs.py")}
+    for path, text in bodies.items():
+        sent = [prompt for task, prompt in prompts.items() if task.startswith("module_") and f"SOURCE FILE {path}" in prompt]
+        assert sent and all(text in prompt for prompt in sent), f"{path} body not in its module prompt"
+
+
+def test_script_driver_marks_run_partial_when_input_tokens_show_no_source(tmp_path, monkeypatch, capsys) -> None:
+    from cbe import cli
+
+    repo = _tiny_repo(tmp_path)
+    run_dir = tmp_path / "run"
+    _scripted_model(monkeypatch, input_tokens=1, prompts={})
+    code = cli.main(["generate", str(repo), "--run-dir", str(run_dir), "--model", "example/model", "--jobs", "2"])
+    result = json.loads(capsys.readouterr().out)
+    assert code == 3 and result["status"] == "partial"
+    assert result["partial_reason"] == "source_not_delivered"
+    summary = json.loads((run_dir / "summary.json").read_text(encoding="utf-8"))
+    assert summary["status"] == "partial" and summary["partial_reason"] == "source_not_delivered"
+    status = (run_dir / "STATUS.md").read_text(encoding="utf-8")
+    assert "status **partial**" in status and "source_not_delivered" in status
+    assert "source_not_delivered" in (run_dir / "progress.log").read_text(encoding="utf-8")
