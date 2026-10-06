@@ -283,44 +283,6 @@ def plan(files: list[SourceFile]) -> list[Module]:
     return bins
 
 
-def _dependency_components(modules: list[Module]) -> dict[int, set[int]]:
-    """Treat import cycles as concurrent units; wait only for outside dependencies."""
-    order = 0
-    stack: list[int] = []
-    on_stack: set[int] = set()
-    index: dict[int, int] = {}
-    low: dict[int, int] = {}
-    membership: dict[int, set[int]] = {}
-
-    def visit(node: int) -> None:
-        nonlocal order
-        index[node] = low[node] = order
-        order += 1
-        stack.append(node)
-        on_stack.add(node)
-        for dep in modules[node].depends_on:
-            if dep not in index:
-                visit(dep)
-                low[node] = min(low[node], low[dep])
-            elif dep in on_stack:
-                low[node] = min(low[node], index[dep])
-        if low[node] == index[node]:
-            group: set[int] = set()
-            while True:
-                member = stack.pop()
-                on_stack.remove(member)
-                group.add(member)
-                if member == node:
-                    break
-            for member in group:
-                membership[member] = group
-
-    for module in modules:
-        if module.number not in index:
-            visit(module.number)
-    return membership
-
-
 def _check_naming(value: dict[str, Any], modules: list[Module]) -> None:
     rows = value.get("names")
     if not isinstance(rows, list) or len(rows) != len(modules):
@@ -397,10 +359,15 @@ def _check_module(value: dict[str, Any], module: Module) -> None:
         raise ValueError("uncertainties must be a list of short strings")
 
 
-def _check_system(value: dict[str, Any]) -> None:
+def system_limit(module_count: int) -> int:
+    """Overview and navigation must name every module, so the cap grows with them."""
+    return max(2000, min(12000, 250 * module_count))
+
+
+def _check_system(value: dict[str, Any], limit: int = 2000) -> None:
     for key in ("overview", "maintenance_navigation"):
-        if not isinstance(value.get(key), str) or not value[key].strip() or len(value[key]) > 2000:
-            raise ValueError(f"{key} must be a nonempty concise string")
+        if not isinstance(value.get(key), str) or not value[key].strip() or len(value[key]) > limit:
+            raise ValueError(f"{key} must be a nonempty concise string of at most {limit} characters")
 
 
 def _check_review(value: dict[str, Any]) -> None:
@@ -410,43 +377,163 @@ def _check_review(value: dict[str, Any]) -> None:
         raise ValueError("issues must be a list of strings")
 
 
-def _call(*, task: str, prompt: str, check: Any, repo: Path, run_dir: Path,
-          model: str, config: Path, timeout: int, host: str = "opencode") -> dict[str, Any]:
-    previous_error = ""
-    for attempt in (1, 2):
-        full_prompt = FIXED + "\n\n" + prompt
-        if previous_error:
-            full_prompt += "\n\nPrevious completion failed. Correct it now. Original error: " + previous_error
-        completion = invoke(task=task, attempt=attempt, prompt=full_prompt,
-                            repo=repo, run_dir=run_dir, model=model, config=config,
-                            timeout=timeout, csv_path=run_dir / "calls.csv", host=host)
-        if completion.error:
-            previous_error = completion.error
-            if completion.error in {"provider_limit", "provider_auth"}:
-                break
-            continue
-        try:
-            check(completion.value)
-        except (ValueError, TypeError) as exc:
-            previous_error = f"schema_error:{exc}; original_output:{completion.raw_text}"
-            # The host call itself completed, but its CSV result must show the
-            # schema failure. Do not erase its observed usage.
-            _mark_schema_failure(run_dir / "calls.csv", task, attempt)
-            continue
-        return completion.value or {}
-    raise GenerateError(f"{task} failed after two physical calls: {previous_error[:250]}")
+# Repair-first validation. A strict miss is re-asked once with the exact
+# error; if the second answer still misses, these normalizers make a usable
+# answer compliant and return flags describing every change. They raise only
+# when nothing usable is left (for example, no summary at all).
 
 
-def _mark_schema_failure(csv_path: Path, task: str, attempt: int) -> None:
-    # This runs after invoke has appended its row. No other writer can modify
-    # that row while _call is inside one worker, but other workers may append.
+def _truncate(text: str, limit: int) -> str:
+    if len(text) <= limit:
+        return text
+    cut = text[:max(1, limit - 1)]
+    floor = int(limit * 0.7)
+    boundary = max((cut.rfind(mark) + len(mark) for mark in (". ", "。", "\n", "; ")
+                    if cut.rfind(mark) >= floor), default=-1)
+    if boundary < 0:
+        boundary = cut.rfind(" ") if cut.rfind(" ") >= floor else len(cut)
+    return cut[:boundary].rstrip() + "…"
+
+
+def _as_text(value: Any) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, str):
+        return value
+    if isinstance(value, (list, dict)):
+        return json.dumps(value, ensure_ascii=False, indent=2)
+    return str(value)
+
+
+def _fit(value: dict[str, Any], key: str, limit: int, flags: list[str], *, label: str | None = None) -> None:
+    label = label or key
+    text = value.get(key)
+    if not isinstance(text, str):
+        if text is not None:
+            flags.append(f"{label} was {type(text).__name__}; converted to text")
+        text = _as_text(text)
+    if len(text) > limit:
+        flags.append(f"{label} truncated from {len(text)} to {limit} characters")
+        text = _truncate(text, limit)
+    value[key] = text
+
+
+def normalize_module(value: Any, module: Module) -> list[str]:
+    if not isinstance(value, dict):
+        raise ValueError("module result is not a JSON object")
+    if not isinstance(value.get("summary"), str) or not value["summary"].strip():
+        raise ValueError("module result has no summary")
+    flags: list[str] = []
+    _fit(value, "summary", 1500, flags)
+    _fit(value, "flow", 2000, flags)
+    if not value["flow"].strip():
+        value["flow"] = "Not described by the model."
+        flags.append("flow was empty")
+    _fit(value, "test_coverage", max(1500, min(12000, module.tokens // 2)), flags)
+    if module.is_test and not value["test_coverage"].strip():
+        value["test_coverage"] = "No coverage summary was returned for this test module."
+        flags.append("test_coverage was empty")
+    rows = value.get("key_behaviors")
+    if not isinstance(rows, list):
+        if rows is not None:
+            flags.append("key_behaviors was not a list; dropped")
+        rows = []
+    kept = []
+    for row in rows[:16]:
+        if not isinstance(row, dict) or not isinstance(row.get("symbol"), str):
+            flags.append("dropped a key behavior without a symbol")
+            continue
+        for key in ("behavior", "conditions", "failures"):
+            _fit(row, key, 750, flags, label=f"{row['symbol']}.{key}")
+        kept.append(row)
+    if len(rows) > 16:
+        flags.append(f"key_behaviors cut from {len(rows)} to 16")
+    value["key_behaviors"] = kept
+    notes = value.get("uncertainties")
+    if not isinstance(notes, list):
+        notes = [] if notes is None else [_as_text(notes)]
+    if len(notes) > 8:
+        flags.append(f"uncertainties cut from {len(notes)} to 8")
+    fitted = []
+    for item in notes[:8]:
+        text = _as_text(item)
+        if len(text) > 400:
+            flags.append(f"an uncertainty was truncated from {len(text)} to 400 characters")
+            text = _truncate(text, 400)
+        fitted.append(text)
+    value["uncertainties"] = fitted
+    _check_module(value, module)
+    return flags
+
+
+def fallback_title(module: Module) -> str:
+    directory, _ = _primary_directory(module)
+    return f"{'Tests' if module.is_test else 'Source'} in {directory or '.'}"[:80]
+
+
+def normalize_naming(value: Any, modules: list[Module]) -> list[str]:
+    if not isinstance(value, dict):
+        raise ValueError("naming result is not a JSON object")
+    rows = value.get("names") if isinstance(value.get("names"), list) else []
+    titles: dict[int, str] = {}
+    for row in rows:
+        if (isinstance(row, dict) and type(row.get("module")) is int and isinstance(row.get("title"), str)
+                and row["title"].strip() and row["module"] not in titles
+                and 0 <= row["module"] < len(modules)):
+            titles[row["module"]] = row["title"]
+    if not titles:
+        raise ValueError("naming result has no usable titles")
+    flags = []
+    for module in modules:
+        if module.number not in titles:
+            titles[module.number] = fallback_title(module)
+            flags.append(f"module {module.number + 1} had no title; used {titles[module.number]!r}")
+    value["names"] = [{"module": number, "title": titles[number]} for number in sorted(titles)]
+    _check_naming(value, modules)
+    return flags
+
+
+def normalize_system(value: Any, limit: int) -> list[str]:
+    if not isinstance(value, dict):
+        raise ValueError("overview result is not a JSON object")
+    flags: list[str] = []
+    for key in ("overview", "maintenance_navigation"):
+        _fit(value, key, limit, flags)
+    if not value["overview"].strip():
+        raise ValueError("overview result has no overview")
+    if not value["maintenance_navigation"].strip():
+        value["maintenance_navigation"] = "See the subsystem list below."
+        flags.append("maintenance_navigation was empty")
+    _check_system(value, limit)
+    return flags
+
+
+def normalize_review(value: Any) -> list[str]:
+    if not isinstance(value, dict):
+        raise ValueError("review result is not a JSON object")
+    flags: list[str] = []
+    issues = value.get("issues")
+    if not isinstance(issues, list):
+        issues = [] if issues in (None, "") else [_as_text(issues)]
+        flags.append("issues was not a list")
+    value["issues"] = [_as_text(item) for item in issues]
+    if value.get("decision") not in {"accepted", "needs_repair"}:
+        value["decision"] = "needs_repair" if value["issues"] else "accepted"
+        flags.append(f"decision was invalid; treated as {value['decision']}")
+    _check_review(value)
+    return flags
+
+
+def _mark_result(csv_path: Path, task: str, attempt: int, result: str) -> None:
+    # This runs after invoke has appended its row. Other workers may append
+    # rows meanwhile, so rewrite under the same lock invoke uses.
     from cbe.headless_completion import CSV_LOCK, FIELDS
     with CSV_LOCK:
         with csv_path.open(newline="", encoding="utf-8") as stream:
             rows = list(csv.DictReader(stream))
         for row in rows:
             if row["task"] == task and row["attempt"] == str(attempt):
-                row["result"] = "schema_error"
+                row["result"] = result
                 break
         with csv_path.open("w", newline="", encoding="utf-8") as stream:
             writer = csv.DictWriter(stream, fieldnames=FIELDS)
@@ -466,7 +553,10 @@ def _name_prompt(modules: list[Module]) -> str:
             "Keep mixed-language scope honest. Modules:\n" + json.dumps(rows, ensure_ascii=False))
 
 
-def _module_prompt(module: Module, modules: list[Module], issues: list[str] | None = None) -> str:
+def _module_prompt(module: Module, modules: list[Module], issues: list[str] | None = None,
+                   *, source_root: Path | None = None) -> str:
+    """Build the module task. With ``source_root`` the files are listed by
+    absolute path for a tool-using host subagent instead of being embedded."""
     dependencies = [other for other in modules if other.number in module.depends_on]
     dep_lines = [f"{other.title}: " + ", ".join(
         f"{file.path}: {', '.join(file.signatures[:30])}" for file in other.files)
@@ -477,7 +567,7 @@ def _module_prompt(module: Module, modules: list[Module], issues: list[str] | No
     symbols = ([] if module.is_test else
                [alias if counts[alias] == 1 else source_id for alias, source_id in aliases])
     header = (f"TASK: Document the module titled {module.title}. Return JSON with string fields "
-              "summary, flow, test_coverage; key_behaviors is a list of at most 16 objects with "
+              "summary (at most 1500 characters), flow (at most 2000 characters), test_coverage; key_behaviors is a list of at most 16 objects with "
               "symbol, behavior, conditions, failures strings; uncertainties is a list of short strings. "
               "Choose only meaningful symbols from the given signature list and copy their names exactly. "
               "If this module consists of tests, "
@@ -489,6 +579,11 @@ def _module_prompt(module: Module, modules: list[Module], issues: list[str] | No
               f"Dependency signatures: {json.dumps(dep_lines, ensure_ascii=False)}\n")
     if issues:
         header += "Correct these review findings without broadening claims: " + json.dumps(issues, ensure_ascii=False) + "\n"
+    if source_root is not None:
+        header += "\nSOURCE FILES (read each one completely; read no other file):\n"
+        for file in sorted(module.files, key=lambda item: item.path):
+            header += f"- {source_root / file.path} ({file.tokens} tokens)\n"
+        return header
     for file in sorted(module.files, key=lambda item: item.path):
         header += f"\nSOURCE FILE {file.path}\n```\n{file.source}\n```\n"
     return header
@@ -536,7 +631,8 @@ def _guard_rows(repo: Path, files: list[SourceFile]) -> dict[str, list[dict[str,
 
 
 def _render(repo: Path, run_dir: Path, files: list[SourceFile], modules: list[Module],
-            system: dict[str, Any]) -> dict[str, Any]:
+            system: dict[str, Any], notes: dict[int, list[str]] | None = None,
+            index_notes: list[str] | None = None) -> dict[str, Any]:
     _verify_source(repo, files)
     output = run_dir / "docs"
     pages = output / "modules"
@@ -594,6 +690,8 @@ def _render(repo: Path, run_dir: Path, files: list[SourceFile], modules: list[Mo
                 lines.append("")
         if result.get("uncertainties"):
             lines += ["## Uncertainties", ""] + [f"- {item}" for item in result["uncertainties"]]
+        if notes and notes.get(module.number):
+            lines += ["", "## Generation notes", ""] + [f"- {item}" for item in notes[module.number]]
         (output / page).write_text("\n".join(lines).strip() + "\n", encoding="utf-8")
         directory, share = _primary_directory(module)
         kind = "tests" if module.is_test else "source"
@@ -602,6 +700,8 @@ def _render(repo: Path, run_dir: Path, files: list[SourceFile], modules: list[Mo
                      f"{', '.join(f.path for f in module.files)}")
         catalog["modules"].append({"title": module.title, "page": page,
                                    "files": [f.path for f in module.files], "source_tokens": module.tokens})
+    if index_notes:
+        index += ["", "## Generation notes", ""] + [f"- {item}" for item in index_notes]
     (output / "INDEX.md").write_text("\n".join(index) + "\n", encoding="utf-8")
     (run_dir / "catalog.json").write_text(json.dumps(catalog, ensure_ascii=False, indent=2), encoding="utf-8")
     return catalog
@@ -624,100 +724,108 @@ def _cost(run_dir: Path, *, host: str = "opencode") -> dict[str, Any]:
             "usage_complete": known, "seconds": round(sum(float(row["seconds"]) for row in rows), 3)}
 
 
+def _csv_task(task_id: str, review: str) -> str:
+    """Keep calls.csv task names comparable with earlier script runs."""
+    if task_id == "names":
+        return "module_names"
+    if task_id == "system":
+        return "system_overview"
+    if review == "sample" and task_id.startswith(("review_", "repair_")):
+        return "sample_review" if task_id.startswith("review_") else "sample_repair"
+    return task_id
+
+
 def generate(repo: Path, run_dir: Path, *, model: str, config: Path | None = None,
-             jobs: int = 4, review: str = "sample", timeout: int = 360,
-             host: str = "opencode") -> dict[str, Any]:
+             jobs: int = 4, review: str | None = None, timeout: int = 360,
+             host: str = "opencode", resume: bool = False) -> dict[str, Any]:
+    """Script driver: the shared run state, with each task as one tool-free completion.
+
+    A task failure never voids the run. Finished modules render; failed parts
+    stay pending in the run state, and ``resume=True`` continues the same run.
+    """
+    from cbe import host_run
+
+    review = review or host_run.DEFAULT_REVIEW
     repo, run_dir = repo.resolve(), run_dir.resolve()
     if not repo.is_dir():
         raise GenerateError("repository root is not a directory")
-    if jobs < 1 or review not in {"none", "sample"} or timeout < 1:
-        raise GenerateError("jobs and timeout must be positive; review must be none or sample")
+    if jobs < 1 or review not in host_run.REVIEW_MODES or timeout < 1:
+        raise GenerateError("jobs and timeout must be positive; review must be none, sample, or all")
     if host not in {"opencode", "devin"}:
         raise GenerateError("host must be opencode or devin")
     if host == "opencode" and ("/" not in model or model.startswith("/") or model.endswith("/")):
         raise GenerateError("OpenCode model must be a provider/model name")
     if host == "devin" and (not model or "/" in model):
         raise GenerateError("Devin model must be one exact catalog model ID")
-    if (run_dir / "calls.csv").exists():
-        raise GenerateError("run directory already contains calls; choose a fresh run directory")
+    has_state = (run_dir / "host" / "state.json").is_file()
+    if resume and not has_state:
+        raise GenerateError("nothing to resume: the run directory has no run state")
+    if not resume and ((run_dir / "calls.csv").exists() or has_state):
+        raise GenerateError("run directory already contains a run; pass --resume or choose a fresh run directory")
     run_dir.mkdir(parents=True, exist_ok=True)
     if config is None:
         config = run_dir / f"{host}-completion.json"
-        if host == "devin":
-            from cbe.devin_completion import DEFAULT_DEVIN_CONFIG
-            default_config = DEFAULT_DEVIN_CONFIG
-        else:
-            default_config = DEFAULT_HOST_CONFIG
-        config.write_text(json.dumps(default_config, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        if not config.is_file():
+            if host == "devin":
+                from cbe.devin_completion import DEFAULT_DEVIN_CONFIG
+                default_config = DEFAULT_DEVIN_CONFIG
+            else:
+                default_config = DEFAULT_HOST_CONFIG
+            config.write_text(json.dumps(default_config, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     else:
         config = config.resolve()
         if not config.is_file():
             raise GenerateError(f"{host} config file does not exist")
     started = time.monotonic()
-    files = scan(repo)
-    modules = plan(files)
-    names = _call(task="module_names", prompt=_name_prompt(modules),
-                  check=lambda value: _check_naming(value, modules), repo=repo, run_dir=run_dir,
-                  model=model, config=config, timeout=timeout, host=host)
-    for row in names["names"]:
-        modules[row["module"]].title = row["title"].strip()
-
-    pending = {module.number for module in modules}
-    completed: set[int] = set()
-    active: dict[Any, int] = {}
-    components = _dependency_components(modules)
+    if resume:
+        host_run.resume(run_dir, owner=host)
+    else:
+        host_run.plan(repo, run_dir, review=review, jobs=jobs, host=host, driver="script")
+    review = json.loads((run_dir / "host" / "state.json").read_text(encoding="utf-8"))["review"]
+    csv_path = run_dir / "calls.csv"
+    stopped: str | None = None
+    active: dict[Any, tuple[dict[str, Any], str]] = {}
     with ThreadPoolExecutor(max_workers=jobs) as pool:
-        while pending or active:
-            ready = [mid for mid in sorted(pending)
-                     if (modules[mid].depends_on - components[mid]) <= completed]
-            for mid in ready[:max(0, jobs - len(active))]:
-                module = modules[mid]
-                future = pool.submit(_call, task=f"module_{mid + 1}",
-                    prompt=_module_prompt(module, modules),
-                    check=lambda value, chosen=module: _check_module(value, chosen),
-                    repo=repo, run_dir=run_dir, model=model, config=config, timeout=timeout,
-                    host=host)
-                active[future] = mid
-                pending.remove(mid)
+        while True:
+            if stopped is None and len(active) < jobs:
+                for item in host_run.next_tasks(run_dir, limit=jobs - len(active), owner=host)["tasks"]:
+                    csv_task = _csv_task(item["task"], review)
+                    future = pool.submit(invoke, task=csv_task, attempt=item["attempt"],
+                                         prompt=host_run.completion_prompt(run_dir, item["task"]),
+                                         repo=repo, run_dir=run_dir, model=model, config=config,
+                                         timeout=timeout, csv_path=csv_path, host=host)
+                    active[future] = (item, csv_task)
             if not active:
-                raise GenerateError("module dependency scheduling deadlock")
+                break
             done, _ = wait(active, return_when=FIRST_COMPLETED)
             for future in done:
-                mid = active.pop(future)
-                modules[mid].output = future.result()
-                completed.add(mid)
-
-    if review == "sample":
-        chosen = max(modules, key=lambda module: (module.tokens, -module.number))
-        question = ("TASK: Check this module documentation against the source. Return JSON "
-                    "{\"decision\":\"accepted\" or \"needs_repair\",\"issues\":[...]} . "
-                    "Only report material unsupported or missing behavior.\n"
-                    "DOCUMENTATION: " + json.dumps(chosen.output, ensure_ascii=False) + "\n"
-                    + _module_prompt(chosen, modules))
-        verdict = _call(task="sample_review", prompt=question, check=_check_review,
-                        repo=repo, run_dir=run_dir, model=model, config=config, timeout=timeout,
-                        host=host)
-        if verdict["decision"] == "needs_repair" and verdict["issues"]:
-            chosen.output = _call(task="sample_repair", prompt=_module_prompt(chosen, modules, verdict["issues"]),
-                                  check=lambda value: _check_module(value, chosen), repo=repo, run_dir=run_dir,
-                                  model=model, config=config, timeout=timeout, host=host)
-
-    summaries = [{"title": module.title, "summary": module.output["summary"],
-                  "flow": module.output["flow"], "files": [file.path for file in module.files]}
-                 for module in modules]
-    system = _call(task="system_overview", prompt=("TASK: Synthesize only these module summaries. "
-        "Return JSON with nonempty strings overview and maintenance_navigation. "
-        "Explain which module to open for a maintenance question; do not invent unseen details.\n"
-        + json.dumps(summaries, ensure_ascii=False)), check=_check_system,
-        repo=repo, run_dir=run_dir, model=model, config=config, timeout=timeout, host=host)
-    catalog = _render(repo, run_dir, files, modules, system)
-    cost = _cost(run_dir, host=host)
-    summary = {"status": "complete", "source_files": len(files),
-               "source_tokens": sum(file.tokens for file in files), "modules": len(modules),
-               "published_pages": len(catalog["modules"]) + 1,
-               "wall_seconds": round(time.monotonic() - started, 3),
+                item, csv_task = active.pop(future)
+                try:
+                    completion = future.result()
+                except Exception as exc:  # noqa: BLE001 - one broken call must not void the run
+                    outcome = host_run.submit(run_dir, item["task"], error=f"driver_error:{exc}")
+                    continue
+                if completion.error:
+                    outcome = host_run.submit(run_dir, item["task"], error=completion.error,
+                                              raw_text=completion.raw_text or None)
+                    if completion.error in {"provider_limit", "provider_auth"}:
+                        stopped = completion.error
+                    continue
+                Path(item["output_file"]).write_text(completion.raw_text, encoding="utf-8")
+                outcome = host_run.submit(run_dir, item["task"])
+                if not outcome["accepted"] and outcome["error"].startswith("schema_error"):
+                    # The host call completed; its CSV row must still show the check failure.
+                    _mark_result(csv_path, csv_task, item["attempt"], "schema_error")
+                elif outcome.get("normalized"):
+                    _mark_result(csv_path, csv_task, item["attempt"], "normalized")
+    if stopped:
+        host_run.release(run_dir)
+    result = host_run.finish(run_dir)
+    cost = _cost(run_dir, host=host) if csv_path.is_file() else {"calls": 0}
+    summary = {**result, "status": result.get("status", "partial"),
+               "stopped": stopped, "wall_seconds": round(time.monotonic() - started, 3),
                "run_dir": str(run_dir), "index": str(run_dir / "docs" / "INDEX.md"),
-               "host": host, "model": model,
+               "progress_log": str(run_dir / "progress.log"), "host": host, "model": model,
                "input_token_basis": ("Devin CLI reported input_tokens; cache inclusion is unverified"
                                      if host == "devin" else "OpenCode noncached input tokens"),
                **cost}
