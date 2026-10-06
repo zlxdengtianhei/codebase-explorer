@@ -175,6 +175,7 @@ def _done_modules(state: dict[str, Any]) -> list[int]:
 
 
 def _drift(state: dict[str, Any], paths: list[str] | None = None) -> list[str]:
+    """Planned paths that are missing, unreadable, or no longer match their digest."""
     repo = Path(state["repo"])
     wanted = set(paths) if paths is not None else None
     changed = []
@@ -182,7 +183,14 @@ def _drift(state: dict[str, Any], paths: list[str] | None = None) -> list[str]:
         if wanted is not None and row["path"] not in wanted:
             continue
         path = repo / row["path"]
-        if not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != row["digest"]:
+        try:
+            raw = path.read_bytes()
+        except OSError:
+            # Missing or unreadable: a host task must not list a path the
+            # subagent cannot actually read.
+            changed.append(row["path"])
+            continue
+        if hashlib.sha256(raw).hexdigest() != row["digest"]:
             changed.append(row["path"])
     return changed
 
@@ -388,7 +396,7 @@ def next_tasks(run_dir: Path, *, limit: int | None = None, owner: str | None = N
             if task["kind"] in {"module", "repair", "review"}:
                 changed = _drift(state, state["modules"][task["module"]]["files"])
                 if changed:
-                    raise HostRunError("source changed since plan: " + ", ".join(changed[:10])
+                    raise HostRunError("source missing or changed since plan: " + ", ".join(changed[:10])
                                        + "; start a new plan")
             prompt_path = _host_dir(run_dir) / "tasks" / f"{task_id}.md"
             prompt_path.write_text(_prompt(run_dir, state, task), encoding="utf-8")
@@ -469,8 +477,15 @@ def _apply_submit(run_dir: Path, state: dict[str, Any], task: dict[str, Any], re
             error, value = f"schema_error:{exc}", None
     if error is not None and final:
         # The re-ask already happened. Accept the newest usable answer, made
-        # compliant, rather than failing a task whose content is there.
+        # compliant, rather than failing a task whose content is there. A
+        # source_not_delivered attempt is the exception: its answer was written
+        # without the source reaching the model, so it is never publishable.
+        undelivered = set(task.get("undelivered_attempts") or [])
+        if error.startswith("source_not_delivered"):
+            undelivered.add(attempt)  # recorded durably in the error branch below
         for number in range(attempt, task.get("attempt_base", 0), -1):
+            if number in undelivered:
+                continue
             candidate = archive / f"{task['id']}.attempt-{number}.txt"
             if not candidate.is_file():
                 continue
@@ -488,6 +503,8 @@ def _apply_submit(run_dir: Path, state: dict[str, Any], task: dict[str, Any], re
     timing = f" in {task['seconds']}s" if task["seconds"] is not None else ""
     if error is not None:
         task["errors"].append(error)
+        if error.startswith("source_not_delivered"):
+            task.setdefault("undelivered_attempts", []).append(attempt)
         result.unlink(missing_ok=True)
         task["status"] = "failed" if final else "pending"
         if task["status"] == "failed":
@@ -542,6 +559,17 @@ def submit(run_dir: Path, task_id: str, *, result: Path | None = None, usage: di
         return {**outcome, **_summary(state)}
 
 
+def note_usage_unknown(run_dir: Path, task_id: str, attempt: int) -> None:
+    """Record a completed script-driver call whose host reported no usage at all.
+
+    Per-call source delivery could not be verified for it. The call is not
+    failed on this, but the gap must be visible in STATUS.md."""
+    with _locked(run_dir) as state:
+        state.setdefault("usage_unknown", []).append({"task": task_id, "attempt": attempt})
+        _event(run_dir, "usage", f"{task_id} attempt {attempt} reported no usage; "
+               "per-call source delivery not verified", task=task_id, attempt=attempt)
+
+
 # ---------------------------------------------------------------- status / resume
 
 
@@ -569,8 +597,9 @@ def _summary(state: dict[str, Any]) -> dict[str, Any]:
         action = "wait for the dispatched subagents, then submit each task"
     else:
         action = f"cbe host next --run-dir {run}"
+    unknown = [f"{row['task']}#attempt-{row['attempt']}" for row in state.get("usage_unknown") or []]
     return {"status": state["status"], "counts": counts, "leased": leased, "failed": failed,
-            "ready": len(ready), "next_action": action}
+            "ready": len(ready), "next_action": action, "usage_unknown": unknown}
 
 
 def status(run_dir: Path) -> dict[str, Any]:
@@ -840,11 +869,14 @@ def _status_markdown(state: dict[str, Any]) -> str:
     counts: dict[str, int] = {}
     for task in state["tasks"].values():
         counts[task["status"]] = counts.get(task["status"], 0) + 1
+    unknown = [f"{row['task']} (attempt {row['attempt']})" for row in state.get("usage_unknown") or []]
     lines = ["# CBE run status", "",
              f"Run `{state['run_tag']}` · status **{state['status']}** · updated {state['updated_at']} · "
              f"review {state['review']} · jobs {state['jobs']} · host {state['host']}", "",
              *([f"**Partial: {state['partial_reason']}** · {state.get('partial_detail', '')}", ""]
                if state.get("partial_reason") else []),
+             *([f"**Usage unknown** · the host reported no usage, so per-call source delivery could not "
+                f"be verified for: {', '.join(unknown)}", ""] if unknown else []),
              "Counts: " + ", ".join(f"{key} {value}" for key, value in sorted(counts.items())), "",
              "| Task | Module | State | Attempts | Seconds | Output | Note |", "|---|---|---|---:|---:|---|---|"]
     for task in sorted(state["tasks"].values(), key=lambda row: (ORDER[row["kind"]], row["module"] or 0)):

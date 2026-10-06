@@ -160,11 +160,36 @@ def test_source_drift_blocks_dispatch_and_fails_verify(tmp_path: Path) -> None:
         json.dumps(_answer({"kind": "names"}, Path(names["prompt_file"]).read_text())))
     host_run.submit(run_dir, "names")
     (repo / "src" / "pkg" / "jobs.py").write_text("def changed():\n    pass\n", encoding="utf-8")
-    with pytest.raises(host_run.HostRunError, match="source changed"):
+    with pytest.raises(host_run.HostRunError, match="missing or changed"):
         host_run.next_tasks(run_dir)
     report = host_run.verify(run_dir)
     assert not report["ok"]
     assert any(row["check"] == "sources_unchanged" and not row["ok"] for row in report["checks"])
+
+
+def test_host_dispatch_refuses_missing_or_unreadable_source(tmp_path: Path) -> None:
+    """Host tasks list paths: every listed path must exist, be readable, and match the plan."""
+    repo = _repo(tmp_path)
+    run_dir = Path(host_run.plan(repo, tmp_path / "run", review="none")["run_dir"])
+    names = host_run.next_tasks(run_dir)["tasks"][0]
+    Path(names["output_file"]).write_text(
+        json.dumps(_answer({"kind": "names"}, Path(names["prompt_file"]).read_text())))
+    host_run.submit(run_dir, "names")
+
+    (repo / "src" / "pkg" / "cli.py").unlink()
+    with pytest.raises(host_run.HostRunError, match="missing or changed.*cli.py"):
+        host_run.next_tasks(run_dir)
+
+    (repo / "src" / "pkg" / "cli.py").write_text(
+        "from pkg.jobs import reserve_run\n\ndef main(argv):\n    return reserve_run(len(argv))\n",
+        encoding="utf-8")
+    if hasattr(os, "geteuid") and os.geteuid() != 0:
+        os.chmod(repo / "src" / "pkg" / "cli.py", 0o000)
+        try:
+            with pytest.raises(host_run.HostRunError, match="missing or changed.*cli.py"):
+                host_run.next_tasks(run_dir)
+        finally:
+            os.chmod(repo / "src" / "pkg" / "cli.py", 0o644)
 
 
 def test_import_claude_and_codex_usage_and_cost_report(tmp_path: Path) -> None:
@@ -372,3 +397,15 @@ def test_script_prompt_refuses_changed_source(tmp_path: Path) -> None:
     with pytest.raises(host_run.HostRunError, match="source changed"):
         for number in range(len(json.loads((run_dir / "host" / "state.json").read_text())["modules"])):
             host_run.completion_prompt(run_dir, f"module_{number + 1}")
+
+
+def test_host_run_pages_and_catalog_carry_concrete_facts(tmp_path: Path) -> None:
+    """Host state keeps digests, not text: the facts must still be extracted at render time."""
+    repo = _repo(tmp_path)
+    run_dir = Path(host_run.plan(repo, review="none", jobs=2, host="test")["run_dir"])
+    host_run.release(run_dir)
+    _drive(run_dir)
+    # (Pages print no facts table; the catalogue is where the facts are asserted.)
+    catalog = json.loads((run_dir / "catalog.json").read_text())
+    assert any(entry.get("facts") for entry in catalog["symbols"].values())
+    assert any("negative" in json.dumps(item) for item in find(run_dir, "negative"))

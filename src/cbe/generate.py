@@ -19,6 +19,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from cbe import concrete_facts
 from cbe.headless_completion import invoke
 from cbe.inventory import build_inventory
 from cbe.syntax_facts import atoms_for
@@ -54,6 +55,14 @@ DEFAULT_HOST_CONFIG = {
 
 class GenerateError(ValueError):
     pass
+
+
+class SourceNotEmbedded(GenerateError):
+    """A script-driver prompt lacks a source body it must embed before any model call.
+
+    The v2.1.0 failure mode: modules were rebuilt from run state that keeps
+    digests, not text, so every prompt named the files but carried empty bodies.
+    """
 
 
 @dataclass
@@ -630,6 +639,18 @@ def _guard_rows(repo: Path, files: list[SourceFile]) -> dict[str, list[dict[str,
     return rows
 
 
+def _render_source(repo: Path, file: SourceFile) -> str:
+    """Source text for fact extraction. Host runs keep digests, not text, in their state, so
+    ``file.source`` is empty at render time; read it back and accept it only if the digest holds."""
+    if file.source:
+        return file.source
+    try:
+        raw = (repo / file.path).read_bytes()
+        return raw.decode("utf-8") if hashlib.sha256(raw).hexdigest() == file.digest else ""
+    except (OSError, UnicodeDecodeError):
+        return ""
+
+
 def _render(repo: Path, run_dir: Path, files: list[SourceFile], modules: list[Module],
             system: dict[str, Any], notes: dict[int, list[str]] | None = None,
             index_notes: list[str] | None = None) -> dict[str, Any]:
@@ -640,7 +661,11 @@ def _render(repo: Path, run_dir: Path, files: list[SourceFile], modules: list[Mo
     guards = _guard_rows(repo, files)
     catalog: dict[str, Any] = {"modules": [], "symbols": {}, "files": {}}
     index = ["# Codebase Explorer", "", system["overview"], "", "## Maintenance navigation", "",
-             system["maintenance_navigation"], "", "## Subsystems", ""]
+             system["maintenance_navigation"], "",
+             "Constants, defaults, option tables, templates and literal raises are indexed in "
+             "catalog.json, not printed on module pages: `cbe find --term <name>` searches them "
+             "and `cbe query --id <symbol or file>` returns one entry.",
+             "", "## Subsystems", ""]
     used_slugs: set[str] = set()
     current_subsystem = None
     for module in modules:
@@ -673,12 +698,20 @@ def _render(repo: Path, run_dir: Path, files: list[SourceFile], modules: list[Mo
                 lines += ["; ".join(f"`{name}`" for name in file.signatures), ""]
             else:
                 lines += ["Mechanically indexed file; no supported symbol parser in this baseline.", ""]
-            catalog["files"][file.path] = {"module": module.title, "page": page,
-                                            "tokens": file.tokens, "language": Path(file.path).suffix}
+            facts = (concrete_facts.file_facts(file.path, _render_source(repo, file))
+                     if file.path.endswith(".py") else None)
+            file_entry: dict[str, Any] = {"module": module.title, "page": page,
+                                          "tokens": file.tokens, "language": Path(file.path).suffix}
+            if facts and facts["file"]:
+                file_entry["facts"] = facts["file"]
+            catalog["files"][file.path] = file_entry
             for name in file.signatures:
                 sid = f"{file.path}::{name}"
-                catalog["symbols"][sid] = {"file": file.path, "name": name, "module": module.title,
-                                            "page": page, "notes": [x for x in highlights if x.get("source_id") == sid]}
+                symbol_entry: dict[str, Any] = {"file": file.path, "name": name, "module": module.title,
+                                                "page": page, "notes": [x for x in highlights if x.get("source_id") == sid]}
+                if facts and facts["symbols"].get(name):
+                    symbol_entry["facts"] = facts["symbols"][name]
+                catalog["symbols"][sid] = symbol_entry
             if guards.get(file.path):
                 lines += ["## Conditions and failure paths (mechanical syntax)", "",
                           "Lexical guards and statements only; reachability and runtime effects are unverified.", "",
@@ -746,6 +779,70 @@ def _delivery_problem(run_dir: Path, csv_path: Path) -> tuple[str | None, str]:
                                     f"{int(DELIVERY_FLOOR * 100)}% of the {sent} source tokens sent")
 
 
+# Tasks whose prompt embeds source bodies; names and system prompts embed none.
+SOURCE_TASK_KINDS = ("module", "repair", "review")
+
+
+def _embedded_paths(state: dict[str, Any], task_id: str) -> list[str]:
+    """Module file paths a task's prompt must embed; empty when it embeds none."""
+    task = state["tasks"][task_id]
+    if task["kind"] not in SOURCE_TASK_KINDS:
+        return []
+    return list(state["modules"][task["module"]]["files"])
+
+
+def _verify_embedded_source(run_dir: Path, task_id: str, prompt: str) -> None:
+    """Pre-flight before each script-driver model call: every file the task's
+    prompt must embed is present in the prompt with its full body, read back
+    from disk and checked against the plan digest.
+
+    Raises :class:`SourceNotEmbedded` naming the file, so the run stops before
+    the call is spent. Host-mode tasks list paths instead and are checked at
+    dispatch (``host_run.next_tasks`` refuses drifted paths)."""
+    state = json.loads((run_dir / "host" / "state.json").read_text(encoding="utf-8"))
+    paths = _embedded_paths(state, task_id)
+    if not paths:
+        return
+    planned = {row["path"]: row for row in state["files"]}
+    repo = Path(state["repo"])
+    for path in paths:
+        row = planned[path]
+        try:
+            raw = (repo / path).read_bytes()
+        except OSError as exc:
+            raise SourceNotEmbedded(f"{path}: cannot be read ({exc.strerror or exc})") from exc
+        if hashlib.sha256(raw).hexdigest() != row["digest"]:
+            raise SourceNotEmbedded(f"{path}: changed since the plan (digest mismatch)")
+        body = raw.decode("utf-8")
+        if not body and not row["tokens"]:
+            continue  # an empty file embeds nothing by design
+        if body not in prompt:
+            raise SourceNotEmbedded(
+                f"{path}: not embedded in the prompt ({row['tokens']} planned tokens); the model was not called")
+
+
+def _call_delivery_problem(run_dir: Path, task_id: str,
+                           usage: dict[str, int | None] | None) -> str | None:
+    """Per-call delivery check: reject an answer unless the model reported at
+    least the delivery floor of the source tokens embedded in its own prompt.
+
+    Returns None when the call is fine or nothing was reported (the caller
+    records ``usage_unknown`` for silent hosts instead of failing)."""
+    if not usage:
+        return None
+    state = json.loads((run_dir / "host" / "state.json").read_text(encoding="utf-8"))
+    paths = _embedded_paths(state, task_id)
+    if not paths:
+        return None
+    planned = {row["path"]: row["tokens"] for row in state["files"]}
+    sent = sum(planned[path] for path in paths)
+    reported = (usage.get("input") or 0) + (usage.get("cache") or 0)
+    if sent <= 0 or reported >= DELIVERY_FLOOR * sent:
+        return None
+    return (f"source_not_delivered: reported {reported} input tokens (input + cache-read) "
+            f"against the {sent} source tokens embedded in this prompt")
+
+
 def _csv_task(task_id: str, review: str) -> str:
     """Keep calls.csv task names comparable with earlier script runs."""
     if task_id == "names":
@@ -764,6 +861,11 @@ def generate(repo: Path, run_dir: Path, *, model: str, config: Path | None = Non
 
     A task failure never voids the run. Finished modules render; failed parts
     stay pending in the run state, and ``resume=True`` continues the same run.
+
+    Two hard delivery checks guard every call: a pre-flight that each prompt
+    really embeds its module's source (``SourceNotEmbedded`` stops the run
+    before the call is spent), and a per-call token check that rejects answers
+    whose reported input is under half the embedded source.
     """
     from cbe import host_run
 
@@ -807,13 +909,33 @@ def generate(repo: Path, run_dir: Path, *, model: str, config: Path | None = Non
     csv_path = run_dir / "calls.csv"
     stopped: str | None = None
     active: dict[Any, tuple[dict[str, Any], str]] = {}
+    preflight: SourceNotEmbedded | None = None
     with ThreadPoolExecutor(max_workers=jobs) as pool:
         while True:
-            if stopped is None and len(active) < jobs:
-                for item in host_run.next_tasks(run_dir, limit=jobs - len(active), owner=host)["tasks"]:
+            if stopped is None and preflight is None and len(active) < jobs:
+                try:
+                    batch = host_run.next_tasks(run_dir, limit=jobs - len(active), owner=host)["tasks"]
+                except host_run.HostRunError as exc:
+                    # Dispatch itself refused the task (a listed source is
+                    # missing, unreadable, or drifted); stop the same way.
+                    preflight = SourceNotEmbedded(str(exc))
+                    host_run.mark_partial(run_dir, "source_not_embedded", str(preflight))
+                    batch = []
+                for item in batch:
                     csv_task = _csv_task(item["task"], review)
+                    try:
+                        prompt = host_run.completion_prompt(run_dir, item["task"])
+                        _verify_embedded_source(run_dir, item["task"], prompt)
+                    except (SourceNotEmbedded, host_run.HostRunError, OSError) as exc:
+                        # The prompt cannot carry this module's source (unreadable,
+                        # drifted, or bodies missing), so the model must not be
+                        # called; stop the run instead of paying for documentation
+                        # written from file names.
+                        preflight = exc if isinstance(exc, SourceNotEmbedded) else SourceNotEmbedded(str(exc))
+                        host_run.mark_partial(run_dir, "source_not_embedded", str(preflight))
+                        break
                     future = pool.submit(invoke, task=csv_task, attempt=item["attempt"],
-                                         prompt=host_run.completion_prompt(run_dir, item["task"]),
+                                         prompt=prompt,
                                          repo=repo, run_dir=run_dir, model=model, config=config,
                                          timeout=timeout, csv_path=csv_path, host=host)
                     active[future] = (item, csv_task)
@@ -833,6 +955,16 @@ def generate(repo: Path, run_dir: Path, *, model: str, config: Path | None = Non
                     if completion.error in {"provider_limit", "provider_auth"}:
                         stopped = completion.error
                     continue
+                delivery = _call_delivery_problem(run_dir, item["task"], completion.usage)
+                if delivery is not None:
+                    # The model never saw this prompt's source, so its answer
+                    # is not accepted; the retry/partial logic takes over.
+                    outcome = host_run.submit(run_dir, item["task"], error=delivery,
+                                              raw_text=completion.raw_text or None)
+                    _mark_result(csv_path, csv_task, item["attempt"], "source_not_delivered")
+                    continue
+                if completion.usage is None:
+                    host_run.note_usage_unknown(run_dir, item["task"], item["attempt"])
                 Path(item["output_file"]).write_text(completion.raw_text, encoding="utf-8")
                 outcome = host_run.submit(run_dir, item["task"])
                 if not outcome["accepted"] and outcome["error"].startswith("schema_error"):
@@ -840,10 +972,11 @@ def generate(repo: Path, run_dir: Path, *, model: str, config: Path | None = Non
                     _mark_result(csv_path, csv_task, item["attempt"], "schema_error")
                 elif outcome.get("normalized"):
                     _mark_result(csv_path, csv_task, item["attempt"], "normalized")
-    if stopped:
+    if stopped or preflight is not None:
         host_run.release(run_dir)
     cost = _cost(run_dir, host=host) if csv_path.is_file() else {"calls": 0}
-    host_run.mark_partial(run_dir, *_delivery_problem(run_dir, csv_path))
+    if preflight is None:
+        host_run.mark_partial(run_dir, *_delivery_problem(run_dir, csv_path))
     result = host_run.finish(run_dir)
     summary = {**result, "status": result.get("status", "partial"),
                "stopped": stopped, "wall_seconds": round(time.monotonic() - started, 3),
@@ -853,6 +986,8 @@ def generate(repo: Path, run_dir: Path, *, model: str, config: Path | None = Non
                                      if host == "devin" else "OpenCode noncached input tokens"),
                **cost}
     (run_dir / "summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
+    if preflight is not None:
+        raise preflight
     return summary
 
 
@@ -861,6 +996,11 @@ def find(run_dir: Path, term: str, limit: int = 25) -> list[dict[str, Any]]:
     needle = term.casefold()
     results = [{"id": sid, **record} for sid, record in catalog["symbols"].items()
                if needle in sid.casefold() or needle in json.dumps(record, ensure_ascii=False).casefold()]
+    # Module-level facts (constants, option tables, templates) live on file
+    # entries; their text is searched like symbol notes.
+    results += [{"id": path, **record} for path, record in catalog["files"].items()
+                if record.get("facts")
+                and needle in json.dumps(record["facts"], ensure_ascii=False).casefold()]
     return results[:limit]
 
 
