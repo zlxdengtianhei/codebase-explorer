@@ -51,5 +51,6 @@ jobs:
           cd "$RUNNER_TEMP"
           "$RUNNER_TEMP/venv/bin/python" -m pytest "$GITHUB_WORKSPACE/tests/test_installation.py" --import-mode=importlib -q
           "$RUNNER_TEMP/venv/bin/cbe" --help
+          "$RUNNER_TEMP/venv/bin/cbe-http" --help
           "$RUNNER_TEMP/venv/bin/cbe-install" install --dir "$RUNNER_TEMP/skills with spaces"
           "$RUNNER_TEMP/venv/bin/cbe-install" doctor --dir "$RUNNER_TEMP/skills with spaces"
