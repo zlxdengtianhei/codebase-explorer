@@ -24,6 +24,7 @@ from __future__ import annotations
 import contextlib
 import hashlib
 import json
+import math
 import os
 import re
 import secrets
@@ -33,36 +34,39 @@ from pathlib import Path
 from typing import Any, Iterator
 
 from cbe import generate as gen
+from cbe import semantic
+from cbe import source_context
 from cbe.headless_completion import _json_object
 from cbe.token_budget import count_text_tokens
 
 
-SCHEMA = "cbe-host-run/1"
+SCHEMA = "cbe-host-run/2"
 MAX_ATTEMPTS = 2
 REVIEW_MODES = ("none", "sample", "all")
 # One switch for both drivers: change to "all" to review every module by default.
 DEFAULT_REVIEW = "sample"
 FILE_TASK_RULES = (
     "Read every listed source file completely with your file-reading tool; page through long files. "
-    "Use only those files and the supplied signatures. Do not open other files, run code, search the web, "
-    "or modify the repository. Separate observed syntax from inferred behavior; state uncertainty instead "
+    "Use only those source files, the supplied signatures, and the provided frozen graph evidence. "
+    "Do not open other source files, execute repository code, search the web, or modify the repository. "
+    "The supplied graph-query command is allowed to read a slice of the frozen graph. "
+    "Separate observed syntax from inferred behavior; state uncertainty instead "
     "of inventing runtime facts. Be concise. Test functions and trivial accessors need no individual prose. "
     "Paths identify files; do not repeat large source passages.")
 NO_FILE_RULES = (
     "Everything you need is in this file. Do not read source files, run code, search the web, or modify "
     "the repository. Do not invent details that the supplied material does not show.")
 # USD per million tokens: input, output, cache write (5 minute), cache read.
-# Anthropic first-party list prices as of 2026-09-25; pass --price-* to override.
+# Anthropic first-party list prices as of 2026-09-25; pass --price to override.
 PRICES = {
     "claude-fable-5-1": (10.0, 50.0, 12.5, 0.25),
     "claude-opus-5-5": (4.0, 20.0, 5.0, 0.20),
     "claude-sonnet-5-5": (2.0, 10.0, 2.5, 0.20),
     "claude-haiku-4-5": (1.0, 5.0, 1.25, 0.10),
 }
-COMPARISON_PRICE = (5.0, 25.0, 5.0, 0.50)  # the price CBE already uses for CodeWiki comparisons
 # Rough per-subagent harness overhead (system prompt and tool definitions) for estimates.
 DEFAULT_OVERHEAD_TOKENS = 20_000
-ORDER = {"names": 0, "repair": 1, "module": 2, "review": 3, "system": 4}
+ORDER = {"names": 0, "module": 1, "repair": 2, "tree": 3, "review": 4, "system": 5}
 
 
 class HostRunError(ValueError):
@@ -96,6 +100,235 @@ def _write_json(path: Path, value: Any) -> None:
     os.replace(temporary, path)
 
 
+def _read_context(run_dir: Path) -> dict[str, Any]:
+    path = run_dir / "context.json"
+    if not path.is_file():
+        raise HostRunError(f"no frozen source context at {path}")
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def context_digest(context: dict[str, Any]) -> str:
+    """Canonical digest of a frozen context object.
+
+    Sorted keys and fixed separators make the digest reproducible across
+    processes and platforms, so a rewritten ``context.json`` cannot pass as
+    the frozen snapshot."""
+    payload = json.dumps(context, ensure_ascii=False, sort_keys=True,
+                         separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(payload).hexdigest()
+
+
+def _verify_graph_manifest(repo: Path, state: dict[str, Any], context: dict[str, Any]) -> None:
+    """Re-check that the frozen graph still matches the frozen source.
+
+    Scanned files are checked against the plan digests without touching disk;
+    a boundary file the graph references but the scan did not cover is read and
+    checked against its manifest hash. A node that anchors existing repo source
+    must be covered by the manifest, so a graph cannot mix snapshots.
+    """
+    graph = context.get("graph")
+    if not graph:
+        return
+    from cbe.graph import GraphError, validate_graph_provenance
+
+    try:
+        validate_graph_provenance(repo, graph)
+    except (GraphError, OSError) as exc:
+        raise HostRunError(str(exc)) from exc
+    manifest = graph.get("source_manifest")
+    if not isinstance(manifest, list):
+        raise HostRunError("frozen graph has no source_manifest; cannot prove it matches the source")
+    planned = {row["path"]: row["digest"] for row in state["files"]}
+    manifested: set[str] = set()
+    for entry in manifest:
+        if not isinstance(entry, dict) or not isinstance(entry.get("path"), str) \
+                or not isinstance(entry.get("sha256"), str):
+            raise HostRunError("frozen graph has a malformed source_manifest entry")
+        rel, expected = entry["path"], entry["sha256"]
+        manifested.add(rel)
+        if rel in planned:
+            if planned[rel] != expected:
+                raise HostRunError(f"frozen graph/source drift on {rel}: manifest {expected} != plan "
+                                   f"{planned[rel]}; start a new plan")
+            continue
+        try:
+            raw = (repo / rel).read_bytes()
+        except OSError as exc:
+            raise HostRunError(f"frozen graph boundary source is unreadable: {rel} ({exc.strerror or exc})") from exc
+        if hashlib.sha256(raw).hexdigest() != expected:
+            raise HostRunError(f"frozen graph boundary source drifted: {rel}; start a new plan")
+    for node in graph.get("nodes") or []:
+        if not isinstance(node, dict):
+            continue
+        rel = node.get("path")
+        if isinstance(rel, str) and rel and rel not in manifested and (repo / rel).exists():
+            raise HostRunError(f"frozen graph anchors source not in its manifest: {rel}")
+
+
+def _verified_context(run_dir: Path, state: dict[str, Any]) -> dict[str, Any]:
+    """Return the frozen context only if it is byte-identical to the plan.
+
+    Runs before every prompt, dispatch, submission, resume and verification, so
+    a rewritten ``context.json`` cannot smuggle a forged graph, chunk or
+    manifest into a model prompt or into evidence."""
+    context = _read_context(run_dir)
+    frozen = state.get("context") or {}
+    if context.get("schema") != frozen.get("schema"):
+        raise HostRunError("frozen context schema changed after planning; start a new plan")
+    if context_digest(context) != frozen.get("digest"):
+        raise HostRunError("frozen source context was modified after planning; start a new plan")
+    if bool(context.get("graph")) != bool(frozen.get("graph_present")):
+        raise HostRunError("frozen context graph presence changed after planning; start a new plan")
+    planned = {row["path"]: row["digest"] for row in state["files"]}
+    context_files = {row.get("path"): row.get("sha256") for row in context.get("files") or []}
+    for path, digest in planned.items():
+        if context_files.get(path) != digest:
+            raise HostRunError(f"frozen context and plan disagree on {path}; start a new plan")
+    _verify_graph_manifest(Path(state["repo"]), state, context)
+    return context
+
+
+def _local_context(context: dict[str, Any], paths: list[str]) -> dict[str, Any]:
+    """One local reading package from the frozen context (source_context owns it)."""
+    return source_context.context_for_paths(context, paths)
+
+
+def _build_context(repo: Path, paths: list[str],
+                   graph_path: Path | None = None) -> dict[str, Any]:
+    """Freeze the source context once through the packaged product module.
+
+    ``cbe.source_context`` is a required product module; there is no second
+    context implementation. A graph path is validated against the frozen
+    source by ``build_context``.
+    """
+    try:
+        return source_context.build_context(repo, paths, graph_path=graph_path)
+    except Exception as exc:  # noqa: BLE001 - surface a locatable context/graph failure
+        raise HostRunError(f"source context build failed: {exc}") from exc
+
+
+def _semantic_units(run_dir: Path, state: dict[str, Any]) -> tuple[dict[str, dict], dict[str, dict]]:
+    """Merge accepted module/repair detail payloads into (units, dispositions).
+
+    A repair output supersedes its module's original output, matching
+    ``_module_output``; unit ids are keyed once and a cross-batch duplicate is
+    caught by the deterministic checks rather than silently overwritten."""
+    units: dict[str, dict] = {}
+    dispositions: dict[str, dict] = {}
+    for row in state["modules"]:
+        output = _module_output(run_dir, state, row["number"])
+        if not output:
+            continue
+        for unit in output.get("units") or []:
+            uid = unit.get("id") if isinstance(unit, dict) else None
+            if uid and uid not in units:
+                units[uid] = unit
+        for key, entry in (output.get("dispositions") or {}).items():
+            dispositions.setdefault(key, entry)
+    return units, dispositions
+
+
+def _semantic_tree(run_dir: Path, state: dict[str, Any], units: dict[str, dict]) -> dict[str, Any]:
+    """Accepted tree, or an honest mechanical batch grouping while it is missing."""
+    tree = _accepted(run_dir, "tree") if "tree" in state["tasks"] else None
+    if tree:
+        return tree
+    return semantic.mechanical_tree(state["modules"], units)
+
+
+def _known_unit_ids(run_dir: Path, state: dict[str, Any], *, exclude: int | None = None) -> set[str]:
+    units, _ = _semantic_units(run_dir, state)
+    if exclude is None:
+        return set(units)
+    paths = set(state["modules"][exclude]["files"])
+    # A repair supersedes the module's own output, so that output's unit ids are
+    # not foreign collisions. Path-prefixed ids drop out via ``paths``; group
+    # (``grp:``) ids carry no path, so subtract the module's current output ids
+    # explicitly. Cross-module collisions are still reported.
+    own = _module_output(run_dir, state, exclude) or {}
+    own_ids = {unit.get("id") for unit in own.get("units") or [] if isinstance(unit, dict)}
+    return {uid for uid in units if uid.split("::", 1)[0] not in paths and uid not in own_ids}
+
+
+def _module_inventory_ids(state: dict[str, Any], module: dict[str, Any]) -> list[str]:
+    inventory = state.get("inventory") or {}
+    return [symbol["id"]
+            for path in module["files"]
+            for symbol in (inventory.get(path) or {}).get("symbols") or []]
+
+
+def _auto_complete_empty_modules(run_dir: Path, state: dict[str, Any]) -> list[str]:
+    """Complete a known-empty batch mechanically, without a model call.
+
+    A module whose files hold no inventory id has no explainable detail: it may
+    only be empty files. Writing an empty, explicit accepted payload prevents
+    both a ``units must be a nonempty list`` rejection and the invented prose
+    that a forced retry produces. Comments and docstrings still produce chunks
+    and inventory ids, so they are never auto-completed."""
+    if not state.get("semantic"):
+        return []
+    completed: list[str] = []
+    for row in state["modules"]:
+        number = row["number"]
+        task = state["tasks"].get(f"module_{number + 1}")
+        if task is None or task["status"] != "pending" or _module_inventory_ids(state, row):
+            continue
+        output = {"units": [], "dispositions": {},
+                  "batch_notes": "No explainable detail: every file in this batch is empty and has "
+                                 "no inventory id, so no model call was made.",
+                  "known_empty": True}
+        _write_json(_host_dir(run_dir) / "accepted" / f"module_{number + 1}.json", output)
+        task["status"], task["flags"] = "done", ["known_empty"]
+        task["output"] = f"host/accepted/module_{number + 1}.json"
+        _event(run_dir, "accept", f"module_{number + 1} auto-completed: known-empty batch, no model call",
+               task=task["id"], flags=["known_empty"])
+        completed.append(task["id"])
+        review = state["tasks"].get(f"review_{number + 1}")
+        if review is not None and review["status"] == "pending":
+            _write_json(_host_dir(run_dir) / "accepted" / f"review_{number + 1}.json",
+                        {"decision": "accepted", "issues": []})
+            review["status"], review["output"] = "done", f"host/accepted/review_{number + 1}.json"
+            _event(run_dir, "accept", f"review_{number + 1} auto-accepted: known-empty module has no "
+                   "prose to review", task=review["id"])
+    modules = [task for task in state["tasks"].values() if task["kind"] == "module"]
+    if modules and all(task["status"] in {"done", "failed"} for task in modules):
+        # Only once every reading batch is settled can "no units" mean an empty
+        # repository; before that the real units are still in flight.
+        units, _ = _semantic_units(run_dir, state)
+        if not units:
+            tree = state["tasks"].get("tree")
+            if tree is not None and tree["status"] == "pending":
+                _write_json(_host_dir(run_dir) / "accepted" / "tree.json",
+                            semantic.mechanical_tree(state["modules"], units))
+                tree["status"], tree["output"] = "done", "host/accepted/tree.json"
+                _event(run_dir, "accept", "tree auto-completed mechanically: no units in this run",
+                       task="tree")
+            system = state["tasks"].get("system")
+            if system is not None and system["status"] == "pending":
+                _write_json(_host_dir(run_dir) / "accepted" / "system.json",
+                            _mechanical_semantic_overview(state, {"nodes": []}))
+                system["status"], system["output"] = "done", "host/accepted/system.json"
+                _event(run_dir, "accept", "system auto-completed mechanically: no units in this "
+                       "run", task="system")
+    return completed
+
+
+def _assert_paths_unchanged(state: dict[str, Any], paths: list[str]) -> None:
+    """The script driver builds a prompt outside ``next_tasks``; a drifted source
+    must stop it exactly as the host dispatch refuses a drifted path."""
+    repo = Path(state["repo"])
+    planned = {row["path"]: row["digest"] for row in state["files"]}
+    for path in paths:
+        try:
+            raw = (repo / path).read_bytes()
+        except OSError as exc:
+            raise HostRunError(f"source changed since plan: {path} ({exc.strerror or exc}); "
+                               "start a new plan") from exc
+        if hashlib.sha256(raw).hexdigest() != planned.get(path):
+            raise HostRunError(f"source changed since plan: {path}; start a new plan")
+
+
+
 @contextlib.contextmanager
 def _locked(run_dir: Path) -> Iterator[dict[str, Any]]:
     """Yield the state under an exclusive lock; save it and STATUS.md on normal exit."""
@@ -111,7 +344,11 @@ def _locked(run_dir: Path) -> Iterator[dict[str, Any]]:
             pass
         state = json.loads(state_path.read_text(encoding="utf-8"))
         if state.get("schema") != SCHEMA:
-            raise HostRunError(f"unsupported run schema {state.get('schema')!r}")
+            found = state.get("schema")
+            hint = ("; this run uses the older free-text module layout, which is not "
+                    "readable by this build. Start a new run instead of resuming it."
+                    if found == "cbe-host-run/1" else ".")
+            raise HostRunError(f"unsupported run schema {found!r}{hint}")
         yield state
         state["updated_at"] = _now()
         _write_json(state_path, state)
@@ -203,7 +440,8 @@ def _title(state: dict[str, Any], task: dict[str, Any]) -> str:
 
 
 def plan(repo: Path, run_dir: Path | None = None, *, review: str = DEFAULT_REVIEW, jobs: int = 4,
-         host: str = "other", driver: str = "host") -> dict[str, Any]:
+         host: str = "other", driver: str = "host", semantic_mode: bool = True,
+         graph_path: Path | None = None) -> dict[str, Any]:
     repo = repo.resolve()
     if not repo.is_dir():
         raise HostRunError("repository root is not a directory")
@@ -219,9 +457,21 @@ def plan(repo: Path, run_dir: Path | None = None, *, review: str = DEFAULT_REVIE
         raise HostRunError("run directory already has a run; resume it or choose a fresh directory")
     files = gen.scan(repo)
     modules = gen.plan(files)
+    inventory: dict[str, Any] = {}
+    context: dict[str, Any] | None = None
+    if semantic_mode:
+        ast_inventory = semantic.build_inventory(
+            {item.path: {"source": item.source, "digest": item.digest, "tokens": item.tokens}
+             for item in files})
+        selected = [item.path for item in files]
+        context = _build_context(repo, selected, graph_path=graph_path)
+        semantic.ensure_chunk_coverage(context, repo, ast_inventory, selected)
+        inventory = semantic.inventory_from_context(context, selected)
     tasks: dict[str, dict[str, Any]] = {"names": _task("names", "names")}
     for module in modules:
         tasks[f"module_{module.number + 1}"] = _task(f"module_{module.number + 1}", "module", module.number)
+    if semantic_mode:
+        tasks["tree"] = _task("tree", "tree")
     if review == "sample":
         reviewed = [max(modules, key=lambda module: (module.tokens, -module.number))]
     else:
@@ -233,6 +483,13 @@ def plan(repo: Path, run_dir: Path | None = None, *, review: str = DEFAULT_REVIE
         "schema": SCHEMA, "cbe_version": _version(), "run_tag": secrets.token_hex(3),
         "repo": str(repo), "run_dir": str(run_dir), "host": host, "driver": driver,
         "review": review, "jobs": jobs, "created_at": _now(), "updated_at": _now(), "status": "running",
+        "semantic": semantic_mode,
+        "context": ({"schema": context.get("schema"),
+                      "digest": context_digest(context),
+                      "graph_present": bool(context.get("graph")),
+                      "graph_digest": (context_digest(context["graph"])
+                                       if context.get("graph") else None)} if context else None),
+        "inventory": inventory,
         "files": [{"path": item.path, "tokens": item.tokens, "digest": item.digest,
                    "signatures": item.signatures} for item in files],
         "modules": [{"number": module.number, "bucket": module.bucket, "title": gen.fallback_title(module),
@@ -243,6 +500,8 @@ def plan(repo: Path, run_dir: Path | None = None, *, review: str = DEFAULT_REVIE
     host_dir = _host_dir(run_dir)
     for name in ("tasks", "outbox", "accepted", "raw"):
         (host_dir / name).mkdir(parents=True, exist_ok=True)
+    if context is not None:
+        _write_json(run_dir / "context.json", context)
     _write_json(host_dir / "state.json", state)
     (run_dir / "STATUS.md").write_text(_status_markdown(state), encoding="utf-8")
     _event(run_dir, "plan", f"{len(files)} files, {len(modules)} modules, {len(tasks)} tasks "
@@ -274,6 +533,9 @@ def _settled(state: dict[str, Any], task: dict[str, Any]) -> bool:
         return True
     if task["kind"] in {"review", "repair"}:
         return _module_task(state, task["module"])["status"] == "failed"
+    if task["kind"] == "tree":
+        modules = [other for other in state["tasks"].values() if other["kind"] == "module"]
+        return all(other["status"] in {"done", "failed"} for other in modules)
     if task["kind"] == "system":
         others = [other for other in state["tasks"].values() if other["kind"] != "system"]
         return all(_settled(state, other) for other in others) and not _done_modules(state)
@@ -283,6 +545,7 @@ def _settled(state: dict[str, Any], task: dict[str, Any]) -> bool:
 def _ready(state: dict[str, Any]) -> list[str]:
     tasks = state["tasks"]
     titled = tasks["names"]["status"] in {"done", "failed"}
+    semantic_mode = bool(state.get("semantic"))
     ready = []
     for task_id, task in tasks.items():
         if task["status"] != "pending":
@@ -291,14 +554,20 @@ def _ready(state: dict[str, Any]) -> list[str]:
         if kind == "names" or kind == "repair":
             ok = True
         elif kind == "module":
-            # Module prompts use only dependency titles and signatures, both
+            # Module prompts use only the frozen context and signatures, both
             # known after naming, so modules do not wait for each other.
             ok = titled
+        elif kind == "tree":
+            modules = [other for other in tasks.values() if other["kind"] == "module"]
+            ok = bool(modules) and all(other["status"] in {"done", "failed"} for other in modules) \
+                and any(other["status"] == "done" for other in modules)
         elif kind == "review":
             ok = _module_task(state, task["module"])["status"] == "done"
         else:
             others = [other for other in tasks.values() if other["kind"] != "system"]
-            ok = titled and bool(_done_modules(state)) and all(_settled(state, other) for other in others)
+            tree_ok = ("tree" not in tasks) or tasks["tree"]["status"] in {"done", "failed"}
+            ok = titled and bool(_done_modules(state)) and tree_ok \
+                and all(_settled(state, other) for other in others)
         if ok:
             ready.append(task_id)
     return sorted(ready, key=lambda task_id: (ORDER[tasks[task_id]["kind"]], tasks[task_id]["module"] or 0))
@@ -311,6 +580,8 @@ def _labels(state: dict[str, Any], task_id: str) -> dict[str, str]:
 
 def _body(run_dir: Path, state: dict[str, Any], task: dict[str, Any], *, embed: bool) -> tuple[str, str]:
     """Return (rules, task body). ``embed`` puts source in the prompt for tool-free completions."""
+    if state.get("semantic"):
+        return _semantic_body(run_dir, state, task, embed=embed)
     kind = task["kind"]
     modules = _modules(state, source_of=task["module"] if embed and kind in {"module", "repair", "review"} else None)
     source_root = None if embed else Path(state["repo"])
@@ -346,6 +617,67 @@ def _body(run_dir: Path, state: dict[str, Any], task: dict[str, Any], *, embed: 
         + note + json.dumps(summaries, ensure_ascii=False))
 
 
+def _semantic_body(run_dir: Path, state: dict[str, Any], task: dict[str, Any],
+                   *, embed: bool) -> tuple[str, str]:
+    """Task bodies for the structured detail -> ownership tree mainline.
+
+    The frozen context is sliced once per task. Script completions embed each
+    chunk once (``embed=True``); host subagents get the absolute paths and the
+    authoritative chunk line ranges instead, so the source is never sent
+    twice. A missing graph is stated as not provided.
+    """
+    kind = task["kind"]
+    source_root = Path(state["repo"])
+    if kind == "names":
+        return NO_FILE_RULES, gen._name_prompt(_modules(state))
+    if kind in {"module", "repair"}:
+        module = state["modules"][task["module"]]
+        paths = list(module["files"])
+        _assert_paths_unchanged(state, paths)
+        context = _verified_context(run_dir, state)
+        local = _local_context(context, paths)
+        prompt = semantic.detail_prompt(
+            paths, state["inventory"], chunks=local.get("chunks") or [],
+            source_root=source_root, graph=context.get("graph"),
+            expand_context_path=str(run_dir / "context.json"),
+            context_diagnostics=local.get("diagnostics"),
+            issues=task.get("issues") if kind == "repair" else None, embed=embed)
+        return (NO_FILE_RULES if embed else FILE_TASK_RULES), prompt
+    if kind == "tree":
+        units, _ = _semantic_units(run_dir, state)
+        all_paths = [path for module in state["modules"] for path in module["files"]]
+        return NO_FILE_RULES, semantic.tree_prompt(units, all_paths)
+    if kind == "review":
+        module = state["modules"][task["module"]]
+        paths = list(module["files"])
+        _assert_paths_unchanged(state, paths)
+        context = _verified_context(run_dir, state)
+        local = _local_context(context, paths)
+        doc = json.dumps(_module_output(run_dir, state, module["number"]), ensure_ascii=False)
+        source_task = semantic.detail_prompt(
+            paths, state["inventory"], chunks=local.get("chunks") or [],
+            source_root=source_root, graph=context.get("graph"),
+            expand_context_path=str(run_dir / "context.json"), embed=embed)
+        return (NO_FILE_RULES if embed else FILE_TASK_RULES), (
+            "TASK: Check these structured detail units against the source. Return JSON "
+            "{\"decision\":\"accepted\" or \"needs_repair\",\"issues\":[...]} . Only report "
+            "material unsupported or missing behavior, a wrong condition or failure surface, or a "
+            "unit attributed to the wrong symbol. Do not judge writing style.\n"
+            "DOCUMENTATION (structured units): " + doc + "\n\n" + source_task)
+    units, _ = _semantic_units(run_dir, state)
+    nodes = (_semantic_tree(run_dir, state, units).get("nodes") or [])
+    limit = gen.system_limit(max(len(nodes), 1))
+    summaries = [{"id": node.get("id"), "title": node.get("title"),
+                  "capability": node.get("capability"), "summary": node.get("summary"),
+                  "parent": node.get("parent"), "units": len(node.get("unit_ids") or [])}
+                 for node in nodes]
+    return NO_FILE_RULES, (
+        "TASK: Synthesize only these semantic node summaries into an overview and maintenance "
+        f"navigation for the repository. Return JSON with nonempty strings overview and "
+        f"maintenance_navigation, each at most {limit} characters. Explain which node to open for "
+        "a maintenance question; do not invent unseen details.\n" + json.dumps(summaries, ensure_ascii=False))
+
+
 def _previous_error(task: dict[str, Any]) -> str:
     if not task["errors"]:
         return ""
@@ -379,6 +711,9 @@ def completion_prompt(run_dir: Path, task_id: str) -> str:
 def next_tasks(run_dir: Path, *, limit: int | None = None, owner: str | None = None,
                reclaim_after: int | None = None) -> dict[str, Any]:
     with _locked(run_dir) as state:
+        if state.get("semantic"):
+            _verified_context(run_dir, state)
+            _auto_complete_empty_modules(run_dir, state)
         now = time.time()
         if reclaim_after is not None:
             for task in state["tasks"].values():
@@ -406,6 +741,8 @@ def next_tasks(run_dir: Path, *, limit: int | None = None, owner: str | None = N
             task["lease"] = {"id": secrets.token_hex(4), "at": stamp, "owner": owner or state["host"]}
             if task["kind"] == "system":
                 task["covered"] = _done_modules(state)
+            if task["kind"] == "tree":
+                task["covered"] = _done_modules(state)
             labels = _labels(state, task_id)
             handed.append({
                 "task": task_id, "kind": task["kind"], "attempt": task["attempts"] + 1,
@@ -426,9 +763,26 @@ def next_tasks(run_dir: Path, *, limit: int | None = None, owner: str | None = N
 # ---------------------------------------------------------------- submit
 
 
-def _checks(state: dict[str, Any], task: dict[str, Any]) -> tuple[Any, Any]:
+def _raise_problems(problems: list[str]) -> None:
+    """Adapt a validator that returns problems to one that raises, so the
+    submit path's schema_error handling and re-ask work unchanged."""
+    if problems:
+        raise ValueError("; ".join(problems[:12]))
+
+
+def _checks(run_dir: Path, state: dict[str, Any], task: dict[str, Any]) -> tuple[Any, Any]:
     """(strict check, normalizer) for a task; both mutate the value they accept."""
     modules = _modules(state)
+    if state.get("semantic") and task["kind"] in {"module", "repair"}:
+        paths = list(state["modules"][task["module"]]["files"])
+        subset = semantic.inventory_for_paths(state["inventory"], paths)
+        known = _known_unit_ids(run_dir, state, exclude=task["module"])
+        return (lambda value: _raise_problems(semantic.validate_details(value, paths, subset, known)),
+                lambda value: semantic.normalize_details(value, paths, subset, known))
+    if state.get("semantic") and task["kind"] == "tree":
+        universe = set(_semantic_units(run_dir, state)[0])
+        return (lambda value: _raise_problems(semantic.validate_tree(value, universe)),
+                lambda value: semantic.normalize_tree(value, universe))
     if task["kind"] == "names":
         return (lambda value: gen._check_naming(value, modules),
                 lambda value: gen.normalize_naming(value, modules))
@@ -466,7 +820,7 @@ def _apply_submit(run_dir: Path, state: dict[str, Any], task: dict[str, Any], re
     archive = _host_dir(run_dir) / "raw"
     if raw is not None:
         (archive / f"{task['id']}.attempt-{attempt}.txt").write_text(raw, encoding="utf-8")
-    strict, normalize = _checks(state, task)
+    strict, normalize = _checks(run_dir, state, task)
     value: dict[str, Any] | None = None
     flags: list[str] = []
     if error is None:
@@ -534,9 +888,23 @@ def _apply_submit(run_dir: Path, state: dict[str, Any], task: dict[str, Any], re
             state["tasks"][repair_id] = _task(repair_id, "repair", task["module"], issues=value["issues"])
             _event(run_dir, "queue", f"{repair_id} for {len(value['issues'])} review finding(s)", task=repair_id)
     elif task["kind"] in {"module", "repair"}:
+        if state.get("semantic"):
+            tree = state["tasks"].get("tree")
+            if tree is not None and tree["status"] == "done" \
+                    and (task["kind"] == "repair"
+                         or task["module"] not in tree.get("covered", [])):
+                # Both a newly finished module and a repair can change the unit
+                # set (a repair often adds grp: units), so the ownership tree
+                # must be rebuilt or some unit ends up with no primary owner.
+                tree["status"], tree["attempt_base"] = "pending", tree["attempts"]
+                tree.pop("covered", None)
+                _event(run_dir, "queue", "tree again so the ownership tree covers the current units",
+                       task="tree")
         system = state["tasks"]["system"]
-        if system["status"] == "done" and task["module"] not in system.get("covered", []):
-            # The overview was written without this module; ask for a fresh one.
+        if system["status"] == "done" and (task["kind"] == "repair"
+                                            or task["module"] not in system.get("covered", [])):
+            # The overview was written without this module's current output; ask
+            # for a fresh one.
             system["status"], system["attempt_base"] = "pending", system["attempts"]
             _event(run_dir, "queue", "system again so the overview covers the newly finished module", task="system")
     _maybe_render(run_dir, state, force=task["kind"] == "system")
@@ -547,6 +915,9 @@ def _apply_submit(run_dir: Path, state: dict[str, Any], task: dict[str, Any], re
 def submit(run_dir: Path, task_id: str, *, result: Path | None = None, usage: dict[str, Any] | None = None,
            error: str | None = None, raw_text: str | None = None) -> dict[str, Any]:
     with _locked(run_dir) as state:
+        if state.get("semantic"):
+            # Evidence is only consumed against the frozen snapshot.
+            _verified_context(run_dir, state)
         task = state["tasks"].get(task_id)
         if task is None:
             raise HostRunError(f"unknown task {task_id}")
@@ -612,10 +983,28 @@ def status(run_dir: Path) -> dict[str, Any]:
                 "progress_log": str(run_dir / "progress.log"), **_summary(state)}
 
 
-def resume(run_dir: Path, *, owner: str | None = None, retry_failed: bool = True) -> dict[str, Any]:
+def resume(run_dir: Path, *, owner: str | None = None, retry_failed: bool = True,
+           graph_path: Path | None = None) -> dict[str, Any]:
     """Continue a run from its records: adopt finished outbox files, release lost
-    leases, and (by default) give failed tasks fresh attempts."""
+    leases, and (by default) give failed tasks fresh attempts.
+
+    A ``graph_path`` passed on resume must be the same graph the plan froze; a
+    different graph is rejected instead of silently ignored."""
     with _locked(run_dir) as state:
+        if state.get("semantic"):
+            _verified_context(run_dir, state)
+            _auto_complete_empty_modules(run_dir, state)
+        if graph_path is not None:
+            frozen = state.get("context") or {}
+            if not frozen.get("graph_present"):
+                raise HostRunError("this run was planned without a graph; --graph cannot be added on resume")
+            try:
+                provided = json.loads(Path(graph_path).read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError) as exc:
+                raise HostRunError(f"cannot read the --graph passed on resume: {exc}") from exc
+            if context_digest(provided) != frozen.get("graph_digest"):
+                raise HostRunError("the --graph passed on resume differs from the frozen graph; "
+                                   "start a new plan to change the graph")
         if owner:
             state["host"] = owner
         changed = _drift(state)
@@ -695,7 +1084,135 @@ def _mechanical_overview(state: dict[str, Any], modules: list[gen.Module]) -> di
             "maintenance_navigation": gen._truncate("\n".join(lines), gen.system_limit(len(modules)))}
 
 
+def _mechanical_semantic_overview(state: dict[str, Any], tree: dict[str, Any]) -> dict[str, str]:
+    nodes = tree.get("nodes") or []
+    lines = [f"- {node.get('title') or node['id']}: {node.get('summary') or node.get('capability') or ''}"
+             for node in nodes if node.get("parent") is not None]
+    return {"overview": (f"This map covers {len(state['files'])} source files in {len(nodes)} semantic "
+                         "nodes. The model-written overview is not available yet, so this summary is "
+                         "generated mechanically from the responsibility tree."),
+            "maintenance_navigation": gen._truncate("\n".join(lines), gen.system_limit(max(len(nodes), 1)))}
+
+
+def _semantic_review_summary(run_dir: Path, state: dict[str, Any]) -> dict[str, Any]:
+    """A separate record of the independent semantic review, not a validity score.
+
+    ``deterministic_checks_ok`` reports structure and coverage. A review clears
+    only the module whose source a fresh reviewer read; it never proves the
+    whole map, and ``needs_repair`` findings are listed, not hidden."""
+    reviewed, pending = [], []
+    for module in state["modules"]:
+        task_id = f"review_{module['number'] + 1}"
+        task = state["tasks"].get(task_id)
+        if task is None:
+            continue
+        if task["status"] == "done":
+            output = _accepted(run_dir, task_id) or {}
+            repair_id = f"repair_{module['number'] + 1}"
+            repair = state["tasks"].get(repair_id)
+            reviewed.append({"module": module["number"], "decision": output.get("decision"),
+                             "issues": output.get("issues") or [],
+                             "repair": repair["status"] if repair else None})
+        else:
+            pending.append(task_id)
+    outcomes: dict[str, int] = {}
+    for row in reviewed:
+        outcomes[row["decision"]] = outcomes.get(str(row["decision"]), 0) + 1
+    return {"mode": state.get("review"), "reviewed": reviewed, "outcomes": outcomes,
+            "pending": pending,
+            "note": "an independent reviewer read the source for each reviewed batch; "
+                    "this is not a whole-map proof"}
+
+
+def _render_semantic(run_dir: Path, state: dict[str, Any]) -> None:
+    if state.get("semantic"):
+        try:
+            _verified_context(run_dir, state)
+            _auto_complete_empty_modules(run_dir, state)
+        except HostRunError as exc:
+            state["render_error"] = str(exc)
+            _event(run_dir, "render", f"failed: {exc}", error=str(exc))
+            return
+    units, dispositions = _semantic_units(run_dir, state)
+    tree = _semantic_tree(run_dir, state, units)
+    pending = [f"module_{row['number'] + 1}" for row in state["modules"]
+               if _module_output(run_dir, state, row["number"]) is None]
+    index_notes: list[str] = []
+    tree_task = state["tasks"].get("tree")
+    if tree_task is not None and tree_task["status"] != "done":
+        index_notes.append("The responsibility tree is a mechanical batch grouping because the `tree` "
+                           "task is " + ("failed; resume the run to retry it."
+                                         if tree_task["status"] == "failed" else "not finished yet."))
+    system_task = state["tasks"]["system"]
+    system = _accepted(run_dir, "system") if system_task["status"] == "done" else None
+    if system is None:
+        index_notes.append("The overview and navigation are mechanical because the `system` task is "
+                           + ("failed; resume the run to retry it." if system_task["status"] == "failed"
+                              else "not finished yet."))
+    else:
+        index_notes += [f"CBE normalized the overview after a second invalid answer: {flag}"
+                        for flag in system_task["flags"]]
+    if pending:
+        index_notes.append(f"{len(pending)} module page(s) are pending: {', '.join(pending)}.")
+    known_empty = sorted(path for path, entry in (state.get("inventory") or {}).items()
+                         if entry.get("known_empty"))
+    if known_empty:
+        index_notes.append("Known-empty files (no source text, no inventory id, no unit, no model "
+                           "call): " + ", ".join(known_empty) + ".")
+    normalized = sorted(task["id"] for task in state["tasks"].values()
+                        if task["flags"] and "known_empty" not in task["flags"])
+    if normalized:
+        index_notes.append("Normalized after a second invalid answer (facts kept, shape fixed): "
+                           + ", ".join(normalized) + ".")
+    try:
+        meta = semantic.render(run_dir=run_dir, source_root=Path(state["repo"]),
+                               inventory=state.get("inventory") or {}, units=units,
+                               dispositions=dispositions, tree=tree, index_notes=index_notes)
+    except semantic.SemanticError as exc:
+        state["render_error"] = str(exc)
+        _event(run_dir, "render", f"failed: {exc}", error=str(exc))
+        return
+    state.pop("render_error", None)
+    for row in state["modules"]:
+        row["page"] = None  # node pages own the published units now
+    state["published"] = {"units": meta["units_rendered"], "nodes": meta["nodes"]}
+    reason = state.get("partial_reason")
+    complete = all(task["status"] == "done" for task in state["tasks"].values()) and not reason
+    state["status"], state["rendered"] = ("complete" if complete else "partial"), True
+    if not complete and not all(_settled(state, task) for task in state["tasks"].values()):
+        state["status"] = "running"
+    published_pages = meta["nodes"] + 1
+    summary = {"status": state["status"], "driver": state.get("driver", "host"), "host": state["host"],
+               "source_files": len(state["files"]),
+               "source_tokens": sum(row["tokens"] for row in state["files"]),
+               "modules": len(state["modules"]), "units": meta["units_rendered"],
+               "semantic_nodes": meta["nodes"], "published_pages": published_pages,
+               "pending": pending + (["tree"] if tree_task and tree_task["status"] != "done" else [])
+                          + (["system"] if system_task["status"] != "done" else []),
+               "normalized": sorted(task["id"] for task in state["tasks"].values()
+                                   if task["flags"] and "known_empty" not in task["flags"]),
+               "known_empty": sorted(task["id"] for task in state["tasks"].values()
+                                    if "known_empty" in task["flags"]),
+               "wall_seconds": round(time.time() - _epoch(state["created_at"]), 3),
+               "run_dir": str(run_dir), "index": str(run_dir / "docs" / "INDEX.md"),
+               "subagent_tasks": sum(task["attempts"] for task in state["tasks"].values())}
+    if reason:
+        summary["partial_reason"], summary["partial_detail"] = reason, state.get("partial_detail", "")
+    state["verify"] = verify_state(run_dir, state)
+    summary["deterministic_checks_ok"] = state["verify"]["ok"]
+    summary["semantic_review"] = _semantic_review_summary(run_dir, state)
+    summary["truth"] = ("deterministic structure/coverage checks and the separate semantic review are "
+                        "different states; neither one proves prose truth")
+    _write_json(run_dir / "summary.json", summary)
+    _event(run_dir, "render", f"{published_pages} pages, status {state['status']}"
+           + (f", pending {summary['pending']}" if summary["pending"] else "")
+           + f", verify {'ok' if state['verify']['ok'] else 'has failures'} -> docs/INDEX.md",
+           pages=published_pages, status=state["status"], verify_ok=state["verify"]["ok"])
+
+
 def _render(run_dir: Path, state: dict[str, Any]) -> None:
+    if state.get("semantic"):
+        return _render_semantic(run_dir, state)
     modules = _modules(state)
     notes: dict[int, list[str]] = {}
     pending: list[str] = []
@@ -766,7 +1283,48 @@ def _render(run_dir: Path, state: dict[str, Any]) -> None:
            pages=summary["published_pages"], status=state["status"], verify_ok=state["verify"]["ok"])
 
 
+def _semantic_verify_state(run_dir: Path, state: dict[str, Any]) -> dict[str, Any]:
+    checks: list[dict[str, Any]] = []
+
+    def check(name: str, ok: bool, detail: Any = None) -> None:
+        checks.append({"check": name, "ok": bool(ok), **({"detail": detail} if detail else {})})
+
+    unfinished = [task["id"] for task in state["tasks"].values() if task["status"] != "done"]
+    check("all_tasks_done", not unfinished, unfinished[:20])
+    try:
+        _verified_context(run_dir, state)
+        check("frozen_context_intact", True)
+    except HostRunError as exc:
+        check("frozen_context_intact", False, str(exc)[:300])
+    changed = _drift(state)
+    check("sources_unchanged", not changed, changed[:20])
+    planned = [row["path"] for row in state["files"]]
+    assigned = [path for module in state["modules"] for path in module["files"]]
+    duplicates = sorted({path for path in assigned if assigned.count(path) > 1})
+    check("each_file_in_exactly_one_module", sorted(assigned) == sorted(planned) and not duplicates,
+          {"planned": len(planned), "assigned": len(assigned), "duplicates": duplicates[:20]})
+    try:
+        current = {item.path for item in gen.scan(Path(state["repo"]))}
+    except gen.GenerateError as exc:
+        current = set()
+        check("rescan", False, str(exc))
+    unplanned = sorted(current - set(planned))
+    check("no_unplanned_source_files", not unplanned, unplanned[:20])
+    if not (run_dir / "docs" / "INDEX.md").is_file() or not (run_dir / "catalog.json").is_file():
+        check("semantic_rendered", False, "docs/INDEX.md or catalog.json is missing")
+        return {"ok": False, "checks": checks}
+    try:
+        units, dispositions = _semantic_units(run_dir, state)
+        tree = _semantic_tree(run_dir, state, units)
+        checks += semantic.verify(run_dir, state.get("inventory") or {}, units, dispositions, tree)
+    except (semantic.SemanticError, OSError, ValueError) as exc:
+        check("semantic_checks", False, str(exc)[:300])
+    return {"ok": all(row["ok"] for row in checks), "checks": checks}
+
+
 def verify_state(run_dir: Path, state: dict[str, Any]) -> dict[str, Any]:
+    if state.get("semantic"):
+        return _semantic_verify_state(run_dir, state)
     checks: list[dict[str, Any]] = []
 
     def check(name: str, ok: bool, detail: Any = None) -> None:
@@ -870,9 +1428,16 @@ def _status_markdown(state: dict[str, Any]) -> str:
     for task in state["tasks"].values():
         counts[task["status"]] = counts.get(task["status"], 0) + 1
     unknown = [f"{row['task']} (attempt {row['attempt']})" for row in state.get("usage_unknown") or []]
+    review_tasks = [task for task in state["tasks"].values() if task["kind"] == "review"]
+    review_line = ([f"Semantic review: mode **{state['review']}**; "
+                    f"{sum(task['status'] == 'done' for task in review_tasks)}/{len(review_tasks)} "
+                    "reviewed by a separate reader of the source. This is independent of the "
+                    "deterministic structure/coverage checks and does not prove whole-map truth.", ""]
+                   if state.get("semantic") and review_tasks else [])
     lines = ["# CBE run status", "",
              f"Run `{state['run_tag']}` · status **{state['status']}** · updated {state['updated_at']} · "
              f"review {state['review']} · jobs {state['jobs']} · host {state['host']}", "",
+             *review_line,
              *([f"**Partial: {state['partial_reason']}** · {state.get('partial_detail', '')}", ""]
                if state.get("partial_reason") else []),
              *([f"**Usage unknown** · the host reported no usage, so per-call source delivery could not "
@@ -1005,19 +1570,27 @@ def import_usage(run_dir: Path, harness: str, root: Path | None = None) -> dict[
                 "tasks_without_exact_usage": missing}
 
 
-def _price_for(model: str, override: tuple[float, float, float, float] | None) -> tuple[tuple[float, ...], str]:
-    if override:
+def _price_for(model: str, override: tuple[float, float, float, float] | None) -> tuple[tuple[float, ...] | None, str]:
+    if override is not None:
         return override, "price given on the command line"
     for name, price in PRICES.items():
-        if model.startswith(name):
-            return price, f"{name} list price"
-    return COMPARISON_PRICE, "CBE comparison price (model price unknown)"
+        if model == name or model.startswith(name + "-"):
+            return price, f"{name} list price (2026-09-25)"
+    return None, f"price unknown: {model or 'model not recorded'}"
 
 
-def _dollars(row: dict[str, Any], price: tuple[float, ...]) -> float:
+def _dollars(row: dict[str, Any], price: tuple[float, ...] | None) -> float | None:
+    if price is None:
+        return None
     return round((row.get("input_tokens", 0) * price[0] + row.get("output_tokens", 0) * price[1]
                   + row.get("cache_write_tokens", 0) * price[2] + row.get("cache_read_tokens", 0) * price[3])
                  / 1_000_000, 4)
+
+
+def _sum_dollars(values: list[float | None]) -> float | None:
+    if any(value is None for value in values):
+        return None
+    return round(sum(value for value in values if value is not None), 4)
 
 
 def _estimate(run_dir: Path, state: dict[str, Any], task: dict[str, Any], overhead: int) -> dict[str, Any]:
@@ -1050,10 +1623,11 @@ def _estimate(run_dir: Path, state: dict[str, Any], task: dict[str, Any], overhe
 
 def cost(run_dir: Path, *, model: str | None = None, price: tuple[float, float, float, float] | None = None,
          overhead: int = DEFAULT_OVERHEAD_TOKENS) -> dict[str, Any]:
+    if price is not None and (len(price) != 4 or any(not math.isfinite(value) or value < 0 for value in price)):
+        raise HostRunError("--price needs four finite, nonnegative rates: input,output,cache_write,cache_read")
     with _locked(run_dir) as state:
         rows, totals = [], {"input_tokens": 0, "cache_write_tokens": 0, "cache_read_tokens": 0,
-                            "output_tokens": 0, "usd": 0.0}
-        estimate_total = 0.0
+                            "output_tokens": 0}
         bases: set[str] = set()
         price_notes: set[str] = set()
         for task in state["tasks"].values():
@@ -1066,18 +1640,18 @@ def cost(run_dir: Path, *, model: str | None = None, price: tuple[float, float, 
             else:
                 parts = [{**estimate, "model": model or ""}]
                 basis = "estimate"
-            estimate_model = model or next((part.get("model") for part in parts if part.get("model")), "")
+            effective_models = {part.get("model") or model or "" for part in parts}
+            estimate_model = next(iter(effective_models)) if len(effective_models) == 1 else ""
             estimate_usd = _dollars(estimate, _price_for(estimate_model, price)[0])
-            estimate_total += estimate_usd
             bases.add(basis)
-            usd = 0.0
+            amounts = []
             for part in parts:
                 chosen, note = _price_for(part.get("model") or model or "", price)
                 price_notes.add(note)
-                usd += _dollars(part, chosen)
+                amounts.append(_dollars(part, chosen))
             row = {"task": task["id"], "basis": basis, "subagents": len(parts) if basis == "exact" else task["attempts"],
-                   **{field: sum(part.get(field, 0) for part in parts) for field in totals if field != "usd"},
-                   "usd_api_equivalent": round(usd, 4), "estimate_usd": estimate_usd,
+                   **{field: sum(part.get(field, 0) for part in parts) for field in totals},
+                   "usd_api_equivalent": _sum_dollars(amounts), "estimate_usd": estimate_usd,
                    "estimate_anchored_on_reported_context": estimate["anchored"],
                    "models": sorted({part.get("model") or "" for part in parts} - {""})}
             reported = [entry for entry in task["usage"] if entry.get("total_tokens")]
@@ -1085,29 +1659,35 @@ def cost(run_dir: Path, *, model: str | None = None, price: tuple[float, float, 
                 row["harness_reported_total_tokens"] = sum(entry["total_tokens"] for entry in reported)
             rows.append(row)
             for field in totals:
-                totals[field] += row["usd_api_equivalent"] if field == "usd" else row[field]
-        totals["usd"] = round(totals["usd"], 4)
+                totals[field] += row[field]
+        totals["usd"] = _sum_dollars([row["usd_api_equivalent"] for row in rows])
         basis = "exact" if bases == {"exact"} else "estimate" if bases == {"estimate"} else "mixed"
         report = {
             "basis": basis, "tasks": rows, "totals": totals,
             "subagent_runs": sum(row["subagents"] for row in rows),
-            "estimate_usd": round(estimate_total, 4),
+            "estimate_usd": _sum_dollars([row["estimate_usd"] for row in rows]),
             "price_basis": sorted(price_notes),
-            "statement": _statement(basis, state["host"]),
+            "statement": _statement(basis, totals["usd"] is not None),
         }
         _write_json(_host_dir(run_dir) / "cost.json", report)
         (_host_dir(run_dir) / "COST.md").write_text(_cost_markdown(report), encoding="utf-8")
         return report
 
 
-def _statement(basis: str, host: str) -> str:
+def _statement(basis: str, priced: bool) -> str:
     tokens = {"exact": "Token counts are exact, read from the harness's own per-subagent usage records.",
               "estimate": "Token counts are ESTIMATES from prompt and source sizes; the harness did not "
                           "provide exact per-subagent usage.",
               "mixed": "Some token counts are exact (harness records) and the rest are ESTIMATES."}[basis]
-    return (tokens + " The dollar figure prices those tokens at API list rates. It is not a bill: on a "
-            "Claude or ChatGPT subscription the run uses plan quota, not per-token charges. The host agent's "
-            "own orchestration turns are not included; quote the harness session total for those.")
+    pricing = ("Dollar figures apply the rates identified below." if priced else
+               "One or more model prices are unknown, so dollar totals are unknown. "
+               "Pass --price with current rates to calculate a price equivalent.")
+    return (tokens + " " + pricing + " This is not a bill: a subscription uses plan quota. "
+            "The host agent's own orchestration turns are not included; quote the harness session total for those.")
+
+
+def _money(value: float | None, decimals: int = 2) -> str:
+    return "unknown" if value is None else f"${value:.{decimals}f}"
 
 
 def _cost_markdown(report: dict[str, Any]) -> str:
@@ -1116,12 +1696,12 @@ def _cost_markdown(report: dict[str, Any]) -> str:
              f"- Basis: **{report['basis']}**; subagent runs: {report['subagent_runs']}",
              f"- Tokens: input {totals['input_tokens']:,}, cache write {totals['cache_write_tokens']:,}, "
              f"cache read {totals['cache_read_tokens']:,}, output {totals['output_tokens']:,}",
-             f"- API-list-price equivalent: ${totals['usd']:.2f} ({'; '.join(report['price_basis'])})",
-             f"- The estimate model alone would say: ${report['estimate_usd']:.2f}", "",
+             f"- Price equivalent: {_money(totals['usd'])} ({'; '.join(report['price_basis'])})",
+             f"- Price of the token-use estimate: {_money(report['estimate_usd'])}", "",
              "| Task | Basis | Subagents | Input | Cache write | Cache read | Output | USD equiv. |",
              "|---|---|---:|---:|---:|---:|---:|---:|"]
     for row in report["tasks"]:
         lines.append(f"| {row['task']} | {row['basis']} | {row['subagents']} | {row['input_tokens']:,} | "
                      f"{row['cache_write_tokens']:,} | {row['cache_read_tokens']:,} | {row['output_tokens']:,} | "
-                     f"{row['usd_api_equivalent']:.4f} |")
+                     f"{_money(row['usd_api_equivalent'], 4)} |")
     return "\n".join(lines) + "\n"

@@ -1,11 +1,11 @@
 ---
 name: codebase-explorer
-description: Generate a navigable, source-grounded documentation map (INDEX, subsystems, module pages, symbol catalogue) for a code repository. Inside Claude Code, Codex, or another agent harness with subagents, the host agent runs `cbe host` and dispatches one subagent per module on the user's own subscription; with an OpenCode or Devin CLI login, run `cbe generate`. Also use it to query a generated map, resume an interrupted run, or report a run's token usage and cost.
+description: Generate a navigable, source-grounded documentation map (INDEX, a semantic responsibility tree, node pages with structured detail units and program-derived source anchors, and a symbol catalogue) for a code repository. Inside Claude Code, Codex, or another agent harness with subagents, the host agent runs `cbe host` and dispatches one subagent per reading task on the user's own subscription; with an OpenAI-compatible endpoint, OpenCode, or a Devin CLI login, run `cbe generate`. Also use it to query a generated map, resume an interrupted run, or report a run's token usage and cost.
 ---
 
 # Codebase Explorer
 
-CBE splits documentation generation into deterministic CLI steps and model work. The CLI scans source, plans directory-first modules, hands out tasks, checks every JSON result, renders the two-level INDEX and module pages, verifies coverage, and builds the catalogue for `cbe find`. The model work is one fresh completion per task: module titles, one page per module, optional reviews, and the system overview.
+CBE splits documentation generation into deterministic CLI steps and model work. The CLI freezes one source snapshot (and validates an optional analyzed graph against it), builds the symbol inventory and reading batches, hands out tasks, checks every JSON result, assembles the semantic responsibility tree, renders node pages with program-derived source anchors, and builds the catalogue for `cbe find`. The model work is one fresh completion per task: reading-batch titles, one structured-detail payload per batch, the responsibility tree, optional reviews, and the system overview. Each detail unit has exactly one primary owner in the tree; the program, never the model, writes the published line ranges.
 
 Pick the path by where you run:
 
@@ -13,14 +13,22 @@ Pick the path by where you run:
 |---|---|---|
 | Claude Code, Codex, or another harness that can start subagents | `cbe host ...` (below) | your subagents, on the user's subscription |
 | A shell with a signed-in OpenCode or Devin CLI | `cbe generate` (end of this file) | OpenCode or Devin, one tool-free call per task |
+| A shell or service that reaches an OpenAI-compatible endpoint, with no harness login | `cbe generate --host api` (end of this file) | that endpoint, one tool-free request per task |
 
 ## Runtime
 
-Use the absolute `cbe` command from the "Installed runtime" note if `cbe-install` added one above. Otherwise try `cbe --version`, then `"$(uv tool dir --bin)/cbe" --version`. If CBE is missing, ask the user before installing it, then install a pinned release:
+Use the absolute `cbe` command from the "Installed runtime" note if `cbe-install` added one above. Otherwise try `cbe --version`, then `"$(uv tool dir --bin)/cbe" --version`. If CBE is missing, ask the user before installing it.
 
-```sh
-uv tool install --python 3.13 'https://github.com/zlxdengtianhei/codebase-explorer/archive/refs/tags/v2.1.1.zip'
-```
+The `cbe` CLI and this Skill are **one build**: the structured-detail, responsibility-tree, `cbe graph` and `cbe context` protocol above exists only in a build that ships with this Skill. An older `cbe` will plan a different run and reject new flags, so install a build matching this Skill, not a remembered version number.
+
+- Published release: install the wheel or tag that ships with this Skill. Do not assume a tag name; use whatever the Skill's release page names.
+- Development build from a checkout (use this while the build is unpublished). Point `uv` at the checkout so the CLI and this Skill come from the same commit:
+
+  ```sh
+  uv tool install --python 3.13 /path/to/codebase-explorer
+  ```
+
+After installing, confirm `cbe --version` and that the newest surface is present, for example `cbe context --help` and `cbe graph capabilities --help`; a CLI without those commands predates this Skill.
 
 ## Host-driven generation
 
@@ -28,17 +36,18 @@ uv tool install --python 3.13 'https://github.com/zlxdengtianhei/codebase-explor
 
    ```sh
    cbe host plan "$PWD" --review sample --jobs 4 --host claude-code   # or --host codex
+   cbe host plan "$PWD" --graph /abs/path/graph.json                  # analyzed graph for the same source
    ```
 
-   It prints `run_dir`, `run_tag`, and the file, token, module, and task counts. Tell the user these counts before dispatching. `--review` is `none`, `sample` (default: one review of the largest module), or `all` (one review per module; each finding queues one repair). `--jobs` caps concurrent subagents; keep it within the user's subscription capacity.
+   It freezes `context.json` (the source snapshot), builds the symbol inventory and reading batches, and prints `run_dir`, `run_tag`, and the file, token, module, and task counts. Tell the user these counts before dispatching. `--review` is `none`, `sample` (default: one review of the largest batch), or `all` (one review per batch; each finding queues one repair). `--jobs` caps concurrent subagents; keep it within the user's subscription capacity. `--graph` is optional: without it the run records the graph as not provided; with it, CBE rejects a graph whose `source_manifest` does not match the frozen source.
 
 2. **Dispatch.** Run `cbe host next --run-dir RUN`. For every task it returns, start one fresh subagent whose whole prompt is the task's `dispatch_message`. Label it with the task's `description` (Claude Code) or `codex_task_name` (Codex); the label lets CBE find that subagent's exact usage later. Start the subagents for one `next` batch concurrently. The host-specific calls are in [claude-code.md](references/claude-code.md) and [codex.md](references/codex.md).
 
 3. **Submit.** When a subagent returns, run `cbe host submit --run-dir RUN --task TASK`, adding the usage numbers the harness showed for that subagent when it shows any. The CLI reads the JSON file that the subagent wrote. A first miss goes back to the queue with the exact error, and the next instruction file asks for a correction. A second miss with usable content is normalized, accepted, and flagged. Only an unusable second answer marks the task `failed`; the rest of the run continues.
 
-4. **Repeat** `next` and `submit` until `status` is `complete` or `partial`. The first batch is only the naming task; modules follow; reviews and repairs come next; the overview comes last. CBE renders the docs when the overview arrives or when nothing more can run. With `partial`, every finished module is rendered, and failed parts have placeholder pages. Report the failed tasks and their errors to the user; after the cause is fixed, `cbe host resume` gives them fresh attempts.
+4. **Repeat** `next` and `submit` until `status` is `complete` or `partial`. The first batch is only the naming task; structured-detail batches follow. Reviews may run as their batches finish, alongside other detail work; findings queue repairs. The responsibility tree assembles from settled details and is rebuilt after accepted repairs; the overview comes last. Follow `next` for the current dependency order. CBE renders the docs when the overview arrives or when nothing more can run. With `partial`, every finished batch is rendered, the pending work is named in the INDEX notes, and failed parts stay pending. Report the failed tasks and their errors to the user; after the cause is fixed, `cbe host resume` gives them fresh attempts.
 
-5. **Verify.** `cbe host verify --run-dir RUN` checks that every task is done, the sources did not change, every file is in exactly one module and on its page, INDEX links resolve, the INDEX has subsystem headings, and the symbol catalogue is complete. Report any failed check.
+5. **Verify.** `cbe host verify --run-dir RUN` runs the deterministic structural and coverage checks: every task is done, the sources did not change, every file is in exactly one reading batch, every detail unit has exactly one primary owner, the responsibility tree is single-rooted and acyclic, every unit's published range is present and in bounds, relative links resolve, the catalogue covers every file, and symbol/unit queries resolve to their actual primary page anchors (or explicitly explain an index-only disposition). These checks do not judge whether an explanation is true. Truth of the prose stays with the separate `review_*` task (one fresh subagent) and the final independent verification, so a run that reports `complete` with passing checks is structurally sound, not thereby semantically reviewed. Report any failed check and say which of the three states applies: run finished, structure valid, semantic review done.
 
 Rules for the host agent:
 - Do not read the instruction files or the source yourself, and do not write or edit result JSON. The subagent does that work; the CLI checks it. This keeps your own context and cost small.
@@ -54,26 +63,28 @@ The run records where it is while it runs: `RUN/progress.log` (one line per clai
 Report cost after every run. The rule: **use the harness's exact numbers when it records them; otherwise estimate, and say clearly that it is an estimate.**
 
 1. Run `cbe host import-usage --run-dir RUN --harness claude-code` (or `codex`). It reads the per-subagent usage that the harness already wrote to disk.
-2. Run `cbe host cost --run-dir RUN --model MODEL`. Rows with imported usage are `exact`; the rest are `estimate`, computed from instruction, source, and result sizes. It writes `host/COST.md` and `host/cost.json`.
+2. Run `cbe host cost --run-dir RUN --model MODEL`. Rows with imported usage are `exact`; the rest are `estimate`, computed from instruction, source, and result sizes. Token certainty and pricing are separate: unknown model prices produce `null` dollar values in JSON and `unknown` in the report. Supply current rates with `--price INPUT,OUTPUT,CACHE_WRITE,CACHE_READ` when needed; CBE does not silently substitute a comparison price. It writes `host/COST.md` and `host/cost.json`.
 3. Tell the user: the number of subagent runs, the wall time, the token totals and whether they are exact or estimated, and the API-list-price equivalent. Say that the dollar figure is not a bill: a subscription spends plan quota. Add the harness's own session total (`/usage` in Claude Code, `/status` in Codex) for your orchestration turns, and name its source.
 
 ## Read and query the result
 
-Open `RUN/docs/INDEX.md`. Its links are relative. For progressive disclosure:
+Open `RUN/docs/INDEX.md`. It lists the responsibility tree and links each node page under `RUN/docs/nodes/`. A node page carries its capability and summary, its child nodes, its outgoing dependencies, and one block per owned detail unit with a program-derived source link. For progressive disclosure:
 
 ```sh
 cbe find --run-dir "$RUN" --term SEARCH_TERM
 cbe query --run-dir "$RUN" --id EXACT_ID_FROM_FIND
 ```
 
-The Python catalogue covers top-level functions, classes, and direct methods. The lexical guard and failure tables do not prove runtime reachability. Test files get a module-level coverage summary, not prose per test. Confirm that the pages answer the user's maintenance questions before claiming quality.
+The catalogue is built from the frozen, multi-language inventory: for Python, top-level functions, classes and direct methods; for every other registered language (C/C++, JavaScript/TypeScript, Java, Go), the declarations the source grammar found; and one file/region entry when a grammar is unavailable. It is a navigation index, not a semantic proof. The lexical guard and failure tables do not prove runtime reachability. A detail unit states only what the model read; confirm that the pages answer the user's maintenance questions before claiming quality.
 
-## Script-driven generation (OpenCode or Devin CLI)
+## Script-driven generation (API, OpenCode, or Devin CLI)
 
 ```sh
 cbe generate "$PWD" --model zai-coding-plan/glm-5.3-flash
 cbe generate "$PWD" --host devin --model swe-2-medium --jobs 3
+cbe generate "$PWD" --host api --model gpt-oss-120b \
+  --base-url https://api.example.com/v1 --api-key-env MY_API_KEY
 ```
 
-Check Devin's current cost label with `devin models list --format json` first; free offers change. The command runs every completion itself on the same run state as `cbe host`, prints `run_dir`, `index`, status, token totals, and elapsed time, and records each physical call in `calls.csv`. It exits 0 when complete and 3 when the docs are rendered with pending parts; continue with `cbe generate "$PWD" --resume`. Review modes are `none`, `sample`, and `all`.
+`--host api` speaks the OpenAI-compatible `POST {base-url}/chat/completions` shape. The API key comes from the named environment variable (default `OPENAI_API_KEY`) or a standard config file, never from a flag, and CBE never writes it to the run log or any durable artifact. Check Devin's current cost label with `devin models list --format json` first; free offers change. The command runs every completion itself on the same run state as `cbe host`, prints `run_dir`, `index`, status, token totals, and elapsed time, and records each physical call in `calls.csv`. It exits 0 when complete and 3 when the docs are rendered with pending parts; continue with `cbe generate "$PWD" --resume`. Review modes are `none`, `sample`, and `all`.
 

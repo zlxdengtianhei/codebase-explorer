@@ -28,6 +28,30 @@ from cbe.token_budget import count_text_tokens
 
 SUFFIXES = {".py", ".ts", ".tsx", ".mts", ".cts", ".js", ".jsx", ".mjs",
             ".cjs", ".c", ".h", ".cpp", ".cc", ".rs", ".sql"}
+_SUFFIX_CACHE: set[str] | None = None
+
+
+def supported_suffixes() -> set[str]:
+    """Source suffixes to scan: the legacy floor plus every grammar the
+    installed ``cbe.source_context`` discovers.
+
+    The registry, not a hard-coded list, decides multi-language coverage; an
+    extra grammar added to ``source_context`` becomes scannable here with no
+    change. If that module is unavailable the legacy set is the honest floor.
+    """
+    global _SUFFIX_CACHE
+    if _SUFFIX_CACHE is None:
+        discovered: set[str] = set()
+        try:
+            from cbe import source_context
+            for row in source_context.available_languages().get("languages") or []:
+                for suffix in row.get("suffixes") or []:
+                    text = str(suffix).lower()
+                    discovered.add(text if text.startswith(".") else "." + text)
+        except Exception:  # noqa: BLE001 - discovery is optional; the floor stands
+            discovered = set()
+        _SUFFIX_CACHE = discovered | SUFFIXES
+    return _SUFFIX_CACHE
 TARGET_TOKENS = 20_000
 MAX_TOKENS = 25_000
 MAX_SINGLE_FILE_TOKENS = 60_000
@@ -136,9 +160,10 @@ def _imports(path: str, source: str) -> set[str]:
 
 
 def scan(repo: Path) -> list[SourceFile]:
+    suffixes = supported_suffixes()
     files: list[SourceFile] = []
     for path in sorted(repo.rglob("*")):
-        if not path.is_file() or path.is_symlink() or path.suffix.lower() not in SUFFIXES:
+        if not path.is_file() or path.is_symlink() or path.suffix.lower() not in suffixes:
             continue
         if any(part in {".git", ".venv", "venv", "node_modules", "__pycache__", ".codebase-analysis"}
                for part in path.relative_to(repo).parts):
@@ -796,9 +821,10 @@ def _verify_embedded_source(run_dir: Path, task_id: str, prompt: str) -> None:
     prompt must embed is present in the prompt with its full body, read back
     from disk and checked against the plan digest.
 
-    Raises :class:`SourceNotEmbedded` naming the file, so the run stops before
-    the call is spent. Host-mode tasks list paths instead and are checked at
-    dispatch (``host_run.next_tasks`` refuses drifted paths)."""
+    Under the semantic mainline the prompt embeds the frozen context chunks
+    rather than whole files, so the check is that each of the task's chunks is
+    present verbatim in the prompt. Raises :class:`SourceNotEmbedded` naming the
+    file, so the run stops before the call is spent."""
     state = json.loads((run_dir / "host" / "state.json").read_text(encoding="utf-8"))
     paths = _embedded_paths(state, task_id)
     if not paths:
@@ -856,7 +882,9 @@ def _csv_task(task_id: str, review: str) -> str:
 
 def generate(repo: Path, run_dir: Path, *, model: str, config: Path | None = None,
              jobs: int = 4, review: str | None = None, timeout: int = 360,
-             host: str = "opencode", resume: bool = False) -> dict[str, Any]:
+             host: str = "opencode", resume: bool = False, semantic: bool = True,
+             graph_path: Path | None = None, api_base_url: str | None = None,
+             api_key_env: str | None = None) -> dict[str, Any]:
     """Script driver: the shared run state, with each task as one tool-free completion.
 
     A task failure never voids the run. Finished modules render; failed parts
@@ -875,12 +903,14 @@ def generate(repo: Path, run_dir: Path, *, model: str, config: Path | None = Non
         raise GenerateError("repository root is not a directory")
     if jobs < 1 or review not in host_run.REVIEW_MODES or timeout < 1:
         raise GenerateError("jobs and timeout must be positive; review must be none, sample, or all")
-    if host not in {"opencode", "devin"}:
-        raise GenerateError("host must be opencode or devin")
+    if host not in {"opencode", "devin", "api"}:
+        raise GenerateError("host must be opencode, devin or api")
     if host == "opencode" and ("/" not in model or model.startswith("/") or model.endswith("/")):
         raise GenerateError("OpenCode model must be a provider/model name")
     if host == "devin" and (not model or "/" in model):
         raise GenerateError("Devin model must be one exact catalog model ID")
+    if host == "api" and not model:
+        raise GenerateError("API host requires a model name (--model)")
     has_state = (run_dir / "host" / "state.json").is_file()
     if resume and not has_state:
         raise GenerateError("nothing to resume: the run directory has no run state")
@@ -893,6 +923,9 @@ def generate(repo: Path, run_dir: Path, *, model: str, config: Path | None = Non
             if host == "devin":
                 from cbe.devin_completion import DEFAULT_DEVIN_CONFIG
                 default_config = DEFAULT_DEVIN_CONFIG
+            elif host == "api":
+                from cbe.api_completion import DEFAULT_API_CONFIG
+                default_config = DEFAULT_API_CONFIG
             else:
                 default_config = DEFAULT_HOST_CONFIG
             config.write_text(json.dumps(default_config, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -900,11 +933,20 @@ def generate(repo: Path, run_dir: Path, *, model: str, config: Path | None = Non
         config = config.resolve()
         if not config.is_file():
             raise GenerateError(f"{host} config file does not exist")
+    api_overrides: dict[str, Any] = {}
+    if host == "api":
+        # Apply the CLI overrides in memory only: never copy a user config that
+        # may carry an auth header into the run directory.
+        if api_base_url:
+            api_overrides["base_url"] = api_base_url
+        if api_key_env:
+            api_overrides["api_key_env"] = api_key_env
     started = time.monotonic()
     if resume:
-        host_run.resume(run_dir, owner=host)
+        host_run.resume(run_dir, owner=host, graph_path=graph_path)
     else:
-        host_run.plan(repo, run_dir, review=review, jobs=jobs, host=host, driver="script")
+        host_run.plan(repo, run_dir, review=review, jobs=jobs, host=host, driver="script",
+                      semantic_mode=semantic, graph_path=graph_path)
     review = json.loads((run_dir / "host" / "state.json").read_text(encoding="utf-8"))["review"]
     csv_path = run_dir / "calls.csv"
     stopped: str | None = None
@@ -937,7 +979,8 @@ def generate(repo: Path, run_dir: Path, *, model: str, config: Path | None = Non
                     future = pool.submit(invoke, task=csv_task, attempt=item["attempt"],
                                          prompt=prompt,
                                          repo=repo, run_dir=run_dir, model=model, config=config,
-                                         timeout=timeout, csv_path=csv_path, host=host)
+                                         timeout=timeout, csv_path=csv_path, host=host,
+                                         api_overrides=api_overrides or None)
                     active[future] = (item, csv_task)
             if not active:
                 break
@@ -991,8 +1034,16 @@ def generate(repo: Path, run_dir: Path, *, model: str, config: Path | None = Non
     return summary
 
 
-def find(run_dir: Path, term: str, limit: int = 25) -> list[dict[str, Any]]:
+def _query_catalog(run_dir: Path) -> dict[str, Any]:
+    from cbe.semantic import catalog_symbols
+
     catalog = json.loads((run_dir / "catalog.json").read_text(encoding="utf-8"))
+    catalog["symbols"] = catalog_symbols(catalog)
+    return catalog
+
+
+def find(run_dir: Path, term: str, limit: int = 25) -> list[dict[str, Any]]:
+    catalog = _query_catalog(run_dir)
     needle = term.casefold()
     results = [{"id": sid, **record} for sid, record in catalog["symbols"].items()
                if needle in sid.casefold() or needle in json.dumps(record, ensure_ascii=False).casefold()]
@@ -1005,7 +1056,7 @@ def find(run_dir: Path, term: str, limit: int = 25) -> list[dict[str, Any]]:
 
 
 def query(run_dir: Path, symbol_id: str) -> dict[str, Any]:
-    catalog = json.loads((run_dir / "catalog.json").read_text(encoding="utf-8"))
+    catalog = _query_catalog(run_dir)
     if symbol_id in catalog["symbols"]:
         return {"id": symbol_id, **catalog["symbols"][symbol_id]}
     if symbol_id in catalog["files"]:

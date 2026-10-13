@@ -163,16 +163,6 @@ def line_starts(text: str) -> tuple[int, ...]:
     return tuple(starts)
 
 
-def char_offset(starts: tuple[int, ...], lineno: int, col_offset: int, text_len: int) -> int:
-    """Line/column → character offset when ``col_offset`` is already in characters."""
-
-    if lineno < 1:
-        return 0
-    if lineno - 1 >= len(starts):
-        return text_len
-    return min(text_len, starts[lineno - 1] + max(0, col_offset))
-
-
 def ast_point_to_char(
     offsets: OffsetMap,
     starts: tuple[int, ...],

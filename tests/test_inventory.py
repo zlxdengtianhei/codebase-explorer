@@ -1,13 +1,15 @@
+"""Inventory parsing, exclusion and exclusive-span coverage across languages.
+
+The retired first-round packet serialization is gone; these assertions now run
+on the live inventory consumer. Fixtures are unchanged.
+"""
+
 from __future__ import annotations
 
+import os
 from pathlib import Path
-from dataclasses import replace
-
-import pytest
 
 from cbe.inventory import build_inventory, load_offsets, should_exclude_dir
-from cbe.ir import CharSpan
-from cbe.packets import DuplicateIdentityError, pack_inventory, packet_source, validate_packed_fragments
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURES = ROOT / "tests" / "fixtures"
@@ -22,7 +24,7 @@ def _copy_fixtures(tmp: Path) -> Path:
     return repo
 
 
-def test_three_languages_share_inventory_and_non_overlapping_packets(tmp_path: Path) -> None:
+def test_three_languages_share_inventory_and_non_overlapping_spans(tmp_path: Path) -> None:
     repo = _copy_fixtures(tmp_path)
     inventory = build_inventory(repo)
     assert set(inventory.files) == {"python_case.py", "ts_case.ts", "js_case.js"}
@@ -50,22 +52,7 @@ def test_three_languages_share_inventory_and_non_overlapping_packets(tmp_path: P
     assert "makeCounter" in js_names
     assert "run" in js_names
 
-    packets = pack_inventory(inventory, repo=repo, window_chars=8000)
-    ids = [packet.packet_id for packet in packets.packets]
-    assert len(ids) == len(set(ids))
-    for path, record in inventory.files.items():
-        offsets = load_offsets(repo, path)
-        owned = [0] * record.char_length
-        file_packets = [item for item in packets.packets if item.path == path]
-        assert file_packets
-        for packet in file_packets:
-            body = packet_source(offsets, packet)
-            assert len(body) == packet.source_chars
-            for span in packet.spans:
-                for index in range(span.start, span.end):
-                    assert owned[index] == 0, f"overlap {path}:{index}"
-                    owned[index] = 1
-        assert owned == [1] * record.char_length
+    _assert_enrolled_partition(inventory, repo)
 
     worker = next(symbol for symbol in inventory.symbols.values() if symbol.name == "Worker")
     run = next(symbol for symbol in inventory.symbols.values() if symbol.name == "run" and symbol.kind == "method")
@@ -76,50 +63,37 @@ def test_three_languages_share_inventory_and_non_overlapping_packets(tmp_path: P
     assert "def run" not in class_text
 
 
-def test_parse_failure_still_gets_raw_packets(tmp_path: Path) -> None:
+def test_parse_failure_still_enrolls_raw_source(tmp_path: Path) -> None:
     repo = tmp_path / "bad"
     repo.mkdir()
-    (repo / "broken.py").write_text("def oops(\n", encoding="utf-8")
+    raw = "def oops(\n"
+    (repo / "broken.py").write_text(raw, encoding="utf-8")
     inventory = build_inventory(repo)
     record = inventory.files["broken.py"]
     assert record.parse_failure is not None
-    packets = pack_inventory(inventory, repo=repo)
-    assert packets.packets
-    assert sum(packet.source_chars for packet in packets.packets) == record.char_length
-
-
-def test_fragment_count_validation_still_rejects_missing_fragment(tmp_path: Path) -> None:
-    repo = _copy_fixtures(tmp_path)
-    inventory = build_inventory(repo)
-    packets = pack_inventory(inventory, repo=repo, window_chars=8000)
-    packet = next(item for item in packets.packets if item.fragments)
-    original = packet.fragments[0]
-    packet.fragments = (replace(original, fragment_count=original.fragment_count + 1), *packet.fragments[1:])
-    with pytest.raises(DuplicateIdentityError, match="expected .* fragments"):
-        validate_packed_fragments(packets.packets, inventory)
+    assert record.enrolled
+    assert record.char_length == len(raw)
+    # Unparsed bytes have no symbol spans; source_context owns raw-coverage
+    # reporting for syntax errors now (tests/test_source_context.py).
 
 
 def _assert_enrolled_partition(inventory, repo: Path) -> None:
-    packets = pack_inventory(inventory, repo=repo, window_chars=8000)
-    ids = [packet.packet_id for packet in packets.packets]
-    assert len(ids) == len(set(ids))
-    fragment_ids = [fragment.fragment_id for packet in packets.packets for fragment in packet.fragments]
-    assert len(fragment_ids) == len(set(fragment_ids))
     for path, record in inventory.files.items():
-        if not record.enrolled:
+        if not record.enrolled or record.parse_failure is not None:
             continue
-        offsets = load_offsets(repo, path)
         owned = [0] * record.char_length
-        file_packets = [item for item in packets.packets if item.path == path]
-        assert file_packets
-        for packet in file_packets:
-            body = packet_source(offsets, packet)
-            assert len(body) == packet.source_chars
-            for span in packet.spans:
+        for symbol in inventory.symbols.values():
+            if symbol.path != path:
+                continue
+            for span in symbol.exclusive_spans:
                 for index in range(span.start, span.end):
-                    assert owned[index] == 0, f"overlap {path}:{index}"
+                    assert owned[index] == 0, f"exclusive overlap {path}:{index} {symbol.id}"
                     owned[index] = 1
-        assert owned == [1] * record.char_length
+        assert owned == [1] * record.char_length, {
+            "path": path,
+            "missing": owned.count(0),
+            "repeated": sum(item > 1 for item in owned),
+        }
 
 
 def test_python_nonascii_spans_and_nested_lambda_and_crlf_header(tmp_path: Path) -> None:
@@ -558,3 +532,20 @@ def test_inventory_enrolls_owned_min_js_and_min_ts(tmp_path: Path) -> None:
     assert "notes.md" not in inventory.files
     assert "notes.md" not in other_paths
     _assert_enrolled_partition(inventory, repo)
+
+
+def test_inventory_skips_symlinked_sources(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "real.py").write_text("def real():\n    return 1\n", encoding="utf-8")
+    outside = tmp_path / "outside.py"
+    outside.write_text("def secret():\n    return 0\n", encoding="utf-8")
+    os.symlink(outside, repo / "external.py")
+    os.symlink(repo / "real.py", repo / "internal_link.py")
+    inventory = build_inventory(repo)
+    # Inventory never follows a symlink, so neither an escape nor an in-repo
+    # alias reaches the frozen reader.
+    assert "real.py" in inventory.files
+    assert "external.py" not in inventory.files
+    assert "internal_link.py" not in inventory.files
+    assert "secret" not in {symbol.name for symbol in inventory.symbols.values()}

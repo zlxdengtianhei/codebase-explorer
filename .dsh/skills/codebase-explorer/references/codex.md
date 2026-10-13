@@ -2,10 +2,10 @@
 
 ## Install
 
-Install the CLI (pinned), then the skill:
+Install a CBE build that ships with this Skill (the CLI and Skill are one build), then the skill. From an unpublished checkout:
 
 ```sh
-uv tool install --python 3.13 'https://github.com/zlxdengtianhei/codebase-explorer/archive/refs/tags/v2.1.1.zip'
+uv tool install --python 3.13 /path/to/codebase-explorer
 "$(uv tool dir --bin)/cbe-install" install --host codex --scope project   # .agents/skills/codebase-explorer
 ```
 

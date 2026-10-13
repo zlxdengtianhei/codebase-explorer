@@ -8,10 +8,27 @@ import ast
 import hashlib
 import json
 from functools import lru_cache
-
-from cbe.static_literals import _frozen_source, _offset
+from pathlib import Path
+from typing import Any
 
 BOUNDARY = "Frozen statement syntax and lexical guards only; reachability, runtime binding and dynamic effects unknown."
+
+
+def _frozen_source(ledger: dict[str, Any], path: str) -> str:
+    """Read frozen source only when it is inside the repo and hash-matches."""
+    root = Path(ledger["repo_root"]).resolve()
+    file = root / path
+    resolved = file.resolve()
+    if not resolved.is_relative_to(root) or file.is_symlink() or not file.is_file():
+        raise ValueError(f"frozen source file unavailable or outside repo: {path}")
+    record = ((ledger.get("inventory") or {}).get("files") or {}).get(path) or {}
+    expected = record.get("content_hash")
+    if not isinstance(expected, str) or not expected:
+        raise ValueError(f"missing frozen content_hash: {path}")
+    raw = file.read_bytes()
+    if hashlib.sha256(raw).hexdigest() != expected:
+        raise ValueError(f"frozen source hash mismatch: {path}")
+    return raw.decode("utf-8")
 
 
 @lru_cache(maxsize=8)
@@ -130,15 +147,3 @@ def check_atom_refs(ledger: dict, sid: str, refs: object, spans: list[dict]) -> 
     ids = {atom["id"] for atom in atoms_for(ledger, sid, spans)["atoms"]}
     if not set(refs) <= ids:
         raise ValueError("syntax_atom_refs contain an unpresented or foreign frozen statement/guard")
-
-
-def assignment_facts(ledger: dict, sid: str, spans: list[dict] | None = None) -> dict:
-    projection = atoms_for(ledger, sid, spans)
-    if not projection["atoms"] and not projection.get("omitted_atom_count"):
-        return {}
-    return {"syntax_atoms": projection["atoms"], "syntax_atoms_omitted": projection.get("omitted_atom_count", 0)}
-
-
-def reader_facts(ledger: dict, sid: str) -> dict:
-    facts = atoms_for(ledger, sid)
-    return facts if facts["atoms"] or facts.get("omitted_atom_count") else {}

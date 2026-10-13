@@ -103,12 +103,17 @@ def _csv_row(path: Path, row: dict[str, Any]) -> None:
 
 def invoke(*, task: str, attempt: int, prompt: str, repo: Path, run_dir: Path,
            model: str, config: Path, timeout: int, csv_path: Path,
-           host: str = "opencode") -> Completion:
+           host: str = "opencode", api_overrides: dict[str, Any] | None = None) -> Completion:
     if host == "devin":
         from cbe.devin_completion import invoke as invoke_devin
         return invoke_devin(task=task, attempt=attempt, prompt=prompt, repo=repo,
                             run_dir=run_dir, model=model, config=config, timeout=timeout,
                             csv_path=csv_path)
+    if host == "api":
+        from cbe.api_completion import invoke as invoke_api
+        return invoke_api(task=task, attempt=attempt, prompt=prompt, repo=repo,
+                          run_dir=run_dir, model=model, config=config, timeout=timeout,
+                          csv_path=csv_path, overrides=api_overrides)
     if host != "opencode":
         raise ValueError(f"unsupported completion host: {host}")
     argv = ["opencode", "run", "--pure", "--format", "json", "--agent", "cbe-completion",

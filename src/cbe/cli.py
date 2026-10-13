@@ -33,14 +33,16 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--version", action="version", version=f"%(prog)s {_package_version()}")
     sub = parser.add_subparsers(dest="command", required=True)
 
-    generate_p = sub.add_parser("generate", help="Generate documentation with fresh tool-free OpenCode or Devin "
-                                "completions, one per task")
+    generate_p = sub.add_parser("generate", help="Generate documentation through an API, OpenCode, or Devin")
     generate_p.add_argument("repo", type=lambda value: Path(value).expanduser().resolve())
     generate_p.add_argument("--run-dir", type=_abs, default=None)
-    generate_p.add_argument("--host", choices=("opencode", "devin"), default="opencode")
+    generate_p.add_argument("--host", choices=("api", "opencode", "devin"), default="opencode")
     generate_p.add_argument("--model", default=None)
     generate_p.add_argument("--config", type=_abs, default=None,
-                            help="optional task-specific OpenCode config; default is generated inside the run")
+                            help="optional host/API configuration file")
+    generate_p.add_argument("--graph", type=_abs, default=None, help="analyzed graph matching this source snapshot")
+    generate_p.add_argument("--base-url", default=None, help="OpenAI-compatible API base URL (--host api)")
+    generate_p.add_argument("--api-key-env", default=None, help="environment variable containing the API key")
     generate_p.add_argument("--jobs", type=int, default=4)
     generate_p.add_argument("--review", choices=REVIEW_MODES, default=DEFAULT_REVIEW)
     generate_p.add_argument("--resume", action="store_true",
@@ -50,9 +52,10 @@ def build_parser() -> argparse.ArgumentParser:
     host_p = sub.add_parser("host", help="Host-agent driven generation: the CLI plans and checks, "
                             "the host agent (Claude Code, Codex) dispatches one subagent per task")
     host_sub = host_p.add_subparsers(dest="host_command", required=True)
-    host_plan = host_sub.add_parser("plan", help="Scan, plan directory-first modules, and write the run state")
+    host_plan = host_sub.add_parser("plan", help="Freeze source and graph context and plan semantic generation")
     host_plan.add_argument("repo", type=lambda value: Path(value).expanduser().resolve())
     host_plan.add_argument("--run-dir", type=_abs, default=None)
+    host_plan.add_argument("--graph", type=_abs, default=None, help="analyzed graph matching this source snapshot")
     host_plan.add_argument("--review", choices=REVIEW_MODES, default=DEFAULT_REVIEW)
     host_plan.add_argument("--jobs", type=int, default=4, help="maximum concurrently dispatched subagents")
     host_plan.add_argument("--host", default="other", help="label only, e.g. claude-code or codex")
@@ -100,6 +103,45 @@ def build_parser() -> argparse.ArgumentParser:
             part.add_argument("--overhead", type=int, default=None,
                               help="estimated harness tokens per subagent turn context")
 
+    sub.add_parser("languages", help="Show source grammars, extensions, and availability")
+
+    graph_p = sub.add_parser("graph", help="Build and query source-linked code graphs")
+    graph_sub = graph_p.add_subparsers(dest="graph_command", required=True)
+    graph_build = graph_sub.add_parser("build", help="Run the configured open-source analyzers")
+    graph_build.add_argument("repo", type=lambda value: Path(value).expanduser().resolve())
+    graph_build.add_argument("--output", type=_abs, required=True, help="graph JSON output path")
+    graph_build.add_argument("--backend", default="auto", help="analyzer selection; default: auto")
+    graph_build.add_argument("--language", action="append", dest="languages", default=None)
+    graph_build.add_argument("--joern-home", type=_abs, default=None)
+    graph_build.add_argument("--depcruise-bin", type=_abs, default=None)
+    graph_build.add_argument("--timeout", type=int, default=300)
+    graph_build.add_argument("--max-methods", type=int, default=200,
+                             help="maximum methods for CFG export; omitted methods are reported")
+    graph_build.add_argument("--max-reaching-defs", type=int, default=50000)
+    graph_build.add_argument("--dataflow-path-method", action="append", dest="dataflow_path_methods",
+                             help="opt in to sampled value-flow paths for a named method")
+    graph_build.add_argument("--max-paths-per-method", type=int, default=5)
+    graph_query = graph_sub.add_parser("query", help="Select relations and their boundary nodes")
+    graph_query.add_argument("--graph", type=_abs, required=True,
+                             help="cbe-graph/1 JSON or a frozen context.json containing a graph")
+    graph_query.add_argument("--path", action="append", dest="paths", default=None)
+    graph_query.add_argument("--kind", choices=("import", "call", "cfg", "dataflow"), default=None)
+    graph_query.add_argument("--direction", choices=("both", "in", "out"), default="both")
+    graph_query.add_argument("--node", dest="node_id", default=None)
+    graph_caps = graph_sub.add_parser("capabilities", help="Read the analyzed language/type coverage")
+    graph_caps.add_argument("--graph", type=_abs, required=True)
+
+    context_p = sub.add_parser("context", help="Build or select frozen code chunks with graph evidence")
+    context_sub = context_p.add_subparsers(dest="context_command", required=True)
+    context_build = context_sub.add_parser("build", help="Parse source and validate an optional graph snapshot")
+    context_build.add_argument("repo", type=lambda value: Path(value).expanduser().resolve())
+    context_build.add_argument("--output", type=_abs, required=True)
+    context_build.add_argument("--graph", type=_abs, default=None)
+    context_build.add_argument("--path", action="append", dest="paths", default=None)
+    context_query = context_sub.add_parser("query", help="Select code chunks and their graph boundary")
+    context_query.add_argument("--context", type=_abs, required=True)
+    context_query.add_argument("--path", action="append", dest="paths", required=True)
+
     find_p = sub.add_parser("find", help="Search the generated symbol catalogue")
     find_p.add_argument("--run-dir", type=_abs, required=True)
     find_p.add_argument("--term", required=True)
@@ -108,6 +150,10 @@ def build_parser() -> argparse.ArgumentParser:
     query_p = sub.add_parser("query", help="Return one catalogue entry by symbol ID or file path")
     query_p.add_argument("--run-dir", type=_abs, required=True)
     query_p.add_argument("--id", required=True)
+    for source_parser in (generate_p, host_plan, context_build, graph_build):
+        source_parser.add_argument("--header-language", choices=("c", "cpp"), default=None,
+                                   help="interpret .h files as C or C++ when planning source context")
+
     return parser
 
 
@@ -116,7 +162,8 @@ def _host(args: argparse.Namespace):
 
     command = args.host_command
     if command == "plan":
-        return host_run.plan(args.repo, args.run_dir, review=args.review, jobs=args.jobs, host=args.host)
+        return host_run.plan(args.repo, args.run_dir, review=args.review, jobs=args.jobs, host=args.host,
+                             graph_path=args.graph)
     run_dir = args.run_dir or (host_run.latest_run(args.repo) if args.repo else None)
     if run_dir is None:
         raise host_run.HostRunError("pass --run-dir, or --repo to use the repository's latest run")
@@ -151,9 +198,69 @@ def _host(args: argparse.Namespace):
 
 
 def main(argv: list[str] | None = None) -> int:
+    from cbe.source_context import ContextError
+
     parser = build_parser()
     args = parser.parse_args(argv)
     try:
+        header_language = getattr(args, "header_language", None)
+        if header_language:
+            from dataclasses import replace
+            from cbe.source_context import GRAMMARS, register_language
+
+            spec = next(spec for spec in GRAMMARS if spec.name == header_language)
+            register_language(replace(spec, suffixes=tuple(dict.fromkeys((*spec.suffixes, ".h")))))
+        if args.command == "languages":
+            from cbe.source_context import available_languages
+
+            print(json.dumps(available_languages(), ensure_ascii=False, indent=2))
+            return 0
+        if args.command == "graph":
+            from cbe.graph import analyze_graph, query_graph
+
+            if args.graph_command == "build":
+                graph = analyze_graph(args.repo, args.output, backend=args.backend,
+                                      languages=args.languages, joern_home=args.joern_home,
+                                      depcruise_bin=args.depcruise_bin, timeout=args.timeout,
+                                      max_methods=args.max_methods, max_reaching_defs=args.max_reaching_defs,
+                                      dataflow_path_methods=args.dataflow_path_methods,
+                                      max_paths_per_method=args.max_paths_per_method)
+                value = {"output": str(args.output), "schema": graph["schema"],
+                         "backend": graph["backend"], "files": len(graph["source_manifest"]),
+                         "nodes": len(graph["nodes"]), "edges": len(graph["edges"]),
+                         "capabilities": graph["capabilities"], "diagnostics": graph["diagnostics"]}
+            else:
+                graph = json.loads(args.graph.read_text(encoding="utf-8"))
+                if isinstance(graph, dict) and graph.get("schema") == "cbe-context/1":
+                    graph = graph.get("graph")
+                if not isinstance(graph, dict):
+                    raise ValueError("input contains no graph; this run may have been planned without one")
+                if args.graph_command == "capabilities":
+                    if graph.get("schema") != "cbe-graph/1":
+                        raise ValueError("expected a cbe-graph/1 file")
+                    value = {"backend": graph.get("backend"),
+                             "capabilities": graph.get("capabilities", []),
+                             "diagnostics": graph.get("diagnostics", [])}
+                else:
+                    value = query_graph(graph, paths=args.paths, kind=args.kind,
+                                        direction=args.direction, node_id=args.node_id)
+            print(json.dumps(value, ensure_ascii=False, indent=2))
+            return 0
+        if args.command == "context":
+            from cbe.source_context import build_context, context_for_paths
+
+            if args.context_command == "build":
+                value = build_context(args.repo, args.paths, graph_path=args.graph)
+                args.output.parent.mkdir(parents=True, exist_ok=True)
+                args.output.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+                result = {"output": str(args.output), "schema": value["schema"],
+                          "files": len(value["files"]), "chunks": len(value["chunks"]),
+                          "diagnostics": value["diagnostics"]}
+            else:
+                value = json.loads(args.context.read_text(encoding="utf-8"))
+                result = context_for_paths(value, args.paths)
+            print(json.dumps(result, ensure_ascii=False, indent=2))
+            return 0
         if args.command == "generate":
             from datetime import datetime, timezone
             from uuid import uuid4
@@ -165,10 +272,20 @@ def main(argv: list[str] | None = None) -> int:
                 args.run_dir = latest_run(repo)
             run_dir = args.run_dir or (repo / ".codebase-analysis" / "runs" /
                 (datetime.now(timezone.utc).strftime("generate-%Y%m%dT%H%M%SZ-") + uuid4().hex[:8]))
+            if args.host == "api" and not args.model:
+                raise ValueError("--host api requires --model")
+            if args.host != "api" and (args.base_url is not None or args.api_key_env is not None):
+                raise ValueError("--base-url and --api-key-env require --host api")
+            if args.resume and header_language:
+                frozen = json.loads((run_dir / "context.json").read_text(encoding="utf-8"))
+                if any(row["language"] != header_language for row in frozen["files"]
+                       if Path(row["path"]).suffix.lower() == ".h"):
+                    raise ValueError("header language differs from the frozen context; start a new plan")
             model = args.model or ("swe-2-medium" if args.host == "devin" else "zai-coding-plan/glm-5.3-flash")
             value = generate(repo, run_dir, model=model, config=args.config,
                              jobs=args.jobs, review=args.review, timeout=args.timeout,
-                             host=args.host, resume=args.resume)
+                             host=args.host, resume=args.resume, graph_path=args.graph,
+                             api_base_url=args.base_url, api_key_env=args.api_key_env)
             print(json.dumps(value, ensure_ascii=False, indent=2))
             # 3 means docs were rendered but some tasks are still pending.
             return 0 if value.get("status") == "complete" else 3
@@ -182,6 +299,9 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         print(json.dumps(query(args.run_dir, args.id), ensure_ascii=False, indent=2))
         return 0
+    except ContextError as exc:
+        print(json.dumps(exc.to_dict(), ensure_ascii=False), file=sys.stderr)
+        return 2
     except (FileNotFoundError, ValueError, KeyError) as exc:
         print(str(exc), file=sys.stderr)
         return 2

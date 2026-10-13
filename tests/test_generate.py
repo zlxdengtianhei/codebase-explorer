@@ -14,6 +14,36 @@ from cbe.headless_completion import Completion, _events
 generator = importlib.import_module("cbe.generate")
 
 
+def _semantic_answer(prompt: str) -> dict:
+    """One valid semantic-stage answer, chosen from the prompt's own content."""
+    if "Modules:\n" in prompt and "INVENTORY (" not in prompt:
+        rows = json.loads(prompt.split("Modules:\n", 1)[1])
+        return {"names": [{"module": row["module"], "title": f"Area {row['module']}"}
+                           for row in rows]}
+    if "DOCUMENTATION (structured units)" in prompt:
+        return {"decision": "accepted", "issues": []}
+    if "INVENTORY (this batch" in prompt:
+        inv = json.loads(prompt.split("INVENTORY (this batch, authoritative ids):\n", 1)[1]
+                         .split("\n\n", 1)[0])
+        units, dispositions = [], {}
+        for file_row in inv:
+            for symbol in file_row["symbols"]:
+                units.append({"id": symbol["id"], "kind": symbol["kind"],
+                              "explain": f"Unit {symbol['name']} does its job.",
+                              "extras": [], "relations": [], "uncertainties": []})
+                dispositions[symbol["id"]] = {"how": "unit", "unit": symbol["id"],
+                                               "reason": "real behavior"}
+        return {"units": units, "dispositions": dispositions, "batch_notes": "batch ok"}
+    if "UNITS:\n" in prompt:
+        units = json.loads(prompt.split("UNITS:\n", 1)[1])
+        ids = [unit["id"] for unit in units]
+        return {"nodes": [{"id": "root", "parent": None, "title": "Root",
+                           "capability": "All units of the repository under one semantic root.",
+                           "summary": "Start here.", "unit_ids": ids}], "depends_on": []}
+    return {"overview": "A small work reservation package.",
+            "maintenance_navigation": "Open the root node."}
+
+
 def test_completion_events_keep_reasoning_and_reject_tools() -> None:
     events = [
         {"type": "text", "part": {"id": "part-1", "type": "text", "text": '{"ok":true}'}},
@@ -46,20 +76,7 @@ def test_generate_renders_and_accounts_for_each_physical_call(tmp_path, monkeypa
     def fake_invoke(**kwargs):
         task = kwargs["task"]
         seen.append(task)
-        if task == "module_names":
-            rows = json.loads(kwargs["prompt"].split("Modules:\n", 1)[1])
-            value = {"names": [{"module": row["module"], "title": f"Module {row['module']}"}
-                               for row in rows]}
-        elif task.startswith("module_"):
-            value = {"summary": "Reserves work from the supplied source.", "flow": "Checks input.",
-                     "test_coverage": "Tests the accepted input." if "test_jobs.py" in kwargs["prompt"] else "",
-                     "key_behaviors": [], "uncertainties": []}
-        elif task == "sample_review":
-            value = {"decision": "accepted", "issues": []}
-        else:
-            assert task == "system_overview"
-            value = {"overview": "A small work reservation package.",
-                     "maintenance_navigation": "Open the relevant module page."}
+        value = _semantic_answer(kwargs["prompt"])
         from cbe.headless_completion import _csv_row
         _csv_row(kwargs["csv_path"], {"task": task, "attempt": kwargs["attempt"],
                   "input_tokens": 200, "output_tokens": 2, "cache_tokens": 1,
@@ -73,20 +90,20 @@ def test_generate_renders_and_accounts_for_each_physical_call(tmp_path, monkeypa
     assert "apiKey" not in json.dumps(host_config)
     assert result["source_files"] == 2
     assert result["modules"] == 2
-    assert result["calls"] == len(seen) == 5
-    assert result["input_tokens"] == 1000
-    assert result["cache_tokens"] == 5
+    assert result["calls"] == len(seen) == 6
+    assert result["input_tokens"] == 1200
+    assert result["cache_tokens"] == 6
     assert result["status"] == "complete"
     index = (run_dir / "docs" / "INDEX.md").read_text(encoding="utf-8")
-    assert "## Subsystems" in index
-    assert "### Pkg" in index
-    assert "primary directory" in index
-    assert "src/pkg/jobs.py" in index
+    assert "## Responsibility tree" in index
+    pages = "".join(path.read_text(encoding="utf-8")
+                     for path in (run_dir / "docs" / "nodes").glob("*.md"))
+    assert "src/pkg/jobs.py" in pages
     assert str(tmp_path) not in index
     matches = generator.find(run_dir, "reserve_run")
     assert matches and generator.query(run_dir, matches[0]["id"])["file"] == "src/pkg/jobs.py"
     with (run_dir / "calls.csv").open(newline="", encoding="utf-8") as stream:
-        assert len(list(csv.DictReader(stream))) == 5
+        assert len(list(csv.DictReader(stream))) == 6
 
 
 def test_large_test_module_keeps_valid_coverage_in_text_or_json_shape() -> None:
@@ -257,17 +274,10 @@ def test_generate_renders_partial_run_and_resume_finishes_pending_parts(tmp_path
             _csv_row(kwargs["csv_path"], {"task": task, "attempt": attempt, "input_tokens": 5, "output_tokens": 1,
                                           "cache_tokens": 0, "result": "invalid_json:prose", "seconds": 0.01})
             return Completion(None, "invalid_json:prose", "Here is the module summary in prose.", None, 0.01)
-        if task == "module_names":
-            rows = json.loads(kwargs["prompt"].split("Modules:\n", 1)[1])
-            value = {"names": [{"module": row["module"], "title": f"Area {row['module']}"} for row in rows]}
-        elif task.startswith("module_"):
-            value = {"summary": "Reserves work.", "flow": "Returns the value.",
-                     "test_coverage": "Covers reserve." if "test_jobs.py" in kwargs["prompt"] else "",
-                     "key_behaviors": [], "uncertainties": []}
-        elif task == "sample_review":
-            value = {"decision": "accepted", "issues": []}
-        else:
+        if task == "system_overview":
             value = {"overview": "A tiny package.", "maintenance_navigation": "Open the jobs page. " * 300}
+        else:
+            value = _semantic_answer(kwargs["prompt"])
         _csv_row(kwargs["csv_path"], {"task": task, "attempt": attempt, "input_tokens": 200, "output_tokens": 2,
                                       "cache_tokens": 1, "result": "ok", "seconds": 0.01})
         return Completion(value, None, json.dumps(value), {"input": 200, "output": 2, "cache": 1}, 0.01)
@@ -279,8 +289,6 @@ def test_generate_renders_partial_run_and_resume_finishes_pending_parts(tmp_path
     assert first["normalized"] == ["system"]
     index = (run_dir / "docs" / "INDEX.md").read_text(encoding="utf-8")
     assert "## Generation notes" in index and "module_2" in index
-    assert "Documentation for this module is pending." in "".join(
-        path.read_text(encoding="utf-8") for path in (run_dir / "docs" / "modules").glob("*.md"))
     with (run_dir / "calls.csv").open(newline="", encoding="utf-8") as stream:
         results = {(row["task"], row["attempt"]): row["result"] for row in csv.DictReader(stream)}
     assert results[("system_overview", "1")] == "schema_error"
@@ -292,7 +300,7 @@ def test_generate_renders_partial_run_and_resume_finishes_pending_parts(tmp_path
     second = json.loads(capsys.readouterr().out)
     assert code == 0 and second["status"] == "complete" and second["pending"] == []
     assert seen[0] == "module_2" and "system_overview" in seen  # the overview is redone to cover module_2
-    assert "pending" not in (run_dir / "docs" / "INDEX.md").read_text(encoding="utf-8").split("## Subsystems")[0]
+    assert "are pending" not in (run_dir / "docs" / "INDEX.md").read_text(encoding="utf-8")
 
 
 def _tiny_repo(tmp_path):
@@ -314,17 +322,7 @@ def _scripted_model(monkeypatch, *, input_tokens: int, prompts: dict[str, str]):
     def fake_invoke(**kwargs):
         task = kwargs["task"]
         prompts[task] = kwargs["prompt"]
-        if task == "module_names":
-            rows = json.loads(kwargs["prompt"].split("Modules:\n", 1)[1])
-            value = {"names": [{"module": row["module"], "title": f"Area {row['module']}"} for row in rows]}
-        elif task.startswith("module_"):
-            value = {"summary": "Reserves work.", "flow": "Checks input.",
-                     "test_coverage": "Covers reserve." if "test_jobs.py" in kwargs["prompt"] else "",
-                     "key_behaviors": [], "uncertainties": []}
-        elif task == "sample_review":
-            value = {"decision": "accepted", "issues": []}
-        else:
-            value = {"overview": "A tiny package.", "maintenance_navigation": "Open a module page."}
+        value = _semantic_answer(kwargs["prompt"])
         _csv_row(kwargs["csv_path"], {"task": task, "attempt": kwargs["attempt"], "input_tokens": input_tokens,
                                       "output_tokens": 2, "cache_tokens": 0, "result": "ok", "seconds": 0.01})
         return Completion(value, None, json.dumps(value), {"input": input_tokens, "output": 2, "cache": 0}, 0.01)
@@ -340,7 +338,8 @@ def test_script_driver_sends_the_source_text_of_every_module_file(tmp_path, monk
     assert result["status"] == "complete" and "partial_reason" not in result
     bodies = {path: (repo / path).read_text(encoding="utf-8") for path in ("src/pkg/jobs.py", "tests/test_jobs.py")}
     for path, text in bodies.items():
-        sent = [prompt for task, prompt in prompts.items() if task.startswith("module_") and f"SOURCE FILE {path}" in prompt]
+        sent = [prompt for task, prompt in prompts.items()
+                if task.startswith("module_") and task[7:].isdigit() and f"==== FILE {path} ====" in prompt]
         assert sent and all(text in prompt for prompt in sent), f"{path} body not in its module prompt"
 
 
@@ -451,19 +450,8 @@ def test_call_without_reported_usage_is_recorded_not_failed(tmp_path, monkeypatc
     run_dir = tmp_path / "run"
 
     def quiet_invoke(**kwargs):
-        task = kwargs["task"]
-        if task == "module_names":
-            rows = json.loads(kwargs["prompt"].split("Modules:\n", 1)[1])
-            value = {"names": [{"module": row["module"], "title": f"Area {row['module']}"} for row in rows]}
-        elif task.startswith("module_"):
-            value = {"summary": "Reserves work.", "flow": "Checks input.",
-                     "test_coverage": "Covers reserve." if "test_jobs.py" in kwargs["prompt"] else "",
-                     "key_behaviors": [], "uncertainties": []}
-        elif task == "sample_review":
-            value = {"decision": "accepted", "issues": []}
-        else:
-            value = {"overview": "A tiny package.", "maintenance_navigation": "Open a module page."}
-        _csv_row(kwargs["csv_path"], {"task": task, "attempt": kwargs["attempt"], "input_tokens": "",
+        value = _semantic_answer(kwargs["prompt"])
+        _csv_row(kwargs["csv_path"], {"task": kwargs["task"], "attempt": kwargs["attempt"], "input_tokens": "",
                                       "output_tokens": "", "cache_tokens": "", "result": "ok", "seconds": 0.01})
         # The host reported no usage at all for this call.
         return Completion(value, None, json.dumps(value), None, 0.01)
@@ -475,3 +463,23 @@ def test_call_without_reported_usage_is_recorded_not_failed(tmp_path, monkeypatc
     assert {row["task"] for row in state["usage_unknown"]} >= {"module_1", "module_2"}
     status = (run_dir / "STATUS.md").read_text(encoding="utf-8")
     assert "Usage unknown" in status and "module_1" in status
+
+
+def test_generate_resume_rejects_a_different_graph(tmp_path) -> None:
+    import hashlib
+    from cbe import host_run
+    repo = _tiny_repo(tmp_path)
+    digest = lambda path: hashlib.sha256((repo / path).read_bytes()).hexdigest()  # noqa: E731
+    graph_a = {"schema": "cbe-graph/1", "backend": {"name": "test", "version": "1"},
+               "source_manifest": [{"path": "src/pkg/jobs.py", "sha256": digest("src/pkg/jobs.py")}],
+               "nodes": [{"id": "n", "kind": "function", "path": "src/pkg/jobs.py",
+                          "start_line": 1, "end_line": 1, "name": "reserve_run"}],
+               "edges": [], "capabilities": [], "diagnostics": []}
+    ga = tmp_path / "ga.json"
+    ga.write_text(json.dumps(graph_a), encoding="utf-8")
+    run_dir = tmp_path / "run"
+    host_run.plan(repo, run_dir, review="none", graph_path=ga)
+    gb = tmp_path / "gb.json"
+    gb.write_text(json.dumps({**graph_a, "backend": {"name": "test", "version": "2"}}), encoding="utf-8")
+    with pytest.raises(host_run.HostRunError, match="differs from the frozen graph"):
+        generator.generate(repo, run_dir, model="example/model", resume=True, graph_path=gb)

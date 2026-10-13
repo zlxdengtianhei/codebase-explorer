@@ -1,8 +1,8 @@
 """Regression: ECMA walker enumerates non-body executable named children.
 
 Fixtures live in tests/fixtures/ecma_executable_children, located from this
-file via Path(__file__). Inventory and packets are consumed read-only; this
-module does not modify them.
+file via Path(__file__). The inventory and its exclusive spans are consumed
+read-only; this module does not modify them.
 """
 
 from __future__ import annotations
@@ -11,7 +11,6 @@ from pathlib import Path
 
 from cbe.inventory import build_inventory, load_offsets
 from cbe.ir import FileIR, ResolutionStatus
-from cbe.packets import pack_inventory, packet_source, source_for_symbol_ids
 from cbe.parser import ParserSet
 
 FIXTURES = Path(__file__).resolve().parent / "fixtures" / "ecma_executable_children"
@@ -82,23 +81,9 @@ def _assert_exclusive_partition(inventory, repo: Path, path: str) -> None:
     }
 
 
-def _assert_packet_partition(inventory, repo: Path) -> None:
-    packets = pack_inventory(inventory, repo=repo, window_chars=8000)
-    for path, record in inventory.files.items():
-        offsets = load_offsets(repo, path)
-        owned = [0] * record.char_length
-        file_packets = [item for item in packets.packets if item.path == path]
-        assert file_packets
-        packet_ids = [item.packet_id for item in file_packets]
-        assert len(packet_ids) == len(set(packet_ids)), packet_ids
-        for packet in file_packets:
-            body = packet_source(offsets, packet)
-            assert len(body) == packet.source_chars
-            for span in packet.spans:
-                for index in range(span.start, span.end):
-                    assert owned[index] == 0, f"packet overlap {path}:{index}"
-                    owned[index] = 1
-        assert owned == [1] * record.char_length
+def _exclusive_text(offsets, symbol) -> str:
+    """Current consumer: a symbol's own exclusive spans, no nested body text."""
+    return "".join(offsets.text[span.start : span.end] for span in symbol.exclusive_spans)
 
 
 def _assert_parseset_matches_inventory(repo: Path, inventory, path: str) -> None:
@@ -182,19 +167,14 @@ def test_defaults_ts_enumerates_seven_non_residual_identities(tmp_path: Path) ->
     assert arrow.parent_id == choose.id
     assert inner.parent_id == next(symbol for symbol in symbols if symbol.name == "method").id
     assert factory.parent_id == next(symbol for symbol in symbols if symbol.name == "<class>").id
-    source, spans, _basis = source_for_symbol_ids(
-        offsets,
-        {symbol.id: symbol.to_dict() for symbol in inventory.symbols.values()},
-        [choose.id],
-    )
+    source = _exclusive_text(offsets, choose)
     assert "() => 17" not in source
     assert "function choose" in source
-    assert all(not (span["start"] < arrow.span.end and arrow.span.start < span["end"]) for span in spans)
+    assert all(not (span.start < arrow.span.end and arrow.span.start < span.end) for span in choose.exclusive_spans)
     for relation in _unresolved_calls(inventory, path):
         assert relation.get("status") == ResolutionStatus.UNRESOLVED.value
         assert relation.get("target_id") in {None, ""}
     _assert_exclusive_partition(inventory, repo, path)
-    _assert_packet_partition(inventory, repo)
     _assert_parseset_matches_inventory(repo, inventory, path)
 
 
@@ -234,24 +214,18 @@ def test_defaults_js_enumerates_five_non_residual_identities(tmp_path: Path) -> 
     assert default_cb.parent_id == exported.id
     inner = next(symbol for symbol in symbols if symbol.name == "inner")
     assert inner.kind != "method"
-    source, _spans, _basis = source_for_symbol_ids(
-        offsets,
-        {symbol.id: symbol.to_dict() for symbol in inventory.symbols.values()},
-        [exported.id],
-    )
+    source = _exclusive_text(offsets, exported)
     assert "() => 17" not in source
     for relation in _unresolved_calls(inventory, path):
         assert relation.get("status") == ResolutionStatus.UNRESOLVED.value
         assert relation.get("target_id") in {None, ""}
     _assert_exclusive_partition(inventory, repo, path)
-    _assert_packet_partition(inventory, repo)
     _assert_parseset_matches_inventory(repo, inventory, path)
 
 
 def test_nested_destructuring_defaults_are_children_of_pack(tmp_path: Path) -> None:
     repo = _copy_evidence(tmp_path, ("nested_destruct.ts", "nested_destruct.js"))
     inventory = build_inventory(repo)
-    _assert_packet_partition(inventory, repo)
     for path in ("nested_destruct.ts", "nested_destruct.js"):
         offsets = load_offsets(repo, path)
         symbols = _non_residual(inventory, path)
@@ -267,11 +241,7 @@ def test_nested_destructuring_defaults_are_children_of_pack(tmp_path: Path) -> N
         assert nested.kind == "function"
         assert {symbol.kind for symbol in symbols} == {"function", "lambda"}
         assert len(symbols) == 3
-        source, _spans, _basis = source_for_symbol_ids(
-            offsets,
-            {symbol.id: symbol.to_dict() for symbol in inventory.symbols.values()},
-            [pack.id],
-        )
+        source = _exclusive_text(offsets, pack)
         assert "() => 1" not in source
         assert "function nested" not in source
         _assert_exclusive_partition(inventory, repo, path)
@@ -281,7 +251,6 @@ def test_nested_destructuring_defaults_are_children_of_pack(tmp_path: Path) -> N
 def test_computed_key_factory_is_function_not_method(tmp_path: Path) -> None:
     repo = _copy_evidence(tmp_path, ("computed.ts", "computed.js"))
     inventory = build_inventory(repo)
-    _assert_packet_partition(inventory, repo)
     for path in ("computed.ts", "computed.js"):
         offsets = load_offsets(repo, path)
         symbols = _non_residual(inventory, path)
@@ -303,7 +272,6 @@ def test_computed_key_factory_is_function_not_method(tmp_path: Path) -> None:
 def test_decorator_closures_enter_denominator(tmp_path: Path) -> None:
     repo = _copy_evidence(tmp_path, ("decorator.ts", "decorator.js"))
     inventory = build_inventory(repo)
-    _assert_packet_partition(inventory, repo)
     for path in ("decorator.ts", "decorator.js"):
         offsets = load_offsets(repo, path)
         symbols = _non_residual(inventory, path)
@@ -345,7 +313,6 @@ def test_pure_type_function_shapes_are_not_runtime_closures(tmp_path: Path) -> N
     assert "() => void" in _span_text(offsets, next(symbol for symbol in symbols if symbol.name == "Handler"))
     assert "() => number" in _span_text(offsets, typed)
     _assert_exclusive_partition(inventory, repo, path)
-    _assert_packet_partition(inventory, repo)
     _assert_parseset_matches_inventory(repo, inventory, path)
 
 
@@ -372,7 +339,6 @@ def test_field_initializer_closures_and_direct_members_stay_methods(tmp_path: Pa
     assert _span_text(offsets, boot_fn) == "function bootFn() { return 2; }"
     assert len(symbols) == 5
     _assert_exclusive_partition(inventory, repo, path)
-    _assert_packet_partition(inventory, repo)
     _assert_parseset_matches_inventory(repo, inventory, path)
 
 
@@ -392,4 +358,3 @@ def test_payload_children_are_subtracted_from_parent_exclusive_spans(tmp_path: P
                 for parent_span in parent.exclusive_spans:
                     assert not parent_span.overlaps(child.span), (parent.id, child.id)
         _assert_exclusive_partition(inventory, repo, path)
-    _assert_packet_partition(inventory, repo)

@@ -1,109 +1,164 @@
 # Codebase Explorer
 
-Codebase Explorer (CBE) generates a navigable map of a repository: a two-level INDEX, one page per module, and a symbol catalogue you can query. CBE keeps every deterministic step in a Python CLI: it scans source, groups files by directory and imports, checks every model result, renders the pages, and verifies coverage. The model work runs in one of two ways:
+Codebase Explorer (CBE) turns source code and code graphs into structured explanations, a semantic module tree, and a searchable documentation index. It freezes the source, splits it at syntax boundaries, and supplies the relevant code and graph evidence to the model. The same generation state supports host-agent subagents and an OpenAI-compatible API.
 
-- **Inside Claude Code, Codex, or another agent harness** (`cbe host`): the host agent dispatches one subagent per task on your own subscription. No API key is needed, and an interrupted run resumes from its state file.
-- **From a shell with a signed-in OpenCode or Devin CLI** (`cbe generate`): a Python controller runs fresh, tool-free completions through that CLI.
+This checkout contains **2.2.0.dev0**. It is a development version; see [CHANGELOG.md](CHANGELOG.md) for the changes from 2.1.1. Python 3.12 or 3.13 is required.
 
-## Install and generate
+## Install and inspect a repository
 
-Requires Python 3.12 or 3.13 and [uv](https://docs.astral.sh/uv/getting-started/installation/). Install the isolated CBE command, pinned to a release tag, with one shell line:
-
-```sh
-uv tool install --python 3.13 'https://github.com/zlxdengtianhei/codebase-explorer/archive/refs/tags/v2.1.1.zip'
-```
-
-Replace `v2.1.0` with the tag you want; a commit archive (`.../archive/<commit>.zip`) pins just as firmly. The release archive does not include the `test_repos` submodules. Installing from `main` (`https://github.com/zlxdengtianhei/codebase-explorer/archive/refs/heads/main.zip`) follows the newest commit instead. `cbe --version` prints the installed version.
-
-### Inside Claude Code or Codex
-
-Install the agent skill into the project, then ask the agent to document the repository:
+From this checkout:
 
 ```sh
-"$(uv tool dir --bin)/cbe-install" install --host claude-code   # or --host codex
+uv tool install --python 3.13 .
+cbe --version
+cbe languages
 ```
 
-Claude Code users can instead install the plugin, which adds the same skill and a restricted `cbe-writer` subagent: `claude plugin marketplace add zlxdengtianhei/codebase-explorer`, then `claude plugin install codebase-explorer@codebase-explorer`.
-
-The skill tells the host agent to run this loop:
+The standard installation includes Tree-sitter grammars for C, C++, Python, JavaScript, TypeScript/TSX, Java, and Go. The `languages` extra adds Ruby, Rust, PHP, and C#; `languages-community` adds the community grammars for Kotlin and Swift:
 
 ```sh
-cbe host plan "$PWD" --review sample --jobs 4 --host claude-code
-cbe host next --run-dir RUN          # lease up to --jobs ready tasks; dispatch one subagent each
-cbe host submit --run-dir RUN --task TASK   # check the JSON the subagent wrote
-cbe host verify --run-dir RUN        # coverage, links, catalogue, source drift
-cbe host import-usage --run-dir RUN --harness claude-code   # or codex
-cbe host cost --run-dir RUN          # exact tokens where recorded, labelled estimates otherwise
+uv tool install --python 3.13 '.[graphs,languages,languages-community]'
+cbe languages
 ```
 
-`--review` is `none`, `sample` (one review of the largest module), or `all` (one review per module, each finding queues one repair). Run state lives in `RUN/host/state.json`; `cbe host resume --repo "$PWD"` lets any host continue after a crash. The cost report prices tokens at API list rates as a comparison; on a subscription the run uses plan quota, not per-token charges. Per-host details are in the skill's `references/claude-code.md` and `references/codex.md`.
+All use the same context interface. `cbe languages` reports extensions, grammar versions, provenance, availability, and plugin errors. Missing grammars and parse errors remain visible in diagnostics. ABAP, Jimple bytecode, and Ghidra output do not currently have a matching source grammar in this interface. A `.h` file defaults to C with an ambiguity diagnostic. Pass `--header-language cpp` to `context build`, `graph build`, `host plan`, or `generate` for C++ headers (`c` also selects C explicitly). A resumed run keeps its original language choice.
 
-### With OpenCode or Devin CLI
-
-Sign in to the model provider using OpenCode's normal setup, then run from the repository you want to document:
+Build a source context without making a model call:
 
 ```sh
-"$(uv tool dir --bin)/cbe" generate "$PWD" --model zai-coding-plan/glm-5.3-flash
+cbe context build /absolute/path/to/repo --output /absolute/path/to/context.json
+cbe context query --context /absolute/path/to/context.json --path src/example.py
 ```
 
-Choose a `provider/model` that your OpenCode account can use. `--host opencode` and `--review sample` are the current defaults. To use a signed-in Devin CLI account instead, first check `devin auth status` and `devin models list --format json`, then run:
+Chunks have stable identifiers within a snapshot, original byte and line ranges, source text, hashes, and declaration context. Nested declarations do not duplicate their parent's source. Joining a file's chunks in byte order reconstructs that file. Large declarations are segmented at syntax boundaries; indivisible large tokens and unsupported inputs are reported explicitly.
+
+## Generate and query code graphs
+
+Tree-sitter provides syntax and code boundaries. Import resolution, calls, control flow, and data flow come from external analyzers. Each graph records the backend version, input hashes, capabilities, unresolved targets, and analysis conditions. A graph that does not match the current source is rejected when building a context.
+
+The graph adapters use [Joern](https://joern.io/), [Grimp](https://grimp.readthedocs.io/), and [dependency-cruiser](https://github.com/sverweij/dependency-cruiser) according to the language and graph type. The selected integration versions are Joern 4.0.654, Grimp 3.17, and dependency-cruiser 16. Install the `graphs` extra for Grimp (`uv tool install --python 3.13 '.[graphs]'`). Joern and dependency-cruiser are separate installations. The CBE package does not include Joern, a JDK, or Node dependencies.
+
+| Source language | Import backend | Call / CFG / local definition-use backend | Relevant conditions |
+|---|---|---|---|
+| C / C++ | Joern include declarations | Joern | Include paths, macros and compilation settings affect results; virtual calls may bind to a static base target. |
+| Python | Grimp, plus Joern declarations | Joern | Package layout affects imports; dynamic and external calls can remain unresolved. |
+| JavaScript / TypeScript / TSX | dependency-cruiser, plus Joern declarations | Joern | Dynamic imports, CommonJS and external targets may remain partial. |
+| Java | Joern declarations | Joern | Project types and dependencies affect resolution. |
+| Go | Joern declarations | Joern | Cross-package calls may remain unresolved or external. |
+| Ruby | Joern declarations | Joern | The frontend excludes `test`, `tests` and `spec` paths by default. |
+| Rust | Joern declarations | Joern | The frontend requires a Cargo project layout; a flat source directory can fail. |
+| PHP | Joern declarations | Joern | An external PHP runtime (7 or later) is required. The local trial without it reported a failed analysis. |
+| C# | Joern declarations | Joern | Namespace and project layout affect resolution; the bundled AST generator must run on the host platform. |
+| Kotlin | Joern declarations | Joern | Project dependencies and build conditions affect resolution. |
+| Swift | Joern declarations | Joern | The frontend parses per file; the tested cross-file call remained external. |
+
+Joern import declarations do not establish a resolved file dependency. Capabilities describe the actual run, including frontend failures; a registered source language alone does not establish semantic graph coverage. Use an installed Joern distribution and, when needed, a local dependency-cruiser executable:
 
 ```sh
-"$(uv tool dir --bin)/cbe" generate "$PWD" --host devin --model swe-2-medium --jobs 3
+cbe graph build /absolute/path/to/repo \
+  --output /absolute/path/to/graph.json \
+  --joern-home /absolute/path/to/joern-cli \
+  --depcruise-bin /absolute/path/to/node_modules/.bin/depcruise
+cbe graph capabilities --graph /absolute/path/to/graph.json
+cbe graph query --graph /absolute/path/to/graph.json --path src/example.py --kind call
+cbe context build /absolute/path/to/repo \
+  --graph /absolute/path/to/graph.json --output /absolute/path/to/context.json
 ```
 
-The SWE-2 Medium example showed a Free cost label on an eligible signed-in account. [Devin's pricing page](https://devin.ai/pricing) lists free SWE-2 use in Desktop and CLI through **October 16, 2026**; check `devin models list --format json` and your account before each large run, because the offer and model cost can change. When SWE-2 is no longer free, use the OpenCode example above with `--model zai-coding-plan/glm-5.3-flash` **if your OpenCode account has that coding plan**, or choose another supported `provider/model` after checking its cost. The fallback is not promised to be free. This host sends whole-module prompts through Devin's non-interactive CLI, uses a fresh isolated working directory per call, denies tools, and binds model identity and usage to the CLI's local session record. `--jobs` controls concurrent independent modules. `--review none` explicitly skips the default sampled model review, while mechanical JSON and source checks remain. For a custom host configuration, pass `--config /absolute/path/to/config.json`; keep credentials in the host's own authentication store or protected configuration. CBE does not read the host's credential file or require a separate CBE API key.
+`--language` can limit analysis to a language. `--max-methods` and `--max-reaching-defs` bound exports; `--dataflow-path-method` opts into sampled value-flow paths. Omitted scope is reported. `graph query` accepts `import`, `call`, `cfg`, or `dataflow`, a node ID, and an edge direction (`in`, `out`, or `both`). A local query retains boundary endpoints and identifies omitted scope. It can read the graph embedded in a generation run's frozen `context.json`, so host agents expand the same evidence used at planning. The full graph stays in the output file; `graph build` prints a compact result and capability report.
 
-The command prints the run directory, its `docs/INDEX.md` path, the status, and token totals. Each run gets a fresh directory under `.codebase-analysis/runs/`; it leaves earlier runs and any existing `docs/codebase` pages intact. `--review` takes `none`, `sample` (default: one review of the largest module), or `all` (one review per module; each finding queues one repair).
+Graphs produced by CBE record the registered source set and recognized repository configuration files. Context building and generation check their hashes and reject additions, removals, edits, or unstable builds. These checks run before and after analysis of the repository; they do not create an isolated filesystem snapshot. External graphs without configuration provenance retain source-manifest validation, with configuration identity unknown.
 
-The model receives a fixed instruction prefix, whole source files in its assigned module, and dependency signatures. Tools are denied for these child completions. A file above the usual module grouping size stays whole in a standalone module, up to the stated single-file limit. Test files receive a module-level coverage summary and a mechanical symbol catalogue, not prose for every test function.
+Graph kinds have different meanings:
 
-## Runs never void, and resume from their records
+- **Import** edges identify static module, package, or include dependencies according to the selected resolver.
+- **Call** edges are static analysis results. Dynamic dispatch, reflection, unresolved imports, and external code can leave targets unknown or conditional.
+- **CFG** edges describe the analyzer's control-flow nodes. They are not a runtime execution trace.
+- **Dataflow** edges or paths describe the analyzer's definition/use or value-flow analysis, with its stated scope and library models. A local definition/use graph does not prove complete interprocedural data flow.
 
-Both `cbe generate` and `cbe host` drive the same run state, so they behave the same way when a model answer is wrong:
+C/C++ include paths, macros, build configuration, and generated sources affect analysis. Dynamic languages also require explicit uncertainty. Consult the generated `capabilities` and `diagnostics` instead of treating a nonempty graph as complete coverage.
 
-- CBE checks every answer. A length or schema miss is re-asked once with the exact error. If the second answer still misses but has usable content, CBE truncates or reshapes it, accepts it, and notes the change on the page ("Generation notes") and in the progress log. Only an answer with nothing usable (for example, prose instead of JSON) marks the task failed.
-- A failed task never discards the others. Every finished module renders; a failed module gets a placeholder page that lists its files, and a failed overview is replaced by a mechanical one. The run status is then `partial`, and `cbe generate` exits with code 3.
-- The overview is its own task. When a module finishes after the overview was written, the overview is queued again.
+## Generate through a host agent
 
-Each run writes its progress as it goes: `RUN/progress.log` has one line per event (claimed, accepted, re-asked, normalized, failed, retried, rendered, with timings), `RUN/STATUS.md` is a table of every task's state, attempts, seconds, and output path, and `RUN/host/state.json` is the machine-readable record. To continue after a crash or a failure, fix the cause and run `cbe generate "$PWD" --resume` (or `cbe host resume --repo "$PWD"` inside an agent harness). Resume adopts results that finished before the interruption, releases lost work, and gives failed tasks fresh attempts. Missing usage stays unknown rather than becoming zero.
-
-## Read and query the result
-
-Open the `index` path printed by `cbe generate`. Its module links are relative, so the docs can move with the run. The index lists all source files assigned to modules. For Python, CBE also publishes IDs for top-level functions, classes, and their direct methods, plus a mechanically extracted table of lexical guards and failure statements. The catalogue does not cover every nested symbol. These syntax facts do not prove reachability, runtime binding, or the model's narrative. Languages without a supported symbol parser still receive whole-file module summaries and file entries; they do not gain Python-level symbol claims.
-
-Use the `run_dir` value from the generation response:
+Install the bundled skill in the project where the agent will run:
 
 ```sh
-RUN=/absolute/path/to/your/local/run
-"$(uv tool dir --bin)/cbe" find --run-dir "$RUN" --term reserve_run
-"$(uv tool dir --bin)/cbe" query --run-dir "$RUN" --id 'src/package/jobs.py::reserve_run'
+cbe-install install --host claude-code   # or --host codex
 ```
 
-`find` returns matching published symbol IDs and page paths; copy an exact returned ID into `query`. The Markdown index and module links do not contain the author's machine path.
-
-`summary.json` and `calls.csv` are the usage record. The CSV has one row per physical host call, including retries and failures, with input, output, cache-read tokens, result, and elapsed seconds when the host reports them. OpenCode reports non-cached input and output including reasoning; its `priced_usd` is a comparison estimate at $5/$25/$0.50 per million input/output/cache-read tokens, not a subscription invoice. Devin's CLI reports input, output, and cache counters through its session record; whether its input counter includes cache reads is unverified, and some calls omit the cache counter. CBE preserves known input/output totals, marks missing cache as unknown, and leaves Devin's `priced_usd` unset.
-
-## Scope and compatibility
-
-The host-driven `host` path supports any harness whose agent can start subagents and run shell commands; Claude Code and Codex are documented. The script-driven `generate` path supports OpenCode and Devin CLI.
-
-Version 2.1.1 fixes `cbe generate` (OpenCode and Devin): 2.1.0 sent the model only file paths, so every page was written from names alone while the run still reported `complete`. The script driver again embeds each module's source text; `cbe host` still hands paths to subagents that read the files. `generate` now also marks a run `partial` with the reason `source_not_delivered` (in `summary.json`, `STATUS.md`, and `progress.log`) when the model reports under half as many input tokens (cache reads included) as the source it was sent. Delete 2.1.0 script-driver runs and regenerate them.
-
-Version 2.1.0 removed the older `analyze` / `native-next` / `native-record` workflow, its about 50 subcommands, and the `cbe-mcp` and `cbe-http` adapters. Runs made with them cannot be continued by 2.1.0. Their last version is commit `c58f4e2` (release 2.0.0); install that commit's archive to keep using them.
-
-The optional agent skill can still be installed for discovery and guidance:
+The host uses its existing subagent facility and subscription. It drives the CLI's durable task loop:
 
 ```sh
-"$(uv tool dir --bin)/cbe-install" install --interactive
+cbe host plan /absolute/path/to/repo --graph /absolute/path/to/graph.json \
+  --run-dir /absolute/path/to/run --review sample --jobs 4 --host claude-code
+cbe host next --run-dir /absolute/path/to/run
+# Dispatch the returned task instructions to a subagent, then submit its JSON result.
+cbe host submit --run-dir /absolute/path/to/run --task TASK
+cbe host verify --run-dir /absolute/path/to/run
 ```
 
-Choose the host and project in the installer. The generated docs are separate from the skill installation. [Design Doc Protocol](https://github.com/zlxdengtianhei/design-doc-protocol) can consume selected CBE pages through explicit file paths; the products do not share a database.
+The skill describes the complete loop and the result contracts. Detail authors receive their assigned frozen source chunks and local graph evidence. The module stage receives structured explanations and relationships; it assigns each unit one primary place in a semantic tree. A directory or a dense set of import edges does not by itself define a module's responsibility.
 
-To upgrade the installed command, reinstall with the new tag:
+`--graph` is optional. Without it the context explicitly records that no analyzed graph was supplied. The model must not invent missing relations. `--review` selects `none`, `sample`, or `all`. Operational completion, structural validity, and semantic review are separate results.
+
+## Generate through an API
+
+Use any configured OpenAI-compatible chat-completions endpoint:
 
 ```sh
-uv tool install --reinstall --python 3.13 'https://github.com/zlxdengtianhei/codebase-explorer/archive/refs/tags/v2.1.1.zip'
+# Supply the credential through the named environment variable using your normal secret setup.
+cbe generate /absolute/path/to/repo --host api \
+  --base-url https://your-endpoint.example/v1 --api-key-env CBE_API_KEY \
+  --model your-model-id --graph /absolute/path/to/graph.json \
+  --run-dir /absolute/path/to/run --review sample
 ```
 
-To develop from a checkout, run `uv sync --python 3.13 --group dev` and `uv run pytest -q`. The package uses the MIT license in [LICENSE](LICENSE).
+`--config /absolute/path/to/config.json` provides host configuration. API credentials stay in environment variables or the supported credential-file reference. If no credential is configured, CBE omits the Authorization header for endpoints that allow unauthenticated requests. Do not put credentials in a URL. The API client records returned usage and preserves unknown values when usage is absent. Failed completions retain a bounded, redacted provider response, available usage, and finish reason before text extraction; truncation is explicit. A response with only reasoning and no answer remains a failed attempt. Reported token counts are transport/accounting evidence; they do not prove that a model understood the code.
+
+The signed-in OpenCode and Devin drivers remain available:
+
+```sh
+cbe generate /absolute/path/to/repo --host opencode --model provider/model
+cbe generate /absolute/path/to/repo --host devin --model your-supported-model
+```
+
+Choose a model that your own account can use. CBE does not promise that a provider, model, or subscription is free.
+
+## Read, resume, and verify
+
+Open the `index` path in the generation result. The output includes the semantic navigation tree, detail explanations with source anchors, and a machine-readable catalogue. Use exact IDs returned by `find`:
+
+```sh
+cbe find --run-dir /absolute/path/to/run --term Serializer
+cbe query --run-dir /absolute/path/to/run --id 'ID-FROM-FIND'
+cbe host status --run-dir /absolute/path/to/run
+```
+
+Queries return each symbol's disposition. Grouped symbols link to their owning unit's page and anchor; `grp:` unit IDs are searchable too. An `index_only` result has no explanation page and includes its reason. Existing semantic catalogues can be queried without regenerating model output.
+
+Run state, task leases, attempts, accepted results, and the frozen context live inside the run directory. `STATUS.md` and `progress.log` expose progress. A failed task does not discard completed work. Continue after an interruption with:
+
+```sh
+cbe host resume --run-dir /absolute/path/to/run
+# Or use the same script driver and configuration:
+cbe generate /absolute/path/to/repo --host api --model your-model-id \
+  --base-url https://your-endpoint.example/v1 --api-key-env CBE_API_KEY \
+  --run-dir /absolute/path/to/run --resume
+```
+
+Source or graph drift is a reason to make a new plan. An old graph cannot silently become evidence for a new source revision. Verification checks the structure, coverage, source references, catalogue navigation to actual page anchors, and recorded review state; independent semantic review remains responsible for whether the explanations are correct and useful.
+
+Usage reports distinguish known counters, estimates, and missing values. Host-agent usage can be imported where the harness provides the corresponding session records. Unknown model prices remain `null` in JSON and `unknown` in the cost report, even when token counts are exact. `cbe host cost --price INPUT,OUTPUT,CACHE_WRITE,CACHE_READ` accepts supplied rates in USD per million tokens. Price equivalents are not subscription invoices.
+
+## Development and compatibility
+
+```sh
+uv sync --python 3.13 --group dev
+uv run pytest -q
+```
+
+The external graph tools are optional at installation time. Tests that require a real analyzer need that analyzer configured; ordinary package tests also exercise missing backends and invalid inputs. Platform support must be assessed for both CBE and the chosen analyzer.
+
+Version 2.1.0's script driver was withdrawn because it sent file names without source bodies. 2.1.1 repaired source delivery. The 2.2 development workflow introduces structured detail and semantic ownership; do not assume an old run is compatible unless its schema is accepted by the CLI. The former `analyze` / `native-next` / `native-record`, MCP, and HTTP-service workflow remains retired in Git history.
+
+The generated files can be consumed by other tools through explicit paths. CBE does not require a shared database or a second task scheduler. To remove the isolated command, run `uv tool uninstall codebase-explorer`. The product license is [MIT](LICENSE); external analyzers and grammar packages retain their own licenses.

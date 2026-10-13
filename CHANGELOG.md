@@ -1,5 +1,35 @@
 # Changelog
 
+## 2.2.0.dev0 (unreleased)
+
+- Add a shared Tree-sitter source context with declaration metadata, original
+  byte ranges, hashes, diagnostics, and optional analyzed graph evidence.
+- Integrate structured detail, unique primary ownership in a semantic module
+  tree, source anchors, and catalogue queries into the existing host/script
+  generation state machine.
+- Add `graph build/query/capabilities`, `context build/query`, and `languages`
+  commands. External graph analyzers report capabilities and unresolved scope
+  independently for each language and graph kind.
+- Add an OpenAI-compatible API driver with configurable endpoint, model, and
+  credential environment variable, using the same tasks and recovery path.
+- Report operational completion, deterministic structural checks, and semantic
+  review separately. Normalize API cache usage without counting it twice.
+- Preserve exact source bytes across syntax chunks, support optional additional
+  grammars, and keep known-empty files in the index without model calls.
+- Validate frozen context, source and recognized configuration identities when
+  context and generation consume graph evidence. Expose graph expansion from
+  the same frozen context, using the installed interpreter without requiring PATH.
+- Preserve bounded, redacted failed API responses and available finish/usage
+  metadata. Repairs rebuild ownership and may retain their own existing group IDs.
+- Keep unknown model prices unknown even when token counts are exact; accept
+  explicit finite, nonnegative rates without silently substituting comparison prices.
+- Resolve grouped inventory IDs and synthetic `grp:` units in `find`/`query`,
+  including existing semantic catalogues. Verify primary page anchors and expose
+  index-only reasons. Do not label a graph with no completed backend as successfully empty.
+- Remove unused legacy packet, literal, ledger and rendering helpers; retain
+  source guards, current callable contracts and offline token counting. This is
+  separate from the earlier 2.0 → 2.1 source reduction.
+
 ## 2.1.1
 
 - **2.1.0 withdrawn.** The script driver (`cbe generate`) rebuilt modules from
