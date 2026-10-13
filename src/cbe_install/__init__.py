@@ -7,4 +7,4 @@ SOURCE_PARENT_LEVEL = 2
 SOURCE_SKILL_BASE = ".dsh/skills"
 SOURCE_SCRIPT = None
 RUNTIME_SKILLS = ("codebase-explorer",)
-RUNTIME_MODULES = ("cbe", "cbe_install.http_adapter")
+RUNTIME_MODULES = ("cbe",)

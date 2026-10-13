@@ -1,31 +1,20 @@
 [project]
 name = "codebase-explorer"
-version = "2.0.0"
+version = "2.1.1"
 description = "Source-grounded, navigable documentation for software repositories"
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.12,<3.14"
 dependencies = [
-    "markdown-it-py>=4.0,<5",
-    "networkx>=3.3",
-    "orjson>=3.10,<4",
-    "pydantic>=2.9",
     "tiktoken>=0.9,<1",
     "tree-sitter>=0.23.2",
     "tree-sitter-javascript>=0.23.1",
     "tree-sitter-typescript>=0.23.2",
 ]
 
-[project.optional-dependencies]
-mcp = [
-    "mcp>=2.0",
-]
-
 [project.scripts]
 cbe = "cbe.cli:main"
-cbe-mcp = "cbe.mcp_server:main"
 cbe-install = "cbe_install.cli:main"
-cbe-http = "cbe_install.http_adapter:main"
 
 [build-system]
 requires = ["hatchling>=1.27,<2"]
@@ -42,6 +31,9 @@ only-include = ["src/cbe", "src/cbe_install", ".dsh/skills/codebase-explorer", "
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# Several test modules import shared helpers from sibling test modules. Put
+# tests/ on sys.path so this also works with --import-mode=importlib (CI).
+pythonpath = ["tests"]
 markers = [
     "failpoint: exercises environment-variable failpoints via subprocess",
 ]

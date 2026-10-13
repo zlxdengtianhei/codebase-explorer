@@ -1,8 +1,12 @@
 """Deterministic atoms preserve local statement syntax, not narrative truth."""
 import pytest
-from cbe.runner import analyze
-from cbe.store import LedgerStore
+from cbe.inventory import build_inventory
 from cbe.syntax_facts import atoms_for, check_atom_refs
+
+
+def _ledger(repo):
+    # The same ledger shape generate builds for its condition and failure tables.
+    return {"repo_root": str(repo), "inventory": build_inventory(repo).to_dict()}
 
 
 def test_guarded_return_raise_append_and_update_atoms(tmp_path):
@@ -18,9 +22,7 @@ def test_guarded_return_raise_append_and_update_atoms(tmp_path):
         raise ValueError('limit')
     return {'total': usage.get('total') or 0 + counter}
 """)
-    run = tmp_path / "run"
-    analyze(repo, run, documentation_profile="module-first-v2")
-    ledger = LedgerStore(run).open()
+    ledger = _ledger(repo)
     sid = next(s for s, row in ledger["inventory"]["symbols"].items() if row["name"] == "f")
     rows = atoms_for(ledger, sid)["atoms"]
     assert [r["kind"] for r in rows] == ["update", "return_none", "append_call", "raise_expression", "return_expression"]
@@ -39,9 +41,7 @@ def test_fragment_atom_does_not_leak_unpresented_guard(tmp_path):
     repo.mkdir()
     text = "def f(secret_condition):\n if secret_condition:\n  return\n"
     (repo / "ops.py").write_text(text)
-    run = tmp_path / "run"
-    analyze(repo, run, documentation_profile="module-first-v2")
-    ledger = LedgerStore(run).open()
+    ledger = _ledger(repo)
     sid = next(s for s, row in ledger["inventory"]["symbols"].items() if row["name"] == "f")
     spans = [{"start": text.index("return"), "end": text.index("return") + 6}]
     rows = atoms_for(ledger, sid, spans)["atoms"]
@@ -54,8 +54,6 @@ def test_nested_function_is_not_an_outer_statement(tmp_path):
     repo = tmp_path / "repo"
     repo.mkdir()
     (repo / "ops.py").write_text("def outer():\n def inner():\n  raise KeyError('nested')\n return inner\n")
-    run = tmp_path / "run"
-    analyze(repo, run, documentation_profile="module-first-v2")
-    ledger = LedgerStore(run).open()
+    ledger = _ledger(repo)
     sid = next(s for s, row in ledger["inventory"]["symbols"].items() if row["name"] == "outer")
     assert atoms_for(ledger, sid)["atoms"] == []
