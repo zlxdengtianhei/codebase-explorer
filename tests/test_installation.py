@@ -6,7 +6,6 @@ import io
 import json
 import os
 import re
-import hashlib
 import subprocess
 from pathlib import Path
 

@@ -74,13 +74,10 @@ def test_validate_details_flags_missing_disposition_unknown_kind_and_bad_relatio
     assert "relation kind" in joined and "got 'likes'" in joined
 
 
-def test_length_is_a_diagnostic_not_a_hard_failure() -> None:
+def test_length_is_not_a_hard_failure() -> None:
     inventory = _inventory()
     payload = _good_payload(inventory)
     payload["units"][0]["explain"] = "This is a very long explanation. " * 100
-    # The overage is recorded for a reader, but the payload is still valid.
-    diagnostics = semantic.length_diagnostics(payload)
-    assert any(row["kind"] == "explain_length" for row in diagnostics)
     assert semantic.validate_details(payload, ["pkg/jobs.py"], inventory, set()) == []
 
 
@@ -162,18 +159,6 @@ def test_mechanical_tree_covers_every_unit_and_is_labelled_a_fallback() -> None:
     owned = {uid for node in tree["nodes"] for uid in node["unit_ids"]}
     assert owned == set(units)
     assert semantic.validate_tree(tree, set(units)) == []
-
-
-def test_merge_replacement_stays_inline_below_the_measured_threshold(tmp_path) -> None:
-    units = {"a.py::f": {"id": "a.py::f", "explain": "same fact", "extras": []},
-             "b.py::g": {"id": "b.py::g", "explain": "same fact", "extras": []}}
-    owner = {"a.py::f": "node-a", "b.py::g": "node-b"}
-    replacements = [{"merge_id": "m1", "fragment_words": "same fact",
-                     "primary_unit": "a.py::f",
-                     "targets": [{"unit": "b.py::g", "field": "explain"}]}]
-    working, applied, skipped = semantic.apply_merge_replacements(
-        units, replacements, lambda uid: uid, owner, min_saving=24)
-    assert not applied and skipped and working["b.py::g"]["explain"] == "same fact"
 
 
 def test_render_publishes_node_pages_source_links_and_a_compatible_catalog(tmp_path) -> None:

@@ -40,17 +40,6 @@ RELATION_KINDS = {"call", "inherit", "override", "import", "raise", "use",
                   "contract", "group"}
 EXTRA_TOPICS = {"condition", "failure", "side_effect", "field", "contract"}
 
-# Generation guidance only (see module docstring): an overage is recorded by
-# ``length_diagnostics`` and never triggers a repair or a truncation.
-UNIT_EXPLAIN_REFERENCE = 1400
-UNIT_EXTRA_REFERENCE = 6
-UNIT_EXTRA_NOTE_REFERENCE = 260
-RELATION_BASIS_REFERENCE = 200
-UNCERTAINTIES_COUNT_REFERENCE = 3
-UNCERTAINTY_ITEM_REFERENCE = 220
-DISPOSITION_REASON_REFERENCE = 160
-BATCH_NOTES_REFERENCE = 600
-
 # One repository file larger than this becomes its own inventory unit region set;
 # a chunk never has to fit a model context alone because batches group many.
 SCHEMA = "cbe-semantic/1"
@@ -304,9 +293,8 @@ def validate_details(payload: Any, paths: list[str], inventory: dict[str, dict],
     """Hard problems only (empty list = acceptable).
 
     Hard means structure, symbol identity, references, coverage, and nonempty
-    required content. Length and count measures are reported by
-    :func:`length_diagnostics`; they never appear here and never trigger a
-    model repair. The function never mutates its input."""
+    required content. Length and count are never checked here and never trigger
+    a model repair. The function never mutates its input."""
     problems: list[str] = []
     if not isinstance(payload, dict):
         return ["result is not a JSON object"]
@@ -479,77 +467,6 @@ def normalize_details(payload: Any, paths: list[str], inventory: dict[str, dict]
         payload["batch_notes"] = "No batch notes returned."
         flags.append("batch_notes was empty")
     return flags
-
-
-_SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+")
-
-
-def _duplicate_sentences(text: str) -> list[str]:
-    counts: dict[str, int] = {}
-    for sentence in _SENTENCE_SPLIT.split(text.replace("\n", " ")):
-        words = re.findall(r"[a-z0-9_]+", sentence.casefold())
-        if len(words) >= 8:
-            key = " ".join(words)
-            counts[key] = counts.get(key, 0) + 1
-    return [key for key, count in counts.items() if count > 1]
-
-
-def length_diagnostics(payload: Any) -> list[dict]:
-    """Visible length/count observations. Pure function; never mutates and
-    never triggers a repair or a truncation."""
-    diagnostics: list[dict] = []
-
-    def record(kind: str, owner: str, field: str, actual: Any, reference: Any, note: str) -> None:
-        diagnostics.append({"kind": kind, "owner": owner, "field": field,
-                            "actual": actual, "reference": reference, "note": note})
-
-    if not isinstance(payload, dict):
-        return diagnostics
-    for unit in payload.get("units") or []:
-        if not isinstance(unit, dict):
-            continue
-        uid = unit.get("id")
-        explain = unit.get("explain")
-        if isinstance(explain, str) and explain.strip():
-            if len(explain) > UNIT_EXPLAIN_REFERENCE:
-                record("explain_length", uid, "explain", len(explain), UNIT_EXPLAIN_REFERENCE,
-                       "complete content kept verbatim; over the generation reference")
-            dupes = _duplicate_sentences(explain)
-            if dupes:
-                record("explain_duplicate_sentence", uid, "explain", len(dupes), 0,
-                       f"literal repeated sentence, e.g. '{dupes[0][:80]}...'")
-        for index, extra in enumerate(unit.get("extras") or []):
-            if isinstance(extra, dict) and isinstance(extra.get("note"), str) \
-                    and len(extra["note"]) > UNIT_EXTRA_NOTE_REFERENCE:
-                record("extra_note_length", uid, f"extras[{index}].note",
-                       len(extra["note"]), UNIT_EXTRA_NOTE_REFERENCE, "kept verbatim")
-        if isinstance(unit.get("extras"), list) and len(unit["extras"]) > UNIT_EXTRA_REFERENCE:
-            record("extras_count", uid, "extras", len(unit["extras"]), UNIT_EXTRA_REFERENCE,
-                   "all kept; the count is a generation target, not a validity bound")
-        for index, rel in enumerate(unit.get("relations") or []):
-            if isinstance(rel, dict) and isinstance(rel.get("basis"), str) \
-                    and len(rel["basis"]) > RELATION_BASIS_REFERENCE:
-                record("relation_basis_length", uid, f"relations[{index}].basis",
-                       len(rel["basis"]), RELATION_BASIS_REFERENCE, "kept verbatim")
-        uncertainties = unit.get("uncertainties")
-        if isinstance(uncertainties, list) and all(isinstance(item, str) for item in uncertainties):
-            if len(uncertainties) > UNCERTAINTIES_COUNT_REFERENCE:
-                record("uncertainties_count", uid, "uncertainties", len(uncertainties),
-                       UNCERTAINTIES_COUNT_REFERENCE, "all kept; former cap was a target")
-            for index, text in enumerate(uncertainties):
-                if len(text) > UNCERTAINTY_ITEM_REFERENCE:
-                    record("uncertainty_item_length", uid, f"uncertainties[{index}]", len(text),
-                           UNCERTAINTY_ITEM_REFERENCE, "kept verbatim")
-    for key, entry in (payload.get("dispositions") or {}).items():
-        if isinstance(entry, dict) and isinstance(entry.get("reason"), str) \
-                and len(entry["reason"]) > DISPOSITION_REASON_REFERENCE:
-            record("disposition_reason_length", key, "reason", len(entry["reason"]),
-                   DISPOSITION_REASON_REFERENCE, "kept verbatim")
-    notes = payload.get("batch_notes")
-    if isinstance(notes, str) and len(notes) > BATCH_NOTES_REFERENCE:
-        record("batch_notes_length", "<batch>", "batch_notes", len(notes),
-               BATCH_NOTES_REFERENCE, "kept verbatim")
-    return diagnostics
 
 
 # ------------------------------------------------------------------ ranges and names
@@ -1183,107 +1100,6 @@ def tree_prompt(units: dict[str, dict], files: list[str]) -> str:
 # ------------------------------------------------------------------ render
 
 
-def _field_text(unit: dict, field: str) -> str:
-    if field == "explain" and isinstance(unit.get("explain"), str):
-        return unit["explain"]
-    match = re.match(r"extra\[(\d+)\]", field)
-    if match and unit.get("extras"):
-        index = int(match.group(1))
-        if index < len(unit["extras"]):
-            note = unit["extras"][index].get("note")
-            if isinstance(note, str):
-                return note
-    return ""
-
-
-_WORD = re.compile(r"[A-Za-z0-9_]+")
-
-
-def apply_merge_replacements(units: dict[str, dict], replacements: list[dict],
-                             name_of: Callable[[str], str], owner: dict[str, str],
-                             min_saving: int = 24) -> tuple[dict[str, dict], list[dict], list[dict]]:
-    """Replace confirmed duplicate fragments in non-primary units with a short
-    link to the primary unit, only when the measured token saving clears the
-    threshold. Word-sequence replacement only; never mutates the input."""
-    working = {uid: {**unit, "extras": [dict(extra) for extra in unit.get("extras") or []]}
-               for uid, unit in units.items()}
-    applied: list[dict] = []
-    skipped: list[dict] = []
-    for repl in replacements or []:
-        primary = repl["primary_unit"]
-        primary_page = owner.get(primary)
-        usable = [target for target in repl.get("targets", [])
-                  if working.get(target["unit"]) is not None]
-        if primary_page is None:
-            if usable:
-                skipped.append({"merge_id": repl.get("merge_id"), "units": sorted(
-                    {target["unit"] for target in usable}), "reason":
-                    "primary unit has no owning page; a reference would be unreachable"})
-            continue
-        plan = []
-        for target in usable:
-            same_page = owner.get(target["unit"]) == primary_page
-            loc = f"#{anchor(primary)}" if same_page else f"{primary_page}.md#{anchor(primary)}"
-            plan.append((target["unit"], target["field"], f"→ [{name_of(primary)}]({loc})"))
-        if not plan:
-            continue
-        before = {(uid, field): _field_text(working[uid], field) for uid, field, _ in plan}
-        before_tokens = sum(count_text_tokens(text) for text in before.values())
-        counts: dict[tuple[str, str], int] = {}
-        for uid, field, ref in plan:
-            counts[(uid, field)] = _replace_in_unit(working[uid], field,
-                                                    repl.get("fragment_words", ""), ref)
-        after_tokens = sum(count_text_tokens(_field_text(working[uid], field))
-                           for uid, field in before)
-        net = before_tokens - after_tokens
-        if net < min_saving:
-            for (uid, field), text in before.items():
-                _set_field_text(working[uid], field, text)
-            skipped.append({"merge_id": repl.get("merge_id"),
-                            "units": sorted({uid for uid, _f, _r in plan}),
-                            "net_saving_tokens": net,
-                            "reason": f"measured net saving {net} tokens < {min_saving}; kept inline"})
-            continue
-        for uid, field, _ in plan:
-            if counts[(uid, field)]:
-                applied.append({"merge_id": repl.get("merge_id"), "unit": uid, "field": field,
-                                "replacements": counts[(uid, field)], "actual_saving_tokens": net})
-    return working, applied, skipped
-
-
-def _set_field_text(unit: dict, field: str, text: str) -> None:
-    if field == "explain":
-        unit["explain"] = text
-        return
-    match = re.match(r"extra\[(\d+)\]", field)
-    if match and unit.get("extras") and int(match.group(1)) < len(unit["extras"]):
-        unit["extras"][int(match.group(1))]["note"] = text
-
-
-def _replace_in_unit(unit: dict, field: str, fragment: str, ref: str) -> int:
-    pattern_words = _WORD.findall(fragment)
-    if not pattern_words:
-        return 0
-    pattern = re.compile(r"\b" + r"\W+".join(re.escape(word) for word in pattern_words) + r"\b",
-                         re.IGNORECASE)
-
-    def replace_text(text: str) -> tuple[str, int]:
-        return pattern.subn(ref, text)
-
-    if field == "explain" and isinstance(unit.get("explain"), str):
-        unit["explain"], count = replace_text(unit["explain"])
-        return count
-    match = re.match(r"extra\[(\d+)\]", field)
-    if match and unit.get("extras"):
-        index = int(match.group(1))
-        if index < len(unit["extras"]):
-            note = unit["extras"][index].get("note")
-            if isinstance(note, str):
-                unit["extras"][index]["note"], count = replace_text(note)
-                return count
-    return 0
-
-
 def _relation_link(target: str, units: dict, dispositions: dict, owner: dict,
                    nodes: dict, source_root: Path, page_dir: Path,
                    name_of: Callable[[str], str]) -> str:
@@ -1351,9 +1167,7 @@ def _build_unit_block(uid: str, units: dict, ranges_map: dict, owner: dict,
 
 
 def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
-           dispositions: dict, tree: dict, notes: dict[str, list[str]] | None = None,
-           index_notes: list[str] | None = None, merge_ledger: dict | None = None,
-           project: str = "Codebase Explorer", version: str = "") -> dict:
+           dispositions: dict, tree: dict, index_notes: list[str] | None = None) -> dict:
     """Render node pages, INDEX.md and a catalog under ``run_dir/docs``.
 
     Returns metadata the caller stores in run state for verification."""
@@ -1386,8 +1200,6 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
             raise SemanticError(f"anchor collision: {anchors[short]!r} and {uid!r}")
         anchors[short] = uid
 
-    render_units, applied, skipped = apply_merge_replacements(
-        units, (merge_ledger or {}).get("replacements") or [], name_of, owner)
     ranges_map = {uid: unit_ranges(uid, unit, inventory) for uid, unit in units.items()}
     edges_by_from: dict[str, list[dict]] = {nid: [] for nid in nodes}
     for edge in tree.get("depends_on") or []:
@@ -1422,13 +1234,11 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
         if own:
             lines += [f"## Units ({len(own)})", ""]
         for uid in own:
-            if uid not in render_units:
+            if uid not in units:
                 continue
-            block = _build_unit_block(uid, render_units, ranges_map, owner, dispositions,
+            block = _build_unit_block(uid, units, ranges_map, owner, dispositions,
                                       nodes, source_root, nodes_dir, name_of)
             lines += [f'<a id="{anchor(uid)}"></a>'] + block.splitlines() + [""]
-        if notes and notes.get(nid):
-            lines += ["## Generation notes", ""] + [f"- {item}" for item in notes[nid]]
         (nodes_dir / f"{nid}.md").write_text("\n".join(lines).strip() + "\n", encoding="utf-8")
 
     def outline(nid: str, level: int) -> list[str]:
@@ -1441,7 +1251,7 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
         return rows
 
     roots = [nid for nid, node in nodes.items() if not node.get("parent")]
-    index_lines = [f"# {project}", "", "Structured detail units with program-derived source "
+    index_lines = ["# Codebase Explorer", "", "Structured detail units with program-derived source "
                    "ranges and a semantic responsibility tree. Node pages show outgoing "
                    "dependencies; reverse edges, edge evidence and the full symbol index are "
                    "in `catalog.json`.", "", "## Responsibility tree", ""]
@@ -1498,19 +1308,8 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
                 record["facts"] = facts["symbols"][symbol["name"]]
             compatibility_symbols[symbol["id"]] = record
 
-    applied_ids = {row["merge_id"] for row in applied}
-    skip_by_id = {row["merge_id"]: row for row in skipped}
-    merges_catalog = []
-    for merge in (merge_ledger or {}).get("merges", []):
-        row = dict(merge)
-        row["render_applied"] = merge.get("merge_id") in applied_ids
-        if not row["render_applied"]:
-            row["render_kept_inline_reason"] = (skip_by_id.get(merge.get("merge_id")) or {}).get(
-                "reason", "no replacement applied at render")
-        merges_catalog.append(row)
-
     catalog = {
-        "schema": SCHEMA, "project": project, "version": version,
+        "schema": SCHEMA, "project": "Codebase Explorer", "version": "",
         "units": {uid: {"node": owner.get(uid),
                         "page": f"nodes/{owner[uid]}.md" if owner.get(uid) in nodes else None,
                         "anchor": f"#{anchor(uid)}", "kind": units[uid].get("kind"),
@@ -1527,15 +1326,14 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
         "inventory": inventory,
         "short_names": {uid: unique_short(uid, set())
                         for uid in sorted(set(units) | set(dispositions))},
-        "merges": merges_catalog,
+        "merges": [],
         "symbols": compatibility_symbols,
         "files": compatibility_files,
     }
     (run_dir / "catalog.json").write_text(json.dumps(catalog, ensure_ascii=False, indent=2) + "\n",
                                           encoding="utf-8")
-    return {"units_rendered": len(render_units), "nodes": len(nodes), "owner": owner,
-            "ranges_map": ranges_map, "applied_replacements": applied,
-            "skipped_replacements": skipped, "symbol_index": symbol_index,
+    return {"units_rendered": len(units), "nodes": len(nodes), "owner": owner,
+            "ranges_map": ranges_map, "symbol_index": symbol_index,
             "index": str(docs_dir / "INDEX.md")}
 
 

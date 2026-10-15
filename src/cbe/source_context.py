@@ -30,13 +30,12 @@ Design rules that the implementation follows:
 from __future__ import annotations
 
 import bisect
+import hashlib
 import json
 import os
 from dataclasses import dataclass, field
 from pathlib import Path, PurePosixPath
 from typing import Any
-
-from cbe.ir import OffsetMap, canonical_symbol_id, line_starts, sha256_bytes, sha256_text
 
 SCHEMA_CONTEXT = "cbe-context/1"
 SCHEMA_GRAPH = "cbe-graph/1"
@@ -49,9 +48,13 @@ DEFAULT_MAX_SEGMENT_BYTES = 32 * 1024
 #: ``paths`` request) and reported with ``file_too_large``.
 MAX_FILE_BYTES = 8 * 1024 * 1024
 
-#: Reused from ``cbe.inventory`` so discovery keeps the project's own proof of
-#: which directories are caches or environments.
-from cbe.inventory import DEFAULT_EXCLUDE_DIR_NAMES  # noqa: E402  (after constants)
+#: Version-control metadata, dependency caches and tool output: never own source.
+#: Folder names such as build/dist/vendor and other dot-directories are *not*
+#: proof of third-party or generated code, so they stay enrolled.
+DEFAULT_EXCLUDE_DIR_NAMES = frozenset({
+    ".git", ".hg", ".svn", ".venv", "venv", "node_modules", "__pycache__",
+    ".mypy_cache", ".pytest_cache", ".tox", ".codebase-analysis",
+})
 
 _IDENTIFIER_TYPES = frozenset(
     {
@@ -76,6 +79,70 @@ _SIGNATURE_LIMIT = 400
 #: candidate is the default; a real diagnostic states the chosen parse so a C
 #: header is never silently documented as the wrong language.
 AMBIGUOUS_SUFFIXES: dict[str, tuple[str, ...]] = {".h": ("c", "cpp")}
+
+
+# ---------------------------------------------------------------------------
+# Byte, character and line coordinates
+# ---------------------------------------------------------------------------
+
+
+def sha256_bytes(payload: bytes) -> str:
+    return hashlib.sha256(payload).hexdigest()
+
+
+def sha256_text(payload: str) -> str:
+    return sha256_bytes(payload.encode("utf-8"))
+
+
+@dataclass(frozen=True)
+class OffsetMap:
+    """Byte offset (parser) to character offset for one UTF-8 file; CRLF stays two characters."""
+
+    raw: bytes
+    text: str
+    byte_to_char: tuple[int, ...]
+
+    @classmethod
+    def from_bytes(cls, raw: bytes) -> "OffsetMap":
+        text = raw.decode("utf-8")
+        byte_to_char: list[int] = [0] * (len(raw) + 1)
+        byte_index = 0
+        for char_index, char in enumerate(text):
+            for _ in char.encode("utf-8"):
+                byte_to_char[byte_index] = char_index
+                byte_index += 1
+        byte_to_char[len(raw)] = len(text)
+        return cls(raw=raw, text=text, byte_to_char=tuple(byte_to_char))
+
+    def char_of_byte(self, byte_index: int) -> int:
+        if byte_index < 0 or byte_index > len(self.raw):
+            raise ValueError(f"byte offset {byte_index} out of range")
+        return self.byte_to_char[byte_index]
+
+
+def line_starts(text: str) -> tuple[int, ...]:
+    """Character offsets of each 1-indexed line, keeping CRLF as two characters."""
+
+    starts = [0]
+    index = 0
+    length = len(text)
+    while index < length:
+        char = text[index]
+        if char == "\r" and index + 1 < length and text[index + 1] == "\n":
+            index += 2
+            starts.append(index)
+        elif char in "\n\r":
+            index += 1
+            starts.append(index)
+        else:
+            index += 1
+    return tuple(starts)
+
+
+def canonical_symbol_id(path: str, kind: str, scope: str, anchor: int) -> str:
+    """Stable id: path + kind + lexical scope + declaration byte anchor (lines are not identities)."""
+
+    return f"{path}::{kind}::{scope}::{anchor}"
 
 
 # ---------------------------------------------------------------------------

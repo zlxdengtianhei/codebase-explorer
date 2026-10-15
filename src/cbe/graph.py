@@ -67,8 +67,6 @@ GRAPH_CONFIG_NAMES = frozenset({
 GRAPH_CONFIG_SUFFIXES = (".csproj", ".sln", ".gemspec", ".cmake", ".mk")
 
 GRAPH_KINDS = frozenset({"import", "call", "cfg", "dataflow"})
-STATUSES = frozenset({"resolved", "ambiguous", "unresolved", "external", "unsupported"})
-CAPABILITY_STATUSES = frozenset({"resolved", "partial", "empty", "unsupported", "failed", "unavailable"})
 _CAPABILITY_RANK = {"resolved": 6, "partial": 5, "empty": 4, "unsupported": 3,
                     "failed": 2, "unavailable": 1}
 
@@ -78,7 +76,7 @@ class GraphError(ValueError):
 
 
 def _excluded_dir_names() -> frozenset[str]:
-    from cbe.inventory import DEFAULT_EXCLUDE_DIR_NAMES  # noqa: PLC0415
+    from cbe.source_context import DEFAULT_EXCLUDE_DIR_NAMES  # noqa: PLC0415
 
     return DEFAULT_EXCLUDE_DIR_NAMES
 
@@ -213,7 +211,6 @@ def analyze_graph(
     max_reaching_defs: int = 50000,
     dataflow_path_methods: list[str] | None = None,
     max_paths_per_method: int = 5,
-    **options,
 ) -> dict:
     """Build a ``cbe-graph/1`` graph and write it to ``output``.
 
@@ -592,29 +589,3 @@ def _grimp_version() -> str:
         return version("grimp")
     except Exception:
         return "unknown"
-
-
-def _normalize_joern_payload(payload: dict, version: str = "unknown",
-                             namespace: str = "cpg") -> tuple[list[dict], list[dict]]:
-    """Map a raw Joern export payload to standard nodes/edges.  Test helper."""
-
-    from cbe.graph_backends.joern import _normalize  # noqa: PLC0415
-
-    return _normalize(payload, version, namespace)
-
-
-def available_graph_languages() -> dict:
-    """Report which languages the graph layer can attempt, and via which backend."""
-
-    from cbe import graph_backends as backends  # noqa: PLC0415
-
-    languages: dict[str, dict] = {}
-    for language in graph_suffixes().values():
-        entry = languages.setdefault(language, {"backends": {}})
-        if language in backends.JOERN_LANGUAGE_FLAGS:
-            entry["backends"]["joern"] = True
-        if language in backends.DEPCRUISE_LANGUAGES:
-            entry["backends"]["dependency-cruiser"] = True
-        if language == "python":
-            entry["backends"]["grimp"] = True
-    return {"schema": SCHEMA_GRAPH, "languages": languages}

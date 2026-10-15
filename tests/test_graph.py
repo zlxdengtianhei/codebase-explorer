@@ -20,17 +20,17 @@ import pytest
 from cbe.graph import (
     GraphError,
     _merge_capabilities,
-    _normalize_joern_payload,
     _prefer_resolved_imports,
     analyze_graph,
-    available_graph_languages,
     discover_config,
     discover_sources,
     graph_suffixes,
     query_graph,
 )
 from cbe.graph_backends._paths import canonical_repo_path
+from cbe.graph_backends import DEPCRUISE_LANGUAGES, JOERN_LANGUAGE_FLAGS
 from cbe.graph_backends.joern import _capabilities_for
+from cbe.graph_backends.joern import _normalize as _normalize_joern_payload
 
 FIXTURES = Path(__file__).parent / "fixtures" / "graphs"
 
@@ -344,13 +344,12 @@ def test_merge_capabilities_prefers_best_and_keeps_unavailable() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_available_graph_languages_covers_registry() -> None:
-    languages = available_graph_languages()["languages"]
+def test_every_registered_language_has_a_graph_backend() -> None:
     for name in ("c", "cpp", "python", "javascript", "typescript", "tsx", "java",
                  "go", "ruby", "rust", "php", "c_sharp", "kotlin", "swift"):
-        assert languages[name]["backends"].get("joern") is True
-    assert languages["python"]["backends"]["grimp"] is True
-    assert languages["tsx"]["backends"]["dependency-cruiser"] is True
+        assert name in JOERN_LANGUAGE_FLAGS
+    assert set(graph_suffixes().values()) <= set(JOERN_LANGUAGE_FLAGS)
+    assert "tsx" in DEPCRUISE_LANGUAGES
 
 
 # ---------------------------------------------------------------------------

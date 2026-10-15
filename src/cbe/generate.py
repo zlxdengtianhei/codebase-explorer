@@ -13,16 +13,12 @@ import json
 import os
 import re
 import time
-from collections import Counter
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from cbe import concrete_facts
 from cbe.headless_completion import invoke
-from cbe.inventory import build_inventory
-from cbe.syntax_facts import atoms_for
 from cbe.token_budget import count_text_tokens
 
 
@@ -109,8 +105,6 @@ class Module:
     files: list[SourceFile]
     bucket: str
     title: str = ""
-    depends_on: set[int] = field(default_factory=set)
-    output: dict[str, Any] | None = None
 
     @property
     def tokens(self) -> int:
@@ -309,11 +303,6 @@ def plan(files: list[SourceFile]) -> list[Module]:
         strict_root = Path(primary_root) if area == "core" and not is_test else None
         for group in _directory_groups(members, strict_root=strict_root):
             bins.append(Module(len(bins), sorted(group, key=lambda item: item.path), area))
-    for module in bins:
-        for other in bins:
-            if module.number != other.number and any(_linked(file, dependency)
-                    for file in module.files for dependency in other.files):
-                module.depends_on.add(other.number)
     return bins
 
 
@@ -334,63 +323,6 @@ def _check_naming(value: dict[str, Any], modules: list[Module]) -> None:
         seen.add(row["module"])
     if seen != {module.number for module in modules}:
         raise ValueError("module title IDs do not match planned modules")
-
-
-def _check_module(value: dict[str, Any], module: Module) -> None:
-    for key, limit in (("summary", 1500), ("flow", 2000)):
-        if not isinstance(value.get(key), str) or not value[key].strip() or len(value[key]) > limit:
-            raise ValueError(f"{key} must be a nonempty concise string")
-    coverage = value.get("test_coverage")
-    if isinstance(coverage, (list, dict)):
-        # Providers sometimes structure a long test summary as JSON instead of
-        # one string. Preserve that content as readable text for rendering.
-        coverage = json.dumps(coverage, ensure_ascii=False, indent=2)
-    if not isinstance(coverage, str):
-        raise ValueError("test_coverage must be text or a JSON list/object")
-    coverage_limit = max(1500, min(12000, module.tokens // 2))
-    if len(coverage) > coverage_limit:
-        raise ValueError(f"test_coverage exceeds module-sized limit of {coverage_limit} characters")
-    value["test_coverage"] = coverage
-    if module.is_test and not value["test_coverage"].strip():
-        raise ValueError("test modules require a test_coverage summary")
-    highlights = value.get("key_behaviors")
-    if not isinstance(highlights, list):
-        raise ValueError("key_behaviors must be a list")
-    if len(highlights) > 16:
-        highlights = value["key_behaviors"] = highlights[:16]
-    if module.is_test or not any(file.signatures for file in module.files):
-        # Test and unsupported-language symbol prose is not published; their
-        # file/signature catalogue and module coverage summary remain.
-        highlights = value["key_behaviors"] = []
-    alias_ids: dict[str, set[str]] = {}
-    for file in module.files:
-        stem = Path(file.path).stem
-        dotted = ".".join(Path(file.path).with_suffix("").parts)
-        if dotted.startswith("src."):
-            dotted = dotted[4:]
-        for name in file.signatures:
-            source_id = f"{file.path}::{name}"
-            for alias in (name, f"{stem}.{name}", f"{dotted}.{name}", source_id):
-                alias_ids.setdefault(alias, set()).add(source_id)
-    valid_highlights: list[dict[str, Any]] = []
-    for row in highlights:
-        if not isinstance(row, dict) or not isinstance(row.get("symbol"), str):
-            raise ValueError(f"unknown key behavior symbol: {row.get('symbol') if isinstance(row, dict) else row}")
-        matches = alias_ids.get(row["symbol"], set())
-        if len(matches) != 1:
-            # A short alias can name several files in an examples tree. Do
-            # not publish prose against an arbitrary source symbol.
-            continue
-        row["source_id"] = next(iter(matches))
-        for key in ("behavior", "conditions", "failures"):
-            if not isinstance(row.get(key), str) or len(row[key]) > 750:
-                raise ValueError(f"key_behaviors.{key} must be a concise string")
-        valid_highlights.append(row)
-    value["key_behaviors"] = valid_highlights
-    uncertainties = value.get("uncertainties")
-    if not isinstance(uncertainties, list) or len(uncertainties) > 8 or any(
-            not isinstance(item, str) or len(item) > 400 for item in uncertainties):
-        raise ValueError("uncertainties must be a list of short strings")
 
 
 def system_limit(module_count: int) -> int:
@@ -450,54 +382,6 @@ def _fit(value: dict[str, Any], key: str, limit: int, flags: list[str], *, label
         flags.append(f"{label} truncated from {len(text)} to {limit} characters")
         text = _truncate(text, limit)
     value[key] = text
-
-
-def normalize_module(value: Any, module: Module) -> list[str]:
-    if not isinstance(value, dict):
-        raise ValueError("module result is not a JSON object")
-    if not isinstance(value.get("summary"), str) or not value["summary"].strip():
-        raise ValueError("module result has no summary")
-    flags: list[str] = []
-    _fit(value, "summary", 1500, flags)
-    _fit(value, "flow", 2000, flags)
-    if not value["flow"].strip():
-        value["flow"] = "Not described by the model."
-        flags.append("flow was empty")
-    _fit(value, "test_coverage", max(1500, min(12000, module.tokens // 2)), flags)
-    if module.is_test and not value["test_coverage"].strip():
-        value["test_coverage"] = "No coverage summary was returned for this test module."
-        flags.append("test_coverage was empty")
-    rows = value.get("key_behaviors")
-    if not isinstance(rows, list):
-        if rows is not None:
-            flags.append("key_behaviors was not a list; dropped")
-        rows = []
-    kept = []
-    for row in rows[:16]:
-        if not isinstance(row, dict) or not isinstance(row.get("symbol"), str):
-            flags.append("dropped a key behavior without a symbol")
-            continue
-        for key in ("behavior", "conditions", "failures"):
-            _fit(row, key, 750, flags, label=f"{row['symbol']}.{key}")
-        kept.append(row)
-    if len(rows) > 16:
-        flags.append(f"key_behaviors cut from {len(rows)} to 16")
-    value["key_behaviors"] = kept
-    notes = value.get("uncertainties")
-    if not isinstance(notes, list):
-        notes = [] if notes is None else [_as_text(notes)]
-    if len(notes) > 8:
-        flags.append(f"uncertainties cut from {len(notes)} to 8")
-    fitted = []
-    for item in notes[:8]:
-        text = _as_text(item)
-        if len(text) > 400:
-            flags.append(f"an uncertainty was truncated from {len(text)} to 400 characters")
-            text = _truncate(text, 400)
-        fitted.append(text)
-    value["uncertainties"] = fitted
-    _check_module(value, module)
-    return flags
 
 
 def fallback_title(module: Module) -> str:
@@ -587,53 +471,6 @@ def _name_prompt(modules: list[Module]) -> str:
             "Keep mixed-language scope honest. Modules:\n" + json.dumps(rows, ensure_ascii=False))
 
 
-def _module_prompt(module: Module, modules: list[Module], issues: list[str] | None = None,
-                   *, source_root: Path | None = None) -> str:
-    """Build the module task. With ``source_root`` the files are listed by
-    absolute path for a tool-using host subagent instead of being embedded."""
-    dependencies = [other for other in modules if other.number in module.depends_on]
-    dep_lines = [f"{other.title}: " + ", ".join(
-        f"{file.path}: {', '.join(file.signatures[:30])}" for file in other.files)
-        for other in dependencies]
-    aliases = [(f"{Path(file.path).stem}.{name}", f"{file.path}::{name}")
-               for file in module.files for name in file.signatures]
-    counts = Counter(alias for alias, _ in aliases)
-    symbols = ([] if module.is_test else
-               [alias if counts[alias] == 1 else source_id for alias, source_id in aliases])
-    header = (f"TASK: Document the module titled {module.title}. Return JSON with string fields "
-              "summary (at most 1500 characters), flow (at most 2000 characters), test_coverage; key_behaviors is a list of at most 16 objects with "
-              "symbol, behavior, conditions, failures strings; uncertainties is a list of short strings. "
-              "Choose only meaningful symbols from the given signature list and copy their names exactly. "
-              "If this module consists of tests, "
-              "summarize tested behavior once and leave key_behaviors empty. Do not claim test execution. "
-              "Keep each field compact; use empty strings for conditions or failures when not established. "
-              "If Available symbols is empty, key_behaviors MUST be an empty list even when the source contains "
-              "commands or functions; describe them in summary or flow instead.\n"
-              f"Available symbols: {json.dumps(symbols, ensure_ascii=False)}\n"
-              f"Dependency signatures: {json.dumps(dep_lines, ensure_ascii=False)}\n")
-    if issues:
-        header += "Correct these review findings without broadening claims: " + json.dumps(issues, ensure_ascii=False) + "\n"
-    if source_root is not None:
-        header += "\nSOURCE FILES (read each one completely; read no other file):\n"
-        for file in sorted(module.files, key=lambda item: item.path):
-            header += f"- {source_root / file.path} ({file.tokens} tokens)\n"
-        return header
-    for file in sorted(module.files, key=lambda item: item.path):
-        header += f"\nSOURCE FILE {file.path}\n```\n{file.source}\n```\n"
-    return header
-
-
-def _verify_source(repo: Path, files: list[SourceFile]) -> None:
-    for file in files:
-        if hashlib.sha256((repo / file.path).read_bytes()).hexdigest() != file.digest:
-            raise GenerateError(f"source changed during generation: {file.path}")
-
-
-def _slug(title: str, number: int) -> str:
-    text = re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")[:65]
-    return text or f"module-{number + 1}"
-
-
 def _primary_directory(module: Module) -> tuple[str, float]:
     counts: dict[str, int] = {}
     for item in module.files:
@@ -641,128 +478,6 @@ def _primary_directory(module: Module) -> tuple[str, float]:
         counts[directory] = counts.get(directory, 0) + 1
     directory = min(counts, key=lambda path: (-counts[path], path))
     return directory, counts[directory] / len(module.files)
-
-
-def _guard_rows(repo: Path, files: list[SourceFile]) -> dict[str, list[dict[str, Any]]]:
-    if not any(item.path.endswith(".py") for item in files):
-        return {}
-    inventory = build_inventory(repo)
-    ledger = {"repo_root": str(repo), "inventory": inventory.to_dict()}
-    rows: dict[str, list[dict[str, Any]]] = {}
-    for sid, symbol in ledger["inventory"]["symbols"].items():
-        if symbol.get("kind") not in {"function", "method"}:
-            continue
-        # The general fact API keeps a short first-page default. A published
-        # module page needs later guarded outcomes too: an early sequence of
-        # checks must not hide the final no-work/status branch.
-        facts = atoms_for(ledger, sid, max_atoms=32)
-        interesting = [atom for atom in facts["atoms"] if atom["guards"] or atom["kind"] in {
-            "raise_expression", "reraise", "return_none"}]
-        if interesting:
-            rows.setdefault(symbol["path"], []).extend({"symbol": symbol["name"], **atom}
-                                                        for atom in interesting)
-    return rows
-
-
-def _render_source(repo: Path, file: SourceFile) -> str:
-    """Source text for fact extraction. Host runs keep digests, not text, in their state, so
-    ``file.source`` is empty at render time; read it back and accept it only if the digest holds."""
-    if file.source:
-        return file.source
-    try:
-        raw = (repo / file.path).read_bytes()
-        return raw.decode("utf-8") if hashlib.sha256(raw).hexdigest() == file.digest else ""
-    except (OSError, UnicodeDecodeError):
-        return ""
-
-
-def _render(repo: Path, run_dir: Path, files: list[SourceFile], modules: list[Module],
-            system: dict[str, Any], notes: dict[int, list[str]] | None = None,
-            index_notes: list[str] | None = None) -> dict[str, Any]:
-    _verify_source(repo, files)
-    output = run_dir / "docs"
-    pages = output / "modules"
-    pages.mkdir(parents=True, exist_ok=True)
-    guards = _guard_rows(repo, files)
-    catalog: dict[str, Any] = {"modules": [], "symbols": {}, "files": {}}
-    index = ["# Codebase Explorer", "", system["overview"], "", "## Maintenance navigation", "",
-             system["maintenance_navigation"], "",
-             "Constants, defaults, option tables, templates and literal raises are indexed in "
-             "catalog.json, not printed on module pages: `cbe find --term <name>` searches them "
-             "and `cbe query --id <symbol or file>` returns one entry.",
-             "", "## Subsystems", ""]
-    used_slugs: set[str] = set()
-    current_subsystem = None
-    for module in modules:
-        if module.bucket != current_subsystem:
-            current_subsystem = module.bucket
-            index += [f"### {current_subsystem.replace('_', ' ').title()}", ""]
-        slug = _slug(module.title, module.number)
-        if slug in used_slugs:
-            slug += f"-{module.number + 1}"
-        used_slugs.add(slug)
-        page = f"modules/{slug}.md"
-        result = module.output or {}
-        lines = [f"# {module.title}", "", result.get("summary", ""), "", "## Flow", "",
-                 result.get("flow", ""), "", "## Key behaviors", ""]
-        highlights = result.get("key_behaviors") or []
-        if highlights:
-            for item in highlights:
-                lines += [f"- **{item['symbol']}** — {item['behavior']}"]
-                if item["conditions"]:
-                    lines += [f"  - Conditions: {item['conditions']}"]
-                if item["failures"]:
-                    lines += [f"  - Failures: {item['failures']}"]
-        else:
-            lines.append("No individual behavior prose; see the source catalogue below.")
-        lines += ["", "## Test coverage", "", result.get("test_coverage") or "No test coverage established for this module.", "",
-                  "## Source catalogue", ""]
-        for file in sorted(module.files, key=lambda item: item.path):
-            lines += [f"### `{file.path}`", ""]
-            if file.signatures:
-                lines += ["; ".join(f"`{name}`" for name in file.signatures), ""]
-            else:
-                lines += ["Mechanically indexed file; no supported symbol parser in this baseline.", ""]
-            facts = (concrete_facts.file_facts(file.path, _render_source(repo, file))
-                     if file.path.endswith(".py") else None)
-            file_entry: dict[str, Any] = {"module": module.title, "page": page,
-                                          "tokens": file.tokens, "language": Path(file.path).suffix}
-            if facts and facts["file"]:
-                file_entry["facts"] = facts["file"]
-            catalog["files"][file.path] = file_entry
-            for name in file.signatures:
-                sid = f"{file.path}::{name}"
-                symbol_entry: dict[str, Any] = {"file": file.path, "name": name, "module": module.title,
-                                                "page": page, "notes": [x for x in highlights if x.get("source_id") == sid]}
-                if facts and facts["symbols"].get(name):
-                    symbol_entry["facts"] = facts["symbols"][name]
-                catalog["symbols"][sid] = symbol_entry
-            if guards.get(file.path):
-                lines += ["## Conditions and failure paths (mechanical syntax)", "",
-                          "Lexical guards and statements only; reachability and runtime effects are unverified.", "",
-                          "| Symbol | Guard | Statement |", "|---|---|---|"]
-                for atom in guards[file.path]:
-                    guard = " / ".join(atom["guards"]).replace("|", "\\|") or "—"
-                    syntax = atom["syntax"].replace("|", "\\|")
-                    lines.append(f"| `{atom['symbol']}` | `{guard}` | `{syntax}` |")
-                lines.append("")
-        if result.get("uncertainties"):
-            lines += ["## Uncertainties", ""] + [f"- {item}" for item in result["uncertainties"]]
-        if notes and notes.get(module.number):
-            lines += ["", "## Generation notes", ""] + [f"- {item}" for item in notes[module.number]]
-        (output / page).write_text("\n".join(lines).strip() + "\n", encoding="utf-8")
-        directory, share = _primary_directory(module)
-        kind = "tests" if module.is_test else "source"
-        index.append(f"- [{module.title}]({page}) — {kind}; primary directory "
-                     f"`{directory}` {share:.0%} ({len(module.files)} files): "
-                     f"{', '.join(f.path for f in module.files)}")
-        catalog["modules"].append({"title": module.title, "page": page,
-                                   "files": [f.path for f in module.files], "source_tokens": module.tokens})
-    if index_notes:
-        index += ["", "## Generation notes", ""] + [f"- {item}" for item in index_notes]
-    (output / "INDEX.md").write_text("\n".join(index) + "\n", encoding="utf-8")
-    (run_dir / "catalog.json").write_text(json.dumps(catalog, ensure_ascii=False, indent=2), encoding="utf-8")
-    return catalog
 
 
 def _cost(run_dir: Path, *, host: str = "opencode") -> dict[str, Any]:
@@ -882,7 +597,7 @@ def _csv_task(task_id: str, review: str) -> str:
 
 def generate(repo: Path, run_dir: Path, *, model: str, config: Path | None = None,
              jobs: int = 4, review: str | None = None, timeout: int = 360,
-             host: str = "opencode", resume: bool = False, semantic: bool = True,
+             host: str = "opencode", resume: bool = False,
              graph_path: Path | None = None, api_base_url: str | None = None,
              api_key_env: str | None = None) -> dict[str, Any]:
     """Script driver: the shared run state, with each task as one tool-free completion.
@@ -946,7 +661,7 @@ def generate(repo: Path, run_dir: Path, *, model: str, config: Path | None = Non
         host_run.resume(run_dir, owner=host, graph_path=graph_path)
     else:
         host_run.plan(repo, run_dir, review=review, jobs=jobs, host=host, driver="script",
-                      semantic_mode=semantic, graph_path=graph_path)
+                      graph_path=graph_path)
     review = json.loads((run_dir / "host" / "state.json").read_text(encoding="utf-8"))["review"]
     csv_path = run_dir / "calls.csv"
     stopped: str | None = None

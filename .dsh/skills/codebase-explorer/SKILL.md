@@ -75,7 +75,7 @@ cbe find --run-dir "$RUN" --term SEARCH_TERM
 cbe query --run-dir "$RUN" --id EXACT_ID_FROM_FIND
 ```
 
-The catalogue is built from the frozen, multi-language inventory: for Python, top-level functions, classes and direct methods; for every other registered language (C/C++, JavaScript/TypeScript, Java, Go), the declarations the source grammar found; and one file/region entry when a grammar is unavailable. It is a navigation index, not a semantic proof. The lexical guard and failure tables do not prove runtime reachability. A detail unit states only what the model read; confirm that the pages answer the user's maintenance questions before claiming quality.
+The catalogue is built from the frozen, multi-language inventory: for Python, top-level functions, classes and direct methods; for every other registered language (C/C++, JavaScript/TypeScript, Java, Go), the declarations the source grammar found; and one file/region entry when a grammar is unavailable. It is a navigation index, not a semantic proof. A detail unit states only what the model read; confirm that the pages answer the user's maintenance questions before claiming quality.
 
 ## Script-driven generation (API, OpenCode, or Devin CLI)
 

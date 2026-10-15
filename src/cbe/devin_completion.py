@@ -16,7 +16,6 @@ import subprocess
 import time
 from contextlib import closing
 from pathlib import Path
-from typing import Any
 from urllib.parse import quote
 
 from cbe.headless_completion import Completion, _csv_row, _json_object

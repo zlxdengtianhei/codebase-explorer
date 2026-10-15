@@ -5,6 +5,7 @@ from __future__ import annotations
 import importlib
 import json
 
+from cbe import semantic
 from cbe.concrete_facts import file_facts
 
 generator = importlib.import_module("cbe.generate")
@@ -153,23 +154,23 @@ def test_nested_dict_call_and_flat_shapes_follow_structure_not_names():
 def _render_repo(tmp_path, source, filler_sentences):
     repo = tmp_path / "repo"
     (repo / "pkg").mkdir(parents=True)
-    (repo / "pkg" / "__init__.py").write_text("", encoding="utf-8")
-    (repo / "pkg" / "defaults.py").write_text(source, encoding="utf-8")
-    files = generator.scan(repo)
-    modules = generator.plan(files)
-    for module in modules:
-        module.output = {"summary": "Summary sentence. " * filler_sentences,
-                         "flow": "Flow sentence. " * filler_sentences,
-                         "test_coverage": "Covered. " * filler_sentences,
-                         "key_behaviors": [], "uncertainties": []}
+    texts = {"pkg/__init__.py": "", "pkg/defaults.py": source}
+    for path, text in texts.items():
+        (repo / path).write_text(text, encoding="utf-8")
+    inventory = semantic.build_inventory({path: {"source": text} for path, text in texts.items()})
+    ids = [row["id"] for entry in inventory.values() for row in entry["symbols"]]
+    units = {uid: {"id": uid, "kind": "module_region", "explain": "Explained. " * filler_sentences}
+             for uid in ids}
+    tree = {"nodes": [{"id": "root", "parent": None, "title": "Defaults", "capability": "Defaults.",
+                       "summary": "Defaults.", "unit_ids": ids}], "depends_on": []}
     run_dir = tmp_path / "run"
-    generator._render(repo, run_dir, files, modules,
-                      {"overview": "Demo package.", "maintenance_navigation": "Open the defaults page."})
+    semantic.render(run_dir=run_dir, source_root=repo, inventory=inventory, units=units,
+                    dispositions={uid: {"how": "unit", "unit": uid} for uid in ids}, tree=tree)
     return run_dir
 
 
 def _module_page(run_dir):
-    pages = list((run_dir / "docs" / "modules").glob("*.md"))
+    pages = list((run_dir / "docs" / "nodes").glob("*.md"))
     assert len(pages) == 1
     return pages[0].read_text(encoding="utf-8")
 
@@ -190,14 +191,12 @@ def test_render_keeps_facts_in_catalog_off_pages_and_points_to_find(tmp_path):
     page = _module_page(run_dir)
     assert "## Constants and defaults (mechanical)" not in page
     assert "acks_on_failure_or_timeout" not in page
-    index = (run_dir / "docs" / "INDEX.md").read_text(encoding="utf-8")
-    assert "cbe find" in index and "cbe query" in index
 
 
 def test_find_returns_a_fact_by_name_and_query_returns_the_entry(tmp_path):
     run_dir = _render_repo(tmp_path, FIXTURE, filler_sentences=2)
     matches = generator.find(run_dir, "DEFAULT_TIMEOUT")
-    assert matches and matches[0]["id"] == "pkg/defaults.py"
+    assert "pkg/defaults.py" in [match["id"] for match in matches]
     record = generator.query(run_dir, "pkg/defaults.py")
     assert record["id"] == "pkg/defaults.py" and record["facts"]
 

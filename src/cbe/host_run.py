@@ -265,8 +265,6 @@ def _auto_complete_empty_modules(run_dir: Path, state: dict[str, Any]) -> list[s
     both a ``units must be a nonempty list`` rejection and the invented prose
     that a forced retry produces. Comments and docstrings still produce chunks
     and inventory ids, so they are never auto-completed."""
-    if not state.get("semantic"):
-        return []
     completed: list[str] = []
     for row in state["modules"]:
         number = row["number"]
@@ -349,6 +347,9 @@ def _locked(run_dir: Path) -> Iterator[dict[str, Any]]:
                     "readable by this build. Start a new run instead of resuming it."
                     if found == "cbe-host-run/1" else ".")
             raise HostRunError(f"unsupported run schema {found!r}{hint}")
+        if not state.get("semantic"):
+            raise HostRunError("this run uses the module-page layout of CBE before 2.2, which this build "
+                               "no longer renders; start a new run instead of resuming it")
         yield state
         state["updated_at"] = _now()
         _write_json(state_path, state)
@@ -370,22 +371,11 @@ def _task(task_id: str, kind: str, module: int | None = None, **extra: Any) -> d
             "seconds": None, "output": None, "usage": [], **extra}
 
 
-def _read_source(state: dict[str, Any], row: dict[str, Any]) -> str:
-    raw = (Path(state["repo"]) / row["path"]).read_bytes()
-    if hashlib.sha256(raw).hexdigest() != row["digest"]:
-        raise HostRunError(f"source changed since plan: {row['path']}; start a new plan")
-    return raw.decode("utf-8")
-
-
-def _modules(state: dict[str, Any], *, source_of: int | None = None) -> list[gen.Module]:
-    """Rebuild the modules from the run state. State keeps digests, not text, so the source
-    of module ``source_of`` is read back from the repository (checked against its digest)."""
-    wanted = set(state["modules"][source_of]["files"]) if source_of is not None else set()
-    files = {row["path"]: gen.SourceFile(row["path"], _read_source(state, row) if row["path"] in wanted else "",
-                                         row["tokens"], row["digest"], list(row["signatures"]))
+def _modules(state: dict[str, Any]) -> list[gen.Module]:
+    """Rebuild the reading batches (paths, tokens and signatures; no source text) from the run state."""
+    files = {row["path"]: gen.SourceFile(row["path"], "", row["tokens"], row["digest"], list(row["signatures"]))
              for row in state["files"]}
-    return [gen.Module(row["number"], [files[path] for path in row["files"]], row["bucket"],
-                       row["title"], set(row["depends_on"]))
+    return [gen.Module(row["number"], [files[path] for path in row["files"]], row["bucket"], row["title"])
             for row in state["modules"]]
 
 
@@ -440,7 +430,7 @@ def _title(state: dict[str, Any], task: dict[str, Any]) -> str:
 
 
 def plan(repo: Path, run_dir: Path | None = None, *, review: str = DEFAULT_REVIEW, jobs: int = 4,
-         host: str = "other", driver: str = "host", semantic_mode: bool = True,
+         host: str = "other", driver: str = "host",
          graph_path: Path | None = None) -> dict[str, Any]:
     repo = repo.resolve()
     if not repo.is_dir():
@@ -457,21 +447,17 @@ def plan(repo: Path, run_dir: Path | None = None, *, review: str = DEFAULT_REVIE
         raise HostRunError("run directory already has a run; resume it or choose a fresh directory")
     files = gen.scan(repo)
     modules = gen.plan(files)
-    inventory: dict[str, Any] = {}
-    context: dict[str, Any] | None = None
-    if semantic_mode:
-        ast_inventory = semantic.build_inventory(
-            {item.path: {"source": item.source, "digest": item.digest, "tokens": item.tokens}
-             for item in files})
-        selected = [item.path for item in files]
-        context = _build_context(repo, selected, graph_path=graph_path)
-        semantic.ensure_chunk_coverage(context, repo, ast_inventory, selected)
-        inventory = semantic.inventory_from_context(context, selected)
+    ast_inventory = semantic.build_inventory(
+        {item.path: {"source": item.source, "digest": item.digest, "tokens": item.tokens}
+         for item in files})
+    selected = [item.path for item in files]
+    context = _build_context(repo, selected, graph_path=graph_path)
+    semantic.ensure_chunk_coverage(context, repo, ast_inventory, selected)
+    inventory = semantic.inventory_from_context(context, selected)
     tasks: dict[str, dict[str, Any]] = {"names": _task("names", "names")}
     for module in modules:
         tasks[f"module_{module.number + 1}"] = _task(f"module_{module.number + 1}", "module", module.number)
-    if semantic_mode:
-        tasks["tree"] = _task("tree", "tree")
+    tasks["tree"] = _task("tree", "tree")
     if review == "sample":
         reviewed = [max(modules, key=lambda module: (module.tokens, -module.number))]
     else:
@@ -483,25 +469,22 @@ def plan(repo: Path, run_dir: Path | None = None, *, review: str = DEFAULT_REVIE
         "schema": SCHEMA, "cbe_version": _version(), "run_tag": secrets.token_hex(3),
         "repo": str(repo), "run_dir": str(run_dir), "host": host, "driver": driver,
         "review": review, "jobs": jobs, "created_at": _now(), "updated_at": _now(), "status": "running",
-        "semantic": semantic_mode,
-        "context": ({"schema": context.get("schema"),
-                      "digest": context_digest(context),
-                      "graph_present": bool(context.get("graph")),
-                      "graph_digest": (context_digest(context["graph"])
-                                       if context.get("graph") else None)} if context else None),
+        "semantic": True,
+        "context": {"schema": context.get("schema"),
+                    "digest": context_digest(context),
+                    "graph_present": bool(context.get("graph")),
+                    "graph_digest": context_digest(context["graph"]) if context.get("graph") else None},
         "inventory": inventory,
         "files": [{"path": item.path, "tokens": item.tokens, "digest": item.digest,
                    "signatures": item.signatures} for item in files],
         "modules": [{"number": module.number, "bucket": module.bucket, "title": gen.fallback_title(module),
-                     "files": [item.path for item in module.files], "depends_on": sorted(module.depends_on),
-                     "page": None} for module in modules],
+                     "files": [item.path for item in module.files], "page": None} for module in modules],
         "tasks": tasks, "rendered": False, "verify": None,
     }
     host_dir = _host_dir(run_dir)
     for name in ("tasks", "outbox", "accepted", "raw"):
         (host_dir / name).mkdir(parents=True, exist_ok=True)
-    if context is not None:
-        _write_json(run_dir / "context.json", context)
+    _write_json(run_dir / "context.json", context)
     _write_json(host_dir / "state.json", state)
     (run_dir / "STATUS.md").write_text(_status_markdown(state), encoding="utf-8")
     _event(run_dir, "plan", f"{len(files)} files, {len(modules)} modules, {len(tasks)} tasks "
@@ -545,7 +528,6 @@ def _settled(state: dict[str, Any], task: dict[str, Any]) -> bool:
 def _ready(state: dict[str, Any]) -> list[str]:
     tasks = state["tasks"]
     titled = tasks["names"]["status"] in {"done", "failed"}
-    semantic_mode = bool(state.get("semantic"))
     ready = []
     for task_id, task in tasks.items():
         if task["status"] != "pending":
@@ -579,47 +561,7 @@ def _labels(state: dict[str, Any], task_id: str) -> dict[str, str]:
 
 
 def _body(run_dir: Path, state: dict[str, Any], task: dict[str, Any], *, embed: bool) -> tuple[str, str]:
-    """Return (rules, task body). ``embed`` puts source in the prompt for tool-free completions."""
-    if state.get("semantic"):
-        return _semantic_body(run_dir, state, task, embed=embed)
-    kind = task["kind"]
-    modules = _modules(state, source_of=task["module"] if embed and kind in {"module", "repair", "review"} else None)
-    source_root = None if embed else Path(state["repo"])
-    if kind == "names":
-        return NO_FILE_RULES, gen._name_prompt(modules)
-    if kind in {"module", "repair"}:
-        return FILE_TASK_RULES, gen._module_prompt(modules[task["module"]], modules,
-                                                   task.get("issues") if kind == "repair" else None,
-                                                   source_root=source_root)
-    if kind == "review":
-        module = modules[task["module"]]
-        return FILE_TASK_RULES, (
-            "TASK: Check this module documentation against the source. Return JSON "
-            "{\"decision\":\"accepted\" or \"needs_repair\",\"issues\":[...]} . "
-            "Only report material unsupported or missing behavior.\n"
-            "DOCUMENTATION: " + json.dumps(_module_output(run_dir, state, module.number), ensure_ascii=False)
-            + "\n" + gen._module_prompt(module, modules, source_root=source_root))
-    limit = gen.system_limit(len(modules))
-    summaries, pending = [], []
-    for module in modules:
-        output = _module_output(run_dir, state, module.number)
-        if output is None:
-            pending.append(module.title)
-            continue
-        summaries.append({"title": module.title, "summary": output["summary"], "flow": output["flow"],
-                          "files": [file.path for file in module.files]})
-    note = (f"These modules are still pending and have no summary; mention them only as pending: "
-            f"{json.dumps(pending, ensure_ascii=False)}\n" if pending else "")
-    return NO_FILE_RULES, (
-        "TASK: Synthesize only these module summaries. "
-        f"Return JSON with nonempty strings overview and maintenance_navigation, each at most {limit} characters. "
-        "Explain which module to open for a maintenance question; do not invent unseen details.\n"
-        + note + json.dumps(summaries, ensure_ascii=False))
-
-
-def _semantic_body(run_dir: Path, state: dict[str, Any], task: dict[str, Any],
-                   *, embed: bool) -> tuple[str, str]:
-    """Task bodies for the structured detail -> ownership tree mainline.
+    """Return (rules, task body); ``embed`` puts source in the prompt for tool-free completions.
 
     The frozen context is sliced once per task. Script completions embed each
     chunk once (``embed=True``); host subagents get the absolute paths and the
@@ -711,9 +653,8 @@ def completion_prompt(run_dir: Path, task_id: str) -> str:
 def next_tasks(run_dir: Path, *, limit: int | None = None, owner: str | None = None,
                reclaim_after: int | None = None) -> dict[str, Any]:
     with _locked(run_dir) as state:
-        if state.get("semantic"):
-            _verified_context(run_dir, state)
-            _auto_complete_empty_modules(run_dir, state)
+        _verified_context(run_dir, state)
+        _auto_complete_empty_modules(run_dir, state)
         now = time.time()
         if reclaim_after is not None:
             for task in state["tasks"].values():
@@ -773,23 +714,19 @@ def _raise_problems(problems: list[str]) -> None:
 def _checks(run_dir: Path, state: dict[str, Any], task: dict[str, Any]) -> tuple[Any, Any]:
     """(strict check, normalizer) for a task; both mutate the value they accept."""
     modules = _modules(state)
-    if state.get("semantic") and task["kind"] in {"module", "repair"}:
+    if task["kind"] in {"module", "repair"}:
         paths = list(state["modules"][task["module"]]["files"])
         subset = semantic.inventory_for_paths(state["inventory"], paths)
         known = _known_unit_ids(run_dir, state, exclude=task["module"])
         return (lambda value: _raise_problems(semantic.validate_details(value, paths, subset, known)),
                 lambda value: semantic.normalize_details(value, paths, subset, known))
-    if state.get("semantic") and task["kind"] == "tree":
+    if task["kind"] == "tree":
         universe = set(_semantic_units(run_dir, state)[0])
         return (lambda value: _raise_problems(semantic.validate_tree(value, universe)),
                 lambda value: semantic.normalize_tree(value, universe))
     if task["kind"] == "names":
         return (lambda value: gen._check_naming(value, modules),
                 lambda value: gen.normalize_naming(value, modules))
-    if task["kind"] in {"module", "repair"}:
-        module = modules[task["module"]]
-        return (lambda value: gen._check_module(value, module),
-                lambda value: gen.normalize_module(value, module))
     if task["kind"] == "review":
         return gen._check_review, gen.normalize_review
     limit = gen.system_limit(len(modules))
@@ -888,18 +825,17 @@ def _apply_submit(run_dir: Path, state: dict[str, Any], task: dict[str, Any], re
             state["tasks"][repair_id] = _task(repair_id, "repair", task["module"], issues=value["issues"])
             _event(run_dir, "queue", f"{repair_id} for {len(value['issues'])} review finding(s)", task=repair_id)
     elif task["kind"] in {"module", "repair"}:
-        if state.get("semantic"):
-            tree = state["tasks"].get("tree")
-            if tree is not None and tree["status"] == "done" \
-                    and (task["kind"] == "repair"
-                         or task["module"] not in tree.get("covered", [])):
-                # Both a newly finished module and a repair can change the unit
-                # set (a repair often adds grp: units), so the ownership tree
-                # must be rebuilt or some unit ends up with no primary owner.
-                tree["status"], tree["attempt_base"] = "pending", tree["attempts"]
-                tree.pop("covered", None)
-                _event(run_dir, "queue", "tree again so the ownership tree covers the current units",
-                       task="tree")
+        tree = state["tasks"].get("tree")
+        if tree is not None and tree["status"] == "done" \
+                and (task["kind"] == "repair"
+                     or task["module"] not in tree.get("covered", [])):
+            # Both a newly finished module and a repair can change the unit
+            # set (a repair often adds grp: units), so the ownership tree
+            # must be rebuilt or some unit ends up with no primary owner.
+            tree["status"], tree["attempt_base"] = "pending", tree["attempts"]
+            tree.pop("covered", None)
+            _event(run_dir, "queue", "tree again so the ownership tree covers the current units",
+                   task="tree")
         system = state["tasks"]["system"]
         if system["status"] == "done" and (task["kind"] == "repair"
                                             or task["module"] not in system.get("covered", [])):
@@ -915,9 +851,8 @@ def _apply_submit(run_dir: Path, state: dict[str, Any], task: dict[str, Any], re
 def submit(run_dir: Path, task_id: str, *, result: Path | None = None, usage: dict[str, Any] | None = None,
            error: str | None = None, raw_text: str | None = None) -> dict[str, Any]:
     with _locked(run_dir) as state:
-        if state.get("semantic"):
-            # Evidence is only consumed against the frozen snapshot.
-            _verified_context(run_dir, state)
+        # Evidence is only consumed against the frozen snapshot.
+        _verified_context(run_dir, state)
         task = state["tasks"].get(task_id)
         if task is None:
             raise HostRunError(f"unknown task {task_id}")
@@ -991,9 +926,8 @@ def resume(run_dir: Path, *, owner: str | None = None, retry_failed: bool = True
     A ``graph_path`` passed on resume must be the same graph the plan froze; a
     different graph is rejected instead of silently ignored."""
     with _locked(run_dir) as state:
-        if state.get("semantic"):
-            _verified_context(run_dir, state)
-            _auto_complete_empty_modules(run_dir, state)
+        _verified_context(run_dir, state)
+        _auto_complete_empty_modules(run_dir, state)
         if graph_path is not None:
             frozen = state.get("context") or {}
             if not frozen.get("graph_present"):
@@ -1072,18 +1006,6 @@ def _maybe_render(run_dir: Path, state: dict[str, Any], *, force: bool = False, 
         _render(run_dir, state)
 
 
-def _mechanical_overview(state: dict[str, Any], modules: list[gen.Module]) -> dict[str, str]:
-    subsystems = sorted({module.bucket for module in modules})
-    lines = []
-    for module in modules:
-        directory, _ = gen._primary_directory(module)
-        lines.append(f"- {module.title}: `{directory}` ({len(module.files)} files)")
-    return {"overview": (f"This map covers {len(state['files'])} source files in {len(modules)} modules across "
-                         f"{len(subsystems)} subsystems. The model-written overview is not available yet, so this "
-                         "summary is generated mechanically from the module list."),
-            "maintenance_navigation": gen._truncate("\n".join(lines), gen.system_limit(len(modules)))}
-
-
 def _mechanical_semantic_overview(state: dict[str, Any], tree: dict[str, Any]) -> dict[str, str]:
     nodes = tree.get("nodes") or []
     lines = [f"- {node.get('title') or node['id']}: {node.get('summary') or node.get('capability') or ''}"
@@ -1124,15 +1046,14 @@ def _semantic_review_summary(run_dir: Path, state: dict[str, Any]) -> dict[str, 
                     "this is not a whole-map proof"}
 
 
-def _render_semantic(run_dir: Path, state: dict[str, Any]) -> None:
-    if state.get("semantic"):
-        try:
-            _verified_context(run_dir, state)
-            _auto_complete_empty_modules(run_dir, state)
-        except HostRunError as exc:
-            state["render_error"] = str(exc)
-            _event(run_dir, "render", f"failed: {exc}", error=str(exc))
-            return
+def _render(run_dir: Path, state: dict[str, Any]) -> None:
+    try:
+        _verified_context(run_dir, state)
+        _auto_complete_empty_modules(run_dir, state)
+    except HostRunError as exc:
+        state["render_error"] = str(exc)
+        _event(run_dir, "render", f"failed: {exc}", error=str(exc))
+        return
     units, dispositions = _semantic_units(run_dir, state)
     tree = _semantic_tree(run_dir, state, units)
     pending = [f"module_{row['number'] + 1}" for row in state["modules"]
@@ -1210,80 +1131,7 @@ def _render_semantic(run_dir: Path, state: dict[str, Any]) -> None:
            pages=published_pages, status=state["status"], verify_ok=state["verify"]["ok"])
 
 
-def _render(run_dir: Path, state: dict[str, Any]) -> None:
-    if state.get("semantic"):
-        return _render_semantic(run_dir, state)
-    modules = _modules(state)
-    notes: dict[int, list[str]] = {}
-    pending: list[str] = []
-    for module in modules:
-        module.output = _module_output(run_dir, state, module.number)
-        if module.output is None:
-            task = _module_task(state, module.number)
-            reason = task["errors"][-1][:300] if task["errors"] else "not generated yet"
-            pending.append(task["id"])
-            module.output = {"summary": "Documentation for this module is pending.", "flow": "Pending.",
-                             "test_coverage": "", "key_behaviors": [], "uncertainties": []}
-            notes[module.number] = [f"Pending: {task['id']} has no accepted result ({reason}). "
-                                    "Resume the run to generate it."]
-        else:
-            source = state["tasks"].get(f"repair_{module.number + 1}") or _module_task(state, module.number)
-            if source["status"] != "done":
-                source = _module_task(state, module.number)
-            if source["flags"]:
-                notes[module.number] = [f"CBE normalized this page after a second invalid answer: {flag}"
-                                        for flag in source["flags"]]
-    index_notes: list[str] = []
-    system_task = state["tasks"]["system"]
-    system = _accepted(run_dir, "system") if system_task["status"] == "done" else None
-    if system is None:
-        system = _mechanical_overview(state, modules)
-        index_notes.append("The overview and navigation are mechanical because the `system` task is "
-                           + ("failed; resume the run to retry it." if system_task["status"] == "failed"
-                              else "not finished yet."))
-    else:
-        index_notes += [f"CBE normalized the overview after a second invalid answer: {flag}"
-                        for flag in system_task["flags"]]
-        missing = [state["tasks"][f"module_{number + 1}"]["id"] for number in _done_modules(state)
-                   if number not in system_task.get("covered", [])]
-        if missing:
-            index_notes.append(f"The overview predates {', '.join(missing)}; the `system` task is queued again.")
-    if pending:
-        index_notes.append(f"{len(pending)} module page(s) are pending: {', '.join(pending)}.")
-    files = [file for module in modules for file in module.files]
-    try:
-        catalog = gen._render(Path(state["repo"]), run_dir, files, modules, system, notes, index_notes)
-    except gen.GenerateError as exc:
-        state["render_error"] = str(exc)
-        _event(run_dir, "render", f"failed: {exc}", error=str(exc))
-        return
-    state.pop("render_error", None)
-    for row, entry in zip(state["modules"], catalog["modules"]):
-        row["page"] = f"docs/{entry['page']}"
-    reason = state.get("partial_reason")
-    complete = all(task["status"] == "done" for task in state["tasks"].values()) and not reason
-    state["status"], state["rendered"] = ("complete" if complete else "partial"), True
-    if not complete and not all(_settled(state, task) for task in state["tasks"].values()):
-        state["status"] = "running"
-    summary = {"status": state["status"], "driver": state.get("driver", "host"), "host": state["host"],
-               "source_files": len(files), "source_tokens": sum(file.tokens for file in files),
-               "modules": len(modules), "published_pages": len(catalog["modules"]) + 1,
-               "pending": pending + (["system"] if system_task["status"] != "done" else []),
-               "normalized": sorted(task["id"] for task in state["tasks"].values() if task["flags"]),
-               "wall_seconds": round(time.time() - _epoch(state["created_at"]), 3),
-               "run_dir": str(run_dir), "index": str(run_dir / "docs" / "INDEX.md"),
-               "subagent_tasks": sum(task["attempts"] for task in state["tasks"].values())}
-    if reason:
-        summary["partial_reason"], summary["partial_detail"] = reason, state.get("partial_detail", "")
-    _write_json(run_dir / "summary.json", summary)
-    state["verify"] = verify_state(run_dir, state)
-    _event(run_dir, "render", f"{summary['published_pages']} pages, status {state['status']}"
-           + (f", pending {summary['pending']}" if summary["pending"] else "")
-           + f", verify {'ok' if state['verify']['ok'] else 'has failures'} -> docs/INDEX.md",
-           pages=summary["published_pages"], status=state["status"], verify_ok=state["verify"]["ok"])
-
-
-def _semantic_verify_state(run_dir: Path, state: dict[str, Any]) -> dict[str, Any]:
+def verify_state(run_dir: Path, state: dict[str, Any]) -> dict[str, Any]:
     checks: list[dict[str, Any]] = []
 
     def check(name: str, ok: bool, detail: Any = None) -> None:
@@ -1319,57 +1167,6 @@ def _semantic_verify_state(run_dir: Path, state: dict[str, Any]) -> dict[str, An
         checks += semantic.verify(run_dir, state.get("inventory") or {}, units, dispositions, tree)
     except (semantic.SemanticError, OSError, ValueError) as exc:
         check("semantic_checks", False, str(exc)[:300])
-    return {"ok": all(row["ok"] for row in checks), "checks": checks}
-
-
-def verify_state(run_dir: Path, state: dict[str, Any]) -> dict[str, Any]:
-    if state.get("semantic"):
-        return _semantic_verify_state(run_dir, state)
-    checks: list[dict[str, Any]] = []
-
-    def check(name: str, ok: bool, detail: Any = None) -> None:
-        checks.append({"check": name, "ok": bool(ok), **({"detail": detail} if detail else {})})
-
-    unfinished = [task["id"] for task in state["tasks"].values() if task["status"] != "done"]
-    check("all_tasks_done", not unfinished, unfinished[:20])
-    changed = _drift(state)
-    check("sources_unchanged", not changed, changed[:20])
-    planned = [row["path"] for row in state["files"]]
-    assigned = [path for module in state["modules"] for path in module["files"]]
-    duplicates = sorted({path for path in assigned if assigned.count(path) > 1})
-    check("each_file_in_exactly_one_module", sorted(assigned) == sorted(planned) and not duplicates,
-          {"planned": len(planned), "assigned": len(assigned), "duplicates": duplicates[:20]})
-    try:
-        current = {item.path for item in gen.scan(Path(state["repo"]))}
-    except gen.GenerateError as exc:
-        current = set()
-        check("rescan", False, str(exc))
-    unplanned = sorted(current - set(planned))
-    check("no_unplanned_source_files", not unplanned, unplanned[:20])
-    index = run_dir / "docs" / "INDEX.md"
-    catalog_path = run_dir / "catalog.json"
-    if not index.is_file() or not catalog_path.is_file():
-        check("rendered", False, "docs/INDEX.md or catalog.json is missing")
-        return {"ok": False, "checks": checks}
-    text = index.read_text(encoding="utf-8")
-    links = re.findall(r"\]\((modules/[^)]+\.md)\)", text)
-    missing = [link for link in links if not (run_dir / "docs" / link).is_file()]
-    check("index_links_resolve", links and not missing and len(links) == len(state["modules"]),
-          {"links": len(links), "modules": len(state["modules"]), "missing": missing[:20]})
-    subsystems = re.findall(r"^### ", text, flags=re.MULTILINE)
-    check("two_level_index", bool(subsystems) and "## Subsystems" in text, {"subsystem_headings": len(subsystems)})
-    catalog = json.loads(catalog_path.read_text(encoding="utf-8"))
-    check("catalog_covers_every_file", sorted(catalog["files"]) == sorted(planned),
-          {"catalog_files": len(catalog["files"])})
-    unlisted = []
-    for entry in catalog["modules"]:
-        page = (run_dir / "docs" / entry["page"]).read_text(encoding="utf-8")
-        unlisted += [path for path in entry["files"] if f"### `{path}`" not in page]
-    check("pages_list_their_files", not unlisted, unlisted[:20])
-    # Overloaded definitions repeat a name; the catalogue keys unique IDs.
-    expected_symbols = len({f"{row['path']}::{name}" for row in state["files"] for name in row["signatures"]})
-    check("symbol_catalogue_complete", len(catalog["symbols"]) == expected_symbols,
-          {"symbols": len(catalog["symbols"]), "expected": expected_symbols})
     return {"ok": all(row["ok"] for row in checks), "checks": checks}
 
 
@@ -1433,7 +1230,7 @@ def _status_markdown(state: dict[str, Any]) -> str:
                     f"{sum(task['status'] == 'done' for task in review_tasks)}/{len(review_tasks)} "
                     "reviewed by a separate reader of the source. This is independent of the "
                     "deterministic structure/coverage checks and does not prove whole-map truth.", ""]
-                   if state.get("semantic") and review_tasks else [])
+                   if review_tasks else [])
     lines = ["# CBE run status", "",
              f"Run `{state['run_tag']}` · status **{state['status']}** · updated {state['updated_at']} · "
              f"review {state['review']} · jobs {state['jobs']} · host {state['host']}", "",

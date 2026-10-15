@@ -5,6 +5,7 @@ from __future__ import annotations
 import csv
 import importlib
 import json
+import os
 
 import pytest
 
@@ -106,42 +107,6 @@ def test_generate_renders_and_accounts_for_each_physical_call(tmp_path, monkeypa
         assert len(list(csv.DictReader(stream))) == 6
 
 
-def test_large_test_module_keeps_valid_coverage_in_text_or_json_shape() -> None:
-    source = generator.SourceFile("tests/test_work.py", "", 24_000, "unused", [])
-    module = generator.Module(0, [source], "tests")
-    base = {"summary": "Tests work.", "flow": "Exercises behavior.",
-            "key_behaviors": [], "uncertainties": []}
-    long_coverage = "verified behavior; " * 380
-    text_result = {**base, "test_coverage": long_coverage}
-    generator._check_module(text_result, module)
-    assert text_result["test_coverage"] == long_coverage
-    structured_result = {**base, "test_coverage": ["success path", "failure path"]}
-    generator._check_module(structured_result, module)
-    assert "failure path" in structured_result["test_coverage"]
-    medium = generator.Module(2, [generator.SourceFile("tests/medium.py", "", 4_000, "unused", [])], "tests")
-    generator._check_module({**base, "test_coverage": "x" * 1_800}, medium)
-    small = generator.Module(1, [generator.SourceFile("tests/small.py", "", 100, "unused", [])], "tests")
-    with pytest.raises(ValueError, match="module-sized limit"):
-        generator._check_module({**base, "test_coverage": "x" * 1501}, small)
-
-
-def test_late_conditional_status_is_in_published_guard_rows(tmp_path) -> None:
-    repo = tmp_path / "repo"
-    repo.mkdir()
-    checks = "".join(f"    if value == {index}:\n        raise ValueError({index})\n"
-                     for index in range(9))
-    (repo / "work.py").write_text(
-        "def apply(value, active, pending):\n" + checks
-        + "    if not active:\n"
-        + "        return {'status': 'needs_revision' if pending else 'applied'}\n"
-        + "    return {'status': 'partial' if pending else 'applied'}\n",
-        encoding="utf-8",
-    )
-    rows = generator._guard_rows(repo, generator.scan(repo))["work.py"]
-    assert any(row["symbol"] == "apply" and "not active" in row["guards"]
-               and "needs_revision" in row["syntax"] for row in rows)
-
-
 def test_missing_devin_cache_keeps_observed_input_and_output(tmp_path) -> None:
     (tmp_path / "calls.csv").write_text(
         "task,attempt,input_tokens,output_tokens,cache_tokens,result,seconds\n"
@@ -197,14 +162,6 @@ def test_naming_trims_long_but_complete_titles() -> None:
     assert len(value["names"][0]["title"]) <= 80
 
 
-def test_module_allows_source_grounded_flow_under_two_thousand_chars() -> None:
-    module = generator.Module(0, [generator.SourceFile("pkg/a.py", "", 100, "unused", [])], "pkg")
-    value = {"summary": "Brief summary", "flow": "step, " * 300,
-             "test_coverage": "", "key_behaviors": [], "uncertainties": []}
-    generator._check_module(value, module)
-    assert len(value["flow"]) > 1500
-
-
 def test_primary_directory_share_uses_direct_parent_not_a_common_ancestor() -> None:
     module = generator.Module(0, [
         generator.SourceFile("pkg/a/x.py", "", 1, "unused", []),
@@ -234,23 +191,6 @@ def test_exact_test_directory_beats_singularized_neighbor() -> None:
     modules = generator.plan(files)
     test_module = next(module for module in modules if module.is_test)
     assert test_module.bucket == "apps"
-
-
-def test_ambiguous_behavior_alias_is_not_published() -> None:
-    module = generator.Module(0, [
-        generator.SourceFile("examples/one/myapp.py", "", 100, "unused", ["add"]),
-        generator.SourceFile("examples/two/myapp.py", "", 100, "unused", ["add"]),
-    ], "examples")
-    detail = {"behavior": "Adds a value", "conditions": "", "failures": ""}
-    value = {"summary": "Examples", "flow": "Run an example", "test_coverage": "",
-             "key_behaviors": [{"symbol": "myapp.add", **detail},
-                               {"symbol": "examples/one/myapp.py::add", **detail}],
-             "uncertainties": []}
-    generator._check_module(value, module)
-    assert [item["symbol"] for item in value["key_behaviors"]] == ["examples/one/myapp.py::add"]
-    prompt = generator._module_prompt(module, [module])
-    available = json.loads(prompt.split("Available symbols: ", 1)[1].split("\n", 1)[0])
-    assert available == ["examples/one/myapp.py::add", "examples/two/myapp.py::add"]
 
 
 def test_generate_renders_partial_run_and_resume_finishes_pending_parts(tmp_path, monkeypatch, capsys) -> None:
@@ -483,3 +423,41 @@ def test_generate_resume_rejects_a_different_graph(tmp_path) -> None:
     gb.write_text(json.dumps({**graph_a, "backend": {"name": "test", "version": "2"}}), encoding="utf-8")
     with pytest.raises(host_run.HostRunError, match="differs from the frozen graph"):
         generator.generate(repo, run_dir, model="example/model", resume=True, graph_path=gb)
+
+
+def test_system_limit_grows_with_the_module_count() -> None:
+    # A recorded GLM overview of 3147 characters once voided a whole 13-module run.
+    system = {"overview": "Overview.", "maintenance_navigation": "n" * 3147}
+    generator._check_system(system, generator.system_limit(13))
+    with pytest.raises(ValueError, match="at most 2000"):
+        generator._check_system({"overview": "x", "maintenance_navigation": "n" * 3147})
+
+
+def test_scan_keeps_own_source_in_build_dist_vendor_hidden_and_minified(tmp_path) -> None:
+    repo = tmp_path / "repo"
+    for directory in ("src", "build", "dist", "vendor", ".hidden", ".git/hooks", ".venv/lib",
+                      "node_modules/pkg"):
+        (repo / directory).mkdir(parents=True)
+    own = {"src/ok.py": "def ok():\n    return 1\n", "build/gen.py": "def gen():\n    return 1\n",
+           "dist/shipped.py": "def shipped():\n    return 1\n",
+           "vendor/mine.js": "export function mine() { return 1; }\n",
+           ".hidden/tool.py": "def tool():\n    return 1\n", "native.c": "int main(void) { return 0; }\n",
+           "broken.py": "def oops(\n", "owned.min.js": "export function m(v) { return v + 1; }\n"}
+    cached = {".git/hooks/secret.py": "def secret():\n    return 0\n",
+              ".venv/lib/cached.py": "def cached():\n    return 0\n",
+              "node_modules/pkg/index.js": "export function dep() { return 0; }\n"}
+    for path, text in {**own, **cached}.items():
+        (repo / path).write_text(text, encoding="utf-8")
+    (repo / "notes.md").write_text("# not source\n", encoding="utf-8")
+    assert {item.path for item in generator.scan(repo)} == set(own)
+
+
+def test_scan_skips_symlinked_sources(tmp_path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "real.py").write_text("def real():\n    return 1\n", encoding="utf-8")
+    outside = tmp_path / "outside.py"
+    outside.write_text("def secret():\n    return 0\n", encoding="utf-8")
+    os.symlink(outside, repo / "external.py")
+    os.symlink(repo / "real.py", repo / "internal_link.py")
+    assert [item.path for item in generator.scan(repo)] == ["real.py"]
