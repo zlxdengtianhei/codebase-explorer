@@ -12,7 +12,6 @@ import ast
 import re
 from typing import Any, Iterator
 
-PROJECTION_VERSION = "concrete-facts/1"
 
 MAX_TEXT_CHARS = 160
 MAX_CONSTANT_ITEMS = 12

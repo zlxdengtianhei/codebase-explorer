@@ -18,36 +18,11 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from cbe import source_context
 from cbe.headless_completion import invoke
 from cbe.token_budget import count_text_tokens
 
 
-SUFFIXES = {".py", ".ts", ".tsx", ".mts", ".cts", ".js", ".jsx", ".mjs",
-            ".cjs", ".c", ".h", ".cpp", ".cc", ".rs", ".sql"}
-_SUFFIX_CACHE: set[str] | None = None
-
-
-def supported_suffixes() -> set[str]:
-    """Source suffixes to scan: the legacy floor plus every grammar the
-    installed ``cbe.source_context`` discovers.
-
-    The registry, not a hard-coded list, decides multi-language coverage; an
-    extra grammar added to ``source_context`` becomes scannable here with no
-    change. If that module is unavailable the legacy set is the honest floor.
-    """
-    global _SUFFIX_CACHE
-    if _SUFFIX_CACHE is None:
-        discovered: set[str] = set()
-        try:
-            from cbe import source_context
-            for row in source_context.available_languages().get("languages") or []:
-                for suffix in row.get("suffixes") or []:
-                    text = str(suffix).lower()
-                    discovered.add(text if text.startswith(".") else "." + text)
-        except Exception:  # noqa: BLE001 - discovery is optional; the floor stands
-            discovered = set()
-        _SUFFIX_CACHE = discovered | SUFFIXES
-    return _SUFFIX_CACHE
 TARGET_TOKENS = 20_000
 MAX_TOKENS = 25_000
 MAX_SINGLE_FILE_TOKENS = 60_000
@@ -154,13 +129,13 @@ def _imports(path: str, source: str) -> set[str]:
 
 
 def scan(repo: Path) -> list[SourceFile]:
-    suffixes = supported_suffixes()
+    """Every regular source file outside the excluded directories; symlinks are never followed."""
+    suffixes = source_context.registered_suffixes() | source_context.FALLBACK_SUFFIXES
     files: list[SourceFile] = []
     for path in sorted(repo.rglob("*")):
         if not path.is_file() or path.is_symlink() or path.suffix.lower() not in suffixes:
             continue
-        if any(part in {".git", ".venv", "venv", "node_modules", "__pycache__", ".codebase-analysis"}
-               for part in path.relative_to(repo).parts):
+        if any(part in source_context.DEFAULT_EXCLUDE_DIR_NAMES for part in path.relative_to(repo).parts):
             continue
         raw = path.read_bytes()
         try:

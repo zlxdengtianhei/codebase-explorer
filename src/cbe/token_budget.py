@@ -5,7 +5,6 @@ from __future__ import annotations
 import hashlib
 import base64
 from functools import lru_cache
-from importlib.metadata import version
 from importlib.resources import files
 
 import tiktoken
@@ -20,10 +19,6 @@ O200K_PATTERN = "|".join([
     r"\p{N}{1,3}", r" ?[^\s\p{L}\p{N}]+[\r\n/]*", r"\s*[\r\n]+",
     r"\s+(?!\S)", r"\s+",
 ])
-
-
-def tokenizer_version() -> str:
-    return version("tiktoken")
 
 
 @lru_cache(maxsize=1)

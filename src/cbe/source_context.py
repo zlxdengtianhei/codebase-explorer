@@ -600,15 +600,14 @@ def available_languages() -> dict[str, Any]:
     return {"schema": SCHEMA_CONTEXT, "languages": languages, "plugin_errors": [dict(item) for item in _PLUGIN_ERRORS]}
 
 
-def supported_languages() -> dict[str, Any]:
-    """Discovery alias for consumers that ask for supported languages.
+#: Suffixes documented without a grammar: each file becomes one whole-file region.
+FALLBACK_SUFFIXES = frozenset({".sql"})
 
-    Returns the same registry as :func:`available_languages`; it is the single
-    authoritative discovery path for the generation driver so no Python-only
-    file scan can hide the extra languages.
-    """
 
-    return available_languages()
+def registered_suffixes() -> frozenset[str]:
+    """Every suffix a registered grammar (built-in or plugin) claims."""
+
+    return frozenset(suffix.lower() for spec in _all_specs() for suffix in spec.suffixes)
 
 
 # ---------------------------------------------------------------------------
@@ -744,7 +743,6 @@ class _Declaration:
     symbol_id: str
     start_byte: int
     end_byte: int
-    body_start_byte: int
     children: list["_Declaration"] = field(default_factory=list)
     ancestors: tuple[str, ...] = ()
     signature: str = ""
@@ -913,7 +911,6 @@ def _make_declaration(
         symbol_id=symbol_id,
         start_byte=start_byte,
         end_byte=end_byte,
-        body_start_byte=body_start,
         ancestors=ancestors,
         signature=signature,
     )
@@ -1393,28 +1390,38 @@ def _load_graph(graph_path: Path, repo: Path, frozen_hashes: dict[str, str]) -> 
             f"expected schema {SCHEMA_GRAPH!r}, got {payload.get('schema')!r}",
             path=str(graph_path),
         )
+    check_graph_source(repo, payload, frozen_hashes)
+    return payload
+
+
+def check_graph_source(repo: Path, graph: dict[str, Any], frozen_hashes: dict[str, str]) -> None:
+    """Raise :class:`ContextError` unless ``graph`` can be evidence for the frozen source.
+
+    Provenance must be stable and current. Every manifest entry must name a
+    repository file whose bytes match: ``frozen_hashes`` (path to sha256) is the
+    authority for frozen files, so a file changed between two reads cannot make
+    a stale chunk set look consistent; other (boundary) files are read from
+    disk. Every node or edge that anchors existing repository source must be in
+    the manifest, so a graph cannot mix snapshots. Nodes without a repository
+    path stay external and a valid empty graph stays valid.
+    """
+
     from cbe.graph import GraphError, validate_graph_provenance
 
     try:
-        validate_graph_provenance(repo, payload)
+        validate_graph_provenance(repo, graph)
     except (GraphError, OSError) as exc:
-        raise ContextError("graph_provenance_mismatch", str(exc), path=str(graph_path)) from exc
-    manifest = payload.get("source_manifest")
+        raise ContextError("graph_provenance_mismatch", str(exc)) from exc
+    manifest = graph.get("source_manifest")
     if not isinstance(manifest, list):
-        raise ContextError(
-            "graph_manifest_missing",
-            "graph has no source_manifest; cannot prove it matches the source",
-            path=str(graph_path),
-        )
+        raise ContextError("graph_manifest_missing",
+                           "graph has no source_manifest; cannot prove it matches the source")
     manifested: set[str] = set()
     for entry in manifest:
-        if not isinstance(entry, dict) or "path" not in entry or "sha256" not in entry:
-            raise ContextError(
-                "graph_manifest_missing",
-                f"malformed source_manifest entry: {entry!r}",
-                path=str(graph_path),
-            )
-        raw_rel = str(entry["path"])
+        if not isinstance(entry, dict) or not isinstance(entry.get("path"), str) \
+                or not isinstance(entry.get("sha256"), str):
+            raise ContextError("graph_manifest_missing", f"malformed source_manifest entry: {entry!r}")
+        raw_rel, expected = entry["path"], entry["sha256"]
         try:
             rel = _validate_relative(repo, raw_rel)
         except ContextError as exc:
@@ -1425,30 +1432,21 @@ def _load_graph(graph_path: Path, repo: Path, frozen_hashes: dict[str, str]) -> 
                 reason="invalid_path",
             ) from exc
         manifested.add(rel)
-        expected = str(entry["sha256"])
         if rel in frozen_hashes:
-            # Authority is the hash of the bytes the chunks were built from, so
-            # a file changed between the two reads cannot make a stale chunk
-            # set look consistent with a matching second read.
-            actual = frozen_hashes[rel]
-        else:
-            target = repo / PurePosixPath(rel)
-            try:
-                raw = target.read_bytes()
-            except OSError:
-                raise GraphSourceMismatch(
-                    rel, expected, None, "file present in graph manifest is missing on disk"
-                ) from None
-            actual = sha256_bytes(raw)
+            if frozen_hashes[rel] != expected:
+                raise GraphSourceMismatch(rel, expected, frozen_hashes[rel],
+                                          "content hash differs from current source")
+            continue
+        try:
+            actual = sha256_bytes((repo / PurePosixPath(rel)).read_bytes())
+        except OSError:
+            raise GraphSourceMismatch(rel, expected, None,
+                                      "file present in graph manifest is missing on disk") from None
         if actual != expected:
-            raise GraphSourceMismatch(rel, expected, actual, "content hash differs from current source")
-
-    # A node or edge that anchors real repo source must be covered by the
-    # manifest, or the graph mixes snapshots.  Nodes without a repo path (or
-    # with a path that is not an existing repo file) stay explicitly
-    # external/unknown and are not rejected; a valid empty graph stays valid.
+            raise GraphSourceMismatch(rel, expected, actual,
+                                      "boundary source drifted: content hash differs from current source")
     unmanifested: set[str] = set()
-    for anchor in _graph_source_anchors(payload):
+    for anchor in _graph_source_anchors(graph):
         raw_path = anchor.get("path")
         if not isinstance(raw_path, str) or not raw_path:
             continue
@@ -1456,9 +1454,7 @@ def _load_graph(graph_path: Path, repo: Path, frozen_hashes: dict[str, str]) -> 
             rel = _validate_relative(repo, raw_path)
         except ContextError:
             continue
-        if rel in manifested:
-            continue
-        if (repo / rel).exists():
+        if rel not in manifested and (repo / rel).exists():
             unmanifested.add(rel)
     if unmanifested:
         listed = ", ".join(sorted(unmanifested)[:10])
@@ -1467,7 +1463,6 @@ def _load_graph(graph_path: Path, repo: Path, frozen_hashes: dict[str, str]) -> 
             f"graph anchors repo source not covered by source_manifest: {listed}",
             paths=sorted(unmanifested),
         )
-    return payload
 
 
 def _prune_graph(graph: dict[str, Any] | None, selected: set[str]) -> dict[str, Any] | None:

@@ -38,22 +38,6 @@ from cbe.graph_backends._paths import canonical_repo_path
 
 SCHEMA_GRAPH = "cbe-graph/1"
 
-#: Fallback suffix -> language map.  The live map is derived from
-#: ``cbe.source_context`` so the graph layer and the chunk layer cannot drift.
-_FALLBACK_SUFFIXES: dict[str, str] = {
-    ".c": "c", ".h": "c",
-    ".cc": "cpp", ".cpp": "cpp", ".cxx": "cpp", ".c++": "cpp",
-    ".hh": "cpp", ".hpp": "cpp", ".hxx": "cpp", ".h++": "cpp", ".inl": "cpp",
-    ".py": "python",
-    ".js": "javascript", ".jsx": "javascript", ".mjs": "javascript", ".cjs": "javascript",
-    ".ts": "typescript", ".mts": "typescript", ".cts": "typescript",
-    ".tsx": "tsx",
-    ".java": "java", ".go": "go",
-    ".rb": "ruby", ".rake": "ruby", ".gemspec": "ruby", ".ru": "ruby",
-    ".rs": "rust", ".php": "php", ".phtml": "php", ".cs": "c_sharp",
-    ".kt": "kotlin", ".kts": "kotlin", ".swift": "swift",
-}
-
 #: Build/module-resolution files that change what an analyzer sees.
 GRAPH_CONFIG_NAMES = frozenset({
     "compile_commands.json", "CMakeLists.txt", "Makefile", "tsconfig.json",
@@ -82,22 +66,11 @@ def _excluded_dir_names() -> frozenset[str]:
 
 
 def graph_suffixes() -> dict[str, str]:
-    """Return suffix -> language, taken from the source-context registry."""
+    """Return suffix -> language from the source-context grammar registry (one table for both layers)."""
 
-    try:
-        from cbe.source_context import supported_languages  # noqa: PLC0415
+    from cbe.source_context import _all_specs  # noqa: PLC0415
 
-        result: dict[str, str] = {}
-        for entry in supported_languages().get("languages", []):
-            name = entry.get("name")
-            for suffix in entry.get("suffixes", []):
-                if name and suffix:
-                    result[str(suffix).lower()] = name
-        if result:
-            return result
-    except Exception:
-        pass
-    return dict(_FALLBACK_SUFFIXES)
+    return {suffix.lower(): spec.name for spec in _all_specs() for suffix in spec.suffixes}
 
 
 def discover_sources(repo, languages: list[str] | None = None) -> list[dict]:

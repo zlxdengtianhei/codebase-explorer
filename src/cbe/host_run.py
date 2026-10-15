@@ -33,6 +33,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterator
 
+from cbe import __version__
 from cbe import generate as gen
 from cbe import semantic
 from cbe import source_context
@@ -81,14 +82,6 @@ def _epoch(stamp: str) -> float:
     return datetime.strptime(stamp, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc).timestamp()
 
 
-def _version() -> str:
-    try:
-        from importlib.metadata import version
-        return version("codebase-explorer")
-    except Exception:  # noqa: BLE001 - a source checkout has no metadata
-        return "source"
-
-
 def _host_dir(run_dir: Path) -> Path:
     return run_dir / "host"
 
@@ -119,50 +112,15 @@ def context_digest(context: dict[str, Any]) -> str:
 
 
 def _verify_graph_manifest(repo: Path, state: dict[str, Any], context: dict[str, Any]) -> None:
-    """Re-check that the frozen graph still matches the frozen source.
-
-    Scanned files are checked against the plan digests without touching disk;
-    a boundary file the graph references but the scan did not cover is read and
-    checked against its manifest hash. A node that anchors existing repo source
-    must be covered by the manifest, so a graph cannot mix snapshots.
-    """
+    """Re-check that the frozen graph still matches the planned source (see ``check_graph_source``)."""
     graph = context.get("graph")
     if not graph:
         return
-    from cbe.graph import GraphError, validate_graph_provenance
-
     try:
-        validate_graph_provenance(repo, graph)
-    except (GraphError, OSError) as exc:
-        raise HostRunError(str(exc)) from exc
-    manifest = graph.get("source_manifest")
-    if not isinstance(manifest, list):
-        raise HostRunError("frozen graph has no source_manifest; cannot prove it matches the source")
-    planned = {row["path"]: row["digest"] for row in state["files"]}
-    manifested: set[str] = set()
-    for entry in manifest:
-        if not isinstance(entry, dict) or not isinstance(entry.get("path"), str) \
-                or not isinstance(entry.get("sha256"), str):
-            raise HostRunError("frozen graph has a malformed source_manifest entry")
-        rel, expected = entry["path"], entry["sha256"]
-        manifested.add(rel)
-        if rel in planned:
-            if planned[rel] != expected:
-                raise HostRunError(f"frozen graph/source drift on {rel}: manifest {expected} != plan "
-                                   f"{planned[rel]}; start a new plan")
-            continue
-        try:
-            raw = (repo / rel).read_bytes()
-        except OSError as exc:
-            raise HostRunError(f"frozen graph boundary source is unreadable: {rel} ({exc.strerror or exc})") from exc
-        if hashlib.sha256(raw).hexdigest() != expected:
-            raise HostRunError(f"frozen graph boundary source drifted: {rel}; start a new plan")
-    for node in graph.get("nodes") or []:
-        if not isinstance(node, dict):
-            continue
-        rel = node.get("path")
-        if isinstance(rel, str) and rel and rel not in manifested and (repo / rel).exists():
-            raise HostRunError(f"frozen graph anchors source not in its manifest: {rel}")
+        source_context.check_graph_source(repo, graph, {row["path"]: row["digest"] for row in state["files"]})
+    except source_context.ContextError as exc:
+        raise HostRunError(f"frozen graph does not match the planned source: {exc.message}; "
+                           "start a new plan") from exc
 
 
 def _verified_context(run_dir: Path, state: dict[str, Any]) -> dict[str, Any]:
@@ -314,16 +272,9 @@ def _auto_complete_empty_modules(run_dir: Path, state: dict[str, Any]) -> list[s
 def _assert_paths_unchanged(state: dict[str, Any], paths: list[str]) -> None:
     """The script driver builds a prompt outside ``next_tasks``; a drifted source
     must stop it exactly as the host dispatch refuses a drifted path."""
-    repo = Path(state["repo"])
-    planned = {row["path"]: row["digest"] for row in state["files"]}
-    for path in paths:
-        try:
-            raw = (repo / path).read_bytes()
-        except OSError as exc:
-            raise HostRunError(f"source changed since plan: {path} ({exc.strerror or exc}); "
-                               "start a new plan") from exc
-        if hashlib.sha256(raw).hexdigest() != planned.get(path):
-            raise HostRunError(f"source changed since plan: {path}; start a new plan")
+    changed = _drift(state, paths)
+    if changed:
+        raise HostRunError(f"source changed since plan: {changed[0]}; start a new plan")
 
 
 
@@ -466,7 +417,7 @@ def plan(repo: Path, run_dir: Path | None = None, *, review: str = DEFAULT_REVIE
         tasks[f"review_{module.number + 1}"] = _task(f"review_{module.number + 1}", "review", module.number)
     tasks["system"] = _task("system", "system")
     state = {
-        "schema": SCHEMA, "cbe_version": _version(), "run_tag": secrets.token_hex(3),
+        "schema": SCHEMA, "cbe_version": __version__, "run_tag": secrets.token_hex(3),
         "repo": str(repo), "run_dir": str(run_dir), "host": host, "driver": driver,
         "review": review, "jobs": jobs, "created_at": _now(), "updated_at": _now(), "status": "running",
         "semantic": True,

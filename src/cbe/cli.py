@@ -15,14 +15,6 @@ def _abs(value: str) -> Path:
     return path
 
 
-def _package_version() -> str:
-    try:
-        from importlib.metadata import version
-        return version("codebase-explorer")
-    except Exception:  # noqa: BLE001 - a source checkout has no metadata
-        return "source"
-
-
 def build_parser() -> argparse.ArgumentParser:
     from cbe.host_run import DEFAULT_REVIEW, REVIEW_MODES
 
@@ -30,7 +22,9 @@ def build_parser() -> argparse.ArgumentParser:
         prog="python -m cbe",
         description="Codebase Explorer: a navigable, source-grounded documentation map of a repository",
     )
-    parser.add_argument("--version", action="version", version=f"%(prog)s {_package_version()}")
+    from cbe import __version__
+
+    parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     sub = parser.add_subparsers(dest="command", required=True)
 
     generate_p = sub.add_parser("generate", help="Generate documentation through an API, OpenCode, or Devin")

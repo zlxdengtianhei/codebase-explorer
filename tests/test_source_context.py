@@ -28,7 +28,6 @@ from cbe.source_context import (
     context_for_paths,
     language_for_path,
     register_language,
-    supported_languages,
 )
 
 FIXTURES = Path(__file__).parent / "fixtures" / "source_context"
@@ -567,7 +566,6 @@ def test_language_discovery_covers_priority_and_extra_languages():
         assert languages[name]["available"] is True, f"{name} grammar unavailable: {languages[name]['error']}"
     assert language_for_path("x.tsx") == "tsx"
     assert language_for_path("x.unknown") is None
-    assert supported_languages() == available_languages()
     # The registry is the single discovery path: an extra language is visible
     # without touching the priority list.
     assert "go" in languages

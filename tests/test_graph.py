@@ -83,10 +83,10 @@ def test_discover_sources_covers_registry_extensions(tmp_path: Path) -> None:
 
 
 def test_graph_suffixes_match_source_context_registry() -> None:
-    from cbe.source_context import supported_languages
+    from cbe.source_context import available_languages
 
     registry = {}
-    for entry in supported_languages()["languages"]:
+    for entry in available_languages()["languages"]:
         for suffix in entry["suffixes"]:
             registry[suffix.lower()] = entry["name"]
     assert graph_suffixes() == registry
