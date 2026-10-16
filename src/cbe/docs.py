@@ -453,6 +453,40 @@ def catalog_symbols(catalog: dict) -> dict[str, dict]:
     return records
 
 
+def prose_for_links(text: str) -> str:
+    """Hide code blocks and paired code spans within each prose paragraph.
+
+    Inline spans may cross a soft line break, but never a blank line or a
+    fenced/indented code block. An unmatched delimiter remains ordinary prose.
+    """
+    paragraphs = []
+    pending = []
+    fence = None
+
+    def flush():
+        paragraph = "".join(pending)
+        paragraphs.append(re.sub(r"(?<!`)(`+)(?!`)(.*?)(?<!`)\1(?!`)", "", paragraph,
+                                 flags=re.DOTALL))
+        pending.clear()
+
+    for line in text.splitlines(keepends=True):
+        marker = re.match(r"^ {0,3}(`{3,}|~{3,})(.*)$", line)
+        if fence:
+            if marker and marker[1][0] == fence[0] and len(marker[1]) >= len(fence) and not marker[2].strip():
+                fence = None
+            continue
+        if marker and (marker[1][0] != "`" or "`" not in marker[2]):
+            flush()
+            fence = marker[1]
+        elif not line.strip() or line.startswith(("    ", "\t")):
+            flush()
+            paragraphs.append("\n")
+        else:
+            pending.append(line)
+    flush()
+    return "".join(paragraphs)
+
+
 def verify(run_dir: Path, inventory: dict, units: dict, dispositions: dict,
            tree: dict) -> list[dict]:
     """Deterministic structural/coverage checks for the semantic artifact.
@@ -528,7 +562,7 @@ def verify(run_dir: Path, inventory: dict, units: dict, dispositions: dict,
         page_texts[md.relative_to(docs).as_posix()] = text
         # Undefined CommonMark references are literal text (e.g. Python a[b][c]).
         # Only fN is our generated reference namespace; code examples are opaque.
-        link_text = re.sub(r"(?<!`)(`+)(?!`)(.*?)(?<!`)\1(?!`)", "", text, flags=re.DOTALL)
+        link_text = prose_for_links(text)
         references = dict(re.findall(r"^\[([^\]\n]+)\]:\s*(\S+)\s*$", link_text, re.MULTILINE))
         for reference in re.findall(r"\[[^\]\n]+\]\[([^\]\n]+)\]", link_text):
             if re.fullmatch(r"f\d+", reference) and reference not in references:

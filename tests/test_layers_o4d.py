@@ -42,3 +42,22 @@ def test_edges_obey_exclusive_ownership_at_shared_boundary(tmp_path, capsys):
     assert [e["id"] for e in docs.query(run, parent["id"], edges="cfg")["raw_edges"]] == ["0-cfg"]
     assert cli.main(["query", "--run-dir", str(run), "--id", parent["id"], "--edges", "cfgg"]) == 2
     assert "--edges" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("prefix", ["Prose with a stray ` backtick.\n\n", "Prose with `` unmatched.\n\n", ""])
+def test_verify_reports_broken_link_after_unmatched_code_delimiter(tmp_path, prefix):
+    run, _, units, inventory, _ = _run(tmp_path)
+    page = run / "docs/nodes/root.md"
+    text = page.read_text()
+    catalog = json.loads((run / "catalog.json").read_text())
+    tree = {"nodes": [{"id": nid, **node} for nid, node in catalog["nodes"].items()]}
+    def check():
+        return next(c for c in docs.verify(run, inventory, units, catalog["dispositions"], tree)
+                    if c["check"] == "relative_links_resolve")
+    literal = "\n`value[x][f999]`\n\n~~~py\n[example](not-a-page.md)\n~~~\n\n    [example](not-a-page.md)\n"
+    page.write_text(text + literal)
+    assert check()["ok"]
+    page.write_text(prefix + "See [broken](missing-page.md).\n\n" + text + literal)
+    result = check()
+    assert not result["ok"]
+    assert any("missing-page.md" in item for item in result["detail"]["broken"])
