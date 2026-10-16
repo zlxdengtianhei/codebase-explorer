@@ -178,22 +178,19 @@ def _normalize_choice(value: Any, allowed: "set[str] | frozenset[str]",
 
 def _detail_identity(uid: str) -> tuple[str, ...]:
     """Ignore only the generated final offset, retaining path/kind/qualified name."""
-    parts = uid.split("::")
-    if len(parts) >= 4 and re.fullmatch(r"\d+(?:_[\w-]+)?", parts[3]) \
-            and all(re.fullmatch(r"s\d+", suffix) for suffix in parts[4:]):
-        return tuple(parts[:3])
-    return tuple(parts)
+    stem = re.sub(r"::\d+[\w-]*(?:::s\d+)*$", "", uid)
+    return tuple(stem.split("::", 2))
 
 
 def _detail_id_problem(uid: str, scope_ids: set[str]) -> str:
-    parts = uid.split("::")
+    parts = _detail_identity(uid)
     name = parts[2] if len(parts) >= 3 else uid
     candidates = sorted(candidate for candidate in scope_ids
-                        if len(candidate.split("::")) >= 3
-                        and candidate.split("::")[2] == name)
+                        if len(_detail_identity(candidate)) >= 3
+                        and _detail_identity(candidate)[2] == name)
     if not candidates and scope_ids:
         def prefix_length(candidate: str) -> int:
-            other = candidate.split("::")
+            other = _detail_identity(candidate)
             other_name = other[2] if len(other) >= 3 else candidate
             return next((i for i, (a, b) in enumerate(zip(name, other_name)) if a != b),
                         min(len(name), len(other_name)))

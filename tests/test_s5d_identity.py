@@ -9,7 +9,8 @@ from cbe import checks, host_run
 from test_generate import _semantic_answer, _tiny_repo
 
 FIXTURES = Path(__file__).parent / "fixtures/s5d"
-REJECTED = {"s5c-module_10.attempt-1", "s5c-module_3.attempt-2", "integration-module_3.attempt-2"}
+REJECTED = {"s5c-module_10.attempt-1", "s5c-module_3.attempt-2", "integration-module_3.attempt-2",
+            "probe-1-module_3.attempt-1", "probe-1-module_3.attempt-2"}
 
 
 @pytest.mark.parametrize("sample", sorted(FIXTURES.glob("*.json")), ids=lambda p: p.stem)
@@ -41,8 +42,10 @@ def _payload(uid):
             "dispositions": {uid: {"how": "unit", "unit": uid}}, "batch_notes": "Complete."}
 
 
-def test_all_structural_references_corrected_and_each_flagged():
-    good, bad = "pkg/a.py::method::App.run::42", "pkg/a.py::method::App.run::51_tmp"
+@pytest.mark.parametrize("suffix", ["51_tmp", "51x", "51_full"])
+@pytest.mark.parametrize("name", ["App.run", "ns::App::run"])
+def test_all_structural_references_corrected_and_each_flagged(suffix, name):
+    good, bad = f"pkg/a.py::method::{name}::42", f"pkg/a.py::method::{name}::{suffix}"
     payload = _payload(bad)
     inv = {"pkg/a.py": {"symbols": [{"id": good}]}}
     flags = checks.normalize_details(payload, ["pkg/a.py"], inv, set())
