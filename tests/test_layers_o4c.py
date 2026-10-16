@@ -62,7 +62,11 @@ def test_each_unit_source_link_resolves_and_file_target_is_shared(tmp_path):
         return next(c for c in docs.verify(run, inventory, units, catalog["dispositions"], tree)
                     if c["check"] == "relative_links_resolve")
     assert check()["ok"]
-    page.write_text(text.replace("][f1]", "][missing]"))
+    literal = "\nself.error_handler_spec[name][c] and table[None][code][exc_class].\n" \
+              "`handlers[x][f999]`\n\n```py\nvalue[a][f998]\n[f997]: missing-example.py\n```\n"
+    page.write_text(text + literal)
+    assert check()["ok"]
+    page.write_text(text.replace("][f1]", "][f999]"))
     assert not check()["ok"]
     page.write_text(text.replace(definitions["f1"], "missing-source.py"))
     assert not check()["ok"]

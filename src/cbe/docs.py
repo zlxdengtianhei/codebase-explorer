@@ -526,11 +526,14 @@ def verify(run_dir: Path, inventory: dict, units: dict, dispositions: dict,
     for md in links:
         text = md.read_text(encoding="utf-8")
         page_texts[md.relative_to(docs).as_posix()] = text
-        references = dict(re.findall(r"^\[([^\]\n]+)\]:\s*(\S+)\s*$", text, re.MULTILINE))
-        for reference in re.findall(r"\[[^\]\n]+\]\[([^\]\n]+)\]", text):
-            if reference not in references:
+        # Undefined CommonMark references are literal text (e.g. Python a[b][c]).
+        # Only fN is our generated reference namespace; code examples are opaque.
+        link_text = re.sub(r"(?<!`)(`+)(?!`)(.*?)(?<!`)\1(?!`)", "", text, flags=re.DOTALL)
+        references = dict(re.findall(r"^\[([^\]\n]+)\]:\s*(\S+)\s*$", link_text, re.MULTILINE))
+        for reference in re.findall(r"\[[^\]\n]+\]\[([^\]\n]+)\]", link_text):
+            if re.fullmatch(r"f\d+", reference) and reference not in references:
                 broken_links.append(f"{md.relative_to(docs)} -> [{reference}] (definition missing)")
-        targets = re.findall(r"\]\(([^)\s]+)\)", text) + list(references.values())
+        targets = re.findall(r"\]\(([^)\s]+)\)", link_text) + list(references.values())
         for target in targets:
             if target.startswith(("http://", "https://", "mailto:")):
                 continue
