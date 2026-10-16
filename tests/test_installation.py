@@ -7,6 +7,7 @@ import json
 import os
 import re
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -131,3 +132,21 @@ def test_user_scope_honors_host_config_roots(tmp_path: Path, monkeypatch: pytest
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "xdg-config"))
     args = cli._parser().parse_args(["install", "--scope", "user", "--host", "dsh", "--host", "opencode"])
     assert cli._targets(args) == [tmp_path / "dsh-home/skills", tmp_path / "xdg-config/opencode/skills"]
+
+
+def test_runtime_note_command_runs_pasted_into_a_shell_and_warns_against_variables(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    bin_dir = tmp_path / "tool env" / "bin"
+    bin_dir.mkdir(parents=True)
+    launcher = bin_dir / "python"
+    launcher.write_text(f'#!/bin/sh\nexec "{sys.executable}" "$@"\n', encoding="utf-8")
+    launcher.chmod(0o755)
+    monkeypatch.setattr(cli, "_runtime_python", lambda: launcher)
+
+    note = cli._with_runtime(b"---\nname: x\n---\nbody\n").decode("utf-8")
+    entry = next(line for line in note.splitlines() if line.startswith("- `cbe`: `"))
+    command = entry.split(": ", 1)[1].strip("`")
+    result = subprocess.run(f"{command} --version", shell=True, capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
+    assert "cbe" in result.stdout
+    assert "shell variable" in note and "shell function" in note

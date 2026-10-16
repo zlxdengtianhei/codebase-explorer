@@ -54,6 +54,7 @@ def _with_runtime(skill_bytes: bytes) -> bytes:
         f"Python executable: `{python}`. Use it as one argument, even when its path contains spaces.",
         "Replace bare CLI names in the examples below with these absolute entry points; no PATH or source checkout is required:",
         *(f"- `{module}`: `{command} -m {module}`" for module in RUNTIME_MODULES),
+        "Each entry point is several words, so write the whole command in every call. Do not store it in a shell variable: zsh does not split an unquoted variable into words. A shell function that runs it also works if you define it in the same call that uses it.",
         "Re-run `cbe-install upgrade` after moving or reinstalling the tool environment.\n",
     ]
     note = ("\n".join(lines) + "\n").encode("utf-8")
