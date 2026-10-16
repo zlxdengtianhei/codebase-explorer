@@ -16,7 +16,7 @@ def _abs(value: str) -> Path:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    from cbe.host_run import DEFAULT_REVIEW, REVIEW_MODES
+    from cbe.host_run import DEFAULT_REVIEW, DETAIL_MAX_ATTEMPTS, MAX_ATTEMPTS, REVIEW_MODES
     from cbe.model_settings import MODEL_DEFAULTS
 
     parser = argparse.ArgumentParser(
@@ -59,11 +59,13 @@ def build_parser() -> argparse.ArgumentParser:
     host_plan.add_argument("--jobs", type=int, default=4, help="maximum concurrently dispatched subagents")
     host_plan.add_argument("--host", default="other", help="label only, e.g. claude-code or codex")
     for name, text in (("next", "Lease ready tasks up to the concurrency limit and write their instruction files"),
-                       ("submit", "Check one subagent result: detail (module/repair) allows 3 answers, others 2; normalize or fail on the final invalid answer"),
+                       ("submit", f"Check one subagent result: detail (module/repair) allows {DETAIL_MAX_ATTEMPTS} answers, "
+                                  f"others {MAX_ATTEMPTS}; normalize or fail on the final invalid answer"),
                        ("status", "Show every task's state, attempts, timing, output, and the next action"),
                        ("resume", "Continue from the run records: adopt finished results, release lost "
                         "leases, retry failed tasks"),
-                       ("retry", "Give a failed task (or `all`) fresh answers: detail (module/repair) allows 3, others 2"),
+                       ("retry", "Give a failed task (or `all`) fresh answers: detail (module/repair) allows "
+                                 f"{DETAIL_MAX_ATTEMPTS}, others {MAX_ATTEMPTS}"),
                        ("release", "Return leased tasks to the queue"),
                        ("render", "Render docs now; pending parts get placeholder pages"),
                        ("verify", "Coverage, link, catalogue, and source-drift checks"),

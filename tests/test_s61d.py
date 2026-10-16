@@ -114,8 +114,9 @@ def test_submit_help_explains_answer_limits(capsys):
     with pytest.raises(SystemExit) as caught:
         cli.main(['host', '--help'])
     assert caught.value.code == 0
-    text = capsys.readouterr().out
-    assert '3 answers' in text and 'others 2' in text and 'final invalid' in text
+    text = ' '.join(capsys.readouterr().out.split())
+    limits = f'detail (module/repair) allows {host_run.DETAIL_MAX_ATTEMPTS} answers, others {host_run.MAX_ATTEMPTS}'
+    assert limits in text and 'final invalid' in text
 
 
 def test_shipped_guidance_matches_detail_protocol():
@@ -134,5 +135,6 @@ def test_retry_help_states_the_real_answer_counts(capsys):
     with pytest.raises(SystemExit):
         cli.main(['host', '--help'])
     text = ' '.join(capsys.readouterr().out.split())
-    assert 'Give a failed task (or `all`) fresh answers: detail (module/repair) allows 3, others 2' in text
+    limits = f'detail (module/repair) allows {host_run.DETAIL_MAX_ATTEMPTS}, others {host_run.MAX_ATTEMPTS}'
+    assert f'Give a failed task (or `all`) fresh answers: {limits}' in text
     assert 'two fresh attempts' not in text
