@@ -25,7 +25,7 @@ class ImportResolver:
             for start in range(len(parts)):
                 self.suffix_files.setdefault("/".join(parts[start:]), []).append(path)
         self.python_roots = [""]
-        if "src" in {p.split("/")[0] for p in self.files}:
+        if "src" in {p.split("/")[0] for p in self.files} and "src/__init__.py" not in self.files:
             self.python_roots.append("src/")
 
     def python_file(self, module: str) -> str | None:
@@ -54,7 +54,7 @@ class ImportResolver:
             relative = bool(statement.level)
             if relative:
                 parent = list(PurePosixPath(path).parent.parts)
-                if parent and parent[0] == "src":
+                if parent and parent[0] == "src" and "src/" in self.python_roots:
                     parent = parent[1:]
                 if statement.level > len(parent):
                     return [("unresolved", None)]
@@ -63,12 +63,21 @@ class ImportResolver:
             for alias in statement.names:
                 child = base + "." + alias.name if base else alias.name
                 # An imported name can be a submodule or a symbol of the base.
-                modules.append(child if self.python_file(child) else base)
+                child_stem = child.replace(".", "/")
+                namespace_child = any(p.startswith(root + child_stem + "/")
+                                      for root in self.python_roots for p in self.files)
+                modules.append(child if self.python_file(child) or namespace_child else base)
         else:
             return [("unresolved", None)]
         results = []
         for module in modules:
             target = self.python_file(module)
+            # Scripts outside packages can import adjacent modules when run
+            # directly. Keep this lookup repository bounded too.
+            parent = PurePosixPath(path).parent
+            if not relative and str(parent / "__init__.py") not in self.files:
+                stem = str(parent / module.replace(".", "/"))
+                target = next((p for p in (stem + ".py", stem + "/__init__.py") if p in self.files), target)
             if target:
                 results.append(("resolved", target))
             elif relative or self.python_local(module):

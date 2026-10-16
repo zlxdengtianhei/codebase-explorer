@@ -94,3 +94,14 @@ def test_frontend_diagnostic_retry_inherits_heap(tmp_path, monkeypatch):
     env = {"JAVA_TOOL_OPTIONS": "-Xmx64m"}
     assert "OutOfMemoryError" in joern._frontend_error_from_direct_run("invoke the frontend: /tool/c2cpg input", tmp_path, 10, [], env=env)
     assert seen == [env]
+
+
+def test_python_script_siblings_src_package_and_namespace_child(tmp_path):
+    for name in ("tests/helpers.py", "tests/main.py", "src/__init__.py", "src/a.py", "src/x.py", "src/nsdir/util.py"):
+        path = tmp_path / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.touch()
+    resolver = ImportResolver(tmp_path)
+    assert resolver.resolve("tests/main.py", "from helpers import make") == [("resolved", "tests/helpers.py")]
+    assert resolver.resolve("src/a.py", "from . import x") == [("resolved", "src/x.py")]
+    assert resolver.resolve("src/a.py", "from . import nsdir") == [("unresolved", None)]
