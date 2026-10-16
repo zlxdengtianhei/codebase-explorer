@@ -66,3 +66,22 @@ def test_each_unit_source_link_resolves_and_file_target_is_shared(tmp_path):
     assert not check()["ok"]
     page.write_text(text.replace(definitions["f1"], "missing-source.py"))
     assert not check()["ok"]
+
+
+def test_query_text_formats_multiple_ranges_while_json_keeps_structured_ranges(tmp_path, capsys):
+    run, ids, _, _, _ = _run(tmp_path)
+    path = run / "catalog.json"
+    catalog = json.loads(path.read_text())
+    ranges = [{"path": "pkg/jobs.py", "lines": [[1, 2], [4, 5]]}]
+    catalog["units"][ids[0]]["ranges"] = ranges
+    path.write_text(json.dumps(catalog))
+    assert cli.main(["query", "--run-dir", str(run), "--id", ids[0]]) == 0
+    text = capsys.readouterr().out
+    assert "ranges: pkg/jobs.py:L1-L2, pkg/jobs.py:L4-L5" in text
+    assert 'ranges: {"path"' not in text
+    assert cli.main(["query", "--run-dir", str(run), "--id", ids[0], "--json"]) == 0
+    assert json.loads(capsys.readouterr().out)["ranges"] == ranges
+    assert cli.main(["query", "--run-dir", str(run), "--id", "pkg/jobs.py"]) == 0
+    text = capsys.readouterr().out
+    assert "units:" in text and "pkg/jobs.py:L1-L2, pkg/jobs.py:L4-L5" in text
+    assert '"lines"' not in text

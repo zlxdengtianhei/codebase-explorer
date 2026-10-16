@@ -687,7 +687,12 @@ def query_text(record: dict) -> str:
             continue
         if field == "signatures" and len(value) == 1 and value[0]["signature"] == record.get("signature"):
             continue
-        if isinstance(value, list):
+        if field == "ranges":
+            lines.append(f"ranges: {format_ranges(value)}")
+        elif field in {"units", "symbols"}:
+            lines.extend(f"{field}: {row['name']} | {row['id']} | {format_ranges(row['ranges'])} | {row['summary']}"
+                         for row in value)
+        elif isinstance(value, list):
             lines.extend(f"{field}: {json.dumps(row, ensure_ascii=False)}" for row in value)
         else:
             lines.append(f"{field}: {value}")
