@@ -42,3 +42,27 @@ def test_legacy_catalog_find_has_the_same_locator_contract(tmp_path):
     assert row["kind"] != "symbol" and row["location"].startswith("pkg/jobs.py:L")
     assert "::" not in row["name"]
     assert not {"explain", "incoming", "outgoing", "signatures"} & row.keys()
+
+
+def test_each_unit_source_link_resolves_and_file_target_is_shared(tmp_path):
+    run, ids, units, inventory, _ = _run(tmp_path)
+    page = run / "docs/nodes/root.md"
+    text = page.read_text()
+    definitions = dict(re.findall(r"^\[([^\]]+)\]: (.+)$", text, re.MULTILINE))
+    assert len(definitions) == 1
+    locations = re.findall(r"^`[^\n]+` · \[(pkg/jobs.py:L\d+-L\d+)\]\[([^\]]+)\]$", text, re.MULTILINE)
+    assert len(locations) == len(ids)
+    for location, ref in locations:
+        assert ref in definitions and "#" not in definitions[ref]
+        assert (page.parent / definitions[ref]).resolve() == (tmp_path / "repo/pkg/jobs.py").resolve()
+        assert (page.parent / definitions[ref]).is_file()
+    catalog = json.loads((run / "catalog.json").read_text())
+    tree = {"nodes": [{"id": nid, **node} for nid, node in catalog["nodes"].items()]}
+    def check():
+        return next(c for c in docs.verify(run, inventory, units, catalog["dispositions"], tree)
+                    if c["check"] == "relative_links_resolve")
+    assert check()["ok"]
+    page.write_text(text.replace("][f1]", "][missing]"))
+    assert not check()["ok"]
+    page.write_text(text.replace(definitions["f1"], "missing-source.py"))
+    assert not check()["ok"]

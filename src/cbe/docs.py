@@ -69,9 +69,14 @@ def anchor(uid: str) -> str:
     return "u-" + hashlib.sha256(uid.encode("utf-8")).hexdigest()[:12]
 
 
+def _file_link(label: str, path: str, source_links: dict[str, str]) -> str:
+    reference = source_links.setdefault(path, f"f{len(source_links) + 1}")
+    return f"[{label}][{reference}]"
+
+
 def _relation_link(target: str, units: dict, dispositions: dict, owner: dict,
                    nodes: dict, source_root: Path, page_dir: Path,
-                   name_of: Callable[[str], str]) -> str:
+                   name_of: Callable[[str], str], source_links: dict[str, str]) -> str:
     resolved = target if target in units else None
     if resolved is None:
         entry = dispositions.get(target) or {}
@@ -81,13 +86,13 @@ def _relation_link(target: str, units: dict, dispositions: dict, owner: dict,
         return f"[{name_of(resolved)}]({owner[resolved]}.md#{anchor(resolved)})"
     path = target.split("::", 1)[0]
     if (source_root / path).exists():
-        return f"[{name_of(target)}]({os.path.relpath(source_root / path, page_dir)})"
+        return _file_link(name_of(target), path, source_links)
     return f"[{name_of(target)}](../../catalog.json)"
 
 
 def _build_unit_block(uid: str, units: dict, ranges_map: dict, owner: dict,
                       dispositions: dict, nodes: dict, source_root: Path, page_dir: Path,
-                      name_of: Callable[[str], str]) -> str:
+                      name_of: Callable[[str], str], source_links: dict[str, str]) -> str:
     unit = units[uid]
     lines = [f"### `{name_of(uid)}`", ""]
     raw_signature = unit.get("signature") or unit.get("kind") or "unit"
@@ -102,8 +107,7 @@ def _build_unit_block(uid: str, units: dict, ranges_map: dict, owner: dict,
     if ranges:
         entry = unit.get("primary_range") or ranges[0]
         start, end = entry["lines"][0]
-        rel = os.path.relpath(source_root / entry["path"], page_dir)
-        location = f" · [{entry['path']}:L{start}-L{end}]({rel}#L{start}-L{end})"
+        location = " · " + _file_link(f"{entry['path']}:L{start}-L{end}", entry["path"], source_links)
     lines += [f"`{signature.replace('`', '')}`{location}", ""]
     summary = unit.get("summary") or ""
     explain = (unit.get("explain") or "").strip()
@@ -130,7 +134,7 @@ def _build_unit_block(uid: str, units: dict, ranges_map: dict, owner: dict,
         for rel in relations:
             label = labels.get(rel.get("kind"), rel.get("kind") or "使用")
             link = _relation_link(rel["target"], units, dispositions, owner, nodes,
-                                  source_root, page_dir, name_of)
+                                  source_root, page_dir, name_of, source_links)
             if link not in grouped.setdefault(label, []):
                 grouped[label].append(link)
         lines += ["；".join(f"{label}：{'、'.join(links)}" for label, links in grouped.items()), ""]
@@ -211,6 +215,7 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
             edges_by_from[edge["from"]].append(edge)
 
     for nid, node in nodes.items():
+        source_links: dict[str, str] = {}
         lines = [f"# {node.get('title') or nid}", ""]
         if (node.get("capability") or "").strip():
             lines += [f"**Capability.** {node['capability'].strip()}", ""]
@@ -239,11 +244,13 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
             if uid not in units:
                 continue
             block = _build_unit_block(uid, units, ranges_map, owner, dispositions,
-                                      nodes, source_root, nodes_dir, name_of)
+                                      nodes, source_root, nodes_dir, name_of, source_links)
             lines += [f'<a id="{anchor(uid)}"></a>'] + block.splitlines() + [""]
         lines += ["## 怎样查", "", '按 [INDEX](../INDEX.md) 取本页单元 `ID`；`RUN` 为运行目录。',
                   '`cbe query --run-dir "$RUN" --id "$ID"`；'
                   '`cbe source --run-dir "$RUN" --id "$ID" --context 2`。', ""]
+        lines += [f"[{ref}]: {os.path.relpath(source_root / path, nodes_dir)}"
+                  for path, ref in source_links.items()]
         (nodes_dir / f"{nid}.md").write_text("\n".join(lines).strip() + "\n", encoding="utf-8")
 
     def outline(nid: str, level: int) -> list[str]:
@@ -519,7 +526,12 @@ def verify(run_dir: Path, inventory: dict, units: dict, dispositions: dict,
     for md in links:
         text = md.read_text(encoding="utf-8")
         page_texts[md.relative_to(docs).as_posix()] = text
-        for target in re.findall(r"\]\(([^)\s]+)\)", text):
+        references = dict(re.findall(r"^\[([^\]\n]+)\]:\s*(\S+)\s*$", text, re.MULTILINE))
+        for reference in re.findall(r"\[[^\]\n]+\]\[([^\]\n]+)\]", text):
+            if reference not in references:
+                broken_links.append(f"{md.relative_to(docs)} -> [{reference}] (definition missing)")
+        targets = re.findall(r"\]\(([^)\s]+)\)", text) + list(references.values())
+        for target in targets:
             if target.startswith(("http://", "https://", "mailto:")):
                 continue
             file_part, _, fragment = target.partition("#")
@@ -774,6 +786,8 @@ def layer_metrics(run_dir: Path) -> dict:
                 in_footer = True
             if path.name == "INDEX.md":
                 category = "index"
+            elif re.match(r"\[f\d+\]: ", stripped):
+                category = "signature_location"
             elif in_footer:
                 category = "footer"
             elif in_units and stripped in body_lines:
@@ -782,7 +796,7 @@ def layer_metrics(run_dir: Path) -> dict:
                 category = "heading_anchor"
             elif in_units and re.match(r"`.*` · \[", stripped):
                 category = "signature_location"
-            elif in_units and re.search(r"：\[.*\]\(", stripped):
+            elif in_units and re.search(r"：\[.*\](?:\(|\[)", stripped):
                 category = "relations"
             else:
                 category = "node_text"
@@ -802,7 +816,8 @@ def layer_metrics(run_dir: Path) -> dict:
             "semantic_source_ratio": semantic / source_tokens if source_tokens else None,
             "deterministic_source_ratio": deterministic / source_tokens if source_tokens else None,
             "scope": "Breakdown partitions full Markdown BPE tokens by the first byte's line: model_body "
-                     "is published unit explain, summary, extras and uncertainties; signature_location, "
+                     "is published unit explain, summary, extras and uncertainties; signature_location includes "
+                     "shared source-file reference definitions (including ones used by relations); "
                      "heading_anchor, relations, footer, INDEX and node_text (including labels/whitespace) "
                      "partition the rest. model_body/source and published_markdown/source use complete frozen files. "
                      "semantic: all published Markdown (node pages + INDEX, including navigation, "
