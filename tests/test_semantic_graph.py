@@ -101,7 +101,7 @@ def test_import_flood_cannot_displace_cross_batch_resolved_calls():
     evidence = graph_projection.unit_graph(graph, ["a.py"], inventory, chunks)
     text = graph_projection.graph_text(evidence, budget=170)
     assert "A → B" in text and "A ← B" in text
-    assert "dependencies=1" in text and "packages=1" in text
+    assert "dependencies=400" in text and "packages=" not in text
     assert "out=" not in text and "in=" not in text
     assert count_text_tokens(text) <= 170
 
@@ -186,12 +186,29 @@ def test_tiny_budget_has_one_explicit_status_notice_with_all_omissions():
     for lines in (script, host):
         assert len([line for line in lines if line]) == 1
         assert "budget=1 tokens" in lines[0]
-        assert "omitted dependencies=1,in=1,out=1,packages=1" in lines[0]
+        assert "omitted in=1,out=1" in lines[0]
+        assert "dependencies=" not in lines[0] and "packages=" not in lines[0]
         assert "internal=1; unmapped=0" in lines[0]
         assert "→" not in lines[0] and "←" not in lines[0]
         assert count_text_tokens(lines[0]) > 1  # explicitly outside the payload cap
     assert ".graph.txt" not in script[0]
     assert "Read full evidence: /run/tasks/module_1.graph.txt" in host[0]
+
+
+def test_omissions_count_relations_and_package_context_precedes_cfg():
+    rows = [graph_projection.EvidenceRow("out", "A → B (b.py:1) ×3", 3),
+            graph_projection.EvidenceRow("unresolved", "Unresolved calls a.py: 8; x", 8)]
+    evidence = graph_projection.UnitGraph(tuple(rows), 0, 0)
+    text = graph_projection.graph_text(evidence, budget=60)
+    assert "out=3" in text and "unresolved=8" in text
+    graph, inventory, chunks = _inputs()
+    graph["edges"].append(_edge("ext", "a", None, status="external", path="a.py"))
+    graph["nodes"].append(_node("ret", "a.py", kind="cfg_node", label="RETURN", owner="a"))
+    evidence = graph_projection.unit_graph(graph, ["a.py"], inventory, chunks)
+    text = graph_projection.graph_text(evidence)
+    assert "external calls=1" in text
+    assert next(r for r in evidence.rows if r.category == "dependencies").count == 1
+    assert text.index("Package imports") < text.index("CFG A")
 
 
 def test_byte_mapping_shared_lines_and_utf8_columns():

@@ -116,6 +116,7 @@ def unit_graph(graph: dict, paths: list[str], inventory: dict[str, dict],
 
     outgoing, incoming, ambiguous = [], [], []
     dependencies: dict[str, set[str]] = defaultdict(set)
+    external_calls: Counter = Counter()
     unresolved: dict[str, list[str]] = defaultdict(list)
     skeleton: Counter = Counter()
     internal = unmapped = 0
@@ -157,6 +158,8 @@ def unit_graph(graph: dict, paths: list[str], inventory: dict[str, dict],
             ambiguous.append(EvidenceRow("ambiguous", f"? {caller or path}: "
                 f"{edge.get('expression') or edge.get('target_expression') or '?'} => "
                 + "; ".join(candidates) + f" ({len(edge.get('candidates') or [])} candidates)"))
+        elif status == "external" and local_source:
+            external_calls[path] += 1
         elif status == "unresolved" and local_source:
             expression = str(edge.get("target_expression") or edge.get("expression") or "?")
             unresolved[path].append(expression.split("(", 1)[0].strip()[:80])
@@ -176,9 +179,10 @@ def unit_graph(graph: dict, paths: list[str], inventory: dict[str, dict],
                                          + (f" ×{count}" if count > 1 else ""), count))
     rows += sorted(ambiguous, key=lambda r: r.text)
     for path in sorted(wanted):
-        rows.append(EvidenceRow("dependencies", f"External imports {path}: "
-                    + ", ".join(sorted(dependencies[path])) if dependencies[path]
-                    else f"External imports {path}: none"))
+        names = ", ".join(sorted(dependencies[path])) or "none"
+        rows.append(EvidenceRow("dependencies", f"External imports {path}: {names}; "
+                    f"external calls={external_calls[path]}",
+                    len(dependencies[path]) + external_calls[path]))
         if unresolved[path]:
             names = list(dict.fromkeys(unresolved[path]))[:5]
             rows.append(EvidenceRow("unresolved", f"Unresolved calls {path}: {len(unresolved[path])}; "
@@ -208,9 +212,14 @@ def unit_graph(graph: dict, paths: list[str], inventory: dict[str, dict],
     for (left, right), count in sorted(skeleton.items())[:12]:
         rows.append(EvidenceRow("packages", f"Package imports {left} → {right}: {count}"))
     if len(skeleton) > 12:
-        rows.append(EvidenceRow("packages", f"Package imports: {len(skeleton) - 12} other package pairs"))
+        rows.append(EvidenceRow("packages", f"Package imports: {len(skeleton) - 12} other package pairs",
+                                len(skeleton) - 12))
     if not skeleton:
-        rows.append(EvidenceRow("packages", "Package imports: no resolved package links"))
+        rows.append(EvidenceRow("packages", "Package imports: no resolved package links", 0))
+    # Package context survives before lower-priority per-function cfg hints.
+    rows.sort(key=lambda row: {"out": 0, "in": 1, "ambiguous": 2,
+                              "dependencies": 3, "unresolved": 3,
+                              "packages": 4, "cfg": 5}[row.category])
     return UnitGraph(tuple(rows), internal, unmapped, len(unmapped_owners),
                      any(n.get("label") == "THROW" for n in nodes.values()))
 
@@ -244,7 +253,7 @@ def graph_text(evidence: UnitGraph, *, budget: int | None = None) -> str:
     rows = list(evidence.rows)
     omitted: Counter = Counter()
     while True:
-        lines = ["LOCAL GRAPH EVIDENCE (unit ids; graph evidence is not proof of behavior).",
+        lines = ["LOCAL GRAPH EVIDENCE (unit ids; dependencies count import names + external call sites; graph evidence is not proof of behavior).",
                  f"Batch-internal resolved calls: {evidence.internal_calls} (source visible); "
                  f"unmapped resolved calls: {evidence.unmapped_calls}; "
                  f"unmapped cfg owners: {evidence.unmapped_cfg}."
@@ -266,7 +275,8 @@ def graph_text(evidence: UnitGraph, *, budget: int | None = None) -> str:
                 return text
             return ""  # zero/tiny source budget: no graph payload can fit
         row = rows.pop()
-        omitted[row.category] += row.count
+        if row.count:
+            omitted[row.category] += row.count
 
 
 def graph_prompt_lines(graph: Any, paths: list[str], *, embed: bool,
@@ -303,7 +313,8 @@ def graph_prompt_lines(graph: Any, paths: list[str], *, embed: bool,
     # A hard zero/tiny payload cap must never imply there were no relations.
     omitted = Counter()
     for row in evidence.rows:
-        omitted[row.category] += row.count
+        if row.count:
+            omitted[row.category] += row.count
     notice = (f"GRAPH STATUS (outside payload cap): budget={budget} tokens; omitted "
               + ",".join(f"{kind}={count}" for kind, count in sorted(omitted.items()))
               + f"; internal={evidence.internal_calls}; unmapped={evidence.unmapped_calls}; "
