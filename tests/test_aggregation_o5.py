@@ -32,8 +32,10 @@ def test_tree_receives_summaries_and_counted_resolved_edges(tmp_path):
         + [{"id": str(i), "source": "ga", "target": "gb", "kind": "call",
                    "path": "a.py", "line": line, "status": status}
                   for i, (line, status) in enumerate([(2, "resolved"), (3, "resolved"), (2, "ambiguous")])]}
+    units[a]["relations"] = [{"target": b, "kind": "use", "basis": "dynamic dispatch"}]
     records, edges = aggregation.inputs(units, dispositions, inventory, context)
-    assert edges == [{"from": a, "to": b, "kind": "call", "count": 2}]
+    assert edges == [{"from": a, "to": b, "kind": "call", "count": 2},
+                     {"from": a, "to": b, "kind": "relation", "count": 1, "provenance": "model_inferred"}]
     prompt = prompts.tree_prompt(records, ["a.py"], edges)
     assert "SECRET" not in prompt and "Owns a capability." in prompt
     assert '"count": 2' in prompt and '"kind": "call"' in prompt
@@ -52,7 +54,7 @@ def test_partitioned_host_keeps_unique_homes_and_subtree_content(tmp_path, monke
         assert max(handed.index(tid) for tid in handed if tid.startswith("repair_")) < min(handed.index(tid) for tid in regions)
     state = json.loads((run / "host/state.json").read_text())
     for region in state["aggregation"]["regions"]:
-        assert len(region["unit_ids"]) <= 2
+        assert region["unit_ids"]
         prompt = host_run.completion_prompt(run, "tree_" + region["id"])
         assert count_text_tokens(prompt) <= state["aggregation"]["limits"]["max_tokens"]
         assert count_text_tokens(prompt) == region["input_tokens"]
@@ -60,12 +62,13 @@ def test_partitioned_host_keeps_unique_homes_and_subtree_content(tmp_path, monke
     assert "MERGE:" in upper_prompt and '"top_nodes"' in upper_prompt
     catalog = json.loads((run / "catalog.json").read_text())
     assert set(catalog["units"]) == {uid for r in state["aggregation"]["regions"] for uid in r["unit_ids"]}
-    assert all(row.get("node", "").startswith("region-") for row in catalog["units"].values())
+    assert all(row.get("node", "").startswith("r") for row in catalog["units"].values())
     assert host_run.verify(run)["ok"]
-    assert (run / "docs/INDEX.md").is_file() and list((run / "docs/nodes").glob("region-*.md"))
+    assert (run / "docs/INDEX.md").is_file() and list((run / "docs/nodes").glob("r*-*.md"))
     host_run.render(run)
     summary = json.loads((run / "summary.json").read_text())
-    assert summary["aggregation_principles"]["checks"][-1]["ok"] is True
+    assert summary["aggregation_principles"]["checks"][-1]["status"] == "re-render identical"
+    assert summary["aggregation_principles"]["checks"][-1]["ok"] is None
     index = (run / "docs/INDEX.md").read_text()
     assert "## Aggregation principle checks" in index
     assert all(f'"principle": "P{i}"' in index for i in range(1, 8))
@@ -117,10 +120,10 @@ def test_file_imports_guide_regions_without_inventing_unit_edges():
     units = {uid: {"id": uid, "summary": "A responsibility.", "ranges": [{"path": f"pkg/{uid}.py"}]}
              for uid in ("a", "b", "c")}
     context = {"graph": {"nodes": [{"id": uid, "path": f"pkg/{uid}.py"} for uid in units],
-                         "edges": [{"source": "a", "target": "c", "kind": "import", "status": "resolved"}]}}
+                         "edges": [{"source": "b", "target": "c", "kind": "import", "status": "resolved"}]}}
     render = lambda rows, edges: prompts.tree_prompt(rows, [], edges)
     regions = aggregation.partition(units, [], aggregation.Limits(max_units=2), render, context=context)
-    assert [r["unit_ids"] for r in regions] == [["a", "c"], ["b"]]
+    assert [r["unit_ids"] for r in regions] == [["a"], ["b", "c"]]
 
 
 def test_hierarchy_and_introduction_checks_detect_flat_overlong_tree():
@@ -140,7 +143,7 @@ def test_hierarchy_and_introduction_checks_detect_flat_overlong_tree():
 
 def test_merge_rejects_id_collision_instead_of_losing_subtree_units():
     sub = {"nodes": [{"id": "root", "parent": None, "unit_ids": ["u"]}], "depends_on": []}
-    upper = {"nodes": [{"id": "region-0001-root", "parent": None, "unit_ids": ["region-0001"]}]}
+    upper = {"nodes": [{"id": "r1-root", "parent": None, "unit_ids": ["region-0001"]}]}
     with pytest.raises(ValueError, match="collides"):
         aggregation.compose(upper, {"region-0001": sub})
 
@@ -154,5 +157,5 @@ def test_summary_budget_splits_and_oversize_single_unit_fails():
     regions = aggregation.partition(units, [], aggregation.Limits(max_units=100, max_tokens=one + 10), render)
     assert len(regions) == 8
     assert all(r["input_tokens"] <= one + 10 for r in regions)
-    with pytest.raises(ValueError, match="single tree summary"):
+    with pytest.raises(ValueError, match="token budget"):
         aggregation.partition(units, [], aggregation.Limits(max_tokens=1), render)

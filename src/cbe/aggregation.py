@@ -9,6 +9,7 @@ from __future__ import annotations
 from collections import Counter, defaultdict
 from dataclasses import dataclass
 import json
+import math
 import os
 from pathlib import PurePosixPath
 
@@ -20,7 +21,7 @@ from cbe.token_budget import count_text_tokens
 @dataclass(frozen=True)
 class Limits:
     max_units: int = 300
-    max_tokens: int = 32000
+    max_tokens: int = 64000
 
     @classmethod
     def configured(cls):
@@ -56,7 +57,13 @@ def inputs(units: dict, dispositions: dict, inventory: dict, context: dict) -> t
     # File-level imports without two source-coordinate unit owners are not
     # unit edges. They are consumed separately by partition(), never attributed
     # to an arbitrary function in the imported file.
-    return records, [{"from": a, "to": b, "kind": kind, "count": n}
+    for uid, unit in units.items():
+        for relation in unit.get("relations") or []:
+            target = owners.get(relation.get("target"))
+            if target and target != uid:
+                counts[uid, target, "relation"] += 1
+    return records, [{"from": a, "to": b, "kind": kind, "count": n,
+                      **({"provenance": "model_inferred"} if kind == "relation" else {})}
                      for (a, b, kind), n in sorted(counts.items())]
 
 
@@ -66,69 +73,128 @@ def region_edges(edges: list[dict], membership: dict[str, str]) -> list[dict]:
         a, b = membership.get(e["from"]), membership.get(e["to"])
         if a and b and a != b:
             counts[a, b, e["kind"]] += e["count"]
-    return [{"from": a, "to": b, "kind": k, "count": n}
+    return [{"from": a, "to": b, "kind": k, "count": n,
+             **({"provenance": "model_inferred"} if k == "relation" else {})}
             for (a, b, k), n in sorted(counts.items())]
 
 
 def partition(units: dict, edges: list[dict], limits: Limits, prompt, *, context: dict | None = None) -> list[dict]:
-    """Deterministic directory/package seeds, import affinity packing, exact budget.
+    """Pack indivisible files into balanced regions, then measure exact prompts.
 
-    ``prompt`` renders a candidate region with its internal edges. Its actual
-    token count (including rules/principles) decides whether it fits. No model
-    is called. A single over-budget digest is an explicit planning error.
+    Incremental weights guide packing; only complete candidate prompts are
+    rendered. Unit count is a soft ceiling for an indivisible file; tokens are
+    a hard ceiling. A file that cannot fit fails with a configurable remedy.
     """
-    def subset(ids):
-        wanted = set(ids)
-        return {uid: units[uid] for uid in sorted(ids)}, [e for e in edges
-                if e["from"] in wanted and e["to"] in wanted]
-
-    def tokens(ids):
-        rows, graph = subset(ids)
-        return count_text_tokens(prompt(rows, graph))
-
-    if len(units) <= limits.max_units and tokens(units) <= limits.max_tokens:
+    if len(units) <= limits.max_units and count_text_tokens(prompt(units, edges)) <= limits.max_tokens:
         return []
-    buckets = defaultdict(list)
-    path_of = {}
-    for uid in sorted(units):
-        ranges = units[uid].get("ranges") or []
-        path = ranges[0]["path"] if ranges else uid.split("::", 1)[0].removeprefix("grp:")
-        path_of[uid] = path
-        buckets[str(PurePosixPath(path).parent)].append(uid)
-    file_affinity = Counter()
+    files = defaultdict(list)
+    for uid, unit in sorted(units.items()):
+        ranges = unit.get("ranges") or []
+        paths = sorted({r["path"] for r in ranges}) or [uid.split("::", 1)[0].removeprefix("grp:")]
+        files[paths[0]].append(uid)
+    # Multi-file units join their files into one atomic component.
+    parent = {path: path for path in files}
+    def find(path):
+        parent.setdefault(path, path)
+        while parent[path] != path:
+            parent[path] = parent[parent[path]]
+            path = parent[path]
+        return path
+    for uid, unit in units.items():
+        paths = sorted({r["path"] for r in unit.get("ranges", [])})
+        for path in paths[1:]:
+            parent[find(path)] = find(paths[0])
+    blocks = defaultdict(list)
+    for path, ids in files.items():
+        blocks[find(path)].extend(ids)
+    directory_index = defaultdict(set)
+    for path in blocks:
+        directory_index[str(PurePosixPath(path).parent)].add(path)
+    paths = [path for directory in sorted(directory_index) for path in sorted(directory_index[directory])]
+    overhead = count_text_tokens(prompt({}, []))
+    weights = {path: sum(count_text_tokens(json.dumps(digest(units[uid]), ensure_ascii=False)) + 2
+                         for uid in blocks[path]) for path in paths}
+    # Account for edges once at their endpoints, avoiding repeated full renders.
+    owner = {uid: path for path in paths for uid in blocks[path]}
+    adjacency = defaultdict(Counter)
+    for edge in edges:
+        a, b = owner.get(edge["from"]), owner.get(edge["to"])
+        if a and b:
+            cost = count_text_tokens(json.dumps(edge, ensure_ascii=False)) + 2
+            weights[a] += cost
+            adjacency[a][b] += edge["count"]
+            adjacency[b][a] += edge["count"]
     graph = (context or {}).get("graph") or {}
-    graph_nodes = {n["id"]: n for n in graph.get("nodes", [])}
+    nodes = {n["id"]: n for n in graph.get("nodes", [])}
     for edge in graph.get("edges", []):
         if edge.get("kind") == "import" and edge.get("status") == "resolved":
-            a = graph_nodes.get(edge.get("source"), {}).get("path")
-            b = graph_nodes.get(edge.get("target"), {}).get("path")
-            if a and b and a != b:
-                file_affinity[a, b] += 1
-                file_affinity[b, a] += 1
-    affinity = Counter()
-    for e in edges:
-        if e["kind"] == "import":
-            affinity[e["from"], e["to"]] += e["count"]
-            affinity[e["to"], e["from"]] += e["count"]
-    pending = [uid for directory in sorted(buckets) for uid in buckets[directory]]
-    groups = []
-    while pending:
-        selected = [pending.pop(0)]
-        if tokens(selected) > limits.max_tokens:
-            raise ValueError(f"single tree summary exceeds token budget: {selected[0]}")
-        while pending and len(selected) < limits.max_units:
-            # Preserve directory locality, prefer an imported neighbour within it.
-            directory = next(key for key, ids in buckets.items() if pending[0] in ids)
-            candidates = [uid for uid in pending if uid in buckets[directory]]
-            candidate = min(candidates, key=lambda uid: (-sum(
-                affinity[a, uid] + file_affinity[path_of[a], path_of[uid]] for a in selected), uid))
-            if tokens(selected + [candidate]) > limits.max_tokens:
-                break
-            selected.append(candidate)
-            pending.remove(candidate)
-        groups.append({"id": f"region-{len(groups) + 1:04d}", "unit_ids": sorted(selected),
-                       "input_tokens": tokens(selected)})
-    return groups
+            a = nodes.get(edge.get("source"), {}).get("path")
+            b = nodes.get(edge.get("target"), {}).get("path")
+            if a in parent and b in parent:
+                a, b = find(a), find(b)
+                adjacency[a][b] += 1
+                adjacency[b][a] += 1
+    def measured(selected):
+        ids = {uid for path in selected for uid in blocks[path]}
+        return sorted(ids), count_text_tokens(prompt({uid: units[uid] for uid in sorted(ids)},
+            [e for e in edges if e["from"] in ids and e["to"] in ids]))
+    if overhead >= limits.max_tokens:
+        raise ValueError("tree prompt rules exceed token budget; increase CBE_TREE_MAX_TOKENS")
+    for path in paths:
+        if overhead + weights[path] > limits.max_tokens:
+            _, size = measured([path])
+            if size > limits.max_tokens:
+                raise ValueError(f"single tree summary file block exceeds token budget: {path} ({size}); "
+                                 "increase CBE_TREE_MAX_TOKENS; files cannot be split")
+    count = max(2, math.ceil(len(units) / limits.max_units),
+                math.ceil(sum(weights.values()) / (limits.max_tokens - overhead)))
+    count = min(count, len(paths))
+    while True:
+        groups = [[] for _ in range(count)]
+        loads, sizes = [0] * count, [0] * count
+        directory_counts = [Counter() for _ in range(count)]
+        assigned = {}
+        for path in paths:
+            directory = str(PurePosixPath(path).parent)
+            eligible = [i for i in range(count) if not groups[i] or
+                        sizes[i] + len(blocks[path]) <= limits.max_units]
+            eligible = eligible or list(range(count))
+            # Load dominates; directory/import affinity breaks nearby choices.
+            low = min(loads[i] for i in eligible)
+            candidates = [i for i in eligible if loads[i] <= low + weights[path] * .25]
+            scores = Counter()
+            for neighbour, weight in adjacency[path].items():
+                if neighbour in assigned:
+                    scores[assigned[neighbour]] += weight
+            chosen = min(candidates, key=lambda i: (-scores[i], -directory_counts[i][directory], loads[i], i))
+            groups[chosen].append(path)
+            assigned[path] = chosen
+            directory_counts[chosen][directory] += 1
+            loads[chosen] += weights[path]
+            sizes[chosen] += len(blocks[path])
+        results = [measured(group) for group in groups if group]
+        if all(size <= limits.max_tokens for _, size in results):
+            return [{"id": f"region-{i:04d}", "unit_ids": ids, "input_tokens": size}
+                    for i, (ids, size) in enumerate(results, 1)]
+        if count == len(paths):
+            raise ValueError("file blocks cannot fit tree budget; increase CBE_TREE_MAX_TOKENS")
+        count += 1
+
+
+def region_prefix(region_id: str) -> str:
+    return f"r{int(region_id.removeprefix('region-'))}-"
+
+
+def region_unit_ids(regions: list[dict], region_id: str) -> set[str]:
+    return set(next(r["unit_ids"] for r in regions if r["id"] == region_id))
+
+
+def validate_region_ids(tree: dict, region_id: str) -> None:
+    prefix = region_prefix(region_id)
+    for node in tree["nodes"]:
+        if len(prefix + node["id"]) > 64:
+            raise ValueError(f"region node id exceeds 64 characters with prefix {prefix!r}; "
+                             f"shorten id to at most {64 - len(prefix)} characters")
 
 
 def merge_inputs(regions: list[dict], subtrees: dict, edges: list[dict]) -> tuple[dict, list[dict]]:
@@ -153,7 +219,7 @@ def compose(upper: dict, subtrees: dict) -> dict:
         nodes.append({**node, "unit_ids": []})
         for rid in node.get("unit_ids") or []:
             subtree = subtrees[rid]
-            rename = {n["id"]: f"{rid}-{n['id']}" for n in subtree["nodes"]}
+            rename = {n["id"]: f"{region_prefix(rid)}{n['id']}" for n in subtree["nodes"]}
             nodes.extend({**n, "id": rename[n["id"]],
                           "parent": rename.get(n.get("parent"), node["id"])} for n in subtree["nodes"])
             edges.extend({**e, "from": rename[e["from"]], "to": rename[e["to"]]}

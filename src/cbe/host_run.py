@@ -24,6 +24,7 @@ retried, and the overview task can be retried on its own.
 from __future__ import annotations
 
 import contextlib
+import gzip
 import hashlib
 import json
 import os
@@ -33,7 +34,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterator
 
-from cbe import batching, checks, docs, projection, prompts, symbols
+from cbe import aggregation, batching, checks, docs, projection, prompts, symbols
 from cbe import __version__
 from cbe import source_context
 
@@ -47,6 +48,10 @@ ORDER = {"names": 0, "module": 1, "repair": 2, "tree": 3, "review": 4, "system":
 
 
 class HostRunError(ValueError):
+    pass
+
+
+class MergeBudgetError(HostRunError):
     pass
 
 
@@ -72,6 +77,7 @@ def write_json(path: Path, value: Any) -> None:
 class _RunState(dict[str, Any]):
     # Cache only within one locked operation; attributes are never serialized.
     context: dict[str, Any] | None = None
+    aggregation_cache: tuple | None = None
 
 
 def context_digest(context: dict[str, Any]) -> str:
@@ -177,13 +183,73 @@ def _semantic_tree(run_dir: Path, state: dict[str, Any], units: dict[str, dict])
             from cbe.aggregation import compose
             return compose(tree, _subtrees(run_dir, state, units))
         return tree
+    if state.get("aggregation", {}).get("regions"):
+        regions = state["aggregation"]["regions"]
+        upper = checks.mechanical_tree([{"number": 0, "title": "Accepted region subtrees",
+                                        "files": []}], {r["id"]: {} for r in regions})
+        return aggregation.compose(upper, _subtrees(run_dir, state, units))
     return checks.mechanical_tree(state["modules"], units)
 
 
+def _detail_fingerprint(run_dir: Path, state: dict[str, Any]) -> str:
+    digest = hashlib.sha256()
+    for row in state["modules"]:
+        tid = f"repair_{row['number'] + 1}"
+        if state["tasks"].get(tid, {}).get("status") != "done":
+            tid = f"module_{row['number'] + 1}"
+        digest.update(f"{tid}:{state['tasks'][tid]['status']}".encode())
+        path = state_dir(run_dir) / "accepted" / f"{tid}.json"
+        if state["tasks"][tid]["status"] == "done" and path.is_file():
+            digest.update(path.read_bytes())
+    return digest.hexdigest()
+
+
 def _aggregation_inputs(run_dir: Path, state: dict[str, Any]) -> tuple[dict, list[dict]]:
-    from cbe.aggregation import inputs
-    units, dispositions = _semantic_units(run_dir, state)
-    return inputs(units, dispositions, state["inventory"], _verified_context(run_dir, state))
+    fingerprint = _detail_fingerprint(run_dir, state)
+    cached = getattr(state, "aggregation_cache", None)
+    if cached and cached[0] == fingerprint:
+        return cached[1]
+    cache_path = state_dir(run_dir) / "aggregation-inputs.json"
+    compressed_path = cache_path.with_suffix(".json.gz")
+    payload = None
+    if compressed_path.is_file() or cache_path.is_file():
+        stored_path = compressed_path if compressed_path.is_file() else cache_path
+        raw = stored_path.read_bytes()
+        metadata = state.get("aggregation_cache") or {}
+        if (metadata.get("fingerprint") == fingerprint and
+                metadata.get("content_digest") == hashlib.sha256(raw).hexdigest()):
+            cached = json.loads(gzip.decompress(raw) if stored_path == compressed_path else raw)
+            if cached["fingerprint"] == fingerprint:
+                payload = cached["records"], cached["edges"]
+    if payload is None:
+        units, dispositions = _semantic_units(run_dir, state)
+        payload = aggregation.inputs(units, dispositions, state["inventory"], _verified_context(run_dir, state))
+        serialized = json.dumps({"fingerprint": fingerprint, "records": payload[0], "edges": payload[1]},
+                                ensure_ascii=False).encode("utf-8")
+        if len(serialized) > 10_000_000:
+            stored_path = compressed_path
+            temporary = compressed_path.with_suffix(".tmp")
+            temporary.write_bytes(gzip.compress(serialized, mtime=0))
+            os.replace(temporary, compressed_path)
+            cache_path.unlink(missing_ok=True)
+        else:
+            stored_path = cache_path
+            temporary = cache_path.with_suffix(".tmp")
+            temporary.write_bytes(serialized)
+            os.replace(temporary, cache_path)
+            compressed_path.unlink(missing_ok=True)
+        state["aggregation_cache"] = {"fingerprint": fingerprint,
+                                      "content_digest": hashlib.sha256(stored_path.read_bytes()).hexdigest()}
+    if isinstance(state, _RunState):
+        state.aggregation_cache = fingerprint, payload
+    return payload
+
+
+def _invalidate_regions(run_dir: Path, state: dict[str, Any]) -> None:
+    for tid in list(state["tasks"]):
+        if state["tasks"][tid].get("region"):
+            del state["tasks"][tid]
+            (state_dir(run_dir) / "accepted" / f"{tid}.json").unlink(missing_ok=True)
 
 
 def _subtrees(run_dir: Path, state: dict[str, Any], units: dict) -> dict:
@@ -204,15 +270,12 @@ def _prepare_aggregation(run_dir: Path, state: dict[str, Any]) -> None:
     modules = [t for t in state["tasks"].values() if t["kind"] == "module"]
     if not modules or not all(t["status"] in {"done", "failed"} for t in modules):
         return
-    units, edges = _aggregation_inputs(run_dir, state)
-    fingerprint = context_digest({"units": units, "edges": edges})
+    fingerprint = _detail_fingerprint(run_dir, state)
     if state.get("aggregation", {}).get("input_digest") == fingerprint:
         return
+    units, edges = _aggregation_inputs(run_dir, state)
     # A newly completed detail/repair invalidates all regions, including leases.
-    for tid in list(state["tasks"]):
-        if state["tasks"][tid].get("region"):
-            del state["tasks"][tid]
-            (state_dir(run_dir) / "accepted" / f"{tid}.json").unlink(missing_ok=True)
+    _invalidate_regions(run_dir, state)
     limits = Limits.configured()
     render_prompt = lambda rows, graph: prompts.TOOL_FREE_RULES + "\n\n" + prompts.tree_prompt(
         rows, sorted({r["path"] for row in rows.values() for r in row.get("ranges", [])}), graph)
@@ -528,7 +591,7 @@ def _ready(state: dict[str, Any]) -> list[str]:
                 and any(other["status"] == "done" for other in modules)
             if ok and state.get("aggregation", {}).get("regions"):
                 # Freeze reviewed detail before handing out region leases.
-                ok = all(t["status"] in {"done", "failed"} for t in tasks.values()
+                ok = all(_settled(state, t) for t in tasks.values()
                          if t["kind"] in {"review", "repair"})
             if ok and task_id == "tree" and state.get("aggregation", {}).get("regions"):
                 ok = all(tasks["tree_" + r["id"]]["status"] in {"done", "failed"}
@@ -604,14 +667,23 @@ def _body(run_dir: Path, state: dict[str, Any], task: dict[str, Any], *, embed: 
         units, edges = _aggregation_inputs(run_dir, state)
         regions = state.get("aggregation", {}).get("regions") or []
         if task.get("region"):
-            wanted = set(next(r["unit_ids"] for r in regions if r["id"] == task["region"]))
+            wanted = aggregation.region_unit_ids(regions, task["region"])
             units = {uid: row for uid, row in units.items() if uid in wanted}
             edges = [e for e in edges if e["from"] in wanted and e["to"] in wanted]
         elif regions:
             units, edges = merge_inputs(regions, _subtrees(run_dir, state, units), edges)
         all_paths = sorted({r["path"] for row in units.values() for r in row.get("ranges", [])})
-        return prompts.NO_FILE_RULES, prompts.tree_prompt(units, all_paths, edges,
-                                                         merge=bool(regions and not task.get("region")))
+        body = prompts.tree_prompt(units, all_paths, edges,
+                                   merge=bool(regions and not task.get("region")))
+        if regions and not task.get("region"):
+            from cbe.token_budget import count_text_tokens
+            size = count_text_tokens(prompts.TOOL_FREE_RULES + "\n\n" + body)
+            budget = state["aggregation"]["limits"]["max_tokens"]
+            state["aggregation"]["merge_input_tokens"] = size
+            if size > budget:
+                raise MergeBudgetError(f"tree merge input {size} exceeds token budget {budget}; "
+                                   "increase CBE_TREE_MAX_TOKENS and replan; accepted region subtrees are retained")
+        return prompts.NO_FILE_RULES, body
     if kind == "review":
         units = _module_output(run_dir, state, task["module"])
         return reading, prompts.review_prompt(
@@ -668,7 +740,8 @@ def next_tasks(run_dir: Path, *, limit: int | None = None, owner: str | None = N
         if limit is not None:
             slots = min(slots, limit)
         handed = []
-        for task_id in _ready(state)[:slots]:
+        queue = _ready(state)[:slots]
+        for task_id in queue:
             task = state["tasks"][task_id]
             if task["kind"] in {"module", "repair", "review"}:
                 changed = _drift(state, state["modules"][task["module"]]["files"])
@@ -676,7 +749,16 @@ def next_tasks(run_dir: Path, *, limit: int | None = None, owner: str | None = N
                     raise HostRunError("source missing or changed since plan: " + ", ".join(changed[:10])
                                        + "; start a new plan")
             prompt_path = state_dir(run_dir) / "tasks" / f"{task_id}.md"
-            prompt_path.write_text(_prompt(run_dir, state, task), encoding="utf-8")
+            try:
+                prompt_text = _prompt(run_dir, state, task)
+            except MergeBudgetError as exc:
+                task["status"], task["lease"] = "failed", None
+                task["errors"].append(str(exc))
+                log_event(run_dir, "fail", str(exc), task=task_id)
+                _maybe_render(run_dir, state, force=True)
+                queue.extend(tid for tid in _ready(state)[:max(0, slots - len(handed))] if tid not in queue)
+                continue
+            prompt_path.write_text(prompt_text, encoding="utf-8")
             (state_dir(run_dir) / "outbox" / f"{task_id}.json").unlink(missing_ok=True)
             stamp = _now()
             task["status"], task["leased_at"] = "leased", stamp
@@ -725,7 +807,7 @@ def _checks(run_dir: Path, state: dict[str, Any], task: dict[str, Any]) -> tuple
         universe = set(_semantic_units(run_dir, state)[0])
         regions = state.get("aggregation", {}).get("regions") or []
         if task.get("region"):
-            universe = set(next(r["unit_ids"] for r in regions if r["id"] == task["region"]))
+            universe = aggregation.region_unit_ids(regions, task["region"])
         elif regions:
             universe = {r["id"] for r in regions}
         if regions and not task.get("region"):
@@ -740,6 +822,15 @@ def _checks(run_dir: Path, state: dict[str, Any], task: dict[str, Any]) -> tuple
                 validate_merge(value)
                 return flags
             return validate_merge, normalize_merge
+        if task.get("region"):
+            def validate_region(value):
+                _raise_problems(checks.validate_tree(value, universe))
+                aggregation.validate_region_ids(value, task["region"])
+            def normalize_region(value):
+                flags = checks.normalize_tree(value, universe)
+                validate_region(value)
+                return flags
+            return validate_region, normalize_region
         return (lambda value: _raise_problems(checks.validate_tree(value, universe)),
                 lambda value: checks.normalize_tree(value, universe))
     if task["kind"] == "names":
@@ -846,10 +937,7 @@ def _apply_submit(run_dir: Path, state: dict[str, Any], task: dict[str, Any], re
         # Region outputs describe a fixed detail snapshot. A repair or a late
         # module must not leave old leases/accepted upper nodes composable.
         if state.get("aggregation", {}).get("regions"):
-            for tid in list(state["tasks"]):
-                if state["tasks"][tid].get("region"):
-                    del state["tasks"][tid]
-                    (state_dir(run_dir) / "accepted" / f"{tid}.json").unlink(missing_ok=True)
+            _invalidate_regions(run_dir, state)
             state.pop("aggregation", None)
             upper = state["tasks"]["tree"]
             upper["status"], upper["lease"], upper["attempt_base"] = "pending", None, upper["attempts"]
@@ -1090,9 +1178,14 @@ def _render(run_dir: Path, state: dict[str, Any]) -> None:
     index_notes: list[str] = []
     tree_task = state["tasks"].get("tree")
     if tree_task is not None and tree_task["status"] != "done":
-        index_notes.append("The responsibility tree is a mechanical batch grouping because the `tree` "
-                           "task is " + ("failed; resume the run to retry it."
-                                         if tree_task["status"] == "failed" else "not finished yet."))
+        if state.get("aggregation", {}).get("regions"):
+            index_notes.append("The region merge is " + tree_task["status"] +
+                               "; accepted region subtrees are retained under a mechanical root. "
+                               "Check the merge error and budget before starting a new plan.")
+        else:
+            index_notes.append("The responsibility tree is a mechanical batch grouping because the `tree` "
+                               "task is " + ("failed; resume the run to retry it."
+                                             if tree_task["status"] == "failed" else "not finished yet."))
     for tid, task in state["tasks"].items():
         if task.get("region") and task["status"] == "failed":
             index_notes.append(f"Region `{tid}` failed; its subtree uses the mechanical fallback.")
@@ -1161,7 +1254,8 @@ def _render(run_dir: Path, state: dict[str, Any]) -> None:
     previous_path = state_dir(run_dir) / "principles.json"
     previous = json.loads(previous_path.read_text(encoding="utf-8")) if previous_path.is_file() else None
     principle_report = principles.report(tree, records, rolled_edges,
-        {f["path"]: f.get("language", "unknown") for f in context["files"]}, previous)
+        {f["path"]: f.get("language", "unknown") for f in context["files"]}, previous,
+        comparison_scope="same_run_rerender")
     summary["aggregation_principles"] = principle_report
     summary["aggregation"] = state.get("aggregation", {})
     write_json(previous_path, principle_report)

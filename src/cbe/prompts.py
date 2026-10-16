@@ -39,13 +39,6 @@ NO_FILE_RULES = (
     "the repository. Do not invent details that the supplied material does not show.")
 
 
-def unit_digest(unit: dict) -> dict:
-    """Compact responsibility and program-derived source location for aggregation."""
-    from cbe.aggregation import digest
-
-    return digest(unit)
-
-
 def detail_prompt(paths: list[str], inventory: dict[str, dict], *,
                   chunks: list[dict] | None = None,
                   source_root: Path | None = None,
@@ -159,15 +152,17 @@ def detail_prompt(paths: list[str], inventory: dict[str, dict], *,
 
 
 def tree_prompt(units: dict[str, dict], files: list[str], edges: list[dict] | None = None, *, merge: bool = False) -> str:
+    from cbe.aggregation import digest
     from cbe.principles import PRINCIPLES, grain_bounds
 
     grain_min, grain_max = grain_bounds()
-    digests = [units[uid] if merge else unit_digest(units[uid]) for uid in sorted(units)]
+    digests = [units[uid] if merge else digest(units[uid]) for uid in sorted(units)]
     return (
         "You design a recursive semantic responsibility tree for a codebase, from the "
         "structured detail units below. You see no raw source: reason only from these "
         "units. Each unit carries only its responsibility summary and source location. "
-        "The resolved graph below rolls source edges up to units with kind and count; "
+        "The graph below rolls source edges up to units with kind and count. "
+        "kind=relation is model-inferred evidence, counted separately from resolved static edges; "
         "missing edges do not prove independence. No full explanations are provided.\n\n"
         + ("MERGE: UNITS are accepted candidate regions. Assign each region id exactly once; "
            "do not repeat their detail units or rewrite their subtrees. The program grafts each "
@@ -189,7 +184,7 @@ def tree_prompt(units: dict[str, dict], files: list[str], edges: list[dict] | No
         "cites unit-level evidence (unit ids / call / import). Real cycles are allowed.\n\n"
         "Every unit id in UNITS must be assigned exactly once.\n\n"
         "FILES: " + json.dumps(sorted(files), ensure_ascii=False) + "\n\n"
-        "RESOLVED UNIT GRAPH (from, to, kind, count):\n" + json.dumps(edges or [], ensure_ascii=False)
+        "UNIT GRAPH (resolved static edges and model-inferred relations; from, to, kind, count):\n" + json.dumps(edges or [], ensure_ascii=False)
         + "\n\nAGGREGATION PRINCIPLES:\n" + "\n".join(
             f"{p.id}: " + p.prompt.format(grain_min=grain_min, grain_max=grain_max) for p in PRINCIPLES)
         + "\n\nUNITS:\n" + json.dumps(digests, ensure_ascii=False)

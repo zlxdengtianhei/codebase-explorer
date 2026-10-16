@@ -179,10 +179,11 @@ def test_fallback_snapshot_keeps_exact_unsupported_source_after_repo_is_gone(tmp
 def test_summary_prompt_and_tree_digest_uses_summary_without_full_explanation():
     from cbe import prompts
     unit = {"id": "a.py::f", "kind": "function", "explain": "First. Second."}
-    digest = prompts.unit_digest(unit)
+    from cbe.aggregation import digest as unit_digest
+    digest = unit_digest(unit)
     assert digest["summary"] == "First." and "explain" not in digest
     unit["summary"] = "Chosen."
-    assert prompts.unit_digest(unit)["summary"] == "Chosen."
+    assert unit_digest(unit)["summary"] == "Chosen."
     prompt = prompts.detail_prompt(["a.py"], {"a.py": {"symbols": []}})
     assert "summary (string, optional)" in prompt and "25 words" in prompt
 

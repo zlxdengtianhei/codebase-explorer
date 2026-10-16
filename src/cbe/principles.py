@@ -68,7 +68,7 @@ def _p5(c):
               if sum(n >= minimum for n in counts.values()) >= 2}
     return {"ok": not shared, "min_edges_per_dependent_module": minimum,
             "min_dependent_modules": 2, "shared_units": shared,
-            "note": "candidates for a shared responsibility; no automatic reassignment"}
+            "note": "dependency signal only, including utilities already separated; no automatic reassignment"}
 
 
 def _p6(c):
@@ -90,6 +90,10 @@ def _p7(c):
         return {"ok": None, "status": "not_checked", "reason": "no prior tree for the same detail input"}
     before = previous["identity"]
     after = c["identity"]
+    if c["comparison_scope"] == "same_run_rerender":
+        return {"ok": None, "status": "re-render identical" if before == after else "re-render changed",
+                "identical": before == after,
+                "scope": "same run, same detail answers; cross-run stability requires replay scripts"}
     return {"ok": before == after, "status": "compared", "previous": before, "current": after}
 
 
@@ -111,13 +115,15 @@ PRINCIPLES = (
 )
 
 
-def report(tree: dict, units: dict, edges: list[dict], languages: dict, previous: dict | None = None) -> dict:
+def report(tree: dict, units: dict, edges: list[dict], languages: dict, previous: dict | None = None,
+           *, comparison_scope: str = "replay") -> dict:
     nodes = tree.get("nodes") or []
     identity = sorted([[n["id"], n["title"]] for n in nodes])
     digest = hashlib.sha256(json.dumps({"units": units, "edges": edges, "languages": languages},
                                       sort_keys=True, ensure_ascii=False).encode()).hexdigest()
     c = {"nodes": nodes, "units": units, "edges": edges, "languages": languages,
          "owner": {uid: n["id"] for n in nodes for uid in n.get("unit_ids") or []},
+         "comparison_scope": comparison_scope,
          "input_digest": digest, "identity": identity, "previous": previous}
     # R-20 and R-21 remain visible alongside principles, without inducing rewrites.
     children = defaultdict(list)
@@ -138,9 +144,11 @@ def report(tree: dict, units: dict, edges: list[dict], languages: dict, previous
         if intro > detail:
             long[n["id"]] = {"introduction_chars": intro, "detail_chars": detail}
     return {"advisory": True, "input_digest": digest, "identity": identity,
+            "edge_counts_by_kind": {kind: sum(e["count"] for e in edges if e["kind"] == kind)
+                                    for kind in sorted({e["kind"] for e in edges})},
             "checks": [{"principle": p.id, **p.check(c)} for p in PRINCIPLES],
-            "hierarchy": {"ok": len(units) < 31 or any(n.get("parent") and children[n["id"]] for n in nodes),
-                          "requires_intermediate_above_units": 30},
+            "hierarchy": {"ok": len(units) <= grain_bounds()[1] or any(n.get("parent") and children[n["id"]] for n in nodes),
+                          "requires_intermediate_above_units": grain_bounds()[1]},
             "introduction_length": {"ok": not long, "overlong": long,
                                     "scope": "capability+summary characters versus descendant explain characters"}}
 
@@ -150,6 +158,8 @@ def markdown(result: dict) -> str:
              "Program diagnostics only; they do not prove semantic correctness or trigger rewrites.", ""]
     for row in result["checks"]:
         state = "not checked" if row["ok"] is None else ("pass" if row["ok"] else "observe")
+        if row["principle"] == "P7":
+            state = row["status"]
         lines += [f"### {row['principle']} · {state}", "", "```json",
                   json.dumps(row, ensure_ascii=False, sort_keys=True), "```", ""]
     lines += ["Hierarchy and introduction length:", "", "```json",
