@@ -220,6 +220,7 @@ def test_import_claude_and_codex_usage_and_cost_report(tmp_path: Path) -> None:
     estimate = usage.cost(run_dir, model="claude-sonnet-5-5")
     assert estimate["basis"] == "estimate" and "ESTIMATES" in estimate["statement"]
     assert estimate["totals"]["usd"] > 0 and (run_dir / "host" / "COST.md").is_file()
+    assert "excludes graph evidence files read by host authors" in (run_dir / "host" / "COST.md").read_text()
 
     session = tmp_path / "claude" / "proj" / "session" / "subagents"
     session.mkdir(parents=True)
@@ -481,6 +482,21 @@ def _graph_for(repo: Path, paths: list[str]) -> dict:
     return {"schema": "cbe-graph/1", "source_manifest": manifest,
             "backend": {"name": "test", "version": "1"},
             "nodes": nodes, "edges": [], "capabilities": [], "diagnostics": []}
+
+
+def test_graph_query_accepts_frozen_context_json(tmp_path: Path, capsys):
+    repo = _repo(tmp_path)
+    graph = _graph_for(repo, ["src/pkg/jobs.py", "src/pkg/cli.py"])
+    graph["edges"] = [{"id": "call", "kind": "call", "source": "n-1", "target": "n-0",
+                       "status": "resolved", "path": "src/pkg/cli.py", "line": 4}]
+    graph_path = tmp_path / "graph.json"
+    graph_path.write_text(json.dumps(graph))
+    run_dir = Path(host_run.plan(repo, tmp_path / "run", graph_path=graph_path)["run_dir"])
+    assert cli.main(["graph", "query", "--graph", str(run_dir / "context.json"),
+                     "--path", "src/pkg/cli.py", "--kind", "call"]) == 0
+    result = json.loads(capsys.readouterr().out)
+    assert [edge["id"] for edge in result["edges"]] == ["call"]
+    assert {node["id"] for node in result["nodes"]} == {"n-0", "n-1"}
 
 
 def test_plan_freezes_graph_and_detail_prompt_carries_it(tmp_path: Path) -> None:

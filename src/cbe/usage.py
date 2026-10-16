@@ -252,6 +252,7 @@ def _statement(basis: str, priced: bool) -> str:
                "One or more model prices are unknown, so dollar totals are unknown. "
                "Pass --price with current rates to calculate a price equivalent.")
     return (tokens + " " + pricing + " This is not a bill: a subscription uses plan quota. "
+            "The token-use estimate excludes graph evidence files read by host authors. "
             "The host agent's own orchestration turns are not included; quote the harness session total for those.")
 
 
