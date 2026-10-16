@@ -589,8 +589,8 @@ def _ready(state: dict[str, Any]) -> list[str]:
             modules = [other for other in tasks.values() if other["kind"] == "module"]
             ok = titled and bool(modules) and all(other["status"] in {"done", "failed"} for other in modules) \
                 and any(other["status"] == "done" for other in modules)
-            if ok and state.get("aggregation", {}).get("regions"):
-                # Freeze reviewed detail before handing out region leases.
+            if ok:
+                # Freeze reviewed detail before handing out any tree lease.
                 ok = all(_settled(state, t) for t in tasks.values()
                          if t["kind"] in {"review", "repair"})
             if ok and task_id == "tree" and state.get("aggregation", {}).get("regions"):

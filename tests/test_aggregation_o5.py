@@ -82,6 +82,52 @@ def test_small_host_keeps_one_tree(tmp_path):
     assert len(report["checks"]) == 7
 
 
+@pytest.mark.parametrize("failed_module", [False, True], ids=["repair", "failed-module"])
+def test_single_tree_waits_for_review_and_repair(tmp_path, failed_module):
+    run = Path(host_run.plan(_repo(tmp_path), tmp_path / "run", review="all", jobs=8)["run_dir"])
+
+    def submit(item, answer):
+        Path(item["output_file"]).write_text(json.dumps(answer))
+        return host_run.submit(run, item["task"])
+
+    first = host_run.next_tasks(run)["tasks"]
+    failed_id = next(item["task"] for item in first if item["kind"] == "module") if failed_module else None
+    for item in first:
+        prompt = Path(item["prompt_file"]).read_text()
+        result = submit(item, {} if item["task"] == failed_id else _answer(item, prompt))
+        assert result["accepted"] == (item["task"] != failed_id)
+    reviews = []
+    for item in host_run.next_tasks(run)["tasks"]:
+        assert item["kind"] in {"module", "review"}  # no tree before reviews
+        if item["task"] == failed_id:
+            assert submit(item, {})["task_status"] == "failed"
+        else:
+            reviews.append(item)
+    assert reviews
+    for item in reviews:
+        assert submit(item, {"decision": "needs_repair", "issues": ["Replace stale unit descriptions."]})["accepted"]
+    repairs = host_run.next_tasks(run)["tasks"]
+    assert repairs and all(item["kind"] == "repair" for item in repairs)
+    assert host_run.next_tasks(run)["tasks"] == []  # repairs are still leased
+    repaired_ids = []
+    for item in repairs:
+        answer = _answer(item, Path(item["prompt_file"]).read_text())
+        for unit in answer["units"]:
+            unit["summary"] = "Repaired capability ready for aggregation."
+            repaired_ids.append(unit["id"])
+        assert submit(item, answer)["accepted"]
+    tree = host_run.next_tasks(run)["tasks"]
+    assert [item["task"] for item in tree] == ["tree"]
+    prompt = Path(tree[0]["prompt_file"]).read_text()
+    units = json.loads(prompt.split("UNITS:\n", 1)[1])
+    assert {unit["id"] for unit in units} == set(repaired_ids)
+    assert all(unit["summary"] == "Repaired capability ready for aggregation." for unit in units)
+    assert submit(tree[0], _answer(tree[0], prompt))["accepted"]
+    assert _drive(run) == ["system"]
+    state = json.loads((run / "host/state.json").read_text())
+    assert state["status"] == ("partial" if failed_module else "complete")
+
+
 def test_principles_report_counterexamples_and_replay_identity(monkeypatch):
     units = {"a": {"explain": "Detail " * 100, "ranges": [{"path": "a.py"}]},
              "b": {"explain": "Detail " * 100, "ranges": [{"path": "b.js"}]},
