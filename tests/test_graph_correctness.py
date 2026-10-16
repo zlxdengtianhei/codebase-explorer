@@ -116,7 +116,7 @@ def test_call_edges_and_capabilities_share_target_policy():
              ("A.run", "obj.run()", "resolved"),
              ("B.same", "obj.same()", "ambiguous"),
              ("<unknownFullName>", "RuntimeError('x')", "external"),
-             ("lib.helper", "lib.helper()", "external")]
+             ("lib.py:<module>.helper", "lib.helper()", "external")]
     calls = [dict(nodeId=10+i, callerId=1, callerFile="pkg/a.py", name=full.split(".")[-1],
                   methodFullName=full, code=code, callees=[dict(nodeId=100+i, fullName=full, external=True)])
              for i, (full, code, status) in enumerate(cases)]

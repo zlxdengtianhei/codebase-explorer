@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import ast
 import builtins
+from pathlib import PurePosixPath
 import re
 
 
@@ -10,11 +11,15 @@ class CallResolver:
     def __init__(self, methods: list[dict], files=None, types=None):
         self.methods = {int(m["nodeId"]): m for m in methods if m.get("nodeId") is not None}
         self.files = set(files) if files is not None else {m.get("file", "") for m in methods if m.get("file")}
+        self.diagnostics: list[dict] = []
         self.python_modules = set()
+        self.python_top_modules = set()
         for path in self.files:
             if path.endswith(".py"):
                 module = path[:-3].removesuffix("/__init__").removeprefix("src/")
+                self.python_modules.add(PurePosixPath(path).stem)
                 if "/" not in module:
+                    self.python_top_modules.add(module)
                     self.python_modules.add(module)
         self.by_pair: dict[str, list[int]] = {}
         self.by_full: dict[str, list[int]] = {}
@@ -68,6 +73,22 @@ class CallResolver:
         return list(dict.fromkeys(search(owners[0])))
 
     def resolve(self, call: dict) -> tuple[str, list[int], list[str]]:
+        result = self._resolve(call)
+        status, _, external_names = result
+        # Enforce Python's external identity contract at the single exit,
+        # including future policy branches that return an external target.
+        if (status == "external" and str(call.get("callerFile", "")).endswith(".py")
+                and (not external_names or any(".py:" not in name and not name.startswith("__builtin")
+                                               for name in external_names))):
+            self.diagnostics.append({
+                "path": call.get("callerFile"), "line": call.get("line"),
+                "code": "python_external_name_unverified", "analyzer_id": call.get("nodeId"),
+                "message": f"Python external target lacks a library identity: {external_names!r}",
+            })
+            return "unresolved", [], []
+        return result
+
+    def _resolve(self, call: dict) -> tuple[str, list[int], list[str]]:
         callees = call.get("callees") or []
         internal = list(dict.fromkeys(int(c["nodeId"]) for c in callees
                                      if not c.get("external") and c.get("nodeId") is not None
@@ -95,7 +116,7 @@ class CallResolver:
         # A repository-qualified miss is analyzer guesswork, not a known
         # external target. Never salvage its last two components.
         if (any(full.startswith(path + ":") for path in self.files)
-                or (".py:" in full and full.split(".py:", 1)[0] in self.python_modules)):
+                or (".py:" in full and full.split(".py:", 1)[0] in self.python_top_modules)):
             return "unresolved", [], []
         if re.fullmatch(r"[A-Za-z_]\w*\.[A-Za-z_]\w*", full):
             matches = self.by_pair.get(full, [])
@@ -107,6 +128,10 @@ class CallResolver:
             matches = self.inherited_targets(receiver, name, call)
             if matches:
                 return ("resolved" if len(matches) == 1 else "ambiguous", matches, [])
+            return "unresolved", [], []
+        if (".py:" not in full and not full.startswith("__builtin")
+                and ("<returnValue>" in full or "<member>(" in full
+                     or full.split(".", 1)[0] in self.python_modules)):
             return "unresolved", [], []
         external = list(dict.fromkeys(c.get("fullName") or call.get("name", "") for c in callees if c.get("external")))
         # An internal callee missing from the exported method set is unknown.

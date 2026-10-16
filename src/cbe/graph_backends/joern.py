@@ -403,7 +403,7 @@ def build_with_joern(
         payload["_frontend"] = FRONTEND_NAME.get(flag, flag)
         raw.append(payload)
         payload["_files"] = files
-        f_nodes, f_edges = _normalize(payload, version, namespace)
+        f_nodes, f_edges = _normalize(payload, version, namespace, diagnostics=diagnostics)
         nodes.extend(f_nodes)
         edges.extend(f_edges)
         frontend_error = None
@@ -528,7 +528,8 @@ def _failed_capabilities(language: str, backend: str, code: str) -> list[dict]:
             for kind in ("call", "cfg", "dataflow", "import")]
 
 
-def _normalize(payload: dict, version: str, namespace: str = "cpg") -> tuple[list[dict], list[dict]]:
+def _normalize(payload: dict, version: str, namespace: str = "cpg", *,
+               diagnostics: list[dict] | None = None) -> tuple[list[dict], list[dict]]:
     """Map a raw Joern export payload to standard nodes/edges.
 
     Every id is namespaced by the analyzed CPG and keyed on Joern's native
@@ -674,6 +675,8 @@ def _normalize(payload: dict, version: str, namespace: str = "cpg") -> tuple[lis
                 })
             previous = eid
 
+    if diagnostics is not None:
+        diagnostics.extend(call_resolver.diagnostics)
     return nodes, edges
 
 
