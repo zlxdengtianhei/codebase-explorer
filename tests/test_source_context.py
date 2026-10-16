@@ -558,6 +558,26 @@ def test_register_language_adds_a_suffix_through_one_path(tmp_path):
         sc._EXTRA_SPECS.pop("c-custom", None)
 
 
+def test_a_registered_override_gives_context_and_graph_the_same_language(tmp_path):
+    import dataclasses
+
+    import cbe.source_context as sc
+    from cbe.graph import discover_sources
+
+    # Replacing a built-in by name keeps its early place in the registry order,
+    # so the suffix map must use the lookup's precedence, not dict order.
+    c_spec = next(spec for spec in GRAMMARS if spec.name == "c")
+    register_language(dataclasses.replace(c_spec, suffixes=(*c_spec.suffixes, ".py")))
+    try:
+        (tmp_path / "mapped.py").write_text("int f(void) { return 1; }\n")
+        assert language_for_path("mapped.py") == "c"
+        assert sc.suffix_languages()[".py"] == "c"
+        assert build_context(tmp_path, paths=["mapped.py"])["files"][0]["language"] == "c"
+        assert [row["language"] for row in discover_sources(tmp_path)] == ["c"]
+    finally:
+        sc._EXTRA_SPECS.pop("c", None)
+
+
 def test_c_header_reports_its_language_ambiguity(tmp_path):
     (tmp_path / "api.h").write_text("int add(int a, int b);\n")
     context = build_context(tmp_path, paths=["api.h"])

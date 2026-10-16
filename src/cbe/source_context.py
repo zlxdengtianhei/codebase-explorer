@@ -612,9 +612,13 @@ FALLBACK_SUFFIXES = frozenset({".sql"})
 
 
 def suffix_languages() -> dict[str, str]:
-    """Suffix -> language for every registered grammar; plugin specs win, as in ``_grammar_for_suffix``."""
+    """Suffix -> language for every registered grammar, chosen by ``_grammar_for_suffix``.
 
-    return {suffix.lower(): spec.name for spec in _all_specs() for suffix in spec.suffixes}
+    Using the lookup itself keeps one precedence rule: a registered spec that
+    claims a built-in's suffix wins here exactly as it does for one path."""
+
+    suffixes = {suffix.lower() for spec in _all_specs() for suffix in spec.suffixes}
+    return {suffix: _grammar_for_suffix(suffix).name for suffix in sorted(suffixes)}
 
 
 def registered_suffixes() -> frozenset[str]:
