@@ -58,15 +58,16 @@ class UnitGraph:
     rows: tuple[EvidenceRow, ...]
     internal_calls: int
     unmapped_calls: int
+    unmapped_cfg: int = 0
+    exception_exits_exported: bool = False
 
 
 def unit_graph(graph: dict, paths: list[str], inventory: dict[str, dict],
                chunks: list[dict]) -> UnitGraph:
-    """Map call sites only through chunks whose ids occur in the inventory.
+    """Map call coordinates into inventory chunks' half-open byte ranges.
 
-    Source endpoints use edge.path/line, never the enclosing Joern method.
-    Targets use the callee definition line. Split chunks retain their own ids.
-    An unmappable resolved call is counted explicitly, never silently dropped.
+    Frozen chunk text reconstructs source coordinates, including UTF-8 columns.
+    Missing coordinates or source bytes are counted rather than guessed by line.
     """
     wanted = set(paths)
     nodes = {n["id"]: n for n in graph.get("nodes", [])}
@@ -75,14 +76,39 @@ def unit_graph(graph: dict, paths: list[str], inventory: dict[str, dict],
     for chunk in chunks:
         if chunk["id"] in ids:
             blocks[chunk["path"]].append(chunk)
-    for rows in blocks.values():
-        rows.sort(key=lambda c: (c["end_line"] - c["start_line"], c["start_line"], c["id"]))
+    source_parts: dict[str, list[dict]] = defaultdict(list)
+    for chunk in chunks:
+        source_parts[chunk["path"]].append(chunk)
+    source_lines = {}
+    for path, parts in source_parts.items():
+        raw = b"".join(c.get("text", "").encode("utf-8")
+                       for c in sorted(parts, key=lambda c: c.get("start_byte", 0)))
+        starts = [0] + [i + 1 for i, byte in enumerate(raw) if byte == 10]
+        source_lines[path] = (raw, starts)
 
-    def at(path: str | None, line: int | None) -> str | None:
-        if path and line is not None:
-            for chunk in blocks[path]:
-                if chunk["start_line"] <= line <= chunk["end_line"]:
-                    return chunk["id"]
+    def at(path: str | None, line: int | None, column: int | None = None) -> str | None:
+        if path not in source_lines or line is None or line < 1:
+            return None
+        raw, starts = source_lines[path]
+        if line > len(starts):
+            return None
+        base = starts[line - 1]
+        if column is None:
+            point = base
+            while point < len(raw) and raw[point] in b" \t":
+                point += 1
+        else:
+            if column < 1:
+                return None
+            end = starts[line] if line < len(starts) else len(raw)
+            text = raw[base:end].decode("utf-8")
+            if column > len(text) + 1:
+                return None
+            point = base + len(text[:column - 1].encode("utf-8"))
+        for chunk in blocks[path]:
+            if chunk.get("start_byte", -1) <= point < chunk.get("end_byte", -1):
+                assert chunk["start_byte"] <= point < chunk["end_byte"]
+                return chunk["id"]
         return None
 
     def endpoint(node: dict) -> str | None:
@@ -110,7 +136,7 @@ def unit_graph(graph: dict, paths: list[str], inventory: dict[str, dict],
             continue
         if edge.get("kind") != "call" or not (local_source or local_target):
             continue
-        caller = at(path, edge.get("line"))
+        caller = at(path, edge.get("line"), edge.get("column"))
         callee = endpoint(target)
         status = edge.get("status")
         if status == "resolved":

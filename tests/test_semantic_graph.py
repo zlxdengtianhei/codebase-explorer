@@ -21,7 +21,9 @@ def _graph(nodes, edges, **extra):
 
 
 def _inputs():
-    chunks = [{"id": uid, "path": path, "start_line": start, "end_line": end}
+    chunks = [{"id": uid, "path": path, "start_line": start, "end_line": end,
+               "start_byte": (start - 1) * 2, "end_byte": end * 2,
+               "text": "x\n" * (end - start + 1)}
               for uid, path, start, end in [("A", "a.py", 1, 20),
                   ("B", "b.py", 1, 20), ("C", "a.py", 21, 30)]]
     inventory = {p: {"symbols": [{"id": c["id"], "kind": "function"} for c in chunks if c["path"] == p]}
@@ -76,7 +78,8 @@ def test_graph_prompt_no_local_nodes_is_not_an_empty_graph_claim() -> None:
 
 def test_callsite_maps_only_to_inventory_chunks_and_reports_missing_mapping():
     graph, inventory, chunks = _inputs()
-    chunks.append({"id": "class-residue", "path": "a.py", "start_line": 6, "end_line": 8})
+    chunks.append({"id": "class-residue", "path": "a.py", "start_line": 6, "end_line": 8,
+                   "start_byte": 10, "end_byte": 10, "text": ""})
     graph["edges"].append(_edge("missing", "a", "b", path="a.py", line=50))
     # The Joern source method starts at line 1, but this call site is in C.
     graph["edges"].append(_edge("later-chunk", "a", "b", path="a.py", line=23))
@@ -181,3 +184,25 @@ def test_tiny_budget_has_one_explicit_status_notice_with_all_omissions():
         assert count_text_tokens(lines[0]) > 1  # explicitly outside the payload cap
     assert ".graph.txt" not in script[0]
     assert "Read full evidence: /run/tasks/module_1.graph.txt" in host[0]
+
+
+def test_byte_mapping_shared_lines_and_utf8_columns():
+    text = "class C:\n    def f():\n        café()\n"
+    split = len("class C:\n    ".encode())
+    raw = text.encode()
+    chunks = [{"id": "head", "path": "a.py", "start_line": 1, "end_line": 2,
+               "start_byte": 0, "end_byte": split, "text": raw[:split].decode()},
+              {"id": "method", "path": "a.py", "start_line": 2, "end_line": 3,
+               "start_byte": split, "end_byte": len(raw), "text": raw[split:].decode()}]
+    inventory = {"a.py": {"symbols": [{"id": "head", "kind": "class"},
+                                        {"id": "method", "kind": "method"}]}}
+    graph = _graph([_node("f", "a.py", 2), _node("other", "other.py")],
+                   [_edge("call", "other", "f", path="a.py", line=3, column=9)])
+    # Source and definition both fall in the method, even though its definition
+    # line is also covered by the smaller class header chunk.
+    evidence = graph_projection.unit_graph(graph, ["a.py"], inventory, chunks)
+    assert evidence.internal_calls == 1
+    assert evidence.unmapped_calls == 0
+    graph["edges"][0]["column"] = 100
+    assert graph_projection.unit_graph(graph, ["a.py"], inventory, chunks).unmapped_calls == 1
+
