@@ -1,4 +1,10 @@
 """Regressions for Python call identities and truncated dataflow exports."""
+import os
+from pathlib import Path
+
+import pytest
+
+from cbe.graph import analyze_graph
 from cbe.graph_backends._calls import CallResolver
 from cbe.graph_backends.joern import _normalize, _capabilities_for
 
@@ -53,3 +59,35 @@ def test_lost_relative_package_requires_unique_file_and_method():
               "fullName": "celery/utils/quorum_queues.py:<module>.detect_quorum_queues"}
     assert CallResolver([nested]).resolve(external_call(
         "//utils/quorum_queues.py:<module>.detect_quorum_queues", "celery/app/base.py")) == ("resolved", [3], [])
+
+
+def test_truncated_dataflow_is_partial_with_omitted_count():
+    payload = {"methods": [{"nodeId": 1}], "reachingDefs": [{}],
+               "reachingDefsTruncated": True, "reachingDefsOmitted": 17}
+    cap = next(c for c in _capabilities_for("python", payload, "1") if c["graph"] == "dataflow")
+    assert cap["status"] == "partial"
+    assert cap["edges_omitted"] == 17
+    assert "17 edges omitted" in cap["limitations"]
+    payload["reachingDefs"] = []  # cap zero remains partial
+    assert next(c for c in _capabilities_for("python", payload, "1") if c["graph"] == "dataflow")["status"] == "partial"
+    payload.pop("reachingDefsOmitted")  # old exports cannot provide an exact count
+    cap = next(c for c in _capabilities_for("python", payload, "1") if c["graph"] == "dataflow")
+    assert cap["edges_omitted"] is None
+    assert "unknown" in cap["limitations"]
+    payload["reachingDefsTruncated"] = False
+    assert next(c for c in _capabilities_for("python", payload, "1") if c["graph"] == "dataflow")["status"] == "empty"
+
+
+@pytest.mark.skipif(not os.environ.get("CBE_JOERN_HOME"), reason="Joern is not configured")
+def test_real_truncated_dataflow_reports_partial(tmp_path):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "app.py").write_text("def compute(x):\n    y = x + 1\n    z = y * x\n    return z\n\ncompute(3)\n")
+    graph = analyze_graph(repo, tmp_path / "graph.json", backend="joern", languages=["python"],
+                          joern_home=Path(os.environ["CBE_JOERN_HOME"]), max_reaching_defs=1)
+    cap = next(c for c in graph["capabilities"] if c["graph"] == "dataflow" and c["language"] == "python")
+    assert cap["status"] == "partial"
+    assert cap["reaching_def_edges"] == 1
+    assert cap["edges_omitted"] > 0
+    diag = next(d for d in graph["diagnostics"] if d["code"] == "reaching_defs_truncated")
+    assert diag["edges_omitted"] == cap["edges_omitted"]

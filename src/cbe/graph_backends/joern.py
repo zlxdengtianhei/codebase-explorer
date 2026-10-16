@@ -183,16 +183,16 @@ import scala.util.{Try, Success, Failure}
   // Native REACHING_DEF definition-use edges: the bounded base data-flow graph.
   val rdSeen = scala.collection.mutable.Set[(Long, Long)]()
   val rdBuf = scala.collection.mutable.ArrayBuffer[ujson.Obj]()
-  var rdTruncated = false
+  var rdOmitted = 0
   realMethods.foreach { m =>
     m.ast.foreach { n =>
-      if (!rdTruncated && n.label != "METHOD") {
+      if (n.label != "METHOD") {
         n.out("REACHING_DEF").foreach { o =>
           val t = o.asInstanceOf[AstNode]
           val key = (n.id, t.id)
           if (!rdSeen.contains(key)) {
             rdSeen.add(key)
-            if (rdBuf.size >= maxReachingDefs) rdTruncated = true
+            if (rdBuf.size >= maxReachingDefs) rdOmitted += 1
             else rdBuf += ujson.Obj("source" -> elemJson(n), "target" -> elemJson(t))
           }
         }
@@ -238,7 +238,8 @@ import scala.util.{Try, Success, Failure}
     "cfgMethodsOmitted" -> (realMethods.size - cfgMethods.size),
     "imports" -> imports,
     "reachingDefs" -> rdBuf.toList,
-    "reachingDefsTruncated" -> rdTruncated,
+    "reachingDefsTruncated" -> (rdOmitted > 0),
+    "reachingDefsOmitted" -> rdOmitted,
     "dataflowPaths" -> pathBuf.toList,
     "dataflowErrors" -> errBuf.toList
   )
@@ -429,8 +430,10 @@ def build_with_joern(
                                            f"(max_methods={max_methods})"})
         if payload.get("reachingDefsTruncated"):
             diagnostics.append({"path": None, "code": "reaching_defs_truncated",
+                                "edges_omitted": payload.get("reachingDefsOmitted"),
                                 "message": f"REACHING_DEF export for frontend {flag} hit the "
-                                           f"{max_reaching_defs}-edge cap"})
+                                           f"{max_reaching_defs}-edge cap; "
+                                           f"{payload.get('reachingDefsOmitted', 'unknown')} edges omitted"})
 
     # A whole-run CLI failure (OSError) raises above.  Per-frontend failures are
     # returned as ``failed`` capabilities + diagnostics so the exact cause
@@ -704,7 +707,9 @@ def _capabilities_for(language: str, payload: dict, version: str,
     cfg_methods = sum(1 for cfg in payload.get("cfg", []) if cfg.get("edges"))
     rd_edges = len(payload.get("reachingDefs", []))
     has_methods = bool(payload.get("methods"))
-    if rd_edges:
+    if payload.get("reachingDefsTruncated"):
+        df_status = "partial"
+    elif rd_edges:
         df_status = "resolved"
     elif has_methods:
         df_status = "empty"
@@ -750,7 +755,11 @@ def _capabilities_for(language: str, payload: dict, version: str,
                     limitations=f"{payload['cfgMethodsOmitted']} methods omitted" if payload.get("cfgMethodsOmitted") else None),
         _capability(language, "dataflow", df_status, version, backend="joern",
                     scope="reaching_def", reaching_def_edges=rd_edges,
-                    limitations=None if rd_edges else "analyzer ran but produced no REACHING_DEF edges",
+                    reaching_defs_truncated=bool(payload.get("reachingDefsTruncated")),
+                    edges_omitted=payload.get("reachingDefsOmitted", None if payload.get("reachingDefsTruncated") else 0),
+                    limitations=(f"REACHING_DEF export truncated; {payload.get('reachingDefsOmitted', 'unknown')} edges omitted"
+                                 if payload.get("reachingDefsTruncated") else
+                                 (None if rd_edges else "analyzer ran but produced no REACHING_DEF edges")),
                     condition="local reaching definitions; inter-procedural value-flow paths are a separate opt-in query"),
         _capability(language, "import",
                     "partial" if payload.get("imports") else ("empty" if has_methods else "unsupported"),
