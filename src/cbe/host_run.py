@@ -491,7 +491,7 @@ def _detail_task(run_dir: Path, state: dict[str, Any], task: dict[str, Any], *, 
     chunks = context.get("chunks") or []
     diagnostics = [row for row in context.get("diagnostics") or [] if row.get("path") in wanted]
     graph_file = None
-    if not embed:
+    if not embed and state.get("driver") != "script":
         # The canonical detail file is shared with review and repair for this
         # module: identical frozen evidence, independent of task id or issues.
         target = state_dir(run_dir) / "tasks" / f"module_{task['module'] + 1}.graph.txt"

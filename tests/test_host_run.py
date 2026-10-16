@@ -580,6 +580,8 @@ def test_script_driver_carries_the_graph_into_the_module_prompt(tmp_path: Path, 
     module_prompts = [prompt for task, prompt in seen.items()
                       if task.startswith("module_") and task[7:].isdigit()]
     assert module_prompts and any("Graph access:" in prompt for prompt in module_prompts)
+    assert all(".graph.txt" not in prompt and "graph query" not in prompt for prompt in module_prompts)
+    assert not list((tmp_path / "run" / "host" / "tasks").glob("*.graph.txt"))
 
 
 def test_summary_reports_structure_and_semantic_review_separately(tmp_path: Path) -> None:
