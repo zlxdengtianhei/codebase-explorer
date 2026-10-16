@@ -40,7 +40,7 @@ def test_rollup_evidence_literal_ancestor_pairs_and_omission():
 
 
 @pytest.mark.parametrize("evidence", [None, {"schema": "cbe-graph/1", "nodes": [], "edges": [],
-                                          "diagnostics": [{"code": "backend_failed"}]}])
+                                          "diagnostics": [{"code": "no_backend_completed"}]}])
 def test_without_usable_graph_only_model_dependencies(evidence):
     result = aggregation.relationship_view(tree(), [edge("a", "c")], evidence)
     assert {r["source"] for r in result["dependencies"]} == {"model_inferred"}

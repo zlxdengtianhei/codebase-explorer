@@ -217,8 +217,7 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
         names[uid] = name
     name_of = lambda uid: names.get(uid, short_name(uid))
     from cbe import aggregation
-    _, unit_edges = aggregation.inputs(units, dispositions, inventory,
-                                        {**(context or {}), "graph": graph})
+    unit_edges = aggregation.unit_edges(units, edge_table)
     relationships = aggregation.annotate_relationships(
         aggregation.relationship_view(tree, unit_edges, graph), system or {}, unit_edges)
     labels = {"graph_confirmed": "图确认", "model_inferred": "模型推断", "graph_only": "图有未描述"}

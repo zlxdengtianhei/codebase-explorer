@@ -250,15 +250,14 @@ def system_prompt(nodes: list[dict], limit: int, relationships: dict | None = No
                ("graph_state", "graph_reason", "graph_only_omitted")}
     context.update(dependencies=list(relationships["dependencies"][:80]),
                    candidate_flows=list(relationships["candidate_flows"][:24]))
-    while count_text_tokens(json.dumps(context, ensure_ascii=False)) > 12000:
-        if context["candidate_flows"]:
-            context["candidate_flows"].pop()
-        elif context["dependencies"]:
-            context["dependencies"].pop()
-        else:
-            break
     context["prompt_omitted"] = {key: len(relationships[key]) - len(context[key])
                                  for key in ("dependencies", "candidate_flows")}
+    while count_text_tokens(json.dumps(context, ensure_ascii=False)) > 12000:
+        key = "candidate_flows" if context["candidate_flows"] else "dependencies"
+        if not context[key]:
+            break
+        context[key].pop()
+        context["prompt_omitted"][key] += 1
     summaries = [{"id": node.get("id"), "title": node.get("title"),
                   "capability": node.get("capability"), "summary": node.get("summary"),
                   "parent": node.get("parent"), "units": len(node.get("unit_ids") or [])}
@@ -277,4 +276,3 @@ def system_prompt(nodes: list[dict], limit: int, relationships: dict | None = No
             "cooperate; link to details rather than repeating unit explanations. Unsupported transitions "
             "will be labeled model inferred by the program.\nRELATIONSHIPS: "
             + json.dumps(context, ensure_ascii=False) + "\nNODE SUMMARIES: " + json.dumps(summaries, ensure_ascii=False))
-

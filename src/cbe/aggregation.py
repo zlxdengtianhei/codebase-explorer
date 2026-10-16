@@ -47,6 +47,11 @@ def inputs(units: dict, dispositions: dict, inventory: dict, context: dict) -> t
         units, dispositions, inventory, ranges, frozen_sources(context, list(inventory)),
         {f["path"]: f.get("language", "unknown") for f in context.get("files", [])},
         context, context.get("graph"), edge_table)
+    return records, unit_edges(records, edge_table)
+
+
+def unit_edges(records: dict, edge_table: dict) -> list[dict]:
+    """Roll resolved raw edges through the catalog's folded-symbol ownership."""
     owners = {sid: uid for uid, row in records.items()
               for sid in [uid] + row.get("folded_members", [])}
     counts = Counter()
@@ -57,12 +62,12 @@ def inputs(units: dict, dispositions: dict, inventory: dict, context: dict) -> t
     # File-level imports without two source-coordinate unit owners are not
     # unit edges. They are consumed separately by partition(), never attributed
     # to an arbitrary function in the imported file.
-    for uid, unit in units.items():
+    for uid, unit in records.items():
         for relation in unit.get("relations") or []:
             target = owners.get(relation.get("target"))
             if target and target != uid:
                 counts[uid, target, "relation"] += 1
-    return records, [{"from": a, "to": b, "kind": kind, "count": n,
+    return [{"from": a, "to": b, "kind": kind, "count": n,
                       **({"provenance": "model_inferred"} if kind == "relation" else {})}
                      for (a, b, kind), n in sorted(counts.items())]
 
