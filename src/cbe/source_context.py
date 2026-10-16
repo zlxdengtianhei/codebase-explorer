@@ -507,7 +507,7 @@ def _lookup_specs() -> tuple[GrammarSpec, ...]:
 def _grammar_for_suffix(suffix: str) -> GrammarSpec | None:
     suffix = suffix.lower()
     for spec in _lookup_specs():
-        if suffix in spec.suffixes:
+        if any(suffix == declared.lower() for declared in spec.suffixes):
             return spec
     return None
 

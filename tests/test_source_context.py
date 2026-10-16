@@ -600,6 +600,20 @@ def test_a_narrower_override_keeps_the_built_in_suffixes_in_every_view(tmp_path)
         sc._EXTRA_SPECS.pop("c", None)
 
 
+def test_a_suffix_declared_in_upper_case_is_matched_like_any_other(tmp_path):
+    import dataclasses
+
+    import cbe.source_context as sc
+
+    c_spec = next(spec for spec in GRAMMARS if spec.name == "c")
+    register_language(dataclasses.replace(c_spec, name="c-upper", suffixes=(".UPX",)))
+    try:
+        assert sc.suffix_languages()[".upx"] == "c-upper"
+        assert language_for_path("a.upx") == language_for_path("a.UPX") == "c-upper"
+    finally:
+        sc._EXTRA_SPECS.pop("c-upper", None)
+
+
 def test_c_header_reports_its_language_ambiguity(tmp_path):
     (tmp_path / "api.h").write_text("int add(int a, int b);\n")
     context = build_context(tmp_path, paths=["api.h"])
