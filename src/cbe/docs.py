@@ -437,6 +437,12 @@ def catalog_symbols(catalog: dict) -> dict[str, dict]:
             record.setdefault("explain", record.get("reason", ""))
             for field in ("signatures", "relations", "reverse_relations", "outgoing", "incoming"):
                 record.setdefault(field, [])
+    edge_table = catalog.get("edges") or {}
+    for sid, record in records.items():
+        record["name"] = (catalog.get("short_names") or {}).get(sid, record.get("name", sid))
+        for direction in ("outgoing", "incoming"):
+            record[direction] = [edge_table[e] if isinstance(e, str) else e
+                                 for e in record.get(direction) or []]
     return records
 
 
@@ -717,8 +723,11 @@ def layer_metrics(run_dir: Path) -> dict:
             body_lines.update(line.strip() for line in explain[len(summary):].lstrip().splitlines() if line.strip())
         for extra in unit.get("extras") or []:
             if isinstance(extra, dict):
-                body_lines.add(f"- {extra.get('topic')}: {str(extra.get('note', '')).strip()}")
-        body_lines.update(f"- {item}" for item in unit.get("uncertainties") or [])
+                body_lines.update(line.strip() for line in
+                                  f"- {extra.get('topic')}: {str(extra.get('note', '')).strip()}".splitlines()
+                                  if line.strip())
+        for item in unit.get("uncertainties") or []:
+            body_lines.update(line.strip() for line in f"- {item}".splitlines() if line.strip())
     breakdown = dict.fromkeys(("model_body", "signature_location", "heading_anchor", "relations",
                                "footer", "index", "node_text"), 0)
     for path in sorted((run_dir / "docs").rglob("*.md")):
