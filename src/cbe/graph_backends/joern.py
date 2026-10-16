@@ -538,6 +538,9 @@ def _normalize(payload: dict, version: str, namespace: str = "cpg") -> tuple[lis
         if native is not None:
             method_by_native[int(native)] = node_id
 
+    from ._calls import CallResolver
+
+    call_resolver = CallResolver(payload.get("methods", []))
     for call in payload.get("calls", []):
         if not _visible_call(call):
             continue
@@ -547,37 +550,22 @@ def _normalize(payload: dict, version: str, namespace: str = "cpg") -> tuple[lis
         if caller is None:
             caller = f"{namespace}/caller/{rel}:{call.get('line', -1)}:{call.get('caller', '')}"
             add_node(caller, "function", path=rel, start=call.get("line"), name=call.get("caller"))
-        internal: list[str] = []
-        externals: list[str] = []
-        for callee in call.get("callees", []) or []:
-            native = callee.get("nodeId")
-            full = callee.get("fullName") or call.get("name", "")
-            if callee.get("external"):
-                eid = f"{namespace}/ext/{full}"
-                add_node(eid, "external", name=full, external=True, joern_id=native)
-                externals.append(eid)
-            else:
-                mapped = method_by_native.get(int(native)) if native is not None else None
-                if mapped is None:
-                    mapped = f"{namespace}/ext/{full}"
-                    add_node(mapped, "external", name=full, external=True, joern_id=native)
-                internal.append(mapped)
-        internal = list(dict.fromkeys(internal))
-        externals = list(dict.fromkeys(externals))
+        status, native_targets, external_names = call_resolver.resolve(call)
+        internal = [method_by_native[native] for native in native_targets]
+        externals = []
+        for full in external_names:
+            eid = f"{namespace}/ext/{full}"
+            add_node(eid, "external", name=full, external=True)
+            externals.append(eid)
         candidates = internal + externals
-        if len(internal) == 1:
-            target, status = internal[0], "resolved"
-        elif len(internal) > 1:
-            target, status = None, "ambiguous"
-        elif externals:
-            target, status = externals[0], "external"
-        else:
-            target, status = None, "unresolved"
+        target = candidates[0] if status in {"resolved", "external"} and candidates else None
         edge = {
             "id": f"{namespace}/call/{call.get('nodeId')}",
             "source": caller, "target": target, "kind": "call", "status": status,
             "path": rel, "line": call.get("line"), "column": call.get("column"),
-            "expression": call.get("code"), "method_full_name": call.get("methodFullName"),
+            "expression": call.get("code"),
+            "method_full_name": external_names[0] if len(external_names) == 1 else call.get("methodFullName"),
+            "analyzer_method_full_name": call.get("methodFullName"),
             "analyzer_id": call.get("nodeId"), "backend": "joern",
         }
         if len(candidates) > 1:
@@ -665,10 +653,14 @@ def _capabilities_for(language: str, payload: dict, version: str,
         return [_capability(language, kind, "failed", version, backend="joern",
                             limitations=f"frontend error: {frontend_error}")
                 for kind in ("call", "cfg", "dataflow", "import")]
+    from ._calls import CallResolver
+
     calls = [call for call in payload.get("calls", []) if _visible_call(call)]
-    resolved = sum(1 for call in calls if _call_status(call) == "resolved")
-    external = sum(1 for call in calls if _call_status(call) == "external")
-    ambiguous = sum(1 for call in calls if _call_status(call) == "ambiguous")
+    resolver = CallResolver(payload.get("methods", []))
+    statuses = [resolver.resolve(call)[0] for call in calls]
+    resolved = statuses.count("resolved")
+    external = statuses.count("external")
+    ambiguous = statuses.count("ambiguous")
     unresolved = len(calls) - resolved - external - ambiguous
 
     if resolved and not (ambiguous or unresolved):
@@ -732,15 +724,3 @@ def _capabilities_for(language: str, payload: dict, version: str,
                     version, backend="joern",
                     limitations="import/include declarations only; not resolved to target files"),
     ]
-
-
-def _call_status(call: dict) -> str:
-    internal = [c for c in call.get("callees", []) or [] if not c.get("external")]
-    externals = [c for c in call.get("callees", []) or [] if c.get("external")]
-    if len(internal) == 1:
-        return "resolved"
-    if len(internal) > 1:
-        return "ambiguous"
-    if externals:
-        return "external"
-    return "unresolved"

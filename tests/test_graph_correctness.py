@@ -95,3 +95,36 @@ def test_grimp_uses_real_package_paths_and_never_fabricates_files(tmp_path, monk
     assert edges["thirdparty"]["status"] == "external"
     assert all(not n["id"].startswith("module:") for n in result["nodes"])
     assert all((tmp_path / n["path"]).is_file() for n in result["nodes"] if n.get("path"))
+
+
+def test_call_edges_and_capabilities_share_target_policy():
+    from collections import Counter
+    from cbe.graph_backends.joern import _normalize, _capabilities_for
+
+    methods = [dict(nodeId=1, file="pkg/a.py", name="run", fullName="pkg/a.py:<module>.A.run"),
+               dict(nodeId=2, file="pkg/a.py", name="same", fullName="pkg/a.py:<module>.B.same"),
+               dict(nodeId=3, file="pkg/b.py", name="same", fullName="pkg/b.py:<module>.B.same")]
+    cases = [("<unknownFullName>", "f()", "unresolved"),
+             ("pkg/a.py:<module>.TypeVar", "t.TypeVar()", "unresolved"),
+             ("A.run", "obj.run()", "resolved"),
+             ("B.same", "obj.same()", "ambiguous"),
+             ("<unknownFullName>", "RuntimeError('x')", "external"),
+             ("lib.helper", "lib.helper()", "external")]
+    calls = [dict(nodeId=10+i, callerId=1, callerFile="pkg/a.py", name=full.split(".")[-1],
+                  methodFullName=full, code=code, callees=[dict(nodeId=100+i, fullName=full, external=True)])
+             for i, (full, code, status) in enumerate(cases)]
+    # The exception may have no Joern callee at all.
+    calls[4]["callees"] = []
+    calls.append(dict(nodeId=30, callerId=1, callerFile="pkg/a.py", name="lost", methodFullName="lost",
+                      code="lost()", callees=[dict(nodeId=999, fullName="lost", external=False)]))
+    payload = dict(methods=methods, calls=calls)
+    nodes, edges = _normalize(payload, "test")
+    assert [e["status"] for e in edges] == [c[2] for c in cases] + ["unresolved"]
+    assert edges[2]["target"] == "cpg/method/1"
+    assert edges[4]["method_full_name"] == "__builtin.RuntimeError"
+    assert edges[4]["analyzer_method_full_name"] == "<unknownFullName>"
+    assert set(edges[3]["candidates"]) == {"cpg/method/2", "cpg/method/3"}
+    counts = Counter(e["status"] for e in edges)
+    cap = next(c for c in _capabilities_for("python", payload, "test") if c["graph"] == "call")
+    assert all(cap[status] == counts[status] for status in ("resolved", "external", "ambiguous", "unresolved"))
+    assert not any(n.get("name") == "<unknownFullName>" for n in nodes)
