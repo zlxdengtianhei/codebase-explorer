@@ -92,3 +92,54 @@ def test_model_link_shaped_text_is_literal_and_generated_links_still_checked(tmp
         stream.write("\n[broken generated navigation](missing-page.md)\n")
     assert not verify_links()["ok"]
 
+
+def _complete_run(tmp_path, monkeypatch):
+    import importlib
+    from cbe.headless_completion import Completion, _csv_row
+    generator = importlib.import_module("cbe.generate")
+    repo = _tiny_repo(tmp_path)
+    run = tmp_path / "run"
+    def fake(**kw):
+        value = _semantic_answer(kw["prompt"])
+        _csv_row(kw["csv_path"], {"task": kw["task"], "attempt": kw["attempt"],
+                 "input_tokens": 50000, "output_tokens": 2, "cache_tokens": 0,
+                 "result": "ok", "seconds": .01})
+        return Completion(value, None, json.dumps(value), {"input": 50000, "output": 2, "cache": 0}, .01)
+    monkeypatch.setattr(generator, "invoke", fake)
+    result = generator.generate(repo, run, host="api", model="test/model", review="none", jobs=1)
+    assert result["status"] == "complete"
+    return repo, run
+
+
+def test_verify_failure_changes_cli_exit_summary_and_status_document(tmp_path, monkeypatch, capsys):
+    from cbe import cli
+    _, run = _complete_run(tmp_path, monkeypatch)
+    assert cli.main(["host", "verify", "--run-dir", str(run)]) == 0
+    assert json.loads(capsys.readouterr().out)["ok"]
+    page = next((run / "docs/nodes").glob("*.md"))
+    original = page.read_text()
+    page.write_text(original + "\n[broken](missing-page.md)\n")
+    assert cli.main(["host", "verify", "--run-dir", str(run)]) == 3
+    assert not json.loads(capsys.readouterr().out)["ok"]
+    summary = json.loads((run / "summary.json").read_text())
+    assert summary["status"] == "partial" and summary["deterministic_checks_ok"] is False
+    status = host_run.status(run)
+    assert status["status"] == "partial" and "verification failed" in status["next_action"]
+    assert "relative_links_resolve" in (run / "STATUS.md").read_text()
+    page.write_text(original)
+    assert cli.main(["host", "verify", "--run-dir", str(run)]) == 0
+    assert json.loads(capsys.readouterr().out)["ok"]
+    summary = json.loads((run / "summary.json").read_text())
+    assert summary["status"] == "complete" and summary["deterministic_checks_ok"] is True
+
+
+def test_render_cannot_claim_complete_when_deterministic_checks_fail(tmp_path, monkeypatch):
+    repo, run = _complete_run(tmp_path, monkeypatch)
+    source = repo / "src/pkg/jobs.py"
+    source.write_text(source.read_text() + "\n# changed after freeze\n")
+    rendered = host_run.render(run)
+    assert rendered["status"] == "partial" and not rendered["verify"]["ok"]
+    summary = json.loads((run / "summary.json").read_text())
+    assert summary["status"] == "partial" and summary["deterministic_checks_ok"] is False
+
+

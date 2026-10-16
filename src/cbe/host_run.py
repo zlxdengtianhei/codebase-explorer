@@ -1013,6 +1013,10 @@ def _summary(state: dict[str, Any]) -> dict[str, Any]:
         action = (f"partial: {state['partial_reason']} ({state.get('partial_detail', '')}); "
                   "the pages were not written from the source, so do not trust them. Fix the cause, then "
                   "start a new run")
+    elif state["status"] == "partial" and state.get("verify") and not state["verify"]["ok"] and not failed:
+        names = ", ".join(row["check"] for row in state["verify"]["checks"] if not row["ok"])
+        action = (f"partial: deterministic verification failed ({names}); inspect `cbe host verify --run-dir {run}`, "
+                  "fix the cause and verify again")
     elif state["status"] == "partial":
         again = (f"`cbe generate {state['repo']} --resume --run-dir {run}`" if state.get("driver") == "script"
                  else f"`cbe host resume --run-dir {run}` and continue with `cbe host next`")
@@ -1249,6 +1253,9 @@ def _render(run_dir: Path, state: dict[str, Any]) -> None:
     if reason:
         summary["partial_reason"], summary["partial_detail"] = reason, state.get("partial_detail", "")
     state["verify"] = verify_state(run_dir, state)
+    if not state["verify"]["ok"] and state["status"] == "complete":
+        state["status"] = "partial"
+    summary["status"] = state["status"]
     summary["deterministic_checks_ok"] = state["verify"]["ok"]
     from cbe import principles
     records, rolled_edges = _aggregation_inputs(run_dir, state)
@@ -1316,6 +1323,13 @@ def verify(run_dir: Path) -> dict[str, Any]:
     with locked_state(run_dir) as state:
         state["verify"] = verify_state(run_dir, state)
         write_json(state_dir(run_dir) / "verify.json", state["verify"])
+        if state.get("rendered") and all(task["status"] == "done" for task in state["tasks"].values()):
+            state["status"] = "complete" if state["verify"]["ok"] and not state.get("partial_reason") else "partial"
+        summary_path = run_dir / "summary.json"
+        if summary_path.is_file():
+            summary = json.loads(summary_path.read_text(encoding="utf-8"))
+            summary.update(status=state["status"], deterministic_checks_ok=state["verify"]["ok"])
+            write_json(summary_path, summary)
         return state["verify"]
 
 
@@ -1379,6 +1393,10 @@ def _status_markdown(state: dict[str, Any]) -> str:
              *review_line,
              *([f"**Partial: {state['partial_reason']}** · {state.get('partial_detail', '')}", ""]
                if state.get("partial_reason") else []),
+             *(["**Deterministic verification failed** · " + ", ".join(
+                 row["check"] for row in state["verify"]["checks"] if not row["ok"])
+                + ". Inspect `cbe host verify`; fix the cause and rerun verification.", ""]
+               if state.get("verify") and not state["verify"]["ok"] else []),
              *([f"**Usage unknown** · the host reported no usage, so per-call source delivery could not "
                 f"be verified for: {', '.join(unknown)}", ""] if unknown else []),
              "Counts: " + ", ".join(f"{key} {value}" for key, value in sorted(counts.items())), "",

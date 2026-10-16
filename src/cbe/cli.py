@@ -325,8 +325,9 @@ def main(argv: list[str] | None = None) -> int:
             # 3 means docs were rendered but some tasks are still pending.
             return 0 if value.get("status") == "complete" else 3
         if args.command == "host":
-            print(json.dumps(_host(args), ensure_ascii=False, indent=2))
-            return 0
+            value = _host(args)
+            print(json.dumps(value, ensure_ascii=False, indent=2))
+            return 3 if args.host_command == "verify" and not value["ok"] else 0
         from cbe.docs import find, find_text, query, query_text, source
 
         if args.command == "source":
