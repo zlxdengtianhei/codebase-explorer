@@ -145,7 +145,8 @@ class CallResolver:
             return "unresolved", [], []
         if (".py:" not in full and not full.startswith("__builtin")
                 and ("<returnValue>" in full or "<member>(" in full
-                     or full.split(".", 1)[0] in self.python_modules)):
+                     or (str(call.get("callerFile", "")).endswith(".py")
+                         and full.split(".", 1)[0] in self.python_modules))):
             return "unresolved", [], []
         external = list(dict.fromkeys(c.get("fullName") or call.get("name", "") for c in callees if c.get("external")))
         # An internal callee missing from the exported method set is unknown.

@@ -18,12 +18,25 @@ def external_call(full, caller="pkg/app.py"):
 def test_python_guessed_names_are_unresolved_but_library_paths_survive():
     resolver = CallResolver([], {"celery/beat.py", "celery/backends/redis.py", "pkg/app.py"})
     for full in ["result.results.<returnValue>.<member>(results).__iter__.<returnValue>.__next__",
-                 "beat.Service.start", "decorator.<returnValue>.view_class"]:
-        # No Python caller: this exercises classification independently of the exit guard.
+                 "decorator.<returnValue>.view_class"]:
+        # Return/member guesswork remains unresolved regardless of caller.
         assert resolver.resolve(external_call(full, "")) == ("unresolved", [], [])
+    assert resolver.resolve(external_call("beat.Service.start")) == ("unresolved", [], [])
     assert resolver.resolve(external_call("copy.py:<module>.copy")) == (
         "external", [], ["copy.py:<module>.copy"])
     assert resolver.resolve(external_call("redis.py:<module>.StrictRedis.__init__"))[0] == "external"
+
+
+def test_python_module_names_do_not_reclassify_javascript_external_calls():
+    resolver = CallResolver([], {"tools/console.py", "web/main.js", "pkg/app.py"})
+    call = external_call("console.log", "web/main.js")
+    call.update(name="log", code="console.log('hello')")
+    assert resolver.resolve(call) == ("external", [], ["console.log"])
+    # The repository Python module inference still applies to Python callers,
+    # and library-qualified Python identities still survive unchanged.
+    assert resolver.resolve(external_call("console.log")) == ("unresolved", [], [])
+    assert resolver.resolve(external_call("console.py:<module>.log")) == (
+        "external", [], ["console.py:<module>.log"])
 
 
 def test_python_external_exit_guard_and_diagnostic():
