@@ -33,7 +33,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterator
 
-from cbe import batching, checks, docs, prompts, symbols
+from cbe import batching, checks, docs, projection, prompts, symbols
 from cbe import __version__
 from cbe import source_context
 
@@ -488,11 +488,21 @@ def _detail_task(run_dir: Path, state: dict[str, Any], task: dict[str, Any], *, 
     _assert_paths_unchanged(state, paths)
     context = _verified_context(run_dir, state)
     wanted = set(paths)
-    chunks = [chunk for chunk in context.get("chunks") or [] if chunk.get("path") in wanted]
+    chunks = context.get("chunks") or []
     diagnostics = [row for row in context.get("diagnostics") or [] if row.get("path") in wanted]
+    graph_file = None
+    if not embed:
+        # The canonical detail file is shared with review and repair for this
+        # module: identical frozen evidence, independent of task id or issues.
+        target = state_dir(run_dir) / "tasks" / f"module_{task['module'] + 1}.graph.txt"
+        lines = projection.graph_prompt_lines(
+            context.get("graph"), paths, embed=False, inventory=state["inventory"],
+            chunks=chunks, source_tokens=2**63, max_tokens=2**63)
+        target.write_text("\n".join(lines), encoding="utf-8")
+        graph_file = str(target)
     return prompts.detail_prompt(
         paths, state["inventory"], chunks=chunks, source_root=Path(state["repo"]),
-        graph=context.get("graph"), expand_context_path=str(run_dir / "context.json"),
+        graph=context.get("graph"), graph_file=graph_file,
         context_diagnostics=diagnostics if with_diagnostics else None, issues=issues, embed=embed)
 
 

@@ -1,38 +1,36 @@
-"""The graph-to-prompt projection: referential integrity, priority, omissions.
-
-These pin the contract that the LLM overlay relies on: a provided graph is
-never presented as a prefix of itself, every included relation keeps its
-endpoints (including boundary nodes outside the reading paths), import/call
-edges are prioritized over CFG/dataflow samples, and absent / empty / failed /
-unsupported are four different statements.
-"""
-
+"""Unit graph evidence: identity, priorities, accounting and token bounds."""
 from __future__ import annotations
 
-import json
-import os
-import subprocess
-
 from cbe import projection as graph_projection, prompts
+from cbe.token_budget import count_text_tokens
 
 
-def _node(nid: str, path: str, kind: str = "function", *, name: str | None = None,
-          owner: str | None = None) -> dict:
-    node = {"id": nid, "kind": kind, "path": path, "start_line": 1, "end_line": 1,
-            "name": name or nid}
-    if owner:
-        node["owner"] = owner
-    return node
+def _node(nid, path, line=1, **extra):
+    return {"id": nid, "kind": "function", "name": nid, "path": path,
+            "start_line": line, "end_line": line, **extra}
 
 
-def _edge(eid: str, source: str, target: str, kind: str, status: str = "resolved", **extra) -> dict:
+def _edge(eid, source, target, kind="call", status="resolved", **extra):
     return {"id": eid, "source": source, "target": target, "kind": kind,
             "status": status, **extra}
 
 
-def _graph(nodes: list[dict], edges: list[dict], **extra) -> dict:
+def _graph(nodes, edges, **extra):
     return {"schema": "cbe-graph/1", "nodes": nodes, "edges": edges,
-            "backend": {"name": "test", "version": "1"}, "capabilities": [], **extra}
+            "capabilities": [], **extra}
+
+
+def _inputs():
+    chunks = [{"id": uid, "path": path, "start_line": start, "end_line": end}
+              for uid, path, start, end in [("A", "a.py", 1, 20),
+                  ("B", "b.py", 1, 20), ("C", "a.py", 21, 30)]]
+    inventory = {p: {"symbols": [{"id": c["id"], "kind": "function"} for c in chunks if c["path"] == p]}
+                 for p in ("a.py", "b.py")}
+    graph = _graph([_node("a", "a.py"), _node("b", "b.py"), _node("c", "a.py", 21)],
+                   [_edge("out", "a", "b", path="a.py", line=7),
+                    _edge("in", "b", "a", path="b.py", line=8),
+                    _edge("internal", "a", "c", path="a.py", line=9)])
+    return graph, inventory, chunks
 
 
 def test_graph_state_distinguishes_absent_empty_failed_and_unsupported() -> None:
@@ -68,85 +66,6 @@ def test_graph_with_no_completed_backend_is_not_successfully_empty() -> None:
         assert "verified result" not in prompt
 
 
-def test_projection_retains_cross_file_boundary_endpoints() -> None:
-    graph = _graph([_node("main", "main.c"), _node("helper", "util.c")],
-                   [_edge("e1", "main", "helper", "call", expression="helper()")])
-    projection = graph_projection.project_graph(graph, ["main.c"])
-    assert projection["state"] == "provided"
-    ids = {node["id"] for node in projection["nodes"]}
-    assert ids == {"main", "helper"}, "the util.c boundary endpoint must survive the code-file filter"
-    assert [edge["id"] for edge in projection["edges"]] == ["e1"]
-    assert projection["scope"]["boundary_endpoints_retained"] is True
-    assert all(edge["source"] in ids and edge["target"] in ids for edge in projection["edges"])
-
-
-def test_projection_prioritises_import_call_and_states_cfg_dataflow_omissions() -> None:
-    nodes = [_node("m0", "a.c"), _node("m1", "b.c")]
-    edges = [_edge("imp", "m0", "m1", "import", "partial"),
-             _edge("call", "m0", "m1", "call", expression="helper()")]
-    for index in range(400):
-        nodes.append(_node(f"cfg{index}", "a.c", kind="cfg_node", owner="m0"))
-        edges.append(_edge(f"cfge{index}", f"cfg{index}", "m0" if index % 2 else "cfg0", "cfg"))
-    for index in range(400):
-        nodes.append(_node(f"df{index}", "a.c", kind="dataflow_node", owner="m0"))
-        edges.append(_edge(f"dfe{index}", f"df{index}", "m0" if index % 2 else "df0", "dataflow"))
-    projection = graph_projection.project_graph(_graph(nodes, edges), ["a.c"],
-                                        max_nodes=30, max_edges=25)
-    kinds = [edge["kind"] for edge in projection["edges"]]
-    assert "import" in kinds and "call" in kinds, "semantic relations must survive the budget"
-    assert projection["counts"]["edges_selected"] <= 25
-    assert projection["counts"]["edges_omitted"] > 0
-    assert projection["counts"]["by_kind"]["cfg"]["omitted"] > 0
-    assert "not a representative subset" in projection["sampling"]["cfg_dataflow"]
-    ids = {node["id"] for node in projection["nodes"]}
-    assert all(edge["source"] in ids and edge["target"] in ids for edge in projection["edges"])
-    assert projection["cfg_dataflow_by_owner"]["cfg"]["m0"]["in_scope"] == 400
-
-
-def test_projection_never_emits_a_dangling_edge() -> None:
-    graph = _graph([_node("m0", "a.c")],
-                   [_edge("good", "m0", "m0", "call"), _edge("dangling", "m0", "missing", "call")])
-    projection = graph_projection.project_graph(graph, ["a.c"])
-    ids = {node["id"] for node in projection["nodes"]}
-    assert all(edge["source"] in ids and edge["target"] in ids for edge in projection["edges"])
-    assert projection["counts"]["edges_omitted_missing_endpoint"] == 1
-    assert "dangling" not in [edge["id"] for edge in projection["edges"]]
-
-
-def test_graph_prompt_marks_api_bounded_and_gives_host_a_follow_up_query() -> None:
-    graph = _graph([_node("m0", "a.c"), _node("m1", "b.c")],
-                   [_edge("e1", "m0", "m1", "call", expression="helper()")])
-    api_prompt = "\n".join(graph_projection.graph_prompt_lines(graph, ["a.c"], embed=True))
-    assert "LOCAL GRAPH EVIDENCE" in api_prompt
-    assert "tool-free" in api_prompt and "cannot query" in api_prompt
-    assert "cbe graph query" not in api_prompt
-    host_prompt = "\n".join(graph_projection.graph_prompt_lines(
-        graph, ["a.c"], embed=False, expand_context_path="/run dir/context.json"))
-    assert "cbe graph query --graph '/run dir/context.json'" in host_prompt
-    assert "--kind call" in host_prompt
-    assert "--kind with import, cfg, or dataflow" in host_prompt
-    assert "boundary" in host_prompt.lower() or "Boundary" in host_prompt
-
-
-def test_host_graph_query_runs_without_cbe_on_path(tmp_path) -> None:
-    source_path = "source dir/a 'quoted'.c"
-    graph = _graph([_node("caller", source_path), _node("callee", "b.c")],
-                   [_edge("cross-file", "caller", "callee", "call")])
-    frozen = tmp_path / "run with spaces" / "context.json"
-    frozen.parent.mkdir()
-    frozen.write_text(json.dumps({"schema": "cbe-context/1", "graph": graph}))
-    lines = graph_projection.graph_prompt_lines(graph, [source_path], embed=False,
-                                        expand_context_path=str(frozen))
-    prefix = "To expand an omitted relation, run: "
-    command = next(line.removeprefix(prefix) for line in lines if line.startswith(prefix))
-    result = subprocess.run(command, shell=True, env={**os.environ, "PATH": ""},
-                            capture_output=True, text=True, timeout=15)
-    assert result.returncode == 0, result.stderr
-    queried = json.loads(result.stdout)
-    assert [edge["id"] for edge in queried["edges"]] == ["cross-file"]
-    assert {node["id"] for node in queried["nodes"]} == {"caller", "callee"}
-
-
 def test_graph_prompt_no_local_nodes_is_not_an_empty_graph_claim() -> None:
     graph = _graph([_node("other", "other.c")], [])
     prompt = "\n".join(graph_projection.graph_prompt_lines(graph, ["a.c"], embed=True))
@@ -155,20 +74,80 @@ def test_graph_prompt_no_local_nodes_is_not_an_empty_graph_claim() -> None:
     assert "successfully empty" not in prompt
 
 
-def test_projection_keeps_unresolved_null_target_with_its_expression() -> None:
-    graph = _graph([_node("file", "a.c", kind="file")],
-                   [_edge("imp", "file", None, "import", "unresolved", expression='#include "b.h"')])
-    projection = graph_projection.project_graph(graph, ["a.c"])
-    assert projection["edges"][0]["target"] is None
-    assert projection["edges"][0]["status"] == "unresolved"
-    assert projection["edges"][0]["expression"] == '#include "b.h"'
-    assert projection["counts"]["edges_omitted_missing_endpoint"] == 0
+def test_callsite_maps_only_to_inventory_chunks_and_reports_missing_mapping():
+    graph, inventory, chunks = _inputs()
+    chunks.append({"id": "class-residue", "path": "a.py", "start_line": 6, "end_line": 8})
+    graph["edges"].append(_edge("missing", "a", "b", path="a.py", line=50))
+    evidence = graph_projection.unit_graph(graph, ["a.py"], inventory, chunks)
+    text = graph_projection.graph_text(evidence)
+    assert "A → B (b.py:1)" in text and "A ← B (b.py:8)" in text
+    assert "class-residue" not in text
+    assert evidence.internal_calls == 1 and evidence.unmapped_calls == 1
+    assert "A → C" not in text
+    assert "unmapped resolved calls: 1" in text
 
 
-def test_detail_prompt_carries_the_projection_and_omission_statement() -> None:
-    graph = _graph([_node("m0", "a.c"), _node("boundary", "util.c")],
-                   [_edge("e1", "m0", "boundary", "call", expression="helper()")])
-    inventory = {"a.c": {"tokens": 1, "sha256": "x", "nlines": 1, "symbols": []}}
-    prompt = prompts.detail_prompt(["a.c"], inventory, graph=graph, embed=True)
-    assert "LOCAL GRAPH EVIDENCE" in prompt and '"boundary"' in prompt
-    assert "omitted" in prompt and "not a representative subset" in prompt
+def test_import_flood_cannot_displace_cross_batch_resolved_calls():
+    graph, inventory, chunks = _inputs()
+    for i in range(400):
+        graph["nodes"].append({"id": f"ext{i}", "name": f"external_module_{i}"})
+        graph["edges"].append(_edge(str(i), "a", f"ext{i}", "import", "external", path="a.py"))
+    evidence = graph_projection.unit_graph(graph, ["a.py"], inventory, chunks)
+    text = graph_projection.graph_text(evidence, budget=170)
+    assert "A → B" in text and "A ← B" in text
+    assert "dependencies=1" in text and "packages=1" in text
+    assert "out=" not in text and "in=" not in text
+    assert count_text_tokens(text) <= 170
+
+
+def test_budget_and_exact_omissions_when_cross_calls_alone_overflow():
+    graph, inventory, chunks = _inputs()
+    graph["edges"] = []
+    for i in range(10):
+        graph["nodes"].append(_node(f"other{i}", "b.py", i + 1))
+        graph["edges"].append(_edge(str(i), "a", f"other{i}", path="a.py", line=i + 1))
+    evidence = graph_projection.unit_graph(graph, ["a.py"], inventory, chunks)
+    text = graph_projection.graph_text(evidence, budget=130)
+    selected = text.count("→")
+    assert 0 < selected < 10
+    assert f"out={10 - selected}" in text
+    assert count_text_tokens(text) <= 130
+    assert len([r for r in evidence.rows if r.category == "out"]) == 10
+
+
+def test_cfg_counts_are_from_nodes_and_do_not_export_dataflow():
+    graph, inventory, chunks = _inputs()
+    for i, (label, line) in enumerate([("CONTROL_STRUCTURE", 3), ("RETURN", 5),
+                                     ("CALL", 9), ("RETURN", 10), ("THROW", 8)]):
+        graph["nodes"].append(_node(str(i), "a.py", line, kind="cfg_node", label=label, owner="a"))
+    graph["nodes"].append(_node("secret-flow", "a.py", kind="dataflow_node", owner="a"))
+    text = graph_projection.graph_text(graph_projection.unit_graph(graph, ["a.py"], inventory, chunks))
+    assert "CFG A: control_structures=1, returns=2, early_returns_by_line=1, explicit_throw_exits=1" in text
+    assert "other exception exits unknown" in text
+    assert "secret-flow" not in text and "cfg_node" not in text
+    graph["nodes"].extend([_node("synthetic", "a.py"),
+        _node("second-return", "a.py", 6, kind="cfg_node", label="RETURN", owner="synthetic")])
+    merged = graph_projection.graph_text(graph_projection.unit_graph(graph, ["a.py"], inventory, chunks))
+    assert merged.count("CFG A:") == 1
+    assert "returns=3" in merged
+
+
+def test_ambiguity_three_candidates_and_unresolved_per_file_counts():
+    graph, inventory, chunks = _inputs()
+    graph["edges"] += [_edge("amb", "a", None, status="ambiguous", path="a.py", line=4,
+                            candidates=["a", "b", "c", "missing"], expression="choose()")]
+    graph["edges"] += [_edge(f"u{i}", "a", None, status="unresolved", path="a.py", line=4,
+                             expression=f"unknown{i}()") for i in range(8)]
+    text = graph_projection.graph_text(graph_projection.unit_graph(graph, ["a.py"], inventory, chunks))
+    assert "A; B; C (4 candidates)" in text and "missing" not in text
+    assert "Unresolved calls a.py: 8;" in text
+    assert "unknown4" in text and "unknown5" not in text
+
+
+def test_default_and_configurable_source_token_caps():
+    graph, inventory, chunks = _inputs()
+    for source_tokens, cap in [(100, 3000), (5000, 120), (5000, 3000), (0, 3000), (1, 3000)]:
+        lines = graph_projection.graph_prompt_lines(graph, ["a.py"], embed=True,
+            inventory=inventory, chunks=chunks, source_tokens=source_tokens, max_tokens=cap)
+        assert count_text_tokens("\n".join(lines).strip()) <= min(source_tokens, cap)
+

@@ -1,31 +1,18 @@
-"""The graph evidence one detail author sees: a bounded, deterministic projection.
+"""Unit-level graph evidence for detail authors, shared by both drivers.
 
-The complete graph stays in the frozen ``context.json``. A projection keeps
-both endpoints of every included relation, reports what it omitted, and is
-never a second graph or scheduler.
+The inventory defines identity; chunks define call-site ownership. Rendering and
+budget selection live here so host files and all detail/review/repair prompts
+cannot acquire different projection rules.
 """
-
 from __future__ import annotations
 
-import json
-import shlex
-import sys
+from collections import Counter, defaultdict
+from dataclasses import dataclass
 from typing import Any
 
+from cbe.token_budget import count_text_tokens
 
-#: The prompt-facing schema. It is a bounded projection of ``cbe-graph/1``, not a new graph.
-GRAPH_PROJECTION_SCHEMA = "cbe-graph-projection/1"
-#: Default prompt budget. The complete graph stays in the frozen ``context.json``;
-#: these caps only bound what one completion sees, with explicit omission counts.
-DEFAULT_GRAPH_MAX_NODES = 200
-DEFAULT_GRAPH_MAX_EDGES = 320
-#: Semantic relations are included before structural ones, and resolved before
-#: unresolved, so a budget cut never silently drops the import/call evidence.
-_GRAPH_KIND_PRIORITY = {"import": 0, "call": 1, "cfg": 2, "dataflow": 3}
-_GRAPH_STATUS_PRIORITY = {"resolved": 0, "ambiguous": 1, "unresolved": 2, "external": 3,
-                          "unsupported": 4}
-_SEMANTIC_GRAPH_KINDS = ("import", "call")
-_STRUCTURAL_GRAPH_KINDS = ("cfg", "dataflow")
+DEFAULT_GRAPH_MAX_TOKENS = 3000
 
 
 def graph_state(graph: Any) -> tuple[str, str]:
@@ -58,168 +45,204 @@ def graph_state(graph: Any) -> tuple[str, str]:
     return "empty", "the analyzer ran and found no relation"
 
 
-def _compact_graph_node(node: dict) -> dict:
-    out: dict[str, Any] = {"id": node.get("id"), "kind": node.get("kind"),
-                           "name": node.get("name")}
-    if node.get("path"):
-        out["path"] = node["path"]
-        out["lines"] = [node.get("start_line"), node.get("end_line")]
-    else:
-        out["boundary"] = True
-    for key in ("owner", "label"):
-        if node.get(key) and node.get(key) != node.get("name"):
-            out[key] = node[key]
-    return out
+@dataclass(frozen=True)
+class EvidenceRow:
+    category: str
+    text: str
+    count: int = 1
 
 
-def _compact_graph_edge(edge: dict) -> dict:
-    out: dict[str, Any] = {"id": edge.get("id"), "source": edge.get("source"),
-                           "target": edge.get("target"), "kind": edge.get("kind"),
-                           "status": edge.get("status")}
-    for key in ("path", "line", "expression", "target_expression", "method_full_name", "owner"):
-        if edge.get(key) is not None:
-            out[key] = edge[key]
-    candidates = edge.get("candidates")
-    if isinstance(candidates, list) and candidates:
-        out["candidates"] = candidates[:8]
-        out["candidate_count"] = len(candidates)
-    return out
+@dataclass(frozen=True)
+class UnitGraph:
+    """Unbounded rows in priority order, plus non-optional mapping accounting."""
+    rows: tuple[EvidenceRow, ...]
+    internal_calls: int
+    unmapped_calls: int
 
 
-def project_graph(graph: Any, paths: list[str], *, max_nodes: int = DEFAULT_GRAPH_MAX_NODES,
-                  max_edges: int = DEFAULT_GRAPH_MAX_EDGES) -> dict[str, Any]:
-    """Bounded, deterministic, referentially closed projection for one prompt.
+def unit_graph(graph: dict, paths: list[str], inventory: dict[str, dict],
+               chunks: list[dict]) -> UnitGraph:
+    """Map call sites only through chunks whose ids occur in the inventory.
 
-    Every included relation keeps both endpoints, even a boundary node outside
-    the requested paths, so no selected edge dangles. Import/call edges are
-    taken first; cfg/dataflow edges are sampled deterministically by edge id and
-    labeled as such. Counts of total/selected/omitted are always reported. This
-    is a projection, never a second graph or scheduler."""
-    state, detail = graph_state(graph)
-    result: dict[str, Any] = {
-        "schema": GRAPH_PROJECTION_SCHEMA, "state": state, "state_detail": detail,
-        "scope": {"paths": sorted(set(paths)), "direction": "both",
-                  "relation_scope": "incident_to_paths",
-                  "boundary_endpoints_retained": True},
-    }
-    if state in {"absent", "unsupported", "failed"}:
-        return result
-    nodes = [node for node in graph.get("nodes") or [] if isinstance(node, dict) and node.get("id")]
-    edges = [edge for edge in graph.get("edges") or [] if isinstance(edge, dict)]
-    by_id = {node["id"]: node for node in nodes}
-    result["backend"] = graph.get("backend")
-    result["capabilities"] = list(graph.get("capabilities") or [])
-    result["diagnostics"] = list(graph.get("diagnostics") or [])[:20]
-    provenance = graph.get("provenance")
-    if isinstance(provenance, dict):
-        result["provenance"] = {key: provenance[key] for key in
-                                ("source_stable", "config_stable", "analyzed_languages", "fingerprint")
-                                if key in provenance}
-    selected_paths = set(paths)
-    path_node_ids = {node["id"] for node in nodes if node.get("path") in selected_paths}
-    if not path_node_ids:
-        result["state"] = "no_local_nodes"
-        result["counts"] = {"nodes_total": len(nodes), "edges_total": len(edges),
-                            "nodes_selected": 0, "edges_selected": 0,
-                            "edges_in_scope": 0}
-        return result
+    Source endpoints use edge.path/line, never the enclosing Joern method.
+    Targets use the callee definition line. Split chunks retain their own ids.
+    An unmappable resolved call is counted explicitly, never silently dropped.
+    """
+    wanted = set(paths)
+    nodes = {n["id"]: n for n in graph.get("nodes", [])}
+    ids = {s["id"] for entry in inventory.values() for s in entry["symbols"]}
+    blocks: dict[str, list[dict]] = defaultdict(list)
+    for chunk in chunks:
+        if chunk["id"] in ids:
+            blocks[chunk["path"]].append(chunk)
+    for rows in blocks.values():
+        rows.sort(key=lambda c: (c["end_line"] - c["start_line"], c["start_line"], c["id"]))
 
-    incident = [edge for edge in edges
-                if edge.get("source") in path_node_ids or edge.get("target") in path_node_ids]
+    def at(path: str | None, line: int | None) -> str | None:
+        if path and line is not None:
+            for chunk in blocks[path]:
+                if chunk["start_line"] <= line <= chunk["end_line"]:
+                    return chunk["id"]
+        return None
 
-    def edge_rank(edge: dict) -> tuple:
-        return (_GRAPH_KIND_PRIORITY.get(edge.get("kind"), 9),
-                _GRAPH_STATUS_PRIORITY.get(edge.get("status"), 9), str(edge.get("id")))
+    def endpoint(node: dict) -> str | None:
+        return at(node.get("path"), node.get("start_line"))
 
-    ranked = sorted(incident, key=edge_rank)
-    selected_nodes: dict[str, dict] = {}
-    selected_edges: list[dict] = []
-    omitted_by_kind: dict[str, int] = {}
-    omitted_missing_endpoint = 0
-    # Relations first, in priority order: a semantic edge and both its endpoints
-    # are taken before any structural node, so a budget cut can never drop
-    # import/call evidence in favour of CFG blocks.
-    for edge in ranked:
-        if len(selected_edges) >= max_edges:
-            omitted_by_kind[edge.get("kind")] = omitted_by_kind.get(edge.get("kind"), 0) + 1
+    outgoing, incoming, ambiguous = [], [], []
+    dependencies: dict[str, set[str]] = defaultdict(set)
+    unresolved: dict[str, list[str]] = defaultdict(list)
+    skeleton: Counter = Counter()
+    internal = unmapped = 0
+    for edge in sorted(graph.get("edges", []), key=lambda e: str(e.get("id", ""))):
+        source = nodes.get(edge.get("source"), {})
+        target = nodes.get(edge.get("target"), {})
+        path = edge.get("path") or source.get("path")
+        target_path = target.get("path")
+        local_source, local_target = path in wanted, target_path in wanted
+        if edge.get("kind") == "import":
+            if edge.get("status") == "external" and local_source:
+                dependencies[path].add(str(target.get("name") or edge.get("target_expression")
+                                           or edge.get("expression") or "unknown"))
+            if edge.get("status") == "resolved" and path and target_path:
+                left = path.rpartition("/")[0] or "."
+                right = target_path.rpartition("/")[0] or "."
+                skeleton[left, right] += 1
             continue
-        endpoints = [edge.get("source"), edge.get("target")]
-        if any(endpoint and endpoint not in by_id for endpoint in endpoints):
-            omitted_missing_endpoint += 1  # never emit a dangling edge
+        if edge.get("kind") != "call" or not (local_source or local_target):
             continue
-        missing = [endpoint for endpoint in endpoints if endpoint and endpoint not in selected_nodes]
-        if len(selected_nodes) + len(set(missing)) > max_nodes:
-            omitted_by_kind[edge.get("kind")] = omitted_by_kind.get(edge.get("kind"), 0) + 1
-            continue
-        for endpoint in missing:
-            selected_nodes[endpoint] = _compact_graph_node(by_id[endpoint])
-        selected_edges.append(_compact_graph_edge(edge))
-    # Then any remaining reading-scope node, so a file/function with no edge is
-    # still visible, without ever displacing a relation.
-    for node_id in sorted(path_node_ids, key=lambda item: (by_id[item].get("path") or "",
-                                                           by_id[item].get("start_line") or 0, item)):
-        if len(selected_nodes) >= max_nodes:
-            break
-        selected_nodes.setdefault(node_id, _compact_graph_node(by_id[node_id]))
+        caller = at(path, edge.get("line"))
+        callee = endpoint(target)
+        status = edge.get("status")
+        if status == "resolved":
+            if not caller or not callee:
+                unmapped += 1
+                continue
+            if local_source and local_target:
+                internal += 1
+            elif local_source:
+                outgoing.append((caller, callee, target_path, target.get("start_line")))
+            else:
+                incoming.append((callee, caller, path, edge.get("line")))
+        elif status == "ambiguous":
+            candidates = []
+            for candidate in (edge.get("candidates") or [])[:3]:
+                node = nodes.get(candidate, {}) if isinstance(candidate, str) else candidate
+                candidates.append(endpoint(node) or str(node.get("name") or candidate))
+            ambiguous.append(EvidenceRow("ambiguous", f"? {caller or path}: "
+                f"{edge.get('expression') or edge.get('target_expression') or '?'} => "
+                + "; ".join(candidates) + f" ({len(edge.get('candidates') or [])} candidates)"))
+        elif status == "unresolved" and local_source:
+            expression = str(edge.get("target_expression") or edge.get("expression") or "?")
+            unresolved[path].append(expression.split("(", 1)[0].strip()[:80])
 
-    by_kind: dict[str, dict[str, int]] = {}
-    for kind in ("import", "call", "cfg", "dataflow"):
-        scope = [edge for edge in incident if edge.get("kind") == kind]
-        chosen = sum(1 for edge in selected_edges if edge.get("kind") == kind)
-        if scope or chosen:
-            by_kind[kind] = {"in_scope": len(scope), "selected": chosen,
-                             "omitted": len(scope) - chosen}
-    semantic_omitted = sum(omitted_by_kind.get(kind, 0) for kind in _SEMANTIC_GRAPH_KINDS)
-    aggregation: dict[str, dict[str, dict[str, int]]] = {}
-    for kind in _STRUCTURAL_GRAPH_KINDS:
-        scope = [edge for edge in incident if edge.get("kind") == kind]
-        if not scope:
-            continue
-        owners: dict[str, dict[str, int]] = {}
-        chosen_ids = {edge.get("id") for edge in selected_edges}
-        for edge in scope:
-            owner = edge.get("owner")
-            if not owner:
-                source_node = by_id.get(edge.get("source")) or {}
-                owner = source_node.get("owner") or edge.get("path") or source_node.get("path") or "<unknown>"
-            row = owners.setdefault(owner, {"in_scope": 0, "selected": 0})
-            row["in_scope"] += 1
-            if edge.get("id") in chosen_ids:
-                row["selected"] += 1
-        aggregation[kind] = dict(sorted(owners.items())[:50])
+    rows: list[EvidenceRow] = []
+    # Group by caller/callee without duplicating an inventory id for every site.
+    # Repeated sites remain counted even if their endpoint pair is the same.
+    for category, arrow, relations in (("out", "→", outgoing), ("in", "←", incoming)):
+        grouped: dict[tuple, Counter] = defaultdict(Counter)
+        for local, remote, remote_path, line in relations:
+            grouped[local][remote, remote_path, line] += 1
+        for local, destinations in sorted(grouped.items()):
+            for (remote, remote_path, line), count in sorted(destinations.items()):
+                # Each row is independently truncatable; repeated local ids are
+                # compressed by render_rows below, keeping omission counts exact.
+                rows.append(EvidenceRow(category, f"{local} {arrow} {remote} ({remote_path}:{line})"
+                                         + (f" ×{count}" if count > 1 else ""), count))
+    rows += sorted(ambiguous, key=lambda r: r.text)
+    for path in sorted(wanted):
+        rows.append(EvidenceRow("dependencies", f"External imports {path}: "
+                    + ", ".join(sorted(dependencies[path])) if dependencies[path]
+                    else f"External imports {path}: none"))
+        if unresolved[path]:
+            names = list(dict.fromkeys(unresolved[path]))[:5]
+            rows.append(EvidenceRow("unresolved", f"Unresolved calls {path}: {len(unresolved[path])}; "
+                                    + "; ".join(names), len(unresolved[path])))
 
-    result["nodes"] = sorted(selected_nodes.values(),
-                             key=lambda node: (node.get("path") or "", node.get("kind") or "",
-                                               node.get("lines") or [0, 0], node.get("id") or ""))
-    result["edges"] = selected_edges
-    result["counts"] = {
-        "nodes_total": len(nodes), "nodes_selected": len(selected_nodes),
-        "nodes_omitted": len(nodes) - len(selected_nodes),
-        "edges_total": len(edges), "edges_in_scope": len(incident),
-        "edges_selected": len(selected_edges),
-        "edges_omitted": len(incident) - len(selected_edges),
-        "edges_omitted_by_kind": {kind: count for kind, count in omitted_by_kind.items() if count},
-        "edges_omitted_missing_endpoint": omitted_missing_endpoint,
-        "by_kind": by_kind,
-    }
-    result["sampling"] = {
-        "priority": "import/call before cfg/dataflow; resolved before unresolved; then edge id",
-        "import_call": ("all included" if semantic_omitted == 0 else
-                        f"{semantic_omitted} import/call edge(s) omitted after the budget"),
-        "cfg_dataflow": "deterministically sampled by edge id; not a representative subset",
-        "aggregation": "cfg/dataflow in_scope/selected counts per owner" if aggregation else None,
-    }
-    if aggregation:
-        result["cfg_dataflow_by_owner"] = aggregation
-    return result
+    symbol_kinds = {s["id"]: s.get("kind") for entry in inventory.values() for s in entry["symbols"]}
+    cfg_nodes: dict[str, list[dict]] = defaultdict(list)
+    for node in nodes.values():
+        if node.get("kind") == "cfg_node" and node.get("path") in wanted:
+            uid = endpoint(nodes.get(node.get("owner"), {}))
+            if uid and symbol_kinds.get(uid) in {"function", "method"}:
+                cfg_nodes[uid].append(node)
+    for uid, members in sorted(cfg_nodes.items()):
+        controls = sum(n.get("label") == "CONTROL_STRUCTURE" for n in members)
+        returns = sum(n.get("label") == "RETURN" for n in members)
+        throws = sum(n.get("label") == "THROW" for n in members)
+        last = max((n.get("start_line") or 0 for n in members
+                    if n.get("label") not in {"METHOD", "METHOD_RETURN"}), default=0)
+        early = sum(n.get("label") == "RETURN" and (n.get("start_line") or last) < last
+                    for n in members)
+        if controls or returns or throws:
+            rows.append(EvidenceRow("cfg", f"CFG {uid}: control_structures={controls}, "
+                        f"returns={returns}, early_returns_by_line={early}, explicit_throw_exits={throws}; "
+                        "other exception exits unknown"))
+    # A package skeleton is deliberately small; preserve its omitted pair count.
+    for (left, right), count in sorted(skeleton.items())[:12]:
+        rows.append(EvidenceRow("packages", f"Package imports {left} → {right}: {count}"))
+    if len(skeleton) > 12:
+        rows.append(EvidenceRow("packages", f"Package imports: {len(skeleton) - 12} other package pairs"))
+    if not skeleton:
+        rows.append(EvidenceRow("packages", "Package imports: no resolved package links"))
+    return UnitGraph(tuple(rows), internal, unmapped)
+
+
+def render_rows(rows: list[EvidenceRow]) -> list[str]:
+    """Group adjacent relations by local inventory id, without new identities."""
+    lines: list[str] = []
+    previous = None
+    for row in rows:
+        if row.category in {"out", "in"}:
+            arrow = " → " if row.category == "out" else " ← "
+            local, remote = row.text.split(arrow, 1)
+            key = row.category, local
+            if previous == key:
+                lines.append("  " + arrow.strip() + " " + remote)
+            else:
+                lines.append(row.text)
+            previous = key
+        else:
+            lines.append(row.text)
+            previous = None
+    return lines
+
+
+def graph_text(evidence: UnitGraph, *, budget: int | None = None) -> str:
+    """Drop a suffix in reverse priority, accounting for every omitted relation.
+
+    The notice itself participates in token accounting. Full host files use
+    budget=None and the exact same rows. No dataflow nodes are ever rendered.
+    """
+    rows = list(evidence.rows)
+    omitted: Counter = Counter()
+    while True:
+        lines = ["LOCAL GRAPH EVIDENCE (unit ids; graph evidence is not proof of behavior).",
+                 f"Batch-internal resolved calls: {evidence.internal_calls} (source visible); "
+                 f"unmapped resolved calls: {evidence.unmapped_calls}."]
+        lines += render_rows(rows)
+        lines.append("Omitted: " + (", ".join(f"{k}={v}" for k, v in sorted(omitted.items())) or "none")
+                     + ". Omitted evidence is unavailable in this excerpt.")
+        text = "\n".join(lines)
+        if budget is None or count_text_tokens(text) <= budget:
+            return text
+        if not rows:
+            # Very small/empty sources cannot carry the normal explanatory
+            # header. Keep numeric accounting before prose, still within budget.
+            text = (f"Graph: internal={evidence.internal_calls}, unmapped={evidence.unmapped_calls}; "
+                    "omitted " + ",".join(f"{k}={v}" for k, v in sorted(omitted.items())))
+            if count_text_tokens(text) <= budget:
+                return text
+            return ""  # zero/tiny source budget: no graph payload can fit
+        row = rows.pop()
+        omitted[row.category] += row.count
 
 
 def graph_prompt_lines(graph: Any, paths: list[str], *, embed: bool,
-                       expand_context_path: str | None = None,
-                       max_nodes: int = DEFAULT_GRAPH_MAX_NODES,
-                       max_edges: int = DEFAULT_GRAPH_MAX_EDGES) -> list[str]:
-    """Prompt body lines that state the graph state and, when present, a bounded
-    deterministic projection with explicit omissions and a host expansion path."""
+                       inventory: dict[str, dict] | None = None,
+                       chunks: list[dict] | None = None,
+                       source_tokens: int = DEFAULT_GRAPH_MAX_TOKENS,
+                       max_tokens: int = DEFAULT_GRAPH_MAX_TOKENS) -> list[str]:
+    """Status notices retain their original meanings; provided evidence is bounded."""
     state, detail = graph_state(graph)
     if state == "absent":
         return ["GRAPH: not provided for this run. Do not infer imports, calls or data flow; state the "
@@ -233,35 +256,11 @@ def graph_prompt_lines(graph: Any, paths: list[str], *, embed: bool,
     if state == "empty":
         return ["GRAPH: provided and successfully empty (the analyzer ran and found no node or relation). "
                 "An empty graph is a verified result, not a missing graph; still state any unproven boundary.", ""]
-    projection = project_graph(graph, paths, max_nodes=max_nodes, max_edges=max_edges)
-    if projection.get("state") == "no_local_nodes":
+    if not any(n.get("path") in set(paths) for n in graph.get("nodes", [])):
         return [f"GRAPH: provided for this run ({detail}) but no graph node anchors the listed file(s). This is "
                 "not an empty graph and not a missing graph: the analyzer produced no symbol node for these "
                 "paths. Do not infer either the presence or the absence of relations from it; keep unproven "
                 "boundaries in 'uncertainties'.", ""]
-    counts = projection["counts"]
-    omitted = counts["edges_omitted_by_kind"] or "none"
-    lines = [
-        "LOCAL GRAPH EVIDENCE (a deterministic projection of the frozen full graph; an edge is evidence, "
-        "not proof of behavior). Boundary nodes outside the listed files are kept so every included relation "
-        "stays resolvable.",
-        f"Scope: relations incident to {sorted(set(paths))}. Totals {counts['nodes_total']} nodes / "
-        f"{counts['edges_total']} edges; included {counts['nodes_selected']} nodes / {counts['edges_selected']} "
-        f"edges; omitted {counts['edges_omitted']} incident edge(s) by kind: {omitted}. "
-        "Import/call relations are prioritized; CFG/dataflow edges are deterministically sampled by edge id and "
-        "are not a representative subset; the omitted edges are not shown and their absence is not evidence.",
-    ]
-    if embed:
-        lines.append("This completion is tool-free: you cannot query the frozen graph, so the projection "
-                     "below is the only relation evidence available. Do not claim to have inspected an "
-                     "omitted edge.")
-    elif expand_context_path:
-        command = shlex.join([
-            sys.executable, "-m", "cbe", "graph", "query", "--graph", expand_context_path,
-            "--path", sorted(set(paths))[0], "--kind", "call", "--direction", "both",
-        ])
-        lines.append("To expand an omitted relation, run: " + command)
-        lines.append("You may replace --path with another listed path and --kind with import, cfg, or "
-                     "dataflow. Read only the returned slice; the query does not execute repository code.")
-    lines += [json.dumps(projection, ensure_ascii=False), ""]
-    return lines
+    evidence = unit_graph(graph, paths, inventory or {}, chunks or [])
+    text = graph_text(evidence, budget=max(0, min(max_tokens, source_tokens)))
+    return [text, ""] if text else []

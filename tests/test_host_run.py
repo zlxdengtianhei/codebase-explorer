@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 
 from cbe import usage
-from cbe import cli, host_run
+from cbe import cli, host_run, prompts
 from cbe.docs import find
 
 
@@ -492,7 +492,37 @@ def test_plan_freezes_graph_and_detail_prompt_carries_it(tmp_path: Path) -> None
     assert state["context"]["graph_present"] is True and state["context"]["schema"] == "cbe-context/1"
     module = next(row for row in state["modules"] if "src/pkg/jobs.py" in row["files"])
     prompt = host_run.completion_prompt(run_dir, f"module_{module['number'] + 1}")
-    assert "LOCAL GRAPH" in prompt and "n-0" in prompt
+    assert "Batch-internal resolved calls" in prompt or "Graph: internal=" in prompt
+    assert "n-0" not in prompt  # Joern ids no longer leak into author evidence
+
+
+def test_host_graph_file_and_review_repair_share_frozen_evidence(tmp_path: Path):
+    repo = _repo(tmp_path)
+    graph_path = tmp_path / "graph.json"
+    graph_path.write_text(json.dumps(_graph_for(repo, ["src/pkg/jobs.py", "src/pkg/cli.py"])))
+    run_dir = Path(host_run.plan(repo, tmp_path / "run", review="all", graph_path=graph_path)["run_dir"])
+    state = json.loads((run_dir / "host" / "state.json").read_text())
+    module = next(row for row in state["modules"] if "src/pkg/jobs.py" in row["files"])
+    number = module["number"]
+    detail = state["tasks"][f"module_{number + 1}"]
+    # Tool-free construction must not create graph artifacts or mention a file.
+    script = host_run.completion_prompt(run_dir, detail["id"])
+    assert "tool-free; omitted evidence cannot be inspected" in script
+    assert ".graph.txt" not in script and "graph query" not in script
+    assert not list((run_dir / "host" / "tasks").glob("*.graph.txt"))
+    _, body = host_run._body(run_dir, state, detail, embed=False)
+    target = run_dir / "host" / "tasks" / f"module_{number + 1}.graph.txt"
+    assert target.is_file() and str(target) in body
+    full = target.read_text()
+    assert "Omitted: none" in full
+    assert "graph query" not in body and "graph-query" not in prompts.FILE_TASK_RULES
+    expected = body.split("Graph access:", 1)[1].split("SOURCE FILES", 1)[0]
+    for kind in ("review", "repair"):
+        task = {**detail, "id": f"{kind}_{number + 1}", "kind": kind}
+        _, other = host_run._body(run_dir, state, task, embed=False)
+        assert other.split("Graph access:", 1)[1].split("SOURCE FILES", 1)[0] == expected
+        assert target.read_text() == full
+    assert len(list((run_dir / "host" / "tasks").glob("*.graph.txt"))) == 1
 
 
 def test_plan_rejects_a_graph_that_does_not_match_the_source(tmp_path: Path) -> None:
@@ -549,7 +579,7 @@ def test_script_driver_carries_the_graph_into_the_module_prompt(tmp_path: Path, 
     assert result["status"] == "complete"
     module_prompts = [prompt for task, prompt in seen.items()
                       if task.startswith("module_") and task[7:].isdigit()]
-    assert module_prompts and any("LOCAL GRAPH" in prompt for prompt in module_prompts)
+    assert module_prompts and any("Graph access:" in prompt for prompt in module_prompts)
 
 
 def test_summary_reports_structure_and_semantic_review_separately(tmp_path: Path) -> None:
@@ -820,4 +850,4 @@ def test_module_with_no_graph_node_gets_an_explicit_no_local_node_statement(tmp_
     assert "not an empty graph and not a missing graph" in prompt
     anchored = next(row for row in state["modules"] if "src/pkg/jobs.py" in row["files"])
     anchored_prompt = host_run.completion_prompt(run_dir, f"module_{anchored['number'] + 1}")
-    assert "LOCAL GRAPH EVIDENCE" in anchored_prompt
+    assert "Batch-internal resolved calls" in anchored_prompt or "Graph: internal=" in anchored_prompt

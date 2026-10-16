@@ -7,7 +7,8 @@ from pathlib import Path
 
 from cbe.batching import Module
 from cbe.checks import RELATION_KINDS
-from cbe.projection import DEFAULT_GRAPH_MAX_EDGES, DEFAULT_GRAPH_MAX_NODES, graph_prompt_lines
+from cbe.projection import DEFAULT_GRAPH_MAX_TOKENS, graph_prompt_lines
+from cbe.token_budget import count_text_tokens
 
 
 TOOL_FREE_RULES = """You document source code in one response. Use only supplied source and signatures. Never use tools or ask to read files. Return exactly one JSON object, no Markdown fences. Separate observed syntax from inferred behavior; state uncertainty instead of inventing runtime facts. Be concise. Test functions and trivial accessors need no individual prose. Paths identify files; do not repeat large source passages."""
@@ -29,7 +30,7 @@ FILE_TASK_RULES = (
     "Read every listed source file completely with your file-reading tool; page through long files. "
     "Use only those source files, the supplied signatures, and the provided frozen graph evidence. "
     "Do not open other source files, execute repository code, search the web, or modify the repository. "
-    "The supplied graph-query command is allowed to read a slice of the frozen graph. "
+    "You may Read the supplied graph evidence file for this batch. "
     "Separate observed syntax from inferred behavior; state uncertainty instead "
     "of inventing runtime facts. Be concise. Test functions and trivial accessors need no individual prose. "
     "Paths identify files; do not repeat large source passages.")
@@ -57,9 +58,8 @@ def detail_prompt(paths: list[str], inventory: dict[str, dict], *,
                   chunks: list[dict] | None = None,
                   source_root: Path | None = None,
                   graph: dict | None = None,
-                  graph_max_nodes: int = DEFAULT_GRAPH_MAX_NODES,
-                  graph_max_edges: int = DEFAULT_GRAPH_MAX_EDGES,
-                  expand_context_path: str | None = None,
+                  graph_max_tokens: int = DEFAULT_GRAPH_MAX_TOKENS,
+                  graph_file: str | None = None,
                   context_diagnostics: list[dict] | None = None,
                   issues: list[str] | None = None,
                   embed: bool = True) -> str:
@@ -117,9 +117,27 @@ def detail_prompt(paths: list[str], inventory: dict[str, dict], *,
                       + json.dumps(issues, ensure_ascii=False))
     body: list[str] = ["INVENTORY (this batch, authoritative ids):",
                        json.dumps(inv_rows, ensure_ascii=False), ""]
-    body += graph_prompt_lines(graph, paths, embed=embed,
-                               expand_context_path=expand_context_path,
-                               max_nodes=graph_max_nodes, max_edges=graph_max_edges)
+    source_texts: dict[str, str] = {}
+    for path in paths:
+        text = ""
+        if source_root is not None:
+            try:
+                text = (source_root / path).read_bytes().decode("utf-8")
+            except (OSError, UnicodeDecodeError):
+                pass
+        if not text:
+            rows = sorted((c for c in (chunks or []) if c.get("path") == path),
+                          key=lambda c: (c.get("start_byte") or 0, c.get("start_line") or 0))
+            text = "".join(c.get("text") or "" for c in rows)
+        source_texts[path] = text
+    source_tokens = sum(count_text_tokens(text) for text in source_texts.values())
+    if embed:
+        body += ["Graph access: this completion is tool-free; omitted evidence cannot be inspected.", ""]
+    elif graph_file:
+        body += [f"Graph access: Read the complete evidence for this batch at {graph_file}", ""]
+    body += graph_prompt_lines(graph, paths, embed=embed, inventory=inventory,
+                               chunks=chunks, source_tokens=source_tokens,
+                               max_tokens=graph_max_tokens)
     if context_diagnostics:
         body += ["SOURCE CONTEXT NOTES (program diagnostics, not model evidence):",
                  json.dumps(context_diagnostics[:10], ensure_ascii=False), ""]
@@ -127,19 +145,7 @@ def detail_prompt(paths: list[str], inventory: dict[str, dict], *,
         body.append("SOURCE (verbatim; the program derives all line ranges, so the model "
                     "never needs to emit one):")
         for path in paths:
-            text = ""
-            if source_root is not None:
-                try:
-                    # Bytes, not read_text: universal newlines would turn CRLF into LF and
-                    # the embedded body would no longer be the planned file verbatim.
-                    text = (source_root / path).read_bytes().decode("utf-8")
-                except (OSError, UnicodeDecodeError):
-                    text = ""
-            if not text:
-                rows = sorted((chunk for chunk in (chunks or []) if chunk.get("path") == path),
-                              key=lambda chunk: (chunk.get("start_byte") or chunk.get("start_line") or 0,
-                                                 chunk.get("start_line") or 0))
-                text = "".join(chunk.get("text") or "" for chunk in rows)
+            text = source_texts[path]
             if text:
                 note = text
             elif inventory.get(path, {}).get("known_empty"):
