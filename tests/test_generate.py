@@ -369,7 +369,9 @@ def test_preflight_refuses_a_source_changed_since_the_plan(tmp_path, monkeypatch
     (repo / "tests" / "test_jobs.py").write_text("def test_reserve():\n    assert True\n", encoding="utf-8")
     with pytest.raises(generator.SourceNotEmbedded, match="test_jobs.py"):
         generator.generate(repo, run_dir, model="example/model", jobs=2, resume=True)
-    assert not _module_calls(called)
+    # Parallel details can finish before the later drifted batch is reached;
+    # the changed source itself must never reach a model call.
+    assert all("tests/test_jobs.py" not in called[task] for task in _module_calls(called))
     state = json.loads((run_dir / "host" / "state.json").read_text(encoding="utf-8"))
     assert state["partial_reason"] == "source_not_embedded"
 

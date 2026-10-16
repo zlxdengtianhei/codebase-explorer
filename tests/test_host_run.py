@@ -93,7 +93,7 @@ def test_full_host_run_renders_verifies_and_is_queryable(tmp_path: Path) -> None
     assert (repo / ".codebase-analysis" / "host-latest").read_text().strip() == str(run_dir)
 
     first = host_run.next_tasks(run_dir)
-    assert [item["task"] for item in first["tasks"]] == ["names"]  # modules wait for titles
+    assert [item["task"] for item in first["tasks"]] == ["names", "module_1"]
     host_run.release(run_dir)
     handed = _drive(run_dir)
     assert handed[0] == "names" and handed[-1] == "system"
@@ -112,7 +112,7 @@ def test_full_host_run_renders_verifies_and_is_queryable(tmp_path: Path) -> None
 def test_concurrency_limit_and_schema_retry_then_failure(tmp_path: Path) -> None:
     repo = _repo(tmp_path)
     run_dir = Path(host_run.plan(repo, tmp_path / "run", review="none", jobs=1)["run_dir"])
-    names = host_run.next_tasks(run_dir)["tasks"][0]
+    names = host_run.next_tasks(run_dir, limit=1)["tasks"][0]
     prompt = Path(names["prompt_file"]).read_text()
     Path(names["output_file"]).write_text(json.dumps(_answer({"kind": "names"}, prompt)))
     host_run.submit(run_dir, "names")
@@ -142,7 +142,7 @@ def test_concurrency_limit_and_schema_retry_then_failure(tmp_path: Path) -> None
 def test_resume_adopts_finished_results_and_releases_lost_leases(tmp_path: Path) -> None:
     repo = _repo(tmp_path)
     run_dir = Path(host_run.plan(repo, tmp_path / "run", review="none", jobs=4)["run_dir"])
-    names = host_run.next_tasks(run_dir)["tasks"][0]
+    names = host_run.next_tasks(run_dir, limit=1)["tasks"][0]
     Path(names["output_file"]).write_text(
         json.dumps(_answer({"kind": "names"}, Path(names["prompt_file"]).read_text())))
     host_run.submit(run_dir, "names")
@@ -176,7 +176,7 @@ def test_review_all_queues_repairs_before_the_overview(tmp_path: Path) -> None:
 def test_source_drift_blocks_dispatch_and_fails_verify(tmp_path: Path) -> None:
     repo = _repo(tmp_path)
     run_dir = Path(host_run.plan(repo, tmp_path / "run", review="none")["run_dir"])
-    names = host_run.next_tasks(run_dir)["tasks"][0]
+    names = host_run.next_tasks(run_dir, limit=1)["tasks"][0]
     Path(names["output_file"]).write_text(
         json.dumps(_answer({"kind": "names"}, Path(names["prompt_file"]).read_text())))
     host_run.submit(run_dir, "names")
@@ -192,7 +192,7 @@ def test_host_dispatch_refuses_missing_or_unreadable_source(tmp_path: Path) -> N
     """Host tasks list paths: every listed path must exist, be readable, and match the plan."""
     repo = _repo(tmp_path)
     run_dir = Path(host_run.plan(repo, tmp_path / "run", review="none")["run_dir"])
-    names = host_run.next_tasks(run_dir)["tasks"][0]
+    names = host_run.next_tasks(run_dir, limit=1)["tasks"][0]
     Path(names["output_file"]).write_text(
         json.dumps(_answer({"kind": "names"}, Path(names["prompt_file"]).read_text())))
     host_run.submit(run_dir, "names")
@@ -300,7 +300,7 @@ def test_cli_host_commands(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -
     planned = json.loads(capsys.readouterr().out)
     assert cli.main(["host", "status", "--repo", str(repo)]) == 0
     status = json.loads(capsys.readouterr().out)
-    assert status["run_dir"] == planned["run_dir"] and status["ready"] == 1
+    assert status["run_dir"] == planned["run_dir"] and status["ready"] == planned["modules"] + 1
     assert cli.main(["host", "next", "--run-dir", planned["run_dir"]]) == 0
     item = json.loads(capsys.readouterr().out)["tasks"][0]
     Path(item["output_file"]).write_text(json.dumps(_answer({"kind": "names"}, Path(item["prompt_file"]).read_text())))
@@ -326,7 +326,7 @@ def _good(item: dict, run_dir: Path) -> dict:
 def test_second_invalid_detail_answer_is_normalized_flagged_and_rendered(tmp_path: Path) -> None:
     repo = _repo(tmp_path)
     run_dir = Path(host_run.plan(repo, tmp_path / "run", review="none", jobs=8)["run_dir"])
-    names = host_run.next_tasks(run_dir)["tasks"][0]
+    names = host_run.next_tasks(run_dir, limit=1)["tasks"][0]
     _answer_task(run_dir, names, _good(names, run_dir))
     batch = host_run.next_tasks(run_dir)["tasks"]
     target = batch[0]
@@ -371,7 +371,7 @@ def test_second_invalid_detail_answer_is_normalized_flagged_and_rendered(tmp_pat
 def test_unusable_module_renders_partial_and_resume_finishes_it(tmp_path: Path) -> None:
     repo = _repo(tmp_path)
     run_dir = Path(host_run.plan(repo, tmp_path / "run", review="sample", jobs=8)["run_dir"])
-    names = host_run.next_tasks(run_dir)["tasks"][0]
+    names = host_run.next_tasks(run_dir, limit=1)["tasks"][0]
     _answer_task(run_dir, names, _good(names, run_dir))
     batch = host_run.next_tasks(run_dir)["tasks"]
     broken = batch[-1]
@@ -677,7 +677,7 @@ def test_tampered_frozen_context_chunk_is_rejected(tmp_path: Path) -> None:
 def test_submit_refuses_evidence_against_a_tampered_context(tmp_path: Path) -> None:
     repo = _repo(tmp_path)
     run_dir = Path(host_run.plan(repo, tmp_path / "run", review="none")["run_dir"])
-    names = host_run.next_tasks(run_dir)["tasks"][0]
+    names = host_run.next_tasks(run_dir, limit=1)["tasks"][0]
     _answer_task(run_dir, names, _good(names, run_dir))
     host_run.submit(run_dir, "names")
     item = host_run.next_tasks(run_dir)["tasks"][0]
@@ -979,3 +979,34 @@ def test_legacy_canonical_run_resumes_and_acquires_byte_freeze(tmp_path):
     with pytest.raises(host_run.HostRunError, match="modified after planning"):
         host_run.resume(run_dir)
 
+
+@pytest.mark.parametrize("naming_fails", [False, True])
+def test_details_parallel_with_names_keep_prompts_and_wait_before_tree(tmp_path, naming_fails):
+    run_dir = Path(host_run.plan(_repo(tmp_path), tmp_path / "run", review="none", jobs=8)["run_dir"])
+    batch = host_run.next_tasks(run_dir)["tasks"]
+    assert batch[0]["task"] == "names"
+    details = [item for item in batch if item["kind"] == "module"]
+    state = json.loads((run_dir / "host/state.json").read_text())
+    assert len(details) == len(state["modules"])
+    before = {item["task"]: host_run.completion_prompt(run_dir, item["task"]) for item in details}
+    for item in details:
+        assert item["title"] == state["modules"][int(item["task"].split("_")[1]) - 1]["title"]
+        _answer_task(run_dir, item, _good(item, run_dir))
+    assert host_run.next_tasks(run_dir)["tasks"] == []  # tree/system still wait for names
+    names = batch[0]
+    if naming_fails:
+        host_run.submit(run_dir, "names", error="unavailable")
+        assert [i["task"] for i in host_run.next_tasks(run_dir)["tasks"]] == ["names"]
+        assert host_run.submit(run_dir, "names", error="unavailable")["task_status"] == "failed"
+    else:
+        _answer_task(run_dir, names, _good(names, run_dir))
+    for item in details:
+        assert host_run.completion_prompt(run_dir, item["task"]).encode() == before[item["task"]].encode()
+    current = json.loads((run_dir / "host/state.json").read_text())
+    expected_titles = [m["title"] for m in state["modules"]] if naming_fails else [
+        f"Area {m['number']}" for m in state["modules"]]
+    assert [m["title"] for m in current["modules"]] == expected_titles
+    host_run.render(run_dir)  # mechanical tree uses the settled batch titles
+    index = (run_dir / "docs/INDEX.md").read_text()
+    assert all(title in index for title in expected_titles)
+    assert [item["kind"] for item in host_run.next_tasks(run_dir)["tasks"]] == ["tree"]

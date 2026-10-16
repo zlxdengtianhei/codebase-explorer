@@ -467,15 +467,12 @@ def _ready(state: dict[str, Any]) -> list[str]:
         if task["status"] != "pending":
             continue
         kind = task["kind"]
-        if kind == "names" or kind == "repair":
+        if kind in {"names", "module", "repair"}:
+            # Detail prompts use only the frozen context and inventory.
             ok = True
-        elif kind == "module":
-            # Module prompts use only the frozen context and signatures, both
-            # known after naming, so modules do not wait for each other.
-            ok = titled
         elif kind == "tree":
             modules = [other for other in tasks.values() if other["kind"] == "module"]
-            ok = bool(modules) and all(other["status"] in {"done", "failed"} for other in modules) \
+            ok = titled and bool(modules) and all(other["status"] in {"done", "failed"} for other in modules) \
                 and any(other["status"] == "done" for other in modules)
         elif kind == "review":
             ok = _module_task(state, task["module"])["status"] == "done"
