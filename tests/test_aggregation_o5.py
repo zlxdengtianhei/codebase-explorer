@@ -1,5 +1,6 @@
 """Observable O5 contracts: graph input, bounded tasks, composition and diagnostics."""
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -62,9 +63,10 @@ def test_partitioned_host_keeps_unique_homes_and_subtree_content(tmp_path, monke
     assert "MERGE:" in upper_prompt and '"top_nodes"' in upper_prompt
     catalog = json.loads((run / "catalog.json").read_text())
     assert set(catalog["units"]) == {uid for r in state["aggregation"]["regions"] for uid in r["unit_ids"]}
-    assert all(row.get("node", "").startswith("r") for row in catalog["units"].values())
+    assert all(re.match(r"r\d+-", row.get("node", "")) for row in catalog["units"].values())
     assert host_run.verify(run)["ok"]
-    assert (run / "docs/INDEX.md").is_file() and list((run / "docs/nodes").glob("r*-*.md"))
+    node_pages = [p.name for p in (run / "docs/nodes").glob("r*-*.md")]
+    assert (run / "docs/INDEX.md").is_file() and node_pages and all(re.match(r"r\d+-", n) for n in node_pages)
     host_run.render(run)
     summary = json.loads((run / "summary.json").read_text())
     assert summary["aggregation_principles"]["checks"][-1]["status"] == "re-render identical"
