@@ -216,7 +216,8 @@ def _prepare_aggregation(run_dir: Path, state: dict[str, Any]) -> None:
     limits = Limits.configured()
     render_prompt = lambda rows, graph: prompts.TOOL_FREE_RULES + "\n\n" + prompts.tree_prompt(
         rows, sorted({r["path"] for row in rows.values() for r in row.get("ranges", [])}), graph)
-    regions = partition(units, edges, limits, render_prompt) if units else []
+    regions = partition(units, edges, limits, render_prompt,
+                        context=_verified_context(run_dir, state)) if units else []
     state["aggregation"] = {"input_digest": fingerprint, "limits": {"max_units": limits.max_units,
                               "max_tokens": limits.max_tokens}, "regions": regions}
     for region in regions:

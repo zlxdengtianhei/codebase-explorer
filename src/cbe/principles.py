@@ -35,8 +35,15 @@ def _p2(c):
             "scope": "direct primary ownership; incident cross-module edges counted at each endpoint"}
 
 
-def _p3(c):
+def grain_bounds() -> tuple[int, int]:
     low, high = int(os.environ.get("CBE_TREE_MIN_GRAIN", 5)), int(os.environ.get("CBE_TREE_MAX_GRAIN", 30))
+    if not 1 <= low <= high:
+        raise ValueError("tree grain bounds must satisfy 1 <= minimum <= maximum")
+    return low, high
+
+
+def _p3(c):
+    low, high = grain_bounds()
     sizes = {n["id"]: len(n.get("unit_ids") or []) for n in c["nodes"] if n.get("unit_ids")}
     bad = {nid: size for nid, size in sizes.items() if not low <= size <= high}
     return {"ok": not bad, "bounds": [low, high], "out_of_bounds": bad,
@@ -96,7 +103,7 @@ class Principle:
 PRINCIPLES = (
     Principle("P1", "Give each module one distinct capability sentence.", _p1),
     Principle("P2", "Prefer cohesive responsibilities; use resolved internal and external edges as evidence.", _p2),
-    Principle("P3", "Aim for 5–30 units per module; grow genuine intermediate capabilities when needed.", _p3),
+    Principle("P3", "Aim for {grain_min}–{grain_max} units per module; grow genuine intermediate capabilities when needed.", _p3),
     Principle("P4", "Give every unit exactly one primary home; reference it elsewhere.", _p4),
     Principle("P5", "Keep shared utilities and infrastructure separate from their consumers.", _p5),
     Principle("P6", "Group by responsibility across languages and retain language identity.", _p6),

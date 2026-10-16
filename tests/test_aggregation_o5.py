@@ -14,9 +14,10 @@ def test_tree_receives_summaries_and_counted_resolved_edges(tmp_path):
     repo = tmp_path / "repo"
     repo.mkdir()
     (repo / "a.py").write_text("def a():\n    b()\n    b()\n\ndef b():\n    return 3\n")
+    (repo / "c.py").write_text("def c():\n    return 4\n")
     context = source_context.build_context(repo)
     inventory = inventory_from_context(context)
-    syms = inventory["a.py"]["symbols"]
+    syms = [symbol for row in inventory.values() for symbol in row["symbols"]]
     a = next(s["id"] for s in syms if s["name"] == "a")
     b = next(s["id"] for s in syms if s["name"] == "b")
     units = {s["id"]: {"id": s["id"], "kind": s["kind"],
@@ -24,8 +25,11 @@ def test_tree_receives_summaries_and_counted_resolved_edges(tmp_path):
     dispositions = {uid: {"how": "unit", "unit": uid} for uid in units}
     context["graph"] = {"nodes": [
         {"id": "ga", "kind": "method", "path": "a.py", "start_line": 1},
-        {"id": "gb", "kind": "method", "path": "a.py", "start_line": 5}],
-        "edges": [{"id": str(i), "source": "ga", "target": "gb", "kind": "call",
+        {"id": "gb", "kind": "method", "path": "a.py", "start_line": 5},
+        {"id": "fa", "kind": "file", "path": "a.py"},
+        {"id": "fc", "kind": "file", "path": "c.py"}],
+        "edges": [{"id": "file-import", "source": "fa", "target": "fc", "kind": "import", "status": "resolved"}]
+        + [{"id": str(i), "source": "ga", "target": "gb", "kind": "call",
                    "path": "a.py", "line": line, "status": status}
                   for i, (line, status) in enumerate([(2, "resolved"), (3, "resolved"), (2, "ambiguous")])]}
     records, edges = aggregation.inputs(units, dispositions, inventory, context)
@@ -105,7 +109,18 @@ def test_principles_report_counterexamples_and_replay_identity(monkeypatch):
     assert not bad["checks"][0]["ok"] and not bad["checks"][3]["ok"] and not bad["checks"][-1]["ok"]
     assert bad["hierarchy"]["ok"]
     monkeypatch.setenv("CBE_TREE_MIN_GRAIN", "1")
+    assert "Aim for 1–30 units" in prompts.tree_prompt({}, [])
     assert principles.report({"nodes": tree["nodes"][:1]}, {}, [], {})["introduction_length"]["overlong"]
+
+
+def test_file_imports_guide_regions_without_inventing_unit_edges():
+    units = {uid: {"id": uid, "summary": "A responsibility.", "ranges": [{"path": f"pkg/{uid}.py"}]}
+             for uid in ("a", "b", "c")}
+    context = {"graph": {"nodes": [{"id": uid, "path": f"pkg/{uid}.py"} for uid in units],
+                         "edges": [{"source": "a", "target": "c", "kind": "import", "status": "resolved"}]}}
+    render = lambda rows, edges: prompts.tree_prompt(rows, [], edges)
+    regions = aggregation.partition(units, [], aggregation.Limits(max_units=2), render, context=context)
+    assert [r["unit_ids"] for r in regions] == [["a", "c"], ["b"]]
 
 
 def test_hierarchy_and_introduction_checks_detect_flat_overlong_tree():

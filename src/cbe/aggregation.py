@@ -42,7 +42,7 @@ def inputs(units: dict, dispositions: dict, inventory: dict, context: dict) -> t
     """Use the same source-coordinate ownership as the published catalog."""
     ranges = {uid: unit_ranges(uid, unit, inventory) for uid, unit in units.items()}
     edge_table = {}
-    records, symbols = build_records(
+    records, _ = build_records(
         units, dispositions, inventory, ranges, frozen_sources(context, list(inventory)),
         {f["path"]: f.get("language", "unknown") for f in context.get("files", [])},
         context, context.get("graph"), edge_table)
@@ -53,27 +53,9 @@ def inputs(units: dict, dispositions: dict, inventory: dict, context: dict) -> t
         source, target = owners.get(edge.get("source_symbol")), owners.get(edge.get("target_symbol"))
         if edge.get("status") == "resolved" and source and target and source != target:
             counts[source, target, edge["kind"]] += 1
-    # Import file nodes have no symbol coordinate. Attribute an import once to
-    # the module residual (or first source unit) of each file, never every pair.
-    files = defaultdict(list)
-    for uid, row in records.items():
-        for r in row["ranges"]:
-            files[r["path"]].append(uid)
-    representative = {path: min(ids, key=lambda uid: ("::module_residual::" not in uid, uid))
-                      for path, ids in files.items()}
-    graph = context.get("graph") or {}
-    nodes = {n["id"]: n for n in graph.get("nodes", [])}
-    for edge in graph.get("edges", []):
-        if edge.get("kind") != "import" or edge.get("status") != "resolved":
-            continue
-        source = representative.get(nodes.get(edge.get("source"), {}).get("path"))
-        target = representative.get(nodes.get(edge.get("target"), {}).get("path"))
-        # Coordinate-resolved imports already entered the counter above.
-        existing = edge_table.get(edge.get("id"), {})
-        if owners.get(existing.get("source_symbol")) and owners.get(existing.get("target_symbol")):
-            continue
-        if source and target and source != target:
-            counts[source, target, "import"] += 1
+    # File-level imports without two source-coordinate unit owners are not
+    # unit edges. They are consumed separately by partition(), never attributed
+    # to an arbitrary function in the imported file.
     return records, [{"from": a, "to": b, "kind": kind, "count": n}
                      for (a, b, kind), n in sorted(counts.items())]
 
@@ -88,7 +70,7 @@ def region_edges(edges: list[dict], membership: dict[str, str]) -> list[dict]:
             for (a, b, k), n in sorted(counts.items())]
 
 
-def partition(units: dict, edges: list[dict], limits: Limits, prompt) -> list[dict]:
+def partition(units: dict, edges: list[dict], limits: Limits, prompt, *, context: dict | None = None) -> list[dict]:
     """Deterministic directory/package seeds, import affinity packing, exact budget.
 
     ``prompt`` renders a candidate region with its internal edges. Its actual
@@ -107,10 +89,22 @@ def partition(units: dict, edges: list[dict], limits: Limits, prompt) -> list[di
     if len(units) <= limits.max_units and tokens(units) <= limits.max_tokens:
         return []
     buckets = defaultdict(list)
+    path_of = {}
     for uid in sorted(units):
         ranges = units[uid].get("ranges") or []
         path = ranges[0]["path"] if ranges else uid.split("::", 1)[0].removeprefix("grp:")
+        path_of[uid] = path
         buckets[str(PurePosixPath(path).parent)].append(uid)
+    file_affinity = Counter()
+    graph = (context or {}).get("graph") or {}
+    graph_nodes = {n["id"]: n for n in graph.get("nodes", [])}
+    for edge in graph.get("edges", []):
+        if edge.get("kind") == "import" and edge.get("status") == "resolved":
+            a = graph_nodes.get(edge.get("source"), {}).get("path")
+            b = graph_nodes.get(edge.get("target"), {}).get("path")
+            if a and b and a != b:
+                file_affinity[a, b] += 1
+                file_affinity[b, a] += 1
     affinity = Counter()
     for e in edges:
         if e["kind"] == "import":
@@ -126,7 +120,8 @@ def partition(units: dict, edges: list[dict], limits: Limits, prompt) -> list[di
             # Preserve directory locality, prefer an imported neighbour within it.
             directory = next(key for key, ids in buckets.items() if pending[0] in ids)
             candidates = [uid for uid in pending if uid in buckets[directory]]
-            candidate = min(candidates, key=lambda uid: (-sum(affinity[a, uid] for a in selected), uid))
+            candidate = min(candidates, key=lambda uid: (-sum(
+                affinity[a, uid] + file_affinity[path_of[a], path_of[uid]] for a in selected), uid))
             if tokens(selected + [candidate]) > limits.max_tokens:
                 break
             selected.append(candidate)

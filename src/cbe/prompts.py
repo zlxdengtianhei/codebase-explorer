@@ -159,8 +159,9 @@ def detail_prompt(paths: list[str], inventory: dict[str, dict], *,
 
 
 def tree_prompt(units: dict[str, dict], files: list[str], edges: list[dict] | None = None, *, merge: bool = False) -> str:
-    from cbe.principles import PRINCIPLES
+    from cbe.principles import PRINCIPLES, grain_bounds
 
+    grain_min, grain_max = grain_bounds()
     digests = [units[uid] if merge else unit_digest(units[uid]) for uid in sorted(units)]
     return (
         "You design a recursive semantic responsibility tree for a codebase, from the "
@@ -189,7 +190,8 @@ def tree_prompt(units: dict[str, dict], files: list[str], edges: list[dict] | No
         "Every unit id in UNITS must be assigned exactly once.\n\n"
         "FILES: " + json.dumps(sorted(files), ensure_ascii=False) + "\n\n"
         "RESOLVED UNIT GRAPH (from, to, kind, count):\n" + json.dumps(edges or [], ensure_ascii=False)
-        + "\n\nAGGREGATION PRINCIPLES:\n" + "\n".join(f"{p.id}: {p.prompt}" for p in PRINCIPLES)
+        + "\n\nAGGREGATION PRINCIPLES:\n" + "\n".join(
+            f"{p.id}: " + p.prompt.format(grain_min=grain_min, grain_max=grain_max) for p in PRINCIPLES)
         + "\n\nUNITS:\n" + json.dumps(digests, ensure_ascii=False)
     )
 
