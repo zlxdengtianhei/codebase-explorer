@@ -29,6 +29,17 @@
 - Remove unused legacy packet, literal, ledger and rendering helpers; retain
   source guards, current callable contracts and offline token counting. This is
   separate from the earlier 2.0 → 2.1 source reduction.
+- The script driver embeds CRLF source files byte for byte; it no longer stops
+  with `SourceNotEmbedded` on them.
+- Catalogue file languages are the ones frozen in the source context: `.tsx` is
+  `tsx`, Ruby, PHP, C#, Kotlin and Swift files are no longer `unknown`, and a
+  plan made with `--header-language cpp` lists headers as `cpp`.
+- One source-discovery rule for planning, context and graphs: `cbe generate` and
+  `cbe host plan` now also skip `.hg`, `.svn`, `.mypy_cache`, `.pytest_cache` and
+  `.tox`. A source checkout without package metadata reports version `source`.
+- A frozen graph that no longer matches the planned source stops a run with
+  "frozen graph does not match the planned source: …"; `context build` and the
+  run use the same check.
 
 ## 2.1.1
 
