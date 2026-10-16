@@ -35,3 +35,21 @@ def test_python_external_exit_guard_and_diagnostic():
     # The exit must also validate a newly introduced resolution branch.
     resolver._resolve = lambda call: ("external", [], ["future_guess"])
     assert resolver.resolve(external_call("anything")) == ("unresolved", [], [])
+
+
+def test_lost_relative_package_requires_unique_file_and_method():
+    full = "//logging.py:<module>.create_logger"
+    method = {"nodeId": 1, "file": "flask/logging.py",
+              "fullName": "flask/logging.py:<module>.create_logger"}
+    call = external_call(full, "flask/sansio/app.py")
+    files = {"flask/logging.py", "flask/sansio/app.py", "unrelated/logging.py"}
+    assert CallResolver([method], files).resolve(call) == ("resolved", [1], [])
+    assert CallResolver([method], files | {"flask/sansio/logging.py"}).resolve(call) == ("unresolved", [], [])
+    assert CallResolver([], files).resolve(call) == ("unresolved", [], [])
+    duplicate = dict(method, nodeId=2)
+    assert CallResolver([method, duplicate], files).resolve(call) == ("unresolved", [], [])
+    assert CallResolver([method], {"unrelated/logging.py"}).resolve(call) == ("unresolved", [], [])
+    nested = {"nodeId": 3, "file": "celery/utils/quorum_queues.py",
+              "fullName": "celery/utils/quorum_queues.py:<module>.detect_quorum_queues"}
+    assert CallResolver([nested]).resolve(external_call(
+        "//utils/quorum_queues.py:<module>.detect_quorum_queues", "celery/app/base.py")) == ("resolved", [3], [])

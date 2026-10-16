@@ -21,6 +21,7 @@ class CallResolver:
                 if "/" not in module:
                     self.python_top_modules.add(module)
                     self.python_modules.add(module)
+        self.by_file: dict[str, dict[str, list[int]]] = {}
         self.by_pair: dict[str, list[int]] = {}
         self.by_full: dict[str, list[int]] = {}
         self.classes = {"Self"}
@@ -37,6 +38,8 @@ class CallResolver:
         for native, method in self.methods.items():
             full = method.get("fullName", "")
             self.by_full.setdefault(full, []).append(native)
+            self.by_file.setdefault(method.get("file", ""), {}).setdefault(
+                full.partition(":")[2], []).append(native)
             # Python frontend: path.py:<module>.Class.method. Do not match
             # a bare method name, which confuses unrelated receiver types.
             name = full.split(":")[-1]
@@ -109,6 +112,17 @@ class CallResolver:
                 if callable(getattr(builtins, name, None)):
                     return "external", [], ["__builtin." + name]
         if full == "<unknownFullName>" or any(c.get("fullName") == "<unknownFullName>" for c in callees):
+            return "unresolved", [], []
+        # A leading // is a relative import whose package prefix was lost.
+        # Search only package ancestors; an unrelated basename is not evidence.
+        if full.startswith("//") and ".py:<module>." in full and str(call.get("callerFile", "")).endswith(".py"):
+            relative, _, member = full[2:].partition(":")
+            caller = PurePosixPath(call["callerFile"])
+            candidates = {str(parent / relative) for parent in caller.parents} & self.files
+            if len(candidates) == 1:
+                matches = self.by_file.get(next(iter(candidates)), {}).get(member, [])
+                if len(matches) == 1:
+                    return "resolved", matches, []
             return "unresolved", [], []
         exact = self.by_full.get(full, [])
         if exact:
