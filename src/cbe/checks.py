@@ -206,8 +206,8 @@ def validate_details(payload: Any, paths: list[str], inventory: dict[str, dict],
         if uid in seen or uid in known_unit_ids:
             problems.append(f"duplicate unit id {uid}")
         seen.add(uid)
-        if "::" not in uid and not uid.startswith("grp:"):
-            problems.append(f"unit id {uid} is neither 'path::name' nor 'grp:...'")
+        if not uid.startswith("grp:") and uid not in scope_ids:
+            problems.append(f"unit id {uid} is not in this batch's inventory; use grp: for a group")
         kind = unit.get("kind")
         if not isinstance(kind, str) or kind not in UNIT_KINDS:
             problems.append(f"{uid}: kind must be one of {sorted(UNIT_KINDS)}; got {kind!r}")

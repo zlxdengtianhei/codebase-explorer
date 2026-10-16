@@ -890,6 +890,7 @@ def _apply_submit(run_dir: Path, state: dict[str, Any], task: dict[str, Any], re
             try:
                 parsed = checks.json_object(candidate.read_text(encoding="utf-8"))
                 flags = normalize(parsed)
+                strict(parsed)
             except (ValueError, TypeError):
                 continue
             value = parsed

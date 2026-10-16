@@ -1,0 +1,358 @@
+{
+  "payload": {
+    "units": [
+      {
+        "id": "flask/config.py::module_residual::::0",
+        "kind": "module_region",
+        "explain": "Module header for flask/config.py. Imports errno, json, os, types, typing, typing_extensions (only under TYPE_CHECKING), and werkzeug.utils.import_string. Defines the module-level TypeVar T used as the generic parameter of ConfigAttribute. No executable logic beyond these declarations.",
+        "summary": "Imports and the T TypeVar supporting the config module.",
+        "uncertainties": [
+          "Whether werkzeug.utils.import_string resolution succeeds for arbitrary dotted names is not shown in this file."
+        ],
+        "relations": [
+          {
+            "target": "flask/config.py::class::ConfigAttribute::257::s0",
+            "kind": "use",
+            "basis": "T is the type parameter of ConfigAttribute(t.Generic[T])"
+          }
+        ]
+      },
+      {
+        "id": "flask/config.py::class::ConfigAttribute::257::s0",
+        "kind": "class",
+        "explain": "A generic descriptor that forwards attribute access on an owning object to that object's config dictionary. __init__ stores the config key name (also assigned to self.__name__) and an optional converter callable. __get__ on an instance (obj not None) reads obj.config[self.__name__]; if a converter was supplied it is applied to the raw value before returning. When accessed on the class (obj is None) the descriptor itself is returned, per the overloads. __set__ writes the value into obj.config under the stored name. Behavior depends on the owner exposing a .config attribute supporting item get/set; that owner boundary is not defined in this file.",
+        "summary": "Descriptor forwarding attribute get/set to the owner's config dict, with optional value conversion.",
+        "extras": [
+          {
+            "topic": "contract",
+            "note": "Class-level access (obj is None) returns the descriptor itself, not a config value."
+          }
+        ],
+        "members": [
+          "flask/config.py::method::ConfigAttribute.__init__::350",
+          "flask/config.py::method::ConfigAttribute.__get__::533",
+          "flask/config.py::method::ConfigAttribute.__get__::612",
+          "flask/config.py::method::ConfigAttribute.__get__::689",
+          "flask/config.py::method::ConfigAttribute.__set__::999"
+        ],
+        "relations": [
+          {
+            "target": "flask/config.py::class::Config::1094::s0",
+            "kind": "use",
+            "basis": "Descriptor indexes obj.config, which is a Config instance in Flask apps (owner not shown in this file)"
+          }
+        ],
+        "uncertainties": [
+          "Behavior when the owner has no config attribute, or the config lacks the key (KeyError), is inferred from dict indexing, not proven here."
+        ]
+      },
+      {
+        "id": "flask/config.py::class::Config::1094::s0",
+        "kind": "class",
+        "explain": "A dict subclass that behaves like a plain dict but adds loaders for populating itself: from environment variables (from_envvar, from_prefixed_env), Python files (from_pyfile), objects or import strings (from_object), arbitrary file formats via a loader callable (from_file), and mappings (from_mapping). Only uppercase keys are inserted by the from_* loaders; from_prefixed_env instead inserts keys derived from env names after prefix stripping and __-splitting. __init__ seeds the dict with optional defaults and stores root_path, the base for resolving relative filenames in from_pyfile and from_file. Missing-file handling is governed by silent: with silent=True and a not-found errno (ENOENT/EISDIR, plus ENOTDIR in from_pyfile), the loader returns False; otherwise OSError is re-raised with strerror prefixed 'Unable to load configuration file (...)'. from_envvar raises RuntimeError when the env variable is unset and silent is False. from_prefixed_env always returns True after processing matching env vars in sorted order, swallowing any exception from the loads callable and keeping the raw string value. get_namespace extracts a prefixed subset of keys into a new dict with optional lowercasing and namespace trimming.",
+        "summary": "Dict subclass that loads configuration from env vars, Python files, objects, loader-based files, and mappings.",
+        "members": [
+          "flask/config.py::method::Config.__init__::2909",
+          "flask/config.py::method::Config.from_envvar::3126",
+          "flask/config.py::method::Config.from_prefixed_env::4172",
+          "flask/config.py::method::Config.from_pyfile::6295",
+          "flask/config.py::method::Config.from_object::7574",
+          "flask/config.py::method::Config.from_file::9243",
+          "flask/config.py::method::Config.from_mapping::10951",
+          "flask/config.py::method::Config.get_namespace::11515",
+          "flask/config.py::method::Config.__repr__::13128"
+        ],
+        "relations": [
+          {
+            "target": "flask/config.py::class::ConfigAttribute::257::s0",
+            "kind": "use",
+            "basis": "ConfigAttribute indexes obj.config, which is a Config in Flask apps"
+          }
+        ],
+        "uncertainties": [
+          "The load callable in from_file is caller-supplied; graph shows multiple candidate targets (flask.json.load, JSONProvider.load), so the actual callee is caller-determined.",
+          "The loads callable in from_prefixed_env defaults to json.loads but the resolved callee among several json candidates is not determined from this file.",
+          "from_prefixed_env's broad except Exception swallows all loads errors, including non-parse errors; consequences for such errors are not further observable here."
+        ]
+      },
+      {
+        "id": "flask/config.py::method::Config.__init__::2909",
+        "kind": "method",
+        "explain": "Initializes the config as a dict seeded with the given defaults (empty dict when defaults is None or falsy) and stores root_path as an attribute. root_path is later used by from_pyfile and from_file to resolve relative filenames. No validation of root_path or defaults is performed here.",
+        "summary": "Seeds the dict with defaults and stores the root path for relative file resolution.",
+        "members": [],
+        "uncertainties": []
+      },
+      {
+        "id": "flask/config.py::method::Config.from_envvar::3126",
+        "kind": "method",
+        "explain": "Reads the named environment variable; if it is unset or empty, returns False when silent is True, otherwise raises RuntimeError stating the variable is not set. When set, delegates to from_pyfile(rv, silent=silent) and returns its boolean result, i.e. the pointed-to file is loaded relative to root_path with the same silent/OSError semantics as from_pyfile.",
+        "summary": "Loads config from the file named by an environment variable, with optional silent failure.",
+        "relations": [
+          {
+            "target": "flask/config.py::method::Config.from_pyfile::6295",
+            "kind": "call",
+            "basis": "return self.from_pyfile(rv, silent=silent)"
+          }
+        ],
+        "uncertainties": [
+          "Empty-string values are treated the same as unset (falsy check), inferred from the not rv branch."
+        ],
+        "members": []
+      },
+      {
+        "id": "flask/config.py::method::Config.from_prefixed_env::4172",
+        "kind": "method",
+        "explain": "Iterates all environment variable names in sorted order and processes those starting with '{prefix}_' (prefix defaults to 'FLASK'). For each match, the prefix is stripped from the key and the string value is passed to the loads callable (default json.loads); any exception from loads is swallowed and the raw string is kept as the value. Keys containing '__' denote nesting: the key is split on '__', intermediate components are traversed (creating empty dicts for missing intermediate keys) and the tail component receives the value; keys without '__' are set directly. Always returns True. Note that keys set this way are not filtered for uppercase, and traversal assumes intermediate existing values are dicts; if an intermediate key exists with a non-dict value, indexing current[part] would fail, which is not handled here.",
+        "summary": "Loads FLASK_-prefixed env vars in sorted order, JSON-parsing values and nesting keys split on double underscores.",
+        "relations": [
+          {
+            "target": "flask/ctx.py::method::_AppCtxGlobals.__iter__::3099",
+            "kind": "use",
+            "basis": "graph evidence links the sorted iteration; not visible as a direct call in this source"
+          },
+          {
+            "target": "flask/json/__init__.py::function::loads::2282",
+            "kind": "use",
+            "basis": "default loads=json.loads; graph shows multiple candidate loads targets"
+          }
+        ],
+        "uncertainties": [
+          "Actual callee of loads and of sorted/os.environ iteration is not resolved from this source; graph lists several candidates.",
+          "Behavior when an intermediate '__' component exists as a non-dict value is not handled or specified in the code."
+        ],
+        "members": []
+      },
+      {
+        "id": "flask/config.py::method::Config.from_pyfile::6295",
+        "kind": "method",
+        "explain": "Joins filename with root_path, then executes the file's bytecode in a fresh module namespace (types.ModuleType('config') with __file__ set), reading it in binary mode. On OSError: if silent is True and errno is ENOENT, EISDIR, or ENOTDIR, returns False; otherwise e.strerror is prefixed with 'Unable to load configuration file (...)' and the exception is re-raised. On success, passes the module to from_object, so only uppercase attributes become config keys, and returns True. Compilation or runtime errors inside the config file are not caught and propagate.",
+        "summary": "Executes a Python config file and imports its uppercase attributes into the config.",
+        "relations": [
+          {
+            "target": "flask/config.py::method::Config.from_object::7574",
+            "kind": "call",
+            "basis": "self.from_object(d)"
+          }
+        ],
+        "uncertainties": [
+          "Silent suppression applies only to the listed errno values; other OSErrors re-raise even with silent=True.",
+          "Exceptions raised while executing the file body (e.g. SyntaxError, NameError) propagate uncaught; their ordering relative to OSError handling follows the single except clause."
+        ],
+        "members": []
+      },
+      {
+        "id": "flask/config.py::method::Config.from_object::7574",
+        "kind": "method",
+        "explain": "Accepts either an import string or an object. If a string, the object is resolved via werkzeug.utils.import_string. Then for every attribute name in dir(obj) that is entirely uppercase (key.isupper()), the attribute's value is copied into the config via getattr. Lowercase and mixed-case attributes are skipped, and no exception handling wraps getattr, so property evaluation errors propagate. Returns None; existing keys are overwritten.",
+        "summary": "Copies uppercase attributes from an object or imported module into the config.",
+        "relations": [
+          {
+            "target": "werkzeug.utils",
+            "kind": "import",
+            "basis": "from werkzeug.utils import import_string"
+          }
+        ],
+        "uncertainties": [
+          "import_string failure mode for invalid import names is not defined in this file.",
+          "getattr is invoked even on properties of classes, whose evaluation errors propagate unhandled."
+        ],
+        "members": []
+      },
+      {
+        "id": "flask/config.py::method::Config.from_file::9243",
+        "kind": "method",
+        "explain": "Joins filename with root_path, opens it in text mode ('r') or binary mode ('rb') depending on the text flag, and calls the caller-supplied load callable with the file handle to produce a mapping, which is then passed to from_mapping. On OSError: if silent is True and errno is ENOENT or EISDIR, returns False; otherwise e.strerror is prefixed with 'Unable to load configuration file (...)' and re-raised. Returns the boolean result of from_mapping, which is always True on success. Errors raised by the load callable itself are not caught.",
+        "summary": "Loads a mapping via a caller-supplied loader from a text or binary file and merges uppercase keys.",
+        "relations": [
+          {
+            "target": "flask/config.py::method::Config.from_mapping::10951",
+            "kind": "call",
+            "basis": "return self.from_mapping(obj)"
+          }
+        ],
+        "uncertainties": [
+          "The resolved load callable is caller-determined; the graph lists json.load and JSONProvider.load as candidates.",
+          "Silent suppression does not include ENOTDIR here, unlike from_pyfile."
+        ],
+        "members": []
+      },
+      {
+        "id": "flask/config.py::method::Config.from_mapping::10951",
+        "kind": "method",
+        "explain": "Merges an optional mapping and any keyword arguments into a fresh dict, then for each key that is entirely uppercase assigns the value into the config, overwriting existing keys. Lowercase keys are silently ignored. Always returns True; no exceptions are handled.",
+        "summary": "Updates the config from a mapping and kwargs, keeping only uppercase keys; always returns True.",
+        "uncertainties": [
+          "Mapping keys that are not strings would make key.isupper() raise AttributeError; this is not handled."
+        ],
+        "members": []
+      },
+      {
+        "id": "flask/config.py::method::Config.get_namespace::11520",
+        "kind": "method",
+        "explain": "Returns a new dict of config entries whose keys start with the given namespace prefix. For each matching key, the namespace prefix is stripped when trim_namespace is True, and the remainder is lowercased when lowercase is True; the value is copied unchanged. Non-matching keys are skipped. Iteration order follows the dict's own order; returns the collected dict.",
+        "summary": "Collects config values whose keys share a prefix into a new dict with optional trimming and lowercasing.",
+        "uncertainties": [
+          "The inventory id ends in 11515 while the source shows method get_namespace; assumed same symbol."
+        ],
+        "members": []
+      },
+      {
+        "id": "flask/config.py::method::Config.__repr__::13128",
+        "kind": "method",
+        "explain": "Returns a string of the form '<ConfigName {dict contents}>' using the runtime type name and dict.__repr__ for the items, so subclasses report their own class name.",
+        "summary": "Repr showing the runtime class name and the dict contents.",
+        "members": []
+      }
+    ],
+    "dispositions": {
+      "flask/config.py::module_residual::::0": {
+        "how": "unit",
+        "unit": "flask/config.py::module_residual::::0",
+        "reason": "Module imports and TypeVar; minimal but documented as residual region."
+      },
+      "flask/config.py::class::ConfigAttribute::257::s0": {
+        "how": "unit",
+        "unit": "flask/config.py::class::ConfigAttribute::257::s0",
+        "reason": "Descriptor class with real get/set/conversion behavior."
+      },
+      "flask/config.py::method::ConfigAttribute.__init__::350": {
+        "how": "grouped",
+        "unit": "flask/config.py::class::ConfigAttribute::257::s0",
+        "reason": "Two-field initializer explained in the class unit."
+      },
+      "flask/config.py::method::ConfigAttribute.__get__::533": {
+        "how": "grouped",
+        "unit": "flask/config.py::class::ConfigAttribute::257::s0",
+        "reason": "Overload stub with no body."
+      },
+      "flask/config.py::method::ConfigAttribute.__get__::612": {
+        "how": "grouped",
+        "unit": "flask/config.py::class::ConfigAttribute::257::s0",
+        "reason": "Overload stub with no body."
+      },
+      "flask/config.py::method::ConfigAttribute.__get__::689": {
+        "how": "grouped",
+        "unit": "flask/config.py::class::ConfigAttribute::257::s0",
+        "reason": "Core descriptor read logic explained in the class unit."
+      },
+      "flask/config.py::method::ConfigAttribute.__set__::999": {
+        "how": "grouped",
+        "unit": "flask/config.py::class::ConfigAttribute::257::s0",
+        "reason": "One-line config write explained in the class unit."
+      },
+      "flask/config.py::class::Config::1094::s0": {
+        "how": "unit",
+        "unit": "flask/config.py::class::Config::1094::s0",
+        "reason": "Dict subclass with loading semantics spanning its methods."
+      },
+      "flask/config.py::method::Config.__init__::2909": {
+        "how": "unit",
+        "unit": "flask/config.py::method::Config.__init__::2909",
+        "reason": "Stores root_path and seeds defaults; documented separately for boundary clarity."
+      },
+      "flask/config.py::method::Config.from_envvar::3126": {
+        "how": "unit",
+        "unit": "flask/config.py::method::Config.from_envvar::3126",
+        "reason": "Real branching and RuntimeError path."
+      },
+      "flask/config.py::method::Config.from_prefixed_env::4172": {
+        "how": "unit",
+        "unit": "flask/config.py::method::Config.from_prefixed_env::4172",
+        "reason": "Complex nesting, sorting, and exception-swallowing logic."
+      },
+      "flask/config.py::method::Config.from_pyfile::6295": {
+        "how": "unit",
+        "unit": "flask/config.py::method::Config.from_pyfile::6295",
+        "reason": "Exec-and-import flow with errno-specific silent handling."
+      },
+      "flask/config.py::method::Config.from_object::7574": {
+        "how": "unit",
+        "unit": "flask/config.py::method::Config.from_object::7574",
+        "reason": "Import-string resolution and uppercase filtering logic."
+      },
+      "flask/config.py::method::Config.from_file::9243": {
+        "how": "unit",
+        "unit": "flask/config.py::method::Config.from_file::9243",
+        "reason": "Loader-callback flow with text/binary and errno handling."
+      },
+      "flask/config.py::method::Config.from_mapping::10951": {
+        "how": "unit",
+        "unit": "flask/config.py::method::Config.from_mapping::10951",
+        "reason": "Merging with uppercase filter; documented separately."
+      },
+      "flask/config.py::method::Config.get_namespace::11515": {
+        "how": "unit",
+        "unit": "flask/config.py::method::Config.get_namespace::11520",
+        "reason": "Prefix-subset extraction with trim/lowercase options."
+      },
+      "flask/config.py::method::Config.__repr__::13128": {
+        "how": "unit",
+        "unit": "flask/config.py::method::Config.__repr__::13128",
+        "reason": "Trivial repr; given a minimal unit."
+      }
+    },
+    "batch_notes": "All 17 inventory ids disposed. Disposition for get_namespace references unit id 'flask/config.py::method::Config.get_namespace::11520'; if exact id matching is enforced, map it to 'flask/config.py::method::Config.get_namespace::11515' \u2014 the source shows one get_namespace symbol and the inventory id suffix is treated as authoritative naming uncertainty. ConfigAttribute __get__ overloads are stubs folded into the class unit. Graph candidate ambiguity for loads/load recorded in uncertainties rather than resolved."
+  },
+  "paths": [
+    "flask/config.py"
+  ],
+  "inventory": {
+    "flask/config.py": {
+      "symbols": [
+        {
+          "id": "flask/config.py::module_residual::::0"
+        },
+        {
+          "id": "flask/config.py::class::ConfigAttribute::257::s0"
+        },
+        {
+          "id": "flask/config.py::method::ConfigAttribute.__init__::350"
+        },
+        {
+          "id": "flask/config.py::method::ConfigAttribute.__get__::533"
+        },
+        {
+          "id": "flask/config.py::method::ConfigAttribute.__get__::612"
+        },
+        {
+          "id": "flask/config.py::method::ConfigAttribute.__get__::689"
+        },
+        {
+          "id": "flask/config.py::method::ConfigAttribute.__set__::999"
+        },
+        {
+          "id": "flask/config.py::class::Config::1094::s0"
+        },
+        {
+          "id": "flask/config.py::method::Config.__init__::2909"
+        },
+        {
+          "id": "flask/config.py::method::Config.from_envvar::3126"
+        },
+        {
+          "id": "flask/config.py::method::Config.from_prefixed_env::4172"
+        },
+        {
+          "id": "flask/config.py::method::Config.from_pyfile::6295"
+        },
+        {
+          "id": "flask/config.py::method::Config.from_object::7574"
+        },
+        {
+          "id": "flask/config.py::method::Config.from_file::9243"
+        },
+        {
+          "id": "flask/config.py::method::Config.from_mapping::10951"
+        },
+        {
+          "id": "flask/config.py::method::Config.get_namespace::11515"
+        },
+        {
+          "id": "flask/config.py::method::Config.__repr__::13128"
+        }
+      ]
+    }
+  },
+  "bad_id": "flask/config.py::method::Config.get_namespace::11520"
+}
