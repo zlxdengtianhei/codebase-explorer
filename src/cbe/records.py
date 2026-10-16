@@ -119,7 +119,9 @@ def build_records(units: dict, dispositions: dict, inventory: dict, ranges: dict
         caller = (at(edge.get("path") or source.get("path"), edge.get("line"), edge.get("column"))
                   if edge.get("kind") == "call" else node_symbols.get(edge.get("source")))
         callee = node_symbols.get(edge.get("target"))
-        evidence = {**edge, "source_symbol": caller, "target_symbol": callee}
+        evidence = {key: edge[key] for key in ("id", "kind", "status", "source", "target", "path", "line", "column")
+                    if key in edge}
+        evidence.update(source_symbol=caller, target_symbol=callee)
         if caller:
             outgoing[caller].append(evidence)
         if callee:
@@ -130,8 +132,8 @@ def build_records(units: dict, dispositions: dict, inventory: dict, ranges: dict
 
     records = {}
     for uid, unit in units.items():
-        members = list(dict.fromkeys(([uid] if uid in symbols else []) +
-                                     (unit.get("members") or []) +
+        declared_members = [member for member in unit.get("members") or [] if isinstance(member, str)]
+        members = list(dict.fromkeys(([uid] if uid in symbols else []) + declared_members +
                                      [sid for sid, d in dispositions.items() if d.get("unit") == uid]))
         signature_rows = [{"id": sid, "signature": symbols[sid]["signature"]}
                           for sid in members if sid in symbols]
@@ -146,9 +148,6 @@ def build_records(units: dict, dispositions: dict, inventory: dict, ranges: dict
                 for edge in edges[sid]:
                     unique[edge["id"]] = edge
             record[direction] = list(unique.values())
-        node_ids = {edge.get(endpoint) for direction in ("outgoing", "incoming")
-                    for edge in record[direction] for endpoint in ("source", "target")}
-        record["graph_nodes"] = [graph_nodes[nid] for nid in sorted(node_ids - {None}) if nid in graph_nodes]
         for field in ("extras", "relations", "uncertainties"):
             record.setdefault(field, [])
         records[uid] = record

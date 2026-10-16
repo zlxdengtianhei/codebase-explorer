@@ -82,7 +82,7 @@ cbe source --run-dir "$RUN" --id "$ID" --context 2
 
 `source` prints numbered code from `RUN/context.json`. It verifies each selected file's SHA-256 before printing any code. It reports a digest mismatch as an error. `--context N` adds N surrounding lines and must be nonnegative. Use this command to inspect the precise code behind an explanation.
 
-`catalog.json` preserves the complete records and graph. `summary.json` reports token ratios and their scope. Graph evidence describes static analysis; it does not prove runtime behavior. Confirm that the explanations answer the maintenance question before claiming semantic quality.
+`catalog.json` preserves the unit records and indexes graph edges. Complete graph evidence stays once in the frozen context and `query` expands it on demand. `summary.json` reports token ratios and their scope. Graph evidence describes static analysis; it does not prove runtime behavior. Confirm that the explanations answer the maintenance question before claiming semantic quality.
 
 ## Script-driven generation (API, OpenCode, or Devin CLI)
 

@@ -162,13 +162,17 @@ def test_full_signatures_are_not_limited_to_prompt_signature_budget(tmp_path):
 
 
 def test_summary_metrics_use_the_published_artifacts_and_frozen_source(tmp_path):
-    run = Path(host_run.plan(_repo(tmp_path), tmp_path / "run", review="none")["run_dir"])
+    from cbe.token_budget import count_text_tokens
+    repo = _repo(tmp_path)
+    run = Path(host_run.plan(repo, tmp_path / "run", review="none")["run_dir"])
     _drive(run)
     summary = json.loads((run / "summary.json").read_text())
     expected = docs.layer_metrics(run)
     assert summary["layers"] == expected
     assert expected["semantic_tokens"] > 0 and expected["deterministic_tokens"] > 0
-    assert expected["source_tokens"] > 0 and "Markdown" in expected["scope"]
+    assert expected["source_tokens"] == sum(count_text_tokens(path.read_bytes().decode("utf-8"))
+                                             for path in repo.rglob("*.py"))
+    assert "Markdown" in expected["scope"]
     assert summary["layers"]["semantic_source_ratio"] == expected["semantic_tokens"] / expected["source_tokens"]
 
 
@@ -181,7 +185,8 @@ def test_graph_edges_and_statuses_remain_available_in_both_directions(tmp_path):
         {"id": "reserve", "kind": "function", "path": "src/pkg/jobs.py", "start_line": 5, "name": "reserve_run"},
     ]
     graph["edges"] = [{"id": "edge", "kind": "call", "source": "main", "target": "reserve",
-                        "path": "src/pkg/cli.py", "line": 4, "column": 12, "status": "resolved"}]
+                        "path": "src/pkg/cli.py", "line": 4, "column": 12, "status": "resolved",
+                        "expression": "reserve_run(len(argv))"}]
     gp = tmp_path / "graph.json"
     gp.write_text(json.dumps(graph))
     run = Path(host_run.plan(repo, tmp_path / "run", review="none", graph_path=gp)["run_dir"])
@@ -191,4 +196,12 @@ def test_graph_edges_and_statuses_remain_available_in_both_directions(tmp_path):
     callee = next(r for r in catalog["units"].values() if r["incoming"])
     assert caller["outgoing"][0]["id"] == callee["incoming"][0]["id"] == "edge"
     assert caller["outgoing"][0]["status"] == "resolved"
-    assert catalog["graph"] == graph
+    assert catalog["graph_ref"] == "context.json" and catalog["graph"] is None
+    assert json.loads((run / "context.json").read_text())["graph"] == graph
+    queried = docs.query(run, caller["id"])
+    assert queried["outgoing"][0]["expression"] == "reserve_run(len(argv))"
+    assert {node["id"] for node in queried["graph_nodes"]} == {"main", "reserve"}
+    assert "reserve_run(len(argv))" not in (run / "catalog.json").read_text()
+    metrics = docs.layer_metrics(run)
+    assert metrics["frozen_graph_tokens"] > 0
+    assert metrics["deterministic_tokens"] == metrics["catalog_tokens"] + metrics["frozen_graph_tokens"]

@@ -382,7 +382,8 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
         "units": {uid: {**units[uid], "node": owner.get(uid),
                         "page": f"nodes/{owner[uid]}.md" if owner.get(uid) in nodes else None,
                         "anchor": f"#{anchor(uid)}"} for uid in sorted(units)},
-        "graph": graph,
+        "graph": None if (context or {}).get("graph") is not None else graph,
+        "graph_ref": "context.json" if (context or {}).get("graph") is not None else None,
         "nodes": {nid: {"parent": node.get("parent"), "children": children.get(nid) or [],
                         "unit_ids": node.get("unit_ids") or [], "title": node.get("title"),
                         "capability": node.get("capability"), "summary": node.get("summary")}
@@ -565,6 +566,9 @@ def verify(run_dir: Path, inventory: dict, units: dict, dispositions: dict,
 
 def query_catalog(run_dir: Path) -> dict[str, Any]:
     catalog = json.loads((run_dir / "catalog.json").read_text(encoding="utf-8"))
+    if catalog.get("graph_ref") == "context.json":
+        context = json.loads((run_dir / "context.json").read_text(encoding="utf-8"))
+        catalog["graph"] = context.get("graph")
     catalog["symbols"] = catalog_symbols(catalog)
     return catalog
 
@@ -585,7 +589,17 @@ def find(run_dir: Path, term: str, limit: int = 25) -> list[dict[str, Any]]:
 def query(run_dir: Path, symbol_id: str) -> dict[str, Any]:
     catalog = query_catalog(run_dir)
     if symbol_id in catalog["symbols"]:
-        return {"id": symbol_id, **catalog["symbols"][symbol_id]}
+        record = {"id": symbol_id, **catalog["symbols"][symbol_id]}
+        graph = catalog.get("graph")
+        if graph:
+            edges = {edge["id"]: edge for edge in graph.get("edges") or []}
+            for direction in ("outgoing", "incoming"):
+                record[direction] = [{**edges.get(edge["id"], {}), **edge}
+                                     for edge in record.get(direction) or []]
+            node_ids = {edge.get(endpoint) for field in ("outgoing", "incoming")
+                        for edge in record[field] for endpoint in ("source", "target")}
+            record["graph_nodes"] = [node for node in graph.get("nodes") or [] if node["id"] in node_ids]
+        return record
     if symbol_id in catalog["files"]:
         record = dict(catalog["files"][symbol_id])
         units = {uid: unit for uid, unit in catalog.get("units", {}).items()
@@ -655,8 +669,9 @@ def layer_metrics(run_dir: Path) -> dict:
     """One storage-based token measure, usable on old and new render outputs.
 
     Markdown includes page metadata, navigation, signatures and usage examples.
-    Catalog JSON includes its preserved copies of prose. Thus these two storage
-    layers are measured separately, not claimed to be disjoint semantic content.
+    Catalog JSON includes its preserved copies of prose. Frozen graph evidence
+    is counted once, including when the catalog references it in context.json.
+    These are storage layers, not disjoint semantic content classifications.
     The denominator counts each complete frozen source file exactly once.
     """
     from cbe.records import frozen_sources
@@ -666,13 +681,21 @@ def layer_metrics(run_dir: Path) -> dict:
     source_tokens = sum(count_text_tokens(text) for text in frozen_sources(context).values())
     semantic = sum(count_text_tokens(path.read_text(encoding="utf-8"))
                    for path in sorted((run_dir / "docs").rglob("*.md")))
-    deterministic = count_text_tokens((run_dir / "catalog.json").read_text(encoding="utf-8"))
+    catalog_text = (run_dir / "catalog.json").read_text(encoding="utf-8")
+    catalog = json.loads(catalog_text)
+    catalog_tokens = count_text_tokens(catalog_text)
+    graph_tokens = (count_text_tokens(json.dumps(context["graph"], ensure_ascii=False, indent=2) + "\n")
+                    if context.get("graph") and not catalog.get("graph") else 0)
+    deterministic = catalog_tokens + graph_tokens
     return {"tokenizer": "o200k_base", "source_tokens": source_tokens,
             "semantic_tokens": semantic, "deterministic_tokens": deterministic,
+            "catalog_tokens": catalog_tokens, "frozen_graph_tokens": graph_tokens,
             "semantic_source_ratio": semantic / source_tokens if source_tokens else None,
             "deterministic_source_ratio": deterministic / source_tokens if source_tokens else None,
             "scope": "semantic: all published Markdown (node pages + INDEX, including navigation, "
                      "signatures and commands); deterministic: catalog.json as serialized, including "
-                     "preserved prose copies and graph; source: complete frozen files counted once; "
-                     "context.json, host prompts, raw answers and summary.json excluded; layers are "
+                     "preserved prose copies and edge references, plus frozen graph JSON serialized "
+                     "with ensure_ascii=False and indent=2 once when not inline in catalog; complete "
+                     "graph evidence is expanded by query; source: complete frozen files counted once; "
+                     "context source chunks, host prompts, raw answers and summary.json excluded; layers are "
                      "storage measures, not disjoint content classes"}
