@@ -580,17 +580,49 @@ def query_catalog(run_dir: Path) -> dict[str, Any]:
     return catalog
 
 
+def format_ranges(ranges: list[dict]) -> str:
+    """Compact, unambiguous source coordinates for agent-facing text."""
+    return ", ".join(f"{row['path']}:L{start}-L{end}"
+                     for row in ranges for start, end in row.get("lines", []))
+
+
 def find(run_dir: Path, term: str, limit: int = 25) -> list[dict[str, Any]]:
+    """Locate matches; detailed evidence stays behind query, including for old catalogs."""
+    from cbe.records import summary_sentence
+
     catalog = query_catalog(run_dir)
+    inventory = {s["id"]: (path, s) for path, entry in catalog.get("inventory", {}).items()
+                 for s in entry.get("symbols", [])}
     needle = term.casefold()
-    results = [{"id": sid, **record} for sid, record in catalog["symbols"].items()
-               if needle in sid.casefold() or needle in json.dumps(record, ensure_ascii=False).casefold()]
-    # Module-level facts (constants, option tables, templates) live on file
-    # entries; their text is searched like symbol notes.
-    results += [{"id": path, **record} for path, record in catalog["files"].items()
-                if record.get("facts")
-                and needle in json.dumps(record["facts"], ensure_ascii=False).casefold()]
+    results = []
+    candidates = [(sid, record, False) for sid, record in catalog["symbols"].items()]
+    candidates += [(path, record, True) for path, record in catalog["files"].items() if record.get("facts")]
+    for sid, record, is_file in candidates:
+        searchable = {"facts": record["facts"]} if is_file else {"id": sid, **record}
+        matched = [field for field, value in searchable.items()
+                   if needle in json.dumps(value, ensure_ascii=False).casefold()]
+        if not matched:
+            continue
+        path, symbol = inventory.get(sid, (record.get("file"), {}))
+        ranges = ([{"path": path, "lines": symbol["lines"]}] if symbol.get("lines") else
+                  record.get("ranges") or [])
+        if is_file and not ranges:
+            ranges = [{"path": sid, "lines": [[1, max(1, catalog.get("inventory", {}).get(sid, {}).get("nlines", 1))]]}]
+        name = record.get("name") or sid
+        if "::" in name:
+            name = symbol.get("name") or name
+        summary = summary_sentence(record) or summary_sentence({"explain": record.get("reason", "")})
+        words = summary.split()
+        summary = " ".join(words[:25]) + ("…" if len(words) > 25 else "")
+        results.append({"id": sid, "name": name, "kind": symbol.get("kind") or record.get("kind") or
+                        ("file" if is_file else "symbol"), "location": format_ranges(ranges),
+                        "summary": summary, "matched_fields": matched})
     return results[:limit]
+
+
+def find_text(results: list[dict]) -> str:
+    return "".join(f"{r['name']} | {r['id']} | {r['kind']} | {r['location']} | "
+                   f"{r['summary']} | match: {','.join(r['matched_fields'])}\n" for r in results)
 
 
 def query(run_dir: Path, symbol_id: str, edges: str | None = None) -> dict[str, Any]:

@@ -266,7 +266,8 @@ def test_find_and_query_resolve_grouped_symbols_units_and_index_only(tmp_path, o
         assert record["page"] == "nodes/root.md"
         assert record["anchor"] == f"#{docs.anchor(group)}"
         found = next(row for row in docs.find(run, sid) if row["id"] == sid)
-        assert found == record
+        assert found["id"] == sid and found["location"] and found["name"]
+        assert not {"explain", "incoming", "outgoing", "signatures"} & found.keys()
     record = docs.query(run, index_only)
     assert record["how"] == "index_only" and record["reason"] == "import metadata"
     assert record["page"] is None and record["anchor"] is None

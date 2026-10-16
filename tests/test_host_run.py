@@ -471,7 +471,10 @@ def test_host_run_pages_and_catalog_carry_concrete_facts(tmp_path: Path) -> None
     # (Pages print no facts table; the catalogue is where the facts are asserted.)
     catalog = json.loads((run_dir / "catalog.json").read_text())
     assert any(entry.get("facts") for entry in catalog["symbols"].values())
-    assert any("negative" in json.dumps(item) for item in find(run_dir, "negative"))
+    from cbe.docs import query
+    matches = find(run_dir, "negative")
+    assert matches and all(row["id"] and row["location"] and row["matched_fields"] for row in matches)
+    assert any("negative" in json.dumps(query(run_dir, row["id"])) for row in matches)
 
 
 def _graph_for(repo: Path, paths: list[str]) -> dict:

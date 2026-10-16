@@ -143,6 +143,7 @@ def build_parser() -> argparse.ArgumentParser:
     find_p.add_argument("--run-dir", type=_abs, required=True)
     find_p.add_argument("--term", required=True)
     find_p.add_argument("--limit", type=int, default=25)
+    find_p.add_argument("--json", action="store_true", help="machine-readable locator fields")
 
     query_p = sub.add_parser("query", help="Return explanation and evidence by unit ID, symbol ID or file path")
     query_p.add_argument("--run-dir", type=_abs, required=True)
@@ -321,14 +322,16 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "host":
             print(json.dumps(_host(args), ensure_ascii=False, indent=2))
             return 0
-        from cbe.docs import find, query, query_text, source
+        from cbe.docs import find, find_text, query, query_text, source
 
         if args.command == "source":
             print(source(args.run_dir, args.id, context=args.context), end="")
             return 0
 
         if args.command == "find":
-            print(json.dumps(find(args.run_dir, args.term, limit=args.limit), ensure_ascii=False, indent=2))
+            results = find(args.run_dir, args.term, limit=args.limit)
+            print(json.dumps(results, ensure_ascii=False, indent=2) if args.json else find_text(results),
+                  end="\n" if args.json else "")
             return 0
         record = query(args.run_dir, args.id, edges=args.edges)
         print(json.dumps(record, ensure_ascii=False, indent=2) if args.json else query_text(record),
