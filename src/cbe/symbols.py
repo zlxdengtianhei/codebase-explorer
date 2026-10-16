@@ -12,25 +12,13 @@ import hashlib
 from pathlib import Path
 from typing import Any, Iterable
 
+from cbe import source_context
 from cbe.checks import UNIT_KINDS
 from cbe.token_budget import count_text_tokens
 
 
-_LANGUAGE_BY_SUFFIX = {
-    ".py": "python", ".pyi": "python", ".ts": "typescript", ".tsx": "typescript",
-    ".mts": "typescript", ".cts": "typescript", ".js": "javascript", ".jsx": "javascript",
-    ".mjs": "javascript", ".cjs": "javascript", ".c": "c", ".h": "c", ".cc": "cpp",
-    ".cpp": "cpp", ".cxx": "cpp", ".hpp": "cpp", ".rs": "rust", ".java": "java",
-    ".go": "go", ".sql": "sql",
-}
-
-
 class SemanticError(ValueError):
     """The semantic stage cannot continue with the given input."""
-
-
-def language_of(path: str) -> str:
-    return _LANGUAGE_BY_SUFFIX.get(Path(path).suffix.lower(), "unknown")
 
 
 def _node_span(node: ast.AST) -> list[int]:
@@ -196,7 +184,7 @@ def ensure_chunk_coverage(context: dict, repo: Path, ast_inventory: dict[str, di
             continue
         digest = hashlib.sha256(raw).hexdigest()
         if path not in listed:
-            files.append({"path": path, "language": language_of(path), "sha256": digest})
+            files.append({"path": path, "language": source_context.language_name(path), "sha256": digest})
         if text.strip() == "":
             diagnostics.append({"path": path, "code": "known_empty",
                                 "message": "file is empty; it has no source chunk, no inventory id "
@@ -211,7 +199,7 @@ def ensure_chunk_coverage(context: dict, repo: Path, ast_inventory: dict[str, di
         for symbol in symbols:
             start, end = symbol["lines"][0]
             body = "\n".join(lines[max(start - 1, 0):end])
-            chunks.append({"id": symbol["id"], "path": path, "language": language_of(path),
+            chunks.append({"id": symbol["id"], "path": path, "language": source_context.language_name(path),
                            "kind": symbol["kind"], "name": symbol["name"],
                            "start_line": start, "end_line": end,
                            "start_byte": 0, "end_byte": 0, "text": body,

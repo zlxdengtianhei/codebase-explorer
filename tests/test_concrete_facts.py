@@ -163,7 +163,8 @@ def _render_repo(tmp_path, source, filler_sentences):
                        "summary": "Defaults.", "unit_ids": ids}], "depends_on": []}
     run_dir = tmp_path / "run"
     docs.render(run_dir=run_dir, source_root=repo, inventory=inventory, units=units,
-                    dispositions={uid: {"how": "unit", "unit": uid} for uid in ids}, tree=tree)
+                    dispositions={uid: {"how": "unit", "unit": uid} for uid in ids}, tree=tree,
+                    languages={path: "python" for path in texts})
     return run_dir
 
 

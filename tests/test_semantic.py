@@ -175,7 +175,8 @@ def test_render_publishes_node_pages_source_links_and_a_compatible_catalog(tmp_p
     tree = _tree(sorted(units))
     run_dir = tmp_path / "run"
     meta = docs.render(run_dir=run_dir, source_root=repo, inventory=inventory,
-                           units=units, dispositions=dispositions, tree=tree)
+                           units=units, dispositions=dispositions, tree=tree,
+                           languages={"pkg/jobs.py": "python"})
     assert meta["nodes"] == 1
     index = (run_dir / "docs" / "INDEX.md").read_text(encoding="utf-8")
     assert "](nodes/root.md)" in index
@@ -186,6 +187,34 @@ def test_render_publishes_node_pages_source_links_and_a_compatible_catalog(tmp_p
     checks = {row["check"]: row["ok"] for row in
               docs.verify(run_dir, inventory, units, dispositions, tree)}
     assert checks["unique_primary_ownership"] and checks["relative_links_resolve"]
+
+
+def test_catalog_language_is_the_frozen_context_language(tmp_path) -> None:
+    repo = tmp_path / "repo"
+    (repo / "ui").mkdir(parents=True)
+    (repo / "ui" / "view.tsx").write_text("export const View = () => <div/>;\n", encoding="utf-8")
+    (repo / "ui" / "shape.h").write_text("struct Shape { int w; };\n", encoding="utf-8")
+    context = {"schema": "cbe-context/1", "graph": None, "diagnostics": [],
+               "files": [{"path": "ui/view.tsx", "language": "tsx", "sha256": "a"},
+                         # Planned with --header-language cpp: the frozen row wins.
+                         {"path": "ui/shape.h", "language": "cpp", "sha256": "b"}],
+               "chunks": [{"id": "ui/view.tsx::View", "path": "ui/view.tsx", "kind": "function",
+                           "name": "View", "start_line": 1, "end_line": 1,
+                           "text": "export const View = () => <div/>;\n"},
+                          {"id": "ui/shape.h::Shape", "path": "ui/shape.h", "kind": "class",
+                           "name": "Shape", "start_line": 1, "end_line": 1,
+                           "text": "struct Shape { int w; };\n"}]}
+    inventory = symbols.inventory_from_context(context)
+    units = {uid: {"id": uid, "kind": "function", "explain": "x", "extras": [], "relations": [],
+                   "uncertainties": []} for uid in symbols.inventory_ids(inventory)}
+    dispositions = {uid: {"how": "unit", "unit": uid, "reason": "behavior"} for uid in units}
+    run_dir = tmp_path / "run"
+    docs.render(run_dir=run_dir, source_root=repo, inventory=inventory, units=units,
+                dispositions=dispositions, tree=_tree(sorted(units)),
+                languages={row["path"]: row["language"] for row in context["files"]})
+    catalog = json.loads((run_dir / "catalog.json").read_text(encoding="utf-8"))
+    assert {path: row["language"] for path, row in catalog["files"].items()} == {
+        "ui/view.tsx": "tsx", "ui/shape.h": "cpp"}
 
 
 def _grouped_run(tmp_path):
@@ -210,7 +239,8 @@ def _grouped_run(tmp_path):
     tree = _tree(sorted(units))
     run = tmp_path / "run"
     docs.render(run_dir=run, source_root=repo, inventory=inventory,
-                    units=units, dispositions=dispositions, tree=tree)
+                    units=units, dispositions=dispositions, tree=tree,
+                    languages={"pkg/jobs.py": "python"})
     return run, inventory, units, dispositions, tree, members, group, index_only
 
 

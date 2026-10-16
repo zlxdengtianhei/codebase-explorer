@@ -951,7 +951,7 @@ def _semantic_review_summary(run_dir: Path, state: dict[str, Any]) -> dict[str, 
 
 def _render(run_dir: Path, state: dict[str, Any]) -> None:
     try:
-        _verified_context(run_dir, state)
+        context = _verified_context(run_dir, state)
         _auto_complete_empty_modules(run_dir, state)
     except HostRunError as exc:
         state["render_error"] = str(exc)
@@ -991,7 +991,8 @@ def _render(run_dir: Path, state: dict[str, Any]) -> None:
     try:
         meta = docs.render(run_dir=run_dir, source_root=Path(state["repo"]),
                                inventory=state.get("inventory") or {}, units=units,
-                               dispositions=dispositions, tree=tree, index_notes=index_notes)
+                               dispositions=dispositions, tree=tree, index_notes=index_notes,
+                               languages={row["path"]: row.get("language") or "unknown" for row in context["files"]})
     except symbols.SemanticError as exc:
         state["render_error"] = str(exc)
         log_event(run_dir, "render", f"failed: {exc}", error=str(exc))

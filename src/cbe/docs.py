@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from cbe import concrete_facts
-from cbe.symbols import SemanticError, inventory_ids, language_of
+from cbe.symbols import SemanticError, inventory_ids
 
 
 # One repository file larger than this becomes its own inventory unit region set;
@@ -136,8 +136,12 @@ def _build_unit_block(uid: str, units: dict, ranges_map: dict, owner: dict,
 
 
 def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
-           dispositions: dict, tree: dict, index_notes: list[str] | None = None) -> dict:
+           dispositions: dict, tree: dict, languages: dict[str, str],
+           index_notes: list[str] | None = None) -> dict:
     """Render node pages, INDEX.md and a catalog under ``run_dir/docs``.
+
+    ``languages`` maps each path to the language frozen in the source context,
+    so the catalog agrees with the plan even when it remapped a suffix.
 
     Returns metadata the caller stores in run state for verification."""
     docs_dir = run_dir / "docs"
@@ -265,7 +269,7 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
         facts = concrete_facts.file_facts(path, sources.get(path, "")) \
             if path.endswith(".py") else None
         compatibility_files[path] = {"tokens": entry.get("tokens", 0),
-                                     "language": language_of(path),
+                                     "language": languages.get(path, "unknown"),
                                      "known_empty": bool(entry.get("known_empty"))}
         if facts and facts.get("file"):
             compatibility_files[path]["facts"] = facts["file"]

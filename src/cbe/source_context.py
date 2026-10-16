@@ -505,6 +505,13 @@ def _grammar_for_suffix(suffix: str) -> GrammarSpec | None:
     return None
 
 
+def language_name(path: str) -> str:
+    """The language CBE records for a path: the grammar's name, else the bare suffix."""
+
+    spec = _grammar_for_suffix(PurePosixPath(path).suffix)
+    return spec.name if spec is not None else _language_from_suffix(path)
+
+
 def language_for_path(path: str | os.PathLike[str]) -> str | None:
     """Return the CBE language name for a path, or ``None`` if unsupported."""
 
@@ -1247,7 +1254,7 @@ def build_context(
         digest = sha256_bytes(raw)
         source_hashes[relative] = digest
         spec = _grammar_for_suffix(PurePosixPath(relative).suffix)
-        language = spec.name if spec is not None else _language_from_suffix(relative)
+        language = language_name(relative)
 
         if spec is None:
             diagnostics.append(
