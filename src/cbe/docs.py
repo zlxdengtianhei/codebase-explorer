@@ -414,7 +414,7 @@ def catalog_symbols(catalog: dict) -> dict[str, dict]:
     """
     records = {key: dict(row) for key, row in (catalog.get("symbols") or {}).items()}
     for uid, unit in (catalog.get("units") or {}).items():
-        record = {**unit, **records.get(uid, {})}
+        record = {**records.get(uid, {}), **unit}
         record.setdefault("name", (catalog.get("short_names") or {}).get(uid, uid))
         paths = sorted({row["path"] for row in unit.get("ranges") or [] if row.get("path")})
         record.setdefault("files", paths)

@@ -50,6 +50,7 @@ def test_page_and_catalog_share_complete_records(tmp_path):
         assert record["ranges"] == docs.unit_ranges(uid, original, inventory)
         assert {"signatures", "outgoing", "incoming", "graph_state", "reverse_relations"} <= record.keys()
         assert docs.query(run, uid)["explain"] == original["explain"]
+        assert docs.query(run, uid)["ranges"] == record["ranges"]
     assert catalog["units"][ids[-1]]["reverse_relations"][0]["basis"] == "KEEP THIS EVIDENCE"
 
 
@@ -69,6 +70,7 @@ def test_source_uses_frozen_bytes_and_rejects_corruption_without_stdout(tmp_path
     assert cli.main(["source", "--run-dir", str(run), "--id", "pkg/jobs.py"]) == 0
     printed = capsys.readouterr().out
     assert "negative" in printed and "LIVE FILE" not in printed
+    assert "def submit" in docs.source(run, ids[0])
     for uid in ids:
         assert cli.main(["source", "--run-dir", str(run), "--id", uid, "--context", "1"]) == 0
         assert "pkg/jobs.py:L" in capsys.readouterr().out
