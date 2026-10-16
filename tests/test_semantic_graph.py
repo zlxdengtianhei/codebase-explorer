@@ -128,18 +128,26 @@ def test_cfg_counts_are_from_nodes_and_do_not_export_dataflow():
         graph["nodes"].append(_node(str(i), "a.py", line, kind="cfg_node", label=label, owner="a"))
     graph["nodes"].append(_node("secret-flow", "a.py", kind="dataflow_node", owner="a"))
     text = graph_projection.graph_text(graph_projection.unit_graph(graph, ["a.py"], inventory, chunks))
-    assert "CFG A: control_structures=1, returns=2, early_returns_by_line=1, explicit_throw_exits=1" in text
-    assert "other exception exits unknown" in text
+    assert "CFG A: control_structures=1, returns=2" in text
+    assert "early_returns_by_line" not in text and "explicit_throw_exits" not in text
     assert "secret-flow" not in text and "cfg_node" not in text
     graph["nodes"].extend([_node("synthetic", "a.py"),
         _node("second-return", "a.py", 6, kind="cfg_node", label="RETURN", owner="synthetic")])
     merged = graph_projection.graph_text(graph_projection.unit_graph(graph, ["a.py"], inventory, chunks))
     assert merged.count("CFG A:") == 1
     assert "returns=3" in merged
-    graph["nodes"].extend([_node("adapter", "a.py", name="f<metaClassAdapter>"),
-        _node("adapter-return", "a.py", 1, kind="cfg_node", label="RETURN", owner="adapter")])
+    for name in ("<lambda>", "f<metaClassAdapter>", "<metaClassCallHandler>", "<fakeNew>"):
+        graph["nodes"].extend([_node(name, "a.py", name=name),
+            _node(name + "-return", "a.py", 1, kind="cfg_node", label="RETURN", owner=name)])
     filtered = graph_projection.graph_text(graph_projection.unit_graph(graph, ["a.py"], inventory, chunks))
     assert filtered == merged
+    graph["nodes"] = [n for n in graph["nodes"] if n.get("label") != "THROW"]
+    graph["nodes"].extend([_node("lost", "a.py", 100),
+        _node("lost-return", "a.py", 100, kind="cfg_node", label="RETURN", owner="lost")])
+    evidence = graph_projection.unit_graph(graph, ["a.py"], inventory, chunks)
+    assert evidence.unmapped_cfg == 1
+    assert "unmapped cfg owners: 1" in graph_projection.graph_text(evidence)
+    assert "exception exits are not exported by this graph" in graph_projection.graph_text(evidence)
 
 
 def test_ambiguity_three_candidates_and_unresolved_per_file_counts():

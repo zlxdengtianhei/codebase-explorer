@@ -186,28 +186,24 @@ def unit_graph(graph: dict, paths: list[str], inventory: dict[str, dict],
 
     symbol_kinds = {s["id"]: s.get("kind") for entry in inventory.values() for s in entry["symbols"]}
     cfg_nodes: dict[str, list[dict]] = defaultdict(list)
+    unmapped_owners = set()
     for node in nodes.values():
         if node.get("kind") == "cfg_node" and node.get("path") in wanted:
             owner = nodes.get(node.get("owner"), {})
-            # Joern's synthetic adapter shares the real definition line but
-            # executes a generated forwarding return, not a source function.
-            if "<metaClassAdapter>" in str(owner.get("name", "")):
+            # All angle-bracket methods are analyzer-generated, including lambdas.
+            if "<" in str(owner.get("name", "")) and ">" in str(owner.get("name", "")):
                 continue
             uid = endpoint(owner)
             if uid and symbol_kinds.get(uid) in {"function", "method"}:
                 cfg_nodes[uid].append(node)
+            else:
+                unmapped_owners.add(node.get("owner"))
     for uid, members in sorted(cfg_nodes.items()):
         controls = sum(n.get("label") == "CONTROL_STRUCTURE" for n in members)
         returns = sum(n.get("label") == "RETURN" for n in members)
-        throws = sum(n.get("label") == "THROW" for n in members)
-        last = max((n.get("start_line") or 0 for n in members
-                    if n.get("label") not in {"METHOD", "METHOD_RETURN"}), default=0)
-        early = sum(n.get("label") == "RETURN" and (n.get("start_line") or last) < last
-                    for n in members)
-        if controls or returns or throws:
+        if controls or returns:
             rows.append(EvidenceRow("cfg", f"CFG {uid}: control_structures={controls}, "
-                        f"returns={returns}, early_returns_by_line={early}, explicit_throw_exits={throws}; "
-                        "other exception exits unknown"))
+                                    f"returns={returns}"))
     # A package skeleton is deliberately small; preserve its omitted pair count.
     for (left, right), count in sorted(skeleton.items())[:12]:
         rows.append(EvidenceRow("packages", f"Package imports {left} → {right}: {count}"))
@@ -215,7 +211,8 @@ def unit_graph(graph: dict, paths: list[str], inventory: dict[str, dict],
         rows.append(EvidenceRow("packages", f"Package imports: {len(skeleton) - 12} other package pairs"))
     if not skeleton:
         rows.append(EvidenceRow("packages", "Package imports: no resolved package links"))
-    return UnitGraph(tuple(rows), internal, unmapped)
+    return UnitGraph(tuple(rows), internal, unmapped, len(unmapped_owners),
+                     any(n.get("label") == "THROW" for n in nodes.values()))
 
 
 def render_rows(rows: list[EvidenceRow]) -> list[str]:
@@ -249,7 +246,10 @@ def graph_text(evidence: UnitGraph, *, budget: int | None = None) -> str:
     while True:
         lines = ["LOCAL GRAPH EVIDENCE (unit ids; graph evidence is not proof of behavior).",
                  f"Batch-internal resolved calls: {evidence.internal_calls} (source visible); "
-                 f"unmapped resolved calls: {evidence.unmapped_calls}."]
+                 f"unmapped resolved calls: {evidence.unmapped_calls}; "
+                 f"unmapped cfg owners: {evidence.unmapped_cfg}."
+                 + ("" if evidence.exception_exits_exported else
+                    " exception exits are not exported by this graph.")]
         lines += render_rows(rows)
         lines.append("Omitted: " + (", ".join(f"{k}={v}" for k, v in sorted(omitted.items())) or "none")
                      + ". Omitted evidence is unavailable in this excerpt.")
@@ -259,7 +259,8 @@ def graph_text(evidence: UnitGraph, *, budget: int | None = None) -> str:
         if not rows:
             # Very small/empty sources cannot carry the normal explanatory
             # header. Keep numeric accounting before prose, still within budget.
-            text = (f"Graph: internal={evidence.internal_calls}, unmapped={evidence.unmapped_calls}; "
+            text = (f"Graph: internal={evidence.internal_calls}, unmapped={evidence.unmapped_calls}, "
+                    f"unmapped_cfg={evidence.unmapped_cfg}; "
                     "omitted " + ",".join(f"{k}={v}" for k, v in sorted(omitted.items())))
             if count_text_tokens(text) <= budget:
                 return text
@@ -305,7 +306,10 @@ def graph_prompt_lines(graph: Any, paths: list[str], *, embed: bool,
         omitted[row.category] += row.count
     notice = (f"GRAPH STATUS (outside payload cap): budget={budget} tokens; omitted "
               + ",".join(f"{kind}={count}" for kind, count in sorted(omitted.items()))
-              + f"; internal={evidence.internal_calls}; unmapped={evidence.unmapped_calls}.")
+              + f"; internal={evidence.internal_calls}; unmapped={evidence.unmapped_calls}; "
+              + f"unmapped_cfg={evidence.unmapped_cfg}."
+              + ("" if evidence.exception_exits_exported else
+                 " exception exits are not exported by this graph."))
     if not embed and graph_file:
         notice += f" Read full evidence: {graph_file}"
     return [notice, ""]
