@@ -108,6 +108,29 @@ def test_generate_renders_and_accounts_for_each_physical_call(tmp_path, monkeypa
         assert len(list(csv.DictReader(stream))) == 6
 
 
+def test_crlf_source_is_embedded_verbatim_and_the_run_completes(tmp_path, monkeypatch) -> None:
+    repo = tmp_path / "repo"
+    (repo / "pkg").mkdir(parents=True)
+    (repo / "pkg" / "jobs.py").write_bytes(
+        b"def reserve_run(value):\r\n    if value < 0:\r\n        raise ValueError('negative')\r\n"
+        b"    return value\r\n")
+    (repo / "pkg" / "schema.sql").write_bytes(b"create table jobs (id integer);\r\n")
+    run_dir = tmp_path / "run"
+    prompts: list[str] = []
+
+    def fake_invoke(**kwargs):
+        prompts.append(kwargs["prompt"])
+        value = _semantic_answer(kwargs["prompt"])
+        return Completion(value, None, json.dumps(value), {"input": 200, "output": 2, "cache": 1}, 0.01)
+
+    monkeypatch.setattr(generator, "invoke", fake_invoke)
+    result = generator.generate(repo, run_dir, model="example/model", jobs=1)
+    assert result["status"] == "complete"
+    for name in ("jobs.py", "schema.sql"):
+        raw = (repo / "pkg" / name).read_bytes().decode("utf-8")
+        assert any(raw in prompt for prompt in prompts), name
+
+
 def test_missing_devin_cache_keeps_observed_input_and_output(tmp_path) -> None:
     (tmp_path / "calls.csv").write_text(
         "task,attempt,input_tokens,output_tokens,cache_tokens,result,seconds\n"

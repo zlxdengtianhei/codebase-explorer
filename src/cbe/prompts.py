@@ -130,7 +130,9 @@ def detail_prompt(paths: list[str], inventory: dict[str, dict], *,
             text = ""
             if source_root is not None:
                 try:
-                    text = (source_root / path).read_text(encoding="utf-8")
+                    # Bytes, not read_text: universal newlines would turn CRLF into LF and
+                    # the embedded body would no longer be the planned file verbatim.
+                    text = (source_root / path).read_bytes().decode("utf-8")
                 except (OSError, UnicodeDecodeError):
                     text = ""
             if not text:

@@ -8,6 +8,7 @@ published source ranges.
 
 from __future__ import annotations
 
+import hashlib
 import json
 
 import pytest
@@ -297,6 +298,17 @@ def test_ensure_chunk_coverage_marks_empty_and_keeps_comment_only(tmp_path) -> N
     inventory = symbols.inventory_from_context(context, ["empty.py", "doc.py"])
     assert inventory["empty.py"]["symbols"] == [] and inventory["empty.py"]["known_empty"] is True
     assert inventory["doc.py"]["symbols"] and inventory["doc.py"]["known_empty"] is False
+
+
+def test_ensure_chunk_coverage_digests_the_file_bytes_of_a_crlf_file(tmp_path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    raw = b"def f():\r\n    return 1\r\n"
+    (repo / "crlf.py").write_bytes(raw)
+    context = {"schema": "cbe-context/1", "files": [], "chunks": [], "graph": None, "diagnostics": []}
+    symbols.ensure_chunk_coverage(context, repo, {}, ["crlf.py"])
+    assert context["files"] == [{"path": "crlf.py", "language": "python",
+                                 "sha256": hashlib.sha256(raw).hexdigest()}]
 
 
 def test_validate_details_allows_empty_units_only_when_no_inventory_ids() -> None:

@@ -189,11 +189,12 @@ def ensure_chunk_coverage(context: dict, repo: Path, ast_inventory: dict[str, di
         if path in present:
             continue
         try:
-            text = (repo / path).read_text(encoding="utf-8")
+            raw = (repo / path).read_bytes()
+            text = raw.decode("utf-8")
         except (OSError, UnicodeDecodeError) as exc:
             diagnostics.append({"path": path, "code": "source_unavailable", "message": str(exc)})
             continue
-        digest = hashlib.sha256(text.encode("utf-8")).hexdigest()
+        digest = hashlib.sha256(raw).hexdigest()
         if path not in listed:
             files.append({"path": path, "language": language_of(path), "sha256": digest})
         if text.strip() == "":
