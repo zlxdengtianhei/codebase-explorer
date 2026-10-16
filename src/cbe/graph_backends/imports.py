@@ -122,6 +122,9 @@ def build_with_grimp(repo, languages: list[str]) -> dict:
             {"path": None, "code": "backend_unavailable",
              "message": "grimp is not installed; Python import graph skipped (install the 'graphs' extra)"}],
             "capabilities": []}
+    from ._imports import ImportResolver
+
+    resolver = ImportResolver(repo)
     packages = _top_level_python_packages(repo)
     if not packages:
         return _result([], [], [{"path": None, "code": "no_python_packages",
@@ -153,16 +156,23 @@ def build_with_grimp(repo, languages: list[str]) -> dict:
                 continue
             built += 1
             for module in graph.modules:
-                module_id = _add_module(nodes, seen, module)
+                source_path = resolver.python_file(module)
+                if source_path is None:
+                    diagnostics.append({"path": None, "code": "module_file_missing",
+                                        "message": f"grimp module {module!r} has no repository file"})
+                    continue
+                module_id = _add_module(nodes, seen, module, source_path)
                 for imported in graph.find_modules_directly_imported_by(module):
-                    target_id = _add_module(nodes, seen, imported)
+                    target_path = resolver.python_file(imported)
+                    status = "resolved" if target_path else ("unresolved" if resolver.python_local(imported) else "external")
+                    target_id = _add_module(nodes, seen, imported, target_path) if status != "unresolved" else None
                     edges.append({
                         "id": f"grimp/import/{module}->{imported}",
                         "source": module_id,
                         "target": target_id,
                         "kind": "import",
-                        "status": "resolved",
-                        "path": module.replace(".", "/") + ".py",
+                        "status": status,
+                        "path": source_path,
                         "expression": imported,
                         "analyzer_id": None,
                         "backend": "grimp",
@@ -185,14 +195,14 @@ def build_with_grimp(repo, languages: list[str]) -> dict:
     return _result(nodes, edges, diagnostics, None, status=status, language="python")
 
 
-def _add_module(nodes: list[dict], seen: set[str], module: str) -> str:
-    module_id = f"module:{module}"
+def _add_module(nodes: list[dict], seen: set[str], module: str, path: str | None) -> str:
+    module_id = f"file:{path}" if path else f"ext:{module}"
     if module_id not in seen:
         seen.add(module_id)
-        nodes.append({"id": module_id, "kind": "file",
-                      "path": module.replace(".", "/") + ".py",
+        nodes.append({"id": module_id, "kind": "file" if path else "external",
+                      "path": path,
                       "start_line": None, "end_line": None, "name": module,
-                      "backend": "grimp"})
+                      "backend": "grimp", **({"external": True} if path is None else {})})
     return module_id
 
 

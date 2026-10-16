@@ -429,7 +429,7 @@ def test_integration_python_import(tmp_path: Path) -> None:
                           backend="imports", languages=["python"], timeout=120)
     imports = {edge["source"]: edge["target"] for edge in graph["edges"]
                if edge["kind"] == "import" and edge["status"] == "resolved"}
-    assert imports.get("module:app.main") == "module:app.util"
+    assert imports.get("file:app/main.py") == "file:app/util.py"
 
 
 def test_graph_output_is_json_serializable() -> None:

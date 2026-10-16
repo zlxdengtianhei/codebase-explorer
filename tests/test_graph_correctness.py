@@ -71,3 +71,27 @@ def test_import_merge_uses_real_target_and_preserves_unresolved_expression(tmp_p
     assert {e["id"] for e in kept} == {"g", "missing/0"}
     assert kept[-1]["expression"] == "from .missing import x"
     assert {n["id"] for n in nodes} == {"file:util.py"}
+
+
+def test_grimp_uses_real_package_paths_and_never_fabricates_files(tmp_path, monkeypatch):
+    import sys
+    from types import SimpleNamespace
+    from cbe.graph_backends.imports import build_with_grimp
+
+    (tmp_path / "pkg").mkdir()
+    (tmp_path / "pkg/__init__.py").touch()
+    (tmp_path / "pkg/main.py").touch()
+    graph = SimpleNamespace(modules={"pkg", "pkg.main"},
+                            find_modules_directly_imported_by=lambda module: {"pkg.main", "pkg.missing", "thirdparty"} if module == "pkg" else set())
+    monkeypatch.setitem(sys.modules, "grimp", SimpleNamespace(build_graph=lambda name: graph))
+    result = build_with_grimp(tmp_path, ["python"])
+    edges = {e["expression"]: e for e in result["edges"]}
+    assert edges["pkg.main"]["source"] == "file:pkg/__init__.py"
+    assert edges["pkg.main"]["target"] == "file:pkg/main.py"
+    assert edges["pkg.main"]["path"] == "pkg/__init__.py"
+    assert edges["pkg.missing"]["status"] == "unresolved"
+    assert edges["pkg.missing"]["target"] is None
+    assert edges["thirdparty"]["target"] == "ext:thirdparty"
+    assert edges["thirdparty"]["status"] == "external"
+    assert all(not n["id"].startswith("module:") for n in result["nodes"])
+    assert all((tmp_path / n["path"]).is_file() for n in result["nodes"] if n.get("path"))
