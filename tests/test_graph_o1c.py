@@ -121,3 +121,16 @@ def test_suffix_registry_is_built_once_per_graph(tmp_path, monkeypatch):
     for _ in range(10):
         resolver.resolve("main.rb", 'require "set"')
     assert len(calls) == 1
+
+
+def test_python_only_build_does_not_report_unused_dependency_cruiser(tmp_path, monkeypatch):
+    from cbe import graph, graph_backends
+    monkeypatch.setattr(graph_backends, "find_depcruise", lambda *args: None)
+    (tmp_path / "app").mkdir()
+    (tmp_path / "app" / "__init__.py").write_text("import os\n")
+    result = graph.analyze_graph(tmp_path, tmp_path / "g.json", backend="imports")
+    assert not any("dependency-cruiser" in d.get("message", "") for d in result["diagnostics"])
+    # A requested JS backend still reports its absence.
+    (tmp_path / "main.js").write_text('import x from "missing";')
+    result = graph.analyze_graph(tmp_path, tmp_path / "g.json", backend="imports")
+    assert any("dependency-cruiser not found" in d.get("message", "") for d in result["diagnostics"])

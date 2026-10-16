@@ -240,11 +240,11 @@ def analyze_graph(
     if use_imports:
         depcruise = backends.find_depcruise(depcruise_bin)
         import_languages = [lang for lang in requested if lang in backends.DEPCRUISE_LANGUAGES]
-        if depcruise is None:
+        if depcruise is None and import_languages:
             diagnostics.append({"path": None, "code": "backend_unavailable",
                                 "message": "dependency-cruiser not found; JS/TS import graph skipped"})
             extra_capabilities.extend(_unavailable("dependency-cruiser", import_languages, ("import",)))
-        elif import_languages:
+        elif depcruise is not None and import_languages:
             fragment = backends.build_with_depcruise(repo, run_dir / "depcruise", depcruise,
                                                      timeout, import_languages)
             if fragment["nodes"] or not fragment["diagnostics"]:
