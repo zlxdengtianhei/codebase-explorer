@@ -151,3 +151,24 @@ def test_layer_metrics_count_footer_in_footer_category(tmp_path):
     assert expected > 0
     assert metrics["semantic_breakdown"]["footer"] == expected
     assert sum(metrics["semantic_breakdown"].values()) == metrics["semantic_tokens"]
+
+
+def test_method_titles_keep_their_declaring_class(tmp_path):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "views.py").write_text("class View:\n    def dispatch_request(self):\n        pass\n\n"
+                                   "class MethodView:\n    def dispatch_request(self):\n        pass\n")
+    context = source_context.build_context(repo)
+    inventory = inventory_from_context(context)
+    units = {s["id"]: {"id": s["id"], "kind": s["kind"], "explain": "Dispatch a request."}
+             for s in inventory["views.py"]["symbols"]}
+    run = tmp_path / "run"
+    run.mkdir()
+    docs.render(run_dir=run, source_root=repo, inventory=inventory, units=units,
+                dispositions={uid: {"how": "unit", "unit": uid} for uid in units},
+                tree={"nodes": [{"id": "root", "unit_ids": list(units)}]},
+                languages={"views.py": "python"}, context=context)
+    page = (run / "docs/nodes/root.md").read_text()
+    assert "### `View.dispatch_request`" in page
+    assert "### `MethodView.dispatch_request`" in page
+    assert "dispatch_request (2)" not in page

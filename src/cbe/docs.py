@@ -195,6 +195,9 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
     for uid in sorted(set(units) | set(dispositions)):
         symbol = symbol_records.get(uid, {})
         base = symbol.get("name") or short_name(uid)
+        parts = uid.split("::")
+        if symbol.get("kind") == "method" and len(parts) > 2 and "." in parts[2]:
+            base = parts[2]
         if "::module_residual::" in uid or symbol.get("kind") == "module_residual":
             spans = symbol["ranges"][0]["lines"]
             base = f"{Path(symbol['file']).name} 模块代码（L{spans[0][0]}—L{spans[-1][1]}）"
