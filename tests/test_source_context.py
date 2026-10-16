@@ -403,6 +403,26 @@ def test_graph_manifest_without_source_manifest_is_rejected(tmp_path):
     assert excinfo.value.code == "graph_manifest_missing"
 
 
+@pytest.mark.parametrize("problem, code", [("no_manifest", "graph_manifest_missing"),
+                                           ("unstable", "graph_provenance_mismatch")])
+def test_context_build_graph_errors_name_the_graph_file(tmp_path, capsys, problem, code):
+    from cbe import cli
+
+    graph = _graph_for(build_context(FIXTURES, paths=["sample.py"]), EDGES)
+    if problem == "no_manifest":
+        del graph["source_manifest"]
+    else:
+        graph["provenance"] = {"source_stable": False}
+    graph_path = tmp_path / f"{problem}.json"
+    graph_path.write_text(json.dumps(graph))
+    status = cli.main(["context", "build", str(FIXTURES), "--graph", str(graph_path),
+                       "--output", str(tmp_path / "context.json")])
+    error = json.loads(capsys.readouterr().err)
+    assert status == 2
+    assert set(error) == {"code", "message", "path"}
+    assert (error["code"], error["path"]) == (code, str(graph_path))
+
+
 def test_context_for_paths_prunes_graph_but_keeps_boundary_nodes(tmp_path):
     base = build_context(FIXTURES, paths=["sample.py", "sample.c"])
     graph_path = tmp_path / "graph.json"

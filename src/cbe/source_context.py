@@ -1397,7 +1397,14 @@ def _load_graph(graph_path: Path, repo: Path, frozen_hashes: dict[str, str]) -> 
             f"expected schema {SCHEMA_GRAPH!r}, got {payload.get('schema')!r}",
             path=str(graph_path),
         )
-    check_graph_source(repo, payload, frozen_hashes)
+    try:
+        check_graph_source(repo, payload, frozen_hashes)
+    except ContextError as exc:
+        # The shared check knows no file name; errors about the graph as a
+        # whole name the graph file, errors about one source file keep theirs.
+        if "path" not in exc.details and "paths" not in exc.details:
+            exc.details["path"] = str(graph_path)
+        raise
     return payload
 
 
@@ -1425,10 +1432,9 @@ def check_graph_source(repo: Path, graph: dict[str, Any], frozen_hashes: dict[st
                            "graph has no source_manifest; cannot prove it matches the source")
     manifested: set[str] = set()
     for entry in manifest:
-        if not isinstance(entry, dict) or not isinstance(entry.get("path"), str) \
-                or not isinstance(entry.get("sha256"), str):
+        if not isinstance(entry, dict) or "path" not in entry or "sha256" not in entry:
             raise ContextError("graph_manifest_missing", f"malformed source_manifest entry: {entry!r}")
-        raw_rel, expected = entry["path"], entry["sha256"]
+        raw_rel, expected = str(entry["path"]), str(entry["sha256"])
         try:
             rel = _validate_relative(repo, raw_rel)
         except ContextError as exc:
