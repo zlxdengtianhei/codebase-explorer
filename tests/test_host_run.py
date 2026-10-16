@@ -105,6 +105,8 @@ def test_full_host_run_renders_verifies_and_is_queryable(tmp_path: Path) -> None
     assert "## Responsibility tree" in index and "](nodes/" in index and str(tmp_path) not in index
     assert find(run_dir, "reserve_run")
     assert host_run.verify(run_dir)["ok"]
+    assert not list((run_dir / "host/tasks").glob("*.graph.txt"))
+    assert all("Graph access:" not in file.read_text() for file in (run_dir / "host/tasks").glob("*.md"))
 
 
 def test_concurrency_limit_and_schema_retry_then_failure(tmp_path: Path) -> None:
@@ -891,6 +893,10 @@ def test_module_with_no_graph_node_gets_an_explicit_no_local_node_statement(tmp_
     prompt = host_run.completion_prompt(run_dir, f"module_{module['number'] + 1}")
     assert "no graph node anchors the listed file(s)" in prompt
     assert "not an empty graph and not a missing graph" in prompt
+    assert "Graph access:" not in prompt
+    host_run.release(run_dir)
+    _drive(run_dir)
+    assert not (run_dir / "host/tasks" / f"module_{module['number'] + 1}.graph.txt").exists()
     anchored = next(row for row in state["modules"] if "src/pkg/jobs.py" in row["files"])
     anchored_prompt = host_run.completion_prompt(run_dir, f"module_{anchored['number'] + 1}")
     assert "Batch-internal resolved calls" in anchored_prompt or "Graph: internal=" in anchored_prompt

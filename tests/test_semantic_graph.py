@@ -195,6 +195,41 @@ def test_tiny_budget_has_one_explicit_status_notice_with_all_omissions():
     assert "Read full evidence: /run/tasks/module_1.graph.txt" in host[0]
 
 
+def test_package_pair_and_placeholder_omission_units():
+    graph, inventory, chunks = _inputs()
+    evidence = graph_projection.unit_graph(graph, ["a.py"], inventory, chunks)
+    assert all(r.count == 0 for r in evidence.rows if r.category in {"dependencies", "packages"})
+    for i in range(15):
+        graph["nodes"].extend([_node(f"s{i}", f"p{i}/a.py"), _node(f"t{i}", f"q{i}/b.py")])
+        graph["edges"].append(_edge(f"imp{i}", f"s{i}", f"t{i}", kind="import"))
+    evidence = graph_projection.unit_graph(graph, ["a.py"], inventory, chunks)
+    other = next(r for r in evidence.rows if "other package pairs" in r.text)
+    assert other.count == 3
+
+
+def test_cfg_owner_mapped_to_class_is_reported():
+    graph, inventory, chunks = _inputs()
+    inventory["a.py"]["symbols"][0]["kind"] = "class"
+    graph["nodes"].append(_node("return", "a.py", kind="cfg_node", label="RETURN", owner="a"))
+    evidence = graph_projection.unit_graph(graph, ["a.py"], inventory, chunks)
+    assert evidence.unmapped_cfg == 1
+    assert not any(r.category == "cfg" for r in evidence.rows)
+
+
+def test_utf8_call_column_is_a_character_coordinate():
+    graph, inventory, chunks = _inputs()
+    raw = "é(); f()\n".encode()
+    split = len("é(); ".encode())
+    chunks = [c for c in chunks if c["path"] != "a.py"] + [
+        {"id": "A", "path": "a.py", "start_line": 1, "end_line": 1,
+         "start_byte": 0, "end_byte": split, "text": raw[:split].decode()},
+        {"id": "C", "path": "a.py", "start_line": 1, "end_line": 1,
+         "start_byte": split, "end_byte": len(raw), "text": raw[split:].decode()}]
+    graph["edges"] = [_edge("call", "a", "b", path="a.py", line=1, column=6)]
+    text = graph_projection.graph_text(graph_projection.unit_graph(graph, ["a.py"], inventory, chunks))
+    assert "C → B" in text and "A → B" not in text
+
+
 def test_truncation_uses_logarithmic_token_counts(monkeypatch):
     calls = []
     original = graph_projection.count_text_tokens

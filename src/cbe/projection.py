@@ -288,7 +288,9 @@ def graph_text(evidence: UnitGraph, *, budget: int | None = None) -> str:
     text = (f"Graph: internal={evidence.internal_calls}, unmapped={evidence.unmapped_calls}, "
             f"unmapped_cfg={evidence.unmapped_cfg}; omitted "
             + ",".join(f"{k}={v}" for k, v in sorted(suffix[0].items()))
-            + "; dependencies unit=import names + external call sites")
+            + "; dependencies unit=import names + external call sites"
+            + ("" if evidence.exception_exits_exported else
+               "; exception exits are not exported by this graph"))
     return text if count_text_tokens(text) <= budget else ""
 
 
