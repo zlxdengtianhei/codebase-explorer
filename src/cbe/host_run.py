@@ -1010,9 +1010,11 @@ def _summary(state: dict[str, Any]) -> dict[str, Any]:
     if state["status"] == "complete":
         action = f"done; open {run}/docs/INDEX.md, then run `cbe host cost --run-dir {run}`"
     elif state["status"] == "partial" and state.get("partial_reason"):
+        affected = ", ".join(row["task"] for row in failed) or state.get("partial_detail", "")
+        again = (f"`cbe generate {state['repo']} --resume --run-dir {run}`" if state.get("driver") == "script"
+                 else f"`cbe host resume --run-dir {run}` and continue with `cbe host next`")
         action = (f"partial: {state['partial_reason']} ({state.get('partial_detail', '')}); "
-                  "the pages were not written from the source, so do not trust them. Fix the cause, then "
-                  "start a new run")
+                  f"affected tasks: {affected}. Rejected answers were not published. Fix the cause, then {again}")
     elif state["status"] == "partial" and state.get("verify") and not state["verify"]["ok"] and not failed:
         names = ", ".join(row["check"] for row in state["verify"]["checks"] if not row["ok"])
         action = (f"partial: deterministic verification failed ({names}); inspect `cbe host verify --run-dir {run}`, "
@@ -1340,13 +1342,6 @@ def render(run_dir: Path) -> dict[str, Any]:
         if state.get("render_error"):
             raise HostRunError(f"render failed: {state['render_error']}")
         return {"index": str(run_dir / "docs" / "INDEX.md"), "status": state["status"], "verify": state["verify"]}
-
-
-def source_sent_tokens(state: dict[str, Any]) -> int:
-    """Source tokens sent to the model at least once: the modules with a module task attempt."""
-    tokens = {row["path"]: row["tokens"] for row in state["files"]}
-    return sum(tokens[path] for row in state["modules"]
-               if _module_task(state, row["number"])["attempts"] > 0 for path in row["files"])
 
 
 def mark_partial(run_dir: Path, reason: str | None, detail: str = "") -> None:

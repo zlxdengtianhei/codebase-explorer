@@ -126,7 +126,7 @@ cbe generate /absolute/path/to/repo --host api \
 `--config /absolute/path/to/config.json` provides host configuration. API credentials stay in environment variables or the supported credential-file reference. If no credential is configured, CBE omits the Authorization header for endpoints that allow unauthenticated requests. Do not put credentials in a URL. The API client records returned usage and preserves unknown values when usage is absent. Failed completions retain a bounded, redacted provider response, available usage, and finish reason before text extraction; truncation is explicit. A response with only reasoning and no answer remains a failed attempt. Reported token counts are transport/accounting evidence; they do not prove that a model understood the code.
 
 For `--host api`, exact model `zai/glm-5.3-flash` selects resource defaults from
-`cbe/model_settings.py`: 1,800 seconds per call, `max_tokens: 49152` (including
+`cbe/model_settings.py`: 1,800 seconds per call, `output_max_tokens: 49152` (including
 reasoning), `reasoning_effort: "low"`, JSON object response mode, and reading-batch target/max of
 8,000/10,000 source tokens. Whole files stay intact; a single file may exceed
 the batch maximum up to the existing 60,000-token file limit. Other API model
@@ -139,7 +139,7 @@ over the config, which takes precedence over model defaults. For example:
 ```json
 {
   "timeout": 1800,
-  "max_tokens": 60000,
+  "output_max_tokens": 60000,
   "reasoning_effort": "low",
   "response_format": {"type": "json_object"},
   "batch_target_tokens": 8000,
@@ -152,13 +152,28 @@ new plans; `--resume` keeps the frozen batches. A response ending with `length`
 (or `max_tokens`/`max_output_tokens`) fails with `output_limit`, even if its JSON
 parses. The driver retries once with the error, then leaves the task failed for
 resume; truncated attempts cannot be accepted by final normalization. Increase
-`max_tokens` for resume or start a fresh run with smaller batch limits if needed.
+`output_max_tokens` for resume or start a fresh run with smaller batch limits if needed.
+`output_max_tokens` caps API output (sent as the provider's `max_tokens` field);
+`batch_max_tokens` caps source input per reading batch. Legacy config `max_tokens`
+is still accepted as an alias for `output_max_tokens`; the explicit new name wins
+if both are supplied. CLI help reads the model defaults table directly.
+
+API config is parsed and validated before planning or sending model requests.
+Malformed JSON or invalid resource settings exit 2 without a generated summary.
+Timeout and token limits must be positive integers (numeric strings and zero are
+rejected); prices must be three finite nonnegative numbers. An explicit batch
+target must not exceed its maximum. For models without a default batch target,
+setting only `batch_max_tokens` lowers the fallback target to that maximum when
+necessary; unspecified limits use the constants from `batching`.
+
 Timeouts and provider failures remain visible as their own errors. Only a
 source-bearing response whose reported input is too small is marked
-`source_not_delivered`.
+`source_not_delivered`. The rejected answer is not published; the status names
+failed tasks and suggests fixing the cause, then using `--resume`.
 
 API `summary.json` sums observed input/output tokens, including returned failed
-calls. Missing-call counters and `usage_complete: false` identify an incomplete
+calls. The observed-total and missing-call conventions also apply to OpenCode
+and Devin summaries. Missing-call counters and `usage_complete: false` identify an incomplete
 sum; absent usage is never estimated. Cache totals remain unknown when any
 cache counter is missing, with the known portion in `observed_cache_tokens`.
 API price is unknown (`priced_usd: null`) unless config supplies
@@ -199,6 +214,20 @@ cbe generate /absolute/path/to/repo --host api --model your-model-id \
 ```
 
 Source or graph drift is a reason to make a new plan. An old graph cannot silently become evidence for a new source revision. Verification checks the structure, coverage, source references, catalogue navigation to actual page anchors, and recorded review state; independent semantic review remains responsible for whether the explanations are correct and useful.
+
+`cbe host verify --run-dir /absolute/path/to/run` prints JSON and exits 0 only
+when `ok` is true; failed checks exit 3. Scripts can use the exit code or inspect
+`ok`. Verification updates `summary.json` (`deterministic_checks_ok` and `status`)
+and `STATUS.md`; a finished run with failed checks is `partial`, with failing
+check names in the status document. `cbe generate` likewise exits 3 for a partial
+run. Fix the reported cause and verify again; source drift requires a new plan.
+
+Detail answers may use inventory IDs from their own batch or `grp:` IDs for
+model-defined groups. Normalization must pass the same strict checks before an
+answer is published; unrepaired answers stay failed for resume. Model prose that
+looks like an inline Markdown link is rendered as literal text, including code
+such as `environ['werkzeug.debug.preserve_context'](ctx)`. Code spans and fenced
+code remain verbatim; source and navigation links are generated by CBE.
 
 Usage reports distinguish known counters, estimates, and missing values. Host-agent usage can be imported where the harness provides the corresponding session records. Unknown model prices remain `null` in JSON and `unknown` in the cost report, even when token counts are exact. `cbe host cost --price INPUT,OUTPUT,CACHE_WRITE,CACHE_READ` accepts supplied rates in USD per million tokens. Price equivalents are not subscription invoices.
 

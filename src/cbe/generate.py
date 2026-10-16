@@ -16,6 +16,7 @@ from typing import Any
 
 from cbe import batching, usage
 from cbe.headless_completion import invoke
+from cbe.model_settings import DEFAULT_API_CONFIG, load_config
 
 
 DEFAULT_HOST_CONFIG = {
@@ -214,7 +215,6 @@ def generate(repo: Path, run_dir: Path, *, model: str, config: Path | None = Non
                 from cbe.devin_completion import DEFAULT_DEVIN_CONFIG
                 default_config = DEFAULT_DEVIN_CONFIG
             elif host == "api":
-                from cbe.api_completion import DEFAULT_API_CONFIG
                 default_config = DEFAULT_API_CONFIG
             else:
                 default_config = DEFAULT_HOST_CONFIG
@@ -226,7 +226,6 @@ def generate(repo: Path, run_dir: Path, *, model: str, config: Path | None = Non
     api_overrides: dict[str, Any] = {}
     settings: dict[str, Any] = {}
     if host == "api":
-        from cbe.model_settings import load_config
         settings = load_config(config, model)
     # Keep the historical Python default (360) and CLI default (420), while
     # distinguishing an explicit --timeout from a model/config default.

@@ -298,3 +298,20 @@ def test_unknown_model_does_not_receive_reasoning_or_output_defaults(tmp_path, s
     assert "max_tokens" not in _Handler.captured["body"]
     assert "reasoning_effort" not in _Handler.captured["body"]
 
+
+def test_output_budget_config_is_separate_from_source_batch_budget(tmp_path, server, monkeypatch):
+    _Handler.body = {"choices": [{"message": {"content": "{}"}}]}
+    config = tmp_path / "api.json"
+    config.write_text(json.dumps({"base_url": server, "max_tokens": 61000,
+                                  "output_max_tokens": 62000, "batch_max_tokens": 15000}))
+    result = api_completion.invoke(task="x", attempt=1, prompt="x", repo=tmp_path,
+        run_dir=tmp_path / "run", model="other/model", config=config,
+        timeout=10, csv_path=tmp_path / "run/calls.csv")
+    assert result.error is None
+    assert _Handler.captured["body"]["max_tokens"] == 62000
+    assert "output_max_tokens" not in _Handler.captured["body"]
+    assert "batch_max_tokens" not in _Handler.captured["body"]
+    recorded = json.loads((tmp_path / "run/raw/x-1.api.json").read_text())
+    assert recorded["request_settings"]["output_max_tokens"] == 62000
+
+

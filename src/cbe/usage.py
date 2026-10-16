@@ -296,7 +296,8 @@ def script_cost(run_dir: Path, *, host: str = "opencode",
             "calls_with_unknown_cache": sum(row["cache_tokens"] == "" for row in rows),
             "priced_usd": round((input_tokens * rates[0] + output_tokens * rates[1] + cache_tokens * rates[2]) / 1_000_000, 6)
             if known and rates is not None else None,
-            "price_basis": ("configured USD per million input,output,cache tokens" if price is not None
+            "price_basis": ("configured USD per million input,output,cache tokens" if host == "api" and price is not None
                             else "historical OpenCode rates" if host == "opencode" else
-                            "unknown; configure API price_per_million: [input, output, cache]"),
+                            "unknown; configure API price_per_million: [input, output, cache]" if host == "api" else
+                            "unknown; Devin subscription usage has no configured API-equivalent price"),
             "usage_complete": known, "seconds": round(sum(float(row["seconds"]) for row in rows), 3)}

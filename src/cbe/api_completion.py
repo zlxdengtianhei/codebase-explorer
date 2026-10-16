@@ -90,7 +90,9 @@ def _request_body(model: str, prompt: str, config: dict[str, Any]) -> dict[str, 
         "messages": [{"role": "user", "content": prompt}],
         "temperature": config.get("temperature", 0),
     }
-    for key in ("max_tokens", "response_format", "top_p", "reasoning_effort"):
+    if config.get("output_max_tokens") is not None:
+        body["max_tokens"] = config["output_max_tokens"]
+    for key in ("response_format", "top_p", "reasoning_effort"):
         if key in config and config[key] is not None:
             body[key] = config[key]
     return body
@@ -306,7 +308,7 @@ def invoke(*, task: str, attempt: int, prompt: str, repo: Path, run_dir: Path,
         json.dumps({"endpoint": log_endpoint, "model": model, "status": status,
                     "actual_model": actual_model,
                     "request_settings": {key: settings[key] for key in
-                                         ("max_tokens", "reasoning_effort", "response_format") if key in settings},
+                                         ("output_max_tokens", "reasoning_effort", "response_format") if key in settings},
                     "timeout": timeout,
                     "finish_reason": finish_reason, "choice": choice,
                     "usage": usage, "provider_usage": provider_usage,

@@ -17,6 +17,7 @@ def _abs(value: str) -> Path:
 
 def build_parser() -> argparse.ArgumentParser:
     from cbe.host_run import DEFAULT_REVIEW, REVIEW_MODES
+    from cbe.model_settings import MODEL_DEFAULTS
 
     parser = argparse.ArgumentParser(
         prog="python -m cbe",
@@ -43,10 +44,9 @@ def build_parser() -> argparse.ArgumentParser:
                             help="continue the run in --run-dir (default: the repository's latest run)")
     generate_p.add_argument("--timeout", type=int, default=None,
                             help="seconds per call; overrides API config/model default (otherwise 420). "
-                                 "API zai/glm-5.3-flash: 1800s, max_tokens=49152, reasoning_effort=low, "
-                                 "JSON mode, batch target/max=8000/10000; override via --config JSON keys "
-                                 "timeout,max_tokens,reasoning_effort,response_format,batch_target_tokens,"
-                                 "batch_max_tokens,price_per_million")
+                                 "API model defaults: " + json.dumps(MODEL_DEFAULTS, sort_keys=True) +
+                                 "; override via --config JSON keys timeout,output_max_tokens,reasoning_effort,"
+                                 "response_format,batch_target_tokens,batch_max_tokens,price_per_million")
 
     host_p = sub.add_parser("host", help="Host-agent driven generation: the CLI plans and checks, "
                             "the host agent (Claude Code, Codex) dispatches one subagent per task")
