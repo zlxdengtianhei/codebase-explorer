@@ -18,7 +18,8 @@ from pathlib import Path
 
 import pytest
 
-from cbe.graph import analyze_graph, graph_suffixes
+from cbe.graph import analyze_graph
+from cbe.source_context import suffix_languages
 from cbe.graph_backends.joern import (
     JOERN_LANGUAGE_FLAGS,
     _capabilities_for,
@@ -77,7 +78,7 @@ def test_first_error_line_returns_none_without_markers() -> None:
 
 
 def test_language_flags_cover_registry_languages() -> None:
-    registry = set(graph_suffixes().values())
+    registry = set(suffix_languages().values())
     missing = registry - set(JOERN_LANGUAGE_FLAGS)
     assert not missing, f"registry languages without a Joern frontend route: {sorted(missing)}"
     assert JOERN_LANGUAGE_FLAGS["c_sharp"] == "csharpsrc"

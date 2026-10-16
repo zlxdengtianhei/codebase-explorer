@@ -24,13 +24,13 @@ from cbe.graph import (
     analyze_graph,
     discover_config,
     discover_sources,
-    graph_suffixes,
     query_graph,
 )
 from cbe.graph_backends._paths import canonical_repo_path
 from cbe.graph_backends import DEPCRUISE_LANGUAGES, JOERN_LANGUAGE_FLAGS
 from cbe.graph_backends.joern import _capabilities_for
 from cbe.graph_backends.joern import _normalize as _normalize_joern_payload
+from cbe.source_context import suffix_languages
 
 FIXTURES = Path(__file__).parent / "fixtures" / "graphs"
 
@@ -82,14 +82,14 @@ def test_discover_sources_covers_registry_extensions(tmp_path: Path) -> None:
                         "m.kt": "kotlin", "m.swift": "swift", "m.tsx": "tsx"}
 
 
-def test_graph_suffixes_match_source_context_registry() -> None:
+def test_suffix_languages_match_the_published_language_list() -> None:
     from cbe.source_context import available_languages
 
     registry = {}
     for entry in available_languages()["languages"]:
         for suffix in entry["suffixes"]:
             registry[suffix.lower()] = entry["name"]
-    assert graph_suffixes() == registry
+    assert suffix_languages() == registry
 
 
 def test_discover_config_hashes_build_files(tmp_path: Path) -> None:
@@ -348,7 +348,7 @@ def test_every_registered_language_has_a_graph_backend() -> None:
     for name in ("c", "cpp", "python", "javascript", "typescript", "tsx", "java",
                  "go", "ruby", "rust", "php", "c_sharp", "kotlin", "swift"):
         assert name in JOERN_LANGUAGE_FLAGS
-    assert set(graph_suffixes().values()) <= set(JOERN_LANGUAGE_FLAGS)
+    assert set(suffix_languages().values()) <= set(JOERN_LANGUAGE_FLAGS)
     assert "tsx" in DEPCRUISE_LANGUAGES
 
 

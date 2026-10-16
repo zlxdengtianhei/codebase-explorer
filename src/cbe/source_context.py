@@ -611,10 +611,16 @@ def available_languages() -> dict[str, Any]:
 FALLBACK_SUFFIXES = frozenset({".sql"})
 
 
+def suffix_languages() -> dict[str, str]:
+    """Suffix -> language for every registered grammar; plugin specs win, as in ``_grammar_for_suffix``."""
+
+    return {suffix.lower(): spec.name for spec in _all_specs() for suffix in spec.suffixes}
+
+
 def registered_suffixes() -> frozenset[str]:
     """Every suffix a registered grammar (built-in or plugin) claims."""
 
-    return frozenset(suffix.lower() for spec in _all_specs() for suffix in spec.suffixes)
+    return frozenset(suffix_languages())
 
 
 # ---------------------------------------------------------------------------

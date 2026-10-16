@@ -34,6 +34,7 @@ import os
 import re
 from datetime import datetime, timezone
 
+from cbe import source_context
 from cbe.graph_backends._paths import canonical_repo_path
 
 SCHEMA_GRAPH = "cbe-graph/1"
@@ -59,26 +60,12 @@ class GraphError(ValueError):
     """Raised when no graph could be produced or an input is invalid."""
 
 
-def _excluded_dir_names() -> frozenset[str]:
-    from cbe.source_context import DEFAULT_EXCLUDE_DIR_NAMES  # noqa: PLC0415
-
-    return DEFAULT_EXCLUDE_DIR_NAMES
-
-
-def graph_suffixes() -> dict[str, str]:
-    """Return suffix -> language from the source-context grammar registry (one table for both layers)."""
-
-    from cbe.source_context import _all_specs  # noqa: PLC0415
-
-    return {suffix.lower(): spec.name for spec in _all_specs() for suffix in spec.suffixes}
-
-
 def discover_sources(repo, languages: list[str] | None = None) -> list[dict]:
     """Return ``[{path, language, sha256}]`` for source files under ``repo``."""
 
-    suffix_map = graph_suffixes()
+    suffix_map = source_context.suffix_languages()
     wanted = set(languages) if languages else None
-    excluded = _excluded_dir_names()
+    excluded = source_context.DEFAULT_EXCLUDE_DIR_NAMES
     manifest: list[dict] = []
     repo = repo.resolve()
     for dirpath, dirnames, filenames in os.walk(repo, topdown=True, followlinks=False):
@@ -102,7 +89,7 @@ def discover_sources(repo, languages: list[str] | None = None) -> list[dict]:
 def discover_config(repo) -> list[dict]:
     """Return ``[{path, sha256}]`` for build/module-resolution files."""
 
-    excluded = _excluded_dir_names()
+    excluded = source_context.DEFAULT_EXCLUDE_DIR_NAMES
     repo = os.path.abspath(str(repo))
     found: list[dict] = []
     for dirpath, dirnames, filenames in os.walk(repo, topdown=True, followlinks=False):
