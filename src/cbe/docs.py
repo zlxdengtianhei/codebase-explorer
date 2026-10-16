@@ -104,15 +104,15 @@ def _build_unit_block(uid: str, units: dict, ranges_map: dict, owner: dict,
 
     summary, explain = summary_and_remainder(unit)
     if summary:
-        lines += [summary, ""]
+        lines += [literal_links(summary), ""]
     if explain:
-        lines += [explain, ""]
+        lines += [literal_links(explain), ""]
     extras = [extra for extra in unit.get("extras") or []
               if isinstance(extra, dict) and isinstance(extra.get("note"), str)
               and extra["note"].strip()]
     if extras:
         lines += ["**Notes.**", ""]
-        lines += [f"- {extra.get('topic')}: {extra['note'].strip()}" for extra in extras]
+        lines += [f"- {extra.get('topic')}: {literal_links(extra['note'].strip())}" for extra in extras]
         lines.append("")
     relations = [rel for rel in unit.get("relations") or []
                  if isinstance(rel, dict) and isinstance(rel.get("target"), str)
@@ -132,7 +132,7 @@ def _build_unit_block(uid: str, units: dict, ranges_map: dict, owner: dict,
                      if isinstance(item, str) and item.strip()]
     if uncertainties:
         lines += ["**Uncertainties.**", ""]
-        lines += [f"- {item}" for item in uncertainties]
+        lines += [f"- {literal_links(item)}" for item in uncertainties]
         lines.append("")
     return "\n".join(lines).rstrip() + "\n"
 
@@ -211,9 +211,9 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
         source_links: dict[str, str] = {}
         lines = [f"# {node.get('title') or nid}", ""]
         if (node.get("capability") or "").strip():
-            lines += [f"**Capability.** {node['capability'].strip()}", ""]
+            lines += [f"**Capability.** {literal_links(node['capability'].strip())}", ""]
         if (node.get("summary") or "").strip():
-            lines += [node['summary'].strip(), ""]
+            lines += [literal_links(node['summary'].strip()), ""]
         if children.get(nid):
             lines += ["**Children.**", ""]
             for kid in children[nid]:
@@ -255,7 +255,7 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
         for uid in (node.get("unit_ids") or [])[:1]:
             if uid in units:
                 rows.append(f"{pad}  - [{name_of(uid)}](nodes/{nid}.md#{anchor(uid)}) · "
-                            + units[uid]["summary"])
+                            + literal_links(units[uid]["summary"]))
         for kid in children.get(nid) or []:
             rows.extend(outline(kid, level + 1))
         return rows
@@ -331,8 +331,8 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
             integrity.append("后端完成状态未知")
         index_lines += ["程序核：" + "；".join(integrity) + "。"]
     if system:
-        index_lines += ["", "## Overview", "", system["overview"],
-                        "", "## Maintenance navigation", "", system["maintenance_navigation"]]
+        index_lines += ["", "## Overview", "", literal_links(system["overview"]),
+                        "", "## Maintenance navigation", "", literal_links(system["maintenance_navigation"])]
     if index_notes:
         index_lines += ["", "## Generation notes", ""] + [f"- {item}" for item in index_notes]
     (docs_dir / "INDEX.md").write_text("\n".join(index_lines) + "\n", encoding="utf-8")
@@ -447,20 +447,20 @@ def catalog_symbols(catalog: dict) -> dict[str, dict]:
     return records
 
 
-def prose_for_links(text: str) -> str:
-    """Hide code blocks and paired code spans within each prose paragraph.
-
-    Inline spans may cross a soft line break, but never a blank line or a
-    fenced/indented code block. An unmatched delimiter remains ordinary prose.
-    """
+def _map_prose(text: str, prose: Callable[[str], str], code: Callable[[str], str]) -> str:
+    """Map prose and code separately, respecting fences and paired code spans."""
     paragraphs = []
     pending = []
     fence = None
 
     def flush():
         paragraph = "".join(pending)
-        paragraphs.append(re.sub(r"(?<!`)(`+)(?!`)(.*?)(?<!`)\1(?!`)", "", paragraph,
-                                 flags=re.DOTALL))
+        parts, start = [], 0
+        for match in re.finditer(r"(?<!`)(`+)(?!`)(.*?)(?<!`)\1(?!`)", paragraph, re.DOTALL):
+            parts.extend((prose(paragraph[start:match.start()]), code(match[0])))
+            start = match.end()
+        parts.append(prose(paragraph[start:]))
+        paragraphs.append("".join(parts))
         pending.clear()
 
     for line in text.splitlines(keepends=True):
@@ -468,20 +468,36 @@ def prose_for_links(text: str) -> str:
         if fence:
             if marker and marker[1][0] == fence[0] and len(marker[1]) >= len(fence) and not marker[2].strip():
                 fence = None
+            paragraphs.append(code(line))
             continue
         if marker and (marker[1][0] != "`" or "`" not in marker[2]):
             flush()
             fence = marker[1]
+            paragraphs.append(code(line))
         elif not line.strip():
             flush()
-            paragraphs.append("\n")
+            paragraphs.append(line)
         elif line.startswith(("    ", "\t")) and not pending:
-            # Indented code cannot interrupt an existing prose paragraph.
-            paragraphs.append("\n")
+            paragraphs.append(code(line))
         else:
             pending.append(line)
     flush()
     return "".join(paragraphs)
+
+
+def literal_links(text: str) -> str:
+    """Keep model-written inline links as visible text; code stays verbatim.
+
+    Source and navigation links are generated separately by the renderer.
+    Escaping the opening parenthesis prevents accidental Markdown links such
+    as ``environ['werkzeug.debug.preserve_context'](ctx)``.
+    """
+    return _map_prose(text, lambda part: part.replace("](", r"]\("), lambda part: part)
+
+
+def prose_for_links(text: str) -> str:
+    """Hide code blocks and paired code spans within each prose paragraph."""
+    return _map_prose(text, lambda part: part, lambda part: "")
 
 
 def verify(run_dir: Path, inventory: dict, units: dict, dispositions: dict,

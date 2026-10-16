@@ -48,3 +48,47 @@ def test_normalized_shape_repair_is_still_accepted(tmp_path):
     assert result["accepted"] and result["normalized"]
     accepted = json.loads((run / "host/accepted/module_1.json").read_text())
     assert accepted["units"][0]["extras"] == []
+
+
+@pytest.mark.parametrize("field", ["explain", "summary", "extras", "uncertainties", "overview", "capability"])
+def test_model_link_shaped_text_is_literal_and_generated_links_still_checked(tmp_path, field):
+    from cbe import docs
+    from test_semantic import SRC, _inventory, _good_payload, _tree
+
+    repo = tmp_path / "repo"
+    (repo / "pkg").mkdir(parents=True)
+    (repo / "pkg/jobs.py").write_text(SRC)
+    inventory = _inventory()
+    payload = _good_payload(inventory)
+    units = {u["id"]: u for u in payload["units"]}
+    unit = next(iter(units.values()))
+    tree = _tree(list(units))
+    bad = "Call environ['werkzeug.debug.preserve_context'](ctx) to save it."
+    code = "`a[b](ctx)`\n\n```python\na[b](ctx)\n```"
+    system = {"overview": "Overview.", "maintenance_navigation": "Start here."}
+    if field == "extras":
+        unit[field] = [{"topic": "contract", "note": bad}]
+    elif field == "uncertainties":
+        unit[field] = [bad]
+    elif field == "overview":
+        system[field] = bad
+    elif field == "capability":
+        tree["nodes"][0][field] = bad
+    else:
+        unit[field] = bad + "\n\n" + code
+    run = tmp_path / "run"
+    docs.render(run_dir=run, source_root=repo, inventory=inventory, units=units,
+                dispositions=payload["dispositions"], tree=tree, languages={"pkg/jobs.py": "python"},
+                system=system)
+    page = (run / "docs" / ("INDEX.md" if field == "overview" else "nodes/root.md")).read_text()
+    assert r"preserve_context']\(ctx)" in page
+    if field == "explain":
+        assert code in page  # Escaping prose must preserve actual code.
+    def verify_links():
+        return next(row for row in docs.verify(run, inventory, units, payload["dispositions"], tree)
+                    if row["check"] == "relative_links_resolve")
+    assert verify_links()["ok"]
+    with (run / "docs/nodes/root.md").open("a") as stream:
+        stream.write("\n[broken generated navigation](missing-page.md)\n")
+    assert not verify_links()["ok"]
+
