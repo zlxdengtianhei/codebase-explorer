@@ -170,8 +170,6 @@ def test_graph_processes_have_no_stdin_and_cfg_limit_reaches_export(tmp_path, mo
     assert cfg["status"] == "partial" and cfg["methods_omitted"] == 2
     analyze_graph(repo, tmp_path / "unlimited.json", backend="joern", languages=["python"], joern_home=home)
     assert exports[-1]["maxMethods"] == "-1"
-    from cbe.graph_backends.joern import _EXPORT_SCRIPT
-    assert "if (maxMethods > 0) realMethods.take(maxMethods) else realMethods" in _EXPORT_SCRIPT
     assert any(d["code"] == "cfg_methods_omitted" and "2 methods" in d["message"] for d in graph["diagnostics"])
     _depcruise_version(home / "dc", 2)
     build_with_depcruise(repo, tmp_path / "dc-run", home / "dc", 2, ["javascript"])
@@ -193,6 +191,10 @@ def test_real_cfg_limit_preserves_method_and_call_scope(tmp_path):
     assert len(methods) >= 3
     assert any(d["code"] == "cfg_methods_omitted" for d in graph["diagnostics"])
     assert any(e["kind"] == "call" and e["expression"] == "first()" for e in graph["edges"])
+    unlimited = analyze_graph(repo, tmp_path / "all.json", backend="joern", languages=["python"])
+    assert len({n["owner"] for n in unlimited["nodes"] if n["kind"] == "cfg_node"}) >= 3
+    assert not any(d["code"] == "cfg_methods_omitted" for d in unlimited["diagnostics"])
+    assert sum(e["kind"] == "call" for e in unlimited["edges"]) == sum(e["kind"] == "call" for e in graph["edges"])
 
 
 def test_cli_heap_and_oom_cause_for_partial_and_total_failure(tmp_path, monkeypatch, capsys):

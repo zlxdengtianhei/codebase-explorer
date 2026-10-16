@@ -73,10 +73,12 @@ def test_depcruise_unresolvable_dependency_never_invents_file(tmp_path, monkeypa
     import subprocess
     from cbe.graph_backends.imports import build_with_depcruise
     (tmp_path / "main.js").touch()
+    (tmp_path / "existing.js").touch()
     # This shape is emitted for polyglot ./helper.js and c1-jsrepo packages.
     payload = dict(modules=[dict(source="main.js", dependencies=[
         dict(module="./helper.js", resolved="./helper.js", couldNotResolve=True),
-        dict(module="react", resolved="react", couldNotResolve=True)])])
+        dict(module="react", resolved="react", couldNotResolve=True),
+        dict(module="./existing.js", resolved="./existing.js", couldNotResolve=True)])])
     monkeypatch.setattr(subprocess, "run", lambda *a, **kw: subprocess.CompletedProcess(a, 0, json.dumps(payload), ""))
     result = build_with_depcruise(tmp_path, tmp_path / "run", "depcruise", 10, ["javascript"])
     assert all(e["status"] == "unresolved" and e["target"] is None for e in result["edges"])
