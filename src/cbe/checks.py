@@ -57,9 +57,9 @@ def check_naming(value: dict[str, Any], modules: list[Module]) -> None:
         raise ValueError("module title IDs do not match planned modules")
 
 
-def system_limit(module_count: int) -> int:
-    """Overview and navigation must name every module, so the cap grows with them."""
-    return max(2000, min(12000, 250 * module_count))
+def system_limit(node_count: int) -> int:
+    """Overview and navigation name semantic nodes, independent of reading batches."""
+    return max(2000, min(12000, 250 * node_count))
 
 
 def check_system(value: dict[str, Any], limit: int = 2000) -> None:

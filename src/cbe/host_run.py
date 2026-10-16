@@ -530,7 +530,7 @@ def _body(run_dir: Path, state: dict[str, Any], task: dict[str, Any], *, embed: 
             units, _detail_task(run_dir, state, task, embed=embed, with_diagnostics=False))
     units, _ = _semantic_units(run_dir, state)
     nodes = (_semantic_tree(run_dir, state, units).get("nodes") or [])
-    return prompts.NO_FILE_RULES, prompts.system_prompt(nodes, checks.system_limit(max(len(nodes), 1)))
+    return prompts.NO_FILE_RULES, prompts.system_prompt(nodes, checks.system_limit(len(nodes)))
 
 
 def _previous_error(task: dict[str, Any]) -> str:
@@ -642,7 +642,9 @@ def _checks(run_dir: Path, state: dict[str, Any], task: dict[str, Any]) -> tuple
                 lambda value: checks.normalize_naming(value, modules))
     if task["kind"] == "review":
         return checks.check_review, checks.normalize_review
-    limit = checks.system_limit(len(modules))
+    units, _ = _semantic_units(run_dir, state)
+    nodes = _semantic_tree(run_dir, state, units).get("nodes") or []
+    limit = checks.system_limit(len(nodes))
     return (lambda value: checks.check_system(value, limit), lambda value: checks.normalize_system(value, limit))
 
 
