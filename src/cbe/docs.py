@@ -239,14 +239,15 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
     if graph is None:
         index_lines += ["未提供图；关系仅靠模型阅读源码推断，可能不准确。"]
     else:
-        from cbe.graph import graph_quality
-        from cbe.graph_backends.identity import repository_files
-
-        quality = graph.get("quality") or graph_quality(graph, existing_paths=repository_files(source_root))
-        if quality["backend_completed"] is False:
+        from cbe.graph import read_graph_quality, graph_state
+        quality = read_graph_quality(graph, repo=source_root)
+        state, _ = graph_state(graph, quality=quality)
+        if state == "failed":
             index_lines += ["没有后端跑成；图不可作为关系证据，关系仅靠模型阅读源码。"]
-        elif quality["empty_graph"]:
+        elif state == "empty":
             index_lines += ["图为空，没有图确认的关系；关系仅靠模型阅读源码。"]
+        elif state == "unsupported":
+            index_lines += ["图不支持本次分析；关系仅靠模型阅读源码，可能不准确。"]
         else:
             index_lines += ["来源：静态分析图；resolved 表示图确认的关系（不保证语义正确）。"
                             "其余状态及未覆盖的语言/关系种类仅靠模型阅读源码，可能不准确。"]

@@ -16,33 +16,10 @@ DEFAULT_GRAPH_MAX_TOKENS = 3000
 
 
 def graph_state(graph: Any) -> tuple[str, str]:
-    """Classify a graph as one of ``absent|unsupported|failed|empty|provided``.
+    """Use the graph module's authoritative availability classification."""
+    from cbe.graph import graph_state as classify_graph
 
-    An empty graph is a verified result, not a missing graph, and is never
-    reported as "not provided". """
-    if graph is None:
-        return "absent", "no graph was provided for this run"
-    if not isinstance(graph, dict) or graph.get("schema") != "cbe-graph/1":
-        found = graph.get("schema") if isinstance(graph, dict) else type(graph).__name__
-        return "unsupported", f"graph schema is {found!r}, expected 'cbe-graph/1'"
-    nodes = [node for node in graph.get("nodes") or [] if isinstance(node, dict)]
-    edges = [edge for edge in graph.get("edges") or [] if isinstance(edge, dict)]
-    if nodes or edges:
-        return "provided", f"{len(nodes)} nodes, {len(edges)} edges"
-    statuses = {str(cap.get("status")) for cap in graph.get("capabilities") or []
-                if isinstance(cap, dict) and cap.get("status")}
-    if statuses & {"failed", "unavailable"}:
-        return "failed", "backend failed or was unavailable"
-    if "unsupported" in statuses and not (statuses & {"resolved", "partial", "empty"}):
-        return "unsupported", "no requested language/graph type is supported"
-    diagnostics = {row.get("code") for row in graph.get("diagnostics") or []
-                   if isinstance(row, dict)}
-    if "no_language_requested" in diagnostics or (
-            "analyzed_languages" in graph and not graph["analyzed_languages"]):
-        return "unsupported", "no language was selected for analysis"
-    if "no_backend_completed" in diagnostics:
-        return "failed", "no backend completed; the empty graph is not authoritative"
-    return "empty", "the analyzer ran and found no relation"
+    return classify_graph(graph)
 
 
 @dataclass(frozen=True)

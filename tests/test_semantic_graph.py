@@ -61,7 +61,7 @@ def test_graph_with_no_completed_backend_is_not_successfully_empty() -> None:
                          diagnostics=[{"code": "no_language_requested"},
                                       {"code": "no_backend_completed"}])
     assert graph_projection.graph_state(failed)[0] == "failed"
-    assert graph_projection.graph_state(no_language)[0] == "unsupported"
+    assert graph_projection.graph_state(no_language)[0] == "failed"
     for graph in (failed, no_language):
         prompt = "\n".join(graph_projection.graph_prompt_lines(graph, ["a.c"], embed=True))
         assert "successfully empty" not in prompt

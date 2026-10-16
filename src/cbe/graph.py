@@ -227,6 +227,51 @@ def graph_quality(graph: dict, *, existing_paths: Iterable[str] | None = None) -
     }
 
 
+def read_graph_quality(graph: dict, *, existing_paths: Iterable[str] | None = None,
+                       repo=None) -> dict:
+    """Read a persisted audit, or compute it; an explicit file snapshot refreshes it.
+
+    ``repo`` supplies a file snapshot only for a legacy graph without an audit.
+    """
+    if existing_paths is None and graph.get("quality"):
+        return graph["quality"]
+    if existing_paths is None and repo is not None:
+        existing_paths = repository_files(repo)
+    return graph_quality(graph, existing_paths=existing_paths)
+
+
+def graph_state(graph: object, *, quality: dict | None = None) -> tuple[str, str]:
+    """Classify availability once for prompts and quality consumers.
+
+    An explicit failed build takes precedence over unsupported capabilities.
+    A completed backend can produce an empty graph even if another capability
+    failed. Older graphs without completion evidence retain capability fallback.
+    """
+    if graph is None:
+        return "absent", "no graph was provided for this run"
+    if not isinstance(graph, dict) or graph.get("schema") != SCHEMA_GRAPH:
+        found = graph.get("schema") if isinstance(graph, dict) else type(graph).__name__
+        return "unsupported", f"graph schema is {found!r}, expected 'cbe-graph/1'"
+    quality = read_graph_quality(graph) if quality is None else quality
+    if quality["backend_completed"] is False:
+        return "failed", "no backend completed; the empty graph is not authoritative"
+    nodes, edges = graph.get("nodes") or [], graph.get("edges") or []
+    if nodes or edges:
+        return "provided", f"{len(nodes)} nodes, {len(edges)} edges"
+    if quality["backend_completed"] is True:
+        return "empty", "the analyzer ran and found no relation"
+    statuses = {c.get("status") for c in quality["incomplete_capabilities"]}
+    if statuses & {"failed", "unavailable"}:
+        return "failed", "backend failed or was unavailable"
+    if "unsupported" in statuses:
+        return "unsupported", "no requested language/graph type is supported"
+    diagnostics = {row.get("code") for row in graph.get("diagnostics") or []}
+    if "no_language_requested" in diagnostics or (
+            "analyzed_languages" in graph and not graph["analyzed_languages"]):
+        return "unsupported", "no language was selected for analysis"
+    return "empty", "the analyzer ran and found no relation"
+
+
 def analyze_graph(
     repo,
     output,
@@ -496,7 +541,7 @@ def query_graph(
         "edges": kept_edges,
         "capabilities": graph.get("capabilities", []),
         "diagnostics": diagnostics,
-        "quality": graph.get("quality") or graph_quality(graph),
+        "quality": read_graph_quality(graph),
         "scope": {
             "paths": canonical_paths or None,
             "kind": kind,

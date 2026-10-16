@@ -213,7 +213,7 @@ def main(argv: list[str] | None = None) -> int:
             print(json.dumps(available_languages(), ensure_ascii=False, indent=2))
             return 0
         if args.command == "graph":
-            from cbe.graph import analyze_graph, query_graph, graph_quality, GraphError, BACKEND_FAILURE_CODES
+            from cbe.graph import analyze_graph, query_graph, read_graph_quality, GraphError, BACKEND_FAILURE_CODES
 
             build_error = None
             if args.graph_command == "build":
@@ -229,7 +229,7 @@ def main(argv: list[str] | None = None) -> int:
                     if exc.graph is None:
                         raise
                     graph, build_error = exc.graph, str(exc)
-                quality = graph.get("quality") or graph_quality(graph)
+                quality = read_graph_quality(graph)
                 failures = [d["message"] for d in graph["diagnostics"]
                             if d.get("code") in BACKEND_FAILURE_CODES]
                 failures += [f"{c.get('language')}/{c.get('graph')}: {c.get('status')}"
@@ -257,9 +257,9 @@ def main(argv: list[str] | None = None) -> int:
                         raise ValueError("expected a cbe-graph/1 file")
                     if args.repo is not None:
                         from cbe.graph_backends.identity import repository_files
-                        quality = graph_quality(graph, existing_paths=repository_files(args.repo))
+                        quality = read_graph_quality(graph, existing_paths=repository_files(args.repo))
                     else:
-                        quality = graph.get("quality") or graph_quality(graph)
+                        quality = read_graph_quality(graph)
                     value = {"backend": graph.get("backend"), "quality": quality,
                              "capabilities": graph.get("capabilities", []),
                              "diagnostics": graph.get("diagnostics", [])}
