@@ -15,28 +15,37 @@ def external_call(full, caller="pkg/app.py"):
             "callees": [{"external": True, "fullName": full}]}
 
 
+def assert_resolution(resolver, call, expected, *, unverified=False):
+    """Check the public result together with diagnostics from this call."""
+    start = len(resolver.diagnostics)
+    assert resolver.resolve(call) == expected
+    codes = [item["code"] for item in resolver.diagnostics[start:]]
+    assert codes == (["python_external_name_unverified"] if unverified else [])
+
+
 def test_python_guessed_names_are_unresolved_but_library_paths_survive():
     resolver = CallResolver([], {"celery/beat.py", "celery/backends/redis.py", "pkg/app.py"})
     for full in ["result.results.<returnValue>.<member>(results).__iter__.<returnValue>.__next__",
                  "decorator.<returnValue>.view_class"]:
         # Return/member guesswork remains unresolved regardless of caller.
-        assert resolver.resolve(external_call(full, "")) == ("unresolved", [], [])
-    assert resolver.resolve(external_call("beat.Service.start")) == ("unresolved", [], [])
-    assert resolver.resolve(external_call("copy.py:<module>.copy")) == (
-        "external", [], ["copy.py:<module>.copy"])
-    assert resolver.resolve(external_call("redis.py:<module>.StrictRedis.__init__"))[0] == "external"
+        assert_resolution(resolver, external_call(full, ""), ("unresolved", [], []))
+    assert_resolution(resolver, external_call("beat.Service.start"), ("unresolved", [], []))
+    assert_resolution(resolver, external_call("copy.py:<module>.copy"),
+                      ("external", [], ["copy.py:<module>.copy"]))
+    full = "redis.py:<module>.StrictRedis.__init__"
+    assert_resolution(resolver, external_call(full), ("external", [], [full]))
 
 
 def test_python_module_names_do_not_reclassify_javascript_external_calls():
     resolver = CallResolver([], {"tools/console.py", "web/main.js", "pkg/app.py"})
     call = external_call("console.log", "web/main.js")
     call.update(name="log", code="console.log('hello')")
-    assert resolver.resolve(call) == ("external", [], ["console.log"])
+    assert_resolution(resolver, call, ("external", [], ["console.log"]))
     # The repository Python module inference still applies to Python callers,
     # and library-qualified Python identities still survive unchanged.
-    assert resolver.resolve(external_call("console.log")) == ("unresolved", [], [])
-    assert resolver.resolve(external_call("console.py:<module>.log")) == (
-        "external", [], ["console.py:<module>.log"])
+    assert_resolution(resolver, external_call("console.log"), ("unresolved", [], []))
+    assert_resolution(resolver, external_call("console.py:<module>.log"),
+                      ("external", [], ["console.py:<module>.log"]))
 
 
 def test_python_external_exit_guard_and_diagnostic():
@@ -48,12 +57,13 @@ def test_python_external_exit_guard_and_diagnostic():
     assert diagnostics[0]["code"] == "python_external_name_unverified"
     assert diagnostics[0]["analyzer_id"] == 10
     resolver = CallResolver([])
-    assert resolver.resolve(external_call("__builtin.print"))[0] == "external"
-    assert resolver.resolve(external_call("__builtin.dict<meta>.<returnValue>.setdefault"))[0] == "external"
-    assert resolver.resolve(external_call("java.util.List.add", "Main.java"))[0] == "external"
+    for full in ["__builtin.print", "__builtin.dict<meta>.<returnValue>.setdefault"]:
+        assert_resolution(resolver, external_call(full), ("external", [], [full]))
+    assert_resolution(resolver, external_call("java.util.List.add", "Main.java"),
+                      ("external", [], ["java.util.List.add"]))
     # The exit must also validate a newly introduced resolution branch.
     resolver._resolve = lambda call: ("external", [], ["future_guess"])
-    assert resolver.resolve(external_call("anything")) == ("unresolved", [], [])
+    assert_resolution(resolver, external_call("anything"), ("unresolved", [], []), unverified=True)
 
 
 def test_lost_relative_package_requires_unique_file_and_method():
@@ -62,16 +72,18 @@ def test_lost_relative_package_requires_unique_file_and_method():
               "fullName": "flask/logging.py:<module>.create_logger"}
     call = external_call(full, "flask/sansio/app.py")
     files = {"flask/logging.py", "flask/sansio/app.py", "unrelated/logging.py"}
-    assert CallResolver([method], files).resolve(call) == ("resolved", [1], [])
-    assert CallResolver([method], files | {"flask/sansio/logging.py"}).resolve(call) == ("unresolved", [], [])
-    assert CallResolver([], files).resolve(call) == ("unresolved", [], [])
+    assert_resolution(CallResolver([method], files), call, ("resolved", [1], []))
+    assert_resolution(CallResolver([method], files | {"flask/sansio/logging.py"}),
+                      call, ("unresolved", [], []))
+    assert_resolution(CallResolver([], files), call, ("unresolved", [], []))
     duplicate = dict(method, nodeId=2)
-    assert CallResolver([method, duplicate], files).resolve(call) == ("unresolved", [], [])
-    assert CallResolver([method], {"unrelated/logging.py"}).resolve(call) == ("unresolved", [], [])
+    assert_resolution(CallResolver([method, duplicate], files), call, ("unresolved", [], []))
+    assert_resolution(CallResolver([method], {"unrelated/logging.py"}), call, ("unresolved", [], []))
     nested = {"nodeId": 3, "file": "celery/utils/quorum_queues.py",
               "fullName": "celery/utils/quorum_queues.py:<module>.detect_quorum_queues"}
-    assert CallResolver([nested]).resolve(external_call(
-        "//utils/quorum_queues.py:<module>.detect_quorum_queues", "celery/app/base.py")) == ("resolved", [3], [])
+    assert_resolution(CallResolver([nested]), external_call(
+        "//utils/quorum_queues.py:<module>.detect_quorum_queues", "celery/app/base.py"),
+        ("resolved", [3], []))
 
 
 def test_truncated_dataflow_is_partial_with_omitted_count():
