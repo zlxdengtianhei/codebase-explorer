@@ -67,6 +67,15 @@ def test_function_types_and_nested_function_owners_are_not_classes():
     for full in ("copy.py:<module>.copy", "inspect.isfunction"):
         assert resolver.resolve(dict(methodFullName=full, callees=[dict(fullName=full, external=True)]))[0] == "external"
     assert resolver.resolve(dict(methodFullName="AppContext.missing", callees=[dict(external=True)]))[0] == "unresolved"
+    # Joern's guessed top-level package module is separate from class names.
+    resolver = CallResolver(methods, {"celery/__init__.py", "ctx.py"}, types)
+    assert "celery" not in resolver.classes
+    resolver.classes.add("redis")  # A real test class shares an external module name.
+    assert resolver.resolve(dict(methodFullName="redis.py:<module>.Redis.__init__",
+        callees=[dict(fullName="redis.py:<module>.Redis.__init__", external=True)]))[0] == "external"
+    assert resolver.resolve(dict(methodFullName="redis.missing", callees=[dict(external=True)]))[0] == "unresolved"
+    assert resolver.resolve(dict(methodFullName="celery.py:<module>.chord",
+                                 callees=[dict(fullName="celery.py:<module>.chord", external=True)]))[0] == "unresolved"
 
 
 def test_cli_default_exports_all_cfg_methods(tmp_path, monkeypatch):

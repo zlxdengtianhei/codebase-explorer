@@ -10,6 +10,12 @@ class CallResolver:
     def __init__(self, methods: list[dict], files=None, types=None):
         self.methods = {int(m["nodeId"]): m for m in methods if m.get("nodeId") is not None}
         self.files = set(files) if files is not None else {m.get("file", "") for m in methods if m.get("file")}
+        self.python_modules = set()
+        for path in self.files:
+            if path.endswith(".py"):
+                module = path[:-3].removesuffix("/__init__").removeprefix("src/")
+                if "/" not in module:
+                    self.python_modules.add(module)
         self.by_pair: dict[str, list[int]] = {}
         self.by_full: dict[str, list[int]] = {}
         self.classes = {"Self"}
@@ -88,14 +94,16 @@ class CallResolver:
             return ("resolved" if len(exact) == 1 else "ambiguous", exact, [])
         # A repository-qualified miss is analyzer guesswork, not a known
         # external target. Never salvage its last two components.
-        if any(full.startswith(path + ":") for path in self.files):
+        if (any(full.startswith(path + ":") for path in self.files)
+                or (".py:" in full and full.split(".py:", 1)[0] in self.python_modules)):
             return "unresolved", [], []
         if re.fullmatch(r"[A-Za-z_]\w*\.[A-Za-z_]\w*", full):
             matches = self.by_pair.get(full, [])
             if matches:
                 return ("resolved" if len(matches) == 1 else "ambiguous", matches, [])
         receiver, _, name = full.rpartition(".")
-        if full.split(".", 1)[0] in self.classes or full.startswith("te.Self."):
+        if ((".py:" not in full and full.split(".", 1)[0] in self.classes)
+                or full.startswith("te.Self.")):
             matches = self.inherited_targets(receiver, name, call)
             if matches:
                 return ("resolved" if len(matches) == 1 else "ambiguous", matches, [])
