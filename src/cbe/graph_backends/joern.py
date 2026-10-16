@@ -232,7 +232,8 @@ import scala.util.{Try, Success, Failure}
     "dataflowPaths" -> pathBuf.toList,
     "dataflowErrors" -> errBuf.toList
   )
-  Files.write(Paths.get(outFile), ujson.write(root, indent = 2).getBytes("UTF-8"))
+  val writer = Files.newBufferedWriter(Paths.get(outFile), java.nio.charset.StandardCharsets.UTF_8)
+  try ujson.writeTo(root, writer, indent = -1) finally writer.close()
   println("WROTE " + outFile)
 }
 """
@@ -260,8 +261,8 @@ def find_joern(joern_home: Path | str | None = None) -> Path | None:
     return None
 
 
-def _run(argv: list[str], timeout: int, cwd: Path) -> subprocess.CompletedProcess:
-    return subprocess.run(argv, cwd=str(cwd), check=False,
+def _run(argv: list[str], timeout: int, cwd: Path, *, env=None) -> subprocess.CompletedProcess:
+    return subprocess.run(argv, cwd=str(cwd), check=False, env=env,
                           capture_output=True, text=True, timeout=timeout, stdin=subprocess.DEVNULL)
 
 
@@ -287,6 +288,7 @@ def build_with_joern(
     dataflow_path_methods: list[str] | None = None,
     max_paths_per_method: int = 5,
     max_methods: int = 200,
+    joern_heap: str | None = None,
 ) -> dict:
     """Parse each frontend's languages with Joern and return a normalized fragment.
 
@@ -302,6 +304,11 @@ def build_with_joern(
     script = run_dir / "joern_export.sc"
     script.write_text(_EXPORT_SCRIPT, encoding="utf-8")
 
+    joern_env = None
+    if joern_heap:
+        joern_env = os.environ.copy()
+        # Last -Xmx wins, preserving unrelated caller JVM options.
+        joern_env["JAVA_TOOL_OPTIONS"] = (joern_env.get("JAVA_TOOL_OPTIONS", "") + f" -Xmx{joern_heap}").strip()
     version = joern_version(joern_bin, timeout)
     roots = [str(repo), str(joern_home)]
     diagnostics: list[dict] = []
@@ -330,7 +337,7 @@ def build_with_joern(
         export = run_dir / f"cpg-{flag}.json"
         try:
             parsed = _run([str(parse_bin), str(repo), "--language", flag, "-o", str(cpg)],
-                          timeout=timeout, cwd=run_dir)
+                          timeout=timeout, cwd=run_dir, env=joern_env)
         except subprocess.TimeoutExpired:
             for language in langs:
                 capabilities.extend(_failed_capabilities(language, "joern", "backend_timeout"))
@@ -357,7 +364,7 @@ def build_with_joern(
                  "--param", f"maxReachingDefs={max_reaching_defs}",
                  "--param", f"pathMethods={path_methods}",
                  "--param", f"maxPathsPerMethod={max_paths_per_method}", "--nocolors"],
-                timeout=timeout, cwd=run_dir)
+                timeout=timeout, cwd=run_dir, env=joern_env)
         except subprocess.TimeoutExpired:
             for language in langs:
                 capabilities.extend(_failed_capabilities(language, "joern", "backend_timeout"))
@@ -367,8 +374,11 @@ def build_with_joern(
         if exported.returncode != 0 or not export.exists():
             for language in langs:
                 capabilities.extend(_failed_capabilities(language, "joern", "backend_error"))
-            diagnostics.append({"path": None, "code": "backend_error",
-                                "message": f"joern export failed for frontend {flag} (exit {exported.returncode})"})
+            message = f"joern export failed for frontend {flag} (exit {exported.returncode})"
+            cause = _first_error_line((exported.stderr or "") + "\n" + (exported.stdout or ""), roots)
+            if cause:
+                message += f": {cause}"
+            diagnostics.append({"path": None, "code": "backend_error", "message": message})
             continue
         try:
             payload = json.loads(export.read_text(encoding="utf-8"))
@@ -450,11 +460,13 @@ def _scrub_text(text: str, roots: list[str]) -> str:
 
 def _first_error_line(text: str, roots: list[str]) -> str | None:
     candidates = [line.strip() for line in (text or "").splitlines()
-                  if _ERROR_MARKERS.search(line) and "process exited with code" not in line.lower()]
+                  if (_ERROR_MARKERS.search(line) or "OutOfMemoryError" in line)
+                  and "process exited with code" not in line.lower()]
     if not candidates:
         return None
     primary = [line for line in candidates if _PRIMARY_CAUSE.search(line)]
-    chosen = max(primary or candidates, key=len)
+    oom = [line for line in candidates if "OutOfMemoryError" in line]
+    chosen = max(oom or primary or candidates, key=len)
     return _scrub_text(chosen, roots)[:300]
 
 

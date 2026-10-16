@@ -182,3 +182,50 @@ def test_real_cfg_limit_preserves_method_and_call_scope(tmp_path):
     assert len(methods) >= 3
     assert any(d["code"] == "cfg_methods_omitted" for d in graph["diagnostics"])
     assert any(e["kind"] == "call" and e["expression"] == "first()" for e in graph["edges"])
+
+
+def test_cli_heap_and_oom_cause_for_partial_and_total_failure(tmp_path, monkeypatch, capsys):
+    import json
+    import subprocess
+    from cbe.cli import main
+    from cbe import graph_backends
+
+    home = tmp_path / "joern"
+    home.mkdir()
+    (home / "joern").touch()
+    (home / "joern-parse").touch()
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "a.py").touch()
+    seen_env = []
+    monkeypatch.setenv("JAVA_TOOL_OPTIONS", "-Dexample=yes -Xmx2g")
+
+    def run(argv, **kwargs):
+        if "--version" in argv:
+            return subprocess.CompletedProcess(argv, 0, "Version: 1", "")
+        seen_env.append(kwargs["env"])
+        if "--language" in argv:
+            Path(argv[argv.index("-o") + 1]).touch()
+            return subprocess.CompletedProcess(argv, 0, "", "")
+        return subprocess.CompletedProcess(argv, 1, "", 'java.lang.OutOfMemoryError: Java heap space')
+
+    monkeypatch.setattr(subprocess, "run", run)
+    args = ["graph", "build", str(repo), "--joern-home", str(home), "--joern-heap", "8g"]
+    out = tmp_path / "failed.json"
+    assert main(args + ["--backend", "joern", "--output", str(out)]) != 0
+    assert "OutOfMemoryError" in capsys.readouterr().err
+    graph = json.loads(out.read_text())
+    assert any("OutOfMemoryError" in d["message"] for d in graph["diagnostics"])
+    assert all(env["JAVA_TOOL_OPTIONS"] == "-Dexample=yes -Xmx2g -Xmx8g" for env in seen_env)
+    monkeypatch.setattr(graph_backends, "build_with_grimp", lambda *a: dict(
+        nodes=[dict(id="file:a.py", kind="file", path="a.py")], edges=[], diagnostics=[],
+        capabilities=[dict(language="python", graph="import", status="empty", backend="grimp")]))
+    assert main(args + ["--output", str(tmp_path / "partial.json")]) == 0
+    assert "OutOfMemoryError" in capsys.readouterr().err
+
+
+def test_invalid_heap_is_rejected_before_running_analyzers(tmp_path):
+    import pytest
+    from cbe.graph import analyze_graph
+    with pytest.raises(ValueError, match="joern_heap"):
+        analyze_graph(tmp_path, tmp_path / "g.json", joern_heap="8g -Dother")

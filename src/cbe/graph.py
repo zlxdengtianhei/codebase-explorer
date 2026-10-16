@@ -165,6 +165,7 @@ def analyze_graph(
     backend: str = "auto",
     languages: list[str] | None = None,
     joern_home=None,
+    joern_heap: str | None = None,
     depcruise_bin=None,
     timeout: int = 300,
     max_methods: int = 200,
@@ -188,6 +189,8 @@ def analyze_graph(
                         ("max_paths_per_method", max_paths_per_method)):
         if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
             raise GraphError(f"{name} must be a positive integer")
+    if joern_heap is not None and not re.fullmatch(r"[1-9][0-9]*[kKmMgG]", joern_heap):
+        raise GraphError("joern_heap must be a positive JVM heap size, such as 8g or 4096m")
     repo = Path(repo).expanduser().resolve()
     if not repo.is_dir():
         raise GraphError(f"repository root is not a directory: {repo}")
@@ -222,7 +225,7 @@ def analyze_graph(
             try:
                 fragment = backends.build_with_joern(
                     repo, run_dir / "joern", requested, joern, timeout,
-                    max_methods=max_methods, max_reaching_defs=max_reaching_defs,
+                    joern_heap=joern_heap, max_methods=max_methods, max_reaching_defs=max_reaching_defs,
                     dataflow_path_methods=dataflow_path_methods,
                     max_paths_per_method=max_paths_per_method)
             except backends.JoernError as exc:
@@ -232,7 +235,8 @@ def analyze_graph(
                 fragments.append(fragment)
                 components.append(fragment["backend"])
                 diagnostics.extend(fragment["diagnostics"])
-                ran = ran or bool(fragment["raw"])
+                ran = ran or (bool(fragment["raw"]) and any(
+                    c.get("status") in {"resolved", "partial", "empty"} for c in fragment["capabilities"]))
 
     if use_imports:
         depcruise = backends.find_depcruise(depcruise_bin)
@@ -305,6 +309,10 @@ def analyze_graph(
     }
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(graph, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    if not ran:
+        causes = "; ".join(d["message"] for d in diagnostics if d.get("code") in {
+            "backend_error", "backend_timeout", "frontend_error", "backend_unavailable"})
+        raise GraphError("no graph backend completed" + (f": {causes}" if causes else ""))
     return graph
 
 

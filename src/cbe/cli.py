@@ -107,6 +107,8 @@ def build_parser() -> argparse.ArgumentParser:
     graph_build.add_argument("--backend", default="auto", help="analyzer selection; default: auto")
     graph_build.add_argument("--language", action="append", dest="languages", default=None)
     graph_build.add_argument("--joern-home", type=_abs, default=None)
+    graph_build.add_argument("--joern-heap", default=None, metavar="SIZE",
+                             help="Joern JVM maximum heap via JAVA_TOOL_OPTIONS (for example 8g); default: inherit JVM settings")
     graph_build.add_argument("--depcruise-bin", type=_abs, default=None)
     graph_build.add_argument("--timeout", type=int, default=300)
     graph_build.add_argument("--max-methods", type=int, default=200,
@@ -215,10 +217,15 @@ def main(argv: list[str] | None = None) -> int:
             if args.graph_command == "build":
                 graph = analyze_graph(args.repo, args.output, backend=args.backend,
                                       languages=args.languages, joern_home=args.joern_home,
+                                      joern_heap=args.joern_heap,
                                       depcruise_bin=args.depcruise_bin, timeout=args.timeout,
                                       max_methods=args.max_methods, max_reaching_defs=args.max_reaching_defs,
                                       dataflow_path_methods=args.dataflow_path_methods,
                                       max_paths_per_method=args.max_paths_per_method)
+                failures = [d["message"] for d in graph["diagnostics"]
+                            if d.get("code") in {"backend_error", "backend_timeout", "frontend_error", "no_backend_completed"}]
+                if failures:
+                    print("cbe graph build: " + "; ".join(failures), file=sys.stderr)
                 value = {"output": str(args.output), "schema": graph["schema"],
                          "backend": graph["backend"], "files": len(graph["source_manifest"]),
                          "nodes": len(graph["nodes"]), "edges": len(graph["edges"]),
