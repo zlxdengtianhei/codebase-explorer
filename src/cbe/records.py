@@ -43,7 +43,8 @@ def frozen_sources(context: dict, paths: list[str] | None = None) -> dict[str, s
 
 def build_records(units: dict, dispositions: dict, inventory: dict, ranges: dict,
                   sources: dict[str, str], languages: dict[str, str],
-                  context: dict | None, graph: dict | None) -> tuple[dict, dict]:
+                  context: dict | None, graph: dict | None,
+                  edge_table: dict | None = None) -> tuple[dict, dict]:
     """Return unit and inventory-symbol records, keeping original evidence verbatim."""
     from cbe.source_context import source_signatures
     from cbe.graph import graph_state
@@ -115,21 +116,31 @@ def build_records(units: dict, dispositions: dict, inventory: dict, ranges: dict
         owner = graph_nodes.get(node.get("owner"), node)
         node_symbols[nid] = at(owner.get("path"), owner.get("start_line"))
     outgoing, incoming = defaultdict(list), defaultdict(list)
+    internal = defaultdict(lambda: defaultdict(int))
+    edge_table = {} if edge_table is None else edge_table
     for edge in (graph or {}).get("edges") or []:
         source = graph_nodes.get(edge.get("source"), {})
         caller = (at(edge.get("path") or source.get("path"), edge.get("line"), edge.get("column"))
                   if edge.get("kind") == "call" else node_symbols.get(edge.get("source")))
         callee = node_symbols.get(edge.get("target"))
+        if edge.get("kind") in {"cfg", "dataflow"}:
+            if caller:
+                internal[caller][edge["kind"]] += 1
+            continue
         evidence = {key: edge[key] for key in ("id", "kind", "status", "source", "target", "path", "line", "column")
                     if key in edge}
-        evidence.update(source_symbol=caller, target_symbol=callee)
+        evidence.update(source_symbol=caller, target_symbol=callee,
+                        source_name=symbols.get(caller, {}).get("name") or source.get("name") or edge.get("source"),
+                        target_name=symbols.get(callee, {}).get("name") or graph_nodes.get(edge.get("target"), {}).get("name") or edge.get("target"))
+        edge_table[edge["id"]] = evidence
         if caller:
-            outgoing[caller].append(evidence)
+            outgoing[caller].append(edge["id"])
         if callee:
-            incoming[callee].append(evidence)
+            incoming[callee].append(edge["id"])
     availability = graph_state(graph)[0]
     for sid, symbol in symbols.items():
-        symbol.update(graph_state=availability, outgoing=outgoing[sid], incoming=incoming[sid])
+        symbol.update(graph_state=availability, outgoing=outgoing[sid], incoming=incoming[sid],
+                      internal_edge_counts=dict(internal[sid]))
 
     records = {}
     for uid, unit in units.items():
@@ -154,11 +165,10 @@ def build_records(units: dict, dispositions: dict, inventory: dict, ranges: dict
                   "members": unit.get("members") or [], "folded_members": [m for m in members if m != uid],
                   "reverse_relations": reverse[uid], "graph_state": availability}
         for direction, edges in (("outgoing", outgoing), ("incoming", incoming)):
-            unique = {}
-            for sid in members:
-                for edge in edges[sid]:
-                    unique[edge["id"]] = edge
-            record[direction] = list(unique.values())
+            record[direction] = list(dict.fromkeys(eid for sid in members for eid in edges[sid]))
+        record["internal_edge_counts"] = {
+            kind: sum(internal[sid].get(kind, 0) for sid in members)
+            for kind in ("cfg", "dataflow")}
         for field in ("extras", "relations", "uncertainties"):
             record.setdefault(field, [])
         records[uid] = record

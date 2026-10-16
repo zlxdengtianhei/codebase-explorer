@@ -54,12 +54,13 @@ def test_page_and_catalog_share_complete_records(tmp_path):
     assert catalog["units"][ids[-1]]["reverse_relations"][0]["basis"] == "KEEP THIS EVIDENCE"
 
 
-def test_file_query_includes_actual_unit_explanations_and_symbol_ranges(tmp_path):
+def test_file_query_is_a_drill_down_listing(tmp_path):
     run, ids, units, _, _ = _run(tmp_path)
     record = docs.query(run, "pkg/jobs.py")
     assert len(record["units"]) == len(units)
-    assert record["explain"] and record["ranges"][0]["lines"] == [[1, len(SRC.splitlines())]]
-    assert record["signatures"] and "KEEP THIS EVIDENCE" in json.dumps(record)
+    assert record["ranges"][0]["lines"] == [[1, len(SRC.splitlines())]]
+    assert "explain" not in record and "KEEP THIS EVIDENCE" not in json.dumps(record)
+    assert all(set(row) == {"id", "name", "ranges", "summary"} for row in record["units"])
     symbol = docs.query(run, next(uid for uid in ids if units[uid]["kind"] == "function"))
     assert symbol["signature"] and symbol["ranges"]
 
@@ -107,8 +108,9 @@ def test_grouped_and_index_only_queries_keep_scope_and_explanation(tmp_path):
         assert record["explain"] == units[group]["explain"]
         assert record["ranges"] == next(s["ranges"] for s in json.loads(
             (run / "catalog.json").read_text())["symbols"].values() if s["id"] == sid)
-        assert record["unit_detail"]["members"] == members
-        assert record["unit_detail"]["ranges"] == docs.unit_ranges(group, units[group], inventory)
+        assert "unit_detail" not in record
+        assert record["unit_id"] == group
+        assert record["unit_ranges"] == docs.unit_ranges(group, units[group], inventory)
     record = docs.query(run, index_only)
     assert record["explain"] == dispositions[index_only]["reason"]
     assert record["ranges"] and record["how"] == "index_only"
@@ -236,6 +238,7 @@ def test_graph_edges_and_statuses_remain_available_in_both_directions(tmp_path):
     graph["edges"] = [{"id": "edge", "kind": "call", "source": "main", "target": "reserve",
                         "path": "src/pkg/cli.py", "line": 4, "column": 12, "status": "resolved",
                         "expression": "reserve_run(len(argv))"}]
+    graph["edges"].append({"id": "internal", "kind": "cfg", "source": "main", "target": "main"})
     gp = tmp_path / "graph.json"
     gp.write_text(json.dumps(graph))
     run = Path(host_run.plan(repo, tmp_path / "run", review="none", graph_path=gp)["run_dir"])
@@ -243,13 +246,24 @@ def test_graph_edges_and_statuses_remain_available_in_both_directions(tmp_path):
     catalog = json.loads((run / "catalog.json").read_text())
     caller = next(r for r in catalog["units"].values() if r["outgoing"])
     callee = next(r for r in catalog["units"].values() if r["incoming"])
-    assert caller["outgoing"][0]["id"] == callee["incoming"][0]["id"] == "edge"
-    assert caller["outgoing"][0]["status"] == "resolved"
+    assert caller["outgoing"] == callee["incoming"] == ["edge"]
+    assert catalog["edges"]["edge"]["status"] == "resolved"
+    assert len(catalog["edges"]) == 1
+    assert caller["internal_edge_counts"] == {"cfg": 1, "dataflow": 0}
+    assert all(isinstance(e, str) for section in ("units", "symbols")
+               for row in catalog[section].values() for d in ("outgoing", "incoming") for e in row[d])
     assert catalog["graph_ref"] == "context.json" and catalog["graph"] is None
     assert json.loads((run / "context.json").read_text())["graph"] == graph
     queried = docs.query(run, caller["id"])
-    assert queried["outgoing"][0]["expression"] == "reserve_run(len(argv))"
-    assert {node["id"] for node in queried["graph_nodes"]} == {"main", "reserve"}
+    assert queried["outgoing"][0]["target_name"] == "reserve_run"
+    assert "graph_nodes" not in queried and "unit_detail" not in queried
+    assert docs.query(run, caller["id"], edges="all")["raw_edges"][0]["expression"] == "reserve_run(len(argv))"
+    assert docs.query(run, caller["id"], edges="cfg")["raw_edges"] == [graph["edges"][1]]
+    # Ordinary reads work with the large frozen context unavailable.
+    (run / "context.json").rename(run / "context.saved")
+    assert docs.query(run, caller["id"])["outgoing"][0]["status"] == "resolved"
+    assert docs.find(run, "reserve")
+    (run / "context.saved").rename(run / "context.json")
     assert "reserve_run(len(argv))" not in (run / "catalog.json").read_text()
     metrics = docs.layer_metrics(run)
     assert metrics["frozen_graph_tokens"] > 0

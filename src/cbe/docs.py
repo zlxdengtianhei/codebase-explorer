@@ -182,13 +182,18 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
     sources = (frozen_sources(context, list(inventory)) if context is not None else
                {path: (source_root / path).read_text(encoding="utf-8")
                 for path in inventory if (source_root / path).is_file()})
+    edge_table = {}
     units, symbol_records = build_records(units, dispositions, inventory, ranges_map,
-                                          sources, languages, context, graph)
+                                          sources, languages, context, graph, edge_table)
     ranges_map = {uid: record["ranges"] for uid, record in units.items()}
     names = {}
     taken: set[str] = set()
     for uid in sorted(set(units) | set(dispositions)):
-        base = symbol_records.get(uid, {}).get("name") or short_name(uid)
+        symbol = symbol_records.get(uid, {})
+        base = symbol.get("name") or short_name(uid)
+        if symbol.get("kind") == "module_residual":
+            spans = symbol["ranges"][0]["lines"]
+            base = f"{Path(symbol['file']).name} 模块代码（L{spans[0][0]}—L{spans[-1][1]}）"
         if base in taken:
             base = f"{uid.split('::', 1)[0]}:{base}"
         name = base
@@ -380,6 +385,7 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
         "units": {uid: {**units[uid], "node": owner.get(uid),
                         "page": f"nodes/{owner[uid]}.md" if owner.get(uid) in nodes else None,
                         "anchor": f"#{anchor(uid)}"} for uid in sorted(units)},
+        "edges": edge_table,
         "graph": None if (context or {}).get("graph") is not None else graph,
         "graph_ref": "context.json" if (context or {}).get("graph") is not None else None,
         "nodes": {nid: {"parent": node.get("parent"), "children": children.get(nid) or [],
@@ -426,7 +432,8 @@ def catalog_symbols(catalog: dict) -> dict[str, dict]:
         target = record.get("unit") or (sid if sid in (catalog.get("units") or {}) else None)
         detail = (catalog.get("units") or {}).get(target)
         if detail is not None:
-            records[sid] = {**detail, **record, "id": sid, "unit_detail": detail}
+            records[sid] = {**detail, **record, "id": sid,
+                            "unit_id": target, "unit_ranges": detail.get("ranges", [])}
         else:
             record.setdefault("explain", record.get("reason", ""))
             for field in ("signatures", "relations", "reverse_relations", "outgoing", "incoming"):
@@ -564,9 +571,6 @@ def verify(run_dir: Path, inventory: dict, units: dict, dispositions: dict,
 
 def query_catalog(run_dir: Path) -> dict[str, Any]:
     catalog = json.loads((run_dir / "catalog.json").read_text(encoding="utf-8"))
-    if catalog.get("graph_ref") == "context.json":
-        context = json.loads((run_dir / "context.json").read_text(encoding="utf-8"))
-        catalog["graph"] = context.get("graph")
     catalog["symbols"] = catalog_symbols(catalog)
     return catalog
 
@@ -584,44 +588,66 @@ def find(run_dir: Path, term: str, limit: int = 25) -> list[dict[str, Any]]:
     return results[:limit]
 
 
-def query(run_dir: Path, symbol_id: str) -> dict[str, Any]:
+def query(run_dir: Path, symbol_id: str, edges: str | None = None) -> dict[str, Any]:
+    """Compact object view; frozen graph is read only for explicit expansion."""
     catalog = query_catalog(run_dir)
+    table = catalog.get("edges") or {}
     if symbol_id in catalog["symbols"]:
         record = {"id": symbol_id, **catalog["symbols"][symbol_id]}
-        graph = catalog.get("graph")
-        if graph:
-            edges = {edge["id"]: edge for edge in graph.get("edges") or []}
-            for direction in ("outgoing", "incoming"):
-                record[direction] = [{**edges.get(edge["id"], {}), **edge}
-                                     for edge in record.get(direction) or []]
-            node_ids = {edge.get(endpoint) for field in ("outgoing", "incoming")
-                        for edge in record[field] for endpoint in ("source", "target")}
-            record["graph_nodes"] = [node for node in graph.get("nodes") or [] if node["id"] in node_ids]
-        return record
-    if symbol_id in catalog["files"]:
-        record = dict(catalog["files"][symbol_id])
-        units = {uid: unit for uid, unit in catalog.get("units", {}).items()
-                 if any(r["path"] == symbol_id for r in unit.get("ranges") or [])}
-        record["units"] = units
-        record["symbols"] = {sid: row for sid, row in catalog["symbols"].items()
-                             if row.get("file") == symbol_id}
-        record["explain"] = "\n\n".join(unit.get("explain", "") for unit in units.values()) or "\n".join(
-            row.get("reason", "") for row in record["symbols"].values() if row.get("reason"))
-        for field in ("relations", "reverse_relations"):
-            record[field] = [row for unit in units.values() for row in unit.get(field) or []]
-        graph = catalog.get("graph") or {}
-        graph_nodes = {n["id"]: n for n in graph.get("nodes") or []}
-        record["outgoing"] = [edge for edge in graph.get("edges") or []
-                              if (edge.get("path") or graph_nodes.get(edge.get("source"), {}).get("path")) == symbol_id]
-        record["incoming"] = [edge for edge in graph.get("edges") or []
-                              if graph_nodes.get(edge.get("target"), {}).get("path") == symbol_id]
-        node_ids = {edge.get(endpoint) for field in ("outgoing", "incoming")
-                    for edge in record[field] for endpoint in ("source", "target")}
-        record["graph_nodes"] = [graph_nodes[nid] for nid in sorted(node_ids - {None}) if nid in graph_nodes]
-        from cbe.graph import graph_state
-        record["graph_state"] = graph_state(catalog.get("graph"))[0]
-        return {"id": symbol_id, **record}
-    raise SemanticError(f"unknown unit, symbol or file: {symbol_id}")
+        for direction in ("outgoing", "incoming"):
+            record[direction] = [table[e] if isinstance(e, str) else e
+                                 for e in record.get(direction) or []]
+    elif symbol_id in catalog["files"]:
+        def listing(uid, row):
+            return {"id": uid, "name": catalog.get("short_names", {}).get(uid, row.get("name", uid)),
+                    "ranges": row.get("ranges", []), "summary": row.get("summary", row.get("reason", ""))}
+        record = {"id": symbol_id, "ranges": catalog["files"][symbol_id].get("ranges", []),
+                  "units": [listing(uid, u) for uid, u in catalog.get("units", {}).items()
+                            if any(r["path"] == symbol_id for r in u.get("ranges") or [])],
+                  "symbols": [listing(sid, s) for sid, s in catalog["symbols"].items()
+                              if s.get("file") == symbol_id and sid not in catalog.get("units", {})],
+                  "imports": [e for e in table.values() if e.get("kind") == "import"
+                              and e.get("path") == symbol_id]}
+    else:
+        raise SemanticError(f"unknown unit, symbol or file: {symbol_id}")
+    record["name"] = catalog.get("short_names", {}).get(symbol_id, record.get("name", symbol_id))
+    if edges:
+        graph = json.loads((run_dir / "context.json").read_text(encoding="utf-8")).get("graph") or {}
+        nodes = {n["id"]: n for n in graph.get("nodes") or []}
+        def matches(edge):
+            node = nodes.get(edge.get("source"), {})
+            owner = nodes.get(node.get("owner"), node)
+            path = edge.get("path") or owner.get("path")
+            line = edge.get("line") or owner.get("start_line")
+            return any(r["path"] == path and any(a <= line <= b for a, b in r["lines"])
+                       for r in record.get("ranges", []) if isinstance(line, int))
+        record["raw_edges"] = [e for e in graph.get("edges") or []
+                               if (edges == "all" or e.get("kind") in edges.split(",")) and matches(e)]
+    return record
+
+
+def query_text(record: dict) -> str:
+    """Agent view: prose once, one line per relation or graph edge."""
+    lines = [f"{record['name']}  {record['id']}"]
+    for field in ("signature", "signatures", "ranges", "summary", "explain", "extras",
+                  "uncertainties", "relations", "reverse_relations", "folded_members",
+                  "internal_edge_counts", "units", "symbols"):
+        value = record.get(field)
+        if not value or (field == "summary" and record.get("explain", "").startswith(value)):
+            continue
+        if field == "signatures" and len(value) == 1 and value[0]["signature"] == record.get("signature"):
+            continue
+        if isinstance(value, list):
+            lines.extend(f"{field}: {json.dumps(row, ensure_ascii=False)}" for row in value)
+        else:
+            lines.append(f"{field}: {value}")
+    for direction in ("outgoing", "incoming", "imports", "raw_edges"):
+        for edge in record.get(direction) or []:
+            endpoint = "source" if direction == "incoming" else "target"
+            lines.append(f"{direction}: {edge.get('kind')} {edge.get(endpoint + '_name', edge.get(endpoint))} "
+                         f"{edge.get(endpoint + '_symbol') or edge.get(endpoint)} [{edge.get('status', 'structural')}] "
+                         f"{edge.get('path', '')}:L{edge.get('line', '')} id={edge['id']}")
+    return "\n".join(lines) + "\n"
 
 
 def source(run_dir: Path, object_id: str, context: int = 0) -> str:

@@ -147,6 +147,8 @@ def build_parser() -> argparse.ArgumentParser:
     query_p = sub.add_parser("query", help="Return explanation and evidence by unit ID, symbol ID or file path")
     query_p.add_argument("--run-dir", type=_abs, required=True)
     query_p.add_argument("--id", required=True)
+    query_p.add_argument("--json", action="store_true", help="machine-readable object (no duplicate detail)")
+    query_p.add_argument("--edges", default=None, help="expand frozen raw edges: all or comma-separated kinds")
     source_p = sub.add_parser("source", help="Print frozen source by unit ID, symbol ID or file path; verify SHA-256 first")
     source_p.add_argument("--run-dir", type=_abs, required=True)
     source_p.add_argument("--id", required=True)
@@ -319,7 +321,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "host":
             print(json.dumps(_host(args), ensure_ascii=False, indent=2))
             return 0
-        from cbe.docs import find, query, source
+        from cbe.docs import find, query, query_text, source
 
         if args.command == "source":
             print(source(args.run_dir, args.id, context=args.context), end="")
@@ -328,7 +330,9 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "find":
             print(json.dumps(find(args.run_dir, args.term, limit=args.limit), ensure_ascii=False, indent=2))
             return 0
-        print(json.dumps(query(args.run_dir, args.id), ensure_ascii=False, indent=2))
+        record = query(args.run_dir, args.id, edges=args.edges)
+        print(json.dumps(record, ensure_ascii=False, indent=2) if args.json else query_text(record),
+              end="\n" if args.json else "")
         return 0
     except ContextError as exc:
         print(json.dumps(exc.to_dict(), ensure_ascii=False), file=sys.stderr)
