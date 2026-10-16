@@ -20,7 +20,7 @@ def test_normalized_final_answer_with_wrong_unit_target_stays_failed(tmp_path):
     (repo / "src/pkg/jobs.py").write_text("def first():\n    return 1\n\ndef second():\n    return 2\n")
     run = tmp_path / "run"
     host_run.plan(repo, run, review="none", jobs=20, driver="script")
-    for _ in range(2):
+    for _ in range(3):
         host_run.next_tasks(run, limit=20)
         payload = _semantic_answer(host_run.completion_prompt(run, "module_1"))
         ids = list(payload["dispositions"])
@@ -38,7 +38,7 @@ def test_normalized_shape_repair_is_still_accepted(tmp_path):
     repo = _tiny_repo(tmp_path)
     run = tmp_path / "run"
     host_run.plan(repo, run, review="none", jobs=20, driver="script")
-    for _ in range(2):
+    for _ in range(3):
         host_run.next_tasks(run, limit=20)
         payload = _semantic_answer(host_run.completion_prompt(run, "module_1"))
         payload["units"][0]["extras"] = None

@@ -108,7 +108,7 @@ def _drive(tmp_path, mode):
 
 def test_small_fill_visible_separately_from_model_choices_and_identity_repairs(tmp_path):
     run, rejected, ids, prompt = _drive(tmp_path, 'small')
-    assert len(rejected) == 1
+    assert len(rejected) == 2
     assert 'Every inventory symbol must have a disposition' in prompt
     summary = json.loads((run / 'summary.json').read_text())
     assert summary['status'] == 'complete'
@@ -129,7 +129,7 @@ def test_small_fill_visible_separately_from_model_choices_and_identity_repairs(t
 @pytest.mark.parametrize('mode', ['collapse', 'older_small'])
 def test_final_overflow_fails_partial_and_resume_instead_of_publishing(tmp_path, mode):
     run, rejected, ids, prompt = _drive(tmp_path, mode)
-    assert len(rejected) == 2 and rejected[-1]['task_status'] == 'failed'
+    assert len(rejected) == 3 and rejected[-1]['task_status'] == 'failed'
     assert 'dispositions missing inventory ids' in rejected[-1]['error']
     assert ids[0] in rejected[-1]['error'] and f'{len(ids)}/{len(ids)} missing' in rejected[-1]['error']
     assert 'Every inventory symbol must have a disposition' in prompt

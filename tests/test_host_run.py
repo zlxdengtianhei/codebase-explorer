@@ -128,15 +128,18 @@ def test_concurrency_limit_and_schema_retry_then_failure(tmp_path: Path) -> None
     assert again["task"] == item["task"]
     assert "previous attempt failed validation" in Path(again["prompt_file"]).read_text()
     second = host_run.submit(run_dir, item["task"])  # no file written: counts as the second attempt
-    assert not second["accepted"] and second["task_status"] == "failed" and second["failed"]
+    assert not second["accepted"] and second["task_status"] == "pending"
+    host_run.next_tasks(run_dir)
+    failed = host_run.submit(run_dir, item["task"])
+    assert not failed["accepted"] and failed["task_status"] == "failed" and failed["failed"]
     with pytest.raises(host_run.HostRunError):
         host_run.submit(run_dir, item["task"])
     assert host_run.retry(run_dir, item["task"])["counts"]["pending"] >= 1
     third = host_run.next_tasks(run_dir)["tasks"][0]
     Path(third["output_file"]).write_text(json.dumps(_answer({"kind": "module"}, Path(third["prompt_file"]).read_text())))
     accepted = host_run.submit(run_dir, item["task"])
-    assert accepted["accepted"] and accepted["attempts"] == 3
-    assert (run_dir / "host" / "raw" / f"{item['task']}.attempt-3.txt").is_file()
+    assert accepted["accepted"] and accepted["attempts"] == 4
+    assert (run_dir / "host" / "raw" / f"{item['task']}.attempt-4.txt").is_file()
 
 
 def test_resume_adopts_finished_results_and_releases_lost_leases(tmp_path: Path) -> None:
@@ -323,7 +326,7 @@ def _good(item: dict, run_dir: Path) -> dict:
     return _answer({"kind": item["kind"]}, Path(item["prompt_file"]).read_text())
 
 
-def test_second_invalid_detail_answer_is_normalized_flagged_and_rendered(tmp_path: Path) -> None:
+def test_final_invalid_detail_answer_is_normalized_flagged_and_rendered(tmp_path: Path) -> None:
     repo = _repo(tmp_path)
     run_dir = Path(host_run.plan(repo, tmp_path / "run", review="none", jobs=8)["run_dir"])
     names = host_run.next_tasks(run_dir, limit=1)["tasks"][0]
@@ -342,8 +345,10 @@ def test_second_invalid_detail_answer_is_normalized_flagged_and_rendered(tmp_pat
     again = host_run.next_tasks(run_dir)["tasks"][0]
     assert again["task"] == target["task"]
     second = _answer_task(run_dir, again, bad)
-    assert second["accepted"] and second["normalized"]
-    assert any("module_region" in flag for flag in second["flags"])
+    assert not second["accepted"] and second["task_status"] == "pending"
+    third = _answer_task(run_dir, host_run.next_tasks(run_dir)["tasks"][0], bad)
+    assert third["accepted"] and third["normalized"]
+    assert any("module_region" in flag for flag in third["flags"])
     accepted = json.loads((run_dir / "host" / "accepted" / f"{target['task']}.json").read_text())
     assert all(unit["kind"] in {"class", "function", "method", "group", "module_region"}
                for unit in accepted["units"])
@@ -361,7 +366,7 @@ def test_second_invalid_detail_answer_is_normalized_flagged_and_rendered(tmp_pat
     assert state["status"] == "complete" and state["verify"]["ok"]
     index = (run_dir / "docs" / "INDEX.md").read_text()
     assert "## Generation notes" in index and "maintenance_navigation truncated" in index
-    assert "Normalized after a second invalid answer" in index
+    assert "Normalized after the final invalid answer" in index
     log = (run_dir / "progress.log").read_text()
     for word in ("plan ", "claim ", "reject ", "normalize ", "accept ", "render "):
         assert word in log, word
@@ -377,7 +382,7 @@ def test_unusable_module_renders_partial_and_resume_finishes_it(tmp_path: Path) 
     broken = batch[-1]
     for item in batch[:-1]:
         _answer_task(run_dir, item, _good(item, run_dir))
-    for _ in range(2):
+    for _ in range(3):
         item = host_run.next_tasks(run_dir, limit=1)["tasks"][0] if _ else broken
         assert item["task"] == broken["task"]
         result = _answer_task(run_dir, item, "the model wrote prose instead of JSON")

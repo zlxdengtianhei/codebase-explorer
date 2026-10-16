@@ -90,8 +90,12 @@ def test_submit_repairs_final_attempt_and_retry_prompt_names_bad_and_candidate(t
     assert "Unit ids must come only from this batch's inventory" in prompt
     answer.write_text(json.dumps(payload))
     second = host_run.submit(run, "module_1", result=answer)
-    assert second["accepted"] and second["normalized"]
-    assert sum(f.startswith("id_corrected:") for f in second["flags"]) == 2
+    assert not second["accepted"] and second["task_status"] == "pending"
+    host_run.next_tasks(run, limit=20)
+    answer.write_text(json.dumps(payload))
+    third = host_run.submit(run, "module_1", result=answer)
+    assert third["accepted"] and third["normalized"]
+    assert sum(f.startswith("id_corrected:") for f in third["flags"]) == 2
     accepted = json.loads((run / "host/accepted/module_1.json").read_text())
     assert accepted["units"][0]["id"] == good
     assert accepted["dispositions"][good]["unit"] == good

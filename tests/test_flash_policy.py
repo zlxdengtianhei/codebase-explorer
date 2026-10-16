@@ -38,7 +38,7 @@ def test_retry_cannot_resurrect_valid_json_from_truncated_attempt(tmp_path, seco
     repo = _tiny_repo(tmp_path)
     run = tmp_path / "run"
     host_run.plan(repo, run, review="none", jobs=20, driver="script")
-    for attempt in (1, 2):
+    for attempt in (1, 2, 3):
         tasks = host_run.next_tasks(run, limit=20)["tasks"]
         task = next(row for row in tasks if row["task"] == "module_1")
         raw = json.dumps(_semantic_answer(host_run.completion_prompt(run, task["task"])))

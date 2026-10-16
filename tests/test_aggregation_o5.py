@@ -102,9 +102,14 @@ def test_single_tree_waits_for_review_and_repair(tmp_path, failed_module):
     for item in host_run.next_tasks(run)["tasks"]:
         assert item["kind"] in {"module", "review"}  # no tree before reviews
         if item["task"] == failed_id:
-            assert submit(item, {})["task_status"] == "failed"
+            assert submit(item, {})["task_status"] == "pending"
         else:
             reviews.append(item)
+    if failed_id:
+        # Exhaust the third detail answer before checking the existing failure path.
+        final_retry = host_run.next_tasks(run)["tasks"]
+        assert [item["task"] for item in final_retry] == [failed_id]
+        assert submit(final_retry[0], {})["task_status"] == "failed"
     assert reviews
     for item in reviews:
         assert submit(item, {"decision": "needs_repair", "issues": ["Replace stale unit descriptions."]})["accepted"]

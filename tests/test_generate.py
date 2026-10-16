@@ -227,7 +227,7 @@ def test_generate_renders_partial_run_and_resume_finishes_pending_parts(tmp_path
     (repo / "src" / "pkg" / "jobs.py").write_text("def reserve_run(value):\n    return value\n", encoding="utf-8")
     (repo / "tests" / "test_jobs.py").write_text("def test_reserve():\n    assert True\n", encoding="utf-8")
     run_dir = tmp_path / "run"
-    broken = {"module_2": 2}
+    broken = {"module_2": 3}
     seen: list[str] = []
 
     def fake_invoke(**kwargs):

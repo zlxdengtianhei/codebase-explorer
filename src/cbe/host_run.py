@@ -14,10 +14,10 @@ frozen plan and every task's state, attempts, timings, and output path;
 ``<run>/STATUS.md`` is a snapshot table rewritten on every change. Every command
 re-reads the state under a lock, so any host continues with ``resume``.
 
-No single task failure voids a run. A strict check that fails is re-asked once
-with the exact error; a second miss is normalized (truncated or reshaped) and
-flagged when the answer is usable, and only an unusable answer marks the task
-failed. Finished batches always render; failed parts stay pending until
+No single task failure voids a run. Detail tasks have three answer attempts;
+other tasks have two. Each strict-check failure is re-asked with the exact error
+until the final attempt, when a usable answer may be normalized and flagged.
+Only an unusable final answer marks the task failed. Finished batches always render; failed parts stay pending until
 retried, and the overview task can be retried on its own.
 """
 
@@ -42,6 +42,7 @@ from cbe import source_context
 
 SCHEMA = "cbe-host-run/2"
 MAX_ATTEMPTS = 2
+DETAIL_MAX_ATTEMPTS = 3
 REVIEW_MODES = ("none", "sample", "all")
 # One switch for both drivers: change to "all" to review every module by default.
 DEFAULT_REVIEW = "sample"
@@ -411,6 +412,10 @@ def log_event(run_dir: Path, kind: str, text: str, **fields: Any) -> None:
         stream.write(json.dumps({"at": stamp, "event": kind, **fields}, ensure_ascii=False) + "\n")
     with (run_dir / "progress.log").open("a", encoding="utf-8") as stream:
         stream.write(f"{stamp} {kind:<9} {text}\n")
+
+
+def _attempt_limit(task: dict[str, Any]) -> int:
+    return DETAIL_MAX_ATTEMPTS if task["kind"] in {"module", "repair"} else MAX_ATTEMPTS
 
 
 def _task(task_id: str, kind: str, module: int | None = None, **extra: Any) -> dict[str, Any]:
@@ -861,7 +866,9 @@ def _apply_submit(run_dir: Path, state: dict[str, Any], task: dict[str, Any], re
                   raw_text: str | None = None) -> dict[str, Any]:
     task["attempts"] += 1
     attempt = task["attempts"]
-    final = attempt - task.get("attempt_base", 0) >= MAX_ATTEMPTS
+    limit = _attempt_limit(task)
+    round_attempt = attempt - task.get("attempt_base", 0)
+    final = round_attempt >= limit
     entry = _usage_entry(usage, attempt)
     if entry:
         task["usage"].append(entry)
@@ -924,11 +931,15 @@ def _apply_submit(run_dir: Path, state: dict[str, Any], task: dict[str, Any], re
         result.unlink(missing_ok=True)
         task["status"] = "failed" if final else "pending"
         if task["status"] == "failed":
-            log_event(run_dir, "fail", f"{label} after {attempt} attempts{timing}: {error[:300]}; "
-                   "pending until the run is resumed", task=task["id"], error=error[:300])
+            log_event(run_dir, "fail", f"{label} after {attempt} total attempts "
+                   f"({round_attempt}/{limit} this round){timing}: {error[:300]}; "
+                   "pending until the run is resumed", task=task["id"], error=error[:300],
+                   attempt=attempt, round_attempt=round_attempt, attempt_limit=limit)
         else:
-            log_event(run_dir, "reject", f"{label} attempt {attempt}{timing}: {error[:300]}; re-asking with this error",
-                   task=task["id"], attempt=attempt, error=error[:300])
+            log_event(run_dir, "reject", f"{label} attempt {attempt} ({round_attempt}/{limit} this round)"
+                   f"{timing}: {error[:300]}; re-asking with this error",
+                   task=task["id"], attempt=attempt, error=error[:300],
+                   round_attempt=round_attempt, attempt_limit=limit)
         _maybe_render(run_dir, state, refresh=False)
         return {"accepted": False, "task": task["id"], "error": error[:1000],
                 "attempts": attempt, "task_status": task["status"]}
@@ -1102,10 +1113,13 @@ def resume(run_dir: Path, *, owner: str | None = None, retry_failed: bool = True
                     retried.append(task["id"])
         if (released or retried) and state["status"] == "partial":
             state["status"] = "running"
+        limits = {tid: _attempt_limit(state["tasks"][tid]) for tid in retried}
         log_event(run_dir, "resume", f"by {owner or state['host']}: adopted {[row['task'] for row in submitted]}, "
                f"released {released}, retrying {retried}"
+               + (f"; fresh attempts {limits}" if limits else "")
                + (f"; {len(changed)} source file(s) changed" if changed else ""),
-               submitted=[row["task"] for row in submitted], released=released, retried=retried)
+               submitted=[row["task"] for row in submitted], released=released, retried=retried,
+               **({"attempt_limits": limits} if limits else {}))
         _maybe_render(run_dir, state, refresh=False)
         return {"submitted": submitted, "released": released, "retried": retried, "changed_sources": changed[:50],
                 **({"warning": "sources changed since plan; start a new plan"} if changed else {}),
@@ -1121,7 +1135,8 @@ def retry(run_dir: Path, task_id: str) -> dict[str, Any]:
         for task in chosen:
             # Keep the cumulative count: raw archives and cost rows stay per attempt.
             task["status"], task["attempt_base"] = "pending", task["attempts"]
-            log_event(run_dir, "retry", f"{task['id']} gets {MAX_ATTEMPTS} fresh attempts", task=task["id"])
+            log_event(run_dir, "retry", f"{task['id']} gets {_attempt_limit(task)} fresh attempts",
+                      task=task["id"], attempt_limit=_attempt_limit(task))
         if state["status"] == "partial":
             state["status"] = "running"
         return _summary(state)
@@ -1260,7 +1275,7 @@ def _render(run_dir: Path, state: dict[str, Any]) -> None:
     normalized = sorted(task["id"] for task in state["tasks"].values()
                         if task["flags"] and "known_empty" not in task["flags"])
     if normalized:
-        index_notes.append("Normalized after a second invalid answer (facts kept, shape fixed): "
+        index_notes.append("Normalized after the final invalid answer (facts kept, shape fixed): "
                            + ", ".join(normalized) + ".")
     fill_counts: dict[str, int] = {}
     for row in _index_only_fills(state):
