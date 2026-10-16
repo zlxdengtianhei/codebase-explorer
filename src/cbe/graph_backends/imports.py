@@ -123,7 +123,7 @@ def build_with_depcruise(repo, run_dir, depcruise_bin, timeout: int, languages: 
     return _result(nodes, edges, [], languages, status="resolved" if edges else "empty")
 
 
-def build_with_grimp(repo, languages: list[str]) -> dict:
+def build_with_grimp(repo, languages: list[str], suffix_map=None) -> dict:
     if "python" not in languages:
         return {"nodes": [], "edges": [], "diagnostics": [], "capabilities": []}
     try:
@@ -133,7 +133,7 @@ def build_with_grimp(repo, languages: list[str]) -> dict:
             {"path": None, "code": "backend_unavailable",
              "message": "grimp is not installed; Python import graph skipped (install the 'graphs' extra)"}],
             "capabilities": []}
-    resolver = ImportResolver(repo)
+    resolver = ImportResolver(repo, suffix_map=suffix_map)
     packages = _top_level_python_packages(repo)
     if not packages:
         return _result([], [], [{"path": None, "code": "no_python_packages",

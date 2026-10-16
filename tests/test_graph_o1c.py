@@ -100,3 +100,24 @@ def test_cli_default_exports_all_cfg_methods(tmp_path, monkeypatch):
     assert exports[-1]["maxMethods"] == "-1"
     cfg = next(c for c in json.loads(output.read_text())["capabilities"] if c["graph"] == "cfg")
     assert cfg["methods_omitted"] == 0
+
+
+def test_suffix_registry_is_built_once_per_graph(tmp_path, monkeypatch):
+    from cbe import graph, source_context
+    from cbe.graph_backends import resolution
+    original = source_context.suffix_languages
+    calls = []
+    def registry():
+        calls.append(1)
+        return original()
+    monkeypatch.setattr(source_context, "suffix_languages", registry)
+    monkeypatch.setattr(resolution, "suffix_languages", registry)
+    (tmp_path / "app").mkdir()
+    (tmp_path / "app" / "__init__.py").write_text("import os\nimport sys\n")
+    graph.analyze_graph(tmp_path, tmp_path / "g.json", backend="imports")
+    assert len(calls) == 1
+    calls.clear()
+    resolver = ImportResolver(tmp_path)
+    for _ in range(10):
+        resolver.resolve("main.rb", 'require "set"')
+    assert len(calls) == 1

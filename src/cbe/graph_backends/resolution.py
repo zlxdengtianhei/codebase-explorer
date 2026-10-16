@@ -22,8 +22,9 @@ SYSTEM_INCLUDE_PREFIXES = frozenset({"sys", "netinet", "arpa", "net", "linux", "
 
 
 class ImportResolver:
-    def __init__(self, repo: Path, files=None):
+    def __init__(self, repo: Path, files=None, suffix_map=None):
         self.repo = repo
+        self.suffix_map = suffix_languages() if suffix_map is None else suffix_map
         self.files = repository_files(repo) if files is None else files
         self.suffix_files = {}
         for path in sorted(self.files):
@@ -97,7 +98,7 @@ class ImportResolver:
     def resolve(self, path: str, expression: str) -> list[tuple[str, str | None]]:
         text = (expression or "").strip()
         suffix = PurePosixPath(path).suffix.lower()
-        language = suffix_languages().get(suffix)
+        language = self.suffix_map.get(suffix)
         suffix = {"c": ".c", "cpp": ".c", "ruby": ".rb", "php": ".php"}.get(language, suffix)
         if suffix == ".py":
             return self._python(path, text)
@@ -136,7 +137,7 @@ class ImportResolver:
             if len(matches) == 1:
                 return [("resolved", matches[0])]
             return [("unresolved", None)]
-        token = import_token(text, suffix)
+        token = import_token(text, suffix, self.suffix_map)
         if not token:
             return [("unresolved", None)]
         if suffix in {".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs", ".mts", ".cts"}:
@@ -197,7 +198,7 @@ class ImportResolver:
         return [("unresolved", None)]
 
 
-def import_token(text: str, suffix: str) -> str | None:
+def import_token(text: str, suffix: str, suffix_map=None) -> str | None:
     """Select syntax by source language; Python must never hit JS's `from`."""
     if suffix == ".py":
         try:
@@ -209,7 +210,7 @@ def import_token(text: str, suffix: str) -> str | None:
         if isinstance(statement, ast.Import) and len(statement.names) == 1:
             return statement.names[0].name
         return None
-    language = suffix_languages().get(suffix)
+    language = (suffix_languages() if suffix_map is None else suffix_map).get(suffix)
     suffix = {"ruby": ".rb", "php": ".php"}.get(language, suffix)
     patterns = {
         ".go": r'^import\s+(?:(?:\w+|\.)\s+)?["`]?([^"`\s]+)["`]?$',
@@ -229,8 +230,8 @@ def import_token(text: str, suffix: str) -> str | None:
     return text if text and not re.search(r"[\s()#]", text) else None
 
 
-def resolve_declarations(repo: Path, nodes: list[dict], edges: list[dict], *, files=None, diagnostics=None) -> tuple[list[dict], list[dict]]:
-    resolver = ImportResolver(repo, files)
+def resolve_declarations(repo: Path, nodes: list[dict], edges: list[dict], *, files=None, diagnostics=None, suffix_map=None) -> tuple[list[dict], list[dict]]:
+    resolver = ImportResolver(repo, files, suffix_map)
     known = {n["id"] for n in nodes}
     result = []
     for edge in edges:

@@ -64,10 +64,10 @@ class GraphError(ValueError):
     """Raised when no graph could be produced or an input is invalid."""
 
 
-def discover_sources(repo, languages: list[str] | None = None) -> list[dict]:
+def discover_sources(repo, languages: list[str] | None = None, *, suffix_map=None) -> list[dict]:
     """Return ``[{path, language, sha256}]`` for source files under ``repo``."""
 
-    suffix_map = source_context.suffix_languages()
+    suffix_map = source_context.suffix_languages() if suffix_map is None else suffix_map
     wanted = set(languages) if languages else None
     manifest: list[dict] = []
     repo = repo.resolve()
@@ -195,7 +195,8 @@ def analyze_graph(
     output = Path(output).expanduser()
     # Frontends can read sibling languages (for example C/C++ headers or
     # JS/TS imports). Bind every registered source even for a language filter.
-    manifest = discover_sources(repo)
+    suffix_map = source_context.suffix_languages()
+    manifest = discover_sources(repo, suffix_map=suffix_map)
     config_manifest = discover_config(repo)
     detected = sorted({entry["language"] for entry in manifest})
     requested = sorted(set(languages)) if languages else detected
@@ -253,7 +254,7 @@ def analyze_graph(
             fragments.append(fragment)
             diagnostics.extend(fragment["diagnostics"])
         if "python" in requested:
-            fragment = backends.build_with_grimp(repo, requested)
+            fragment = backends.build_with_grimp(repo, requested, suffix_map)
             if fragment["nodes"]:
                 components.append({"name": "grimp", "version": _grimp_version()})
                 ran = True
@@ -265,17 +266,17 @@ def analyze_graph(
 
     files = repository_files(repo)
     nodes, edges = _merge(fragments)
-    nodes, edges = resolve_declarations(repo, nodes, edges, files=files, diagnostics=diagnostics)
+    nodes, edges = resolve_declarations(repo, nodes, edges, files=files, diagnostics=diagnostics, suffix_map=suffix_map)
     # The merge boundary validates identities; declaration resolution above
     # is the only authority for turning an include into a repository file.
     nodes, edges, identity_diagnostics = validate_identities(nodes, edges, files)
     diagnostics.extend(identity_diagnostics)
-    edges = _prefer_resolved_imports(edges)
+    edges = _prefer_resolved_imports(edges, suffix_map=suffix_map)
     capabilities = _merge_capabilities(fragments, requested, extra_capabilities)
     for capability in capabilities:
         if capability.get("backend") == "joern" and capability.get("graph") == "import" and capability.get("status") not in {"failed", "unsupported", "unavailable"}:
             relevant = [e for e in edges if e.get("kind") == "import"
-                        and source_context.suffix_languages().get(Path(e.get("path") or "").suffix) == capability.get("language")]
+                        and suffix_map.get(Path(e.get("path") or "").suffix.lower()) == capability.get("language")]
             counts = {status: sum(e.get("status") == status for e in relevant)
                       for status in ("resolved", "external", "unresolved")}
             capability.update(counts)
@@ -286,7 +287,7 @@ def analyze_graph(
         diagnostics.append({"path": None, "code": "no_backend_completed",
                             "message": "no backend completed; graph is empty and not authoritative"})
 
-    source_stable = discover_sources(repo) == manifest
+    source_stable = discover_sources(repo, suffix_map=suffix_map) == manifest
     config_stable = discover_config(repo) == config_manifest
     if not source_stable:
         diagnostics.append({"path": None, "code": "source_changed_during_build",
@@ -460,12 +461,14 @@ def _merge(fragments: list[dict]) -> tuple[list[dict], list[dict]]:
     return nodes, edges
 
 
-def _prefer_resolved_imports(edges: list[dict]) -> list[dict]:
+def _prefer_resolved_imports(edges: list[dict], *, suffix_map=None) -> list[dict]:
     """Merge resolved file evidence by endpoints, retaining every expression."""
     from pathlib import PurePosixPath
 
+    suffix_map = source_context.suffix_languages() if suffix_map is None else suffix_map
+
     def specifier(edge):
-        return import_token(edge.get("expression") or "", PurePosixPath(edge.get("path") or "").suffix)
+        return import_token(edge.get("expression") or "", PurePosixPath(edge.get("path") or "").suffix, suffix_map)
 
     resolved_declarations = {(e.get("source"), specifier(e)) for e in edges
                              if e.get("kind") == "import" and e.get("status") == "resolved"
