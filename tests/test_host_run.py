@@ -906,14 +906,29 @@ def test_module_with_no_graph_node_gets_an_explicit_no_local_node_statement(tmp_
     assert "Batch-internal resolved calls" in anchored_prompt or "Graph: internal=" in anchored_prompt
 
 
+@pytest.mark.parametrize("legacy, tamper", [(False, "whitespace"), (False, "value"), (True, "value")],
+                         ids=["new-whitespace", "new-value", "legacy-value"])
 @pytest.mark.parametrize("operation", ["next", "submit", "resume", "render", "prompt", "verify"])
-def test_raw_context_rejects_same_size_same_mtime_byte_change(tmp_path, operation):
+def test_context_rejects_same_size_same_mtime_change(tmp_path, operation, legacy, tamper):
     run_dir = Path(host_run.plan(_repo(tmp_path), tmp_path / "run", review="none")["run_dir"])
     host_run.next_tasks(run_dir, limit=1)  # exercise an already-used context
+    if legacy:
+        state_path = run_dir / "host" / "state.json"
+        state = json.loads(state_path.read_text())
+        del state["context"]["raw_digest"]  # state shape written before the byte freeze
+        host_run.write_json(state_path, state)
     path = run_dir / "context.json"
     raw, stat = path.read_bytes(), path.stat()
     assert raw.endswith(b"\n")
-    path.write_bytes(raw[:-1] + b" ")  # same JSON value, different frozen byte
+    if tamper == "whitespace":
+        changed = raw[:-1] + b" "  # same JSON value, different frozen byte
+    else:
+        original = b'"text": "from pkg.jobs import reserve_run'
+        forged = b'"text": "from pkg.fake import reserve_run'
+        assert original in raw
+        changed = raw.replace(original, forged, 1)
+        assert json.loads(changed) != json.loads(raw)
+    path.write_bytes(changed)
     os.utime(path, ns=(stat.st_atime_ns, stat.st_mtime_ns))
     assert path.stat().st_size == stat.st_size and path.stat().st_mtime_ns == stat.st_mtime_ns
     if operation == "verify":
