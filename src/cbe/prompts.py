@@ -106,18 +106,36 @@ def detail_prompt(paths: list[str], inventory: dict[str, dict], *,
         "Estimate each unit's source tokens from its own implementation (a class header excludes "
         "separately documented members). For source under 50 tokens, one or two sentences usually "
         "suffice; for 50-150 tokens, aim around 70 prose tokens or fewer. For 150-400 tokens, "
-        "around 110 prose tokens often suffice; for 400-1000, around 170; for larger units, "
-        "around 230, growing with actual complexity. These are references, not ceilings: exceed "
+        "around 110 prose tokens often suffice; for 400-1000, around 240; for larger units, "
+        "around 330, growing with actual complexity. These are references, not ceilings: exceed "
         "them whenever needed to explain behavior-changing conditions, failure paths, or side "
-        "effects. Information quality takes priority; remove repetition before removing behavior.")
+        "effects. Cover every behavior-changing branch and every failure path; let those branches "
+        "and paths determine the length. Information quality takes priority; remove repetition "
+        "before removing behavior.")
     header.append(
-        "AVOID DUPLICATION: Explain a class's class-level responsibility and collaboration only; "
-        "do not repeat the behavior of members that have their own units. Keep the coordination "
-        "needed to understand the class. A module region containing only imports or constants "
+        "AVOID DUPLICATION: Explain a class's class-level responsibility and collaboration; "
+        "do not repeat the behavior of members that have their own units in this batch. "
+        "For members folded into the class without their own units, explain their behavior, "
+        "conditions, and failure paths inside the class unit, not just class attributes. "
+        "Include those folded implementations when estimating the class unit's source size. "
+        "Keep the coordination needed to understand the class. Each unit must stand alone: "
+        "never replace behavior with 'see the class unit' or 'see above'. "
+        "A module region containing only imports or constants "
         "must be index_only, because the inventory already locates that non-behavioral material. "
         "Write uncertainties only for a real boundary supported by specific source evidence; "
         "omit boilerplate such as 'not visible in this file'. An empty uncertainties list is "
         "appropriate when no such boundary affects understanding.")
+    header.append(
+        "BEHAVIOR AND EVIDENCE: State each if/elif branch or distinct case with its own condition "
+        "and outcome; do not compress different conditions into one ambiguous sentence. "
+        "Explain how a called function changes this unit's result, not merely that it is called, "
+        "when that effect is supported by the supplied source. Do not speculate about callers, "
+        "decorators, or safety guarantees absent from the source. If a relevant effect cannot "
+        "be established, put the specific boundary and its evidence in uncertainties. "
+        "Describe only code within this unit's source scope. When a docstring conflicts with "
+        "the implementation, follow the implementation and point out the discrepancy. "
+        "Keep generation metadata out of prose: no inventory ids or positions, graph-candidate "
+        "labels, or references to the generation process.")
     if issues:
         header.append("Correct these review findings without broadening claims: "
                       + json.dumps(issues, ensure_ascii=False))
