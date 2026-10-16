@@ -67,3 +67,36 @@ def test_function_types_and_nested_function_owners_are_not_classes():
     for full in ("copy.py:<module>.copy", "inspect.isfunction"):
         assert resolver.resolve(dict(methodFullName=full, callees=[dict(fullName=full, external=True)]))[0] == "external"
     assert resolver.resolve(dict(methodFullName="AppContext.missing", callees=[dict(external=True)]))[0] == "unresolved"
+
+
+def test_cli_default_exports_all_cfg_methods(tmp_path, monkeypatch):
+    import json
+    import subprocess
+    from pathlib import Path
+    from cbe.cli import main
+    home = tmp_path / "joern"
+    home.mkdir()
+    for name in ("joern", "joern-parse"):
+        (home / name).touch()
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "a.py").write_text("def run(): pass\n")
+    exports = []
+    def run(argv, **kwargs):
+        if "--version" in argv:
+            return subprocess.CompletedProcess(argv, 0, "Version: 1", "")
+        if "--language" in argv:
+            Path(argv[argv.index("-o") + 1]).touch()
+        if "--script" in argv:
+            params = dict(arg.split("=", 1) for arg in argv if "=" in arg)
+            exports.append(params)
+            Path(params["outFile"]).write_text(json.dumps(dict(
+                methods=[dict(nodeId=1, file="a.py", fullName="run")], cfgMethodsOmitted=0)))
+        return subprocess.CompletedProcess(argv, 0, "", "")
+    monkeypatch.setattr(subprocess, "run", run)
+    output = tmp_path / "graph.json"
+    assert main(["graph", "build", str(repo), "--output", str(output), "--backend", "joern",
+                 "--joern-home", str(home)]) == 0
+    assert exports[-1]["maxMethods"] == "-1"
+    cfg = next(c for c in json.loads(output.read_text())["capabilities"] if c["graph"] == "cfg")
+    assert cfg["methods_omitted"] == 0
