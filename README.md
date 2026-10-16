@@ -150,13 +150,14 @@ over the config, which takes precedence over model defaults. For example:
 The endpoint must support the configured request fields. Batch limits apply to
 new plans; `--resume` keeps the frozen batches. A response ending with `length`
 (or `max_tokens`/`max_output_tokens`) fails with `output_limit`, even if its JSON
-parses. The driver retries once with the error, then leaves the task failed for
-resume; truncated attempts cannot be accepted by final normalization. Increase
+parses. Module and repair detail tasks allow 3 answers; other tasks allow 2.
+Each rejection includes the error; on the final invalid answer the driver
+normalizes usable content or fails the task for resume. Truncated attempts
+cannot be accepted by final normalization. Increase
 `output_max_tokens` for resume or start a fresh run with smaller batch limits if needed.
 `output_max_tokens` caps API output (sent as the provider's `max_tokens` field);
-`batch_max_tokens` caps source input per reading batch. Legacy config `max_tokens`
-is still accepted as an alias for `output_max_tokens`; the explicit new name wins
-if both are supplied. CLI help reads the model defaults table directly.
+`batch_max_tokens` caps source input per reading batch.
+CLI help reads the model defaults table directly.
 
 API config is parsed and validated before planning or sending model requests.
 Malformed JSON or invalid resource settings exit 2 without a generated summary.
@@ -234,7 +235,9 @@ qualified name, final normalization can correct the ID (including suffixes such
 as `_full`). A corrected unit definition has a notice beside its body: CBE shows
 the original and inventory IDs and warns that the model wrote the body under the
 wrong ID, so it may be inaccurate. Reference-only corrections do not add a unit
-notice. Notices count as program-written `node_text`, not `model_body`, in the
+notice. The same notice is stored in each corrected catalog unit's
+`id_corrections` and returned by `query` in text and JSON; `find` marks the row
+and directs the reader to `query`. Notices count as program-written `node_text`, not `model_body`, in the
 Markdown token breakdown. `STATUS.md` lists `id_corrected` separately from shape
 normalization; `summary.json` contains `id_corrected_count` and `id_corrected`
 rows with `task`, `original`, `corrected` and `location`. The existing `normalized`
@@ -242,10 +245,11 @@ task list remains available. If an extra disposition key corrects to an existing
 key, CBE keeps the existing disposition, drops the extra key and records flags.
 
 Automatic `index_only` coverage repair is bounded: a partially supplied detail
-answer may omit one inventory disposition, or two when its batch has at least
-40 inventory symbols. An answer that omits every disposition is rejected.
-Larger omissions are named in the retry diagnostic, with a count and up to 12
-missing IDs. If the final answer still exceeds the allowance, the task fails
+answer may need one inventory disposition filled, or two when its batch has at
+least 40 inventory symbols. Missing dispositions and entries with invalid `how`
+share this allowance; an answer requiring every disposition to be filled is
+rejected. Retry diagnostics name missing or invalid IDs and the repair count.
+If the final answer still exceeds the allowance, the task fails
 and the run stays partial for resume; CBE does not silently replace it with
 index-only entries or an older answer. Explicit model-authored `index_only`
 choices and complete group dispositions are unaffected.
@@ -253,7 +257,7 @@ choices and complete group dispositions are unaffected.
 `STATUS.md` and `summary.json` list `index_only_filled` separately from
 `id_corrected`; JSON includes `index_only_filled_count` and rows with `task`,
 `symbol`, and `reason` (`missing` or `invalid`). These count only entries made
-by normalization, including historical flags, and exclude the model's own
+by normalization and exclude the model's own
 `index_only` choices. INDEX notes identify the affected active module/repair;
 the note counts as program-written `index` text, outside `model_body`.
 

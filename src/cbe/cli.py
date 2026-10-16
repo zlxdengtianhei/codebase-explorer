@@ -59,7 +59,7 @@ def build_parser() -> argparse.ArgumentParser:
     host_plan.add_argument("--jobs", type=int, default=4, help="maximum concurrently dispatched subagents")
     host_plan.add_argument("--host", default="other", help="label only, e.g. claude-code or codex")
     for name, text in (("next", "Lease ready tasks up to the concurrency limit and write their instruction files"),
-                       ("submit", "Check one subagent result: accept, re-ask once, then normalize or fail"),
+                       ("submit", "Check one subagent result: detail (module/repair) allows 3 answers, others 2; normalize or fail on the final invalid answer"),
                        ("status", "Show every task's state, attempts, timing, output, and the next action"),
                        ("resume", "Continue from the run records: adopt finished results, release lost "
                         "leases, retry failed tasks"),

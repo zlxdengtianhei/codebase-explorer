@@ -95,14 +95,11 @@ def _relation_link(target: str, units: dict, dispositions: dict, owner: dict,
 
 def _build_unit_block(uid: str, units: dict, ranges_map: dict, owner: dict,
                       dispositions: dict, nodes: dict, source_root: Path, page_dir: Path,
-                      name_of: Callable[[str], str], source_links: dict[str, str],
-                      id_corrections: list[dict] | None = None) -> str:
+                      name_of: Callable[[str], str], source_links: dict[str, str]) -> str:
     unit = units[uid]
     lines = [f"### `{name_of(uid)}`", ""]
-    for row in id_corrections or []:
-        lines += [f"> **ID corrected by CBE.** CBE changed the unit ID from {code_text(row['original'])} "
-                  f"to the inventory ID {code_text(uid)}. The model wrote this body under the wrong ID; "
-                  "it may be inaccurate.", ""]
+    for row in unit.get("id_corrections") or []:
+        lines += [f"> **ID corrected by CBE.** {row['notice']}", ""]
     raw_signature = unit.get("signature") or unit.get("kind") or "unit"
     declaration = re.search(r"\b(?:async def|def|class)\s+\w", raw_signature)
     if declaration:
@@ -225,10 +222,12 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
                 and edge.get("to") in nodes:
             edges_by_from[edge["from"]].append(edge)
 
-    corrections_by_unit: dict[str, list[dict]] = {}
+    from cbe.records import correction_notice
+
     for row in id_corrections or []:
-        if re.fullmatch(r"units\[\d+\]\.id", row["location"]):
-            corrections_by_unit.setdefault(row["corrected"], []).append(row)
+        uid = row["corrected"]
+        if uid in units and re.fullmatch(r"units\[\d+\]\.id", row["location"]):
+            units[uid].setdefault("id_corrections", []).append({**row, "notice": correction_notice(row)})
     for nid, node in nodes.items():
         source_links: dict[str, str] = {}
         lines = [f"# {node.get('title') or nid}", ""]
@@ -259,8 +258,7 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
             if uid not in units:
                 continue
             block = _build_unit_block(uid, units, ranges_map, owner, dispositions,
-                                      nodes, source_root, nodes_dir, name_of, source_links,
-                                      corrections_by_unit.get(uid))
+                                      nodes, source_root, nodes_dir, name_of, source_links)
             lines += [f'<a id="{anchor(uid)}"></a>'] + block.splitlines() + [""]
         lines += ["## 怎样查", "", '`RUN` 为运行目录。用本页单元标题查 `ID`（精确名称优先）：',
                   '`cbe find --run-dir "$RUN" --term "单元标题"`。再用结果中的 `ID`：',
@@ -701,7 +699,8 @@ def find(run_dir: Path, term: str, limit: int = 25) -> list[dict[str, Any]]:
         summary = " ".join(words[:25]) + ("…" if len(words) > 25 else "")
         results.append({"id": sid, "name": name, "kind": symbol.get("kind") or record.get("kind") or
                         ("file" if is_file else "symbol"), "location": format_ranges(ranges),
-                        "summary": summary, "matched_fields": matched})
+                        "summary": summary, "matched_fields": matched,
+                        **({"id_corrected": True} if record.get("id_corrections") else {})})
     results.sort(key=lambda row: (0 if needle in {row["id"].casefold(), row["name"].casefold(),
                                                   str(catalog["symbols"].get(row["id"], {}).get("display_name", "")).casefold()}
                                  else 1))
@@ -710,7 +709,9 @@ def find(run_dir: Path, term: str, limit: int = 25) -> list[dict[str, Any]]:
 
 def find_text(results: list[dict]) -> str:
     return "".join(f"{r['name']} | {r['id']} | {r['kind']} | {r['location']} | "
-                   f"{r['summary']} | match: {','.join(r['matched_fields'])}\n" for r in results)
+                   f"{r['summary']} | match: {','.join(r['matched_fields'])}"
+                   f"{' | ID corrected; may be inaccurate (see query)' if r.get('id_corrected') else ''}\n"
+                   for r in results)
 
 
 def query(run_dir: Path, symbol_id: str, edges: str | None = None) -> dict[str, Any]:
@@ -770,7 +771,7 @@ def query_text(record: dict) -> str:
 
     summary, remainder = summary_and_remainder(record)
     lines = [f"{record.get('display_name', record['name'])}  {record['id']}"]
-    for field in ("signature", "signatures", "ranges", "summary", "explain", "extras",
+    for field in ("id_corrections", "signature", "signatures", "ranges", "summary", "explain", "extras",
                   "uncertainties", "relations", "reverse_relations", "folded_members",
                   "internal_edge_counts", "facts", "units", "symbols"):
         value = record.get(field)

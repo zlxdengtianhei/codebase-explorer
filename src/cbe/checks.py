@@ -1,8 +1,8 @@
 """Strict checks and shape repair for every task result.
 
-A strict miss is re-asked once with the exact error. If the second answer still
-misses, the normalizer makes a usable answer compliant and returns flags that
-describe every change; it raises only when nothing usable is left. Retained
+Module and repair detail tasks allow 3 answers; other tasks allow 2. On the
+final invalid answer, the normalizer makes usable content compliant and returns
+flags describing every change, or fails when the answer cannot be accepted. Retained
 obligations: the model never emits line numbers (the program derives published
 ranges from the inventory); every inventory id gets exactly one disposition
 (unit / grouped / index_only), so nothing is silently dropped; length and count
@@ -187,8 +187,14 @@ def _detail_fill_limit(total: int) -> int:
     return 2 if total >= 40 else 1
 
 
-def _missing_dispositions_problem(missing: list[str], total: int) -> str:
+def _missing_dispositions_problem(missing: list[str], total: int,
+                                  invalid: list[str] | None = None) -> str:
     limit = _detail_fill_limit(total)
+    if invalid:
+        return (f"dispositions require automatic index_only: {len(missing) + len(invalid)}/{total} "
+                f"missing or invalid (automatic index_only limit {limit}). "
+                "Every inventory symbol must have a disposition: unit, grouped or index_only; "
+                f"return the complete dispositions object. Missing ids: {missing}; invalid ids: {invalid}")
     return (f"dispositions missing inventory ids: {len(missing)}/{total} missing "
             f"(automatic index_only limit {limit}). "
             "Every inventory symbol must have a disposition: unit, grouped or index_only; "
@@ -384,8 +390,16 @@ def normalize_details(payload: Any, paths: list[str], inventory: dict[str, dict]
                 else:
                     dispositions[target_key] = dispositions.pop(key)
     missing = sorted(scope_ids - set(dispositions)) if isinstance(dispositions, dict) else sorted(scope_ids)
-    if missing and (len(missing) == len(scope_ids) or len(missing) > _detail_fill_limit(len(scope_ids))):
-        raise MissingDispositionsError(_missing_dispositions_problem(missing, len(scope_ids)))
+    invalid = []
+    if isinstance(dispositions, dict):
+        for key in sorted(scope_ids & set(dispositions)):
+            entry = dispositions[key]
+            how = entry.get("how") if isinstance(entry, dict) else None
+            if not isinstance(how, str) or how not in DISPOSITION_HOW:
+                invalid.append(key)
+    filled = missing + invalid
+    if filled and (len(filled) == len(scope_ids) or len(filled) > _detail_fill_limit(len(scope_ids))):
+        raise MissingDispositionsError(_missing_dispositions_problem(missing, len(scope_ids), invalid))
     units = [unit for unit in payload["units"] if isinstance(unit, dict)
              and isinstance(unit.get("id"), str) and unit["id"].strip()]
     if len(units) != len(payload["units"]):

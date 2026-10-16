@@ -8,6 +8,18 @@ from collections import defaultdict
 from cbe.symbols import SemanticError
 
 
+def correction_notice(row: dict) -> str:
+    """One explanation of a corrected definition for pages and agent queries."""
+    def code_span(text):
+        width = max((len(run) for run in re.findall(r"`+", text)), default=0) + 1
+        fence = "`" * width
+        return f"{fence} {text} {fence}"
+
+    return (f"CBE changed the unit ID from {code_span(row['original'])} "
+            f"to the inventory ID {code_span(row['corrected'])}. "
+            "The model wrote this body under the wrong ID; it may be inaccurate.")
+
+
 def summary_sentence(unit: dict) -> str:
     """Use the author's optional sentence, or the first explanation sentence."""
     summary = unit.get("summary")
@@ -188,6 +200,8 @@ def build_records(units: dict, dispositions: dict, inventory: dict, ranges: dict
                   "signature": next((r["signature"] for r in signature_rows if r["signature"]), ""),
                   "members": unit.get("members") or [], "folded_members": [m for m in members if m != uid],
                   "reverse_relations": reverse[uid], "graph_state": availability}
+        # Correction metadata is derived exclusively from active task flags.
+        record.pop("id_corrections", None)
         for direction, edges in (("outgoing", outgoing), ("incoming", incoming)):
             record[direction] = list(dict.fromkeys(eid for sid in members for eid in edges[sid]))
         record["internal_edge_counts"] = {

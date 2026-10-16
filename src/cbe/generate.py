@@ -52,10 +52,9 @@ class SourceNotEmbedded(GenerateError):
     """
 
 
-# Repair-first validation. A strict miss is re-asked once with the exact
-# error; if the second answer still misses, these normalizers make a usable
-# answer compliant and return flags describing every change. They raise only
-# when nothing usable is left (for example, no summary at all).
+# Repair-first validation: module and repair detail tasks allow 3 answers;
+# other tasks allow 2. Each rejection includes the exact error. On the final
+# invalid answer, normalize usable content with flags or fail the task.
 
 
 def _mark_result(csv_path: Path, task: str, attempt: int, result: str) -> None:

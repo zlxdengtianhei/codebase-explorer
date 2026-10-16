@@ -44,11 +44,13 @@ def load_config(path: Path, model: str = "") -> dict[str, Any]:
             raise ApiConfigError(f"API config is not valid JSON: {exc}") from exc
         if not isinstance(loaded, dict):
             raise ApiConfigError("API config must be a JSON object")
-        # Legacy configurations used the provider field name. Normalize it at
-        # the boundary so API output and source-batch budgets stay distinct.
-        if "max_tokens" in loaded:
-            loaded.setdefault("output_max_tokens", loaded["max_tokens"])
-            del loaded["max_tokens"]
+        allowed = set(DEFAULT_API_CONFIG) | {
+            "timeout", "output_max_tokens", "batch_target_tokens", "batch_max_tokens",
+            "reasoning_effort", "response_format", "temperature", "price_per_million",
+        }
+        unknown = sorted(set(loaded) - allowed)
+        if unknown:
+            raise ApiConfigError(f"unknown API config keys: {', '.join(unknown)}")
         value.update(loaded)
     for key in ("timeout", "output_max_tokens", "batch_target_tokens", "batch_max_tokens"):
         if key in value and (type(value[key]) is not int or value[key] < 1):

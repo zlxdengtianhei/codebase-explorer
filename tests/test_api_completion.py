@@ -283,7 +283,7 @@ def test_flash_request_defaults_and_explicit_config_override(tmp_path, server, m
     assert _Handler.captured["body"]["response_format"] == {"type": "json_object"}
     assert _Handler.captured["body"]["reasoning_effort"] == "low"
     config = tmp_path / "run/api.json"
-    config.write_text(json.dumps({"base_url": server, "max_tokens": 60000, "reasoning_effort": "high"}))
+    config.write_text(json.dumps({"base_url": server, "output_max_tokens": 60000, "reasoning_effort": "high"}))
     result = api_completion.invoke(task="x", attempt=1, prompt="x", repo=tmp_path,
         run_dir=tmp_path / "run", model="zai/glm-5.3-flash", config=config,
         timeout=10, csv_path=tmp_path / "run/calls.csv")
@@ -302,7 +302,7 @@ def test_unknown_model_does_not_receive_reasoning_or_output_defaults(tmp_path, s
 def test_output_budget_config_is_separate_from_source_batch_budget(tmp_path, server, monkeypatch):
     _Handler.body = {"choices": [{"message": {"content": "{}"}}]}
     config = tmp_path / "api.json"
-    config.write_text(json.dumps({"base_url": server, "max_tokens": 61000,
+    config.write_text(json.dumps({"base_url": server,
                                   "output_max_tokens": 62000, "batch_max_tokens": 15000}))
     result = api_completion.invoke(task="x", attempt=1, prompt="x", repo=tmp_path,
         run_dir=tmp_path / "run", model="other/model", config=config,
