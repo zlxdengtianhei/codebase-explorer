@@ -259,7 +259,7 @@ the note counts as program-written `index` text, outside `model_body`.
 
 Usage reports distinguish known counters, estimates, and missing values. Host-agent usage can be imported where the harness provides the corresponding session records. Unknown model prices remain `null` in JSON and `unknown` in the cost report, even when token counts are exact. `cbe host cost --price INPUT,OUTPUT,CACHE_WRITE,CACHE_READ` accepts supplied rates in USD per million tokens. Price equivalents are not subscription invoices.
 
-## Development and compatibility
+## Development
 
 ```sh
 uv sync --python 3.13 --group dev
@@ -267,7 +267,5 @@ uv run pytest -q
 ```
 
 The external graph tools are optional at installation time. Tests that require a real analyzer need that analyzer configured; ordinary package tests also exercise missing backends and invalid inputs. Platform support must be assessed for both CBE and the chosen analyzer.
-
-Version 2.1.0's script driver was withdrawn because it sent file names without source bodies. 2.1.1 repaired source delivery. The 2.2 development workflow introduces structured detail and semantic ownership; do not assume an old run is compatible unless its schema is accepted by the CLI. The former `analyze` / `native-next` / `native-record`, MCP, and HTTP-service workflow remains retired in Git history.
 
 The generated files can be consumed by other tools through explicit paths. CBE does not require a shared database or a second task scheduler. To remove the isolated command, run `uv tool uninstall codebase-explorer`. The product license is [MIT](LICENSE); external analyzers and grammar packages retain their own licenses.

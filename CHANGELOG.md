@@ -26,9 +26,8 @@
 - Resolve grouped inventory IDs and synthetic `grp:` units in `find`/`query`,
   including existing semantic catalogues. Verify primary page anchors and expose
   index-only reasons. Do not label a graph with no completed backend as successfully empty.
-- Remove unused legacy packet, literal, ledger and rendering helpers; retain
-  source guards, current callable contracts and offline token counting. This is
-  separate from the earlier 2.0 → 2.1 source reduction.
+- Remove unused packet, literal, ledger and rendering helpers while keeping
+  current callable contracts and offline token counting.
 - The script driver embeds CRLF source files byte for byte; it no longer stops
   with `SourceNotEmbedded` on them.
 - Catalogue file languages are the ones frozen in the source context: `.tsx` is
