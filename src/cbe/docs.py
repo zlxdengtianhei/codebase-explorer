@@ -447,7 +447,7 @@ def catalog_symbols(catalog: dict) -> dict[str, dict]:
                 record.setdefault(field, [])
     edge_table = catalog.get("edges") or {}
     for sid, record in records.items():
-        record["name"] = (catalog.get("short_names") or {}).get(sid, record.get("name", sid))
+        record["display_name"] = (catalog.get("short_names") or {}).get(sid, record.get("name", sid))
         for direction in ("outgoing", "incoming"):
             record[direction] = [edge_table[e] if isinstance(e, str) else e
                                  for e in record.get(direction) or []]
@@ -658,7 +658,7 @@ def find(run_dir: Path, term: str, limit: int = 25) -> list[dict[str, Any]]:
                   record.get("ranges") or [])
         if is_file and not ranges:
             ranges = [{"path": sid, "lines": [[1, max(1, catalog.get("inventory", {}).get(sid, {}).get("nlines", 1))]]}]
-        name = record.get("name") or sid
+        name = record.get("display_name") or record.get("name") or sid
         if "::" in name:
             name = symbol.get("name") or name
         summary = summary_sentence(record) or summary_sentence({"explain": record.get("reason", "")})
@@ -695,6 +695,8 @@ def query(run_dir: Path, symbol_id: str, edges: str | None = None) -> dict[str, 
             return {"id": uid, "name": catalog.get("short_names", {}).get(uid, row.get("name", uid)),
                     "ranges": row.get("ranges", []), "summary": row.get("summary", row.get("reason", ""))}
         record = {"id": symbol_id, "ranges": catalog["files"][symbol_id].get("ranges", []),
+                  **{key: catalog["files"][symbol_id][key] for key in ("tokens", "language", "known_empty")
+                     if key in catalog["files"][symbol_id]},
                   "units": [listing(uid, u) for uid, u in catalog.get("units", {}).items()
                             if any(r["path"] == symbol_id for r in u.get("ranges") or [])],
                   "symbols": [listing(sid, s) for sid, s in catalog["symbols"].items()
@@ -704,7 +706,8 @@ def query(run_dir: Path, symbol_id: str, edges: str | None = None) -> dict[str, 
                               and e.get("path") == symbol_id]}
     else:
         raise SemanticError(f"unknown unit, symbol or file: {symbol_id}")
-    record["name"] = catalog.get("short_names", {}).get(symbol_id, record.get("name", symbol_id))
+    record.setdefault("name", symbol_id)
+    record["display_name"] = catalog.get("short_names", {}).get(symbol_id, record["name"])
     if edges:
         from cbe.records import SourceOwnership, frozen_sources
 
@@ -727,7 +730,7 @@ def query(run_dir: Path, symbol_id: str, edges: str | None = None) -> dict[str, 
 
 def query_text(record: dict) -> str:
     """Agent view: prose once, one line per relation or graph edge."""
-    lines = [f"{record['name']}  {record['id']}"]
+    lines = [f"{record.get('display_name', record['name'])}  {record['id']}"]
     for field in ("signature", "signatures", "ranges", "summary", "explain", "extras",
                   "uncertainties", "relations", "reverse_relations", "folded_members",
                   "internal_edge_counts", "facts", "units", "symbols"):

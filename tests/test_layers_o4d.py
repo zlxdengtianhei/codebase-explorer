@@ -118,3 +118,21 @@ def test_product_read_query_instructions_use_available_commands(tmp_path, capsys
             args = shlex.split(line.replace("$RUN", str(run)).replace("$ID", ids[0]))
             assert cli.main(args[1:]) == 0
             capsys.readouterr()
+
+
+def test_json_queries_preserve_file_metadata_and_inventory_names(tmp_path, capsys):
+    run, _, _, _, _ = _run(tmp_path)
+    path = run / "catalog.json"
+    catalog = json.loads(path.read_text())
+    sid = next(iter(catalog["symbols"]))
+    original_name = catalog["symbols"][sid]["name"]
+    catalog["short_names"][sid] = "pkg/jobs.py:" + original_name
+    path.write_text(json.dumps(catalog))
+    assert cli.main(["query", "--run-dir", str(run), "--id", sid, "--json"]) == 0
+    record = json.loads(capsys.readouterr().out)
+    assert record["name"] == original_name
+    assert record["display_name"] == "pkg/jobs.py:" + original_name
+    assert cli.main(["query", "--run-dir", str(run), "--id", "pkg/jobs.py", "--json"]) == 0
+    file = json.loads(capsys.readouterr().out)
+    for key in ("tokens", "language", "known_empty"):
+        assert file[key] == catalog["files"]["pkg/jobs.py"][key]
