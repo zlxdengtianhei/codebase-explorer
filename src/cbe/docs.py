@@ -211,11 +211,11 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
             edges_by_from[edge["from"]].append(edge)
 
     for nid, node in nodes.items():
-        lines = [f"# {node.get('title') or nid}", "", f"Node id: `{nid}`", ""]
+        lines = [f"# {node.get('title') or nid}", ""]
         if (node.get("capability") or "").strip():
             lines += [f"**Capability.** {node['capability'].strip()}", ""]
         if (node.get("summary") or "").strip():
-            lines += [f"**Summary.** {node['summary'].strip()}", ""]
+            lines += [node['summary'].strip(), ""]
         if children.get(nid):
             lines += ["**Children.**", ""]
             for kid in children[nid]:
@@ -224,8 +224,7 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
                              f"{len(kid_node.get('unit_ids') or [])} unit(s)")
             lines.append("")
         if edges_by_from.get(nid):
-            lines += ["**Depends on** (outgoing; reverse edges and full evidence in the "
-                      "catalog appendix).", ""]
+            lines += ["**Depends on.**", ""]
             for edge in edges_by_from[nid]:
                 target = nodes.get(edge["to"]) or {}
                 lines.append(f"- [{target.get('title') or edge['to']}]({edge['to']}.md)")
@@ -242,9 +241,9 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
             block = _build_unit_block(uid, units, ranges_map, owner, dispositions,
                                       nodes, source_root, nodes_dir, name_of)
             lines += [f'<a id="{anchor(uid)}"></a>'] + block.splitlines() + [""]
-        lines += ["## 怎样查", "", "将 `RUN` 设为绝对运行目录。按 [INDEX 的命令](../INDEX.md)查找 `ID`。",
-                  "", "```sh", 'cbe query --run-dir "$RUN" --id "$ID"',
-                  'cbe source --run-dir "$RUN" --id "$ID" --context 2', "```", ""]
+        lines += ["## 怎样查", "", '按 [INDEX](../INDEX.md) 取本页单元 `ID`；`RUN` 为运行目录。',
+                  '`cbe query --run-dir "$RUN" --id "$ID"`；'
+                  '`cbe source --run-dir "$RUN" --id "$ID" --context 2`。', ""]
         (nodes_dir / f"{nid}.md").write_text("\n".join(lines).strip() + "\n", encoding="utf-8")
 
     def outline(nid: str, level: int) -> list[str]:
@@ -699,7 +698,7 @@ def layer_metrics(run_dir: Path) -> dict:
     The denominator counts each complete frozen source file exactly once.
     """
     from cbe.records import frozen_sources
-    from cbe.token_budget import count_text_tokens
+    from cbe.token_budget import count_text_tokens, count_section_tokens
 
     context = json.loads((run_dir / "context.json").read_text(encoding="utf-8"))
     source_tokens = sum(count_text_tokens(text) for text in frozen_sources(context).values())
@@ -708,18 +707,66 @@ def layer_metrics(run_dir: Path) -> dict:
     catalog_text = (run_dir / "catalog.json").read_text(encoding="utf-8")
     catalog = json.loads(catalog_text)
     catalog_tokens = count_text_tokens(catalog_text)
+    body_lines = set()
+    for unit in catalog.get("units", {}).values():
+        for field in ("explain", "summary"):
+            body_lines.update(line.strip() for line in (unit.get(field) or "").splitlines() if line.strip())
+        explain, summary = unit.get("explain") or "", unit.get("summary") or ""
+        if summary and explain.startswith(summary):
+            body_lines.update(line.strip() for line in explain[len(summary):].lstrip().splitlines() if line.strip())
+        for extra in unit.get("extras") or []:
+            if isinstance(extra, dict):
+                body_lines.add(f"- {extra.get('topic')}: {str(extra.get('note', '')).strip()}")
+        body_lines.update(f"- {item}" for item in unit.get("uncertainties") or [])
+    breakdown = dict.fromkeys(("model_body", "signature_location", "heading_anchor", "relations",
+                               "footer", "index", "node_text"), 0)
+    for path in sorted((run_dir / "docs").rglob("*.md")):
+        sections = []
+        in_units = False
+        in_footer = False
+        for line in path.read_text(encoding="utf-8").splitlines(keepends=True):
+            stripped = line.strip()
+            if stripped.startswith("### ") or '<a id="u-' in stripped:
+                in_units = True
+            if stripped.startswith("## 怎样查"):
+                in_footer = True
+            if path.name == "INDEX.md":
+                category = "index"
+            elif in_footer:
+                category = "footer"
+            elif in_units and stripped in body_lines:
+                category = "model_body"
+            elif stripped.startswith(("### ", '<a id="u-')):
+                category = "heading_anchor"
+            elif in_units and re.match(r"`.*` · \[", stripped):
+                category = "signature_location"
+            elif in_units and re.search(r"：\[.*\]\(", stripped):
+                category = "relations"
+            else:
+                category = "node_text"
+            sections.append((category, line))
+        for category, count in count_section_tokens(sections).items():
+            breakdown[category] += count
     graph_tokens = (count_text_tokens(json.dumps(context["graph"], ensure_ascii=False, indent=2) + "\n")
                     if context.get("graph") and not catalog.get("graph") else 0)
     deterministic = catalog_tokens + graph_tokens
     return {"tokenizer": "o200k_base", "source_tokens": source_tokens,
-            "semantic_tokens": semantic, "deterministic_tokens": deterministic,
+            "semantic_tokens": semantic, "semantic_breakdown": breakdown,
+            "model_body_tokens": breakdown["model_body"],
+            "model_body_source_ratio": breakdown["model_body"] / source_tokens if source_tokens else None,
+            "published_markdown_source_ratio": semantic / source_tokens if source_tokens else None,
+            "deterministic_tokens": deterministic,
             "catalog_tokens": catalog_tokens, "frozen_graph_tokens": graph_tokens,
             "semantic_source_ratio": semantic / source_tokens if source_tokens else None,
             "deterministic_source_ratio": deterministic / source_tokens if source_tokens else None,
-            "scope": "semantic: all published Markdown (node pages + INDEX, including navigation, "
+            "scope": "Breakdown partitions full Markdown BPE tokens by the first byte's line: model_body "
+                     "is published unit explain, summary, extras and uncertainties; signature_location, "
+                     "heading_anchor, relations, footer, INDEX and node_text (including labels/whitespace) "
+                     "partition the rest. model_body/source and published_markdown/source use complete frozen files. "
+                     "semantic: all published Markdown (node pages + INDEX, including navigation, "
                      "signatures and commands); deterministic: catalog.json as serialized, including "
                      "preserved prose copies and edge references, plus frozen graph JSON serialized "
                      "with ensure_ascii=False and indent=2 once when not inline in catalog; complete "
-                     "graph evidence is expanded by query; source: complete frozen files counted once; "
+                     "graph evidence is expanded only with query --edges; source: complete frozen files counted once; "
                      "context source chunks, host prompts, raw answers and summary.json excluded; layers are "
                      "storage measures, not disjoint content classes"}

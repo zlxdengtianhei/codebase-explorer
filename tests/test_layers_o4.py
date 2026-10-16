@@ -224,6 +224,11 @@ def test_summary_metrics_use_the_published_artifacts_and_frozen_source(tmp_path)
     assert expected["source_tokens"] == sum(count_text_tokens(path.read_bytes().decode("utf-8"))
                                              for path in repo.rglob("*.py"))
     assert "Markdown" in expected["scope"]
+    assert sum(expected["semantic_breakdown"].values()) == expected["semantic_tokens"]
+    assert expected["semantic_breakdown"]["model_body"] > 0
+    assert expected["semantic_breakdown"]["signature_location"] > 0
+    assert expected["semantic_breakdown"]["heading_anchor"] > 0
+    assert expected["model_body_source_ratio"] == expected["model_body_tokens"] / expected["source_tokens"]
     assert summary["layers"]["semantic_source_ratio"] == expected["semantic_tokens"] / expected["source_tokens"]
 
 
