@@ -9,7 +9,7 @@ from cbe import host_run
 from test_host_run import _repo, _drive, _answer_task, _good
 
 
-@pytest.mark.parametrize("node_count", [1, 12])
+@pytest.mark.parametrize("node_count", [1, 12, 13])
 def test_system_prompt_and_submit_share_node_limit(tmp_path, node_count):
     run = Path(host_run.plan(_repo(tmp_path), tmp_path / "run", review="none")["run_dir"])
     while True:
