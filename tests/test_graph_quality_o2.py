@@ -75,6 +75,25 @@ def test_cli_build_warns_and_emits_quality(tmp_path, monkeypatch, capsys):
     assert "dangling edges: 1" in output.err and "ruby failed" in output.err
 
 
+def test_quality_reports_missing_source_endpoint():
+    value = bad_graph()
+    value["edges"] = [{"id": "missing-source", "source": "gone", "target": "a",
+                       "kind": "call", "status": "unresolved"}]
+    assert graph.graph_quality(value)["dangling_edges"] == {
+        "count": 1, "examples": [{"id": "missing-source", "missing_endpoints": ["gone"]}]}
+
+
+def test_cli_warns_failed_capability_without_failure_diagnostic(tmp_path, monkeypatch, capsys):
+    value = bad_graph()
+    value["diagnostics"] = []
+    value["edges"] = []
+    monkeypatch.setattr(graph, "analyze_graph", lambda *a, **kw: value)
+    assert cli.main(["graph", "build", str(tmp_path), "--output", str(tmp_path / "graph.json")]) == 0
+    output = capsys.readouterr()
+    assert output.err.strip() == "cbe graph build: ruby/cfg: failed"
+    assert json.loads(output.out)["quality"]["incomplete_capabilities"] == value["capabilities"]
+
+
 def test_build_persists_quality(tmp_path, monkeypatch):
     from cbe import graph_backends
     repo = tmp_path / "repo"
