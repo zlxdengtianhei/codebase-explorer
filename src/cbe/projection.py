@@ -246,7 +246,8 @@ def graph_prompt_lines(graph: Any, paths: list[str], *, embed: bool,
                        inventory: dict[str, dict] | None = None,
                        chunks: list[dict] | None = None,
                        source_tokens: int = DEFAULT_GRAPH_MAX_TOKENS,
-                       max_tokens: int = DEFAULT_GRAPH_MAX_TOKENS) -> list[str]:
+                       max_tokens: int = DEFAULT_GRAPH_MAX_TOKENS,
+                       graph_file: str | None = None) -> list[str]:
     """Status notices retain their original meanings; provided evidence is bounded."""
     state, detail = graph_state(graph)
     if state == "absent":
@@ -267,5 +268,18 @@ def graph_prompt_lines(graph: Any, paths: list[str], *, embed: bool,
                 "paths. Do not infer either the presence or the absence of relations from it; keep unproven "
                 "boundaries in 'uncertainties'.", ""]
     evidence = unit_graph(graph, paths, inventory or {}, chunks or [])
-    text = graph_text(evidence, budget=max(0, min(max_tokens, source_tokens)))
-    return [text, ""] if text else []
+    budget = max(0, min(max_tokens, source_tokens))
+    text = graph_text(evidence, budget=budget)
+    if text:
+        return [text, ""]
+    # Like absent/failed graph notices, this is status, not relation payload.
+    # A hard zero/tiny payload cap must never imply there were no relations.
+    omitted = Counter()
+    for row in evidence.rows:
+        omitted[row.category] += row.count
+    notice = (f"GRAPH STATUS (outside payload cap): budget={budget} tokens; omitted "
+              + ",".join(f"{kind}={count}" for kind, count in sorted(omitted.items()))
+              + f"; internal={evidence.internal_calls}; unmapped={evidence.unmapped_calls}.")
+    if not embed and graph_file:
+        notice += f" Read full evidence: {graph_file}"
+    return [notice, ""]

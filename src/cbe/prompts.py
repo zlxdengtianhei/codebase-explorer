@@ -137,7 +137,7 @@ def detail_prompt(paths: list[str], inventory: dict[str, dict], *,
         body += [f"Graph access: Read the complete evidence for this batch at {graph_file}", ""]
     body += graph_prompt_lines(graph, paths, embed=embed, inventory=inventory,
                                chunks=chunks, source_tokens=source_tokens,
-                               max_tokens=graph_max_tokens)
+                               max_tokens=graph_max_tokens, graph_file=graph_file)
     if context_diagnostics:
         body += ["SOURCE CONTEXT NOTES (program diagnostics, not model evidence):",
                  json.dumps(context_diagnostics[:10], ensure_ascii=False), ""]

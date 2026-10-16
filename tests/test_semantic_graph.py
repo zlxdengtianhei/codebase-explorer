@@ -78,9 +78,12 @@ def test_callsite_maps_only_to_inventory_chunks_and_reports_missing_mapping():
     graph, inventory, chunks = _inputs()
     chunks.append({"id": "class-residue", "path": "a.py", "start_line": 6, "end_line": 8})
     graph["edges"].append(_edge("missing", "a", "b", path="a.py", line=50))
+    # The Joern source method starts at line 1, but this call site is in C.
+    graph["edges"].append(_edge("later-chunk", "a", "b", path="a.py", line=23))
     evidence = graph_projection.unit_graph(graph, ["a.py"], inventory, chunks)
     text = graph_projection.graph_text(evidence)
     assert "A → B (b.py:1)" in text and "A ← B (b.py:8)" in text
+    assert "C → B (b.py:1)" in text
     assert "class-residue" not in text
     assert evidence.internal_calls == 1 and evidence.unmapped_calls == 1
     assert "A → C" not in text
@@ -153,5 +156,28 @@ def test_default_and_configurable_source_token_caps():
     for source_tokens, cap in [(100, 3000), (5000, 120), (5000, 3000), (0, 3000), (1, 3000)]:
         lines = graph_projection.graph_prompt_lines(graph, ["a.py"], embed=True,
             inventory=inventory, chunks=chunks, source_tokens=source_tokens, max_tokens=cap)
-        assert count_text_tokens("\n".join(lines).strip()) <= min(source_tokens, cap)
+        payload = graph_projection.graph_text(
+            graph_projection.unit_graph(graph, ["a.py"], inventory, chunks),
+            budget=min(source_tokens, cap))
+        assert count_text_tokens(payload) <= min(source_tokens, cap)
+        if payload:
+            assert "\n".join(lines).strip() == payload
+        else:
+            assert lines[0].startswith("GRAPH STATUS (outside payload cap):")
 
+
+def test_tiny_budget_has_one_explicit_status_notice_with_all_omissions():
+    graph, inventory, chunks = _inputs()
+    options = dict(inventory=inventory, chunks=chunks, source_tokens=1,
+                   graph_file="/run/tasks/module_1.graph.txt")
+    script = graph_projection.graph_prompt_lines(graph, ["a.py"], embed=True, **options)
+    host = graph_projection.graph_prompt_lines(graph, ["a.py"], embed=False, **options)
+    for lines in (script, host):
+        assert len([line for line in lines if line]) == 1
+        assert "budget=1 tokens" in lines[0]
+        assert "omitted dependencies=1,in=1,out=1,packages=1" in lines[0]
+        assert "internal=1; unmapped=0" in lines[0]
+        assert "→" not in lines[0] and "←" not in lines[0]
+        assert count_text_tokens(lines[0]) > 1  # explicitly outside the payload cap
+    assert ".graph.txt" not in script[0]
+    assert "Read full evidence: /run/tasks/module_1.graph.txt" in host[0]
