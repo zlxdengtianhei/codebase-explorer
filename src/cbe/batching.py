@@ -156,37 +156,61 @@ def _subsystem(item: SourceFile, production_areas: set[str],
     return local_area
 
 
-def _linked(left: SourceFile, right: SourceFile) -> bool:
-    candidates = {right.path, Path(right.path).name, Path(right.path).stem,
-                  ".".join(Path(right.path).with_suffix("").parts),
-                  ".".join(Path(right.path).with_suffix("").parts[1:])}
-    return any(ref in candidates or any(ref.endswith("." + candidate) for candidate in candidates if candidate)
-               for ref in left.imports)
-
-
 def _pack_directory(files: list[SourceFile], *, strict: bool = False) -> list[list[SourceFile]]:
     """Join imports first, then fill only within a specific source directory."""
-    groups = [[item] for item in sorted(files, key=lambda item: item.path)]
+    groups = {i: [item] for i, item in enumerate(sorted(files, key=lambda item: item.path))}
+    tokens = {i: group[0].tokens for i, group in groups.items()}
+    candidates: dict[str, set[int]] = {}
+    for i, group in groups.items():
+        path = Path(group[0].path)
+        for name in {group[0].path, path.name, path.stem, ".".join(path.with_suffix("").parts),
+                     ".".join(path.with_suffix("").parts[1:])}:
+            candidates.setdefault(name, set()).add(i)
+    links: dict[int, dict[int, int]] = {i: {} for i in groups}
+    for i, group in groups.items():
+        targets: set[int] = set()
+        for ref in group[0].imports:
+            # Exact names and nonempty dotted suffixes implement the original
+            # candidate match; a set counts each directed file pair just once.
+            keys = {ref} | {ref[pos + 1:] for pos, char in enumerate(ref)
+                            if char == "." and ref[pos + 1:]}
+            for key in keys:
+                targets.update(candidates.get(key, ()))
+        for j in targets - {i}:
+            links[i][j] = links[i].get(j, 0) + 1
+            links[j][i] = links[j].get(i, 0) + 1
     while True:
         pairs = []
-        for left in range(len(groups)):
-            for right in range(left + 1, len(groups)):
-                combined = groups[left] + groups[right]
-                if sum(item.tokens for item in combined) > MAX_TOKENS:
+        ids = list(groups)
+        for offset, left in enumerate(ids):
+            for right in ids[offset + 1:]:
+                combined_tokens = tokens[left] + tokens[right]
+                if combined_tokens > MAX_TOKENS:
                     continue
-                links = sum(_linked(a, b) + _linked(b, a)
-                            for a in groups[left] for b in groups[right])
-                if links:
-                    pairs.append((links, -abs(TARGET_TOKENS - sum(item.tokens for item in combined)),
+                weight = links[left].get(right, 0)
+                if weight:
+                    # Stable ids retain group order after removals, hence the
+                    # same left/right tie break as the original list indices.
+                    pairs.append((weight, -abs(TARGET_TOKENS - combined_tokens),
                                   -left, -right, left, right))
         if not pairs:
             break
         *_, left, right = max(pairs)
         groups[left].extend(groups.pop(right))
+        tokens[left] += tokens.pop(right)
+        for other in groups:
+            if other == left:
+                continue
+            weight = links[left].get(other, 0) + links[right].get(other, 0)
+            if weight:
+                links[left][other] = links[other][left] = weight
+            links[other].pop(right, None)
+        links[left].pop(right, None)
+        links.pop(right)
     if strict:
-        return groups
+        return list(groups.values())
     packed: list[list[SourceFile]] = []
-    for group in sorted(groups, key=lambda group: (-sum(item.tokens for item in group), group[0].path)):
+    for group in sorted(groups.values(), key=lambda group: (-sum(item.tokens for item in group), group[0].path)):
         candidates = [existing for existing in packed
                       if sum(item.tokens for item in existing + group) <= MAX_TOKENS]
         if candidates:
