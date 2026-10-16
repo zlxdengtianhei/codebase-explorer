@@ -251,39 +251,52 @@ def graph_text(evidence: UnitGraph, *, budget: int | None = None) -> str:
     budget=None and the exact same rows. No dataflow nodes are ever rendered.
     """
     rows = list(evidence.rows)
-    omitted: Counter = Counter()
-    while True:
+    suffix: list[Counter] = [Counter() for _ in range(len(rows) + 1)]
+    for index in range(len(rows) - 1, -1, -1):
+        suffix[index] = suffix[index + 1].copy()
+        if rows[index].count:
+            suffix[index][rows[index].category] += rows[index].count
+
+    def render(keep: int) -> str:
+        omitted = suffix[keep]
         lines = ["LOCAL GRAPH EVIDENCE (unit ids; dependencies count import names + external call sites; graph evidence is not proof of behavior).",
                  f"Batch-internal resolved calls: {evidence.internal_calls} (source visible); "
                  f"unmapped resolved calls: {evidence.unmapped_calls}; "
                  f"unmapped cfg owners: {evidence.unmapped_cfg}."
                  + ("" if evidence.exception_exits_exported else
                     " exception exits are not exported by this graph.")]
-        lines += render_rows(rows)
+        lines += render_rows(rows[:keep])
         lines.append("Omitted: " + (", ".join(f"{k}={v}" for k, v in sorted(omitted.items())) or "none")
                      + ". Omitted evidence is unavailable in this excerpt.")
-        text = "\n".join(lines)
-        if budget is None or count_text_tokens(text) <= budget:
-            return text
-        if not rows:
-            # Very small/empty sources cannot carry the normal explanatory
-            # header. Keep numeric accounting before prose, still within budget.
-            text = (f"Graph: internal={evidence.internal_calls}, unmapped={evidence.unmapped_calls}, "
-                    f"unmapped_cfg={evidence.unmapped_cfg}; "
-                    "omitted " + ",".join(f"{k}={v}" for k, v in sorted(omitted.items())))
-            if count_text_tokens(text) <= budget:
-                return text
-            return ""  # zero/tiny source budget: no graph payload can fit
-        row = rows.pop()
-        if row.count:
-            omitted[row.category] += row.count
+        return "\n".join(lines)
+
+    text = render(len(rows))
+    if budget is None or count_text_tokens(text) <= budget:
+        return text
+    low, high = 0, len(rows) - 1
+    best = ""
+    while low <= high:
+        middle = (low + high) // 2
+        candidate = render(middle)
+        if count_text_tokens(candidate) <= budget:
+            best = candidate
+            low = middle + 1
+        else:
+            high = middle - 1
+    if best:
+        return best
+    text = (f"Graph: internal={evidence.internal_calls}, unmapped={evidence.unmapped_calls}, "
+            f"unmapped_cfg={evidence.unmapped_cfg}; omitted "
+            + ",".join(f"{k}={v}" for k, v in sorted(suffix[0].items()))
+            + "; dependencies unit=import names + external call sites")
+    return text if count_text_tokens(text) <= budget else ""
 
 
 def graph_prompt_lines(graph: Any, paths: list[str], *, embed: bool,
                        inventory: dict[str, dict] | None = None,
                        chunks: list[dict] | None = None,
-                       source_tokens: int = DEFAULT_GRAPH_MAX_TOKENS,
-                       max_tokens: int = DEFAULT_GRAPH_MAX_TOKENS,
+                       source_tokens: int | None = DEFAULT_GRAPH_MAX_TOKENS,
+                       max_tokens: int | None = DEFAULT_GRAPH_MAX_TOKENS,
                        graph_file: str | None = None) -> list[str]:
     """Status notices retain their original meanings; provided evidence is bounded."""
     state, detail = graph_state(graph)
@@ -305,7 +318,8 @@ def graph_prompt_lines(graph: Any, paths: list[str], *, embed: bool,
                 "paths. Do not infer either the presence or the absence of relations from it; keep unproven "
                 "boundaries in 'uncertainties'.", ""]
     evidence = unit_graph(graph, paths, inventory or {}, chunks or [])
-    budget = max(0, min(max_tokens, source_tokens))
+    limits = [limit for limit in (max_tokens, source_tokens) if limit is not None]
+    budget = max(0, min(limits)) if limits else None
     text = graph_text(evidence, budget=budget)
     if text:
         return [text, ""]
@@ -318,7 +332,7 @@ def graph_prompt_lines(graph: Any, paths: list[str], *, embed: bool,
     notice = (f"GRAPH STATUS (outside payload cap): budget={budget} tokens; omitted "
               + ",".join(f"{kind}={count}" for kind, count in sorted(omitted.items()))
               + f"; internal={evidence.internal_calls}; unmapped={evidence.unmapped_calls}; "
-              + f"unmapped_cfg={evidence.unmapped_cfg}."
+              + f"unmapped_cfg={evidence.unmapped_cfg}; dependencies unit=import names + external call sites."
               + ("" if evidence.exception_exits_exported else
                  " exception exits are not exported by this graph."))
     if not embed and graph_file:

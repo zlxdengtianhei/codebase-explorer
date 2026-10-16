@@ -195,6 +195,21 @@ def test_tiny_budget_has_one_explicit_status_notice_with_all_omissions():
     assert "Read full evidence: /run/tasks/module_1.graph.txt" in host[0]
 
 
+def test_truncation_uses_logarithmic_token_counts(monkeypatch):
+    calls = []
+    original = graph_projection.count_text_tokens
+    def counted(text):
+        calls.append(len(text))
+        return original(text)
+    monkeypatch.setattr(graph_projection, "count_text_tokens", counted)
+    evidence = graph_projection.UnitGraph(tuple(graph_projection.EvidenceRow(
+        "cfg", f"CFG function_{i}: control_structures=1, returns=2") for i in range(2000)), 0, 0)
+    text = graph_projection.graph_text(evidence, budget=3000)
+    assert original(text) <= 3000
+    assert "cfg=" in text
+    assert len(calls) <= 15
+
+
 def test_omissions_count_relations_and_package_context_precedes_cfg():
     rows = [graph_projection.EvidenceRow("out", "A → B (b.py:1) ×3", 3),
             graph_projection.EvidenceRow("unresolved", "Unresolved calls a.py: 8; x", 8)]
