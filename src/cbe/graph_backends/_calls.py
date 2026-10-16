@@ -7,9 +7,9 @@ import re
 
 
 class CallResolver:
-    def __init__(self, methods: list[dict]):
+    def __init__(self, methods: list[dict], files=None):
         self.methods = {int(m["nodeId"]): m for m in methods if m.get("nodeId") is not None}
-        self.files = {m.get("file", "") for m in methods if m.get("file")}
+        self.files = set(files) if files is not None else {m.get("file", "") for m in methods if m.get("file")}
         self.by_pair: dict[str, list[int]] = {}
         self.by_full: dict[str, list[int]] = {}
         for native, method in self.methods.items():

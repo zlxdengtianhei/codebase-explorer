@@ -36,6 +36,7 @@ from datetime import datetime, timezone
 
 from cbe import source_context
 from cbe.graph_backends._paths import canonical_repo_path
+from cbe.graph_backends.identity import repository_files
 
 SCHEMA_GRAPH = "cbe-graph/1"
 
@@ -65,23 +66,15 @@ def discover_sources(repo, languages: list[str] | None = None) -> list[dict]:
 
     suffix_map = source_context.suffix_languages()
     wanted = set(languages) if languages else None
-    excluded = source_context.DEFAULT_EXCLUDE_DIR_NAMES
     manifest: list[dict] = []
     repo = repo.resolve()
-    for dirpath, dirnames, filenames in os.walk(repo, topdown=True, followlinks=False):
-        dirnames.sort()
-        dirnames[:] = [name for name in dirnames if name not in excluded]
-        for filename in sorted(filenames):
-            full = os.path.join(dirpath, filename)
-            if os.path.islink(full) or not os.path.isfile(full):
-                continue
-            language = suffix_map.get(os.path.splitext(filename)[1].lower())
-            if language is None or (wanted is not None and language not in wanted):
-                continue
-            rel = os.path.relpath(full, repo).replace(os.sep, "/")
-            with open(full, "rb") as handle:
-                digest = hashlib.sha256(handle.read()).hexdigest()
-            manifest.append({"path": rel, "language": language, "sha256": digest})
+    for rel in sorted(repository_files(repo)):
+        language = suffix_map.get(os.path.splitext(rel)[1].lower())
+        if language is None or (wanted is not None and language not in wanted):
+            continue
+        with (repo / rel).open("rb") as handle:
+            digest = hashlib.sha256(handle.read()).hexdigest()
+        manifest.append({"path": rel, "language": language, "sha256": digest})
     manifest.sort(key=lambda entry: entry["path"])
     return manifest
 
@@ -268,7 +261,13 @@ def analyze_graph(
     from cbe.graph_backends._imports import resolve_declarations
 
     nodes, edges = _merge(fragments)
-    nodes, edges = resolve_declarations(repo, nodes, edges)
+    nodes, edges = resolve_declarations(repo, nodes, edges, files=repository_files(repo))
+    # Use the final authority at the merge boundary even if a backend supplies
+    # an invalid file identity or labels a repository suffix as external.
+    files = repository_files(repo)
+    from cbe.graph_backends.identity import validate_identities
+    nodes, edges, identity_diagnostics = validate_identities(nodes, edges, files)
+    diagnostics.extend(identity_diagnostics)
     edges = _prefer_resolved_imports(edges)
     capabilities = _merge_capabilities(fragments, requested, extra_capabilities)
 
@@ -452,18 +451,28 @@ def _merge(fragments: list[dict]) -> tuple[list[dict], list[dict]]:
 
 
 def _prefer_resolved_imports(edges: list[dict]) -> list[dict]:
-    """Prefer file-resolving import backends over duplicate Joern declarations.
-
-    Compare canonical endpoints, never language-dependent expression spellings.
-    Unresolved declarations remain visible because no target is established.
-    """
-    resolved = {(e.get("source"), e.get("target")) for e in edges
-                if e.get("kind") == "import" and e.get("status") == "resolved"
-                and e.get("target") and e.get("backend") != "joern"}
-    return [e for e in edges if not (
-        e.get("kind") == "import" and e.get("backend") == "joern"
-        and e.get("status") == "resolved"
-        and (e.get("source"), e.get("target")) in resolved)]
+    """Merge resolved file evidence by endpoints, retaining every expression."""
+    groups = {}
+    result = []
+    # Prefer the dedicated resolver as the representative, independent of
+    # fragment ordering. Joern evidence is retained in expressions.
+    ordered = sorted(edges, key=lambda e: e.get("backend") == "joern")
+    for edge in ordered:
+        if edge.get("kind") != "import" or edge.get("status") != "resolved" or not edge.get("target"):
+            result.append(edge)
+            continue
+        key = (edge.get("source"), edge.get("target"), edge.get("kind"))
+        if key not in groups:
+            merged = dict(edge)
+            merged["expressions"] = list(edge.get("expressions") or ([edge["expression"]] if edge.get("expression") else []))
+            groups[key] = merged
+            result.append(merged)
+        else:
+            merged = groups[key]
+            for expression in edge.get("expressions") or [edge.get("expression")]:
+                if expression and expression not in merged["expressions"]:
+                    merged["expressions"].append(expression)
+    return result
 
 
 def _unavailable(backend: str, languages: list[str], kinds: tuple[str, ...]) -> list[dict]:

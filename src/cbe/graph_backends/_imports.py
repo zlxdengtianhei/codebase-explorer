@@ -11,13 +11,13 @@ import re
 from pathlib import Path, PurePosixPath
 
 from ._paths import canonical_repo_path
+from .identity import repository_files, file_id, external_id
 
 
 class ImportResolver:
-    def __init__(self, repo: Path):
+    def __init__(self, repo: Path, files=None):
         self.repo = repo
-        self.files = {p.relative_to(repo).as_posix() for p in repo.rglob("*")
-                      if p.is_file() and not p.is_symlink()}
+        self.files = repository_files(repo) if files is None else files
         self.python_roots = [""]
         if "src" in {p.split("/")[0] for p in self.files}:
             self.python_roots.append("src/")
@@ -163,8 +163,8 @@ def import_token(text: str, suffix: str) -> str | None:
     return text if text and not re.search(r"[\s()#]", text) else None
 
 
-def resolve_declarations(repo: Path, nodes: list[dict], edges: list[dict]) -> tuple[list[dict], list[dict]]:
-    resolver = ImportResolver(repo)
+def resolve_declarations(repo: Path, nodes: list[dict], edges: list[dict], *, files=None) -> tuple[list[dict], list[dict]]:
+    resolver = ImportResolver(repo, files)
     known = {n["id"] for n in nodes}
     result = []
     for edge in edges:
@@ -172,7 +172,7 @@ def resolve_declarations(repo: Path, nodes: list[dict], edges: list[dict]) -> tu
             result.append(edge)
             continue
         for index, (status, target) in enumerate(resolver.resolve(edge.get("path") or "", edge.get("expression") or "")):
-            target_id = ("file:" if status == "resolved" else "ext:") + target if target else None
+            target_id = (file_id(target, resolver.files) if status == "resolved" else external_id(target)) if target else None
             if target_id and target_id not in known:
                 known.add(target_id)
                 nodes.append({"id": target_id, "kind": "file" if status == "resolved" else "external",

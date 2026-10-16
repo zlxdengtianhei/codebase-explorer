@@ -16,6 +16,7 @@ import subprocess
 import sys
 
 from ._paths import canonical_repo_path
+from .identity import repository_files, file_id, external_id
 
 DEPCRUISE_LANGUAGES = frozenset({"javascript", "typescript", "tsx"})
 _JS_EXTENSIONS = (".js", ".jsx", ".mjs", ".cjs", ".ts", ".mts", ".cts", ".tsx")
@@ -64,9 +65,12 @@ def build_with_depcruise(repo, run_dir, depcruise_bin, timeout: int, languages: 
     edges: list[dict] = []
     seen: set[str] = set()
     counter = 0
+    files = repository_files(repo)
 
-    def add_file(rel: str) -> str:
-        node_id = f"file:{rel}"
+    def add_file(rel: str) -> str | None:
+        node_id = file_id(rel, files)
+        if node_id is None:
+            return None
         if node_id not in seen:
             seen.add(node_id)
             nodes.append({"id": node_id, "kind": "file", "path": rel,
@@ -79,6 +83,8 @@ def build_with_depcruise(repo, run_dir, depcruise_bin, timeout: int, languages: 
         if not source or not source.endswith(_JS_EXTENSIONS):
             continue
         source_id = add_file(source)
+        if source_id is None:
+            continue
         for dep in module.get("dependencies", []):
             resolved = dep.get("resolved")
             expression = dep.get("module", "")
@@ -89,7 +95,7 @@ def build_with_depcruise(repo, run_dir, depcruise_bin, timeout: int, languages: 
                 status = "resolved" if target_id else "unresolved"
             elif dep.get("coreModule"):
                 target_rel = canonical_repo_path(str(expression))
-                target_id = f"ext:{target_rel or expression}"
+                target_id = external_id(target_rel or expression)
                 if target_id not in seen:
                     seen.add(target_id)
                     nodes.append({"id": target_id, "kind": "external", "path": None,
@@ -162,11 +168,11 @@ def build_with_grimp(repo, languages: list[str]) -> dict:
                     diagnostics.append({"path": None, "code": "module_file_missing",
                                         "message": f"grimp module {module!r} has no repository file"})
                     continue
-                module_id = _add_module(nodes, seen, module, source_path)
+                module_id = _add_module(nodes, seen, module, source_path, resolver.files)
                 for imported in graph.find_modules_directly_imported_by(module):
                     target_path = resolver.python_file(imported)
                     status = "resolved" if target_path else ("unresolved" if resolver.python_local(imported) else "external")
-                    target_id = _add_module(nodes, seen, imported, target_path) if status != "unresolved" else None
+                    target_id = _add_module(nodes, seen, imported, target_path, resolver.files) if status != "unresolved" else None
                     edges.append({
                         "id": f"grimp/import/{module}->{imported}",
                         "source": module_id,
@@ -196,8 +202,8 @@ def build_with_grimp(repo, languages: list[str]) -> dict:
     return _result(nodes, edges, diagnostics, None, status=status, language="python")
 
 
-def _add_module(nodes: list[dict], seen: set[str], module: str, path: str | None) -> str:
-    module_id = f"file:{path}" if path else f"ext:{module}"
+def _add_module(nodes: list[dict], seen: set[str], module: str, path: str | None, files) -> str:
+    module_id = file_id(path, files) if path else external_id(module)
     if module_id not in seen:
         seen.add(module_id)
         nodes.append({"id": module_id, "kind": "file" if path else "external",

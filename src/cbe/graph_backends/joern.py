@@ -32,6 +32,9 @@ import shutil
 import subprocess
 from pathlib import Path
 
+from .identity import repository_files, file_id
+from ._calls import CallResolver
+
 #: language id (canonical, matches ``cbe.source_context``) -> Joern frontend
 #: flag.  ``pythonsrc``/``javasrc`` are the source frontends; ``python``/``java``
 #: select the removed py2cpg and the bytecode jimple frontend and are wrong for
@@ -317,6 +320,7 @@ def build_with_joern(
     edges: list[dict] = []
     raw: list[dict] = []
     path_methods = ",".join(dataflow_path_methods or [])
+    files = repository_files(repo)
 
     by_language: dict[str, list[str]] = {}
     for language in languages:
@@ -391,6 +395,7 @@ def build_with_joern(
         payload["_languages"] = langs
         payload["_frontend"] = FRONTEND_NAME.get(flag, flag)
         raw.append(payload)
+        payload["_files"] = files
         f_nodes, f_edges = _normalize(payload, version, namespace)
         nodes.extend(f_nodes)
         edges.extend(f_edges)
@@ -558,9 +563,7 @@ def _normalize(payload: dict, version: str, namespace: str = "cpg") -> tuple[lis
         if native is not None:
             method_by_native[int(native)] = node_id
 
-    from ._calls import CallResolver
-
-    call_resolver = CallResolver(payload.get("methods", []))
+    call_resolver = CallResolver(payload.get("methods", []), payload.get("_files"))
     for call in payload.get("calls", []):
         if not _visible_call(call):
             continue
@@ -617,12 +620,12 @@ def _normalize(payload: dict, version: str, namespace: str = "cpg") -> tuple[lis
 
     for imp in payload.get("imports", []):
         rel = _norm_path(imp.get("file", ""))
-        file_id = f"file:{rel}" if rel else None
-        if file_id:
-            add_node(file_id, "file", path=rel, name=Path(rel).name)
+        file_node_id = file_id(rel, payload.get("_files", {rel}))
+        if file_node_id:
+            add_node(file_node_id, "file", path=rel, name=Path(rel).name)
         edges.append({
             "id": f"{namespace}/import/{imp.get('nodeId')}",
-            "source": file_id, "target": None, "kind": "import", "status": "unresolved",
+            "source": file_node_id, "target": None, "kind": "import", "status": "unresolved",
             "path": rel, "expression": imp.get("code"), "analyzer_id": imp.get("nodeId"),
             "backend": "joern",
         })
@@ -673,10 +676,8 @@ def _capabilities_for(language: str, payload: dict, version: str,
         return [_capability(language, kind, "failed", version, backend="joern",
                             limitations=f"frontend error: {frontend_error}")
                 for kind in ("call", "cfg", "dataflow", "import")]
-    from ._calls import CallResolver
-
     calls = [call for call in payload.get("calls", []) if _visible_call(call)]
-    resolver = CallResolver(payload.get("methods", []))
+    resolver = CallResolver(payload.get("methods", []), payload.get("_files"))
     statuses = [resolver.resolve(call)[0] for call in calls]
     resolved = statuses.count("resolved")
     external = statuses.count("external")
