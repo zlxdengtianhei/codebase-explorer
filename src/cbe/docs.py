@@ -137,7 +137,7 @@ def _build_unit_block(uid: str, units: dict, ranges_map: dict, owner: dict,
 
 def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
            dispositions: dict, tree: dict, languages: dict[str, str],
-           index_notes: list[str] | None = None) -> dict:
+           index_notes: list[str] | None = None, system: dict | None = None) -> dict:
     """Render node pages, INDEX.md and a catalog under ``run_dir/docs``.
 
     ``languages`` maps each path to the language frozen in the source context,
@@ -234,6 +234,9 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
                     f"- units: {len(units)} · semantic nodes: {len(nodes)} · "
                     f"dispositioned inventory ids: {len(dispositions)}",
                     "- source ranges are program-derived from the inventory, never model-written"]
+    if system:
+        index_lines += ["", "## Overview", "", system["overview"],
+                        "", "## Maintenance navigation", "", system["maintenance_navigation"]]
     if index_notes:
         index_lines += ["", "## Generation notes", ""] + [f"- {item}" for item in index_notes]
     (docs_dir / "INDEX.md").write_text("\n".join(index_lines) + "\n", encoding="utf-8")
