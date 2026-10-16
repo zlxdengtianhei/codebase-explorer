@@ -1,0 +1,1177 @@
+{
+  "payload": {
+    "units": [
+      {
+        "id": "flask/sansio/app.py::function::_make_timedelta::1773",
+        "kind": "function",
+        "explain": "Normalizes a PERMANENT_SESSION_LIFETIME-style value: None and timedelta inputs pass through unchanged; any int (or other non-timedelta) is interpreted as seconds and converted via timedelta(seconds=value). Used as the get_converter of the permanent_session_lifetime ConfigAttribute. Pure function, no side effects.",
+        "summary": "Converts an int seconds value into a timedelta; passes None/timedelta through.",
+        "uncertainties": [
+          "Non-int non-timedelta values would still be passed to timedelta(seconds=...); resulting TypeError is not handled here."
+        ]
+      },
+      {
+        "id": "flask/sansio/app.py::class::App::1959::s0",
+        "kind": "class",
+        "explain": "Sans-IO application core subclassing Scaffold: a central registry for URL rules, blueprints, error handlers, Jinja configuration, and extension state. Class attributes define pluggable classes (aborter_class, jinja_environment, app_ctx_globals_class, config_class, url_rule_class, url_map_class, json_provider_class) and ConfigAttribute descriptors (testing->TESTING, secret_key->SECRET_KEY, permanent_session_lifetime->PERMANENT_SESSION_LIFETIME with _make_timedelta converter). jinja_options is a plain mutable dict read when the Jinja environment is first created; later changes have no effect. should_ignore_error is a deprecated None-valued placeholder. Concrete request handling lives in flask/app.py's Flask subclass; create_jinja_environment is abstract here. The class body is split in the inventory (s0 attributes/docs, s32 the deprecated should_ignore_error region), both covered by this unit.",
+        "summary": "Sans-IO Flask application core holding routing, config, blueprint, and Jinja registries with pluggable class hooks.",
+        "relations": [
+          {
+            "target": "flask/sansio/scaffold.py::class::Scaffold",
+            "kind": "inherit",
+            "basis": "class App(Scaffold)"
+          },
+          {
+            "target": "flask/sansio/app.py::function::_make_timedelta::1773",
+            "kind": "use",
+            "basis": "get_converter=_make_timedelta on permanent_session_lifetime ConfigAttribute"
+          }
+        ],
+        "members": [
+          "flask/sansio/app.py::class::App::1959::s32",
+          "flask/sansio/app.py::method::App.iter_blueprints::24745",
+          "flask/sansio/app.py::method::App.shell_context_processor::33867"
+        ],
+        "uncertainties": [
+          "Runtime effects of ConfigAttribute descriptors depend on flask/config.py, not shown here."
+        ],
+        "extras": [
+          {
+            "topic": "field",
+            "note": "jinja_options must be set before first access of jinja_env; afterwards changes are ignored."
+          }
+        ]
+      },
+      {
+        "id": "flask/sansio/app.py::method::App.__init__::11658",
+        "kind": "method",
+        "explain": "Initializes the app: delegates resource/static/template/root_path setup to Scaffold.__init__, then resolves the instance path \u2014 auto-detected via auto_find_instance_path when not given, ValueError if a relative path is supplied. Builds config via make_config(instance_relative_config), the aborter via make_aborter, and the JSON provider instance. Initializes empty registries: url_build_error_handlers, teardown_appcontext_funcs, shell_context_processors, blueprints (insertion-ordered dict), extensions. Creates url_map from url_map_class(host_matching=host_matching), stores subdomain_matching, and sets _got_first_request=False, which later gates setup methods. No returns; exceptions: ValueError for relative instance_path, plus whatever Scaffold/find_package raise.",
+        "summary": "Constructor resolving instance path and initializing config, aborter, JSON provider, and empty registries.",
+        "relations": [
+          {
+            "target": "flask/sansio/app.py::method::App.auto_find_instance_path::20999",
+            "kind": "call",
+            "basis": "instance_path = self.auto_find_instance_path()"
+          },
+          {
+            "target": "flask/sansio/app.py::method::App.make_config::19872",
+            "kind": "call",
+            "basis": "self.config = self.make_config(instance_relative_config)"
+          },
+          {
+            "target": "flask/sansio/app.py::method::App.make_aborter::20566",
+            "kind": "call",
+            "basis": "self.aborter = self.make_aborter()"
+          },
+          {
+            "target": "flask/sansio/scaffold.py::class::Scaffold",
+            "kind": "call",
+            "basis": "super().__init__(...)"
+          }
+        ],
+        "extras": [
+          {
+            "topic": "failure",
+            "note": "A relative instance_path argument raises ValueError immediately."
+          }
+        ]
+      },
+      {
+        "id": "flask/sansio/app.py::method::App._check_setup_finished::17137",
+        "kind": "method",
+        "explain": "Guard used by setup methods: raises AssertionError if _got_first_request is True, i.e. once the app has handled its first request, registration-time mutation (routes, blueprints, template hooks) is refused because changes would no longer apply consistently. No-op otherwise.",
+        "summary": "Raises AssertionError if setup methods run after the first request was handled."
+      },
+      {
+        "id": "flask/sansio/app.py::method::App.name::17686",
+        "kind": "method",
+        "explain": "Cached property returning the application display name. If import_name is '__main__', the name is derived from the __main__ module's __file__ (basename without extension); if that file is unknown it falls back to the literal '__main__'. Otherwise returns import_name. Cached, so later changes to import_name or __main__.__file__ are not reflected.",
+        "summary": "Application display name; derived from the run file when import_name is __main__."
+      },
+      {
+        "id": "flask/sansio/app.py::method::App.logger::18378",
+        "kind": "method",
+        "explain": "Cached property returning a standard logging.Logger for the app, created by flask.logging.create_logger(self) and named after the app. Level/handler setup (debug level, default handler when none configured) is delegated to create_logger, which is outside this file; per the docstring the level is only set at creation time.",
+        "summary": "Lazily created per-app logger via create_logger, named after the app.",
+        "relations": [
+          {
+            "target": "flask/logging.py::function::create_logger::1658",
+            "kind": "call",
+            "basis": "return create_logger(self)"
+          }
+        ],
+        "uncertainties": [
+          "Exact handler/level behavior lives in flask/logging.py, not visible here."
+        ]
+      },
+      {
+        "id": "flask/sansio/app.py::method::App.jinja_env::19445",
+        "kind": "method",
+        "explain": "Cached property that builds the Jinja environment on first access by calling create_jinja_environment() (implemented by the concrete subclass; in this sansio class it raises NotImplementedError). Because it is cached, jinja_options and related attributes must be configured before the first access to have any effect.",
+        "summary": "Lazily creates and caches the Jinja environment on first access.",
+        "relations": [
+          {
+            "target": "flask/sansio/app.py::method::App.create_jinja_environment::19780",
+            "kind": "call",
+            "basis": "return self.create_jinja_environment()"
+          }
+        ],
+        "members": [
+          "flask/sansio/app.py::method::App.create_jinja_environment::19780"
+        ],
+        "uncertainties": [
+          "What create_jinja_environment assembles is defined in flask/app.py, not in this file."
+        ]
+      },
+      {
+        "id": "flask/sansio/app.py::method::App.make_config::19872",
+        "kind": "method",
+        "explain": "Constructs the config object: root path is instance_path when instance_relative is True, otherwise self.root_path. Copies class-level default_config into a dict, overrides DEBUG from the environment via get_debug_flag(), and instantiates config_class(root_path, defaults). Called only from __init__.",
+        "summary": "Builds the Config object with defaults and environment-derived DEBUG.",
+        "relations": [
+          {
+            "target": "flask/sansio/app.py::method::App.__init__::11658",
+            "kind": "use",
+            "basis": "called from __init__ (self.config = self.make_config(...))"
+          },
+          {
+            "target": "flask/helpers.py::function::get_debug_flag::671",
+            "kind": "call",
+            "basis": "defaults[\"DEBUG\"] = get_debug_flag()"
+          }
+        ]
+      },
+      {
+        "id": "flask/sansio/app.py::method::App.make_aborter::20566",
+        "kind": "method",
+        "explain": "Factory for the app's aborter: returns aborter_class() (default werkzeug Aborter). The resulting object is stored as self.aborter and invoked by flask.abort; subclasses can swap aborter_class or override this factory.",
+        "summary": "Creates the app's Aborter instance from aborter_class."
+      },
+      {
+        "id": "flask/sansio/app.py::method::App.auto_find_instance_path::20999",
+        "kind": "method",
+        "explain": "Locates the instance folder when none was supplied: calls find_package(import_name); if no installation prefix is found, returns '<package_path>/instance', otherwise '<prefix>/var/<name>-instance' using the cached name property. Path resolution depends on find_package (scaffold.py).",
+        "summary": "Auto-detects the instance folder next to the package or under var/ when prefixed.",
+        "relations": [
+          {
+            "target": "flask/sansio/scaffold.py::function::find_package::29169",
+            "kind": "call",
+            "basis": "prefix, package_path = find_package(self.import_name)"
+          }
+        ]
+      },
+      {
+        "id": "flask/sansio/app.py::method::App.create_global_jinja_loader::21549",
+        "kind": "method",
+        "explain": "Returns a DispatchingJinjaLoader(self) that dispatches template loading between the app's own loader and registered blueprints' loaders. Docstring discourages overriding this; subclasses should override jinja_loader instead.",
+        "summary": "Creates the dispatching Jinja loader covering app and blueprint templates.",
+        "relations": [
+          {
+            "target": "flask/templating.py::method::DispatchingJinjaLoader.__init__::1628",
+            "kind": "call",
+            "basis": "return DispatchingJinjaLoader(self)"
+          }
+        ]
+      },
+      {
+        "id": "flask/sansio/app.py::method::App.select_jinja_autoescape::22092",
+        "kind": "method",
+        "explain": "Autoescape policy: returns True when filename is None; otherwise case-insensitively checks the extension against .html, .htm, .xml, .xhtml, .svg. Extensions outside that set get autoescaping disabled. Pure predicate.",
+        "summary": "Enables autoescape for None names and HTML/XML/SVG extensions, case-insensitively."
+      },
+      {
+        "id": "flask/sansio/app.py::method::App.debug::22697",
+        "kind": "method",
+        "explain": "Getter/setter pair over the DEBUG config key. The getter simply returns config['DEBUG']. The setter writes the value into config and, if TEMPLATES_AUTO_RELOAD is still None (unset), mirrors the value onto the (creating it if needed) jinja_env.auto_reload. Because jinja_env is cached, setting debug after the environment exists changes its auto_reload but not any other environment options.",
+        "summary": "Debug flag mapped to the DEBUG config key; setter syncs Jinja auto-reload when unset.",
+        "relations": [
+          {
+            "target": "flask/sansio/app.py::method::App.jinja_env::19445",
+            "kind": "use",
+            "basis": "setter accesses self.jinja_env.auto_reload"
+          }
+        ],
+        "uncertainties": [
+          "Side effect triggers environment creation if jinja_env was not yet accessed."
+        ]
+      },
+      {
+        "id": "flask/sansio/app.py::method::App.debug::23241",
+        "kind": "method",
+        "explain": "Setter half of the debug property; explained with the getter unit.",
+        "summary": "Setter for the debug property."
+      },
+      {
+        "id": "flask/sansio/app.py::method::App.register_blueprint::23444",
+        "kind": "method",
+        "explain": "Setup-method-guarded registration of a Blueprint: records options and delegates to blueprint.register(self, options), which (in blueprints.py) applies url_prefix/subdomain/url_defaults and adds the blueprint's rules to this app. Keyword options override blueprint defaults and are passed through to BlueprintSetupState; the 'name' option lets the same blueprint be registered multiple times under distinct names. Mutates self.blueprints via the callee. The guard forbids registration after the first request.",
+        "summary": "Registers a blueprint, delegating rule setup to Blueprint.register.",
+        "relations": [
+          {
+            "target": "flask/sansio/blueprints.py::method::Blueprint.register::10928",
+            "kind": "call",
+            "basis": "blueprint.register(self, options)"
+          },
+          {
+            "target": "flask/sansio/app.py::method::App.iter_blueprints::24745",
+            "kind": "use",
+            "basis": "registration populates self.blueprints, which iter_blueprints exposes"
+          }
+        ]
+      },
+      {
+        "id": "flask/sansio/app.py::method::App.iter_blueprints::24745",
+        "kind": "method",
+        "explain": "Returns self.blueprints.values(), a ValuesView over registered blueprints in registration order; multiple registrations of the same blueprint under different names appear multiple times. Explained here and folded into the registration documentation.",
+        "summary": "View over registered blueprints in registration order."
+      },
+      {
+        "id": "flask/sansio/app.py::method::App.add_url_rule::24963",
+        "kind": "method",
+        "explain": "Core route registration, guarded as a setup method. Derives the endpoint from the view function when omitted; pops 'methods' from options; falls back to view_func.methods or ('GET',); rejects a bare string with TypeError; uppercases and set-ifies methods. Computes required_methods from view_func.required_methods; resolves provide_automatic_options (explicit arg > view_func attribute > OPTIONS not already in methods and config PROVIDE_AUTOMATIC_OPTIONS), adding 'OPTIONS' to required methods when automatic options apply, then unions required methods in. Instantiates url_rule_class(rule, methods=methods, **options), sets provide_automatic_options on the rule, and adds it to url_map. Finally registers the view function: raises AssertionError if the endpoint already maps to a different function, otherwise stores it.",
+        "summary": "Creates a URL rule, resolves methods/automatic OPTIONS, registers rule and view function.",
+        "relations": [
+          {
+            "target": "flask/sansio/scaffold.py::function::_endpoint_from_view_func::27081",
+            "kind": "call",
+            "basis": "endpoint = _endpoint_from_view_func(view_func)"
+          },
+          {
+            "target": "flask/sansio/app.py::method::App._check_setup_finished::17137",
+            "kind": "use",
+            "basis": "@setupmethod guard applied to this route-registration method"
+          }
+        ],
+        "extras": [
+          {
+            "topic": "failure",
+            "note": "TypeError when methods is a string; AssertionError when reusing an endpoint with a different view function."
+          },
+          {
+            "topic": "contract",
+            "note": "provide_automatic_options precedence: explicit argument, then view_func attribute, then config-derived default."
+          }
+        ]
+      },
+      {
+        "id": "grp:app-py-template-registration",
+        "kind": "group",
+        "explain": "Template hook registration API, three parallel families (filter, test, global), each with the same shape. The decorator form template_filter/template_test/template_global doubles as direct and parametrized: if called with a callable it registers immediately and returns the function (usable without parentheses); otherwise it returns a decorator closure that registers under the given name (or the function's __name__ when None). All paths funnel into add_template_filter/add_template_test/add_template_global, which are setup-method-guarded and write directly into the (possibly triggering creation of) cached jinja_env's filters/tests/globals dict: jinja_env.filters[name or f.__name__] = f (and .tests/.globals analogues). Registering after the first request violates the setup guard; registering after jinja_env was already created still works but only affects that cached environment. Overload stubs and inner decorator closures are covered by this unit.",
+        "summary": "Decorator and direct registration of Jinja filters, tests, and globals into the cached jinja_env.",
+        "relations": [
+          {
+            "target": "flask/sansio/app.py::method::App.jinja_env::19445",
+            "kind": "use",
+            "basis": "add_template_* assign into self.jinja_env.filters/tests/globals"
+          },
+          {
+            "target": "flask/sansio/scaffold.py::function::setupmethod::1379::s0",
+            "kind": "use",
+            "basis": "@setupmethod decorates add_template_filter/test/global and the template_* decorators"
+          }
+        ],
+        "members": [
+          "flask/sansio/app.py::method::App.template_filter::27251",
+          "flask/sansio/app.py::method::App.template_filter::27348",
+          "flask/sansio/app.py::method::App.template_filter::27492::s0",
+          "flask/sansio/app.py::function::App.template_filter.decorator::28311",
+          "flask/sansio/app.py::method::App.template_filter::27492::s1",
+          "flask/sansio/app.py::method::App.add_template_filter::28472",
+          "flask/sansio/app.py::method::App.template_test::29000",
+          "flask/sansio/app.py::method::App.template_test::29091",
+          "flask/sansio/app.py::method::App.template_test::29229::s0",
+          "flask/sansio/app.py::function::App.template_test.decorator::30250",
+          "flask/sansio/app.py::method::App.template_test::29229::s1",
+          "flask/sansio/app.py::method::App.add_template_test::30405",
+          "flask/sansio/app.py::method::App.template_global::30953",
+          "flask/sansio/app.py::method::App.template_global::31050",
+          "flask/sansio/app.py::method::App.template_global::31194::s0",
+          "flask/sansio/app.py::function::App.template_global.decorator::32020",
+          "flask/sansio/app.py::method::App.template_global::31194::s1",
+          "flask/sansio/app.py::method::App.add_template_global::32181"
+        ],
+        "uncertainties": [
+          "Behavior when the same name is registered twice is not checked here; last write wins in the Jinja dict."
+        ]
+      },
+      {
+        "id": "flask/sansio/app.py::method::App.teardown_appcontext::32741",
+        "kind": "method",
+        "explain": "Setup-method-guarded decorator that appends f to teardown_appcontext_funcs and returns f unchanged. These functions run when the app context is popped (end of request, CLI command, or with-block exit); on unhandled exceptions they receive the error, otherwise None. Return values are ignored; raising from teardown is discouraged and not mitigated here. Setup is refused after the first request via the guard.",
+        "summary": "Registers a teardown function for app-context pop and returns it unchanged.",
+        "relations": [
+          {
+            "target": "flask/sansio/scaffold.py::function::setupmethod::1379::s0",
+            "kind": "use",
+            "basis": "@setupmethod decorator"
+          },
+          {
+            "target": "flask/sansio/app.py::method::App._check_setup_finished::17137",
+            "kind": "use",
+            "basis": "setupmethod guard enforces pre-first-request registration"
+          }
+        ]
+      },
+      {
+        "id": "flask/sansio/app.py::method::App.shell_context_processor::33867",
+        "kind": "method",
+        "explain": "Setup-method-guarded decorator that appends f to shell_context_processors and returns f; processors supply variables when a flask shell context is created. Covered with the other registration decorators.",
+        "summary": "Registers a shell context processor and returns it unchanged."
+      },
+      {
+        "id": "flask/sansio/app.py::method::App._find_error_handler::34163",
+        "kind": "method",
+        "explain": "Error-handler lookup for an exception given a candidate blueprint name list. Resolves (exc_class, code) via Scaffold._get_exc_class_and_code(type(e)); candidates are searched in precedence order: for each code in (code, None) when a code exists (else only None), for each name in (*blueprints, None) \u2014 i.e. most specific blueprint first, then app level \u2014 inspect error_handler_spec[name][c], skipping empty maps, and walk exc_class.__mro__ returning the first handler whose class key matches. Returns None if nothing matches. Behavior of error_handler_spec population lives in the concrete Flask subclass; whether self.get or dict.get applies is ambiguous in the graph and the dict-like mapping is assumed.",
+        "summary": "Finds the most specific registered error handler by code, blueprint, and exception MRO.",
+        "relations": [
+          {
+            "target": "flask/sansio/scaffold.py::method::Scaffold._get_exc_class_and_code::25469",
+            "kind": "call",
+            "basis": "exc_class, code = self._get_exc_class_and_code(type(e))"
+          }
+        ],
+        "uncertainties": [
+          "Structure of error_handler_spec is defined in flask/app.py, not visible here; this reading assumes a nested {name: {code: {cls: handler}}} mapping.",
+          "Graph showed two candidates for handler_map.get(cls); treated as mapping lookup per the nested-spec reading."
+        ]
+      },
+      {
+        "id": "flask/sansio/app.py::method::App.trap_http_exception::35122",
+        "kind": "method",
+        "explain": "Decides whether an HTTP exception raised by a view should escape error handling and surface as a regular traceback. Returns True if config TRAP_HTTP_EXCEPTIONS is set. Otherwise, if TRAP_BAD_REQUEST_ERRORS is unset (None), debug mode is on, and the exception is a BadRequestKeyError, it is trapped. If TRAP_BAD_REQUEST_ERRORS is truthy, returns whether the exception is a BadRequest. Default: False (no trapping). Called by the concrete Flask exception-handling path.",
+        "summary": "Determines if an HTTP exception is trapped for debugging instead of handled."
+      },
+      {
+        "id": "flask/sansio/app.py::method::App.redirect::36718",
+        "kind": "method",
+        "explain": "Creates a redirect response by delegating to werkzeug's redirect with location, the given status code (default 303, changed from 302 in 3.2), and Response=self.response_class so the app's response class is used. Called by flask.redirect; raising/return semantics are werkzeug's.",
+        "summary": "Builds a redirect response using the app's response class; default code 303.",
+        "relations": [
+          {
+            "target": "flask/sansio/scaffold.py::class::Scaffold",
+            "kind": "use",
+            "basis": "uses self.response_class declared on the Scaffold/App class"
+          }
+        ],
+        "uncertainties": [
+          "response_class is only declared (type) in this file; its concrete assignment lives in flask/app.py."
+        ]
+      },
+      {
+        "id": "flask/sansio/app.py::method::App.inject_url_defaults::38226",
+        "kind": "method",
+        "explain": "Implements inject_url_defaults for URL building (called from Flask.url_for): starts with name None (app-level defaults) and, when the endpoint contains a dot, chains the blueprint ancestors from _split_blueprint_path of the endpoint prefix in reversed order (most specific first), so url_for works outside a request context. For each name present in url_default_functions, calls each function with (endpoint, values), letting them mutate values in place. No return value.",
+        "summary": "Applies app- and blueprint-level url default functions to the values dict before building a URL.",
+        "relations": [
+          {
+            "target": "flask/helpers.py::function::_split_blueprint_path::23567",
+            "kind": "call",
+            "basis": "reversed(_split_blueprint_path(endpoint.rpartition(\".\")[0]))"
+          }
+        ],
+        "uncertainties": [
+          "url_default_functions is populated elsewhere (concrete Flask class), not visible in this file."
+        ]
+      },
+      {
+        "id": "flask/sansio/app.py::method::App.handle_url_build_error::38226",
+        "kind": "method",
+        "explain": "BuildError fallback for url_for. Iterates url_build_error_handlers, calling each with (error, endpoint, values). A handler raising BuildError has that new error captured into the loop variable (deliberately, so it is available outside the except block) and iteration continues; a handler returning None is skipped; the first non-None return value is returned to url_for. If no handler produces a value, the (possibly replaced) error is re-raised: bare `raise` when it is the currently active exception, otherwise `raise error`. Setup-method-free; callable at any time.",
+        "summary": "Runs URL build error handlers; returns first result or re-raises the BuildError.",
+        "extras": [
+          {
+            "topic": "failure",
+            "note": "A handler raising BuildError replaces the active error for subsequent handlers and the final raise."
+          },
+          {
+            "topic": "contract",
+            "note": "Return value semantics: None from a handler means 'not handled'; any other value is returned by url_for."
+          }
+        ]
+      }
+    ],
+    "dispositions": {
+      "flask/sansio/app.py::module_residual::::0": {
+        "how": "index_only",
+        "unit": null,
+        "reason": "Imports, TYPE_CHECKING block, and TypeVar aliases with no behavior."
+      },
+      "flask/sansio/app.py::function::_make_timedelta::1773": {
+        "how": "unit",
+        "unit": "flask/sansio/app.py::function::_make_timedelta::1773",
+        "reason": "Converter logic with a conditional branch; real behavior worth prose."
+      },
+      "flask/sansio/app.py::class::App::1959::s0": {
+        "how": "unit",
+        "unit": "flask/sansio/app.py::class::App::1959::s0",
+        "reason": "Class-level attributes, hooks, and ConfigAttribute descriptors documented as the class unit."
+      },
+      "flask/sansio/app.py::method::App.__init__::11658": {
+        "how": "unit",
+        "unit": "flask/sansio/app.py::method::App.__init__::11658",
+        "reason": "Constructor with instance-path resolution and registry initialization."
+      },
+      "flask/sansio/app.py::method::App._check_setup_finished::17137": {
+        "how": "unit",
+        "unit": "flask/sansio/app.py::method::App._check_setup_finished::17137",
+        "reason": "Guard with a raising branch; documented despite small size."
+      },
+      "flask/sansio/app.py::method::App.name::17686": {
+        "how": "unit",
+        "unit": "flask/sansio/app.py::method::App.name::17686",
+        "reason": "Cached property with __main__ fallback branching."
+      },
+      "flask/sansio/app.py::method::App.logger::18378": {
+        "how": "unit",
+        "unit": "flask/sansio/app.py::method::App.logger::18378",
+        "reason": "Cached property delegating to create_logger."
+      },
+      "flask/sansio/app.py::method::App.jinja_env::19445": {
+        "how": "unit",
+        "unit": "flask/sansio/app.py::method::App.jinja_env::19445",
+        "reason": "Lazy cached environment creation; create_jinja_environment folded here."
+      },
+      "flask/sansio/app.py::method::App.create_jinja_environment::19780": {
+        "how": "grouped",
+        "unit": "flask/sansio/app.py::method::App.jinja_env::19445",
+        "reason": "Abstract NotImplementedError stub explained with jinja_env."
+      },
+      "flask/sansio/app.py::method::App.make_config::19872": {
+        "how": "unit",
+        "unit": "flask/sansio/app.py::method::App.make_config::19872",
+        "reason": "Config construction with instance-relative root and DEBUG default."
+      },
+      "flask/sansio/app.py::method::App.make_aborter::20566": {
+        "how": "unit",
+        "unit": "flask/sansio/app.py::method::App.make_aborter::20566",
+        "reason": "Pluggable factory hook for the aborter."
+      },
+      "flask/sansio/app.py::method::App.auto_find_instance_path::20999": {
+        "how": "unit",
+        "unit": "flask/sansio/app.py::method::App.auto_find_instance_path::20999",
+        "reason": "Two-branch instance path detection via find_package."
+      },
+      "flask/sansio/app.py::method::App.create_global_jinja_loader::21549": {
+        "how": "unit",
+        "unit": "flask/sansio/app.py::method::App.create_global_jinja_loader::21549",
+        "reason": "Overridable factory returning DispatchingJinjaLoader."
+      },
+      "flask/sansio/app.py::method::App.select_jinja_autoescape::22092": {
+        "how": "unit",
+        "unit": "flask/sansio/app.py::method::App.select_jinja_autoescape::22092",
+        "reason": "Extension-based autoescape policy predicate."
+      },
+      "flask/sansio/app.py::method::App.debug::22697": {
+        "how": "unit",
+        "unit": "flask/sansio/app.py::method::App.debug::22697",
+        "reason": "Getter of the DEBUG property documented with its setter."
+      },
+      "flask/sansio/app.py::method::App.debug::23241": {
+        "how": "grouped",
+        "unit": "flask/sansio/app.py::method::App.debug::22697",
+        "reason": "Setter half of the same property; explained with the getter."
+      },
+      "flask/sansio/app.py::method::App.register_blueprint::23444": {
+        "how": "unit",
+        "unit": "flask/sansio/app.py::method::App.register_blueprint::23444",
+        "reason": "Blueprint registration delegating to Blueprint.register."
+      },
+      "flask/sansio/app.py::method::App.iter_blueprints::24745": {
+        "how": "grouped",
+        "unit": "flask/sansio/app.py::class::App::1959::s0",
+        "reason": "Trivial values() accessor folded into the class unit."
+      },
+      "flask/sansio/app.py::method::App.add_url_rule::24963": {
+        "how": "unit",
+        "unit": "flask/sansio/app.py::method::App.add_url_rule::24963",
+        "reason": "Substantial method-resolution and rule registration logic."
+      },
+      "flask/sansio/app.py::method::App.template_filter::27251": {
+        "how": "grouped",
+        "unit": "grp:app-py-template-registration",
+        "reason": "Overload stub covered by the template registration group."
+      },
+      "flask/sansio/app.py::method::App.template_filter::27348": {
+        "how": "grouped",
+        "unit": "grp:app-py-template-registration",
+        "reason": "Overload stub covered by the template registration group."
+      },
+      "flask/sansio/app.py::method::App.template_filter::27492::s0": {
+        "how": "grouped",
+        "unit": "grp:app-py-template-registration",
+        "reason": "Decorator implementation covered by the group."
+      },
+      "flask/sansio/app.py::function::App.template_filter.decorator::28311": {
+        "how": "grouped",
+        "unit": "grp:app-py-template-registration",
+        "reason": "Trivial closure returning f after registration."
+      },
+      "flask/sansio/app.py::method::App.template_filter::27492::s1": {
+        "how": "grouped",
+        "unit": "grp:app-py-template-registration",
+        "reason": "Trailing fragment of the same method covered by the group."
+      },
+      "flask/sansio/app.py::method::App.add_template_filter::28472": {
+        "how": "grouped",
+        "unit": "grp:app-py-template-registration",
+        "reason": "One-line jinja_env.filters assignment covered by the group."
+      },
+      "flask/sansio/app.py::method::App.template_test::29000": {
+        "how": "grouped",
+        "unit": "grp:app-py-template-registration",
+        "reason": "Overload stub covered by the group."
+      },
+      "flask/sansio/app.py::method::App.template_test::29091": {
+        "how": "grouped",
+        "unit": "grp:app-py-template-registration",
+        "reason": "Overload stub covered by the group."
+      },
+      "flask/sansio/app.py::method::App.template_test::29229::s0": {
+        "how": "grouped",
+        "unit": "grp:app-py-template-registration",
+        "reason": "Decorator implementation covered by the group."
+      },
+      "flask/sansio/app.py::function::App.template_test.decorator::30250": {
+        "how": "grouped",
+        "unit": "grp:app-py-template-registration",
+        "reason": "Trivial closure covered by the group."
+      },
+      "flask/sansio/app.py::method::App.template_test::29229::s1": {
+        "how": "grouped",
+        "unit": "grp:app-py-template-registration",
+        "reason": "Trailing fragment covered by the group."
+      },
+      "flask/sansio/app.py::method::App.add_template_test::30405": {
+        "how": "grouped",
+        "unit": "grp:app-py-template-registration",
+        "reason": "One-line jinja_env.tests assignment covered by the group."
+      },
+      "flask/sansio/app.py::method::App.template_global::30953": {
+        "how": "grouped",
+        "unit": "grp:app-py-template-registration",
+        "reason": "Overload stub covered by the group."
+      },
+      "flask/sansio/app.py::method::App.template_global::31050": {
+        "how": "grouped",
+        "unit": "grp:app-py-template-registration",
+        "reason": "Overload stub covered by the group."
+      },
+      "flask/sansio/app.py::method::App.template_global::31194::s0": {
+        "how": "grouped",
+        "unit": "grp:app-py-template-registration",
+        "reason": "Decorator implementation covered by the group."
+      },
+      "flask/sansio/app.py::function::App.template_global.decorator::32020": {
+        "how": "grouped",
+        "unit": "grp:app-py-template-registration",
+        "reason": "Trivial closure covered by the group."
+      },
+      "flask/sansio/app.py::method::App.template_global::31194::s1": {
+        "how": "grouped",
+        "unit": "grp:app-py-template-registration",
+        "reason": "Trailing fragment covered by the group."
+      },
+      "flask/sansio/app.py::method::App.add_template_global::32181": {
+        "how": "grouped",
+        "unit": "grp:app-py-template-registration",
+        "reason": "One-line jinja_env.globals assignment covered by the group."
+      },
+      "flask/sansio/app.py::method::App.teardown_appcontext::32741": {
+        "how": "unit",
+        "unit": "flask/sansio/app.py::method::App.teardown_appcontext::32741",
+        "reason": "Registration decorator with documented teardown contract."
+      },
+      "flask/sansio/app.py::method::App.shell_context_processor::33867": {
+        "how": "grouped",
+        "unit": "flask/sansio/app.py::class::App::1959::s0",
+        "reason": "Two-line append-and-return registration folded into the class unit."
+      },
+      "flask/sansio/app.py::method::App._find_error_handler::34163": {
+        "how": "unit",
+        "unit": "flask/sansio/app.py::method::App._find_error_handler::34163",
+        "reason": "Nested precedence search over handler specs; real logic."
+      },
+      "flask/sansio/app.py::method::App.trap_http_exception::35122": {
+        "how": "unit",
+        "unit": "flask/sansio/app.py::method::App.trap_http_exception::35122",
+        "reason": "Config- and debug-dependent trapping decision with multiple branches."
+      },
+      "flask/sansio/app.py::class::App::1959::s32": {
+        "how": "grouped",
+        "unit": "flask/sansio/app.py::class::App::1959::s0",
+        "reason": "Deprecated should_ignore_error placeholder attribute, part of the class body."
+      },
+      "flask/sansio/app.py::method::App.redirect::36718": {
+        "how": "unit",
+        "unit": "flask/sansio/app.py::method::App.redirect::36718",
+        "reason": "Response-producing delegation with app response class."
+      },
+      "flask/sansio/app.py::method::App.inject_url_defaults::37394": {
+        "how": "unit",
+        "unit": "flask/sansio/app.py::method::App.inject_url_defaults::37394",
+        "reason": "Blueprint-aware default injection with iteration logic."
+      },
+      "flask/sansio/app.py::method::App.handle_url_build_error::38226": {
+        "how": "unit",
+        "unit": "flask/sansio/app.py::method::App.handle_url_build_error::38226",
+        "reason": "Handler loop with exception capture and dual re-raise paths."
+      }
+    },
+    "batch_notes": "Single file batch. All 39 resolved call sites map to batch-visible relations; two graph ambiguities (handler_map.get, options.pop) were resolved by structural reading and flagged as uncertainties rather than asserted. The template filter/test/global families were merged into one group since they are structurally identical. Property getter/setter pairs, overload stubs, and trivial accessors were folded into their owning units."
+  },
+  "paths": [
+    "flask/sansio/app.py"
+  ],
+  "inventory": {
+    "flask/sansio/app.py": {
+      "tokens": 8772,
+      "sha256": "cf5df9f2972be7cad9878df7ea321804617d769f47823984abbe0a9b1cbc460b",
+      "nlines": 1014,
+      "symbols": [
+        {
+          "id": "flask/sansio/app.py::module_residual::::0",
+          "name": "app.py",
+          "kind": "module_region",
+          "parent": null,
+          "lines": [
+            [
+              1,
+              52
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/app.py::function::_make_timedelta::1773",
+          "name": "_make_timedelta",
+          "kind": "function",
+          "parent": null,
+          "lines": [
+            [
+              53,
+              57
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/app.py::class::App::1959::s0",
+          "name": "App",
+          "kind": "class",
+          "parent": null,
+          "lines": [
+            [
+              60,
+              280
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/app.py::method::App.__init__::11658",
+          "name": "__init__",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              280,
+              409
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/app.py::method::App._check_setup_finished::17137",
+          "name": "_check_setup_finished",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              411,
+              421
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/app.py::method::App.name::17686",
+          "name": "name",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              423,
+              438
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/app.py::method::App.logger::18378",
+          "name": "logger",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              440,
+              465
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/app.py::method::App.jinja_env::19445",
+          "name": "jinja_env",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              467,
+              475
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/app.py::method::App.create_jinja_environment::19780",
+          "name": "create_jinja_environment",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              477,
+              478
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/app.py::method::App.make_config::19872",
+          "name": "make_config",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              480,
+              494
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/app.py::method::App.make_aborter::20566",
+          "name": "make_aborter",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              496,
+              506
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/app.py::method::App.auto_find_instance_path::20999",
+          "name": "auto_find_instance_path",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              508,
+              519
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/app.py::method::App.create_global_jinja_loader::21549",
+          "name": "create_global_jinja_loader",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              521,
+              532
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/app.py::method::App.select_jinja_autoescape::22092",
+          "name": "select_jinja_autoescape",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              534,
+              548
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/app.py::method::App.debug::22697",
+          "name": "debug",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              550,
+              561
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/app.py::method::App.debug::23241",
+          "name": "debug",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              563,
+              568
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/app.py::method::App.register_blueprint::23444",
+          "name": "register_blueprint",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              570,
+              596
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/app.py::method::App.iter_blueprints::24745",
+          "name": "iter_blueprints",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              598,
+              603
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/app.py::method::App.add_url_rule::24963",
+          "name": "add_url_rule",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              605,
+              662
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/app.py::method::App.template_filter::27251",
+          "name": "template_filter",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              664,
+              665
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/app.py::method::App.template_filter::27348",
+          "name": "template_filter",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              666,
+              669
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/app.py::method::App.template_filter::27492::s0",
+          "name": "template_filter",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              670,
+              693
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/app.py::function::App.template_filter.decorator::28311",
+          "name": "decorator",
+          "kind": "function",
+          "parent": null,
+          "lines": [
+            [
+              693,
+              695
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/app.py::method::App.template_filter::27492::s1",
+          "name": "template_filter",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              695,
+              697
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/app.py::method::App.add_template_filter::28472",
+          "name": "add_template_filter",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              699,
+              712
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/app.py::method::App.template_test::29000",
+          "name": "template_test",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              714,
+              715
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/app.py::method::App.template_test::29091",
+          "name": "template_test",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              716,
+              719
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/app.py::method::App.template_test::29229::s0",
+          "name": "template_test",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              720,
+              750
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/app.py::function::App.template_test.decorator::30250",
+          "name": "decorator",
+          "kind": "function",
+          "parent": null,
+          "lines": [
+            [
+              750,
+              752
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/app.py::method::App.template_test::29229::s1",
+          "name": "template_test",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              752,
+              754
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/app.py::method::App.add_template_test::30405",
+          "name": "add_template_test",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              756,
+              771
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/app.py::method::App.template_global::30953",
+          "name": "template_global",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              773,
+              774
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/app.py::method::App.template_global::31050",
+          "name": "template_global",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              775,
+              778
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/app.py::method::App.template_global::31194::s0",
+          "name": "template_global",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              779,
+              804
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/app.py::function::App.template_global.decorator::32020",
+          "name": "decorator",
+          "kind": "function",
+          "parent": null,
+          "lines": [
+            [
+              804,
+              806
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/app.py::method::App.template_global::31194::s1",
+          "name": "template_global",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              806,
+              808
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/app.py::method::App.add_template_global::32181",
+          "name": "add_template_global",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              810,
+              825
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/app.py::method::App.teardown_appcontext::32741",
+          "name": "teardown_appcontext",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              827,
+              856
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/app.py::method::App.shell_context_processor::33867",
+          "name": "shell_context_processor",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              858,
+              867
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/app.py::method::App._find_error_handler::34163",
+          "name": "_find_error_handler",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              869,
+              892
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/app.py::method::App.trap_http_exception::35122",
+          "name": "trap_http_exception",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              894,
+              927
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/app.py::class::App::1959::s32",
+          "name": "App",
+          "kind": "class",
+          "parent": null,
+          "lines": [
+            [
+              927,
+              940
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/app.py::method::App.redirect::36718",
+          "name": "redirect",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              940,
+              959
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/app.py::method::App.inject_url_defaults::37394",
+          "name": "inject_url_defaults",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              961,
+              980
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/app.py::method::App.handle_url_build_error::38226",
+          "name": "handle_url_build_error",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              982,
+              1014
+            ]
+          ]
+        }
+      ],
+      "known_empty": false
+    }
+  },
+  "source": "runs/s5-int/flask-glm53flash/run/host/raw/module_11.attempt-1.txt",
+  "accepted": true
+}

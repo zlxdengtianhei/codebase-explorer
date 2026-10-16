@@ -801,7 +801,13 @@ def _checks(run_dir: Path, state: dict[str, Any], task: dict[str, Any]) -> tuple
         paths = list(state["modules"][task["module"]]["files"])
         subset = symbols.inventory_for_paths(state["inventory"], paths)
         known = _known_unit_ids(run_dir, state, exclude=task["module"])
-        return (lambda value: _raise_problems(checks.validate_details(value, paths, subset, known)),
+        def validate_detail(value):
+            problems = checks.validate_details(value, paths, subset, known)
+            # The retry prompt has a bounded error excerpt. Put actionable
+            # identity diagnostics before secondary shape/coverage errors.
+            problems.sort(key=lambda problem: "not in this batch's inventory" not in problem)
+            _raise_problems(problems)
+        return (validate_detail,
                 lambda value: checks.normalize_details(value, paths, subset, known))
     if task["kind"] == "tree":
         universe = set(_semantic_units(run_dir, state)[0])

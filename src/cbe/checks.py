@@ -176,6 +176,34 @@ def _normalize_choice(value: Any, allowed: "set[str] | frozenset[str]",
     return default, True
 
 
+def _detail_identity(uid: str) -> tuple[str, ...]:
+    """Ignore only the generated final offset, retaining path/kind/qualified name."""
+    parts = uid.split("::")
+    if len(parts) >= 4 and re.fullmatch(r"\d+(?:_[\w-]+)?", parts[3]) \
+            and all(re.fullmatch(r"s\d+", suffix) for suffix in parts[4:]):
+        return tuple(parts[:3])
+    return tuple(parts)
+
+
+def _detail_id_problem(uid: str, scope_ids: set[str]) -> str:
+    parts = uid.split("::")
+    name = parts[2] if len(parts) >= 3 else uid
+    candidates = sorted(candidate for candidate in scope_ids
+                        if len(candidate.split("::")) >= 3
+                        and candidate.split("::")[2] == name)
+    if not candidates and scope_ids:
+        def prefix_length(candidate: str) -> int:
+            other = candidate.split("::")
+            other_name = other[2] if len(other) >= 3 else candidate
+            return next((i for i, (a, b) in enumerate(zip(name, other_name)) if a != b),
+                        min(len(name), len(other_name)))
+        longest = max(map(prefix_length, scope_ids))
+        candidates = sorted(candidate for candidate in scope_ids
+                            if prefix_length(candidate) == longest)
+    return (f"unit id {uid} is not in this batch's inventory; candidates: {candidates[:12]}. "
+            "Unit ids must come only from this batch's inventory; use grp: for self-created groups.")
+
+
 def validate_details(payload: Any, paths: list[str], inventory: dict[str, dict],
                      known_unit_ids: set[str]) -> list[str]:
     """Hard problems only (empty list = acceptable).
@@ -207,7 +235,7 @@ def validate_details(payload: Any, paths: list[str], inventory: dict[str, dict],
             problems.append(f"duplicate unit id {uid}")
         seen.add(uid)
         if not uid.startswith("grp:") and uid not in scope_ids:
-            problems.append(f"unit id {uid} is not in this batch's inventory; use grp: for a group")
+            problems.append(_detail_id_problem(uid, scope_ids))
         kind = unit.get("kind")
         if not isinstance(kind, str) or kind not in UNIT_KINDS:
             problems.append(f"{uid}: kind must be one of {sorted(UNIT_KINDS)}; got {kind!r}")
@@ -288,10 +316,10 @@ def normalize_details(payload: Any, paths: list[str], inventory: dict[str, dict]
                       known_unit_ids: set[str]) -> list[str]:
     """Make a usable answer compliant without dropping facts.
 
-    Only shape is repaired: non-dict units are dropped, invalid relation kinds
-    become ``use``, an absent uncertainty list becomes ``[]``, and a missing
-    disposition becomes ``index_only`` with a reason. Facts are never removed.
-    Raises when nothing usable is left."""
+    Identity is repaired only when path, kind and qualified name identify one
+    batch inventory id. All rewritten identity fields receive flags. Shape
+    repairs retain facts; a strict check at submission still decides acceptance.
+    Raises when nothing usable is left or identity correction would collide."""
     if not isinstance(payload, dict):
         raise ValueError("module result is not a JSON object")
     if not isinstance(payload.get("units"), list):
@@ -299,6 +327,41 @@ def normalize_details(payload: Any, paths: list[str], inventory: dict[str, dict]
     if not payload["units"] and any(inventory.get(path, {}).get("symbols") for path in paths):
         raise ValueError("module result has no units")
     flags: list[str] = []
+    scope_ids = {row["id"] for path in paths for row in inventory[path]["symbols"]}
+    # Only structural identity fields are rewritten; prose is never searched.
+    # Include references as well as definitions, since either can contain a typo.
+    def corrected(uid: Any, location: str) -> Any:
+        if not isinstance(uid, str) or uid in scope_ids or uid.startswith("grp:"):
+            return uid
+        matches = [candidate for candidate in scope_ids
+                   if _detail_identity(candidate) == _detail_identity(uid)]
+        if len(matches) == 1:
+            flags.append(f"id_corrected: {uid} -> {matches[0]} ({location})")
+            return matches[0]
+        return uid
+
+    for index, unit in enumerate(payload["units"]):
+        if not isinstance(unit, dict):
+            continue
+        unit["id"] = corrected(unit.get("id"), f"units[{index}].id")
+        relations = unit.get("relations")
+        for rel_index, rel in enumerate(relations if isinstance(relations, list) else []):
+            if isinstance(rel, dict) and "target" in rel:
+                rel["target"] = corrected(rel["target"], f"units[{index}].relations[{rel_index}].target")
+        if isinstance(unit.get("members"), list):
+            unit["members"] = [corrected(member, f"units[{index}].members[{member_index}]")
+                               for member_index, member in enumerate(unit["members"])]
+    dispositions = payload.get("dispositions")
+    if isinstance(dispositions, dict):
+        for key in list(dispositions):
+            entry = dispositions[key]
+            if isinstance(entry, dict) and "unit" in entry:
+                entry["unit"] = corrected(entry["unit"], f"dispositions[{key}].unit")
+            target_key = corrected(key, f"dispositions[{key}] key")
+            if target_key != key:
+                if target_key in dispositions:
+                    raise ValueError(f"duplicate disposition after id correction: {key} -> {target_key}")
+                dispositions[target_key] = dispositions.pop(key)
     units = [unit for unit in payload["units"] if isinstance(unit, dict)
              and isinstance(unit.get("id"), str) and unit["id"].strip()]
     if len(units) != len(payload["units"]):

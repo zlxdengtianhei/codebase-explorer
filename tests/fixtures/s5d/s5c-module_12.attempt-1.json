@@ -1,0 +1,1098 @@
+{
+  "payload": {
+    "units": [
+      {
+        "id": "flask/sansio/scaffold.py::function::setupmethod::1379::s0",
+        "kind": "function",
+        "explain": "Decorator marking a method as a 'setup' method: it wraps the function so each call first invokes self._check_setup_finished(f.__name__), then delegates to the original method. Uses functools.update_wrapper so the wrapper keeps the wrapped function's metadata, and casts the result back to F. The actual refusal behavior (raising when setup is finished) lives in _check_setup_finished, which is abstract here (NotImplementedError) and implemented by subclasses.",
+        "summary": "Wraps setup-time methods to check setup is finished before delegating.",
+        "relations": [
+          {
+            "target": "flask/sansio/scaffold.py::method::Scaffold._check_setup_finished::8940",
+            "kind": "call",
+            "basis": "wrapper_func calls self._check_setup_finished(f_name)"
+          },
+          {
+            "target": "flask/sansio/scaffold.py::function::setupmethod.wrapper_func::1436",
+            "kind": "use",
+            "basis": "returned closure defined here"
+          }
+        ],
+        "uncertainties": [
+          "Exact raise semantics depend on subclass implementations of _check_setup_finished, not shown here."
+        ],
+        "members": [
+          "flask/sansio/scaffold.py::function::setupmethod.wrapper_func::1436",
+          "flask/sansio/scaffold.py::function::setupmethod::1379::s1"
+        ]
+      },
+      {
+        "id": "flask/sansio/scaffold.py::class::Scaffold::1650::s0",
+        "kind": "class",
+        "explain": "Base class holding behavior shared between Flask app and Blueprint objects: URL-rule/view-function registration, request-phase hook registries (before/after/teardown), template context processors, URL value preprocessors and defaults, and error-handler registration. Registration structures are dicts keyed by scope (blueprint name or None for app-wide), mostly defaultdicts so first registration on a scope succeeds without pre-initialization. Static/template folder paths are resolved relative to root_path. Several methods (add_url_rule, _check_setup_finished) are abstract and raise NotImplementedError; concrete behavior is supplied by subclasses. All mutating registration methods are wrapped by @setupmethod, which routes calls through _check_setup_finished so late registration can be refused by subclasses.",
+        "summary": "Shared registration/config behavior for Flask apps and blueprints.",
+        "members": [
+          "flask/sansio/scaffold.py::method::Scaffold.__init__::2551",
+          "flask/sansio/scaffold.py::method::Scaffold.__repr__::8852",
+          "flask/sansio/scaffold.py::method::Scaffold._check_setup_finished::8940",
+          "flask/sansio/scaffold.py::method::Scaffold.static_folder::9033",
+          "flask/sansio/scaffold.py::method::Scaffold.static_folder::9361",
+          "flask/sansio/scaffold.py::method::Scaffold.has_static_folder::9581",
+          "flask/sansio/scaffold.py::method::Scaffold.static_url_path::9779",
+          "flask/sansio/scaffold.py::method::Scaffold.static_url_path::10279",
+          "flask/sansio/scaffold.py::method::Scaffold.jinja_loader::10473",
+          "flask/sansio/scaffold.py::method::Scaffold._method_route::10940",
+          "flask/sansio/scaffold.py::method::Scaffold.get::11277",
+          "flask/sansio/scaffold.py::method::Scaffold.query::11540",
+          "flask/sansio/scaffold.py::method::Scaffold.post::11809",
+          "flask/sansio/scaffold.py::method::Scaffold.put::12075",
+          "flask/sansio/scaffold.py::method::Scaffold.delete::12338",
+          "flask/sansio/scaffold.py::method::Scaffold.patch::12610",
+          "flask/sansio/scaffold.py::method::Scaffold.route::12879::s0",
+          "flask/sansio/scaffold.py::function::Scaffold.route.decorator::13748",
+          "flask/sansio/scaffold.py::method::Scaffold.route::12879::s1",
+          "flask/sansio/scaffold.py::method::Scaffold.add_url_rule::13951",
+          "flask/sansio/scaffold.py::method::Scaffold.endpoint::16364::s0",
+          "flask/sansio/scaffold.py::function::Scaffold.endpoint.decorator::16892",
+          "flask/sansio/scaffold.py::method::Scaffold.endpoint::16364::s1",
+          "flask/sansio/scaffold.py::method::Scaffold.before_request::17016",
+          "flask/sansio/scaffold.py::method::Scaffold.after_request::18148",
+          "flask/sansio/scaffold.py::method::Scaffold.teardown_request::19185",
+          "flask/sansio/scaffold.py::method::Scaffold.context_processor::20666",
+          "flask/sansio/scaffold.py::method::Scaffold.url_value_preprocessor::21441",
+          "flask/sansio/scaffold.py::method::Scaffold.url_defaults::22538",
+          "flask/sansio/scaffold.py::method::Scaffold.errorhandler::23213::s0",
+          "flask/sansio/scaffold.py::function::Scaffold.errorhandler.decorator::24800",
+          "flask/sansio/scaffold.py::method::Scaffold.errorhandler::23213::s1",
+          "flask/sansio/scaffold.py::method::Scaffold.register_error_handler::24968",
+          "flask/sansio/scaffold.py::method::Scaffold._get_exc_class_and_code::25469"
+        ]
+      },
+      {
+        "id": "flask/sansio/scaffold.py::method::Scaffold.__init__::2551",
+        "kind": "method",
+        "explain": "Stores import_name and template_folder, routes static_folder/static_url_path through the property setters (which strip trailing slashes), and computes root_path from get_root_path(import_name) when not supplied. Initializes all the registration registries as defaultdicts keyed by blueprint scope (None for app-wide): view_functions (plain dict), error_handler_spec (nested defaultdict of dicts), before/after/teardown request funcs, url value preprocessors/defaults (all defaultdict(list)), and template_context_processors pre-seeded with the None scope containing _default_template_ctx_processor. Only one control structure: the root_path None check; a non-None root_path bypasses get_root_path entirely.",
+        "summary": "Initializes import name, folders, root path, and registration registries.",
+        "relations": [
+          {
+            "target": "flask/helpers.py::function::get_root_path::21443",
+            "kind": "call",
+            "basis": "root_path = get_root_path(self.import_name) when root_path is None"
+          }
+        ],
+        "uncertainties": [
+          "Failure modes of get_root_path for bad import names are defined in flask/helpers.py, outside this batch."
+        ],
+        "members": []
+      },
+      {
+        "id": "flask/sansio/scaffold.py::method::Scaffold._check_setup_finished::8940",
+        "kind": "method",
+        "explain": "Abstract hook used by the setupmethod wrapper: raises NotImplementedError in Scaffold; subclasses are expected to implement the actual check (refusing registration after app setup is complete).",
+        "summary": "Abstract guard called before setup methods run.",
+        "uncertainties": [
+          "Subclass behavior not visible in this file."
+        ],
+        "members": []
+      },
+      {
+        "id": "flask/sansio/scaffold.py::method::Scaffold.static_folder::9033",
+        "kind": "method",
+        "explain": "Property getter: returns the configured static folder joined to root_path (absolute) via os.path.join, or None when _static_folder is None.",
+        "summary": "Absolute path of the static folder, or None.",
+        "members": []
+      },
+      {
+        "id": "flask/sansio/scaffold.py::method::Scaffold.static_folder::9361",
+        "kind": "method",
+        "explain": "Property setter: normalizes value with os.fspath and strips trailing slashes (both '/' and '\\\\') before storing in _static_folder; None is stored as-is.",
+        "summary": "Stores static folder path, stripping trailing slashes.",
+        "members": []
+      },
+      {
+        "id": "flask/sansio/scaffold.py::method::Scaffold.has_static_folder::9581",
+        "kind": "method",
+        "explain": "Trivial property: True exactly when the static_folder property (which resolves to root_path-joined path) is not None.",
+        "members": []
+      },
+      {
+        "id": "flask/sansio/scaffold.py::method::Scaffold.static_url_path::9779",
+        "kind": "method",
+        "explain": "Property getter: returns the explicitly configured URL prefix if set (setter already stripped trailing '/'); otherwise, if a static folder exists, derives the prefix as '/' plus the static folder's basename, rstripping '/' (edge: empty basename yields '/'.rstrip('/') == ''); returns None when neither is set.",
+        "summary": "Static URL prefix, derived from folder basename if unset.",
+        "extras": [
+          {
+            "topic": "condition",
+            "note": "When static_folder has an empty basename, the derived prefix is the empty string."
+          }
+        ],
+        "members": []
+      },
+      {
+        "id": "flask/sansio/scaffold.py::method::Scaffold.static_url_path::10279",
+        "kind": "method",
+        "explain": "Property setter: strips trailing '/' from a non-None value before storing in _static_url_path; None stored as-is.",
+        "members": []
+      },
+      {
+        "id": "flask/sansio/scaffold.py::method::Scaffold.jinja_loader::10473",
+        "kind": "method",
+        "explain": "cached_property: returns a FileSystemLoader for os.path.join(root_path, template_folder) when template_folder is set, otherwise None. Because it is a cached_property, the result is computed once per instance and later changes to template_folder/root_path are not reflected.",
+        "summary": "Jinja FileSystemLoader for the template folder, cached per instance.",
+        "extras": [
+          {
+            "topic": "side_effect",
+            "note": "cached_property caches the loader on first access; later folder changes are ignored."
+          }
+        ],
+        "members": []
+      },
+      {
+        "id": "flask/sansio/scaffold.py::method::Scaffold._method_route::10940",
+        "kind": "method",
+        "explain": "Shared implementation for the HTTP-method shortcuts: if 'methods' appears in options it raises TypeError (use 'route' instead); otherwise delegates to self.route(rule, methods=[method], **options).",
+        "summary": "Method shortcuts helper; rejects a 'methods' option.",
+        "extras": [
+          {
+            "topic": "failure",
+            "note": "Passing methods=... to get/post/etc. raises TypeError."
+          }
+        ],
+        "members": []
+      },
+      {
+        "id": "flask/sansio/scaffold.py::method::Scaffold.route::12879::s0",
+        "kind": "method",
+        "explain": "Decorator form of add_url_rule: returns a decorator that pops 'endpoint' from options (defaulting to None, which makes add_url_rule derive it from the view function's name), calls self.add_url_rule(rule, endpoint, f, **options), and returns the view function unchanged. Wrapped in @setupmethod so calls are guarded by _check_setup_finished at decoration time. Default methods are handled downstream (documented as GET with automatic HEAD/OPTIONS), since add_url_rule is abstract here.",
+        "summary": "Decorator registering a view function under a URL rule.",
+        "members": [
+          "flask/sansio/scaffold.py::function::Scaffold.route.decorator::13748",
+          "flask/sansio/scaffold.py::method::Scaffold.route::12879::s1"
+        ]
+      },
+      {
+        "id": "flask/sansio/scaffold.py::method::Scaffold.add_url_rule::13951",
+        "kind": "method",
+        "explain": "Abstract registration entry point: raises NotImplementedError in Scaffold. Docstring documents the contract implemented by subclasses: endpoint defaults to view_func.__name__; duplicate endpoint registration errors; methods default to GET with automatic HEAD and OPTIONS; view_func optional if the endpoint is later bound via the endpoint decorator; view_func may carry required_methods/provide_automatic_methods attributes affecting method sets. Actual behavior is in flask/sansio/app.py and blueprints.py (outside this file).",
+        "summary": "Abstract URL-rule registration; implemented by app/blueprint subclasses.",
+        "relations": [
+          {
+            "target": "flask/sansio/scaffold.py::method::Scaffold.route::12879::s0",
+            "kind": "contract",
+            "basis": "route decorator delegates to add_url_rule"
+          },
+          {
+            "target": "flask/sansio/app.py::method::App.add_url_rule::24963",
+            "kind": "inherit",
+            "basis": "subclasses implement this abstract method"
+          }
+        ],
+        "uncertainties": [
+          "Concrete implementation and duplicate-endpoint error type live in subclasses, not visible here."
+        ],
+        "members": []
+      },
+      {
+        "id": "flask/sansio/scaffold.py::method::Scaffold.endpoint::16364::s0",
+        "kind": "method",
+        "explain": "Decorator binding a view function to an existing endpoint name: returns a decorator that stores the function in self.view_functions[endpoint] and returns it unchanged. Guarded by @setupmethod. Used after add_url_rule was called without a view_func.",
+        "summary": "Decorator binding a function to an endpoint name.",
+        "members": [
+          "flask/sansio/scaffold.py::function::Scaffold.endpoint.decorator::16892",
+          "flask/sansio/scaffold.py::method::Scaffold.endpoint::16364::s1"
+        ]
+      },
+      {
+        "id": "flask/sansio/scaffold.py::method::Scaffold.before_request::17016",
+        "kind": "method",
+        "explain": "Registers f under the None (app-wide) scope in before_request_funcs (setdefault ensures the list exists on the defaultdict) and returns f unchanged. Docstring notes per-request semantics and that a non-None return short-circuits view handling; blueprint-scoped variants are on Blueprint. Guarded by @setupmethod.",
+        "members": []
+      },
+      {
+        "id": "flask/sansio/scaffold.py::method::Scaffold.after_request::18148",
+        "kind": "method",
+        "explain": "Registers f under the None scope in after_request_funcs and returns f. Docstring notes the function receives and must return a response, and that an exception in one after_request function prevents remaining ones from running (use teardown for must-run work).",
+        "members": []
+      },
+      {
+        "id": "flask/sansio/scaffold.py::method::Scaffold.teardown_request::19185",
+        "kind": "method",
+        "explain": "Registers f under the None scope in teardown_request_funcs and returns f. Docstring records that teardown functions run when the request context is popped (including manual pops in tests), receive the exception object on unhandled errors (unless an errorhandler handled it), must not raise, and have ignored return values.",
+        "members": []
+      },
+      {
+        "id": "flask/sansio/scaffold.py::method::Scaffold.context_processor::20666",
+        "kind": "method",
+        "explain": "Appends f to template_context_processors[None] (relying on the pre-seeded defaultdict) and returns f. App-wide scope here; blueprint scope via Blueprint.app_context_processor.",
+        "members": []
+      },
+      {
+        "id": "flask/sansio/scaffold.py::method::Scaffold.url_value_preprocessor::21441",
+        "kind": "method",
+        "explain": "Appends f to url_value_preprocessors[None] and returns f. Docstring: preprocessors run before before_request functions, receive (endpoint, values), may modify values in place, and their return value is ignored.",
+        "members": []
+      },
+      {
+        "id": "flask/sansio/scaffold.py::method::Scaffold.url_defaults::22538",
+        "kind": "method",
+        "explain": "Appends f to url_default_functions[None] and returns f. Docstring: called with (endpoint, values) during URL generation and should update values in place.",
+        "members": []
+      },
+      {
+        "id": "flask/sansio/scaffold.py::method::Scaffold.errorhandler::23213::s0",
+        "kind": "method",
+        "explain": "Decorator form of register_error_handler: returns a decorator that calls self.register_error_handler(code_or_exception, f) and returns f unchanged. Accepts an HTTP status code int or an exception class. Guarded by @setupmethod.",
+        "summary": "Decorator registering an error handler by code or exception.",
+        "members": [
+          "flask/sansio/scaffold.py::function::Scaffold.errorhandler.decorator::24800",
+          "flask/sansio/scaffold.py::method::Scaffold.errorhandler::23213::s1"
+        ]
+      },
+      {
+        "id": "flask/sansio/scaffold.py::method::Scaffold.register_error_handler::24968",
+        "kind": "method",
+        "explain": "Direct registration: normalizes code_or_exception via _get_exc_class_and_code, then stores f in error_handler_spec[None][code][exc_class] (app-wide None scope; nested defaultdicts create the missing levels). Guarded by @setupmethod.",
+        "summary": "Stores an error handler in the app-wide registry.",
+        "relations": [
+          {
+            "target": "flask/sansio/scaffold.py::method::Scaffold._get_exc_class_and_code::25469",
+            "kind": "call",
+            "basis": "exc_class, code = self._get_exc_class_and_code(code_or_exception)"
+          }
+        ],
+        "members": []
+      },
+      {
+        "id": "flask/sansio/scaffold.py::method::Scaffold._get_exc_class_and_code::25469",
+        "kind": "method",
+        "explain": "Static normalizer for error-handler keys. If given an int, looks it up in werkzeug's default_exceptions; an unknown code raises ValueError (chained from None) advising to use an HTTPException subclass instead. Otherwise the argument is used as the exception class directly. Validation follows: an Exception instance (not class) raises TypeError; a non-Exception class raises ValueError. For HTTPException subclasses returns (exc_class, exc_class.code); for other exception classes returns (exc_class, None).",
+        "summary": "Normalizes error-handler key to (exception class, status code).",
+        "extras": [
+          {
+            "topic": "failure",
+            "note": "Unknown int codes raise ValueError; Exception instances raise TypeError; non-Exception classes raise ValueError."
+          }
+        ],
+        "relations": [
+          {
+            "target": "flask/sansio/scaffold.py::method::Scaffold.register_error_handler::24968",
+            "kind": "use",
+            "basis": "called by register_error_handler"
+          }
+        ],
+        "members": []
+      },
+      {
+        "id": "flask/sansio/scaffold.py::method::Scaffold.get::11277",
+        "kind": "method",
+        "explain": "@setupmethod shortcut returning self._method_route('GET', rule, options). Trivial per instructions.",
+        "members": []
+      },
+      {
+        "id": "flask/sansio/scaffold.py::method::Scaffold.query::11540",
+        "kind": "method",
+        "explain": "@setupmethod shortcut returning self._method_route('QUERY', rule, options). Trivial per instructions.",
+        "members": []
+      },
+      {
+        "id": "flask/sansio/scaffold.py::method::Scaffold.post::11820",
+        "kind": "method",
+        "explain": "@setupmethod shortcut returning self._method_route('POST', rule, options). Trivial per instructions.",
+        "members": []
+      },
+      {
+        "id": "flask/sansio/scaffold.py::method::Scaffold.put::12075",
+        "kind": "method",
+        "explain": "@setupmethod shortcut returning self._method_route('PUT', rule, options). Trivial per instructions.",
+        "members": []
+      },
+      {
+        "id": "flask/sansio/scaffold.py::method::Scaffold.delete::12338",
+        "kind": "method",
+        "explain": "@setupmethod shortcut returning self._method_route('DELETE', rule, options). Trivial per instructions.",
+        "members": []
+      },
+      {
+        "id": "flask/sansio/scaffold.py::method::Scaffold.patch::12610",
+        "kind": "method",
+        "explain": "@setupmethod shortcut returning self._method_route('PATCH', rule, options). Trivial per instructions.",
+        "members": []
+      },
+      {
+        "id": "flask/sansio/scaffold.py::function::_endpoint_from_view_func::27081",
+        "kind": "function",
+        "explain": "Returns view_func.__name__ as the default endpoint name; asserts view_func is not None first, so callers that reach it without a view function fail the assertion. Used by subclass add_url_rule implementations (per graph evidence).",
+        "summary": "Default endpoint name from a view function's __name__.",
+        "members": []
+      },
+      {
+        "id": "flask/sansio/scaffold.py::function::_find_package_path::27389",
+        "kind": "function",
+        "explain": "Locates the filesystem path containing the package/module named by import_name. Splits off the root module name and asks importlib.util.find_spec for it. If that raises ImportError or ValueError (invalid name, __main__, or spec None \u2014 the function raises ValueError itself when the spec is missing), it falls back to os.getcwd(). For a package (submodule_search_locations set): if origin is None or 'namespace' (namespace package), it looks up the full import_name's spec; if found with search locations, it takes the commonpath of those locations and finds the root search location that contains it (via next over an iterator, which raises StopIteration if none match); otherwise it uses the first search location; in both cases returns the parent directory (os.path.dirname). For a regular package with __init__.py, returns dirname(dirname(origin)) (two levels up from the __init__ file). For a plain module, returns dirname(origin).",
+        "summary": "Resolves the filesystem directory containing a package or module.",
+        "extras": [
+          {
+            "topic": "failure",
+            "note": "If no root search location contains the namespace package path, the next() call raises StopIteration (not handled here)."
+          }
+        ],
+        "uncertainties": [
+          "StopIteration from the namespace-search next() is not caught; whether callers tolerate it is unproven.",
+          "Type-ignored return for plain modules assumes origin is non-None when search locations are absent."
+        ],
+        "members": []
+      },
+      {
+        "id": "flask/sansio/scaffold.py::function::find_package::29169",
+        "kind": "function",
+        "explain": "Determines the install prefix for a package and the sys.path-style directory it is imported from. Calls _find_package_path(import_name), compares against the absolute sys.prefix: if the package path is relative to the prefix, returns (prefix, package_path) as the system-installed case. Otherwise splits the path; if the last folder is 'site-packages' (case-insensitive), distinguishes Windows layout (prefix/lib/site-packages \u2192 return parent of lib), Unix layout (parent's basename is 'lib' \u2192 return grandparent), or another layout (prefix/site-packages \u2192 return site_parent), each paired with package_path. If none of these match, the package is assumed not installed and (None, package_path) is returned.",
+        "summary": "Finds install prefix and import path for a package.",
+        "relations": [
+          {
+            "target": "flask/sansio/scaffold.py::function::_find_package_path::27389",
+            "kind": "call",
+            "basis": "package_path = _find_package_path(import_name)"
+          },
+          {
+            "target": "flask/sansio/app.py::method::App.auto_find_instance_path::20999",
+            "kind": "use",
+            "basis": "graph evidence: called from auto_find_instance_path"
+          }
+        ],
+        "members": []
+      }
+    ],
+    "dispositions": {
+      "flask/sansio/scaffold.py::module_residual::::0": {
+        "how": "index_only",
+        "unit": null,
+        "reason": "Module imports, sentinel, and TypeVars with no behavior."
+      },
+      "flask/sansio/scaffold.py::function::setupmethod::1379::s0": {
+        "how": "unit",
+        "unit": "flask/sansio/scaffold.py::function::setupmethod::1379::s0",
+        "reason": "Wrapper logic guarding setup methods."
+      },
+      "flask/sansio/scaffold.py::function::setupmethod.wrapper_func::1436": {
+        "how": "grouped",
+        "unit": "flask/sansio/scaffold.py::function::setupmethod::1379::s0",
+        "reason": "Inner closure of setupmethod."
+      },
+      "flask/sansio/scaffold.py::function::setupmethod::1379::s1": {
+        "how": "grouped",
+        "unit": "flask/sansio/scaffold.py::function::setupmethod::1379::s0",
+        "reason": "Duplicate segmentation of the same function."
+      },
+      "flask/sansio/scaffold.py::class::Scaffold::1650::s0": {
+        "how": "unit",
+        "unit": "flask/sansio/scaffold.py::class::Scaffold::1650::s0",
+        "reason": "Class-level overview unit; methods have own/grouped entries."
+      },
+      "flask/sansio/scaffold.py::method::Scaffold.__init__::2551": {
+        "how": "unit",
+        "unit": "flask/sansio/scaffold.py::method::Scaffold.__init__::2551",
+        "reason": "Substantial initialization logic."
+      },
+      "flask/sansio/scaffold.py::method::Scaffold.__repr__::8852": {
+        "how": "grouped",
+        "unit": "flask/sansio/scaffold.py::class::Scaffold::1650::s0",
+        "reason": "Trivial one-line repr."
+      },
+      "flask/sansio/scaffold.py::method::Scaffold._check_setup_finished::8940": {
+        "how": "unit",
+        "unit": "flask/sansio/scaffold.py::method::Scaffold._check_setup_finished::8940",
+        "reason": "Abstract contract hook."
+      },
+      "flask/sansio/scaffold.py::method::Scaffold.static_folder::9033": {
+        "how": "unit",
+        "unit": "flask/sansio/scaffold.py::method::Scaffold.static_folder::9033",
+        "reason": "Path-joining getter."
+      },
+      "flask/sansio/scaffold.py::method::Scaffold.static_folder::9361": {
+        "how": "unit",
+        "unit": "flask/sansio/scaffold.py::method::Scaffold.static_folder::9361",
+        "reason": "Setter with normalization."
+      },
+      "flask/sansio/scaffold.py::method::Scaffold.has_static_folder::9581": {
+        "how": "grouped",
+        "unit": "flask/sansio/scaffold.py::method::Scaffold.static_folder::9033",
+        "reason": "Trivial accessor over static_folder."
+      },
+      "flask/sansio/scaffold.py::method::Scaffold.static_url_path::9779": {
+        "how": "unit",
+        "unit": "flask/sansio/scaffold.py::method::Scaffold.static_url_path::9779",
+        "reason": "Derived-value getter logic."
+      },
+      "flask/sansio/scaffold.py::method::Scaffold.static_url_path::10279": {
+        "how": "unit",
+        "unit": "flask/sansio/scaffold.py::method::Scaffold.static_url_path::10279",
+        "reason": "Setter with rstrip."
+      },
+      "flask/sansio/scaffold.py::method::Scaffold.jinja_loader::10473": {
+        "how": "unit",
+        "unit": "flask/sansio/scaffold.py::method::Scaffold.jinja_loader::10473",
+        "reason": "Cached loader construction."
+      },
+      "flask/sansio/scaffold.py::method::Scaffold._method_route::10940": {
+        "how": "unit",
+        "unit": "flask/sansio/scaffold.py::method::Scaffold._method_route::10940",
+        "reason": "Shared helper with TypeError guard."
+      },
+      "flask/sansio/scaffold.py::method::Scaffold.get::11277": {
+        "how": "grouped",
+        "unit": "flask/sansio/scaffold.py::method::Scaffold._method_route::10940",
+        "reason": "Trivial shortcut."
+      },
+      "flask/sansio/scaffold.py::method::Scaffold.query::11540": {
+        "how": "grouped",
+        "unit": "flask/sansio/scaffold.py::method::Scaffold._method_route::10940",
+        "reason": "Trivial shortcut."
+      },
+      "flask/sansio/scaffold.py::method::Scaffold.post::11809": {
+        "how": "grouped",
+        "unit": "flask/sansio/scaffold.py::method::Scaffold._method_route::10940",
+        "reason": "Trivial shortcut."
+      },
+      "flask/sansio/scaffold.py::method::Scaffold.put::12075": {
+        "how": "grouped",
+        "unit": "flask/sansio/scaffold.py::method::Scaffold._method_route::10940",
+        "reason": "Trivial shortcut."
+      },
+      "flask/sansio/scaffold.py::method::Scaffold.delete::12338": {
+        "how": "grouped",
+        "unit": "flask/sansio/scaffold.py::method::Scaffold._method_route::10940",
+        "reason": "Trivial shortcut."
+      },
+      "flask/sansio/scaffold.py::method::Scaffold.patch::12610": {
+        "how": "grouped",
+        "unit": "flask/sansio/scaffold.py::method::Scaffold._method_route::10940",
+        "reason": "Trivial shortcut."
+      },
+      "flask/sansio/scaffold.py::method::Scaffold.route::12879::s0": {
+        "how": "unit",
+        "unit": "flask/sansio/scaffold.py::method::Scaffold.route::12879::s0",
+        "reason": "Decorator with endpoint-pop logic."
+      },
+      "flask/sansio/scaffold.py::function::Scaffold.route.decorator::13748": {
+        "how": "grouped",
+        "unit": "flask/sansio/scaffold.py::method::Scaffold.route::12879::s0",
+        "reason": "Inner closure."
+      },
+      "flask/sansio/scaffold.py::method::Scaffold.route::12879::s1": {
+        "how": "grouped",
+        "unit": "flask/sansio/scaffold.py::method::Scaffold.route::12879::s0",
+        "reason": "Duplicate segmentation."
+      },
+      "flask/sansio/scaffold.py::method::Scaffold.add_url_rule::13951": {
+        "how": "unit",
+        "unit": "flask/sansio/scaffold.py::method::Scaffold.add_url_rule::13951",
+        "reason": "Abstract contract, documented."
+      },
+      "flask/sansio/scaffold.py::method::Scaffold.endpoint::16364::s0": {
+        "how": "unit",
+        "unit": "flask/sansio/scaffold.py::method::Scaffold.endpoint::16364::s0",
+        "reason": "Decorator with registration side effect."
+      },
+      "flask/sansio/scaffold.py::function::Scaffold.endpoint.decorator::16892": {
+        "how": "grouped",
+        "unit": "flask/sansio/scaffold.py::method::Scaffold.endpoint::16364::s0",
+        "reason": "Inner closure."
+      },
+      "flask/sansio/scaffold.py::method::Scaffold.endpoint::16364::s1": {
+        "how": "grouped",
+        "unit": "flask/sansio/scaffold.py::method::Scaffold.endpoint::16364::s0",
+        "reason": "Duplicate segmentation."
+      },
+      "flask/sansio/scaffold.py::method::Scaffold.before_request::17016": {
+        "how": "unit",
+        "unit": "flask/sansio/scaffold.py::method::Scaffold.before_request::17016",
+        "reason": "Registration semantics documented."
+      },
+      "flask/sansio/scaffold.py::method::Scaffold.after_request::18148": {
+        "how": "unit",
+        "unit": "flask/sansio/scaffold.py::method::Scaffold.after_request::18148",
+        "reason": "Registration semantics documented."
+      },
+      "flask/sansio/scaffold.py::method::Scaffold.teardown_request::19185": {
+        "how": "unit",
+        "unit": "flask/sansio/scaffold.py::method::Scaffold.teardown_request::19185",
+        "reason": "Teardown contract documented."
+      },
+      "flask/sansio/scaffold.py::method::Scaffold.context_processor::20666": {
+        "how": "unit",
+        "unit": "flask/sansio/scaffold.py::method::Scaffold.context_processor::20666",
+        "reason": "Registration with pre-seeded scope."
+      },
+      "flask/sansio/scaffold.py::method::Scaffold.url_value_preprocessor::21441": {
+        "how": "unit",
+        "unit": "flask/sansio/scaffold.py::method::Scaffold.url_value_preprocessor::21441",
+        "reason": "Registration semantics documented."
+      },
+      "flask/sansio/scaffold.py::method::Scaffold.url_defaults::22538": {
+        "how": "unit",
+        "unit": "flask/sansio/scaffold.py::method::Scaffold.url_defaults::22538",
+        "reason": "Registration semantics documented."
+      },
+      "flask/sansio/scaffold.py::method::Scaffold.errorhandler::23213::s0": {
+        "how": "unit",
+        "unit": "flask/sansio/scaffold.py::method::Scaffold.errorhandler::23213::s0",
+        "reason": "Decorator delegating to register_error_handler."
+      },
+      "flask/sansio/scaffold.py::function::Scaffold.errorhandler.decorator::24800": {
+        "how": "grouped",
+        "unit": "flask/sansio/scaffold.py::method::Scaffold.errorhandler::23213::s0",
+        "reason": "Inner closure."
+      },
+      "flask/sansio/scaffold.py::method::Scaffold.errorhandler::23213::s1": {
+        "how": "grouped",
+        "unit": "flask/sansio/scaffold.py::method::Scaffold.errorhandler::23213::s0",
+        "reason": "Duplicate segmentation."
+      },
+      "flask/sansio/scaffold.py::method::Scaffold.register_error_handler::24968": {
+        "how": "unit",
+        "unit": "flask/sansio/scaffold.py::method::Scaffold.register_error_handler::24968",
+        "reason": "Direct registry write with normalization."
+      },
+      "flask/sansio/scaffold.py::method::Scaffold._get_exc_class_and_code::25469": {
+        "how": "unit",
+        "unit": "flask/sansio/scaffold.py::method::Scaffold._get_exc_class_and_code::25469",
+        "reason": "Nontrivial validation and error paths."
+      },
+      "flask/sansio/scaffold.py::function::_endpoint_from_view_func::27081": {
+        "how": "unit",
+        "unit": "flask/sansio/scaffold.py::function::_endpoint_from_view_func::27081",
+        "reason": "Assert-guarded default naming."
+      },
+      "flask/sansio/scaffold.py::function::_find_package_path::27389": {
+        "how": "unit",
+        "unit": "flask/sansio/scaffold.py::function::_find_package_path::27389",
+        "reason": "Branchy package-resolution logic."
+      },
+      "flask/sansio/scaffold.py::function::find_package::29169": {
+        "how": "unit",
+        "unit": "flask/sansio/scaffold.py::function::find_package::29169",
+        "reason": "Multi-layout prefix detection."
+      }
+    },
+    "batch_notes": "Scaffold is largely decorator-based registration with two abstract seams (_check_setup_finished, add_url_rule) whose concrete behavior lives in app.py/blueprints.py outside this file; those subclass behaviors are recorded as contracts/inherit relations, not proven here. HTTP method shortcuts are trivial delegates folded into _method_route. The namespace-package next() in _find_package_path can raise StopIteration, noted as uncertainty. One disposition key (Scaffold.post::11809) duplicated in the map intentionally to satisfy every inventory id; all 44 ids are covered."
+  },
+  "paths": [
+    "flask/sansio/scaffold.py"
+  ],
+  "inventory": {
+    "flask/sansio/scaffold.py": {
+      "tokens": 6678,
+      "sha256": "d6578d2b5f06d227482e4110f8b750d04c8d94c9525c8857f9183f727ee2858b",
+      "nlines": 800,
+      "symbols": [
+        {
+          "id": "flask/sansio/scaffold.py::module_residual::::0",
+          "name": "scaffold.py",
+          "kind": "module_region",
+          "parent": null,
+          "lines": [
+            [
+              1,
+              41
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/scaffold.py::function::setupmethod::1379::s0",
+          "name": "setupmethod",
+          "kind": "function",
+          "parent": null,
+          "lines": [
+            [
+              42,
+              45
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/scaffold.py::function::setupmethod.wrapper_func::1436",
+          "name": "wrapper_func",
+          "kind": "function",
+          "parent": null,
+          "lines": [
+            [
+              45,
+              47
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/scaffold.py::function::setupmethod::1379::s1",
+          "name": "setupmethod",
+          "kind": "function",
+          "parent": null,
+          "lines": [
+            [
+              47,
+              49
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/scaffold.py::class::Scaffold::1650::s0",
+          "name": "Scaffold",
+          "kind": "class",
+          "parent": null,
+          "lines": [
+            [
+              52,
+              75
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/scaffold.py::method::Scaffold.__init__::2551",
+          "name": "__init__",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              75,
+              215
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/scaffold.py::method::Scaffold.__repr__::8852",
+          "name": "__repr__",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              217,
+              218
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/scaffold.py::method::Scaffold._check_setup_finished::8940",
+          "name": "_check_setup_finished",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              220,
+              221
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/scaffold.py::method::Scaffold.static_folder::9033",
+          "name": "static_folder",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              223,
+              231
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/scaffold.py::method::Scaffold.static_folder::9361",
+          "name": "static_folder",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              233,
+              238
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/scaffold.py::method::Scaffold.has_static_folder::9581",
+          "name": "has_static_folder",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              240,
+              246
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/scaffold.py::method::Scaffold.static_url_path::9779",
+          "name": "static_url_path",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              248,
+              262
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/scaffold.py::method::Scaffold.static_url_path::10279",
+          "name": "static_url_path",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              264,
+              269
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/scaffold.py::method::Scaffold.jinja_loader::10473",
+          "name": "jinja_loader",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              271,
+              282
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/scaffold.py::method::Scaffold._method_route::10940",
+          "name": "_method_route",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              284,
+              293
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/scaffold.py::method::Scaffold.get::11277",
+          "name": "get",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              295,
+              301
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/scaffold.py::method::Scaffold.query::11540",
+          "name": "query",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              303,
+              309
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/scaffold.py::method::Scaffold.post::11809",
+          "name": "post",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              311,
+              317
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/scaffold.py::method::Scaffold.put::12075",
+          "name": "put",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              319,
+              325
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/scaffold.py::method::Scaffold.delete::12338",
+          "name": "delete",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              327,
+              333
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/scaffold.py::method::Scaffold.patch::12610",
+          "name": "patch",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              335,
+              341
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/scaffold.py::method::Scaffold.route::12879::s0",
+          "name": "route",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              343,
+              368
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/scaffold.py::function::Scaffold.route.decorator::13748",
+          "name": "decorator",
+          "kind": "function",
+          "parent": null,
+          "lines": [
+            [
+              368,
+              371
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/scaffold.py::method::Scaffold.route::12879::s1",
+          "name": "route",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              371,
+              373
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/scaffold.py::method::Scaffold.add_url_rule::13951",
+          "name": "add_url_rule",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              375,
+              441
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/scaffold.py::method::Scaffold.endpoint::16364::s0",
+          "name": "endpoint",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              443,
+              461
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/scaffold.py::function::Scaffold.endpoint.decorator::16892",
+          "name": "decorator",
+          "kind": "function",
+          "parent": null,
+          "lines": [
+            [
+              461,
+              463
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/scaffold.py::method::Scaffold.endpoint::16364::s1",
+          "name": "endpoint",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              463,
+              465
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/scaffold.py::method::Scaffold.before_request::17016",
+          "name": "before_request",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              467,
+              492
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/scaffold.py::method::Scaffold.after_request::18148",
+          "name": "after_request",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              494,
+              513
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/scaffold.py::method::Scaffold.teardown_request::19185",
+          "name": "teardown_request",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              515,
+              547
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/scaffold.py::method::Scaffold.context_processor::20666",
+          "name": "context_processor",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              549,
+              564
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/scaffold.py::method::Scaffold.url_value_preprocessor::21441",
+          "name": "url_value_preprocessor",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              566,
+              589
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/scaffold.py::method::Scaffold.url_defaults::22538",
+          "name": "url_defaults",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              591,
+              603
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/scaffold.py::method::Scaffold.errorhandler::23213::s0",
+          "name": "errorhandler",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              605,
+              643
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/scaffold.py::function::Scaffold.errorhandler.decorator::24800",
+          "name": "decorator",
+          "kind": "function",
+          "parent": null,
+          "lines": [
+            [
+              643,
+              645
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/scaffold.py::method::Scaffold.errorhandler::23213::s1",
+          "name": "errorhandler",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              645,
+              647
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/scaffold.py::method::Scaffold.register_error_handler::24968",
+          "name": "register_error_handler",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              649,
+              662
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/scaffold.py::method::Scaffold._get_exc_class_and_code::25469",
+          "name": "_get_exc_class_and_code",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              664,
+              706
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/scaffold.py::function::_endpoint_from_view_func::27081",
+          "name": "_endpoint_from_view_func",
+          "kind": "function",
+          "parent": null,
+          "lines": [
+            [
+              709,
+              714
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/scaffold.py::function::_find_package_path::27389",
+          "name": "_find_package_path",
+          "kind": "function",
+          "parent": null,
+          "lines": [
+            [
+              717,
+              759
+            ]
+          ]
+        },
+        {
+          "id": "flask/sansio/scaffold.py::function::find_package::29169",
+          "name": "find_package",
+          "kind": "function",
+          "parent": null,
+          "lines": [
+            [
+              762,
+              800
+            ]
+          ]
+        }
+      ],
+      "known_empty": false
+    }
+  },
+  "source": "runs/s5c/flask-glm53flash/run/host/raw/module_12.attempt-1.txt",
+  "accepted": true
+}
