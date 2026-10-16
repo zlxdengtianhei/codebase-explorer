@@ -253,19 +253,25 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
         by_language: dict[str, list[dict]] = {}
         for row in quality["edge_counts"]:
             by_language.setdefault(row["language"], []).append(row)
-        coverage = []
+        index_lines += ["import、call 的状态比例分别按各自边数计算；"
+                        "cfg、dataflow 是结构边，不按状态算可信度，仅列边数。"]
         for language, rows in sorted(by_language.items()):
-            kinds = ", ".join(f"{r['kind']}={r['total']}" for r in rows)
-            total = sum(r["total"] for r in rows)
-            states: dict[str, int] = {}
-            for row in rows:
-                for status, count in row["statuses"].items():
-                    states[status] = states.get(status, 0) + count
-            proportions = ", ".join(f"{status} {count}/{total} ({count / total:.0%})"
-                                    for status, count in states.items() if count) if total else "无边"
-            coverage.append(f"{language}: {kinds}; {proportions}")
-        if coverage:
-            index_lines += ["覆盖（边数；状态比例按语言合计）：" + " · ".join(coverage) + "。"]
+            by_kind = {row["kind"]: row for row in rows}
+            relations = []
+            for kind in ("import", "call"):
+                row = by_kind.get(kind)
+                if row is None:
+                    continue
+                total = row["total"]
+                proportions = ", ".join(f"{status} {count}/{total} ({count / total:.0%})"
+                                        for status, count in row["statuses"].items() if count) if total else "无边"
+                relations.append(f"{language} {kind}: {proportions}")
+            structural = ", ".join(f"{kind}={by_kind[kind]['total']}"
+                                   for kind in ("cfg", "dataflow") if kind in by_kind)
+            if relations:
+                index_lines += [" · ".join(relations) + "。"]
+            if structural:
+                index_lines += [f"{language} 结构边：{structural}。"]
         incomplete = quality["incomplete_capabilities"]
         if incomplete:
             index_lines += ["不完整：" + "; ".join(

@@ -148,5 +148,5 @@ def test_index_coverage_without_successful_graph(tmp_path, mode):
     elif mode == "failed":
         assert "没有后端跑成" in index
     else:
-        assert "resolved 1/3 (33%)" in index and "ruby/cfg failed" in index
+        assert "python import: resolved 1/1 (100%)" in index and "ruby/cfg failed" in index
         assert "悬空边 1" in index
