@@ -79,8 +79,10 @@ def test_graph_prompt_no_local_nodes_is_not_an_empty_graph_claim() -> None:
 
 def test_callsite_maps_only_to_inventory_chunks_and_reports_missing_mapping():
     graph, inventory, chunks = _inputs()
-    chunks.append({"id": "class-residue", "path": "a.py", "start_line": 6, "end_line": 8,
-                   "start_byte": 10, "end_byte": 10, "text": ""})
+    # Non-inventory source still reconstructs coordinates, but cannot own calls.
+    chunks.append({"id": "class-residue", "path": "a.py", "start_line": 31, "end_line": 33,
+                   "start_byte": 60, "end_byte": 66, "text": "x\nx\nx\n"})
+    graph["edges"].append(_edge("residue-call", "a", "b", path="a.py", line=32))
     graph["edges"].append(_edge("missing", "a", "b", path="a.py", line=50))
     # The Joern source method starts at line 1, but this call site is in C.
     graph["edges"].append(_edge("later-chunk", "a", "b", path="a.py", line=23))
@@ -89,9 +91,9 @@ def test_callsite_maps_only_to_inventory_chunks_and_reports_missing_mapping():
     assert "A → B (b.py:1)" in text and "A ← B (b.py:8)" in text
     assert "C → B (b.py:1)" in text
     assert "class-residue" not in text
-    assert evidence.internal_calls == 1 and evidence.unmapped_calls == 1
+    assert evidence.internal_calls == 1 and evidence.unmapped_calls == 2
     assert "A → C" not in text
-    assert "unmapped resolved calls: 1" in text
+    assert "unmapped resolved calls: 2" in text
 
 
 def test_import_flood_cannot_displace_cross_batch_resolved_calls():
