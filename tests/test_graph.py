@@ -193,7 +193,7 @@ def test_prefer_resolved_imports_keeps_unrelated_unresolved() -> None:
 def test_prefer_resolved_imports_supersedes_same_target() -> None:
     edges = [
         {"id": "resolved", "source": "file:main.js", "target": "file:util.js", "path": "main.js", "kind": "import", "status": "resolved", "expression": "./util", "backend": "dependency-cruiser"},
-        {"id": "decl", "source": "file:main.js", "target": "file:util.js", "path": "main.js", "kind": "import", "status": "resolved", "expression": "require('./util')", "backend": "joern"},
+        {"id": "decl", "source": "file:main.js", "target": None, "path": "main.js", "kind": "import", "status": "unresolved", "expression": "require('./util')", "backend": "joern"},
         {"id": "other", "path": "main.js", "kind": "import", "status": "unresolved", "expression": "require('./other')"},
     ]
     assert {edge["id"] for edge in _prefer_resolved_imports(edges)} == {"resolved", "other"}

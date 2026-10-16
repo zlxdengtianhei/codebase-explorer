@@ -39,3 +39,15 @@ def test_merge_boundary_degrades_invalid_files_and_repairs_external_suffix():
     assert edges[0]["target"] is None and edges[0]["status"] == "unresolved"
     assert edges[1]["target"] == "file:include/curl/curl.h" and edges[1]["status"] == "resolved"
     assert len(diagnostics) == 2
+
+
+def test_src_layout_absolute_import_and_js_extension_index(tmp_path):
+    for name in ("src/pkg/a.py", "src/pkg/__init__.py", "src/main.ts", "src/util.ts", "src/lib/index.mts", "src/plain.js"):
+        path = tmp_path / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.touch()
+    resolver = ImportResolver(tmp_path)
+    assert resolver.resolve("src/pkg/a.py", "from pkg import a") == [("resolved", "src/pkg/a.py")]
+    assert resolver.resolve("src/main.ts", 'import x from "./util.js"') == [("resolved", "src/util.ts")]
+    assert resolver.resolve("src/main.ts", 'import x from "./lib"') == [("resolved", "src/lib/index.mts")]
+    assert resolver.resolve("src/main.ts", 'import x from "./plain"') == [("resolved", "src/plain.js")]

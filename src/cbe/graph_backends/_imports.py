@@ -12,6 +12,7 @@ from pathlib import Path, PurePosixPath
 
 from ._paths import canonical_repo_path
 from .identity import repository_files, file_id, external_id
+from cbe.source_context import suffix_languages
 
 
 class ImportResolver:
@@ -74,6 +75,8 @@ class ImportResolver:
     def resolve(self, path: str, expression: str) -> list[tuple[str, str | None]]:
         text = (expression or "").strip()
         suffix = PurePosixPath(path).suffix.lower()
+        language = suffix_languages().get(suffix)
+        suffix = {"c": ".c", "cpp": ".c", "ruby": ".rb", "php": ".php"}.get(language, suffix)
         if suffix == ".py":
             return self._python(path, text)
         if suffix in {".c", ".h", ".cc", ".cpp", ".hpp", ".cxx", ".hh"}:
@@ -96,7 +99,14 @@ class ImportResolver:
                 return [("external", token)]
             stem = canonical_repo_path(str(PurePosixPath(path).parent / token))
             if stem:
-                for candidate in [stem] + [stem + ext for ext in (".js", ".ts", ".tsx", ".jsx")] + [stem + "/index" + ext for ext in (".js", ".ts", ".tsx")]:
+                extensions = (".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx", ".mts", ".cts")
+                candidates = [stem] + [stem + ext for ext in extensions] + [stem + "/index" + ext for ext in extensions]
+                # TypeScript source commonly imports the emitted JS filename.
+                replacements = {".js": (".ts", ".tsx"), ".mjs": (".mts",), ".cjs": (".cts",)}
+                for emitted, sources in replacements.items():
+                    if stem.endswith(emitted):
+                        candidates.extend(stem[:-len(emitted)] + ext for ext in sources)
+                for candidate in candidates:
                     if candidate in self.files:
                         return [("resolved", candidate)]
         if suffix == ".rb":

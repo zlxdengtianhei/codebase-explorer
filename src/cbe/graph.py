@@ -452,12 +452,25 @@ def _merge(fragments: list[dict]) -> tuple[list[dict], list[dict]]:
 
 def _prefer_resolved_imports(edges: list[dict]) -> list[dict]:
     """Merge resolved file evidence by endpoints, retaining every expression."""
+    from pathlib import PurePosixPath
+    from cbe.graph_backends._imports import import_token
+
+    def specifier(edge):
+        return import_token(edge.get("expression") or "", PurePosixPath(edge.get("path") or "").suffix)
+
+    resolved_declarations = {(e.get("source"), specifier(e)) for e in edges
+                             if e.get("kind") == "import" and e.get("status") == "resolved"
+                             and e.get("backend") != "joern" and specifier(e)}
     groups = {}
     result = []
     # Prefer the dedicated resolver as the representative, independent of
     # fragment ordering. Joern evidence is retained in expressions.
     ordered = sorted(edges, key=lambda e: e.get("backend") == "joern")
     for edge in ordered:
+        if (edge.get("kind") == "import" and edge.get("backend") == "joern"
+                and edge.get("status") == "unresolved" and specifier(edge)
+                and (edge.get("source"), specifier(edge)) in resolved_declarations):
+            continue
         if edge.get("kind") != "import" or edge.get("status") != "resolved" or not edge.get("target"):
             result.append(edge)
             continue
