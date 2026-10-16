@@ -128,3 +128,57 @@ def test_call_edges_and_capabilities_share_target_policy():
     cap = next(c for c in _capabilities_for("python", payload, "test") if c["graph"] == "call")
     assert all(cap[status] == counts[status] for status in ("resolved", "external", "ambiguous", "unresolved"))
     assert not any(n.get("name") == "<unknownFullName>" for n in nodes)
+
+
+def test_graph_processes_have_no_stdin_and_cfg_limit_reaches_export(tmp_path, monkeypatch):
+    import json
+    import subprocess
+    from cbe.graph import analyze_graph, _depcruise_version
+    from cbe.graph_backends.imports import build_with_depcruise
+
+    home = tmp_path / "joern"
+    home.mkdir()
+    (home / "joern").touch()
+    (home / "joern-parse").touch()
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "a.py").touch()
+    exports = []
+
+    def run(argv, **kwargs):
+        assert kwargs["stdin"] == subprocess.DEVNULL
+        if "--version" in argv:
+            return subprocess.CompletedProcess(argv, 0, "Version: 1", "")
+        if "--language" in argv:
+            Path(argv[argv.index("-o") + 1]).touch()
+        if "--script" in argv:
+            params = dict(arg.split("=", 1) for arg in argv if "=" in arg)
+            exports.append(params)
+            Path(params["outFile"]).write_text(json.dumps(dict(methods=[dict(nodeId=1, file="a.py", fullName="run")],
+                                                               cfgMethodsOmitted=2)))
+        return subprocess.CompletedProcess(argv, 0, '{"modules": []}', "")
+
+    monkeypatch.setattr(subprocess, "run", run)
+    graph = analyze_graph(repo, tmp_path / "g.json", backend="joern", languages=["python"], joern_home=home, max_methods=1)
+    assert exports[0]["maxMethods"] == "1"
+    assert any(d["code"] == "cfg_methods_omitted" and "2 methods" in d["message"] for d in graph["diagnostics"])
+    _depcruise_version(home / "dc", 2)
+    build_with_depcruise(repo, tmp_path / "dc-run", home / "dc", 2, ["javascript"])
+
+
+def test_real_cfg_limit_preserves_method_and_call_scope(tmp_path):
+    import os
+    import pytest
+    from cbe.graph import analyze_graph
+    if not os.environ.get("CBE_JOERN_HOME"):
+        pytest.skip("CBE_JOERN_HOME is not set")
+    repo = tmp_path / "case"
+    repo.mkdir()
+    (repo / "main.py").write_text("def first():\n    return 1\ndef second():\n    return first()\nsecond()\n")
+    graph = analyze_graph(repo, tmp_path / "g.json", backend="joern", languages=["python"], max_methods=1)
+    cfg_owners = {n["owner"] for n in graph["nodes"] if n["kind"] == "cfg_node"}
+    methods = [n for n in graph["nodes"] if n["kind"] in {"method", "function"}]
+    assert len(cfg_owners) == 1
+    assert len(methods) >= 3
+    assert any(d["code"] == "cfg_methods_omitted" for d in graph["diagnostics"])
+    assert any(e["kind"] == "call" and e["expression"] == "first()" for e in graph["edges"])

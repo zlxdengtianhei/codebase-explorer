@@ -39,6 +39,7 @@ def build_with_depcruise(repo, run_dir, depcruise_bin, timeout: int, languages: 
         completed = subprocess.run(
             [str(depcruise_bin), "--no-config", "--output-type", "json", "."],
             cwd=str(repo), check=False, capture_output=True, text=True, timeout=timeout,
+            stdin=subprocess.DEVNULL,
         )
     except subprocess.TimeoutExpired:
         return _result([], [], [{"path": None, "code": "backend_timeout",

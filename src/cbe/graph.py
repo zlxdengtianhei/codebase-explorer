@@ -222,7 +222,7 @@ def analyze_graph(
             try:
                 fragment = backends.build_with_joern(
                     repo, run_dir / "joern", requested, joern, timeout,
-                    max_reaching_defs=max_reaching_defs,
+                    max_methods=max_methods, max_reaching_defs=max_reaching_defs,
                     dataflow_path_methods=dataflow_path_methods,
                     max_paths_per_method=max_paths_per_method)
             except backends.JoernError as exc:
@@ -502,7 +502,7 @@ def _depcruise_version(binary, timeout: int) -> str:
 
     try:
         completed = subprocess.run([str(binary), "--version"], check=False, capture_output=True,
-                                   text=True, timeout=timeout)
+                                   text=True, timeout=timeout, stdin=subprocess.DEVNULL)
     except (OSError, subprocess.TimeoutExpired):
         return "unknown"
     text = (completed.stdout or completed.stderr).strip()

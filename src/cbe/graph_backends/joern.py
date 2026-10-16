@@ -80,7 +80,7 @@ import java.nio.file.{Files, Paths}
 import scala.util.{Try, Success, Failure}
 
 @main def main(cpgFile: String, outFile: String, maxReachingDefs: Int,
-               pathMethods: String, maxPathsPerMethod: Int): Unit = {
+               pathMethods: String, maxPathsPerMethod: Int, maxMethods: Int): Unit = {
   val cpg = importCpg(cpgFile).get
   implicit val engineConfig: EngineConfig = EngineConfig()
 
@@ -139,7 +139,7 @@ import scala.util.{Try, Success, Failure}
     )
   }.l
 
-  val cfg = realMethods.map { m =>
+  val cfg = realMethods.take(maxMethods).map { m =>
     val nodes = m.cfgNode.l
     val idx = nodes.zipWithIndex.map { case (n, i) => n.id -> i }.toMap
     val nodeJson = nodes.zipWithIndex.map { case (n, i) =>
@@ -225,6 +225,7 @@ import scala.util.{Try, Success, Failure}
     "methods" -> methods,
     "calls" -> calls,
     "cfg" -> cfg,
+    "cfgMethodsOmitted" -> math.max(0, realMethods.size - maxMethods),
     "imports" -> imports,
     "reachingDefs" -> rdBuf.toList,
     "reachingDefsTruncated" -> rdTruncated,
@@ -261,7 +262,7 @@ def find_joern(joern_home: Path | str | None = None) -> Path | None:
 
 def _run(argv: list[str], timeout: int, cwd: Path) -> subprocess.CompletedProcess:
     return subprocess.run(argv, cwd=str(cwd), check=False,
-                          capture_output=True, text=True, timeout=timeout)
+                          capture_output=True, text=True, timeout=timeout, stdin=subprocess.DEVNULL)
 
 
 def joern_version(joern_bin: Path, timeout: int) -> str:
@@ -285,6 +286,7 @@ def build_with_joern(
     max_reaching_defs: int = DEFAULT_MAX_REACHING_DEFS,
     dataflow_path_methods: list[str] | None = None,
     max_paths_per_method: int = 5,
+    max_methods: int = 200,
 ) -> dict:
     """Parse each frontend's languages with Joern and return a normalized fragment.
 
@@ -351,6 +353,7 @@ def build_with_joern(
             exported = _run(
                 [str(joern_bin), "--script", str(script),
                  "--param", f"cpgFile={cpg}", "--param", f"outFile={export}",
+                 "--param", f"maxMethods={max_methods}",
                  "--param", f"maxReachingDefs={max_reaching_defs}",
                  "--param", f"pathMethods={path_methods}",
                  "--param", f"maxPathsPerMethod={max_paths_per_method}", "--nocolors"],
@@ -397,6 +400,11 @@ def build_with_joern(
             diagnostics.append({"path": None, "code": "dataflow_path_error",
                                 "message": f"value-flow path query failed for {error.get('method')}: "
                                            f"{error.get('kind')}: {error.get('message')}"})
+        omitted = payload.get("cfgMethodsOmitted", 0)
+        if omitted:
+            diagnostics.append({"path": None, "code": "cfg_methods_omitted",
+                                "message": f"CFG export for frontend {flag} omitted {omitted} methods "
+                                           f"(max_methods={max_methods})"})
         if payload.get("reachingDefsTruncated"):
             diagnostics.append({"path": None, "code": "reaching_defs_truncated",
                                 "message": f"REACHING_DEF export for frontend {flag} hit the "
