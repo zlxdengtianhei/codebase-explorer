@@ -147,7 +147,8 @@ def test_graph_processes_have_no_stdin_and_cfg_limit_reaches_export(tmp_path, mo
     (home / "joern-parse").touch()
     repo = tmp_path / "repo"
     repo.mkdir()
-    (repo / "a.py").touch()
+    (repo / "a.py").write_text("import helper\n")
+    (repo / "helper.py").touch()
     exports = []
 
     def run(argv, **kwargs):
@@ -160,6 +161,7 @@ def test_graph_processes_have_no_stdin_and_cfg_limit_reaches_export(tmp_path, mo
             params = dict(arg.split("=", 1) for arg in argv if "=" in arg)
             exports.append(params)
             Path(params["outFile"]).write_text(json.dumps(dict(methods=[dict(nodeId=1, file="a.py", fullName="run")],
+                                                               imports=[dict(nodeId=2, file="a.py", code="import helper")],
                                                                cfgMethodsOmitted=2)))
         return subprocess.CompletedProcess(argv, 0, '{"modules": []}', "")
 
@@ -168,6 +170,10 @@ def test_graph_processes_have_no_stdin_and_cfg_limit_reaches_export(tmp_path, mo
     assert exports[0]["maxMethods"] == "1"
     cfg = next(c for c in graph["capabilities"] if c["graph"] == "cfg")
     assert cfg["status"] == "partial" and cfg["methods_omitted"] == 2
+    imports = next(c for c in graph["capabilities"] if c["graph"] == "import")
+    assert imports["status"] == "resolved" and imports["resolved"] == 1 and imports["unresolved"] == 0
+    assert "not resolved to target files" not in imports["limitations"]
+    assert "1 resolved" in imports["limitations"]
     analyze_graph(repo, tmp_path / "unlimited.json", backend="joern", languages=["python"], joern_home=home)
     assert exports[-1]["maxMethods"] == "-1"
     assert any(d["code"] == "cfg_methods_omitted" and "2 methods" in d["message"] for d in graph["diagnostics"])

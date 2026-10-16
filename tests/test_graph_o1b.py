@@ -39,6 +39,14 @@ def test_merge_boundary_degrades_invalid_files_and_repairs_external_suffix():
     assert edges[0]["target"] is None and edges[0]["status"] == "unresolved"
     assert edges[1]["target"] == "file:include/curl/curl.h" and edges[1]["status"] == "resolved"
     assert len(diagnostics) == 2
+    ambiguous = [dict(id="ext:common.h", name="common.h")]
+    nodes, edges, diagnostics = validate_identities(ambiguous, [dict(kind="import", status="external", target="ext:common.h")], {"a/common.h", "b/common.h"})
+    assert nodes[0]["id"] == "ext:common.h"
+    assert edges[0]["status"] == "external"
+    nodes, edges, _ = validate_identities(
+        [dict(id="file:missing.c", path="missing.c"), dict(id="file:ok.h", path="ok.h")],
+        [dict(kind="import", status="resolved", source="file:missing.c", target="file:ok.h")], {"ok.h"})
+    assert edges[0]["source"] is None and edges[0]["status"] == "unresolved"
 
 
 def test_src_layout_absolute_import_and_js_extension_index(tmp_path):
@@ -60,12 +68,21 @@ def test_repository_class_guesses_and_exact_inheritance():
              dict(name="Child", fullName="app.py:<module>.Child", file="app.py", inherits=["app.py:<module>.Base"])]
     resolver = CallResolver(methods, {"app.py"}, types)
     def call(full):
-        return dict(callerId=2, methodFullName=full, callees=[dict(fullName=full, external=True)])
+        return dict(callerId="2", methodFullName=full, callees=[dict(fullName=full, external=True)])
     assert resolver.resolve(call("Child.run")) == ("resolved", [1], [])
     assert resolver.resolve(call("te.Self.run")) == ("resolved", [1], [])
     assert resolver.resolve(call("Child.missing"))[0] == "unresolved"
+    assert resolver.resolve(call("Child.<member>(session).open"))[0] == "unresolved"
+    assert resolver.resolve(call("te.Self.run.<returnValue>.loads"))[0] == "unresolved"
     assert resolver.resolve(call("Self.missing"))[0] == "unresolved"
     assert resolver.resolve(call("werkzeug.Response"))[0] == "external"
+    # Captured C# method signatures contain System.*; those names are not
+    # repository class declarations (real csharpsrc output).
+    csharp = CallResolver([dict(nodeId="107374182400", file="Helper.cs",
+                                fullName="Probe.Helper.Compute:System.Int32(System.Int32)"),
+                           dict(nodeId="107374182401", file="Program.cs",
+                                fullName="Probe.Program.Main:System.Void()")], {"Helper.cs", "Program.cs"})
+    assert csharp.resolve(call("System.Console.WriteLine:System.Void(System.Int32)"))[0] == "external"
 
 
 def test_depcruise_unresolvable_dependency_never_invents_file(tmp_path, monkeypatch):

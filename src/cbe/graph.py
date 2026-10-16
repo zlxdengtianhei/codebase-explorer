@@ -263,11 +263,11 @@ def analyze_graph(
     if not fragments:
         raise GraphError("no graph backend was available for the requested languages")
 
+    files = repository_files(repo)
     nodes, edges = _merge(fragments)
-    nodes, edges = resolve_declarations(repo, nodes, edges, files=repository_files(repo))
+    nodes, edges = resolve_declarations(repo, nodes, edges, files=files)
     # Use the final authority at the merge boundary even if a backend supplies
     # an invalid file identity or labels a repository suffix as external.
-    files = repository_files(repo)
     nodes, edges, identity_diagnostics = validate_identities(nodes, edges, files)
     diagnostics.extend(identity_diagnostics)
     edges = _prefer_resolved_imports(edges)

@@ -28,11 +28,13 @@ class CallResolver:
             parts = name.split(".")
             if len(parts) >= 2 and not any(p.startswith("<") for p in parts[-2:]):
                 self.by_pair.setdefault(".".join(parts[-2:]), []).append(native)
-                self.classes.add(parts[-2])
+                if str(method.get("file", "")).endswith(".py") and ":<module>." in full:
+                    self.classes.add(parts[-2])
 
     def inherited_targets(self, receiver, name, call):
         if receiver in {"Self", "te.Self"}:
-            caller = self.methods.get(call.get("callerId"), {})
+            native_caller = call.get("callerId")
+            caller = self.methods.get(int(native_caller), {}) if native_caller is not None else {}
             owners = [caller.get("fullName", "").rsplit(".", 1)[0]]
         else:
             owners = self.types_by_name.get(receiver, [])
@@ -88,7 +90,7 @@ class CallResolver:
             if matches:
                 return ("resolved" if len(matches) == 1 else "ambiguous", matches, [])
         receiver, _, name = full.rpartition(".")
-        if receiver in self.classes or receiver == "te.Self":
+        if full.split(".", 1)[0] in self.classes or full.startswith("te.Self."):
             matches = self.inherited_targets(receiver, name, call)
             if matches:
                 return ("resolved" if len(matches) == 1 else "ambiguous", matches, [])
