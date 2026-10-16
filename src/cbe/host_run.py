@@ -28,6 +28,7 @@ import gzip
 import hashlib
 import json
 import os
+import re
 import secrets
 import time
 from datetime import datetime, timezone
@@ -1015,6 +1016,10 @@ def _summary(state: dict[str, Any]) -> dict[str, Any]:
     run = state["run_dir"]
     if state["status"] == "complete":
         action = f"done; open {run}/docs/INDEX.md, then run `cbe host cost --run-dir {run}`"
+    elif state["status"] == "partial" and state.get("partial_reason") == "source_not_embedded":
+        action = (f"partial: source_not_embedded ({state.get('partial_detail', '')}); "
+                  "source changed or could not be embedded from the frozen plan. "
+                  "Create a new plan for the current source before generating documentation.")
     elif state["status"] == "partial" and state.get("partial_reason"):
         affected = ", ".join(row["task"] for row in failed) or state.get("partial_detail", "")
         again = (f"`cbe generate {state['repo']} --resume --run-dir {run}`" if state.get("driver") == "script"
@@ -1176,6 +1181,19 @@ def _semantic_review_summary(run_dir: Path, state: dict[str, Any]) -> dict[str, 
                     "this is not a whole-map proof"}
 
 
+def _identity_corrections(state: dict[str, Any]) -> list[dict[str, str]]:
+    """Read durable S5d flags too, so old runs gain the same visibility on render."""
+    rows = []
+    for task in sorted(state["tasks"].values(), key=lambda row: row["id"]):
+        for flag in task.get("flags") or []:
+            match = re.fullmatch(r"id_corrected: (.*?) -> (.*?) \((.*)\)", flag)
+            if match:
+                original, corrected, location = match.groups()
+                rows.append({"task": task["id"], "original": original,
+                             "corrected": corrected, "location": location})
+    return rows
+
+
 def _render(run_dir: Path, state: dict[str, Any]) -> None:
     try:
         context = _verified_context(run_dir, state)
@@ -1223,12 +1241,21 @@ def _render(run_dir: Path, state: dict[str, Any]) -> None:
     if normalized:
         index_notes.append("Normalized after a second invalid answer (facts kept, shape fixed): "
                            + ", ".join(normalized) + ".")
+    page_corrections = []
+    for row in _identity_corrections(state):
+        task = state["tasks"][row["task"]]
+        if task["kind"] == "module":
+            repair = state["tasks"].get(f"repair_{task['module'] + 1}")
+            if repair and repair["status"] == "done":
+                continue  # The repair's prose supersedes this corrected module answer.
+        page_corrections.append(row)
     try:
         meta = docs.render(run_dir=run_dir, source_root=Path(state["repo"]),
                                inventory=state.get("inventory") or {}, units=units,
                                dispositions=dispositions, tree=tree, index_notes=index_notes,
                                system=system or _mechanical_semantic_overview(state, tree),
                                graph=context.get("graph"), context=context,
+                               id_corrections=page_corrections,
                                languages={row["path"]: row.get("language") or "unknown" for row in context["files"]})
     except symbols.SemanticError as exc:
         state["render_error"] = str(exc)
@@ -1253,6 +1280,8 @@ def _render(run_dir: Path, state: dict[str, Any]) -> None:
                           + (["system"] if system_task["status"] != "done" else []),
                "normalized": sorted(task["id"] for task in state["tasks"].values()
                                    if task["flags"] and "known_empty" not in task["flags"]),
+               "id_corrected_count": len(_identity_corrections(state)),
+               "id_corrected": _identity_corrections(state),
                "known_empty": sorted(task["id"] for task in state["tasks"].values()
                                     if "known_empty" in task["flags"]),
                "wall_seconds": round(time.time() - epoch(state["created_at"]), 3),
@@ -1388,6 +1417,11 @@ def _status_markdown(state: dict[str, Any]) -> str:
                     "reviewed by a separate reader of the source. This is independent of the "
                     "deterministic structure/coverage checks and does not prove whole-map truth.", ""]
                    if review_tasks else [])
+    corrections = _identity_corrections(state)
+    correction_lines = [f"id_corrected {len(corrections)}", ""]
+    correction_lines += [f"- {row['task']}: {docs.code_text(row['original'])} → "
+                         f"{docs.code_text(row['corrected'])} ({row['location']})"
+                         for row in corrections]
     lines = ["# CBE run status", "",
              f"Run `{state['run_tag']}` · status **{state['status']}** · updated {state['updated_at']} · "
              f"review {state['review']} · jobs {state['jobs']} · host {state['host']}", "",
@@ -1401,13 +1435,18 @@ def _status_markdown(state: dict[str, Any]) -> str:
              *([f"**Usage unknown** · the host reported no usage, so per-call source delivery could not "
                 f"be verified for: {', '.join(unknown)}", ""] if unknown else []),
              "Counts: " + ", ".join(f"{key} {value}" for key, value in sorted(counts.items())), "",
+             *correction_lines, "",
              "| Task | Module | State | Attempts | Seconds | Output | Note |", "|---|---|---|---:|---:|---|---|"]
     for task in sorted(state["tasks"].values(), key=lambda row: (ORDER[row["kind"]], row["module"] or 0)):
         output = task["output"] or ""
         if task["module"] is not None and state["modules"][task["module"]].get("page") and task["kind"] == "module":
             output = state["modules"][task["module"]]["page"]
+        shape_flags = [flag for flag in task["flags"] if not flag.startswith("id_corrected:")]
+        identity_count = len(task["flags"]) - len(shape_flags)
         note = (task["errors"][-1][:120] if task["status"] in {"failed", "pending"} and task["errors"]
-                else f"normalized ({len(task['flags'])})" if task["flags"] else "")
+                else f"normalized ({len(shape_flags)})" if shape_flags else "")
+        if identity_count:
+            note += ("; " if note else "") + f"id_corrected {identity_count}"
         lines.append(f"| {task['id']} | {_title(state, task) if task['module'] is not None else ''} | "
                      f"{task['status']} | {task['attempts']} | {task['seconds'] if task['seconds'] is not None else ''} | "
                      f"{output} | {note.replace('|', '/')} |")

@@ -60,6 +60,18 @@ def anchor(uid: str) -> str:
     return "u-" + hashlib.sha256(uid.encode("utf-8")).hexdigest()[:12]
 
 
+def link_text(text: str) -> str:
+    """Escape generated Markdown link labels, including literal backslashes."""
+    return re.sub(r"([\\\[\]()`*_<>])", r"\\\1", text)
+
+
+def code_text(text: str) -> str:
+    """Keep original IDs verbatim, even when they contain Markdown characters."""
+    width = max((len(run) for run in re.findall(r"`+", text)), default=0) + 1
+    fence = "`" * width
+    return f"{fence} {text} {fence}"
+
+
 def _file_link(label: str, path: str, source_links: dict[str, str]) -> str:
     reference = source_links.setdefault(path, f"f{len(source_links) + 1}")
     return f"[{label}][{reference}]"
@@ -83,9 +95,13 @@ def _relation_link(target: str, units: dict, dispositions: dict, owner: dict,
 
 def _build_unit_block(uid: str, units: dict, ranges_map: dict, owner: dict,
                       dispositions: dict, nodes: dict, source_root: Path, page_dir: Path,
-                      name_of: Callable[[str], str], source_links: dict[str, str]) -> str:
+                      name_of: Callable[[str], str], source_links: dict[str, str],
+                      id_corrections: list[dict] | None = None) -> str:
     unit = units[uid]
     lines = [f"### `{name_of(uid)}`", ""]
+    for row in id_corrections or []:
+        lines += [f"> **ID corrected by CBE.** 程序将单元 id 从 {code_text(row['original'])} "
+                  f"改为清单 id {code_text(uid)}；正文由模型在错 id 下撰写，可能不准确。", ""]
     raw_signature = unit.get("signature") or unit.get("kind") or "unit"
     declaration = re.search(r"\b(?:async def|def|class)\s+\w", raw_signature)
     if declaration:
@@ -140,7 +156,8 @@ def _build_unit_block(uid: str, units: dict, ranges_map: dict, owner: dict,
 def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
            dispositions: dict, tree: dict, languages: dict[str, str],
            index_notes: list[str] | None = None, system: dict | None = None,
-           graph: dict | None = None, context: dict | None = None) -> dict:
+           graph: dict | None = None, context: dict | None = None,
+           id_corrections: list[dict] | None = None) -> dict:
     """Render node pages, INDEX.md and a catalog under ``run_dir/docs``.
 
     ``languages`` maps each path to the language frozen in the source context,
@@ -207,6 +224,10 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
                 and edge.get("to") in nodes:
             edges_by_from[edge["from"]].append(edge)
 
+    corrections_by_unit: dict[str, list[dict]] = {}
+    for row in id_corrections or []:
+        if re.fullmatch(r"units\[\d+\]\.id", row["location"]):
+            corrections_by_unit.setdefault(row["corrected"], []).append(row)
     for nid, node in nodes.items():
         source_links: dict[str, str] = {}
         lines = [f"# {node.get('title') or nid}", ""]
@@ -218,18 +239,18 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
             lines += ["**Children.**", ""]
             for kid in children[nid]:
                 kid_node = nodes[kid]
-                lines.append(f"- [{kid_node.get('title') or kid}]({kid}.md) `{kid}` · "
+                lines.append(f"- [{link_text(kid_node.get('title') or kid)}]({kid}.md) `{kid}` · "
                              f"{len(kid_node.get('unit_ids') or [])} unit(s)")
             lines.append("")
         if edges_by_from.get(nid):
             lines += ["**Depends on.**", ""]
             for edge in edges_by_from[nid]:
                 target = nodes.get(edge["to"]) or {}
-                lines.append(f"- [{target.get('title') or edge['to']}]({edge['to']}.md)")
+                lines.append(f"- [{link_text(target.get('title') or edge['to'])}]({edge['to']}.md)")
             lines.append("")
         parent = node.get("parent")
         if parent in nodes:
-            lines += [f"Parent: [{nodes[parent].get('title') or parent}]({parent}.md)", ""]
+            lines += [f"Parent: [{link_text(nodes[parent].get('title') or parent)}]({parent}.md)", ""]
         own = node.get("unit_ids") or []
         if own:
             lines += [f"## Units ({len(own)})", ""]
@@ -237,7 +258,8 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
             if uid not in units:
                 continue
             block = _build_unit_block(uid, units, ranges_map, owner, dispositions,
-                                      nodes, source_root, nodes_dir, name_of, source_links)
+                                      nodes, source_root, nodes_dir, name_of, source_links,
+                                      corrections_by_unit.get(uid))
             lines += [f'<a id="{anchor(uid)}"></a>'] + block.splitlines() + [""]
         lines += ["## 怎样查", "", '`RUN` 为运行目录。用本页单元标题查 `ID`（精确名称优先）：',
                   '`cbe find --run-dir "$RUN" --term "单元标题"`。再用结果中的 `ID`：',
@@ -250,7 +272,7 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
     def outline(nid: str, level: int) -> list[str]:
         node = nodes[nid]
         pad = "  " * level
-        rows = [f"{pad}- [{node.get('title') or nid}](nodes/{nid}.md) "
+        rows = [f"{pad}- [{link_text(node.get('title') or nid)}](nodes/{nid}.md) "
                 f"({len(node.get('unit_ids') or [])} units)"]
         for uid in (node.get("unit_ids") or [])[:1]:
             if uid in units:
@@ -862,6 +884,8 @@ def layer_metrics(run_dir: Path) -> dict:
                 category = "signature_location"
             elif in_footer:
                 category = "footer"
+            elif stripped.startswith("> **ID corrected by CBE.**"):
+                category = "node_text"
             elif in_units and stripped in body_lines:
                 category = "model_body"
             elif stripped.startswith(("### ", '<a id="u-')):
@@ -895,7 +919,8 @@ def layer_metrics(run_dir: Path) -> dict:
             "scope": "Breakdown partitions full Markdown BPE tokens by the first byte's line: model_body "
                      "is published unit explain, summary, extras and uncertainties; signature_location includes "
                      "shared source-file reference definitions (including ones used by relations); "
-                     "heading_anchor, relations, footer, INDEX and node_text (including labels/whitespace) "
+                     "heading_anchor, relations, footer, INDEX and node_text (including labels/whitespace "
+                     "and program-written ID correction notices) "
                      "partition the rest. model_body/source and published_markdown/source use complete frozen files. "
                      "semantic: all published Markdown (node pages + INDEX, including navigation, "
                      "signatures and commands); deterministic: catalog.json as serialized, including "

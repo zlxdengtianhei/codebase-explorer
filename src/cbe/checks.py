@@ -357,8 +357,10 @@ def normalize_details(payload: Any, paths: list[str], inventory: dict[str, dict]
             target_key = corrected(key, f"dispositions[{key}] key")
             if target_key != key:
                 if target_key in dispositions:
-                    raise ValueError(f"duplicate disposition after id correction: {key} -> {target_key}")
-                dispositions[target_key] = dispositions.pop(key)
+                    dispositions.pop(key)
+                    flags.append(f"{key}: duplicate disposition after id correction to {target_key}; dropped")
+                else:
+                    dispositions[target_key] = dispositions.pop(key)
     units = [unit for unit in payload["units"] if isinstance(unit, dict)
              and isinstance(unit.get("id"), str) and unit["id"].strip()]
     if len(units) != len(payload["units"]):
