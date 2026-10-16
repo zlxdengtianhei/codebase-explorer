@@ -176,11 +176,11 @@ def test_fallback_snapshot_keeps_exact_unsupported_source_after_repo_is_gone(tmp
     assert "create table jobs" in capsys.readouterr().out
 
 
-def test_summary_prompt_and_tree_digest_preserve_full_semantics():
+def test_summary_prompt_and_tree_digest_uses_summary_without_full_explanation():
     from cbe import prompts
     unit = {"id": "a.py::f", "kind": "function", "explain": "First. Second."}
     digest = prompts.unit_digest(unit)
-    assert digest["summary"] == "First." and digest["explain"] == unit["explain"]
+    assert digest["summary"] == "First." and "explain" not in digest
     unit["summary"] = "Chosen."
     assert prompts.unit_digest(unit)["summary"] == "Chosen."
     prompt = prompts.detail_prompt(["a.py"], {"a.py": {"symbols": []}})

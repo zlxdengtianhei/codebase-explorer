@@ -40,20 +40,10 @@ NO_FILE_RULES = (
 
 
 def unit_digest(unit: dict) -> dict:
-    """Complete semantic view of one unit for tree decisions: full explain,
-    every extra note, every uncertainty and every relation with its basis."""
-    relations = [{"target": rel.get("target"), "kind": rel.get("kind", "use"),
-                  "basis": rel.get("basis") or ""}
-                 for rel in unit.get("relations") or [] if isinstance(rel, dict)]
-    extras = [{"topic": extra.get("topic"), "note": extra.get("note")}
-              for extra in unit.get("extras") or [] if isinstance(extra, dict)]
-    uncertainties = [item for item in unit.get("uncertainties") or [] if isinstance(item, str)]
-    from cbe.records import summary_sentence
+    """Compact responsibility and program-derived source location for aggregation."""
+    from cbe.aggregation import digest
 
-    return {"id": unit.get("id"), "kind": unit.get("kind"), "summary": summary_sentence(unit),
-            "explain": unit.get("explain") or "", "extras": extras,
-            "uncertainties": uncertainties, "relations": relations,
-            "members": unit.get("members") or []}
+    return digest(unit)
 
 
 def detail_prompt(paths: list[str], inventory: dict[str, dict], *,
@@ -168,13 +158,19 @@ def detail_prompt(paths: list[str], inventory: dict[str, dict], *,
     return "\n".join(header + body)
 
 
-def tree_prompt(units: dict[str, dict], files: list[str]) -> str:
-    digests = [unit_digest(units[uid]) for uid in sorted(units)]
+def tree_prompt(units: dict[str, dict], files: list[str], edges: list[dict] | None = None, *, merge: bool = False) -> str:
+    from cbe.principles import PRINCIPLES
+
+    digests = [units[uid] if merge else unit_digest(units[uid]) for uid in sorted(units)]
     return (
         "You design a recursive semantic responsibility tree for a codebase, from the "
         "structured detail units below. You see no raw source: reason only from these "
-        "units. Each unit carries its COMPLETE explain, extras, uncertainties and "
-        "relations; all of them are authoritative for grouping decisions.\n\n"
+        "units. Each unit carries only its responsibility summary and source location. "
+        "The resolved graph below rolls source edges up to units with kind and count; "
+        "missing edges do not prove independence. No full explanations are provided.\n\n"
+        + ("MERGE: UNITS are accepted candidate regions. Assign each region id exactly once; "
+           "do not repeat their detail units or rewrite their subtrees. The program grafts each "
+           "intact subtree at its selected home. Use their top nodes and cross-region edges.\n\n" if merge else "") +
         "OUTPUT: exactly one JSON object, no Markdown fences, no commentary: "
         '{"nodes":[...],"depends_on":[...]}\n\n'
         "nodes: objects with fields\n"
@@ -192,7 +188,9 @@ def tree_prompt(units: dict[str, dict], files: list[str]) -> str:
         "cites unit-level evidence (unit ids / call / import). Real cycles are allowed.\n\n"
         "Every unit id in UNITS must be assigned exactly once.\n\n"
         "FILES: " + json.dumps(sorted(files), ensure_ascii=False) + "\n\n"
-        "UNITS:\n" + json.dumps(digests, ensure_ascii=False)
+        "RESOLVED UNIT GRAPH (from, to, kind, count):\n" + json.dumps(edges or [], ensure_ascii=False)
+        + "\n\nAGGREGATION PRINCIPLES:\n" + "\n".join(f"{p.id}: {p.prompt}" for p in PRINCIPLES)
+        + "\n\nUNITS:\n" + json.dumps(digests, ensure_ascii=False)
     )
 
 

@@ -173,8 +173,58 @@ def _semantic_tree(run_dir: Path, state: dict[str, Any], units: dict[str, dict])
     """Accepted tree, or an honest mechanical batch grouping while it is missing."""
     tree = _accepted(run_dir, "tree") if "tree" in state["tasks"] else None
     if tree:
+        if state.get("aggregation", {}).get("regions"):
+            from cbe.aggregation import compose
+            return compose(tree, _subtrees(run_dir, state, units))
         return tree
     return checks.mechanical_tree(state["modules"], units)
+
+
+def _aggregation_inputs(run_dir: Path, state: dict[str, Any]) -> tuple[dict, list[dict]]:
+    from cbe.aggregation import inputs
+    units, dispositions = _semantic_units(run_dir, state)
+    return inputs(units, dispositions, state["inventory"], _verified_context(run_dir, state))
+
+
+def _subtrees(run_dir: Path, state: dict[str, Any], units: dict) -> dict:
+    result = {}
+    for region in state["aggregation"]["regions"]:
+        rid = region["id"]
+        task_id = "tree_" + rid
+        result[rid] = _accepted(run_dir, task_id) or checks.mechanical_tree(
+            [{"number": 0, "title": rid, "files": [r["path"] for uid in region["unit_ids"]
+              for r in units[uid].get("ranges", [])]}],
+            {uid: units[uid] for uid in region["unit_ids"]})
+    return result
+
+
+def _prepare_aggregation(run_dir: Path, state: dict[str, Any]) -> None:
+    """Plan only once detail is available; repairs invalidate the region snapshot."""
+    from cbe.aggregation import Limits, partition
+    modules = [t for t in state["tasks"].values() if t["kind"] == "module"]
+    if not modules or not all(t["status"] in {"done", "failed"} for t in modules):
+        return
+    units, edges = _aggregation_inputs(run_dir, state)
+    fingerprint = context_digest({"units": units, "edges": edges})
+    if state.get("aggregation", {}).get("input_digest") == fingerprint:
+        return
+    # A newly completed detail/repair invalidates all regions, including leases.
+    for tid in list(state["tasks"]):
+        if state["tasks"][tid].get("region"):
+            del state["tasks"][tid]
+            (state_dir(run_dir) / "accepted" / f"{tid}.json").unlink(missing_ok=True)
+    limits = Limits.configured()
+    render_prompt = lambda rows, graph: prompts.TOOL_FREE_RULES + "\n\n" + prompts.tree_prompt(
+        rows, sorted({r["path"] for row in rows.values() for r in row.get("ranges", [])}), graph)
+    regions = partition(units, edges, limits, render_prompt) if units else []
+    state["aggregation"] = {"input_digest": fingerprint, "limits": {"max_units": limits.max_units,
+                              "max_tokens": limits.max_tokens}, "regions": regions}
+    for region in regions:
+        tid = "tree_" + region["id"]
+        state["tasks"][tid] = {**_task(tid, "tree"), "region": region["id"]}
+    if regions:
+        log_event(run_dir, "queue", f"{len(regions)} candidate region trees followed by tree merge",
+                  regions=regions)
 
 
 def _known_unit_ids(run_dir: Path, state: dict[str, Any], *, exclude: int | None = None) -> set[str]:
@@ -475,6 +525,13 @@ def _ready(state: dict[str, Any]) -> list[str]:
             modules = [other for other in tasks.values() if other["kind"] == "module"]
             ok = titled and bool(modules) and all(other["status"] in {"done", "failed"} for other in modules) \
                 and any(other["status"] == "done" for other in modules)
+            if ok and state.get("aggregation", {}).get("regions"):
+                # Freeze reviewed detail before handing out region leases.
+                ok = all(t["status"] in {"done", "failed"} for t in tasks.values()
+                         if t["kind"] in {"review", "repair"})
+            if ok and task_id == "tree" and state.get("aggregation", {}).get("regions"):
+                ok = all(tasks["tree_" + r["id"]]["status"] in {"done", "failed"}
+                         for r in state["aggregation"]["regions"])
         elif kind == "review":
             ok = _module_task(state, task["module"])["status"] == "done"
         else:
@@ -542,9 +599,18 @@ def _body(run_dir: Path, state: dict[str, Any], task: dict[str, Any], *, embed: 
         return reading, _detail_task(run_dir, state, task, embed=embed, with_diagnostics=True,
                                      issues=task.get("issues") if kind == "repair" else None)
     if kind == "tree":
-        units, _ = _semantic_units(run_dir, state)
-        all_paths = [path for module in state["modules"] for path in module["files"]]
-        return prompts.NO_FILE_RULES, prompts.tree_prompt(units, all_paths)
+        from cbe.aggregation import merge_inputs
+        units, edges = _aggregation_inputs(run_dir, state)
+        regions = state.get("aggregation", {}).get("regions") or []
+        if task.get("region"):
+            wanted = set(next(r["unit_ids"] for r in regions if r["id"] == task["region"]))
+            units = {uid: row for uid, row in units.items() if uid in wanted}
+            edges = [e for e in edges if e["from"] in wanted and e["to"] in wanted]
+        elif regions:
+            units, edges = merge_inputs(regions, _subtrees(run_dir, state, units), edges)
+        all_paths = sorted({r["path"] for row in units.values() for r in row.get("ranges", [])})
+        return prompts.NO_FILE_RULES, prompts.tree_prompt(units, all_paths, edges,
+                                                         merge=bool(regions and not task.get("region")))
     if kind == "review":
         units = _module_output(run_dir, state, task["module"])
         return reading, prompts.review_prompt(
@@ -588,6 +654,7 @@ def next_tasks(run_dir: Path, *, limit: int | None = None, owner: str | None = N
     with locked_state(run_dir) as state:
         _verified_context(run_dir, state)
         _auto_complete_empty_modules(run_dir, state)
+        _prepare_aggregation(run_dir, state)
         now = time.time()
         if reclaim_after is not None:
             for task in state["tasks"].values():
@@ -655,6 +722,23 @@ def _checks(run_dir: Path, state: dict[str, Any], task: dict[str, Any]) -> tuple
                 lambda value: checks.normalize_details(value, paths, subset, known))
     if task["kind"] == "tree":
         universe = set(_semantic_units(run_dir, state)[0])
+        regions = state.get("aggregation", {}).get("regions") or []
+        if task.get("region"):
+            universe = set(next(r["unit_ids"] for r in regions if r["id"] == task["region"]))
+        elif regions:
+            universe = {r["id"] for r in regions}
+        if regions and not task.get("region"):
+            from cbe.aggregation import compose
+            units = _semantic_units(run_dir, state)[0]
+            subtrees = _subtrees(run_dir, state, units)
+            def validate_merge(value):
+                _raise_problems(checks.validate_tree(value, universe))
+                _raise_problems(checks.validate_tree(compose(value, subtrees), set(units)))
+            def normalize_merge(value):
+                flags = checks.normalize_tree(value, universe)
+                validate_merge(value)
+                return flags
+            return validate_merge, normalize_merge
         return (lambda value: _raise_problems(checks.validate_tree(value, universe)),
                 lambda value: checks.normalize_tree(value, universe))
     if task["kind"] == "names":
@@ -758,6 +842,17 @@ def _apply_submit(run_dir: Path, state: dict[str, Any], task: dict[str, Any], re
             state["tasks"][repair_id] = _task(repair_id, "repair", task["module"], issues=value["issues"])
             log_event(run_dir, "queue", f"{repair_id} for {len(value['issues'])} review finding(s)", task=repair_id)
     elif task["kind"] in {"module", "repair"}:
+        # Region outputs describe a fixed detail snapshot. A repair or a late
+        # module must not leave old leases/accepted upper nodes composable.
+        if state.get("aggregation", {}).get("regions"):
+            for tid in list(state["tasks"]):
+                if state["tasks"][tid].get("region"):
+                    del state["tasks"][tid]
+                    (state_dir(run_dir) / "accepted" / f"{tid}.json").unlink(missing_ok=True)
+            state.pop("aggregation", None)
+            upper = state["tasks"]["tree"]
+            upper["status"], upper["lease"], upper["attempt_base"] = "pending", None, upper["attempts"]
+            (state_dir(run_dir) / "accepted" / "tree.json").unlink(missing_ok=True)
         tree = state["tasks"].get("tree")
         if tree is not None and tree["status"] == "done" \
                 and (task["kind"] == "repair"
@@ -997,6 +1092,9 @@ def _render(run_dir: Path, state: dict[str, Any]) -> None:
         index_notes.append("The responsibility tree is a mechanical batch grouping because the `tree` "
                            "task is " + ("failed; resume the run to retry it."
                                          if tree_task["status"] == "failed" else "not finished yet."))
+    for tid, task in state["tasks"].items():
+        if task.get("region") and task["status"] == "failed":
+            index_notes.append(f"Region `{tid}` failed; its subtree uses the mechanical fallback.")
     system_task = state["tasks"]["system"]
     system = _accepted(run_dir, "system") if system_task["status"] == "done" else None
     if system is None:
@@ -1057,6 +1155,17 @@ def _render(run_dir: Path, state: dict[str, Any]) -> None:
         summary["partial_reason"], summary["partial_detail"] = reason, state.get("partial_detail", "")
     state["verify"] = verify_state(run_dir, state)
     summary["deterministic_checks_ok"] = state["verify"]["ok"]
+    from cbe import principles
+    records, rolled_edges = _aggregation_inputs(run_dir, state)
+    previous_path = state_dir(run_dir) / "principles.json"
+    previous = json.loads(previous_path.read_text(encoding="utf-8")) if previous_path.is_file() else None
+    principle_report = principles.report(tree, records, rolled_edges,
+        {f["path"]: f.get("language", "unknown") for f in context["files"]}, previous)
+    summary["aggregation_principles"] = principle_report
+    summary["aggregation"] = state.get("aggregation", {})
+    write_json(previous_path, principle_report)
+    with (run_dir / "docs" / "INDEX.md").open("a", encoding="utf-8") as index:
+        index.write(principles.markdown(principle_report))
     summary["layers"] = docs.layer_metrics(run_dir)
     summary["semantic_review"] = _semantic_review_summary(run_dir, state)
     summary["truth"] = ("deterministic structure/coverage checks and the separate semantic review are "
