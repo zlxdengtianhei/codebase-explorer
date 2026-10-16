@@ -1198,6 +1198,35 @@ def _plan_chunks(
     return plans, diagnostics
 
 
+def source_signatures(path: str, source: str, language: str) -> tuple[dict[str, str], dict[str, str]]:
+    """Full declaration signatures by canonical symbol ID and qualified name.
+
+    Prompt chunks intentionally cap their signatures. Published records reparse
+    verified source with the same grammar and declaration boundaries, and retain
+    the complete signature. No code executes. Unsupported grammars return empty
+    maps, letting legacy inventory records retain their available metadata.
+    """
+    spec = next((s for s in _all_specs() if s.name == language), None)
+    if spec is None:
+        return {}, {}
+    try:
+        parser = _make_parser(spec)
+    except (ImportError, AttributeError):
+        return {}, {}
+    raw = source.encode("utf-8")
+    offsets = OffsetMap.from_bytes(raw)
+    declarations = _extract_declarations(spec, offsets, parser.parse(raw).root_node, path)
+    by_id, by_name = {}, {}
+    for declaration in declarations:
+        end = _body_start(offsets, declaration.node)
+        if end < 0:
+            end = declaration.end_byte
+        signature = raw[declaration.start_byte:end].decode("utf-8").strip()
+        by_id[declaration.symbol_id] = signature
+        by_name.setdefault(declaration.qualified_name, signature)
+    return by_id, by_name
+
+
 def _chunk_from_plan(plan: _ChunkPlan, offsets: OffsetMap, starts: tuple[int, ...]) -> dict[str, Any]:
     text = offsets.raw[plan.start_byte:plan.end_byte].decode("utf-8")
     char_start = offsets.char_of_byte(plan.start_byte)

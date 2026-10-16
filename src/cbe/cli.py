@@ -144,9 +144,14 @@ def build_parser() -> argparse.ArgumentParser:
     find_p.add_argument("--term", required=True)
     find_p.add_argument("--limit", type=int, default=25)
 
-    query_p = sub.add_parser("query", help="Return one catalogue entry by symbol ID or file path")
+    query_p = sub.add_parser("query", help="Return explanation and evidence by unit ID, symbol ID or file path")
     query_p.add_argument("--run-dir", type=_abs, required=True)
     query_p.add_argument("--id", required=True)
+    source_p = sub.add_parser("source", help="Print frozen source by unit ID, symbol ID or file path; verify SHA-256 first")
+    source_p.add_argument("--run-dir", type=_abs, required=True)
+    source_p.add_argument("--id", required=True)
+    source_p.add_argument("--context", type=int, default=0, metavar="N",
+                          help="include N surrounding lines (nonnegative; default: 0)")
     for source_parser in (generate_p, host_plan, context_build, graph_build):
         source_parser.add_argument("--header-language", choices=("c", "cpp"), default=None,
                                    help="interpret .h files as C or C++ when planning source context")
@@ -314,7 +319,11 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "host":
             print(json.dumps(_host(args), ensure_ascii=False, indent=2))
             return 0
-        from cbe.docs import find, query
+        from cbe.docs import find, query, source
+
+        if args.command == "source":
+            print(source(args.run_dir, args.id, context=args.context), end="")
+            return 0
 
         if args.command == "find":
             print(json.dumps(find(args.run_dir, args.term, limit=args.limit), ensure_ascii=False, indent=2))

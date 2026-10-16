@@ -82,7 +82,7 @@ def _relation_link(target: str, units: dict, dispositions: dict, owner: dict,
     path = target.split("::", 1)[0]
     if (source_root / path).exists():
         return f"[{name_of(target)}]({os.path.relpath(source_root / path, page_dir)})"
-    return f"`{name_of(target)}`"
+    return f"[{name_of(target)}](../../catalog.json)"
 
 
 def _build_unit_block(uid: str, units: dict, ranges_map: dict, owner: dict,
@@ -90,22 +90,23 @@ def _build_unit_block(uid: str, units: dict, ranges_map: dict, owner: dict,
                       name_of: Callable[[str], str]) -> str:
     unit = units[uid]
     lines = [f"### `{name_of(uid)}`", ""]
-    meta = [f"kind: `{unit.get('kind')}`"]
-    src_parts = []
-    for entry in ranges_map.get(uid) or []:
+    signature = " ".join((unit.get("signature") or unit.get("kind") or "unit").split())
+    if len(signature) > 120:
+        signature = signature[:117] + "…"
+    location = ""
+    ranges = unit.get("ranges") or []
+    if ranges:
+        entry = ranges[0]
+        start, end = entry["lines"][0]
         rel = os.path.relpath(source_root / entry["path"], page_dir)
-        ranges_text = ",".join(f"L{pair[0]}-L{pair[1]}" for pair in entry["lines"])
-        first = entry["lines"][0]
-        src_parts.append(f"[{entry['path']} {ranges_text}]({rel}#L{first[0]}-L{first[1]})")
-    if src_parts:
-        meta.append("source: " + " · ".join(src_parts))
-    members = [member for member in unit.get("members") or [] if isinstance(member, str)]
-    if members:
-        shown = ", ".join(f"`{name_of(member)}`" for member in members[:8])
-        meta.append("folds: " + shown + (f" +{len(members) - 8} more" if len(members) > 8 else ""))
-    lines.append(" — ".join(meta))
-    lines.append("")
+        location = f" · [{entry['path']}:L{start}-L{end}]({rel}#L{start}-L{end})"
+    lines += [f"`{signature.replace('`', '')}`{location}", ""]
+    summary = unit.get("summary") or ""
     explain = (unit.get("explain") or "").strip()
+    if summary:
+        lines += [summary, ""]
+        if explain.startswith(summary):
+            explain = explain[len(summary):].lstrip()
     if explain:
         lines += [explain, ""]
     extras = [extra for extra in unit.get("extras") or []
@@ -119,13 +120,16 @@ def _build_unit_block(uid: str, units: dict, ranges_map: dict, owner: dict,
                  if isinstance(rel, dict) and isinstance(rel.get("target"), str)
                  and rel["target"].strip()]
     if relations:
-        lines += ["**Relations.**", ""]
+        labels = {"call": "调用", "inherit": "继承", "override": "覆盖", "import": "导入",
+                  "raise": "抛出", "use": "使用", "contract": "契约", "group": "分组"}
+        grouped: dict[str, list[str]] = {}
         for rel in relations:
+            label = labels.get(rel.get("kind"), rel.get("kind") or "使用")
             link = _relation_link(rel["target"], units, dispositions, owner, nodes,
                                   source_root, page_dir, name_of)
-            basis = f" — {rel['basis']}" if rel.get("basis") else ""
-            lines.append(f"- {link} ({rel.get('kind') or 'use'}){basis}")
-        lines.append("")
+            if link not in grouped.setdefault(label, []):
+                grouped[label].append(link)
+        lines += ["；".join(f"{label}：{'、'.join(links)}" for label, links in grouped.items()), ""]
     uncertainties = [item for item in unit.get("uncertainties") or []
                      if isinstance(item, str) and item.strip()]
     if uncertainties:
@@ -138,7 +142,7 @@ def _build_unit_block(uid: str, units: dict, ranges_map: dict, owner: dict,
 def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
            dispositions: dict, tree: dict, languages: dict[str, str],
            index_notes: list[str] | None = None, system: dict | None = None,
-           graph: dict | None = None) -> dict:
+           graph: dict | None = None, context: dict | None = None) -> dict:
     """Render node pages, INDEX.md and a catalog under ``run_dir/docs``.
 
     ``languages`` maps each path to the language frozen in the source context,
@@ -160,21 +164,36 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
         for uid in node.get("unit_ids") or []:
             owner[uid] = nid
 
-    taken: set[str] = set()
-    name_of = lambda uid: unique_short(uid, taken)
-    for uid in sorted(units):
-        name_of(uid)
-    for key in sorted(dispositions):
-        name_of(key)
-
     anchors: dict[str, str] = {}
     for uid in sorted(units):
-        short = anchor(uid)
-        if short in anchors:
-            raise SemanticError(f"anchor collision: {anchors[short]!r} and {uid!r}")
-        anchors[short] = uid
-
+        key = anchor(uid)
+        if key in anchors:
+            raise SemanticError(f"anchor collision: {anchors[key]!r} and {uid!r}")
+        anchors[key] = uid
     ranges_map = {uid: unit_ranges(uid, unit, inventory) for uid, unit in units.items()}
+    from cbe.records import build_records, frozen_sources
+
+    if context is None and (run_dir / "context.json").is_file():
+        context = json.loads((run_dir / "context.json").read_text(encoding="utf-8"))
+    sources = (frozen_sources(context, list(inventory)) if context is not None else
+               {path: (source_root / path).read_text(encoding="utf-8")
+                for path in inventory if (source_root / path).is_file()})
+    units, symbol_records = build_records(units, dispositions, inventory, ranges_map,
+                                          sources, languages, context, graph)
+    names = {}
+    taken: set[str] = set()
+    for uid in sorted(set(units) | set(dispositions)):
+        base = symbol_records.get(uid, {}).get("name") or short_name(uid)
+        if base in taken:
+            base = f"{uid.split('::', 1)[0]}:{base}"
+        name = base
+        suffix = 2
+        while name in taken:
+            name = f"{base} ({suffix})"
+            suffix += 1
+        taken.add(name)
+        names[uid] = name
+    name_of = lambda uid: names.get(uid, short_name(uid))
     edges_by_from: dict[str, list[dict]] = {nid: [] for nid in nodes}
     for edge in tree.get("depends_on") or []:
         if isinstance(edge, dict) and edge.get("from") in edges_by_from \
@@ -213,6 +232,12 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
             block = _build_unit_block(uid, units, ranges_map, owner, dispositions,
                                       nodes, source_root, nodes_dir, name_of)
             lines += [f'<a id="{anchor(uid)}"></a>'] + block.splitlines() + [""]
+        lines += ["## 怎样查", "", "将 `RUN` 设为本次运行目录的绝对路径。将 `ID` 设为下列单元 id。",
+                  "解释、完整签名、全部范围、折叠成员、图边与状态、关系依据均可按 id 查询。",
+                  "`source` 从冻结源码取代码，并先核对摘要。", "", "```sh",
+                  'cbe query --run-dir "$RUN" --id "$ID"',
+                  'cbe source --run-dir "$RUN" --id "$ID" --context 2', "```", ""]
+        lines += [f"- {name_of(uid)}: `{uid}`" for uid in own if uid in units]
         (nodes_dir / f"{nid}.md").write_text("\n".join(lines).strip() + "\n", encoding="utf-8")
 
     def outline(nid: str, level: int) -> list[str]:
@@ -220,15 +245,24 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
         pad = "  " * level
         rows = [f"{pad}- [{node.get('title') or nid}](nodes/{nid}.md) "
                 f"({len(node.get('unit_ids') or [])} units)"]
+        for uid in node.get("unit_ids") or []:
+            if uid in units:
+                rows.append(f"{pad}  - [{name_of(uid)}](nodes/{nid}.md#{anchor(uid)}) · "
+                            + units[uid]["summary"])
         for kid in children.get(nid) or []:
             rows.extend(outline(kid, level + 1))
         return rows
 
     roots = [nid for nid, node in nodes.items() if not node.get("parent")]
-    index_lines = ["# Codebase Explorer", "", "Structured detail units with program-derived source "
-                   "ranges and a semantic responsibility tree. Node pages show outgoing "
-                   "dependencies; reverse edges, edge evidence and the full symbol index are "
-                   "in `catalog.json`.", "", "## Responsibility tree", ""]
+    index_lines = ["# Codebase Explorer", "", "## 给 agent 的读法", "",
+                   "先读 INDEX 的责任树。按维护问题打开节点页，再选单元。",
+                   "节点页保留语义解释。完整签名、全部范围、折叠成员、关系依据和图边保存在 `catalog.json`。",
+                   "将 `RUN` 设为本次运行目录的绝对路径。先找 id，再查解释或冻结源码。", "", "```sh",
+                   'cbe find --run-dir "$RUN" --term "SEARCH_TERM"',
+                   'cbe query --run-dir "$RUN" --id "$ID"',
+                   'cbe source --run-dir "$RUN" --id "$ID" --context 2', "```", "",
+                   "`ID` 可为单元 id、符号 id 或文件路径。命令返回正文，不必再追页面位置。",
+                   "图的反向边、状态和原始依据也在 catalog 中。", "", "## Responsibility tree", ""]
     for root in roots:
         index_lines.extend(outline(root, 0))
     index_lines += ["", "## Reading stats", "",
@@ -320,18 +354,19 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
 
     compatibility_symbols: dict[str, dict] = {}
     compatibility_files: dict[str, dict] = {}
-    sources = {path: (source_root / path).read_text(encoding="utf-8")
-               for path in inventory if (source_root / path).is_file()}
     for path, entry in inventory.items():
         facts = concrete_facts.file_facts(path, sources.get(path, "")) \
             if path.endswith(".py") else None
         compatibility_files[path] = {"tokens": entry.get("tokens", 0),
                                      "language": languages.get(path, "unknown"),
-                                     "known_empty": bool(entry.get("known_empty"))}
+                                     "known_empty": bool(entry.get("known_empty")),
+                                     "ranges": [{"path": path, "lines": [[1, max(1, len(sources.get(path, '').splitlines()))]]}],
+                                     "signatures": [{"id": sid, "signature": row["signature"]}
+                                                    for sid, row in symbol_records.items() if row["file"] == path]}
         if facts and facts.get("file"):
             compatibility_files[path]["facts"] = facts["file"]
         for symbol in entry["symbols"]:
-            record: dict[str, Any] = {"file": path, "name": symbol["name"],
+            record: dict[str, Any] = {**symbol_records[symbol["id"]], "file": path, "name": symbol["name"],
                                       **symbol_index.get(symbol["id"], {"node": None, "page": None})}
             if facts and facts["symbols"].get(symbol["name"]):
                 record["facts"] = facts["symbols"][symbol["name"]]
@@ -339,12 +374,10 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
 
     catalog = {
         "schema": SCHEMA, "project": "Codebase Explorer", "version": "",
-        "units": {uid: {"node": owner.get(uid),
+        "units": {uid: {**units[uid], "node": owner.get(uid),
                         "page": f"nodes/{owner[uid]}.md" if owner.get(uid) in nodes else None,
-                        "anchor": f"#{anchor(uid)}", "kind": units[uid].get("kind"),
-                        "members": units[uid].get("members") or [],
-                        "ranges": ranges_map.get(uid) or []}
-                  for uid in sorted(units)},
+                        "anchor": f"#{anchor(uid)}"} for uid in sorted(units)},
+        "graph": graph,
         "nodes": {nid: {"parent": node.get("parent"), "children": children.get(nid) or [],
                         "unit_ids": node.get("unit_ids") or [], "title": node.get("title"),
                         "capability": node.get("capability"), "summary": node.get("summary")}
@@ -353,8 +386,7 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
         "dispositions": dispositions,
         "symbol_index": symbol_index,
         "inventory": inventory,
-        "short_names": {uid: unique_short(uid, set())
-                        for uid in sorted(set(units) | set(dispositions))},
+        "short_names": names,
         "merges": [],
         "symbols": compatibility_symbols,
         "files": compatibility_files,
@@ -386,6 +418,15 @@ def catalog_symbols(catalog: dict) -> dict[str, dict]:
         records[sid] = {**records.get(sid, {}),
                         **(catalog.get("dispositions") or {}).get(sid, {}),
                         **resolution}
+    for sid, record in records.items():
+        target = record.get("unit") or (sid if sid in (catalog.get("units") or {}) else None)
+        detail = (catalog.get("units") or {}).get(target)
+        if detail is not None:
+            records[sid] = {**detail, **record, "id": sid, "unit_detail": detail}
+        else:
+            record.setdefault("explain", record.get("reason", ""))
+            for field in ("signatures", "relations", "reverse_relations", "outgoing", "incoming"):
+                record.setdefault(field, [])
     return records
 
 
@@ -541,5 +582,92 @@ def query(run_dir: Path, symbol_id: str) -> dict[str, Any]:
     if symbol_id in catalog["symbols"]:
         return {"id": symbol_id, **catalog["symbols"][symbol_id]}
     if symbol_id in catalog["files"]:
-        return {"id": symbol_id, **catalog["files"][symbol_id]}
-    raise SemanticError(f"unknown symbol or file: {symbol_id}")
+        record = dict(catalog["files"][symbol_id])
+        units = {uid: unit for uid, unit in catalog.get("units", {}).items()
+                 if any(r["path"] == symbol_id for r in unit.get("ranges") or [])}
+        record["units"] = units
+        record["symbols"] = {sid: row for sid, row in catalog["symbols"].items()
+                             if row.get("file") == symbol_id}
+        record["explain"] = "\n\n".join(unit.get("explain", "") for unit in units.values()) or "\n".join(
+            row.get("reason", "") for row in record["symbols"].values() if row.get("reason"))
+        for field in ("relations", "reverse_relations"):
+            record[field] = [row for unit in units.values() for row in unit.get(field) or []]
+        graph = catalog.get("graph") or {}
+        graph_nodes = {n["id"]: n for n in graph.get("nodes") or []}
+        record["outgoing"] = [edge for edge in graph.get("edges") or []
+                              if (edge.get("path") or graph_nodes.get(edge.get("source"), {}).get("path")) == symbol_id]
+        record["incoming"] = [edge for edge in graph.get("edges") or []
+                              if graph_nodes.get(edge.get("target"), {}).get("path") == symbol_id]
+        node_ids = {edge.get(endpoint) for field in ("outgoing", "incoming")
+                    for edge in record[field] for endpoint in ("source", "target")}
+        record["graph_nodes"] = [graph_nodes[nid] for nid in sorted(node_ids - {None}) if nid in graph_nodes]
+        from cbe.graph import graph_state
+        record["graph_state"] = graph_state(catalog.get("graph"))[0]
+        return {"id": symbol_id, **record}
+    raise SemanticError(f"unknown unit, symbol or file: {symbol_id}")
+
+
+def source(run_dir: Path, object_id: str, context: int = 0) -> str:
+    """Return numbered frozen source, checking all selected files before output."""
+    from cbe.records import frozen_sources
+
+    if context < 0:
+        raise SemanticError("--context must be nonnegative")
+    record = query(run_dir, object_id)
+    ranges = record.get("ranges") or []
+    if not ranges:
+        raise SemanticError(f"no source ranges for: {object_id}")
+    frozen = json.loads((run_dir / "context.json").read_text(encoding="utf-8"))
+    texts = frozen_sources(frozen, [row["path"] for row in ranges])
+    selected: dict[str, list[list[int]]] = {}
+    for row in ranges:
+        nlines = len(texts[row["path"]].splitlines())
+        for start, end in row["lines"]:
+            if nlines == 0:
+                selected.setdefault(row["path"], [])
+                continue
+            if not 1 <= start <= end <= nlines:
+                raise SemanticError(f"source range out of bounds: {row['path']}:{start}-{end}")
+            selected.setdefault(row["path"], []).append([max(1, start - context), min(nlines, end + context)])
+    output = []
+    for path, spans in sorted(selected.items()):
+        merged: list[list[int]] = []
+        for start, end in sorted(spans):
+            if merged and start <= merged[-1][1] + 1:
+                merged[-1][1] = max(merged[-1][1], end)
+            else:
+                merged.append([start, end])
+        lines = texts[path].splitlines()
+        if not merged:
+            output.append(f"# {path}: empty file")
+        for start, end in merged:
+            output.append(f"# {path}:L{start}-L{end}")
+            output.extend(f"{number}: {lines[number - 1]}" for number in range(start, end + 1))
+    return "\n".join(output) + "\n"
+
+
+def layer_metrics(run_dir: Path) -> dict:
+    """One storage-based token measure, usable on old and new render outputs.
+
+    Markdown includes page metadata, navigation, signatures and usage examples.
+    Catalog JSON includes its preserved copies of prose. Thus these two storage
+    layers are measured separately, not claimed to be disjoint semantic content.
+    The denominator counts each complete frozen source file exactly once.
+    """
+    from cbe.records import frozen_sources
+    from cbe.token_budget import count_text_tokens
+
+    context = json.loads((run_dir / "context.json").read_text(encoding="utf-8"))
+    source_tokens = sum(count_text_tokens(text) for text in frozen_sources(context).values())
+    semantic = sum(count_text_tokens(path.read_text(encoding="utf-8"))
+                   for path in sorted((run_dir / "docs").rglob("*.md")))
+    deterministic = count_text_tokens((run_dir / "catalog.json").read_text(encoding="utf-8"))
+    return {"tokenizer": "o200k_base", "source_tokens": source_tokens,
+            "semantic_tokens": semantic, "deterministic_tokens": deterministic,
+            "semantic_source_ratio": semantic / source_tokens if source_tokens else None,
+            "deterministic_source_ratio": deterministic / source_tokens if source_tokens else None,
+            "scope": "semantic: all published Markdown (node pages + INDEX, including navigation, "
+                     "signatures and commands); deterministic: catalog.json as serialized, including "
+                     "preserved prose copies and graph; source: complete frozen files counted once; "
+                     "context.json, host prompts, raw answers and summary.json excluded; layers are "
+                     "storage measures, not disjoint content classes"}

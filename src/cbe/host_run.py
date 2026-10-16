@@ -1022,7 +1022,7 @@ def _render(run_dir: Path, state: dict[str, Any]) -> None:
                                inventory=state.get("inventory") or {}, units=units,
                                dispositions=dispositions, tree=tree, index_notes=index_notes,
                                system=system or _mechanical_semantic_overview(state, tree),
-                               graph=context.get("graph"),
+                               graph=context.get("graph"), context=context,
                                languages={row["path"]: row.get("language") or "unknown" for row in context["files"]})
     except symbols.SemanticError as exc:
         state["render_error"] = str(exc)
@@ -1056,6 +1056,7 @@ def _render(run_dir: Path, state: dict[str, Any]) -> None:
         summary["partial_reason"], summary["partial_detail"] = reason, state.get("partial_detail", "")
     state["verify"] = verify_state(run_dir, state)
     summary["deterministic_checks_ok"] = state["verify"]["ok"]
+    summary["layers"] = docs.layer_metrics(run_dir)
     summary["semantic_review"] = _semantic_review_summary(run_dir, state)
     summary["truth"] = ("deterministic structure/coverage checks and the separate semantic review are "
                         "different states; neither one proves prose truth")

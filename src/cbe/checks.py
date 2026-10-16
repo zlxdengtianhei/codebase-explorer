@@ -214,6 +214,9 @@ def validate_details(payload: Any, paths: list[str], inventory: dict[str, dict],
         explain = unit.get("explain")
         if not isinstance(explain, str) or not explain.strip():
             problems.append(f"{uid}: explain must be a nonempty paragraph")
+        summary = unit.get("summary")
+        if summary is not None and not isinstance(summary, str):
+            problems.append(f"{uid}: summary must be a string when supplied")
         extras = unit.get("extras", [])
         if not isinstance(extras, list):
             problems.append(f"{uid}: extras must be a list")
@@ -308,6 +311,9 @@ def normalize_details(payload: Any, paths: list[str], inventory: dict[str, dict]
         if not isinstance(unit.get("explain"), str) or not unit["explain"].strip():
             flags.append(f"{unit['id']}: explain was empty; wrote a placeholder")
             unit["explain"] = "No explanation was returned for this unit."
+        if "summary" in unit and not isinstance(unit["summary"], str):
+            unit["summary"] = _as_text(unit["summary"])
+            flags.append(f"{unit['id']}: summary was not a string; converted to text")
         if not isinstance(unit.get("extras"), list):
             flags.append(f"{unit['id']}: extras was not a list; dropped")
             unit["extras"] = []
