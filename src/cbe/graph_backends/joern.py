@@ -147,7 +147,8 @@ import scala.util.{Try, Success, Failure}
     )
   }.l
 
-  val cfg = realMethods.take(maxMethods).map { m =>
+  val cfgMethods = if (maxMethods > 0) realMethods.take(maxMethods) else realMethods
+  val cfg = cfgMethods.map { m =>
     val nodes = m.cfgNode.l
     val idx = nodes.zipWithIndex.map { case (n, i) => n.id -> i }.toMap
     val nodeJson = nodes.zipWithIndex.map { case (n, i) =>
@@ -234,7 +235,7 @@ import scala.util.{Try, Success, Failure}
     "methods" -> methods,
     "calls" -> calls,
     "cfg" -> cfg,
-    "cfgMethodsOmitted" -> math.max(0, realMethods.size - maxMethods),
+    "cfgMethodsOmitted" -> (realMethods.size - cfgMethods.size),
     "imports" -> imports,
     "reachingDefs" -> rdBuf.toList,
     "reachingDefsTruncated" -> rdTruncated,
@@ -296,7 +297,7 @@ def build_with_joern(
     max_reaching_defs: int = DEFAULT_MAX_REACHING_DEFS,
     dataflow_path_methods: list[str] | None = None,
     max_paths_per_method: int = 5,
-    max_methods: int = 200,
+    max_methods: int | None = None,
     joern_heap: str | None = None,
 ) -> dict:
     """Parse each frontend's languages with Joern and return a normalized fragment.
@@ -370,7 +371,7 @@ def build_with_joern(
             exported = _run(
                 [str(joern_bin), "--script", str(script),
                  "--param", f"cpgFile={cpg}", "--param", f"outFile={export}",
-                 "--param", f"maxMethods={max_methods}",
+                 "--param", f"maxMethods={max_methods if max_methods is not None else -1}",
                  "--param", f"maxReachingDefs={max_reaching_defs}",
                  "--param", f"pathMethods={path_methods}",
                  "--param", f"maxPathsPerMethod={max_paths_per_method}", "--nocolors"],
@@ -740,8 +741,10 @@ def _capabilities_for(language: str, payload: dict, version: str,
                     condition="; ".join(conditions) or None,
                     resolved=resolved, external=external, ambiguous=ambiguous,
                     unresolved=unresolved),
-        _capability(language, "cfg", "resolved" if cfg_methods else ("empty" if has_methods else "unsupported"),
-                    version, backend="joern", methods_with_edges=cfg_methods),
+        _capability(language, "cfg", "partial" if payload.get("cfgMethodsOmitted", 0) else ("resolved" if cfg_methods else ("empty" if has_methods else "unsupported")),
+                    version, backend="joern", methods_with_edges=cfg_methods,
+                    methods_omitted=payload.get("cfgMethodsOmitted", 0),
+                    limitations=f"{payload['cfgMethodsOmitted']} methods omitted" if payload.get("cfgMethodsOmitted") else None),
         _capability(language, "dataflow", df_status, version, backend="joern",
                     scope="reaching_def", reaching_def_edges=rd_edges,
                     limitations=None if rd_edges else "analyzer ran but produced no REACHING_DEF edges",
@@ -749,5 +752,5 @@ def _capabilities_for(language: str, payload: dict, version: str,
         _capability(language, "import",
                     "partial" if payload.get("imports") else ("empty" if has_methods else "unsupported"),
                     version, backend="joern",
-                    limitations="import/include declarations only; not resolved to target files"),
+                    limitations="static import/include declarations; repository resolution applied at graph merge"),
     ]

@@ -161,7 +161,7 @@ def analyze_graph(
     joern_heap: str | None = None,
     depcruise_bin=None,
     timeout: int = 300,
-    max_methods: int = 200,
+    max_methods: int | None = None,
     max_reaching_defs: int = 50000,
     dataflow_path_methods: list[str] | None = None,
     max_paths_per_method: int = 5,
@@ -177,11 +177,13 @@ def analyze_graph(
 
     from cbe import graph_backends as backends  # noqa: PLC0415
 
-    for name, value in (("timeout", timeout), ("max_methods", max_methods),
+    for name, value in (("timeout", timeout),
                         ("max_reaching_defs", max_reaching_defs),
                         ("max_paths_per_method", max_paths_per_method)):
         if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
             raise GraphError(f"{name} must be a positive integer")
+    if max_methods is not None and (isinstance(max_methods, bool) or not isinstance(max_methods, int) or max_methods <= 0):
+        raise GraphError("max_methods must be a positive integer or None")
     if joern_heap is not None and not re.fullmatch(r"[1-9][0-9]*[kKmMgG]", joern_heap):
         raise GraphError("joern_heap must be a positive JVM heap size, such as 8g or 4096m")
     repo = Path(repo).expanduser().resolve()
@@ -270,6 +272,15 @@ def analyze_graph(
     diagnostics.extend(identity_diagnostics)
     edges = _prefer_resolved_imports(edges)
     capabilities = _merge_capabilities(fragments, requested, extra_capabilities)
+    for capability in capabilities:
+        if capability.get("backend") == "joern" and capability.get("graph") == "import" and capability.get("status") not in {"failed", "unsupported", "unavailable"}:
+            relevant = [e for e in edges if e.get("kind") == "import"
+                        and source_context.suffix_languages().get(Path(e.get("path") or "").suffix) == capability.get("language")]
+            counts = {status: sum(e.get("status") == status for e in relevant)
+                      for status in ("resolved", "external", "unresolved")}
+            capability.update(counts)
+            capability["status"] = "partial" if counts["unresolved"] else ("resolved" if relevant else "empty")
+            capability["limitations"] = "; ".join(f"{n} {s}" for s, n in counts.items()) + "; static repository-bounded resolution"
 
     if not ran:
         diagnostics.append({"path": None, "code": "no_backend_completed",

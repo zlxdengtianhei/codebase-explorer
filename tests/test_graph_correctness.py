@@ -166,6 +166,12 @@ def test_graph_processes_have_no_stdin_and_cfg_limit_reaches_export(tmp_path, mo
     monkeypatch.setattr(subprocess, "run", run)
     graph = analyze_graph(repo, tmp_path / "g.json", backend="joern", languages=["python"], joern_home=home, max_methods=1)
     assert exports[0]["maxMethods"] == "1"
+    cfg = next(c for c in graph["capabilities"] if c["graph"] == "cfg")
+    assert cfg["status"] == "partial" and cfg["methods_omitted"] == 2
+    analyze_graph(repo, tmp_path / "unlimited.json", backend="joern", languages=["python"], joern_home=home)
+    assert exports[-1]["maxMethods"] == "-1"
+    from cbe.graph_backends.joern import _EXPORT_SCRIPT
+    assert "if (maxMethods > 0) realMethods.take(maxMethods) else realMethods" in _EXPORT_SCRIPT
     assert any(d["code"] == "cfg_methods_omitted" and "2 methods" in d["message"] for d in graph["diagnostics"])
     _depcruise_version(home / "dc", 2)
     build_with_depcruise(repo, tmp_path / "dc-run", home / "dc", 2, ["javascript"])

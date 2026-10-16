@@ -111,8 +111,8 @@ def build_parser() -> argparse.ArgumentParser:
                              help="Joern JVM maximum heap via JAVA_TOOL_OPTIONS (for example 8g); default: inherit JVM settings")
     graph_build.add_argument("--depcruise-bin", type=_abs, default=None)
     graph_build.add_argument("--timeout", type=int, default=300)
-    graph_build.add_argument("--max-methods", type=int, default=200,
-                             help="maximum methods for CFG export; omitted methods are reported")
+    graph_build.add_argument("--max-methods", type=int, default=None,
+                             help="maximum methods for CFG export per frontend; default: unlimited; omitted methods are reported")
     graph_build.add_argument("--max-reaching-defs", type=int, default=50000)
     graph_build.add_argument("--dataflow-path-method", action="append", dest="dataflow_path_methods",
                              help="opt in to sampled value-flow paths for a named method")
