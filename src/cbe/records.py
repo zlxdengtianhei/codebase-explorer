@@ -14,8 +14,20 @@ def summary_sentence(unit: dict) -> str:
     if isinstance(summary, str) and summary.strip():
         return summary.strip()
     text = (unit.get("explain") or "").strip()
-    match = re.search(r"[.!?](?=\s|$)|[。！？]", text)
-    return text[:match.end()] if match else text.split("\n", 1)[0]
+    for match in re.finditer(r"[.!?](?=\s|$)|[。！？]", text):
+        if re.search(r"\b(?:i\.e|e\.g)\.$", text[:match.end()], re.IGNORECASE):
+            continue
+        return text[:match.end()]
+    return text.split("\n", 1)[0]
+
+
+def summary_and_remainder(unit: dict) -> tuple[str, str]:
+    """Keep the explanation once when its prefix already serves as summary."""
+    summary = unit.get("summary") or ""
+    explain = (unit.get("explain") or "").strip()
+    if summary and explain.startswith(summary):
+        explain = explain[len(summary):].lstrip()
+    return summary, explain
 
 
 def frozen_sources(context: dict, paths: list[str] | None = None) -> dict[str, str]:

@@ -172,3 +172,12 @@ def test_method_titles_keep_their_declaring_class(tmp_path):
     assert "### `View.dispatch_request`" in page
     assert "### `MethodView.dispatch_request`" in page
     assert "dispatch_request (2)" not in page
+
+
+@pytest.mark.parametrize("abbreviation", ["i.e.", "e.g.", "I.E."])
+def test_summary_does_not_split_at_explanatory_abbreviations(tmp_path, abbreviation):
+    from cbe.records import summary_sentence
+
+    first = f"Registers a callback, {abbreviation} a function called before dispatch."
+    assert summary_sentence({"explain": first + " The complete body remains available."}) == first
+    assert summary_sentence({"explain": "第一句。第二句。"}) == "第一句。"

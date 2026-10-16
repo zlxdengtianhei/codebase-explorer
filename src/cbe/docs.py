@@ -56,15 +56,6 @@ def short_name(uid: str) -> str:
     return symbol or uid
 
 
-def unique_short(uid: str, taken: set[str]) -> str:
-    base = short_name(uid)
-    if base in taken and base != uid:
-        path = uid.split("::", 1)[0]
-        stem = re.sub(r"\.[a-z]+$", "", path.rsplit("/", 1)[-1], flags=re.IGNORECASE)
-        base = f"{stem}:{base}"
-    return base
-
-
 def anchor(uid: str) -> str:
     return "u-" + hashlib.sha256(uid.encode("utf-8")).hexdigest()[:12]
 
@@ -109,12 +100,11 @@ def _build_unit_block(uid: str, units: dict, ranges_map: dict, owner: dict,
         start, end = entry["lines"][0]
         location = " · " + _file_link(f"{entry['path']}:L{start}-L{end}", entry["path"], source_links)
     lines += [f"`{signature.replace('`', '')}`{location}", ""]
-    summary = unit.get("summary") or ""
-    explain = (unit.get("explain") or "").strip()
+    from cbe.records import summary_and_remainder
+
+    summary, explain = summary_and_remainder(unit)
     if summary:
         lines += [summary, ""]
-        if explain.startswith(summary):
-            explain = explain[len(summary):].lstrip()
     if explain:
         lines += [explain, ""]
     extras = [extra for extra in unit.get("extras") or []
@@ -733,12 +723,15 @@ def query(run_dir: Path, symbol_id: str, edges: str | None = None) -> dict[str, 
 
 def query_text(record: dict) -> str:
     """Agent view: prose once, one line per relation or graph edge."""
+    from cbe.records import summary_and_remainder
+
+    summary, remainder = summary_and_remainder(record)
     lines = [f"{record.get('display_name', record['name'])}  {record['id']}"]
     for field in ("signature", "signatures", "ranges", "summary", "explain", "extras",
                   "uncertainties", "relations", "reverse_relations", "folded_members",
                   "internal_edge_counts", "facts", "units", "symbols"):
         value = record.get(field)
-        if not value or (field == "summary" and record.get("explain", "").startswith(value)):
+        if not value or (field == "summary" and remainder != (record.get("explain") or "").strip()):
             continue
         if field == "signatures" and len(value) == 1 and value[0]["signature"] == record.get("signature"):
             continue
@@ -808,7 +801,7 @@ def layer_metrics(run_dir: Path) -> dict:
     These are storage layers, not disjoint semantic content classifications.
     The denominator counts each complete frozen source file exactly once.
     """
-    from cbe.records import frozen_sources
+    from cbe.records import frozen_sources, summary_and_remainder
     from cbe.token_budget import count_text_tokens, count_section_tokens
 
     context = json.loads((run_dir / "context.json").read_text(encoding="utf-8"))
@@ -822,9 +815,8 @@ def layer_metrics(run_dir: Path) -> dict:
     for unit in catalog.get("units", {}).values():
         for field in ("explain", "summary"):
             body_lines.update(line.strip() for line in (unit.get(field) or "").splitlines() if line.strip())
-        explain, summary = unit.get("explain") or "", unit.get("summary") or ""
-        if summary and explain.startswith(summary):
-            body_lines.update(line.strip() for line in explain[len(summary):].lstrip().splitlines() if line.strip())
+        _, remainder = summary_and_remainder(unit)
+        body_lines.update(line.strip() for line in remainder.splitlines() if line.strip())
         for extra in unit.get("extras") or []:
             if isinstance(extra, dict):
                 body_lines.update(line.strip() for line in
