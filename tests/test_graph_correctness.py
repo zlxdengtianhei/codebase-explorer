@@ -57,9 +57,11 @@ def test_include_resolution_is_local_then_unique_and_angle_resolves_repository(t
     assert resolver.resolve("a/main.c", '#include "local.h"') == [("resolved", "a/local.h")]
     assert resolver.resolve("a/main.c", '#include "shared.h"') == [("resolved", "b/shared.h")]
     assert resolver.resolve("main.c", '#include "duplicate.h"') == [("unresolved", None)]
-    assert resolver.resolve("a/main.c", '#include <local.h>') == [("resolved", "a/local.h")]
+    assert resolver.resolve("a/main.c", '#include <local.h>') == [("external", "local.h")]
+    assert resolver.resolve("a/main.c", '#include <a/local.h>') == [("resolved", "a/local.h")]
     assert resolver.resolve("a/main.c", '#include <stdio.h>') == [("external", "stdio.h")]
-    assert resolver.resolve("a/main.c", '#include <duplicate.h>') == [("external", "duplicate.h")]
+    assert resolver.resolve("a/main.c", '#include <duplicate.h>') == [("unresolved", None)]
+    assert resolver.diagnostics[-1]["candidates"] == ["a/duplicate.h", "b/duplicate.h"]
     assert resolver.resolve("a/main.c", '#include "missing.h"') == [("unresolved", None)]
 
 

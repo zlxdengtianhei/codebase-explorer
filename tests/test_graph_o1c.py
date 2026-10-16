@@ -1,0 +1,36 @@
+"""C1b counterexamples: search evidence must precede repository identity."""
+from cbe.graph_backends.resolution import ImportResolver, resolve_declarations
+from cbe.graph_backends.identity import validate_identities
+
+
+def test_angle_headers_require_directory_evidence(tmp_path):
+    files = {"src/util.c", "test/math.h", "compat/stdint.h", "internal/assert.h",
+             "adapters/poll.h", "lib/vtls/rustls.h", "lib/vtls/schannel.h",
+             "include/curl/curl.h", "fake/sys/types.h", "fake/netinet/in.h",
+             "fake/arpa/inet.h"}
+    resolver = ImportResolver(tmp_path, files)
+    for token in ("math.h", "stdint.h", "assert.h", "poll.h", "rustls.h", "schannel.h",
+                  "sys/types.h", "netinet/in.h", "arpa/inet.h"):
+        assert resolver.resolve("src/util.c", f"#include <{token}>") == [("external", token)]
+    assert resolver.resolve("src/util.c", '#include "math.h"') == [("resolved", "test/math.h")]
+    edge = dict(id="curl", kind="import", backend="joern", path="src/util.c",
+                source="file:src/util.c", expression="#include <curl/curl.h>")
+    nodes, edges = resolve_declarations(tmp_path, [], [edge], files=files)
+    assert edges[0]["target"] == "file:include/curl/curl.h"
+    assert edges[0]["resolution_basis"] == dict(kind="repository_directory_prefix", prefix="curl", include_root="include")
+    # Validation must not reinterpret a standard header based on its basename.
+    nodes, edges, _ = validate_identities([dict(id="ext:math.h", name="math.h")],
+        [dict(kind="import", target="ext:math.h", status="external")], files)
+    assert nodes[0]["id"] == edges[0]["target"] == "ext:math.h"
+
+
+def test_ambiguous_angle_header_preserves_candidates(tmp_path):
+    files = {"include/nlohmann/json.hpp", "single_include/nlohmann/json.hpp"}
+    resolver = ImportResolver(tmp_path, files)
+    assert resolver.resolve("test.cpp", "#include <nlohmann/json.hpp>") == [("unresolved", None)]
+    assert resolver.diagnostics[0]["candidates"] == sorted(files)
+    diagnostics = []
+    _, edges = resolve_declarations(tmp_path, [], [dict(id="json", kind="import", backend="joern",
+        path="test.cpp", expression="#include <nlohmann/json.hpp>")], files=files, diagnostics=diagnostics)
+    assert edges[0]["status"] == "unresolved" and edges[0]["target"] is None
+    assert diagnostics[0]["code"] == "ambiguous_include"

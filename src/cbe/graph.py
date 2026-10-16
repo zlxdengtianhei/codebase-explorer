@@ -265,9 +265,9 @@ def analyze_graph(
 
     files = repository_files(repo)
     nodes, edges = _merge(fragments)
-    nodes, edges = resolve_declarations(repo, nodes, edges, files=files)
-    # Use the final authority at the merge boundary even if a backend supplies
-    # an invalid file identity or labels a repository suffix as external.
+    nodes, edges = resolve_declarations(repo, nodes, edges, files=files, diagnostics=diagnostics)
+    # The merge boundary validates identities; declaration resolution above
+    # is the only authority for turning an include into a repository file.
     nodes, edges, identity_diagnostics = validate_identities(nodes, edges, files)
     diagnostics.extend(identity_diagnostics)
     edges = _prefer_resolved_imports(edges)

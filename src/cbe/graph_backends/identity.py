@@ -34,14 +34,8 @@ def external_id(name: str) -> str:
 
 
 def validate_identities(nodes, edges, files):
-    """Repair invalid backend identities and diagnose every degradation."""
+    """Validate backend identities; import resolution belongs to the resolver."""
     aliases, invalid, diagnostics, result = {}, set(), [], []
-    known = {n["id"] for n in nodes}
-    suffix_files = {}
-    for path in sorted(files):
-        parts = path.split("/")
-        for start in range(len(parts)):
-            suffix_files.setdefault("/".join(parts[start:]), []).append(path)
     for node in nodes:
         native = node["id"]
         if native.startswith("file:"):
@@ -53,23 +47,6 @@ def validate_identities(nodes, edges, files):
                 continue
             aliases[native] = canonical
             node = {**node, "id": canonical}
-        elif native.startswith("ext:"):
-            token = node.get("name") or native[4:]
-            matches = suffix_files.get(token, [])
-            if matches:
-                diagnostics.append(dict(path=None, code="external_repository_identity",
-                                        message=f"external identity {native} matches repository files"))
-                if len(matches) == 1:
-                    canonical = file_id(matches[0], files)
-                    aliases[native] = canonical
-                    if canonical in known:
-                        continue
-                    known.add(canonical)
-                    node = dict(id=canonical, kind="file", path=matches[0], name=matches[0],
-                                backend=node.get("backend"), start_line=None, end_line=None)
-                # Multiple suffix matches do not identify a repository file;
-                # angle includes remain external until build configuration
-                # supplies the missing include search path.
         result.append(node)
     unique = {n["id"]: n for n in result}
     repaired = []

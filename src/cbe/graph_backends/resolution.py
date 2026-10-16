@@ -15,6 +15,12 @@ from .identity import repository_files, file_id, external_id
 from cbe.source_context import suffix_languages
 
 
+# System header namespaces documented by POSIX Issue 8, <sys/...>,
+# <netinet/in.h>, <arpa/inet.h>, and Linux man-pages, headers(7).
+# These namespaces never establish a repository include search root.
+SYSTEM_INCLUDE_PREFIXES = frozenset({"sys", "netinet", "arpa", "net", "linux", "asm", "asm-generic"})
+
+
 class ImportResolver:
     def __init__(self, repo: Path, files=None):
         self.repo = repo
@@ -24,6 +30,8 @@ class ImportResolver:
             parts = path.split("/")
             for start in range(len(parts)):
                 self.suffix_files.setdefault("/".join(parts[start:]), []).append(path)
+        self.diagnostics = []
+        self.include_basis = {}
         self.python_roots = [""]
         if "src" in {p.split("/")[0] for p in self.files} and "src/__init__.py" not in self.files:
             self.python_roots.append("src/")
@@ -104,9 +112,30 @@ class ImportResolver:
             matches = self.suffix_files.get(token, [])
             if delimiter == '"' and not matches:
                 matches = self.suffix_files.get(PurePosixPath(token).name, [])
+            if delimiter == "<":
+                # A basename alone supplies no evidence of an include search
+                # root. In particular, repository compatibility/test headers
+                # must not shadow standard or third-party library headers.
+                if token.split("/", 1)[0] in SYSTEM_INCLUDE_PREFIXES:
+                    return [("external", token)]
+                if len(matches) > 1:
+                    self.diagnostics.append(dict(path=path, code="ambiguous_include",
+                        expression=text, candidates=matches,
+                        message=f"multiple repository candidates for <{token}>: {', '.join(matches)}"))
+                    return [("unresolved", None)]
+                if "/" not in token:
+                    return [("external", token)]
+                if len(matches) == 1:
+                    prefix = str(PurePosixPath(token).parent)
+                    self.include_basis[(path, text)] = {
+                        "kind": "repository_directory_prefix", "prefix": prefix,
+                        "include_root": matches[0][:-len(token)].rstrip("/") or ".",
+                    }
+                    return [("resolved", matches[0])]
+                return [("external", token)]
             if len(matches) == 1:
                 return [("resolved", matches[0])]
-            return [("external", token)] if delimiter == "<" else [("unresolved", None)]
+            return [("unresolved", None)]
         token = import_token(text, suffix)
         if not token:
             return [("unresolved", None)]
@@ -200,7 +229,7 @@ def import_token(text: str, suffix: str) -> str | None:
     return text if text and not re.search(r"[\s()#]", text) else None
 
 
-def resolve_declarations(repo: Path, nodes: list[dict], edges: list[dict], *, files=None) -> tuple[list[dict], list[dict]]:
+def resolve_declarations(repo: Path, nodes: list[dict], edges: list[dict], *, files=None, diagnostics=None) -> tuple[list[dict], list[dict]]:
     resolver = ImportResolver(repo, files)
     known = {n["id"] for n in nodes}
     result = []
@@ -216,5 +245,9 @@ def resolve_declarations(repo: Path, nodes: list[dict], edges: list[dict], *, fi
                               "path": target if status == "resolved" else None,
                               "name": target, "start_line": None, "end_line": None,
                               "backend": "joern", **({"external": True} if status == "external" else {})})
-            result.append({**edge, "id": edge["id"] + f"/{index}", "status": status, "target": target_id})
+            basis = resolver.include_basis.get((edge.get("path") or "", (edge.get("expression") or "").strip()))
+            result.append({**edge, "id": edge["id"] + f"/{index}", "status": status, "target": target_id,
+                           **({"resolution_basis": basis} if basis else {})})
+    if diagnostics is not None:
+        diagnostics.extend(resolver.diagnostics)
     return nodes, result

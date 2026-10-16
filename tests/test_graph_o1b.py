@@ -28,17 +28,17 @@ def test_merge_collapses_repeated_resolved_evidence():
     assert len(merged[0]["expressions"]) == 28
 
 
-def test_merge_boundary_degrades_invalid_files_and_repairs_external_suffix():
+def test_merge_boundary_degrades_invalid_files_without_resolving_external_suffix():
     from cbe.graph_backends.identity import validate_identities
     nodes = [dict(id="file:invented.js", path="invented.js"),
              dict(id="ext:curl/curl.h", name="curl/curl.h")]
     edges = [dict(id="bad", source=None, target="file:invented.js", kind="import", status="resolved"),
              dict(id="curl", source=None, target="ext:curl/curl.h", kind="import", status="external")]
     nodes, edges, diagnostics = validate_identities(nodes, edges, {"include/curl/curl.h"})
-    assert {n["id"] for n in nodes} == {"file:include/curl/curl.h"}
+    assert {n["id"] for n in nodes} == {"ext:curl/curl.h"}
     assert edges[0]["target"] is None and edges[0]["status"] == "unresolved"
-    assert edges[1]["target"] == "file:include/curl/curl.h" and edges[1]["status"] == "resolved"
-    assert len(diagnostics) == 2
+    assert edges[1]["target"] == "ext:curl/curl.h" and edges[1]["status"] == "external"
+    assert len(diagnostics) == 1
     ambiguous = [dict(id="ext:common.h", name="common.h")]
     nodes, edges, diagnostics = validate_identities(ambiguous, [dict(kind="import", status="external", target="ext:common.h")], {"a/common.h", "b/common.h"})
     assert nodes[0]["id"] == "ext:common.h"
