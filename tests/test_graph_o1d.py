@@ -104,6 +104,25 @@ def test_truncated_dataflow_is_partial_with_omitted_count():
 
 
 @pytest.mark.skipif(not os.environ.get("CBE_JOERN_HOME"), reason="Joern is not configured")
+def test_real_javascript_builtins_survive_python_module_name_collisions(tmp_path):
+    repo = tmp_path / "repo"
+    (repo / "tools").mkdir(parents=True)
+    (repo / "web").mkdir()
+    for module in ["Object", "JSON", "Promise"]:
+        (repo / "tools" / f"{module}.py").write_text("def helper():\n    pass\n")
+    expressions = ["Object.keys({ a: 1 })", "JSON.stringify(keys)", "Promise.resolve(text)"]
+    (repo / "web" / "app.js").write_text(
+        f"const keys = {expressions[0]};\nconst text = {expressions[1]};\n{expressions[2]};\n")
+    graph = analyze_graph(repo, tmp_path / "graph.json", backend="joern", languages=["javascript"],
+                          joern_home=Path(os.environ["CBE_JOERN_HOME"]))
+    calls = [edge for edge in graph["edges"] if edge["kind"] == "call"]
+    for expression in expressions:
+        matching = [edge for edge in calls if edge.get("expression") == expression]
+        assert matching, (expression, calls)
+        assert all(edge["status"] == "external" for edge in matching), matching
+
+
+@pytest.mark.skipif(not os.environ.get("CBE_JOERN_HOME"), reason="Joern is not configured")
 def test_real_truncated_dataflow_reports_partial(tmp_path):
     repo = tmp_path / "repo"
     repo.mkdir()
