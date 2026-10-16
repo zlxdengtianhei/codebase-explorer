@@ -80,3 +80,25 @@ def test_every_page_title_finds_its_id_despite_many_incidental_matches(tmp_path)
     footer = (run / "docs/nodes/root.md").read_text().split("## 怎样查")[1]
     assert 'cbe find --run-dir "$RUN" --term' in footer
     assert "按 [INDEX]" not in footer
+
+
+@pytest.mark.parametrize("summary", [None, "Chosen summary.", "First sentence."])
+def test_page_keeps_complete_explanation_with_or_without_summary(tmp_path, summary):
+    run, ids, units, inventory, context = _run(tmp_path)
+    uid = ids[0]
+    explain = "First sentence. Second sentence with the essential boundary.\n\nFinal paragraph about failure."
+    units[uid]["explain"] = explain
+    if summary is not None:
+        units[uid]["summary"] = summary
+    tree = {"nodes": [{"id": "root", "unit_ids": ids}]}
+    docs.render(run_dir=run, source_root=tmp_path / "repo", inventory=inventory,
+                units=units, dispositions={sid: {"how": "unit", "unit": sid} for sid in ids},
+                tree=tree, languages={"pkg/jobs.py": "python"}, context=context)
+    page = (run / "docs/nodes/root.md").read_text()
+    body = page.split(f'<a id="{docs.anchor(uid)}"></a>')[1].split('<a id="')[0]
+    for sentence in ("First sentence.", "Second sentence with the essential boundary.",
+                     "Final paragraph about failure."):
+        assert body.count(sentence) == 1
+    if summary:
+        assert summary in body
+    assert docs.query(run, uid)["explain"] == explain
