@@ -66,16 +66,23 @@ Report cost after every run. The rule: **use the harness's exact numbers when it
 2. Run `cbe host cost --run-dir RUN --model MODEL`. Rows with imported usage are `exact`; the rest are `estimate`, computed from instruction, source, and result sizes. Token certainty and pricing are separate: unknown model prices produce `null` dollar values in JSON and `unknown` in the report. Supply current rates with `--price INPUT,OUTPUT,CACHE_WRITE,CACHE_READ` when needed; CBE does not silently substitute a comparison price. It writes `host/COST.md` and `host/cost.json`.
 3. Tell the user: the number of subagent runs, the wall time, the token totals and whether they are exact or estimated, and the API-list-price equivalent. Say that the dollar figure is not a bill: a subscription spends plan quota. Add the harness's own session total (`/usage` in Claude Code, `/status` in Codex) for your orchestration turns, and name its source.
 
-## Read and query the result
+## 读与查 / Read and query the result
 
-Open `RUN/docs/INDEX.md`. It lists the responsibility tree and links each node page under `RUN/docs/nodes/`. A node page carries its capability and summary, its child nodes, its outgoing dependencies, and one block per owned detail unit with a program-derived source link. For progressive disclosure:
+Start at `RUN/docs/INDEX.md`. Select a responsibility node for the maintenance question. Open that node page and select a unit. The page keeps the explanation, necessary boundary notes, uncertainties, and compact relation links. Its footer lists the exact unit IDs.
+
+Set `RUN` to the absolute run directory. Find an ID, then retrieve its complete explanation and evidence:
 
 ```sh
-cbe find --run-dir "$RUN" --term SEARCH_TERM
-cbe query --run-dir "$RUN" --id EXACT_ID_FROM_FIND
+cbe find --run-dir "$RUN" --term "SEARCH_TERM"
+cbe query --run-dir "$RUN" --id "$ID"
+cbe source --run-dir "$RUN" --id "$ID" --context 2
 ```
 
-The catalogue is built from the frozen, multi-language inventory: for Python, top-level functions, classes and direct methods; for every other registered language (C/C++, JavaScript/TypeScript, Java, Go), the declarations the source grammar found; and one file/region entry when a grammar is unavailable. It is a navigation index, not a semantic proof. A detail unit states only what the model read; confirm that the pages answer the user's maintenance questions before claiming quality.
+`ID` can be a unit ID, inventory symbol ID, or file path. `query` returns explanation text, full signatures, all source ranges, folded members, relation evidence, and incoming and outgoing graph edges with their original statuses. A grouped symbol retains its own source range and includes its owning unit under `unit_detail`. A file query includes its symbols and associated units. An index-only symbol returns its recorded reason instead of invented prose.
+
+`source` prints numbered code from `RUN/context.json`. It verifies each selected file's SHA-256 before printing any code. It reports a digest mismatch as an error. `--context N` adds N surrounding lines and must be nonnegative. Use this command to inspect the precise code behind an explanation.
+
+`catalog.json` preserves the complete records and graph. `summary.json` reports token ratios and their scope. Graph evidence describes static analysis; it does not prove runtime behavior. Confirm that the explanations answer the maintenance question before claiming semantic quality.
 
 ## Script-driven generation (API, OpenCode, or Devin CLI)
 
