@@ -42,6 +42,16 @@ def test_edges_obey_exclusive_ownership_at_shared_boundary(tmp_path, capsys):
     assert [e["id"] for e in docs.query(run, parent["id"], edges="cfg")["raw_edges"]] == ["0-cfg"]
     assert cli.main(["query", "--run-dir", str(run), "--id", parent["id"], "--edges", "cfgg"]) == 2
     assert "--edges" in capsys.readouterr().err
+    # A folded symbol still selects its own edges; the owning unit selects both.
+    units.pop(child["id"])
+    units[parent["id"]]["members"] = [child["id"]]
+    dispositions = {uid: {"how": "unit", "unit": uid} for uid in units}
+    dispositions[child["id"]] = {"how": "grouped", "unit": parent["id"]}
+    docs.render(run_dir=run, source_root=repo, inventory=inventory, units=units,
+                dispositions=dispositions, tree={"nodes": [{"id": "root", "unit_ids": list(units)}]},
+                languages={"views.py": "python"}, context=context, graph=graph)
+    assert [e["id"] for e in docs.query(run, child["id"], edges="cfg")["raw_edges"]] == ["1-cfg"]
+    assert len(docs.query(run, parent["id"], edges="cfg")["raw_edges"]) == 2
 
 
 @pytest.mark.parametrize("prefix", ["Prose with a stray ` backtick.\n\n", "Prose with `` unmatched.\n\n", ""])
@@ -57,6 +67,8 @@ def test_verify_reports_broken_link_after_unmatched_code_delimiter(tmp_path, pre
     literal = "\n`value[x][f999]`\n\n~~~py\n[example](not-a-page.md)\n~~~\n\n    [example](not-a-page.md)\n"
     page.write_text(text + literal)
     assert check()["ok"]
+    page.write_text("Continuation paragraph\n    [broken](missing-page.md).\n\n" + text)
+    assert not check()["ok"]
     page.write_text(prefix + "See [broken](missing-page.md).\n\n" + text + literal)
     result = check()
     assert not result["ok"]

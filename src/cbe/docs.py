@@ -472,8 +472,11 @@ def prose_for_links(text: str) -> str:
         if marker and (marker[1][0] != "`" or "`" not in marker[2]):
             flush()
             fence = marker[1]
-        elif not line.strip() or line.startswith(("    ", "\t")):
+        elif not line.strip():
             flush()
+            paragraphs.append("\n")
+        elif line.startswith(("    ", "\t")) and not pending:
+            # Indented code cannot interrupt an existing prose paragraph.
             paragraphs.append("\n")
         else:
             pending.append(line)
@@ -709,7 +712,8 @@ def query(run_dir: Path, symbol_id: str, edges: str | None = None) -> dict[str, 
         nodes = {n["id"]: n for n in graph.get("nodes") or []}
         ownership = SourceOwnership(frozen_sources(context), context.get("chunks") or [],
                                     catalog["symbols"])
-        members = {symbol_id, *record.get("folded_members", [])}
+        members = ({symbol_id, *record.get("folded_members", [])}
+                   if symbol_id in catalog.get("units", {}) else {symbol_id})
         def matches(edge):
             if symbol_id in catalog["files"]:
                 node = nodes.get(edge.get("source"), {})
