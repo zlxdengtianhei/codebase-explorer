@@ -77,9 +77,10 @@ def detail_prompt(paths: list[str], inventory: dict[str, dict], *,
         "conditions with their consequences, exception catch/propagate/fallback order, side "
         "effects and state, and collaboration with unproven boundaries. Do not restate the "
         "listing line by line; never paraphrase only the signature.",
-        "  summary (string, optional): one sentence, about 25 words or fewer, describing "
-        "the unit's responsibility. Used under the signature and in the tree/INDEX. "
-        "If omitted, the program uses the first explain sentence. This is guidance, not a hard limit.",
+        "  Do not emit a separate summary field: avoid repeating the same responsibility. "
+        "Start explain with a self-contained responsibility sentence of about 25 words or fewer; "
+        "the program reuses that first sentence under the signature and in the tree/INDEX. "
+        "Keep the remaining explanation for behavior the reader needs to predict.",
         "  extras (list, optional): {\"topic\": condition|failure|side_effect|field|contract, "
         "\"note\": <one clear statement>} only for a necessity the explain does not cover.",
         "  relations (list, optional): {\"target\": <inventory id or grp: id>, \"kind\": "
@@ -100,6 +101,23 @@ def detail_prompt(paths: list[str], inventory: dict[str, dict], *,
         "give real units to anything with actual logic. A file whose symbol list is empty "
         "(a known-empty file) needs no disposition and no unit; do not invent prose for it.",
     ]
+    header.append(
+        "LENGTH GUIDANCE: Spend prose on behavior, not a fixed introduction for every unit. "
+        "Estimate each unit's source tokens from its own implementation (a class header excludes "
+        "separately documented members). For source under 50 tokens, one or two sentences usually "
+        "suffice; for 50-150 tokens, aim around 70 prose tokens or fewer. For 150-400 tokens, "
+        "around 110 prose tokens often suffice; for 400-1000, around 170; for larger units, "
+        "around 230, growing with actual complexity. These are references, not ceilings: exceed "
+        "them whenever needed to explain behavior-changing conditions, failure paths, or side "
+        "effects. Information quality takes priority; remove repetition before removing behavior.")
+    header.append(
+        "AVOID DUPLICATION: Explain a class's class-level responsibility and collaboration only; "
+        "do not repeat the behavior of members that have their own units. Keep the coordination "
+        "needed to understand the class. A module region containing only imports or constants "
+        "must be index_only, because the inventory already locates that non-behavioral material. "
+        "Write uncertainties only for a real boundary supported by specific source evidence; "
+        "omit boilerplate such as 'not visible in this file'. An empty uncertainties list is "
+        "appropriate when no such boundary affects understanding.")
     if issues:
         header.append("Correct these review findings without broadening claims: "
                       + json.dumps(issues, ensure_ascii=False))

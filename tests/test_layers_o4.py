@@ -185,7 +185,7 @@ def test_summary_prompt_and_tree_digest_uses_summary_without_full_explanation():
     unit["summary"] = "Chosen."
     assert unit_digest(unit)["summary"] == "Chosen."
     prompt = prompts.detail_prompt(["a.py"], {"a.py": {"symbols": []}})
-    assert "summary (string, optional)" in prompt and "25 words" in prompt
+    assert "Do not emit a separate summary field" in prompt and "25 words" in prompt
 
 
 def test_full_signatures_are_not_limited_to_prompt_signature_budget(tmp_path):
