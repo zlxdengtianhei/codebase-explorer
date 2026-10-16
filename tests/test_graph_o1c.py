@@ -34,3 +34,20 @@ def test_ambiguous_angle_header_preserves_candidates(tmp_path):
         path="test.cpp", expression="#include <nlohmann/json.hpp>")], files=files, diagnostics=diagnostics)
     assert edges[0]["status"] == "unresolved" and edges[0]["target"] is None
     assert diagnostics[0]["code"] == "ambiguous_include"
+
+
+def test_import_boundary_rejects_self_loop_and_diagnoses_library_collision():
+    nodes = [dict(id="file:lib/vtls/schannel.h", path="lib/vtls/schannel.h")]
+    edges = [dict(kind="import", status="resolved", source=nodes[0]["id"], target=nodes[0]["id"],
+                  expression="#include <schannel.h>"),
+             dict(kind="import", status="resolved", source="file:lib/vtls/rustls.c",
+                  target="file:lib/vtls/rustls.h", expressions=["#include <rustls.h>", '#include "vtls/rustls.h"'])]
+    _, kept, diagnostics = validate_identities(nodes, edges, {"lib/vtls/schannel.h"})
+    assert len(kept) == 1
+    assert {d["code"] for d in diagnostics} == {"self_import_suppressed", "external_header_collision"}
+    assert diagnostics[0]["angle_headers"] == ["rustls.h"]
+    # Correct separated external and repository dependencies do not collide.
+    edges[1]["expressions"] = ['#include "vtls/rustls.h"']
+    _, _, diagnostics = validate_identities([], edges[1:] + [dict(kind="import", status="external",
+        source="file:lib/vtls/rustls.c", target="ext:rustls.h", expression="#include <rustls.h>")], set())
+    assert diagnostics == []
