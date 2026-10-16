@@ -1005,6 +1005,7 @@ def _render(run_dir: Path, state: dict[str, Any]) -> None:
                                inventory=state.get("inventory") or {}, units=units,
                                dispositions=dispositions, tree=tree, index_notes=index_notes,
                                system=system or _mechanical_semantic_overview(state, tree),
+                               graph=context.get("graph"),
                                languages={row["path"]: row.get("language") or "unknown" for row in context["files"]})
     except symbols.SemanticError as exc:
         state["render_error"] = str(exc)

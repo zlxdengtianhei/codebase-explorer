@@ -137,7 +137,8 @@ def _build_unit_block(uid: str, units: dict, ranges_map: dict, owner: dict,
 
 def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
            dispositions: dict, tree: dict, languages: dict[str, str],
-           index_notes: list[str] | None = None, system: dict | None = None) -> dict:
+           index_notes: list[str] | None = None, system: dict | None = None,
+           graph: dict | None = None) -> dict:
     """Render node pages, INDEX.md and a catalog under ``run_dir/docs``.
 
     ``languages`` maps each path to the language frozen in the source context,
@@ -234,6 +235,51 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
                     f"- units: {len(units)} · semantic nodes: {len(nodes)} · "
                     f"dispositioned inventory ids: {len(dispositions)}",
                     "- source ranges are program-derived from the inventory, never model-written"]
+    index_lines += ["", "## 图覆盖 / Graph coverage", ""]
+    if graph is None:
+        index_lines += ["未提供图；关系仅靠模型阅读源码推断，可能不准确。"]
+    else:
+        from cbe.graph import graph_quality
+        from cbe.graph_backends.identity import repository_files
+
+        quality = graph.get("quality") or graph_quality(graph, existing_paths=repository_files(source_root))
+        if quality["backend_completed"] is False:
+            index_lines += ["没有后端跑成；图不可作为关系证据，关系仅靠模型阅读源码。"]
+        elif quality["empty_graph"]:
+            index_lines += ["图为空，没有图确认的关系；关系仅靠模型阅读源码。"]
+        else:
+            index_lines += ["来源：静态分析图；resolved 表示图确认的关系（不保证语义正确）。"
+                            "其余状态及未覆盖的语言/关系种类仅靠模型阅读源码，可能不准确。"]
+        by_language: dict[str, list[dict]] = {}
+        for row in quality["edge_counts"]:
+            by_language.setdefault(row["language"], []).append(row)
+        coverage = []
+        for language, rows in sorted(by_language.items()):
+            kinds = ", ".join(f"{r['kind']}={r['total']}" for r in rows)
+            total = sum(r["total"] for r in rows)
+            states: dict[str, int] = {}
+            for row in rows:
+                for status, count in row["statuses"].items():
+                    states[status] = states.get(status, 0) + count
+            proportions = ", ".join(f"{status} {count}/{total} ({count / total:.0%})"
+                                    for status, count in states.items() if count) if total else "无边"
+            coverage.append(f"{language}: {kinds}; {proportions}")
+        if coverage:
+            index_lines += ["覆盖（边数；状态比例按语言合计）：" + " · ".join(coverage) + "。"]
+        incomplete = quality["incomplete_capabilities"]
+        if incomplete:
+            index_lines += ["不完整：" + "; ".join(
+                f"{c.get('language')}/{c.get('graph')} {c.get('status')}"
+                for c in incomplete) + "。"]
+        integrity = [f"悬空边 {quality['dangling_edges']['count']}",
+                     f"清单外节点 {quality['nodes_outside_manifest']['count']}",
+                     f"文件不存在的节点 {quality['nodes_missing_files']['count']}"
+                     if quality["file_existence_checked"] else "文件存在性未检查"]
+        if quality["frontend_failures"]:
+            integrity.append("前端失败，见图 diagnostics")
+        if quality["backend_completed"] is None:
+            integrity.append("后端完成状态未知")
+        index_lines += ["程序核：" + "；".join(integrity) + "。"]
     if system:
         index_lines += ["", "## Overview", "", system["overview"],
                         "", "## Maintenance navigation", "", system["maintenance_navigation"]]

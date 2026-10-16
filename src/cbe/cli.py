@@ -126,6 +126,7 @@ def build_parser() -> argparse.ArgumentParser:
     graph_query.add_argument("--node", dest="node_id", default=None)
     graph_caps = graph_sub.add_parser("capabilities", help="Read the analyzed language/type coverage")
     graph_caps.add_argument("--graph", type=_abs, required=True)
+    graph_caps.add_argument("--repo", type=_abs, help="Recompute quality with a live repository-file snapshot")
 
     context_p = sub.add_parser("context", help="Build or select frozen code chunks with graph evidence")
     context_sub = context_p.add_subparsers(dest="context_command", required=True)
@@ -212,23 +213,38 @@ def main(argv: list[str] | None = None) -> int:
             print(json.dumps(available_languages(), ensure_ascii=False, indent=2))
             return 0
         if args.command == "graph":
-            from cbe.graph import analyze_graph, query_graph, BACKEND_FAILURE_CODES
+            from cbe.graph import analyze_graph, query_graph, graph_quality, GraphError, BACKEND_FAILURE_CODES
 
+            build_error = None
             if args.graph_command == "build":
-                graph = analyze_graph(args.repo, args.output, backend=args.backend,
-                                      languages=args.languages, joern_home=args.joern_home,
-                                      joern_heap=args.joern_heap,
-                                      depcruise_bin=args.depcruise_bin, timeout=args.timeout,
-                                      max_methods=args.max_methods, max_reaching_defs=args.max_reaching_defs,
-                                      dataflow_path_methods=args.dataflow_path_methods,
-                                      max_paths_per_method=args.max_paths_per_method)
+                try:
+                    graph = analyze_graph(args.repo, args.output, backend=args.backend,
+                                          languages=args.languages, joern_home=args.joern_home,
+                                          joern_heap=args.joern_heap,
+                                          depcruise_bin=args.depcruise_bin, timeout=args.timeout,
+                                          max_methods=args.max_methods, max_reaching_defs=args.max_reaching_defs,
+                                          dataflow_path_methods=args.dataflow_path_methods,
+                                          max_paths_per_method=args.max_paths_per_method)
+                except GraphError as exc:
+                    if exc.graph is None:
+                        raise
+                    graph, build_error = exc.graph, str(exc)
+                quality = graph.get("quality") or graph_quality(graph)
                 failures = [d["message"] for d in graph["diagnostics"]
                             if d.get("code") in BACKEND_FAILURE_CODES]
+                failures += [f"{c.get('language')}/{c.get('graph')}: {c.get('status')}"
+                             for c in quality["incomplete_capabilities"] if c.get("status") == "failed"]
+                if quality["dangling_edges"]["count"]:
+                    failures.append(f"dangling edges: {quality['dangling_edges']['count']} "
+                                    f"{quality['dangling_edges']['examples']}")
+                if build_error:
+                    failures.append(build_error)
                 if failures:
                     print("cbe graph build: " + "; ".join(failures), file=sys.stderr)
                 value = {"output": str(args.output), "schema": graph["schema"],
                          "backend": graph["backend"], "files": len(graph["source_manifest"]),
                          "nodes": len(graph["nodes"]), "edges": len(graph["edges"]),
+                         "quality": quality,
                          "capabilities": graph["capabilities"], "diagnostics": graph["diagnostics"]}
             else:
                 graph = json.loads(args.graph.read_text(encoding="utf-8"))
@@ -239,14 +255,19 @@ def main(argv: list[str] | None = None) -> int:
                 if args.graph_command == "capabilities":
                     if graph.get("schema") != "cbe-graph/1":
                         raise ValueError("expected a cbe-graph/1 file")
-                    value = {"backend": graph.get("backend"),
+                    if args.repo is not None:
+                        from cbe.graph_backends.identity import repository_files
+                        quality = graph_quality(graph, existing_paths=repository_files(args.repo))
+                    else:
+                        quality = graph.get("quality") or graph_quality(graph)
+                    value = {"backend": graph.get("backend"), "quality": quality,
                              "capabilities": graph.get("capabilities", []),
                              "diagnostics": graph.get("diagnostics", [])}
                 else:
                     value = query_graph(graph, paths=args.paths, kind=args.kind,
                                         direction=args.direction, node_id=args.node_id)
             print(json.dumps(value, ensure_ascii=False, indent=2))
-            return 0
+            return 2 if build_error else 0
         if args.command == "context":
             from cbe.source_context import build_context, context_for_paths
 

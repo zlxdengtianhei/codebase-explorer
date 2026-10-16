@@ -32,6 +32,7 @@ import hashlib
 import json
 import os
 import re
+from collections.abc import Iterable
 from datetime import datetime, timezone
 
 from cbe import source_context
@@ -61,7 +62,14 @@ _CAPABILITY_RANK = {"resolved": 6, "partial": 5, "empty": 4, "unsupported": 3,
 
 
 class GraphError(ValueError):
-    """Raised when no graph could be produced or an input is invalid."""
+    """Raised when no graph could be produced or an input is invalid.
+
+    A failed build may still have written an auditable, non-authoritative graph.
+    """
+
+    def __init__(self, message: str, *, graph: dict | None = None):
+        super().__init__(message)
+        self.graph = graph
 
 
 def discover_sources(repo, languages: list[str] | None = None, *, suffix_map=None) -> list[dict]:
@@ -152,6 +160,71 @@ def validate_graph_provenance(repo, graph: dict) -> None:
             changed = sorted(path for path in expected.keys() | actual.keys()
                              if expected.get(path) != actual.get(path))
             raise GraphError(f"graph {label} drift: {', '.join(changed[:10])}; rebuild the graph")
+
+
+def graph_quality(graph: dict, *, existing_paths: Iterable[str] | None = None) -> dict:
+    """Pure audit of a graph and an optional repository-file snapshot.
+
+    Language is the declaration/source language (manifest, then node metadata),
+    never the target language. Null endpoints denote absent external/unresolved
+    targets and are not dangling IDs. With no file snapshot, existence is unknown
+    rather than silently reported as zero; persisted build audits retain it.
+    """
+    nodes, edges = graph.get("nodes", []), graph.get("edges", [])
+    by_id = {n.get("id"): n for n in nodes}
+    manifest = {row["path"]: row.get("language", "unknown")
+                for row in graph.get("source_manifest", [])}
+    capabilities = graph.get("capabilities", [])
+    if isinstance(capabilities, dict):
+        capabilities = [{"language": language, "graph": kind, "status": status}
+                        for language, kinds in capabilities.items() if isinstance(kinds, dict)
+                        for kind, status in kinds.items()]
+    languages = set(manifest.values()) | {c.get("language") or "unknown" for c in capabilities}
+    statuses = ("resolved", "ambiguous", "unresolved", "external", "unsupported")
+    counts = {(language, kind): dict.fromkeys(statuses, 0)
+              for language in languages for kind in sorted(GRAPH_KINDS)}
+    dangling = []
+    for edge in edges:
+        source = by_id.get(edge.get("source"), {})
+        edge_path, source_path = edge.get("path"), source.get("path")
+        language = (manifest.get(edge_path) if isinstance(edge_path, str) else None)
+        language = (language or (manifest.get(source_path) if isinstance(source_path, str) else None)
+                    or edge.get("language") or source.get("language") or "unknown")
+        key = (language, edge.get("kind") or "unknown")
+        row = counts.setdefault(key, dict.fromkeys(statuses, 0))
+        status = edge.get("status") or "unknown"
+        row[status] = row.get(status, 0) + 1
+        missing = [edge[endpoint] for endpoint in ("source", "target")
+                   if edge.get(endpoint) is not None and edge[endpoint] not in by_id]
+        if missing:
+            dangling.append({"id": edge.get("id"), "missing_endpoints": missing})
+    anchored = [n for n in nodes if isinstance(n.get("path"), str)]
+    outside = [n for n in anchored if n["path"] not in manifest]
+    missing_files = None
+    if existing_paths is not None:
+        existing = set(existing_paths)
+        missing_files = [n for n in anchored if n["path"] not in existing]
+    diagnostics = graph.get("diagnostics", [])
+    no_backend = any(d.get("code") == "no_backend_completed" for d in diagnostics)
+    backend = graph.get("backend") or {}
+    completed = (False if no_backend or backend.get("name") == "none" else
+                 True if backend.get("components") or any(
+                     c.get("status") in {"resolved", "partial", "empty"} for c in capabilities) else None)
+    return {
+        "edge_counts": [{"language": language, "kind": kind, "statuses": row,
+                         "total": sum(row.values())}
+                        for (language, kind), row in sorted(counts.items())],
+        "dangling_edges": {"count": len(dangling), "examples": dangling[:5]},
+        "nodes_outside_manifest": {"count": len(outside), "examples": [n.get("id") for n in outside[:5]]},
+        "nodes_missing_files": {"count": None if missing_files is None else len(missing_files),
+                                "examples": [] if missing_files is None else [n.get("id") for n in missing_files[:5]]},
+        "file_existence_checked": existing_paths is not None,
+        "empty_graph": not nodes and not edges,
+        "backend_completed": completed,
+        "incomplete_capabilities": [dict(c) for c in capabilities
+                                    if c.get("status") not in {"resolved", "empty"}],
+        "frontend_failures": [dict(d) for d in diagnostics if d.get("code") in BACKEND_FAILURE_CODES],
+    }
 
 
 def analyze_graph(
@@ -318,11 +391,12 @@ def analyze_graph(
         "capabilities": capabilities,
         "diagnostics": diagnostics,
     }
+    graph["quality"] = graph_quality(graph, existing_paths=files)
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(graph, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     if not ran:
         causes = "; ".join(d["message"] for d in diagnostics if d.get("code") in BACKEND_FAILURE_CODES)
-        raise GraphError("no graph backend completed" + (f": {causes}" if causes else ""))
+        raise GraphError("no graph backend completed" + (f": {causes}" if causes else ""), graph=graph)
     return graph
 
 
@@ -422,6 +496,7 @@ def query_graph(
         "edges": kept_edges,
         "capabilities": graph.get("capabilities", []),
         "diagnostics": diagnostics,
+        "quality": graph.get("quality") or graph_quality(graph),
         "scope": {
             "paths": canonical_paths or None,
             "kind": kind,
