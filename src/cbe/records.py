@@ -33,7 +33,8 @@ def frozen_sources(context: dict, paths: list[str] | None = None) -> dict[str, s
             raise SemanticError(f"no frozen source file: {path}")
         parts = sorted((c for c in context.get("chunks") or [] if c["path"] == path),
                        key=lambda c: c.get("start_byte", 0))
-        raw = b"".join(c.get("text", "").encode("utf-8") for c in parts)
+        raw = (files[path]["source"].encode("utf-8") if "source" in files[path] else
+               b"".join(c.get("text", "").encode("utf-8") for c in parts))
         if hashlib.sha256(raw).hexdigest() != files[path].get("sha256"):
             raise SemanticError(f"frozen source digest mismatch: {path}; no code printed")
         sources[path] = raw.decode("utf-8")

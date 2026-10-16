@@ -338,7 +338,8 @@ def test_ensure_chunk_coverage_digests_the_file_bytes_of_a_crlf_file(tmp_path) -
     context = {"schema": "cbe-context/1", "files": [], "chunks": [], "graph": None, "diagnostics": []}
     symbols.ensure_chunk_coverage(context, repo, {}, ["crlf.py"])
     assert context["files"] == [{"path": "crlf.py", "language": "python",
-                                 "sha256": hashlib.sha256(raw).hexdigest()}]
+                                 "sha256": hashlib.sha256(raw).hexdigest(),
+                                 "source": raw.decode("utf-8")}]
 
 
 def test_validate_details_allows_empty_units_only_when_no_inventory_ids() -> None:

@@ -185,6 +185,11 @@ def ensure_chunk_coverage(context: dict, repo: Path, ast_inventory: dict[str, di
         digest = hashlib.sha256(raw).hexdigest()
         if path not in listed:
             files.append({"path": path, "language": source_context.language_name(path), "sha256": digest})
+        # Fallback symbol chunks historically omitted line endings and gaps.
+        # Preserve exact bytes as decoded text so frozen source retrieval does
+        # not need a live repository (and can verify the whole-file digest).
+        file_row = next(row for row in files if row["path"] == path)
+        file_row["source"] = text
         if text.strip() == "":
             diagnostics.append({"path": path, "code": "known_empty",
                                 "message": "file is empty; it has no source chunk, no inventory id "

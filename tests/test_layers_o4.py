@@ -126,6 +126,31 @@ def test_optional_summary_validation_is_compatible_and_does_not_truncate():
     assert isinstance(payload["units"][0]["summary"], str)
 
 
+def test_fallback_snapshot_keeps_exact_unsupported_source_after_repo_is_gone(tmp_path, capsys):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    raw = b"create table jobs (id integer);\r\n\r\n"
+    (repo / "schema.sql").write_bytes(raw)
+    run = Path(host_run.plan(repo, tmp_path / "run", review="none")["run_dir"])
+    _drive(run)
+    (repo / "schema.sql").unlink()
+    context = json.loads((run / "context.json").read_text())
+    assert frozen_sources(context)["schema.sql"].encode() == raw
+    assert cli.main(["source", "--run-dir", str(run), "--id", "schema.sql"]) == 0
+    assert "create table jobs" in capsys.readouterr().out
+
+
+def test_summary_prompt_and_tree_digest_preserve_full_semantics():
+    from cbe import prompts
+    unit = {"id": "a.py::f", "kind": "function", "explain": "First. Second."}
+    digest = prompts.unit_digest(unit)
+    assert digest["summary"] == "First." and digest["explain"] == unit["explain"]
+    unit["summary"] = "Chosen."
+    assert prompts.unit_digest(unit)["summary"] == "Chosen."
+    prompt = prompts.detail_prompt(["a.py"], {"a.py": {"symbols": []}})
+    assert "summary (string, optional)" in prompt and "25 words" in prompt
+
+
 def test_full_signatures_are_not_limited_to_prompt_signature_budget(tmp_path):
     repo = tmp_path / "repo"
     repo.mkdir()
