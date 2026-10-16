@@ -494,6 +494,8 @@ def _prefer_resolved_imports(edges: list[dict], *, suffix_map=None) -> list[dict
             result.append(merged)
         else:
             merged = groups[key]
+            if edge.get("resolution_basis") and not merged.get("resolution_basis"):
+                merged["resolution_basis"] = edge["resolution_basis"]
             for expression in edge.get("expressions") or [edge.get("expression")]:
                 if expression and expression not in merged["expressions"]:
                     merged["expressions"].append(expression)

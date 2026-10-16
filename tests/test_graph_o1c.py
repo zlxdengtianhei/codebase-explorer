@@ -18,6 +18,11 @@ def test_angle_headers_require_directory_evidence(tmp_path):
     nodes, edges = resolve_declarations(tmp_path, [], [edge], files=files)
     assert edges[0]["target"] == "file:include/curl/curl.h"
     assert edges[0]["resolution_basis"] == dict(kind="repository_directory_prefix", prefix="curl", include_root="include")
+    from cbe.graph import _prefer_resolved_imports
+    quoted = {**edges[0], "id": "quoted", "expression": '#include "curl/curl.h"'}
+    quoted.pop("resolution_basis")
+    merged = _prefer_resolved_imports([quoted, edges[0]])
+    assert len(merged) == 1 and merged[0]["resolution_basis"] == edges[0]["resolution_basis"]
     # Validation must not reinterpret a standard header based on its basename.
     nodes, edges, _ = validate_identities([dict(id="ext:math.h", name="math.h")],
         [dict(kind="import", target="ext:math.h", status="external")], files)
