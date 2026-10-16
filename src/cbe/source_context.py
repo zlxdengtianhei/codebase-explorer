@@ -1220,6 +1220,10 @@ def source_signatures(path: str, source: str, language: str) -> tuple[dict[str, 
     for declaration in declarations:
         end = _body_start(offsets, declaration.node)
         if end < 0:
+            value = declaration.node.child_by_field_name("value")
+            if value is not None:
+                end = _body_start(offsets, value)
+        if end < 0:
             end = declaration.end_byte
         signature = raw[declaration.start_byte:end].decode("utf-8").strip()
         by_id[declaration.symbol_id] = signature

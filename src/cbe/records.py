@@ -137,8 +137,18 @@ def build_records(units: dict, dispositions: dict, inventory: dict, ranges: dict
                                      [sid for sid, d in dispositions.items() if d.get("unit") == uid]))
         signature_rows = [{"id": sid, "signature": symbols[sid]["signature"]}
                           for sid in members if sid in symbols]
+        primary_id = next((row["id"] for row in signature_rows if row["signature"]),
+                          next((sid for sid in members if sid in symbols), None))
+        complete_ranges = {row["path"]: [pair[:] for pair in row["lines"]] for row in ranges[uid]}
+        for sid in members:
+            for row in symbols.get(sid, {}).get("ranges", []):
+                pairs = complete_ranges.setdefault(row["path"], [])
+                pairs.extend(pair[:] for pair in row["lines"] if pair not in pairs)
+        effective_ranges = [{"path": path, "lines": pairs} for path, pairs in sorted(complete_ranges.items())]
+        primary_range = (symbols[primary_id]["ranges"][0] if primary_id else
+                         next(iter(effective_ranges), None))
         record = {**unit, "id": uid, "summary": summary_sentence(unit),
-                  "ranges": ranges[uid], "signatures": signature_rows,
+                  "ranges": effective_ranges, "primary_range": primary_range, "signatures": signature_rows,
                   "signature": next((r["signature"] for r in signature_rows if r["signature"]), ""),
                   "members": unit.get("members") or [], "folded_members": [m for m in members if m != uid],
                   "reverse_relations": reverse[uid], "graph_state": availability}

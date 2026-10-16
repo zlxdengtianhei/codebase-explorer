@@ -112,6 +112,21 @@ def test_grouped_and_index_only_queries_keep_scope_and_explanation(tmp_path):
     assert record["ranges"] and record["how"] == "index_only"
 
 
+def test_grouped_dispositions_supply_ranges_even_without_declared_members(tmp_path):
+    run, inventory, units, dispositions, tree, members, group, _ = _grouped_run(tmp_path)
+    units[group]["members"] = []
+    repo = tmp_path / "repo"
+    context = source_context.build_context(repo)
+    (run / "context.json").write_text(json.dumps(context))
+    docs.render(run_dir=run, source_root=repo, inventory=inventory, units=units,
+                dispositions=dispositions, tree=tree, languages={"pkg/jobs.py": "python"}, context=context)
+    record = docs.query(run, group)
+    assert record["members"] == [] and set(record["folded_members"]) == set(members)
+    assert record["ranges"] and record["primary_range"]["path"] == "pkg/jobs.py"
+    text = docs.source(run, group)
+    assert "def reserve" in text and "def submit" in text
+
+
 def test_optional_summary_validation_is_compatible_and_does_not_truncate():
     from cbe import checks
     inventory = _inventory()
@@ -159,6 +174,12 @@ def test_full_signatures_are_not_limited_to_prompt_signature_budget(tmp_path):
     by_id, by_name = source_context.source_signatures("long.py", (repo / "long.py").read_text(), "python")
     assert by_name["many"] == signature
     assert next(iter(by_id.values())) == signature
+
+
+def test_arrow_signature_does_not_include_its_expression_body():
+    _, by_name = source_context.source_signatures("a.js", "export const add = (a, b) => a + b;\n", "javascript")
+    assert by_name["add"].endswith("=>")
+    assert "a + b" not in by_name["add"]
 
 
 def test_summary_metrics_use_the_published_artifacts_and_frozen_source(tmp_path):

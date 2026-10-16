@@ -100,7 +100,7 @@ def _build_unit_block(uid: str, units: dict, ranges_map: dict, owner: dict,
     location = ""
     ranges = unit.get("ranges") or []
     if ranges:
-        entry = ranges[0]
+        entry = unit.get("primary_range") or ranges[0]
         start, end = entry["lines"][0]
         rel = os.path.relpath(source_root / entry["path"], page_dir)
         location = f" · [{entry['path']}:L{start}-L{end}]({rel}#L{start}-L{end})"
@@ -184,6 +184,7 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
                 for path in inventory if (source_root / path).is_file()})
     units, symbol_records = build_records(units, dispositions, inventory, ranges_map,
                                           sources, languages, context, graph)
+    ranges_map = {uid: record["ranges"] for uid, record in units.items()}
     names = {}
     taken: set[str] = set()
     for uid in sorted(set(units) | set(dispositions)):
