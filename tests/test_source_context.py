@@ -578,6 +578,28 @@ def test_a_registered_override_gives_context_and_graph_the_same_language(tmp_pat
         sc._EXTRA_SPECS.pop("c", None)
 
 
+def test_a_narrower_override_keeps_the_built_in_suffixes_in_every_view(tmp_path):
+    import dataclasses
+
+    import cbe.source_context as sc
+    from cbe import batching
+    from cbe.graph import discover_sources
+
+    # The lookup still reaches the built-in C spec for .c; the suffix map, graph
+    # discovery and planning must recognise the same suffixes.
+    c_spec = next(spec for spec in GRAMMARS if spec.name == "c")
+    register_language(dataclasses.replace(c_spec, suffixes=(".py",)))
+    try:
+        for name in ("mapped.py", "native.c"):
+            (tmp_path / name).write_text("int entry(void) { return 0; }\n")
+        assert [language_for_path(name) for name in ("mapped.py", "native.c")] == ["c", "c"]
+        assert (sc.suffix_languages()[".py"], sc.suffix_languages()[".c"]) == ("c", "c")
+        assert [row["path"] for row in discover_sources(tmp_path)] == ["mapped.py", "native.c"]
+        assert [row.path for row in batching.scan(tmp_path)] == ["mapped.py", "native.c"]
+    finally:
+        sc._EXTRA_SPECS.pop("c", None)
+
+
 def test_c_header_reports_its_language_ambiguity(tmp_path):
     (tmp_path / "api.h").write_text("int add(int a, int b);\n")
     context = build_context(tmp_path, paths=["api.h"])

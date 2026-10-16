@@ -494,12 +494,19 @@ def _all_specs() -> tuple[GrammarSpec, ...]:
     return tuple(ordered.values())
 
 
+def _lookup_specs() -> tuple[GrammarSpec, ...]:
+    """Specs in suffix-lookup order: registered/plugin specs win over built-ins,
+    so a project can remap an ambiguous suffix (for example ``.h`` to C++)
+    without editing this module. A built-in replaced by name still answers for
+    the suffixes the replacement does not claim."""
+
+    _ensure_plugins()
+    return (*_EXTRA_SPECS.values(), *GRAMMARS, _TSX_SPEC)
+
+
 def _grammar_for_suffix(suffix: str) -> GrammarSpec | None:
     suffix = suffix.lower()
-    _ensure_plugins()
-    # Registered/plugin specs win over built-ins so a project can remap an
-    # ambiguous suffix (for example ``.h`` to C++) without editing this module.
-    for spec in (*_EXTRA_SPECS.values(), *GRAMMARS, _TSX_SPEC):
+    for spec in _lookup_specs():
         if suffix in spec.suffixes:
             return spec
     return None
@@ -612,12 +619,12 @@ FALLBACK_SUFFIXES = frozenset({".sql"})
 
 
 def suffix_languages() -> dict[str, str]:
-    """Suffix -> language for every registered grammar, chosen by ``_grammar_for_suffix``.
+    """Suffix -> language for every suffix ``_grammar_for_suffix`` recognises.
 
-    Using the lookup itself keeps one precedence rule: a registered spec that
-    claims a built-in's suffix wins here exactly as it does for one path."""
+    Enumerating the lookup's own specs and asking the lookup keeps one rule for
+    which suffixes count and which spec wins, for one path and for a whole tree."""
 
-    suffixes = {suffix.lower() for spec in _all_specs() for suffix in spec.suffixes}
+    suffixes = {suffix.lower() for spec in _lookup_specs() for suffix in spec.suffixes}
     return {suffix: _grammar_for_suffix(suffix).name for suffix in sorted(suffixes)}
 
 
