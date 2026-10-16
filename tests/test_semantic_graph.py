@@ -130,6 +130,10 @@ def test_cfg_counts_are_from_nodes_and_do_not_export_dataflow():
     merged = graph_projection.graph_text(graph_projection.unit_graph(graph, ["a.py"], inventory, chunks))
     assert merged.count("CFG A:") == 1
     assert "returns=3" in merged
+    graph["nodes"].extend([_node("adapter", "a.py", name="f<metaClassAdapter>"),
+        _node("adapter-return", "a.py", 1, kind="cfg_node", label="RETURN", owner="adapter")])
+    filtered = graph_projection.graph_text(graph_projection.unit_graph(graph, ["a.py"], inventory, chunks))
+    assert filtered == merged
 
 
 def test_ambiguity_three_candidates_and_unresolved_per_file_counts():

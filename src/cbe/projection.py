@@ -162,7 +162,12 @@ def unit_graph(graph: dict, paths: list[str], inventory: dict[str, dict],
     cfg_nodes: dict[str, list[dict]] = defaultdict(list)
     for node in nodes.values():
         if node.get("kind") == "cfg_node" and node.get("path") in wanted:
-            uid = endpoint(nodes.get(node.get("owner"), {}))
+            owner = nodes.get(node.get("owner"), {})
+            # Joern's synthetic adapter shares the real definition line but
+            # executes a generated forwarding return, not a source function.
+            if "<metaClassAdapter>" in str(owner.get("name", "")):
+                continue
+            uid = endpoint(owner)
             if uid and symbol_kinds.get(uid) in {"function", "method"}:
                 cfg_nodes[uid].append(node)
     for uid, members in sorted(cfg_nodes.items()):
