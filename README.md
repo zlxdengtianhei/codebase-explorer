@@ -241,6 +241,22 @@ rows with `task`, `original`, `corrected` and `location`. The existing `normaliz
 task list remains available. If an extra disposition key corrects to an existing
 key, CBE keeps the existing disposition, drops the extra key and records flags.
 
+Automatic `index_only` coverage repair is bounded: a partially supplied detail
+answer may omit one inventory disposition, or two when its batch has at least
+40 inventory symbols. An answer that omits every disposition is rejected.
+Larger omissions are named in the retry diagnostic, with a count and up to 12
+missing IDs. If the final answer still exceeds the allowance, the task fails
+and the run stays partial for resume; CBE does not silently replace it with
+index-only entries or an older answer. Explicit model-authored `index_only`
+choices and complete group dispositions are unaffected.
+
+`STATUS.md` and `summary.json` list `index_only_filled` separately from
+`id_corrected`; JSON includes `index_only_filled_count` and rows with `task`,
+`symbol`, and `reason` (`missing` or `invalid`). These count only entries made
+by normalization, including historical flags, and exclude the model's own
+`index_only` choices. INDEX notes identify the affected active module/repair;
+the note counts as program-written `index` text, outside `model_body`.
+
 Usage reports distinguish known counters, estimates, and missing values. Host-agent usage can be imported where the harness provides the corresponding session records. Unknown model prices remain `null` in JSON and `unknown` in the cost report, even when token counts are exact. `cbe host cost --price INPUT,OUTPUT,CACHE_WRITE,CACHE_READ` accepts supplied rates in USD per million tokens. Price equivalents are not subscription invoices.
 
 ## Development and compatibility

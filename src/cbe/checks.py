@@ -176,6 +176,25 @@ def _normalize_choice(value: Any, allowed: "set[str] | frozenset[str]",
     return default, True
 
 
+class MissingDispositionsError(ValueError):
+    """The final detail answer omits too much coverage to repair mechanically."""
+
+
+def _detail_fill_limit(total: int) -> int:
+    """Keep one-off repair tolerance; two omissions require at least 40 symbols."""
+    if total <= 1:
+        return 0
+    return 2 if total >= 40 else 1
+
+
+def _missing_dispositions_problem(missing: list[str], total: int) -> str:
+    limit = _detail_fill_limit(total)
+    return (f"dispositions missing inventory ids: {len(missing)}/{total} missing "
+            f"(automatic index_only limit {limit}). "
+            "Every inventory symbol must have a disposition: unit, grouped or index_only; "
+            f"return the complete dispositions object. First {min(12, len(missing))} missing ids: {missing[:12]}")
+
+
 def _detail_identity(uid: str) -> tuple[str, ...]:
     """Ignore only the generated final offset, retaining path/kind/qualified name."""
     stem = re.sub(r"::\d+[\w-]*(?:::s\d+)*$", "", uid)
@@ -276,11 +295,13 @@ def validate_details(payload: Any, paths: list[str], inventory: dict[str, dict],
             problems.append(f"{uid}: members must be a list")
     dispositions = payload.get("dispositions")
     if not isinstance(dispositions, dict):
+        if scope_ids:
+            problems.append(_missing_dispositions_problem(sorted(scope_ids), len(scope_ids)))
         return problems + ["dispositions must be an object keyed by inventory id"]
     missing = sorted(scope_ids - set(dispositions))
     extra = sorted(set(dispositions) - scope_ids)
     if missing:
-        problems.append(f"dispositions missing inventory ids: {missing[:12]}")
+        problems.append(_missing_dispositions_problem(missing, len(scope_ids)))
     if extra:
         problems.append(f"dispositions has non-scope keys: {extra[:12]}")
     for key, entry in dispositions.items():
@@ -316,7 +337,8 @@ def normalize_details(payload: Any, paths: list[str], inventory: dict[str, dict]
     Identity is repaired only when path, kind and qualified name identify one
     batch inventory id. All rewritten identity fields receive flags. Shape
     repairs retain facts; a strict check at submission still decides acceptance.
-    Raises when nothing usable is left or identity correction would collide."""
+    Raises when nothing usable is left or missing dispositions exceed the
+    bounded automatic index-only repair allowance."""
     if not isinstance(payload, dict):
         raise ValueError("module result is not a JSON object")
     if not isinstance(payload.get("units"), list):
@@ -361,6 +383,9 @@ def normalize_details(payload: Any, paths: list[str], inventory: dict[str, dict]
                     flags.append(f"{key}: duplicate disposition after id correction to {target_key}; dropped")
                 else:
                     dispositions[target_key] = dispositions.pop(key)
+    missing = sorted(scope_ids - set(dispositions)) if isinstance(dispositions, dict) else sorted(scope_ids)
+    if missing and (len(missing) == len(scope_ids) or len(missing) > _detail_fill_limit(len(scope_ids))):
+        raise MissingDispositionsError(_missing_dispositions_problem(missing, len(scope_ids)))
     units = [unit for unit in payload["units"] if isinstance(unit, dict)
              and isinstance(unit.get("id"), str) and unit["id"].strip()]
     if len(units) != len(payload["units"]):

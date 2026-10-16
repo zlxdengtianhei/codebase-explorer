@@ -46,7 +46,9 @@ def test_corrected_definition_notice_status_summary_and_body_accounting(tmp_path
     page = (run / "docs/nodes/root.md").read_text()
     notice = next(line for line in page.splitlines() if "ID corrected by CBE" in line)
     assert bad in notice and good in notice
-    assert "可能不准确" in notice and "模型在错 id 下撰写" in notice
+    assert "may be inaccurate" in notice and "model wrote this body under the wrong ID" in notice
+    assert "to the inventory ID" in notice
+    assert not any("\u4e00" <= char <= "\u9fff" for char in notice)
     assert page.count("ID corrected by CBE") == 1
     assert page.index("### ") < page.index(notice) < page.index("does its job.")
     summary = json.loads((run / "summary.json").read_text())
@@ -152,7 +154,7 @@ def test_titles_escaped_in_outline_children_parent_and_dependencies(tmp_path):
     expected_root = r"Root \[x\] \(detail\) \\\\ \*literal\*"
     expected_child = r"Child \] text \[z\]"
     root = (run / "docs/nodes/root.md").read_text()
-    assert f"[{expected_child}](child.md)" in root.split("**Children.**")[1]
+    assert f"[{expected_child}](child.md)" in root.split("**Children.**")[1].split("**Depends on.**")[0]
     assert f"[{expected_child}](child.md)" in root.split("**Depends on.**")[1]
     assert f"Parent: [{expected_root}](root.md)" in (run / "docs/nodes/child.md").read_text()
     assert f"[{expected_root}](nodes/root.md)" in (run / "docs/INDEX.md").read_text()

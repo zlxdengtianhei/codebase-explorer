@@ -1,0 +1,271 @@
+{
+  "name": "s51b1-module_8",
+  "source": "s51b1/host/raw/module_8.attempt-2.txt",
+  "paths": [
+    "flask/testing.py"
+  ],
+  "inventory": {
+    "flask/testing.py": {
+      "tokens": 2289,
+      "sha256": "629d481658aaec7076a55913eda38c270ec45d430b34b2f9d38b2eec2b0ad3da",
+      "nlines": 298,
+      "symbols": [
+        {
+          "id": "flask/testing.py::module_residual::::0",
+          "name": "testing.py",
+          "kind": "module_region",
+          "parent": null,
+          "lines": [
+            [
+              1,
+              26
+            ]
+          ]
+        },
+        {
+          "id": "flask/testing.py::class::EnvironBuilder::642::s0",
+          "name": "EnvironBuilder",
+          "kind": "class",
+          "parent": null,
+          "lines": [
+            [
+              27,
+              49
+            ]
+          ]
+        },
+        {
+          "id": "flask/testing.py::method::EnvironBuilder.__init__::1667",
+          "name": "__init__",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              49,
+              86
+            ]
+          ]
+        },
+        {
+          "id": "flask/testing.py::method::EnvironBuilder.json_dumps::2850",
+          "name": "json_dumps",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              88,
+              94
+            ]
+          ]
+        },
+        {
+          "id": "flask/testing.py::module_residual::::3151",
+          "name": "testing.py",
+          "kind": "module_region",
+          "parent": null,
+          "lines": [
+            [
+              94,
+              99
+            ]
+          ]
+        },
+        {
+          "id": "flask/testing.py::function::_get_werkzeug_version::3179",
+          "name": "_get_werkzeug_version",
+          "kind": "function",
+          "parent": null,
+          "lines": [
+            [
+              100,
+              106
+            ]
+          ]
+        },
+        {
+          "id": "flask/testing.py::class::FlaskClient::3374::s0",
+          "name": "FlaskClient",
+          "kind": "class",
+          "parent": null,
+          "lines": [
+            [
+              109,
+              125
+            ]
+          ]
+        },
+        {
+          "id": "flask/testing.py::method::FlaskClient.__init__::3974",
+          "name": "__init__",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              125,
+              133
+            ]
+          ]
+        },
+        {
+          "id": "flask/testing.py::method::FlaskClient.session_transaction::4373",
+          "name": "session_transaction",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              135,
+              183
+            ]
+          ]
+        },
+        {
+          "id": "flask/testing.py::method::FlaskClient._copy_environ::6083",
+          "name": "_copy_environ",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              185,
+              191
+            ]
+          ]
+        },
+        {
+          "id": "flask/testing.py::method::FlaskClient._request_from_builder_args::6335",
+          "name": "_request_from_builder_args",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              193,
+              202
+            ]
+          ]
+        },
+        {
+          "id": "flask/testing.py::method::FlaskClient.open::6710",
+          "name": "open",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              204,
+              247
+            ]
+          ]
+        },
+        {
+          "id": "flask/testing.py::method::FlaskClient.__enter__::8421",
+          "name": "__enter__",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              249,
+              253
+            ]
+          ]
+        },
+        {
+          "id": "flask/testing.py::method::FlaskClient.__exit__::8618",
+          "name": "__exit__",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              255,
+              262
+            ]
+          ]
+        },
+        {
+          "id": "flask/testing.py::class::FlaskCliRunner::8843::s0",
+          "name": "FlaskCliRunner",
+          "kind": "class",
+          "parent": null,
+          "lines": [
+            [
+              265,
+              271
+            ]
+          ]
+        },
+        {
+          "id": "flask/testing.py::method::FlaskCliRunner.__init__::9066",
+          "name": "__init__",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              271,
+              273
+            ]
+          ]
+        },
+        {
+          "id": "flask/testing.py::method::FlaskCliRunner.invoke::9186",
+          "name": "invoke",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              275,
+              298
+            ]
+          ]
+        }
+      ],
+      "known_empty": false
+    }
+  },
+  "payload": {
+    "units": [
+      {
+        "id": "flask/testing.py::class::EnvironBuilder::642::s0",
+        "kind": "class",
+        "explain": "Subclass of werkzeug.test.EnvironBuilder that builds WSGI environments using defaults taken from a Flask application. Its constructor enforces mutual exclusion between base_url and the subdomain/url_scheme shortcuts, derives a base URL from app config when none is supplied (parsing path as a possible absolute URL), and overrides JSON serialization to use the app's JSON provider. Members __init__ and json_dumps are fully explained here.",
+        "summary": "EnvironBuilder taking environment defaults from a Flask app.",
+        "members": [
+          "flask/testing.py::method::EnvironBuilder.__init__::1667",
+          "flask/testing.py::method::EnvironBuilder.json_dumps::2850"
+        ],
+        "relations": [
+          {
+            "target": "werkzeug.test.EnvironBuilder",
+            "kind": "inherit",
+            "basis": "class EnvironBuilder(werkzeug.test.EnvironBuilder)"
+          }
+        ],
+        "uncertainties": [
+          "Validation performed by the werkzeug base constructor is outside the supplied source."
+        ]
+      },
+      {
+        "id": "flask/testing.py::method::EnvironBuilder.__init__::1667",
+        "kind": "method",
+        "explain": "Initializes the builder for a request to app. An assert enforces the argument contract: subdomain or url_scheme may only be passed without base_url (mutually exclusive); failure raises AssertionError, stripped under python -O. When base_url is None, the host comes from config SERVER_NAME (fallback 'localhost'), app root from config APPLICATION_ROOT, scheme from explicit url_scheme or config PREFERRED_URL_SCHEME. path may be a full URL; urlsplit lets an explicit scheme/netloc in path override the derived values, the subdomain prefixes the host, and the query string is reattached to the path. Resulting base_url is scheme://host/<app root, leading slash stripped>. The app is stored on self.app before delegating to the werkzeug base constructor with remaining positional/keyword arguments, which handles body, headers, JSON, etc.",
+        "summary": "Builds a request environment, deriving base URL and defaults from app config.",
+        "extras": [
+          {
+            "topic": "contract",
+            "note": "Requires app config keys SERVER_NAME, APPLICATION_ROOT, and PREFERRED_URL_SCHEME; only SERVER_NAME has a fallback."
+          }
+        ],
+        "relations": [
+          {
+            "target": "werkzeug.test.EnvironBuilder",
+            "kind": "call",
+            "basis": "super().__init__(path, base_url, *args, **kwargs)"
+          }
+        ],
+        "uncertainties": [
+          "Behavior of urlsplit on path values without scheme/netloc is standard urllib behavior assumed, not verified here."
+        ]
+      }
+    ],
+    "dispositions": {},
+    "batch_notes": "placeholder"
+  },
+  "baseline_units": 2,
+  "baseline_program_missing": 17
+}

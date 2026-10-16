@@ -61,6 +61,8 @@ def test_path_kind_or_name_mismatch_never_corrected(other):
     bad = "pkg/a.py::method::App.run::51_tmp"
     payload = _payload(bad)
     inv = {"pkg/a.py": {"symbols": [{"id": other}]}}
+    # Keep coverage complete so this case isolates the unmatched identity.
+    payload["dispositions"][other] = {"how": "index_only", "reason": "Explicit inventory coverage."}
     flags = checks.normalize_details(payload, ["pkg/a.py"], inv, set())
     assert not any(f.startswith("id_corrected:") for f in flags)
     assert payload["units"][0]["id"] == bad

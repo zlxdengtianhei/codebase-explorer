@@ -100,8 +100,9 @@ def _build_unit_block(uid: str, units: dict, ranges_map: dict, owner: dict,
     unit = units[uid]
     lines = [f"### `{name_of(uid)}`", ""]
     for row in id_corrections or []:
-        lines += [f"> **ID corrected by CBE.** 程序将单元 id 从 {code_text(row['original'])} "
-                  f"改为清单 id {code_text(uid)}；正文由模型在错 id 下撰写，可能不准确。", ""]
+        lines += [f"> **ID corrected by CBE.** CBE changed the unit ID from {code_text(row['original'])} "
+                  f"to the inventory ID {code_text(uid)}. The model wrote this body under the wrong ID; "
+                  "it may be inaccurate.", ""]
     raw_signature = unit.get("signature") or unit.get("kind") or "unit"
     declaration = re.search(r"\b(?:async def|def|class)\s+\w", raw_signature)
     if declaration:

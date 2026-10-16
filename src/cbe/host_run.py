@@ -806,7 +806,8 @@ def _checks(run_dir: Path, state: dict[str, Any], task: dict[str, Any]) -> tuple
             problems = checks.validate_details(value, paths, subset, known)
             # The retry prompt has a bounded error excerpt. Put actionable
             # identity diagnostics before secondary shape/coverage errors.
-            problems.sort(key=lambda problem: "not in this batch's inventory" not in problem)
+            problems.sort(key=lambda problem: ("not in this batch's inventory" not in problem,
+                                               "dispositions missing inventory ids" not in problem))
             _raise_problems(problems)
         return (validate_detail,
                 lambda value: checks.normalize_details(value, paths, subset, known))
@@ -898,6 +899,13 @@ def _apply_submit(run_dir: Path, state: dict[str, Any], task: dict[str, Any], re
                 parsed = checks.json_object(candidate.read_text(encoding="utf-8"))
                 flags = normalize(parsed)
                 strict(parsed)
+            except checks.MissingDispositionsError as exc:
+                if number == attempt:
+                    # A collapsed final answer must fail visibly, rather than
+                    # silently publishing either index-only fillers or an older answer.
+                    error = f"schema_error:{exc}"
+                    break
+                continue
             except (ValueError, TypeError):
                 continue
             value = parsed
@@ -1194,6 +1202,19 @@ def _identity_corrections(state: dict[str, Any]) -> list[dict[str, str]]:
     return rows
 
 
+def _index_only_fills(state: dict[str, Any]) -> list[dict[str, str]]:
+    """Count program-created entries, including flags preserved in older runs."""
+    rows = []
+    for task in sorted(state["tasks"].values(), key=lambda row: row["id"]):
+        for flag in task.get("flags") or []:
+            for suffix, reason in ((": disposition missing; treated as index_only", "missing"),
+                                   (": invalid disposition; treated as index_only", "invalid")):
+                if flag.endswith(suffix):
+                    rows.append({"task": task["id"], "symbol": flag.removesuffix(suffix),
+                                 "reason": reason})
+    return rows
+
+
 def _render(run_dir: Path, state: dict[str, Any]) -> None:
     try:
         context = _verified_context(run_dir, state)
@@ -1241,6 +1262,16 @@ def _render(run_dir: Path, state: dict[str, Any]) -> None:
     if normalized:
         index_notes.append("Normalized after a second invalid answer (facts kept, shape fixed): "
                            + ", ".join(normalized) + ".")
+    fill_counts: dict[str, int] = {}
+    for row in _index_only_fills(state):
+        task = state["tasks"][row["task"]]
+        repair = (state["tasks"].get(f"repair_{task['module'] + 1}")
+                  if task["kind"] == "module" else None)
+        if task["status"] == "done" and not (repair and repair["status"] == "done"):
+            fill_counts[row["task"]] = fill_counts.get(row["task"], 0) + 1
+    for tid, count in sorted(fill_counts.items()):
+        index_notes.append(f"{tid}: CBE assigned {count} inventory symbol(s) to index_only "
+                           "because the model answer omitted or supplied invalid dispositions.")
     page_corrections = []
     for row in _identity_corrections(state):
         task = state["tasks"][row["task"]]
@@ -1282,6 +1313,8 @@ def _render(run_dir: Path, state: dict[str, Any]) -> None:
                                    if task["flags"] and "known_empty" not in task["flags"]),
                "id_corrected_count": len(_identity_corrections(state)),
                "id_corrected": _identity_corrections(state),
+               "index_only_filled_count": len(_index_only_fills(state)),
+               "index_only_filled": _index_only_fills(state),
                "known_empty": sorted(task["id"] for task in state["tasks"].values()
                                     if "known_empty" in task["flags"]),
                "wall_seconds": round(time.time() - epoch(state["created_at"]), 3),
@@ -1422,6 +1455,10 @@ def _status_markdown(state: dict[str, Any]) -> str:
     correction_lines += [f"- {row['task']}: {docs.code_text(row['original'])} → "
                          f"{docs.code_text(row['corrected'])} ({row['location']})"
                          for row in corrections]
+    fills = _index_only_fills(state)
+    correction_lines += ["", f"index_only_filled {len(fills)}", ""]
+    correction_lines += [f"- {row['task']}: {docs.code_text(row['symbol'])} ({row['reason']})"
+                         for row in fills]
     lines = ["# CBE run status", "",
              f"Run `{state['run_tag']}` · status **{state['status']}** · updated {state['updated_at']} · "
              f"review {state['review']} · jobs {state['jobs']} · host {state['host']}", "",
@@ -1441,12 +1478,17 @@ def _status_markdown(state: dict[str, Any]) -> str:
         output = task["output"] or ""
         if task["module"] is not None and state["modules"][task["module"]].get("page") and task["kind"] == "module":
             output = state["modules"][task["module"]]["page"]
-        shape_flags = [flag for flag in task["flags"] if not flag.startswith("id_corrected:")]
-        identity_count = len(task["flags"]) - len(shape_flags)
+        task_fills = sum(row["task"] == task["id"] for row in fills)
+        shape_flags = [flag for flag in task["flags"] if not flag.startswith("id_corrected:")
+                       and not flag.endswith((": disposition missing; treated as index_only",
+                                              ": invalid disposition; treated as index_only"))]
+        identity_count = sum(flag.startswith("id_corrected:") for flag in task["flags"])
         note = (task["errors"][-1][:120] if task["status"] in {"failed", "pending"} and task["errors"]
                 else f"normalized ({len(shape_flags)})" if shape_flags else "")
         if identity_count:
             note += ("; " if note else "") + f"id_corrected {identity_count}"
+        if task_fills:
+            note += ("; " if note else "") + f"index_only_filled {task_fills}"
         lines.append(f"| {task['id']} | {_title(state, task) if task['module'] is not None else ''} | "
                      f"{task['status']} | {task['attempts']} | {task['seconds'] if task['seconds'] is not None else ''} | "
                      f"{output} | {note.replace('|', '/')} |")
