@@ -570,7 +570,11 @@ def test_script_driver_carries_the_graph_into_the_module_prompt(tmp_path: Path, 
     from cbe.headless_completion import Completion, _csv_row
     repo = _repo(tmp_path)
     graph_path = tmp_path / "graph.json"
-    graph_path.write_text(json.dumps(_graph_for(repo, ["src/pkg/jobs.py", "src/pkg/cli.py"])), encoding="utf-8")
+    graph = _graph_for(repo, ["src/pkg/jobs.py", "src/pkg/cli.py"])
+    graph["edges"] = [{"id": "visible-call", "kind": "call", "status": "resolved",
+                       "source": "n-0", "target": "n-0", "path": "src/pkg/jobs.py", "line": 8,
+                       "column": 5}]
+    graph_path.write_text(json.dumps(graph), encoding="utf-8")
     seen: dict[str, str] = {}
 
     def fake_invoke(**kwargs):
@@ -610,7 +614,7 @@ def test_script_driver_carries_the_graph_into_the_module_prompt(tmp_path: Path, 
     assert result["status"] == "complete"
     module_prompts = [prompt for task, prompt in seen.items()
                       if task.startswith("module_") and task[7:].isdigit()]
-    assert module_prompts and any("Batch-internal resolved calls:" in prompt or "Graph: internal=" in prompt
+    assert module_prompts and any("Batch-internal resolved calls: 1 " in prompt or "Graph: internal=1," in prompt
                                   for prompt in module_prompts)
     assert all(".graph.txt" not in prompt and "graph query" not in prompt for prompt in module_prompts)
     assert not list((tmp_path / "run" / "host" / "tasks").glob("*.graph.txt"))

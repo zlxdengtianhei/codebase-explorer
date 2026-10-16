@@ -281,4 +281,3 @@ def test_byte_mapping_shared_lines_and_utf8_columns():
     assert evidence.unmapped_calls == 0
     graph["edges"][0]["column"] = 100
     assert graph_projection.unit_graph(graph, ["a.py"], inventory, chunks).unmapped_calls == 1
-
