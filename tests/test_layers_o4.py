@@ -291,5 +291,7 @@ def test_graph_edges_and_statuses_remain_available_in_both_directions(tmp_path):
     (run / "context.saved").rename(run / "context.json")
     assert "reserve_run(len(argv))" not in (run / "catalog.json").read_text()
     metrics = docs.layer_metrics(run)
-    assert metrics["frozen_graph_tokens"] > 0
-    assert metrics["deterministic_tokens"] == metrics["catalog_tokens"] + metrics["frozen_graph_tokens"]
+    assert metrics["frozen_graph_tokens"] == 0
+    assert metrics["frozen_graph_bytes"] == len(json.dumps(graph, ensure_ascii=False, separators=(",", ":")).encode())
+    assert metrics["deterministic_tokens"] == metrics["catalog_tokens"]
+    assert "excluded from token ratios" in metrics["scope"]

@@ -136,3 +136,18 @@ def test_json_queries_preserve_file_metadata_and_inventory_names(tmp_path, capsy
     file = json.loads(capsys.readouterr().out)
     for key in ("tokens", "language", "known_empty"):
         assert file[key] == catalog["files"]["pkg/jobs.py"][key]
+
+
+def test_layer_metrics_count_footer_in_footer_category(tmp_path):
+    from cbe.token_budget import count_section_tokens
+
+    run, _, _, _, _ = _run(tmp_path)
+    page = (run / "docs/nodes/root.md").read_text()
+    before, footer = page.split("## 怎样查", 1)
+    footer, references = footer.split("[f1]:", 1)
+    expected = count_section_tokens([("before", before), ("footer", "## 怎样查" + footer),
+                                     ("references", "[f1]:" + references)])["footer"]
+    metrics = docs.layer_metrics(run)
+    assert expected > 0
+    assert metrics["semantic_breakdown"]["footer"] == expected
+    assert sum(metrics["semantic_breakdown"].values()) == metrics["semantic_tokens"]

@@ -801,7 +801,7 @@ def layer_metrics(run_dir: Path) -> dict:
 
     Markdown includes page metadata, navigation, signatures and usage examples.
     Catalog JSON includes its preserved copies of prose. Frozen graph evidence
-    is counted once, including when the catalog references it in context.json.
+    is reported as UTF-8 JSON bytes, excluded from token ratios.
     These are storage layers, not disjoint semantic content classifications.
     The denominator counts each complete frozen source file exactly once.
     """
@@ -860,9 +860,13 @@ def layer_metrics(run_dir: Path) -> dict:
             sections.append((category, line))
         for category, count in count_section_tokens(sections).items():
             breakdown[category] += count
-    graph_tokens = (count_text_tokens(json.dumps(context["graph"], ensure_ascii=False, indent=2) + "\n")
-                    if context.get("graph") and not catalog.get("graph") else 0)
-    deterministic = catalog_tokens + graph_tokens
+    graph = context.get("graph") or catalog.get("graph")
+    graph_bytes = (len(json.dumps(graph, ensure_ascii=False, separators=(",", ":")).encode("utf-8"))
+                   if graph else 0)
+    if catalog.get("graph"):
+        catalog_tokens = count_text_tokens(json.dumps({**catalog, "graph": None}, ensure_ascii=False, indent=2) + "\n")
+    graph_tokens = 0
+    deterministic = catalog_tokens
     return {"tokenizer": "o200k_base", "source_tokens": source_tokens,
             "semantic_tokens": semantic, "semantic_breakdown": breakdown,
             "model_body_tokens": breakdown["model_body"],
@@ -870,6 +874,7 @@ def layer_metrics(run_dir: Path) -> dict:
             "published_markdown_source_ratio": semantic / source_tokens if source_tokens else None,
             "deterministic_tokens": deterministic,
             "catalog_tokens": catalog_tokens, "frozen_graph_tokens": graph_tokens,
+            "frozen_graph_bytes": graph_bytes,
             "semantic_source_ratio": semantic / source_tokens if source_tokens else None,
             "deterministic_source_ratio": deterministic / source_tokens if source_tokens else None,
             "scope": "Breakdown partitions full Markdown BPE tokens by the first byte's line: model_body "
@@ -879,8 +884,9 @@ def layer_metrics(run_dir: Path) -> dict:
                      "partition the rest. model_body/source and published_markdown/source use complete frozen files. "
                      "semantic: all published Markdown (node pages + INDEX, including navigation, "
                      "signatures and commands); deterministic: catalog.json as serialized, including "
-                     "preserved prose copies and edge references, plus frozen graph JSON serialized "
-                     "with ensure_ascii=False and indent=2 once when not inline in catalog; complete "
+                     "preserved prose copies and edge references, excluding the graph field; frozen graph "
+                     "is excluded from token ratios (frozen_graph_tokens=0), reported separately as frozen_graph_bytes "
+                     "using UTF-8 JSON with ensure_ascii=False and compact separators; complete "
                      "graph evidence is expanded only with query --edges; source: complete frozen files counted once; "
                      "context source chunks, host prompts, raw answers and summary.json excluded; layers are "
                      "storage measures, not disjoint content classes"}
