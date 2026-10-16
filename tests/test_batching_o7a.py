@@ -50,6 +50,19 @@ def test_index_preserves_boolean_matches_for_multiple_aliases_and_empty_imports(
     assert [[item.path for item in group] for group in packed] == [["a.py", "c.py"], ["b.py"]]
 
 
+def test_equal_import_weights_and_token_distances_keep_preindex_pair_order():
+    files = [batching.SourceFile("pkg/a.py", "", 10_000, "", [], {"b", "c"}),
+             batching.SourceFile("pkg/b.py", "", 10_000, "", [], set()),
+             batching.SourceFile("pkg/c.py", "", 10_000, "", [], set())]
+    # a-b and a-c each have one import and exactly meet the 20k target.
+    # Only one pair fits: merging all three would exceed the 25k cap.
+    # Fixed expectation independently recorded with dd82d6c's plan(), loaded
+    # via git show; do not derive it from the implementation under test.
+    modules = batching.plan(list(reversed(files)))
+    assert [[item.path for item in module.files] for module in modules] == [
+        ["pkg/a.py", "pkg/b.py"], ["pkg/c.py"]]
+
+
 def test_index_keeps_literal_paths_as_candidates():
     files = [batching.SourceFile("a.py", "", 10_000, "", [], {"./b.py"}),
              batching.SourceFile("./b.py", "", 10_000, "", [], set())]
