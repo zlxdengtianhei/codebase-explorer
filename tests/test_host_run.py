@@ -783,9 +783,8 @@ def test_comment_only_file_still_reaches_the_model(tmp_path: Path) -> None:
     assert f"module_{module['number'] + 1}" in handed
 
 
-def test_repair_requeues_the_tree_so_new_group_units_get_an_owner(tmp_path: Path) -> None:
-    """A repair can add grp: units; the ownership tree must be rebuilt or those
-    units have no primary owner and verify fails."""
+def test_tree_waits_for_repairs_so_new_group_units_get_an_owner(tmp_path: Path) -> None:
+    """Repairs can add grp: units; the first ownership tree must include them."""
     repo = _repo(tmp_path)
     run_dir = Path(host_run.plan(repo, tmp_path / "run", review="all", jobs=8)["run_dir"])
     handed: list[str] = []
@@ -814,7 +813,9 @@ def test_repair_requeues_the_tree_so_new_group_units_get_an_owner(tmp_path: Path
             Path(item["output_file"]).write_text(json.dumps(value), encoding="utf-8")
             result = host_run.submit(run_dir, item["task"], usage={"total_tokens": 1000})
             assert result["accepted"], result
-    assert handed.count("tree") >= 2  # rebuilt after the repair changed the unit set
+    assert handed.count("tree") == 1
+    assert all(handed.index(task) < handed.index("tree")
+               for task in handed if task.startswith(("review_", "repair_")))
     state = json.loads((run_dir / "host" / "state.json").read_text())
     assert state["status"] == "complete" and state["verify"]["ok"], state["verify"]["checks"]
     tree = json.loads((run_dir / "host" / "accepted" / "tree.json").read_text())
