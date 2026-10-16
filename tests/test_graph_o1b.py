@@ -51,3 +51,18 @@ def test_src_layout_absolute_import_and_js_extension_index(tmp_path):
     assert resolver.resolve("src/main.ts", 'import x from "./util.js"') == [("resolved", "src/util.ts")]
     assert resolver.resolve("src/main.ts", 'import x from "./lib"') == [("resolved", "src/lib/index.mts")]
     assert resolver.resolve("src/main.ts", 'import x from "./plain"') == [("resolved", "src/plain.js")]
+
+
+def test_repository_class_guesses_and_exact_inheritance():
+    methods = [dict(nodeId=1, file="app.py", fullName="app.py:<module>.Base.run"),
+               dict(nodeId=2, file="app.py", fullName="app.py:<module>.Child.call")]
+    types = [dict(name="Base", fullName="app.py:<module>.Base", file="app.py", inherits=[]),
+             dict(name="Child", fullName="app.py:<module>.Child", file="app.py", inherits=["app.py:<module>.Base"])]
+    resolver = CallResolver(methods, {"app.py"}, types)
+    def call(full):
+        return dict(callerId=2, methodFullName=full, callees=[dict(fullName=full, external=True)])
+    assert resolver.resolve(call("Child.run")) == ("resolved", [1], [])
+    assert resolver.resolve(call("te.Self.run")) == ("resolved", [1], [])
+    assert resolver.resolve(call("Child.missing"))[0] == "unresolved"
+    assert resolver.resolve(call("Self.missing"))[0] == "unresolved"
+    assert resolver.resolve(call("werkzeug.Response"))[0] == "external"

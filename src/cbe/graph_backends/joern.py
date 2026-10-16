@@ -109,6 +109,11 @@ import scala.util.{Try, Success, Failure}
 
   val files = cpg.file.map(f => ujson.Obj("name" -> f.name, "hash" -> f.hash.getOrElse(""))).l
 
+  val types = cpg.typeDecl.filterNot(_.isExternal).map { t =>
+    ujson.Obj("name" -> t.name, "fullName" -> t.fullName,
+              "file" -> t.filename, "inherits" -> t.inheritsFromTypeFullName.toList)
+  }.l
+
   val methods = realMethods.map { m =>
     ujson.Obj(
       "name" -> m.name,
@@ -225,6 +230,7 @@ import scala.util.{Try, Success, Failure}
     "backend" -> "joern",
     "cpgFile" -> cpgFile,
     "files" -> files,
+    "types" -> types,
     "methods" -> methods,
     "calls" -> calls,
     "cfg" -> cfg,
@@ -563,7 +569,7 @@ def _normalize(payload: dict, version: str, namespace: str = "cpg") -> tuple[lis
         if native is not None:
             method_by_native[int(native)] = node_id
 
-    call_resolver = CallResolver(payload.get("methods", []), payload.get("_files"))
+    call_resolver = CallResolver(payload.get("methods", []), payload.get("_files"), payload.get("types"))
     for call in payload.get("calls", []):
         if not _visible_call(call):
             continue
@@ -677,7 +683,7 @@ def _capabilities_for(language: str, payload: dict, version: str,
                             limitations=f"frontend error: {frontend_error}")
                 for kind in ("call", "cfg", "dataflow", "import")]
     calls = [call for call in payload.get("calls", []) if _visible_call(call)]
-    resolver = CallResolver(payload.get("methods", []), payload.get("_files"))
+    resolver = CallResolver(payload.get("methods", []), payload.get("_files"), payload.get("types"))
     statuses = [resolver.resolve(call)[0] for call in calls]
     resolved = statuses.count("resolved")
     external = statuses.count("external")

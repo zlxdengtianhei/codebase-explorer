@@ -7,11 +7,18 @@ import re
 
 
 class CallResolver:
-    def __init__(self, methods: list[dict], files=None):
+    def __init__(self, methods: list[dict], files=None, types=None):
         self.methods = {int(m["nodeId"]): m for m in methods if m.get("nodeId") is not None}
         self.files = set(files) if files is not None else {m.get("file", "") for m in methods if m.get("file")}
         self.by_pair: dict[str, list[int]] = {}
         self.by_full: dict[str, list[int]] = {}
+        self.classes = {"Self"}
+        self.types = {t["fullName"]: t for t in (types or []) if t.get("file") in self.files}
+        self.types_by_name = {}
+        for full, entry in self.types.items():
+            name = entry.get("name") or full.split(".")[-1]
+            self.classes.add(name)
+            self.types_by_name.setdefault(name, []).append(full)
         for native, method in self.methods.items():
             full = method.get("fullName", "")
             self.by_full.setdefault(full, []).append(native)
@@ -21,6 +28,31 @@ class CallResolver:
             parts = name.split(".")
             if len(parts) >= 2 and not any(p.startswith("<") for p in parts[-2:]):
                 self.by_pair.setdefault(".".join(parts[-2:]), []).append(native)
+                self.classes.add(parts[-2])
+
+    def inherited_targets(self, receiver, name, call):
+        if receiver in {"Self", "te.Self"}:
+            caller = self.methods.get(call.get("callerId"), {})
+            owners = [caller.get("fullName", "").rsplit(".", 1)[0]]
+        else:
+            owners = self.types_by_name.get(receiver, [])
+        if len(owners) != 1:
+            return []
+        visited = set()
+        def search(owner):
+            if owner in visited:
+                return []
+            visited.add(owner)
+            direct = self.by_full.get(owner + "." + name, [])
+            if direct:
+                return direct
+            targets = []
+            for base in self.types.get(owner, {}).get("inherits", []):
+                # Only traverse exact analyzer type identities. A short-name
+                # collision is insufficient evidence of an inheritance edge.
+                targets.extend(search(base))
+            return targets
+        return list(dict.fromkeys(search(owners[0])))
 
     def resolve(self, call: dict) -> tuple[str, list[int], list[str]]:
         callees = call.get("callees") or []
@@ -55,6 +87,12 @@ class CallResolver:
             matches = self.by_pair.get(full, [])
             if matches:
                 return ("resolved" if len(matches) == 1 else "ambiguous", matches, [])
+        receiver, _, name = full.rpartition(".")
+        if receiver in self.classes or receiver == "te.Self":
+            matches = self.inherited_targets(receiver, name, call)
+            if matches:
+                return ("resolved" if len(matches) == 1 else "ambiguous", matches, [])
+            return "unresolved", [], []
         external = list(dict.fromkeys(c.get("fullName") or call.get("name", "") for c in callees if c.get("external")))
         # An internal callee missing from the exported method set is unknown.
         return ("external", [], external) if external else ("unresolved", [], [])
