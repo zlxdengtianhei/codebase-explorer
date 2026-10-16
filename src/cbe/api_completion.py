@@ -31,7 +31,7 @@ from cbe.checks import json_object
 from cbe.headless_completion import Completion, _csv_row
 
 
-from cbe.model_settings import ApiConfigError, DEFAULT_API_CONFIG, load_config
+from cbe.model_settings import ApiConfigError, DEFAULT_API_CONFIG, OPTIONAL_REQUEST_KEYS, load_config
 
 
 MAX_RESPONSE_BYTES = 8 * 1024 * 1024
@@ -92,7 +92,7 @@ def _request_body(model: str, prompt: str, config: dict[str, Any]) -> dict[str, 
     }
     if config.get("output_max_tokens") is not None:
         body["max_tokens"] = config["output_max_tokens"]
-    for key in ("response_format", "top_p", "reasoning_effort"):
+    for key in OPTIONAL_REQUEST_KEYS:
         if key in config and config[key] is not None:
             body[key] = config[key]
     return body

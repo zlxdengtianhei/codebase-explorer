@@ -315,3 +315,49 @@ def test_output_budget_config_is_separate_from_source_batch_budget(tmp_path, ser
     assert recorded["request_settings"]["output_max_tokens"] == 62000
 
 
+
+
+def test_top_p_in_config_loads_and_reaches_the_request_body(tmp_path, server):
+    _Handler.body = {"choices": [{"message": {"content": "{}"}}]}
+    config = tmp_path / "api.json"
+    config.write_text(json.dumps({"base_url": server, "top_p": 0.5}))
+    result = api_completion.invoke(task="x", attempt=1, prompt="x", repo=tmp_path,
+        run_dir=tmp_path / "run", model="other/model", config=config,
+        timeout=10, csv_path=tmp_path / "run/calls.csv")
+    assert result.error is None
+    assert _Handler.captured["body"]["top_p"] == 0.5
+
+
+class _ReadLog(dict):
+    """A config that records every key the code asks about."""
+
+    def __init__(self, *args) -> None:
+        super().__init__(*args)
+        self.read: set = set()
+
+    def get(self, key, default=None):
+        self.read.add(key)
+        return super().get(key, default)
+
+    def __getitem__(self, key):
+        self.read.add(key)
+        return super().__getitem__(key)
+
+    def __contains__(self, key) -> bool:
+        self.read.add(key)
+        return super().__contains__(key)
+
+
+def test_every_config_key_the_request_path_reads_is_allowed(tmp_path):
+    from cbe import model_settings
+    full = {"base_url": "http://127.0.0.1:1/v1", "api_key_env": "CBE_NO_SUCH_KEY", "api_key_file": None,
+            "extra_headers": {}, "timeout": 5, "output_max_tokens": 10, "batch_target_tokens": 1,
+            "batch_max_tokens": 2, "temperature": 0.1, "price_per_million": [1, 1, 1],
+            "response_format": {"type": "json_object"}, "top_p": 0.9, "reasoning_effort": "low"}
+    path = tmp_path / "api.json"
+    path.write_text(json.dumps(full))
+    log = _ReadLog(model_settings.load_config(path))
+    body = api_completion._request_body("m", "p", log)
+    api_completion._api_key(log)
+    assert {"top_p", "response_format", "reasoning_effort", "temperature"} <= body.keys()
+    assert log.read <= model_settings.ALLOWED_API_CONFIG_KEYS, log.read - model_settings.ALLOWED_API_CONFIG_KEYS

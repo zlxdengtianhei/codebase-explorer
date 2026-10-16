@@ -18,6 +18,13 @@ DEFAULT_API_CONFIG: dict[str, Any] = {
     "api_key_file": None,
     "extra_headers": {},
 }
+#: Provider request fields sent only when configured; ``api_completion`` reads exactly these.
+OPTIONAL_REQUEST_KEYS = ("response_format", "top_p", "reasoning_effort")
+#: Every config key the code reads. ``load_config`` rejects anything else.
+ALLOWED_API_CONFIG_KEYS = frozenset(DEFAULT_API_CONFIG) | frozenset(OPTIONAL_REQUEST_KEYS) | {
+    "timeout", "output_max_tokens", "batch_target_tokens", "batch_max_tokens",
+    "temperature", "price_per_million",
+}
 MODEL_DEFAULTS: dict[str, dict[str, Any]] = {
     "zai/glm-5.3-flash": {
         "timeout": 1800,
@@ -44,11 +51,7 @@ def load_config(path: Path, model: str = "") -> dict[str, Any]:
             raise ApiConfigError(f"API config is not valid JSON: {exc}") from exc
         if not isinstance(loaded, dict):
             raise ApiConfigError("API config must be a JSON object")
-        allowed = set(DEFAULT_API_CONFIG) | {
-            "timeout", "output_max_tokens", "batch_target_tokens", "batch_max_tokens",
-            "reasoning_effort", "response_format", "temperature", "price_per_million",
-        }
-        unknown = sorted(set(loaded) - allowed)
+        unknown = sorted(set(loaded) - ALLOWED_API_CONFIG_KEYS)
         if unknown:
             raise ApiConfigError(f"unknown API config keys: {', '.join(unknown)}")
         value.update(loaded)

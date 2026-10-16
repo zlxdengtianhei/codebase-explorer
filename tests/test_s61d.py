@@ -128,3 +128,11 @@ def test_shipped_guidance_matches_detail_protocol():
         assert 'accepted as an alias' not in text
     skill = (root / '.dsh/skills/codebase-explorer/SKILL.md').read_text()
     assert 'collapsed detail answer' in skill and 'requires resume' in skill
+
+
+def test_retry_help_states_the_real_answer_counts(capsys):
+    with pytest.raises(SystemExit):
+        cli.main(['host', '--help'])
+    text = ' '.join(capsys.readouterr().out.split())
+    assert 'Give a failed task (or `all`) fresh answers: detail (module/repair) allows 3, others 2' in text
+    assert 'two fresh attempts' not in text

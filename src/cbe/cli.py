@@ -63,7 +63,7 @@ def build_parser() -> argparse.ArgumentParser:
                        ("status", "Show every task's state, attempts, timing, output, and the next action"),
                        ("resume", "Continue from the run records: adopt finished results, release lost "
                         "leases, retry failed tasks"),
-                       ("retry", "Give a failed task (or `all`) two fresh attempts"),
+                       ("retry", "Give a failed task (or `all`) fresh answers: detail (module/repair) allows 3, others 2"),
                        ("release", "Return leased tasks to the queue"),
                        ("render", "Render docs now; pending parts get placeholder pages"),
                        ("verify", "Coverage, link, catalogue, and source-drift checks"),
