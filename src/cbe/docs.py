@@ -90,9 +90,13 @@ def _build_unit_block(uid: str, units: dict, ranges_map: dict, owner: dict,
                       name_of: Callable[[str], str]) -> str:
     unit = units[uid]
     lines = [f"### `{name_of(uid)}`", ""]
-    signature = " ".join((unit.get("signature") or unit.get("kind") or "unit").split())
-    if len(signature) > 120:
-        signature = signature[:117] + "…"
+    raw_signature = unit.get("signature") or unit.get("kind") or "unit"
+    declaration = re.search(r"\b(?:async def|def|class)\s+\w", raw_signature)
+    if declaration:
+        raw_signature = raw_signature[declaration.start():]
+    signature = " ".join(raw_signature.split())
+    if len(signature) > 88:
+        signature = signature[:85] + "…"
     location = ""
     ranges = unit.get("ranges") or []
     if ranges:
@@ -232,12 +236,13 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
             block = _build_unit_block(uid, units, ranges_map, owner, dispositions,
                                       nodes, source_root, nodes_dir, name_of)
             lines += [f'<a id="{anchor(uid)}"></a>'] + block.splitlines() + [""]
-        lines += ["## 怎样查", "", "将 `RUN` 设为本次运行目录的绝对路径。将 `ID` 设为下列单元 id。",
-                  "解释、完整签名、全部范围、折叠成员、图边与状态、关系依据均可按 id 查询。",
+        lines += ["## 怎样查", "", "将 `RUN` 设为本次运行目录的绝对路径。用 `find` 搜索单元标题中的名字，",
+                  "从输出复制 `id` 并设为 `ID`。同名项按文件路径区分。",
+                  "`query` 返回解释、完整签名、全部范围、折叠成员、图边与状态、关系依据。",
                   "`source` 从冻结源码取代码，并先核对摘要。", "", "```sh",
+                  'cbe find --run-dir "$RUN" --term "NAME"',
                   'cbe query --run-dir "$RUN" --id "$ID"',
                   'cbe source --run-dir "$RUN" --id "$ID" --context 2', "```", ""]
-        lines += [f"- {name_of(uid)}: `{uid}`" for uid in own if uid in units]
         (nodes_dir / f"{nid}.md").write_text("\n".join(lines).strip() + "\n", encoding="utf-8")
 
     def outline(nid: str, level: int) -> list[str]:
@@ -245,7 +250,7 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
         pad = "  " * level
         rows = [f"{pad}- [{node.get('title') or nid}](nodes/{nid}.md) "
                 f"({len(node.get('unit_ids') or [])} units)"]
-        for uid in node.get("unit_ids") or []:
+        for uid in (node.get("unit_ids") or [])[:1]:
             if uid in units:
                 rows.append(f"{pad}  - [{name_of(uid)}](nodes/{nid}.md#{anchor(uid)}) · "
                             + units[uid]["summary"])
