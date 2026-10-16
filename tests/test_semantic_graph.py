@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from cbe import projection as graph_projection, prompts
+import pytest
 from cbe.token_budget import count_text_tokens
 
 
@@ -149,6 +150,41 @@ def test_cfg_counts_are_from_nodes_and_do_not_export_dataflow():
     assert evidence.unmapped_cfg == 1
     assert "unmapped cfg owners: 1" in graph_projection.graph_text(evidence)
     assert "exception exits are not exported by this graph" in graph_projection.graph_text(evidence)
+
+
+@pytest.mark.parametrize("name", [
+    "Request.max_content_length<redefined>0", "compare_double<duplicate>0",
+    "demo.Box.get:T()<const>", "js::program:<lambda>0:inner",
+    "Widget:<init>", "<init>:void(int)", "f<unknown>0",
+])
+@pytest.mark.parametrize("destination", ["function", "class", "missing"])
+def test_cfg_real_angle_names_map_or_report_unmapped(name, destination):
+    graph, inventory, chunks = _inputs()
+    graph["nodes"][0]["name"] = name
+    if destination == "class":
+        inventory["a.py"]["symbols"][0]["kind"] = "class"
+    elif destination == "missing":
+        graph["nodes"][0]["start_line"] = 100
+    for i, label in enumerate(["CONTROL_STRUCTURE", "RETURN", "RETURN"]):
+        graph["nodes"].append(_node(f"cfg{i}", "a.py", kind="cfg_node", label=label, owner="a"))
+    evidence = graph_projection.unit_graph(graph, ["a.py"], inventory, chunks)
+    cfg = [r.text for r in evidence.rows if r.category == "cfg"]
+    assert cfg == (["CFG A: control_structures=1, returns=2"] if destination == "function" else [])
+    assert evidence.unmapped_cfg == (0 if destination == "function" else 1)
+
+
+@pytest.mark.parametrize("name", [
+    "<lambda>12", "f<metaClassAdapter>", "<metaClassCallHandler>",
+    "<fakeNew>", "py:<module>", "<body>", "rb:<main>", "c:<global>", "<clinit>",
+    "ts::program:mapJobs:<lambda>0",
+])
+def test_cfg_known_synthetic_suffixes_are_excluded(name):
+    graph, inventory, chunks = _inputs()
+    graph["nodes"][0].update(name=name, start_line=100)
+    graph["nodes"].append(_node("cfg", "a.py", kind="cfg_node", label="RETURN", owner="a"))
+    evidence = graph_projection.unit_graph(graph, ["a.py"], inventory, chunks)
+    assert not any(r.category == "cfg" for r in evidence.rows)
+    assert evidence.unmapped_cfg == 0
 
 
 def test_ambiguity_three_candidates_and_unresolved_per_file_counts():

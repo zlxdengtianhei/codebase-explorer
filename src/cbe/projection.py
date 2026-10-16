@@ -8,11 +8,21 @@ from __future__ import annotations
 
 from collections import Counter, defaultdict
 from dataclasses import dataclass
+import re
 from typing import Any
 
 from cbe.token_budget import count_text_tokens
 
 DEFAULT_GRAPH_MAX_TOKENS = 3000
+
+# Joern names observed in the O1c Flask and O1b cjson/polyglot graphs;
+# C3b's independent cfg_check.py also documents <clinit>. Match only known
+# terminal suffixes: <redefined>, <duplicate>, <const> and <init> are real
+# source methods, and a parent <lambda> must not hide a named inner function.
+_SYNTHETIC_CFG_OWNER = re.compile(
+    r"<(?:lambda|metaClassAdapter|metaClassCallHandler|fakeNew|module|body|"
+    r"main|global|clinit)>\d*$"
+)
 
 
 def graph_state(graph: Any) -> tuple[str, str]:
@@ -171,9 +181,8 @@ def unit_graph(graph: dict, paths: list[str], inventory: dict[str, dict],
     for node in nodes.values():
         if node.get("kind") == "cfg_node" and node.get("path") in wanted:
             owner = nodes.get(node.get("owner"), {})
-            # All angle-bracket methods are analyzer-generated, including lambdas.
             method_name = str(owner.get("name", "")).rsplit(".", 1)[-1]
-            if "<" in method_name and ">" in method_name:
+            if _SYNTHETIC_CFG_OWNER.search(method_name):
                 continue
             uid = endpoint(owner)
             if uid and symbol_kinds.get(uid) in {"function", "method"}:
