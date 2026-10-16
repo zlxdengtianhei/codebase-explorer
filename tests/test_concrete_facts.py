@@ -2,13 +2,11 @@
 
 from __future__ import annotations
 
-import importlib
 import json
 
-from cbe import semantic
+from cbe import docs, symbols
 from cbe.concrete_facts import file_facts
 
-generator = importlib.import_module("cbe.generate")
 
 FIXTURE = '''\
 DEFAULT_TIMEOUT = 4.0
@@ -157,14 +155,14 @@ def _render_repo(tmp_path, source, filler_sentences):
     texts = {"pkg/__init__.py": "", "pkg/defaults.py": source}
     for path, text in texts.items():
         (repo / path).write_text(text, encoding="utf-8")
-    inventory = semantic.build_inventory({path: {"source": text} for path, text in texts.items()})
+    inventory = symbols.build_inventory({path: {"source": text} for path, text in texts.items()})
     ids = [row["id"] for entry in inventory.values() for row in entry["symbols"]]
     units = {uid: {"id": uid, "kind": "module_region", "explain": "Explained. " * filler_sentences}
              for uid in ids}
     tree = {"nodes": [{"id": "root", "parent": None, "title": "Defaults", "capability": "Defaults.",
                        "summary": "Defaults.", "unit_ids": ids}], "depends_on": []}
     run_dir = tmp_path / "run"
-    semantic.render(run_dir=run_dir, source_root=repo, inventory=inventory, units=units,
+    docs.render(run_dir=run_dir, source_root=repo, inventory=inventory, units=units,
                     dispositions={uid: {"how": "unit", "unit": uid} for uid in ids}, tree=tree)
     return run_dir
 
@@ -195,9 +193,9 @@ def test_render_keeps_facts_in_catalog_off_pages_and_points_to_find(tmp_path):
 
 def test_find_returns_a_fact_by_name_and_query_returns_the_entry(tmp_path):
     run_dir = _render_repo(tmp_path, FIXTURE, filler_sentences=2)
-    matches = generator.find(run_dir, "DEFAULT_TIMEOUT")
+    matches = docs.find(run_dir, "DEFAULT_TIMEOUT")
     assert "pkg/defaults.py" in [match["id"] for match in matches]
-    record = generator.query(run_dir, "pkg/defaults.py")
+    record = docs.query(run_dir, "pkg/defaults.py")
     assert record["id"] == "pkg/defaults.py" and record["facts"]
 
 

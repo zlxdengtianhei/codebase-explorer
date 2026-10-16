@@ -18,6 +18,8 @@ from pathlib import Path
 from threading import Lock
 from typing import Any
 
+from cbe.checks import json_object
+
 
 FIELDS = ("task", "attempt", "input_tokens", "output_tokens", "cache_tokens", "result", "seconds")
 CSV_LOCK = Lock()
@@ -30,17 +32,6 @@ class Completion:
     raw_text: str
     usage: dict[str, int | None] | None
     seconds: float
-
-
-def _json_object(text: str) -> dict[str, Any]:
-    stripped = text.strip()
-    if stripped.startswith("```"):
-        stripped = re.sub(r"^```(?:json)?\s*", "", stripped)
-        stripped = re.sub(r"\s*```$", "", stripped).strip()
-    value = json.loads(stripped)
-    if not isinstance(value, dict):
-        raise ValueError("completion must be one JSON object")
-    return value
 
 
 def _events(stdout: str) -> tuple[str, dict[str, int] | None, str | None, str | None]:
@@ -155,7 +146,7 @@ def invoke(*, task: str, attempt: int, prompt: str, repo: Path, run_dir: Path,
     value = None
     if error is None:
         try:
-            value = _json_object(text)
+            value = json_object(text)
         except (ValueError, json.JSONDecodeError) as exc:
             error = f"invalid_json:{str(exc)[:160]}"
     raw_dir = run_dir / "raw"

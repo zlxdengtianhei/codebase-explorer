@@ -9,6 +9,7 @@ import os
 
 import pytest
 
+from cbe import batching, checks, docs, usage
 from cbe.headless_completion import Completion, _events
 
 
@@ -101,8 +102,8 @@ def test_generate_renders_and_accounts_for_each_physical_call(tmp_path, monkeypa
                      for path in (run_dir / "docs" / "nodes").glob("*.md"))
     assert "src/pkg/jobs.py" in pages
     assert str(tmp_path) not in index
-    matches = generator.find(run_dir, "reserve_run")
-    assert matches and generator.query(run_dir, matches[0]["id"])["file"] == "src/pkg/jobs.py"
+    matches = docs.find(run_dir, "reserve_run")
+    assert matches and docs.query(run_dir, matches[0]["id"])["file"] == "src/pkg/jobs.py"
     with (run_dir / "calls.csv").open(newline="", encoding="utf-8") as stream:
         assert len(list(csv.DictReader(stream))) == 6
 
@@ -114,7 +115,7 @@ def test_missing_devin_cache_keeps_observed_input_and_output(tmp_path) -> None:
         "module_2,1,80,15,,ok,2\n",
         encoding="utf-8",
     )
-    result = generator._cost(tmp_path, host="devin")
+    result = usage.script_cost(tmp_path, host="devin")
     assert result["input_tokens"] == 180
     assert result["output_tokens"] == 35
     assert result["cache_tokens"] is None
@@ -125,7 +126,7 @@ def test_missing_devin_cache_keeps_observed_input_and_output(tmp_path) -> None:
 
 def test_directory_plan_keeps_subsystems_and_their_tests_apart() -> None:
     def source(path, tokens, imports=()):
-        return generator.SourceFile(path, "", tokens, "unused", [], set(imports))
+        return batching.SourceFile(path, "", tokens, "unused", [], set(imports))
 
     files = [
         source("pkg/app/base.py", 13_000),
@@ -138,9 +139,9 @@ def test_directory_plan_keeps_subsystems_and_their_tests_apart() -> None:
         source("t/unit/backends/test_redis.py", 5_000),
         source("t/unit/worker/test_pool.py", 5_000),
     ]
-    modules = generator.plan(files)
+    modules = batching.plan(files)
     assert {item.path for module in modules for item in module.files} == {item.path for item in files}
-    assert all(module.tokens <= generator.MAX_TOKENS for module in modules)
+    assert all(module.tokens <= batching.MAX_TOKENS for module in modules)
     assert all(module.is_test == all(item.is_test for item in module.files) for module in modules)
     assert {module.bucket for module in modules if module.is_test} == {"app", "backends", "worker"}
     assert all(len({item.path.split("/")[1] for item in module.files}) == 1
@@ -148,47 +149,47 @@ def test_directory_plan_keeps_subsystems_and_their_tests_apart() -> None:
 
 
 def test_plan_preserves_whole_large_file_and_rejects_oversized_one() -> None:
-    large = generator.SourceFile("pkg/huge.py", "", 31_000, "unused", [])
-    assert generator.plan([large])[0].files == [large]
-    too_large = generator.SourceFile("pkg/impossible.py", "", 60_001, "unused", [])
-    with pytest.raises(generator.GenerateError, match="one whole source file"):
-        generator.plan([too_large])
+    large = batching.SourceFile("pkg/huge.py", "", 31_000, "unused", [])
+    assert batching.plan([large])[0].files == [large]
+    too_large = batching.SourceFile("pkg/impossible.py", "", 60_001, "unused", [])
+    with pytest.raises(batching.BatchingError, match="one whole source file"):
+        batching.plan([too_large])
 
 
 def test_naming_trims_long_but_complete_titles() -> None:
-    modules = [generator.Module(0, [generator.SourceFile("pkg/a.py", "", 1, "unused", [])], "pkg")]
+    modules = [batching.Module(0, [batching.SourceFile("pkg/a.py", "", 1, "unused", [])], "pkg")]
     value = {"names": [{"module": 0, "title": "A descriptive module title " * 5}]}
-    generator._check_naming(value, modules)
+    checks.check_naming(value, modules)
     assert len(value["names"][0]["title"]) <= 80
 
 
 def test_primary_directory_share_uses_direct_parent_not_a_common_ancestor() -> None:
-    module = generator.Module(0, [
-        generator.SourceFile("pkg/a/x.py", "", 1, "unused", []),
-        generator.SourceFile("pkg/a/y.py", "", 1, "unused", []),
-        generator.SourceFile("pkg/b/z.py", "", 1, "unused", []),
+    module = batching.Module(0, [
+        batching.SourceFile("pkg/a/x.py", "", 1, "unused", []),
+        batching.SourceFile("pkg/a/y.py", "", 1, "unused", []),
+        batching.SourceFile("pkg/b/z.py", "", 1, "unused", []),
     ], "pkg")
-    assert generator._primary_directory(module) == ("pkg/a", 2 / 3)
+    assert batching.primary_directory(module) == ("pkg/a", 2 / 3)
 
 
 def test_test_name_prefers_root_implementation_over_same_named_cli_adapter() -> None:
     files = [
-        generator.SourceFile("pkg/result.py", "", 3_000, "unused", []),
-        generator.SourceFile("pkg/bin/result.py", "", 3_000, "unused", []),
-        generator.SourceFile("t/unit/tasks/test_result.py", "", 2_000, "unused", []),
+        batching.SourceFile("pkg/result.py", "", 3_000, "unused", []),
+        batching.SourceFile("pkg/bin/result.py", "", 3_000, "unused", []),
+        batching.SourceFile("t/unit/tasks/test_result.py", "", 2_000, "unused", []),
     ]
-    modules = generator.plan(files)
+    modules = batching.plan(files)
     test_module = next(module for module in modules if module.is_test)
     assert test_module.bucket == "core"
 
 
 def test_exact_test_directory_beats_singularized_neighbor() -> None:
     files = [
-        generator.SourceFile("pkg/app/base.py", "", 100, "unused", []),
-        generator.SourceFile("pkg/apps/beat.py", "", 100, "unused", []),
-        generator.SourceFile("t/unit/apps/test_beat.py", "", 100, "unused", []),
+        batching.SourceFile("pkg/app/base.py", "", 100, "unused", []),
+        batching.SourceFile("pkg/apps/beat.py", "", 100, "unused", []),
+        batching.SourceFile("t/unit/apps/test_beat.py", "", 100, "unused", []),
     ]
-    modules = generator.plan(files)
+    modules = batching.plan(files)
     test_module = next(module for module in modules if module.is_test)
     assert test_module.bucket == "apps"
 
@@ -428,9 +429,9 @@ def test_generate_resume_rejects_a_different_graph(tmp_path) -> None:
 def test_system_limit_grows_with_the_module_count() -> None:
     # A recorded GLM overview of 3147 characters once voided a whole 13-module run.
     system = {"overview": "Overview.", "maintenance_navigation": "n" * 3147}
-    generator._check_system(system, generator.system_limit(13))
+    checks.check_system(system, checks.system_limit(13))
     with pytest.raises(ValueError, match="at most 2000"):
-        generator._check_system({"overview": "x", "maintenance_navigation": "n" * 3147})
+        checks.check_system({"overview": "x", "maintenance_navigation": "n" * 3147})
 
 
 def test_scan_keeps_own_source_in_build_dist_vendor_hidden_and_minified(tmp_path) -> None:
@@ -449,7 +450,7 @@ def test_scan_keeps_own_source_in_build_dist_vendor_hidden_and_minified(tmp_path
     for path, text in {**own, **cached}.items():
         (repo / path).write_text(text, encoding="utf-8")
     (repo / "notes.md").write_text("# not source\n", encoding="utf-8")
-    assert {item.path for item in generator.scan(repo)} == set(own)
+    assert {item.path for item in batching.scan(repo)} == set(own)
 
 
 def test_scan_skips_symlinked_sources(tmp_path) -> None:
@@ -460,4 +461,4 @@ def test_scan_skips_symlinked_sources(tmp_path) -> None:
     outside.write_text("def secret():\n    return 0\n", encoding="utf-8")
     os.symlink(outside, repo / "external.py")
     os.symlink(repo / "real.py", repo / "internal_link.py")
-    assert [item.path for item in generator.scan(repo)] == ["real.py"]
+    assert [item.path for item in batching.scan(repo)] == ["real.py"]

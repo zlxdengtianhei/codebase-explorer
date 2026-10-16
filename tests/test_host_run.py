@@ -8,8 +8,9 @@ from pathlib import Path
 
 import pytest
 
+from cbe import usage
 from cbe import cli, host_run
-from cbe.generate import find
+from cbe.docs import find
 
 
 def _repo(tmp_path: Path) -> Path:
@@ -216,7 +217,7 @@ def test_import_claude_and_codex_usage_and_cost_report(tmp_path: Path) -> None:
     _drive(run_dir)
     tag = json.loads((run_dir / "host" / "state.json").read_text())["run_tag"]
 
-    estimate = host_run.cost(run_dir, model="claude-sonnet-5-5")
+    estimate = usage.cost(run_dir, model="claude-sonnet-5-5")
     assert estimate["basis"] == "estimate" and "ESTIMATES" in estimate["statement"]
     assert estimate["totals"]["usd"] > 0 and (run_dir / "host" / "COST.md").is_file()
 
@@ -232,7 +233,7 @@ def test_import_claude_and_codex_usage_and_cost_report(tmp_path: Path) -> None:
             "input_tokens": 2, "cache_creation_input_tokens": 10, "cache_read_input_tokens": 100, "output_tokens": 60}}},
     ]
     (session / "agent-a1.jsonl").write_text("\n".join(json.dumps(line) for line in lines) + "\n")
-    imported = host_run.import_usage(run_dir, "claude-code", tmp_path / "claude")
+    imported = usage.import_usage(run_dir, "claude-code", tmp_path / "claude")
     assert imported["tasks_with_exact_usage"] == 1
 
     rollouts = tmp_path / "codex" / "2026" / "10" / "06"
@@ -246,9 +247,9 @@ def test_import_claude_and_codex_usage_and_cost_report(tmp_path: Path) -> None:
     ]
     (rollouts / "rollout-x.jsonl").write_text("\n".join(json.dumps(event) for event in events) + "\n")
     (rollouts / "rollout-main.jsonl").write_text(json.dumps({"type": "session_meta", "payload": {"source": "cli"}}) + "\n")
-    assert host_run.import_usage(run_dir, "codex", tmp_path / "codex")["tasks_with_exact_usage"] == 1
+    assert usage.import_usage(run_dir, "codex", tmp_path / "codex")["tasks_with_exact_usage"] == 1
 
-    report = host_run.cost(run_dir, model="claude-sonnet-5-5")
+    report = usage.cost(run_dir, model="claude-sonnet-5-5")
     rows = {row["task"]: row for row in report["tasks"]}
     assert report["basis"] == "mixed"
     assert rows["names"]["basis"] == "exact"
@@ -264,7 +265,7 @@ def test_import_claude_and_codex_usage_and_cost_report(tmp_path: Path) -> None:
     assert "Price equivalent: unknown" in (run_dir / "host" / "COST.md").read_text()
     assert json.loads((run_dir / "host" / "cost.json").read_text())["totals"]["usd"] is None
 
-    supplied = host_run.cost(run_dir, price=(1.0, 2.0, 3.0, 4.0))
+    supplied = usage.cost(run_dir, price=(1.0, 2.0, 3.0, 4.0))
     priced = {row["task"]: row for row in supplied["tasks"]}
     assert priced["system"]["usd_api_equivalent"] == 0.0028
     assert supplied["totals"]["usd"] > 0
@@ -274,10 +275,10 @@ def test_import_claude_and_codex_usage_and_cost_report(tmp_path: Path) -> None:
 def test_cost_unknown_estimates_and_explicit_free_rates(tmp_path: Path) -> None:
     run_dir = Path(host_run.plan(_repo(tmp_path), tmp_path / "run")["run_dir"])
     _drive(run_dir)
-    unknown = host_run.cost(run_dir, model="gpt-6-astra")
+    unknown = usage.cost(run_dir, model="gpt-6-astra")
     assert unknown["basis"] == "estimate"
     assert unknown["totals"]["usd"] is None and unknown["estimate_usd"] is None
-    free = host_run.cost(run_dir, model="gpt-6-astra", price=(0.0, 0.0, 0.0, 0.0))
+    free = usage.cost(run_dir, model="gpt-6-astra", price=(0.0, 0.0, 0.0, 0.0))
     assert free["totals"]["usd"] == 0.0 and free["estimate_usd"] == 0.0
     assert "Price equivalent: $0.00" in (run_dir / "host" / "COST.md").read_text()
 

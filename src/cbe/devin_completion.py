@@ -18,7 +18,8 @@ from contextlib import closing
 from pathlib import Path
 from urllib.parse import quote
 
-from cbe.headless_completion import Completion, _csv_row, _json_object
+from cbe.checks import json_object
+from cbe.headless_completion import Completion, _csv_row
 
 
 DEFAULT_DEVIN_CONFIG = {
@@ -170,7 +171,7 @@ def invoke(*, task: str, attempt: int, prompt: str, repo: Path, run_dir: Path,
     value = None
     if error is None:
         try:
-            value = _json_object(response)
+            value = json_object(response)
         except (ValueError, json.JSONDecodeError) as exc:
             error = f"invalid_json:{str(exc)[:160]}"
     raw_dir = run_dir / "raw"

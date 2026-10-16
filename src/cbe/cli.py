@@ -152,7 +152,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def _host(args: argparse.Namespace):
-    from cbe import host_run
+    from cbe import host_run, usage
 
     command = args.host_command
     if command == "plan":
@@ -164,9 +164,9 @@ def _host(args: argparse.Namespace):
     if command == "next":
         return host_run.next_tasks(run_dir, limit=args.max, owner=args.owner, reclaim_after=args.reclaim_after)
     if command == "submit":
-        usage = {"total_tokens": args.usage_tokens, "tool_uses": args.tool_uses,
-                 "duration_ms": args.duration_ms, "source": args.usage_source}
-        return host_run.submit(run_dir, args.task, result=args.result, usage=usage)
+        reported = {"total_tokens": args.usage_tokens, "tool_uses": args.tool_uses,
+                    "duration_ms": args.duration_ms, "source": args.usage_source}
+        return host_run.submit(run_dir, args.task, result=args.result, usage=reported)
     if command == "status":
         return host_run.status(run_dir)
     if command == "resume":
@@ -180,15 +180,15 @@ def _host(args: argparse.Namespace):
     if command == "verify":
         return host_run.verify(run_dir)
     if command == "import-usage":
-        return host_run.import_usage(run_dir, args.harness, args.root)
+        return usage.import_usage(run_dir, args.harness, args.root)
     price = None
     if args.price:
         parts = [float(value) for value in args.price.split(",")]
         if len(parts) != 4:
             raise host_run.HostRunError("--price needs input,output,cache_write,cache_read")
         price = tuple(parts)
-    return host_run.cost(run_dir, model=args.model, price=price,
-                         overhead=args.overhead or host_run.DEFAULT_OVERHEAD_TOKENS)
+    return usage.cost(run_dir, model=args.model, price=price,
+                         overhead=args.overhead or usage.DEFAULT_OVERHEAD_TOKENS)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -286,7 +286,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "host":
             print(json.dumps(_host(args), ensure_ascii=False, indent=2))
             return 0
-        from cbe.generate import find, query
+        from cbe.docs import find, query
 
         if args.command == "find":
             print(json.dumps(find(args.run_dir, args.term, limit=args.limit), ensure_ascii=False, indent=2))

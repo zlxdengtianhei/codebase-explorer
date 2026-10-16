@@ -1,0 +1,207 @@
+"""What each task's author is told: the rules and task bodies for every task kind."""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+from cbe.batching import Module
+from cbe.checks import RELATION_KINDS
+from cbe.projection import DEFAULT_GRAPH_MAX_EDGES, DEFAULT_GRAPH_MAX_NODES, graph_prompt_lines
+
+
+TOOL_FREE_RULES = """You document source code in one response. Use only supplied source and signatures. Never use tools or ask to read files. Return exactly one JSON object, no Markdown fences. Separate observed syntax from inferred behavior; state uncertainty instead of inventing runtime facts. Be concise. Test functions and trivial accessors need no individual prose. Paths identify files; do not repeat large source passages."""
+
+
+def names_prompt(modules: list[Module]) -> str:
+    rows = [{"module": module.number, "subsystem": module.bucket,
+             "kind": "tests" if module.is_test else "source",
+             "files": [f.path for f in module.files],
+             "signatures": [name for f in module.files for name in f.signatures[:30]]}
+            for module in modules]
+    return ("TASK: Give each source module a short functional title, not a numbered part or path hash. "
+            "Return JSON: {\"names\":[{\"module\":0,\"title\":\"...\"}, ...]}. "
+            "Respect each module's subsystem and test/source kind. Name the common role, not a list of unrelated files. "
+            "Keep mixed-language scope honest. Modules:\n" + json.dumps(rows, ensure_ascii=False))
+
+
+FILE_TASK_RULES = (
+    "Read every listed source file completely with your file-reading tool; page through long files. "
+    "Use only those source files, the supplied signatures, and the provided frozen graph evidence. "
+    "Do not open other source files, execute repository code, search the web, or modify the repository. "
+    "The supplied graph-query command is allowed to read a slice of the frozen graph. "
+    "Separate observed syntax from inferred behavior; state uncertainty instead "
+    "of inventing runtime facts. Be concise. Test functions and trivial accessors need no individual prose. "
+    "Paths identify files; do not repeat large source passages.")
+NO_FILE_RULES = (
+    "Everything you need is in this file. Do not read source files, run code, search the web, or modify "
+    "the repository. Do not invent details that the supplied material does not show.")
+
+
+def unit_digest(unit: dict) -> dict:
+    """Complete semantic view of one unit for tree decisions: full explain,
+    every extra note, every uncertainty and every relation with its basis."""
+    relations = [{"target": rel.get("target"), "kind": rel.get("kind", "use"),
+                  "basis": rel.get("basis") or ""}
+                 for rel in unit.get("relations") or [] if isinstance(rel, dict)]
+    extras = [{"topic": extra.get("topic"), "note": extra.get("note")}
+              for extra in unit.get("extras") or [] if isinstance(extra, dict)]
+    uncertainties = [item for item in unit.get("uncertainties") or [] if isinstance(item, str)]
+    return {"id": unit.get("id"), "kind": unit.get("kind"),
+            "explain": unit.get("explain") or "", "extras": extras,
+            "uncertainties": uncertainties, "relations": relations,
+            "members": unit.get("members") or []}
+
+
+def detail_prompt(paths: list[str], inventory: dict[str, dict], *,
+                  chunks: list[dict] | None = None,
+                  source_root: Path | None = None,
+                  graph: dict | None = None,
+                  graph_max_nodes: int = DEFAULT_GRAPH_MAX_NODES,
+                  graph_max_edges: int = DEFAULT_GRAPH_MAX_EDGES,
+                  expand_context_path: str | None = None,
+                  context_diagnostics: list[dict] | None = None,
+                  issues: list[str] | None = None,
+                  embed: bool = True) -> str:
+    """Build one detail task.
+
+    ``embed=True`` is the tool-free script driver: the source chunk text is
+    inlined once. ``embed=False`` is the host-agent driver: the prompt lists the
+    absolute file paths and chunk line ranges instead, so the text is not sent
+    twice. Graph context, when present, is attached once at chunk granularity;
+    a run without a graph says so instead of implying relations were analyzed.
+    """
+    inv_rows = [{"file": path, "tokens": inventory[path].get("tokens", 0),
+                 "known_empty": bool(inventory[path].get("known_empty")),
+                 "symbols": inventory[path]["symbols"]} for path in paths]
+    header = [
+        "You build compact structured detail units for a code-documentation pipeline. "
+        "Use ONLY the supplied source; never invent runtime behavior; record real "
+        "uncertainty in 'uncertainties' instead of guessing.",
+        "",
+        "OUTPUT: exactly one JSON object, no Markdown fences, no commentary:",
+        '{"units":[...],"dispositions":{...},"batch_notes":"..."}',
+        "",
+        "units: objects with EXACTLY these fields",
+        "  id (string; for one symbol use its exact inventory id; for a merged group use "
+        "'grp:<kebab-slug-starting-with-the-file-name>'; ids unique here)",
+        "  kind: class | function | method | group | module_region",
+        "  explain (string): prose that lets a senior engineer understand this unit WITHOUT "
+        "reading the code and predict its boundary behavior. Cover responsibility and "
+        "boundary, key behavior, entry and input/output semantics, behavior-changing "
+        "conditions with their consequences, exception catch/propagate/fallback order, side "
+        "effects and state, and collaboration with unproven boundaries. Do not restate the "
+        "listing line by line; never paraphrase only the signature.",
+        "  extras (list, optional): {\"topic\": condition|failure|side_effect|field|contract, "
+        "\"note\": <one clear statement>} only for a necessity the explain does not cover.",
+        "  relations (list, optional): {\"target\": <inventory id or grp: id>, \"kind\": "
+        + str(sorted(RELATION_KINDS)) + ", \"basis\": <code evidence>}. kind=call only for an "
+        "invocation visible in the code; use 'use' when unsure.",
+        "  uncertainties (list of strings): real unproven boundaries of this reading.",
+        "  members (optional): inventory ids fully explained inside this unit.",
+        "Do NOT emit 'source' or any line-range field: the program derives published ranges "
+        "from the inventory.",
+        "",
+        "dispositions: one entry for EVERY id in the INVENTORY below, no key missing, no "
+        "extra keys: \"<inventory id>\": {\"how\": unit|grouped|index_only, "
+        "\"unit\": \"<unit id>\", \"reason\": \"short code-evidence statement\"}. "
+        "how=unit means the symbol got its own unit (unit id == the inventory id); "
+        "how=grouped means it is explained inside another unit; how=index_only means pure "
+        "constants/imports/re-exports with no behavior worth prose ('unit' may be null; "
+        "'reason' required). Never drop an inventory id. Fold trivial getters and test cases; "
+        "give real units to anything with actual logic. A file whose symbol list is empty "
+        "(a known-empty file) needs no disposition and no unit; do not invent prose for it.",
+    ]
+    if issues:
+        header.append("Correct these review findings without broadening claims: "
+                      + json.dumps(issues, ensure_ascii=False))
+    body: list[str] = ["INVENTORY (this batch, authoritative ids):",
+                       json.dumps(inv_rows, ensure_ascii=False), ""]
+    body += graph_prompt_lines(graph, paths, embed=embed,
+                               expand_context_path=expand_context_path,
+                               max_nodes=graph_max_nodes, max_edges=graph_max_edges)
+    if context_diagnostics:
+        body += ["SOURCE CONTEXT NOTES (program diagnostics, not model evidence):",
+                 json.dumps(context_diagnostics[:10], ensure_ascii=False), ""]
+    if embed:
+        body.append("SOURCE (verbatim; the program derives all line ranges, so the model "
+                    "never needs to emit one):")
+        for path in paths:
+            text = ""
+            if source_root is not None:
+                try:
+                    text = (source_root / path).read_text(encoding="utf-8")
+                except (OSError, UnicodeDecodeError):
+                    text = ""
+            if not text:
+                rows = sorted((chunk for chunk in (chunks or []) if chunk.get("path") == path),
+                              key=lambda chunk: (chunk.get("start_byte") or chunk.get("start_line") or 0,
+                                                 chunk.get("start_line") or 0))
+                text = "".join(chunk.get("text") or "" for chunk in rows)
+            if text:
+                note = text
+            elif inventory.get(path, {}).get("known_empty"):
+                note = "(this file is empty: it has no source text, no inventory id and needs no unit)"
+            else:
+                note = "(source text was not available; describe only the inventory ids)"
+            body += [f"==== FILE {path} ====", note]
+    else:
+        body.append("SOURCE FILES (read each listed file completely; read no other file):")
+        for path in paths:
+            rows = [chunk for chunk in (chunks or []) if chunk.get("path") == path]
+            target = str((source_root or Path(".")) / path)
+            if rows:
+                spans = ", ".join(f"L{chunk['start_line']}-L{chunk['end_line']}" for chunk in rows)
+                body.append(f"- {target} ({spans})")
+            else:
+                body.append(f"- {target}")
+    return "\n".join(header + body)
+
+
+def tree_prompt(units: dict[str, dict], files: list[str]) -> str:
+    digests = [unit_digest(units[uid]) for uid in sorted(units)]
+    return (
+        "You design a recursive semantic responsibility tree for a codebase, from the "
+        "structured detail units below. You see no raw source: reason only from these "
+        "units. Each unit carries its COMPLETE explain, extras, uncertainties and "
+        "relations; all of them are authoritative for grouping decisions.\n\n"
+        "OUTPUT: exactly one JSON object, no Markdown fences, no commentary: "
+        '{"nodes":[...],"depends_on":[...]}\n\n'
+        "nodes: objects with fields\n"
+        "  id (short kebab slug, unique), parent (id of the parent; exactly ONE node - the "
+        "root - has parent null), title (short name), capability (what responsibility this "
+        "node owns and why its children and units belong together; for any node with "
+        "children this must be a real explanation of the shared capability), summary (how a "
+        "reader should use this subtree; 2-4 sentences), unit_ids (list of unit ids whose "
+        "PRIMARY home is this node; every unit id below must appear in exactly one node).\n"
+        "A node may have children AND its own unit_ids. The tree may be uneven. Create "
+        "genuine intermediate capability nodes; do NOT invent filler nodes and do NOT "
+        "flatten everything under the root. Do not mirror the directory layout unless the "
+        "responsibilities really coincide.\n"
+        "depends_on: list of {from, to, basis} between node ids: 'from' needs 'to'. basis "
+        "cites unit-level evidence (unit ids / call / import). Real cycles are allowed.\n\n"
+        "Every unit id in UNITS must be assigned exactly once.\n\n"
+        "FILES: " + json.dumps(sorted(files), ensure_ascii=False) + "\n\n"
+        "UNITS:\n" + json.dumps(digests, ensure_ascii=False)
+    )
+
+
+def review_prompt(units: dict | None, detail_task: str) -> str:
+    """An independent reader checks one batch's accepted units against the same source."""
+    return ("TASK: Check these structured detail units against the source. Return JSON "
+            "{\"decision\":\"accepted\" or \"needs_repair\",\"issues\":[...]} . Only report "
+            "material unsupported or missing behavior, a wrong condition or failure surface, or a "
+            "unit attributed to the wrong symbol. Do not judge writing style.\n"
+            "DOCUMENTATION (structured units): " + json.dumps(units, ensure_ascii=False) + "\n\n" + detail_task)
+
+
+def system_prompt(nodes: list[dict], limit: int) -> str:
+    """The overview author sees only the tree's node summaries, never source."""
+    summaries = [{"id": node.get("id"), "title": node.get("title"),
+                  "capability": node.get("capability"), "summary": node.get("summary"),
+                  "parent": node.get("parent"), "units": len(node.get("unit_ids") or [])}
+                 for node in nodes]
+    return ("TASK: Synthesize only these semantic node summaries into an overview and maintenance "
+            f"navigation for the repository. Return JSON with nonempty strings overview and "
+            f"maintenance_navigation, each at most {limit} characters. Explain which node to open for "
+            "a maintenance question; do not invent unseen details.\n" + json.dumps(summaries, ensure_ascii=False))

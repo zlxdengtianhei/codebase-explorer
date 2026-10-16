@@ -6,7 +6,7 @@ import json
 import sqlite3
 
 from cbe.devin_completion import _observe, _response_text
-from cbe.generate import SourceFile, plan
+from cbe.batching import SourceFile, plan
 
 
 def test_banner_is_removed_before_json_result() -> None:

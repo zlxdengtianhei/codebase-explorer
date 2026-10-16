@@ -1446,8 +1446,8 @@ def check_graph_source(repo: Path, graph: dict[str, Any], frozen_hashes: dict[st
             raise GraphSourceMismatch(rel, expected, actual,
                                       "boundary source drifted: content hash differs from current source")
     unmanifested: set[str] = set()
-    for anchor in _graph_source_anchors(graph):
-        raw_path = anchor.get("path")
+    anchored = {anchor.get("path") for anchor in _graph_source_anchors(graph)}
+    for raw_path in anchored:
         if not isinstance(raw_path, str) or not raw_path:
             continue
         try:

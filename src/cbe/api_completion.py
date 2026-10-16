@@ -27,7 +27,8 @@ import urllib.request
 from pathlib import Path
 from typing import Any
 
-from cbe.headless_completion import Completion, _csv_row, _json_object
+from cbe.checks import json_object
+from cbe.headless_completion import Completion, _csv_row
 
 
 DEFAULT_API_CONFIG: dict[str, Any] = {
@@ -313,7 +314,7 @@ def invoke(*, task: str, attempt: int, prompt: str, repo: Path, run_dir: Path,
 
     if error is None:
         try:
-            value = _json_object(text)
+            value = json_object(text)
         except (ValueError, json.JSONDecodeError) as exc:
             error = f"invalid_json:{_redact(str(exc), secrets)[:160]}"
     (raw_dir / f"{safe_task}-{attempt}.api.json").write_text(
