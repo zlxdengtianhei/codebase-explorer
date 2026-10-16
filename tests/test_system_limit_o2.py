@@ -1,4 +1,4 @@
-"""Regression probes for the two independent INDEX defects."""
+"""System prompt and submission use the same semantic-node character limit."""
 import json
 import re
 from pathlib import Path
@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from cbe import host_run
-from test_host_run import _repo, _drive, _answer_task, _good
+from test_host_run import _repo, _answer_task, _good
 
 
 @pytest.mark.parametrize("node_count", [1, 12, 13])

@@ -1,12 +1,8 @@
-"""Regression probes for the two independent INDEX defects."""
-import json
-import re
+"""Accepted system overview and navigation appear in the published INDEX."""
 from pathlib import Path
 
-import pytest
-
 from cbe import host_run
-from test_host_run import _repo, _drive, _answer_task, _good
+from test_host_run import _repo, _drive
 
 
 def test_accepted_system_is_published(tmp_path):
