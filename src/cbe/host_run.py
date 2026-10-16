@@ -69,11 +69,9 @@ def write_json(path: Path, value: Any) -> None:
     os.replace(temporary, path)
 
 
-def _read_context(run_dir: Path) -> dict[str, Any]:
-    path = run_dir / "context.json"
-    if not path.is_file():
-        raise HostRunError(f"no frozen source context at {path}")
-    return json.loads(path.read_text(encoding="utf-8"))
+class _RunState(dict[str, Any]):
+    # Cache only within one locked operation; attributes are never serialized.
+    context: dict[str, Any] | None = None
 
 
 def context_digest(context: dict[str, Any]) -> str:
@@ -105,11 +103,22 @@ def _verified_context(run_dir: Path, state: dict[str, Any]) -> dict[str, Any]:
     Runs before every prompt, dispatch, submission, resume and verification, so
     a rewritten ``context.json`` cannot smuggle a forged graph, chunk or
     manifest into a model prompt or into evidence."""
-    context = _read_context(run_dir)
+    path = run_dir / "context.json"
+    if not path.is_file():
+        raise HostRunError(f"no frozen source context at {path}")
+    raw = path.read_bytes()
+    raw_digest = hashlib.sha256(raw).hexdigest()
     frozen = state.get("context") or {}
+    if frozen.get("raw_digest") and raw_digest != frozen["raw_digest"]:
+        raise HostRunError("frozen source context was modified after planning; start a new plan")
+    context = state.context if isinstance(state, _RunState) else None
+    if context is None:
+        context = json.loads(raw)
     if context.get("schema") != frozen.get("schema"):
         raise HostRunError("frozen context schema changed after planning; start a new plan")
-    if context_digest(context) != frozen.get("digest"):
+    # Canonical-only runs predate byte freezing. Verify their original contract
+    # once before recording the byte digest in the next successful state save.
+    if not frozen.get("raw_digest") and context_digest(context) != frozen.get("digest"):
         raise HostRunError("frozen source context was modified after planning; start a new plan")
     if bool(context.get("graph")) != bool(frozen.get("graph_present")):
         raise HostRunError("frozen context graph presence changed after planning; start a new plan")
@@ -119,6 +128,9 @@ def _verified_context(run_dir: Path, state: dict[str, Any]) -> dict[str, Any]:
         if context_files.get(path) != digest:
             raise HostRunError(f"frozen context and plan disagree on {path}; start a new plan")
     _verify_graph_manifest(Path(state["repo"]), state, context)
+    frozen["raw_digest"] = raw_digest
+    if isinstance(state, _RunState):
+        state.context = context
     return context
 
 
@@ -261,7 +273,7 @@ def locked_state(run_dir: Path) -> Iterator[dict[str, Any]]:
             fcntl.flock(handle, fcntl.LOCK_EX)
         except ImportError:  # pragma: no cover - non-POSIX hosts run one command at a time
             pass
-        state = json.loads(state_path.read_text(encoding="utf-8"))
+        state = _RunState(json.loads(state_path.read_text(encoding="utf-8")))
         if state.get("schema") != SCHEMA:
             found = state.get("schema")
             hint = ("; this run uses the older free-text module layout, which is not "
@@ -406,6 +418,7 @@ def plan(repo: Path, run_dir: Path | None = None, *, review: str = DEFAULT_REVIE
     for name in ("tasks", "outbox", "accepted", "raw"):
         (host_dir / name).mkdir(parents=True, exist_ok=True)
     write_json(run_dir / "context.json", context)
+    state["context"]["raw_digest"] = hashlib.sha256((run_dir / "context.json").read_bytes()).hexdigest()
     write_json(host_dir / "state.json", state)
     (run_dir / "STATUS.md").write_text(_status_markdown(state), encoding="utf-8")
     log_event(run_dir, "plan", f"{len(files)} files, {len(modules)} modules, {len(tasks)} tasks "

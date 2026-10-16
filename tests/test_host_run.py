@@ -904,3 +904,78 @@ def test_module_with_no_graph_node_gets_an_explicit_no_local_node_statement(tmp_
     anchored = next(row for row in state["modules"] if "src/pkg/jobs.py" in row["files"])
     anchored_prompt = host_run.completion_prompt(run_dir, f"module_{anchored['number'] + 1}")
     assert "Batch-internal resolved calls" in anchored_prompt or "Graph: internal=" in anchored_prompt
+
+
+@pytest.mark.parametrize("operation", ["next", "submit", "resume", "render", "prompt", "verify"])
+def test_raw_context_rejects_same_size_same_mtime_byte_change(tmp_path, operation):
+    run_dir = Path(host_run.plan(_repo(tmp_path), tmp_path / "run", review="none")["run_dir"])
+    host_run.next_tasks(run_dir, limit=1)  # exercise an already-used context
+    path = run_dir / "context.json"
+    raw, stat = path.read_bytes(), path.stat()
+    assert raw.endswith(b"\n")
+    path.write_bytes(raw[:-1] + b" ")  # same JSON value, different frozen byte
+    os.utime(path, ns=(stat.st_atime_ns, stat.st_mtime_ns))
+    assert path.stat().st_size == stat.st_size and path.stat().st_mtime_ns == stat.st_mtime_ns
+    if operation == "verify":
+        report = host_run.verify(run_dir)
+        assert any(row["check"] == "frozen_context_intact" and not row["ok"] for row in report["checks"])
+        return
+    actions = {"next": lambda: host_run.next_tasks(run_dir),
+               "submit": lambda: host_run.submit(run_dir, "names", error="unused"),
+               "resume": lambda: host_run.resume(run_dir),
+               "render": lambda: host_run.render(run_dir),
+               "prompt": lambda: host_run.completion_prompt(run_dir, "module_1")}
+    with pytest.raises(host_run.HostRunError, match="modified after planning"):
+        actions[operation]()
+
+
+def test_context_digest_not_recomputed_and_parsing_is_scoped_to_locked_operation(tmp_path, monkeypatch):
+    run_dir = Path(host_run.plan(_repo(tmp_path), tmp_path / "run", review="none")["run_dir"])
+    raw = (run_dir / "context.json").read_bytes()
+    loads, parsed = json.loads, []
+
+    def counting_loads(value, *args, **kwargs):
+        if value == raw or value == raw.decode():
+            parsed.append(1)
+        return loads(value, *args, **kwargs)
+
+    def no_canonical_digest(value):
+        pytest.fail("a new run must not recompute its canonical context digest")
+
+    monkeypatch.setattr(json, "loads", counting_loads)
+    monkeypatch.setattr(host_run, "context_digest", no_canonical_digest)
+    # Multiple detail prompts in one next operation share a parse, but still
+    # read/hash the bytes at every boundary. No cache survives the lock.
+    with host_run.locked_state(run_dir) as state:
+        host_run._verified_context(run_dir, state)
+        host_run._verified_context(run_dir, state)
+        assert len(parsed) == 1
+        path = run_dir / "context.json"
+        path.write_bytes(raw[:-1] + b" ")
+        with pytest.raises(host_run.HostRunError, match="modified after planning"):
+            host_run._verified_context(run_dir, state)
+        path.write_bytes(raw)
+    host_run.next_tasks(run_dir, limit=1)
+    assert len(parsed) == 2
+    host_run.submit(run_dir, "names", error="test failure")
+    host_run.resume(run_dir)
+    host_run.render(run_dir)
+    host_run.verify(run_dir)
+
+
+def test_legacy_canonical_run_resumes_and_acquires_byte_freeze(tmp_path):
+    run_dir = Path(host_run.plan(_repo(tmp_path), tmp_path / "run", review="none")["run_dir"])
+    state_path = run_dir / "host" / "state.json"
+    state = json.loads(state_path.read_text())
+    state["context"].pop("raw_digest", None)  # shape written by dd82d6c
+    host_run.write_json(state_path, state)
+    assert not host_run.resume(run_dir)["changed_sources"]
+    upgraded = json.loads(state_path.read_text())
+    import hashlib
+    path = run_dir / "context.json"
+    assert upgraded["context"]["raw_digest"] == hashlib.sha256(path.read_bytes()).hexdigest()
+    raw = path.read_bytes()
+    path.write_bytes(raw[:-1] + b" ")
+    with pytest.raises(host_run.HostRunError, match="modified after planning"):
+        host_run.resume(run_dir)
+
