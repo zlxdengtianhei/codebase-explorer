@@ -191,7 +191,7 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
     for uid in sorted(set(units) | set(dispositions)):
         symbol = symbol_records.get(uid, {})
         base = symbol.get("name") or short_name(uid)
-        if symbol.get("kind") == "module_residual":
+        if "::module_residual::" in uid or symbol.get("kind") == "module_residual":
             spans = symbol["ranges"][0]["lines"]
             base = f"{Path(symbol['file']).name} 模块代码（L{spans[0][0]}—L{spans[-1][1]}）"
         if base in taken:
@@ -605,6 +605,7 @@ def query(run_dir: Path, symbol_id: str, edges: str | None = None) -> dict[str, 
                             if any(r["path"] == symbol_id for r in u.get("ranges") or [])],
                   "symbols": [listing(sid, s) for sid, s in catalog["symbols"].items()
                               if s.get("file") == symbol_id and sid not in catalog.get("units", {})],
+                  "facts": catalog["files"][symbol_id].get("facts", {}),
                   "imports": [e for e in table.values() if e.get("kind") == "import"
                               and e.get("path") == symbol_id]}
     else:
@@ -630,7 +631,7 @@ def query_text(record: dict) -> str:
     lines = [f"{record['name']}  {record['id']}"]
     for field in ("signature", "signatures", "ranges", "summary", "explain", "extras",
                   "uncertainties", "relations", "reverse_relations", "folded_members",
-                  "internal_edge_counts", "units", "symbols"):
+                  "internal_edge_counts", "facts", "units", "symbols"):
         value = record.get(field)
         if not value or (field == "summary" and record.get("explain", "").startswith(value)):
             continue

@@ -86,6 +86,23 @@ def test_source_uses_frozen_bytes_and_rejects_corruption_without_stdout(tmp_path
     assert not capsys.readouterr().out
 
 
+def test_agent_query_prose_once_and_json_opt_in(tmp_path, capsys):
+    run, ids, units, _, _ = _run(tmp_path)
+    uid = ids[0]
+    assert cli.main(["query", "--run-dir", str(run), "--id", uid]) == 0
+    text = capsys.readouterr().out
+    assert text.count(units[uid]["explain"]) == 1
+    assert "unit_detail" not in text and "KEEP THIS EVIDENCE" in text
+    assert cli.main(["query", "--run-dir", str(run), "--id", uid, "--json"]) == 0
+    record = json.loads(capsys.readouterr().out)
+    assert record["explain"] == units[uid]["explain"] and "unit_detail" not in record
+    catalog = json.loads((run / "catalog.json").read_text())
+    residuals = [uid for uid in catalog["short_names"] if "::module_residual::" in uid]
+    assert residuals
+    for uid in residuals:
+        assert "模块代码（L" in catalog["short_names"][uid]
+
+
 def test_frozen_source_crlf_and_utf8_round_trip(tmp_path):
     repo = tmp_path / "repo"
     repo.mkdir()
@@ -264,6 +281,7 @@ def test_graph_edges_and_statuses_remain_available_in_both_directions(tmp_path):
     assert "graph_nodes" not in queried and "unit_detail" not in queried
     assert docs.query(run, caller["id"], edges="all")["raw_edges"][0]["expression"] == "reserve_run(len(argv))"
     assert docs.query(run, caller["id"], edges="cfg")["raw_edges"] == [graph["edges"][1]]
+    assert cli.main(["query", "--run-dir", str(run), "--id", caller["id"]]) == 0
     # Ordinary reads work with the large frozen context unavailable.
     (run / "context.json").rename(run / "context.saved")
     assert docs.query(run, caller["id"])["outgoing"][0]["status"] == "resolved"

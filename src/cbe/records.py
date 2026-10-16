@@ -131,7 +131,7 @@ def build_records(units: dict, dispositions: dict, inventory: dict, ranges: dict
                     if key in edge}
         evidence.update(source_symbol=caller, target_symbol=callee,
                         source_name=symbols.get(caller, {}).get("name") or source.get("name") or edge.get("source"),
-                        target_name=symbols.get(callee, {}).get("name") or graph_nodes.get(edge.get("target"), {}).get("name") or edge.get("target"))
+                        target_name=symbols.get(callee, {}).get("name") or graph_nodes.get(edge.get("target"), {}).get("name") or edge.get("expression") or edge.get("method_full_name") or edge.get("target") or "unknown target")
         edge_table[edge["id"]] = evidence
         if caller:
             outgoing[caller].append(edge["id"])
