@@ -52,6 +52,15 @@ def _tree_from_prompt(prompt: str) -> dict:
                        "summary": "Start here.", "unit_ids": ids}], "depends_on": []}
 
 
+def _system_answer(prompt):
+    view = json.loads(prompt.split("RELATIONSHIPS: ", 1)[1].split("\nNODE SUMMARIES:", 1)[0])
+    candidates = view["candidate_flows"]
+    return {"dependency_descriptions": [{"from": e["from"], "to": e["to"], "description": "Uses its service."}
+                                         for e in view["dependencies"][:1]],
+            "key_flows": [{"name": f"Flow {i}", "description": "Runs the operation.",
+                           "steps": candidates[i % len(candidates)]} for i in range(3)] if candidates else []}
+
+
 def _answer(task: dict, prompt: str, *, decision: str = "accepted") -> dict:
     """Play the subagent: answer from the instruction file alone."""
     kind = task["kind"]
@@ -64,7 +73,8 @@ def _answer(task: dict, prompt: str, *, decision: str = "accepted") -> dict:
         return _tree_from_prompt(prompt)
     if kind == "review":
         return {"decision": decision, "issues": ["the negative check is missing"] if decision != "accepted" else []}
-    return {"overview": "A tiny job reservation package.", "maintenance_navigation": "Open the root node."}
+    return {"overview": "A tiny job reservation package.", "maintenance_navigation": "Open the root node.",
+            **_system_answer(prompt)}
 
 
 def _drive(run_dir: Path, *, decision: str = "accepted") -> list[str]:
@@ -610,7 +620,8 @@ def test_script_driver_carries_the_graph_into_the_module_prompt(tmp_path: Path, 
         elif "DOCUMENTATION (structured units)" in prompt:
             value = {"decision": "accepted", "issues": []}
         else:
-            value = {"overview": "A package.", "maintenance_navigation": "Open the root node."}
+            value = {"overview": "A package.", "maintenance_navigation": "Open the root node.",
+                     **_system_answer(prompt)}
         _csv_row(kwargs["csv_path"], {"task": kwargs["task"], "attempt": kwargs["attempt"],
                                       "input_tokens": 500, "output_tokens": 2, "cache_tokens": 0,
                                       "result": "ok", "seconds": 0.01})
@@ -814,7 +825,8 @@ def test_tree_waits_for_repairs_so_new_group_units_get_an_owner(tmp_path: Path) 
             elif kind == "review":
                 value = {"decision": "needs_repair", "issues": ["group the helper"]}
             else:
-                value = {"overview": "A tiny package.", "maintenance_navigation": "Open the root node."}
+                value = {"overview": "A tiny package.", "maintenance_navigation": "Open the root node.",
+                         **_system_answer(prompt)}
             Path(item["output_file"]).write_text(json.dumps(value), encoding="utf-8")
             result = host_run.submit(run_dir, item["task"], usage={"total_tokens": 1000})
             assert result["accepted"], result
@@ -867,7 +879,8 @@ def test_repair_may_reuse_its_own_module_group_ids(tmp_path: Path) -> None:
             elif kind == "review":
                 value = {"decision": "needs_repair", "issues": ["revise the group"]}
             else:
-                value = {"overview": "A tiny package.", "maintenance_navigation": "Open the root node."}
+                value = {"overview": "A tiny package.", "maintenance_navigation": "Open the root node.",
+                         **_system_answer(prompt)}
             Path(item["output_file"]).write_text(json.dumps(value), encoding="utf-8")
             result = host_run.submit(run_dir, item["task"], usage={"total_tokens": 1000})
             assert result["accepted"], result

@@ -236,13 +236,45 @@ def review_prompt(units: dict | None, detail_task: str) -> str:
             "DOCUMENTATION (structured units): " + json.dumps(units, ensure_ascii=False) + "\n\n" + detail_task)
 
 
-def system_prompt(nodes: list[dict], limit: int) -> str:
-    """The overview author sees only the tree's node summaries, never source."""
+def system_prompt(nodes: list[dict], limit: int, relationships: dict | None = None) -> str:
+    """Bound graph context to 12k tokens: remove last candidates, then dependencies.
+
+    Candidate order is the program's stable traversal; dependency order keeps
+    tree pairs first, then graph-only pairs by descending count. Node summaries
+    retain the existing tree budget and are not truncated here.
+    """
+    from cbe.token_budget import count_text_tokens
+
+    relationships = relationships or {"dependencies": [], "candidate_flows": []}
+    context = {key: relationships.get(key) for key in
+               ("graph_state", "graph_reason", "graph_only_omitted")}
+    context.update(dependencies=list(relationships["dependencies"][:80]),
+                   candidate_flows=list(relationships["candidate_flows"][:24]))
+    while count_text_tokens(json.dumps(context, ensure_ascii=False)) > 12000:
+        if context["candidate_flows"]:
+            context["candidate_flows"].pop()
+        elif context["dependencies"]:
+            context["dependencies"].pop()
+        else:
+            break
+    context["prompt_omitted"] = {key: len(relationships[key]) - len(context[key])
+                                 for key in ("dependencies", "candidate_flows")}
     summaries = [{"id": node.get("id"), "title": node.get("title"),
                   "capability": node.get("capability"), "summary": node.get("summary"),
                   "parent": node.get("parent"), "units": len(node.get("unit_ids") or [])}
                  for node in nodes]
-    return ("TASK: Synthesize only these semantic node summaries into an overview and maintenance "
+    return ("TASK: Synthesize these semantic node summaries and program-derived relationships into an overview and maintenance "
             f"navigation for the repository. Return JSON with nonempty strings overview and "
             f"maintenance_navigation, each at most {limit} characters. Explain which node to open for "
-            "a maintenance question; do not invent unseen details.\n" + json.dumps(summaries, ensure_ascii=False))
+            "a maintenance question; do not invent unseen details. Also return dependency_descriptions: "
+            "[{\"from\":\"node id\",\"to\":\"node id\",\"description\":\"one sentence\"}], describing "
+            "at least one key dependency when the table is nonempty (otherwise []). Use existing pairs only; "
+            "the program owns evidence labels. Return key_flows: [{\"name\":\"short name\","
+            "\"description\":\"one sentence\",\"steps\":[\"unit id\",\"unit id\"]}]. Select 3-7 key flows "
+            "from candidates and keep their unit ids. If fewer than three candidates exist, you may describe "
+            "distinct useful subpaths using those same ids. When there are no candidates, return []. "
+            "Use 2-8 steps per flow, at most 300 characters per name or description. Describe how the parts "
+            "cooperate; link to details rather than repeating unit explanations. Unsupported transitions "
+            "will be labeled model inferred by the program.\nRELATIONSHIPS: "
+            + json.dumps(context, ensure_ascii=False) + "\nNODE SUMMARIES: " + json.dumps(summaries, ensure_ascii=False))
+

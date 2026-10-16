@@ -216,11 +216,22 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
         taken.add(name)
         names[uid] = name
     name_of = lambda uid: names.get(uid, short_name(uid))
+    from cbe import aggregation
+    _, unit_edges = aggregation.inputs(units, dispositions, inventory,
+                                        {**(context or {}), "graph": graph})
+    relationships = aggregation.annotate_relationships(
+        aggregation.relationship_view(tree, unit_edges, graph), system or {}, unit_edges)
+    labels = {"graph_confirmed": "图确认", "model_inferred": "模型推断", "graph_only": "图有未描述"}
     edges_by_from: dict[str, list[dict]] = {nid: [] for nid in nodes}
-    for edge in tree.get("depends_on") or []:
-        if isinstance(edge, dict) and edge.get("from") in edges_by_from \
-                and edge.get("to") in nodes:
-            edges_by_from[edge["from"]].append(edge)
+    edges_by_to: dict[str, list[dict]] = {nid: [] for nid in nodes}
+    for edge in relationships["dependencies"]:
+        edges_by_from[edge["from"]].append(edge)
+        edges_by_to[edge["to"]].append(edge)
+
+    def dependency_line(edge, target, prefix=""):
+        return (f"- [{link_text(nodes[target].get('title') or target)}]({prefix}{target}.md) · "
+                f"{labels[edge['source']]} · {edge['count']} edge(s)"
+                + (" · " + literal_links(edge["description"]) if edge["description"] else ""))
 
     from cbe.records import correction_notice
 
@@ -245,8 +256,11 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
         if edges_by_from.get(nid):
             lines += ["**Depends on.**", ""]
             for edge in edges_by_from[nid]:
-                target = nodes.get(edge["to"]) or {}
-                lines.append(f"- [{link_text(target.get('title') or edge['to'])}]({edge['to']}.md)")
+                lines.append(dependency_line(edge, edge["to"]))
+            lines.append("")
+        if edges_by_to.get(nid):
+            lines += ["**Depended on by.**", ""]
+            lines += [dependency_line(edge, edge["from"]) for edge in edges_by_to[nid]]
             lines.append("")
         parent = node.get("parent")
         if parent in nodes:
@@ -354,6 +368,53 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
     if system:
         index_lines += ["", "## Overview", "", literal_links(system["overview"]),
                         "", "## Maintenance navigation", "", literal_links(system["maintenance_navigation"])]
+    index_lines += ["", "## Dependency view", "",
+                    "箭头从使用方指向被依赖方；包含关系不算依赖。图确认同时见于 tree 与已解析调用/import，"
+                    "模型推断仅见于 tree，图有未描述仅见于图。"]
+    if relationships["graph_state"] != "provided":
+        index_lines += ["没有可用图确认；仅列模型推断：" + relationships["graph_reason"] + "。"]
+    degree = {}
+    for edge in relationships["dependencies"]:
+        for endpoint in (edge["from"], edge["to"]):
+            degree[endpoint] = degree.get(endpoint, 0) + 1
+    selected = sorted(degree, key=lambda nid: (-degree[nid], nid))[:15]
+    aliases = {nid: f"n{i}" for i, nid in enumerate(selected)}
+    if selected:
+        # Numeric Mermaid entity escapes protect quotes, brackets, markup and
+        # fences; only safe program-generated aliases become Mermaid ids.
+        def mermaid_label(text):
+            return "".join(c if c.isalnum() or c in " _-" else f"#{ord(c)};" for c in text[:100])
+        index_lines += ["", "```mermaid", "flowchart LR"]
+        index_lines += [f'  {aliases[nid]}["{mermaid_label(nodes[nid].get("title") or nid)}"]'
+                        for nid in selected]
+        for edge in relationships["dependencies"]:
+            if edge["from"] in aliases and edge["to"] in aliases:
+                arrow = "-.->" if edge["source"] == "model_inferred" else "-->"
+                index_lines.append(f"  {aliases[edge['from']]} {arrow} {aliases[edge['to']]}")
+        index_lines += ["```", "", f"按连接数选 {len(selected)} 个节点；虚线为模型推断。"]
+    else:
+        index_lines += ["没有节点依赖。"]
+    index_lines += ["", "## Dependency list", ""]
+    for edge in relationships["dependencies"]:
+        index_lines += [f"- [{link_text(nodes[edge['from']].get('title') or edge['from'])}]"
+                        f"(nodes/{edge['from']}.md) → " + dependency_line(edge, edge["to"], "nodes/")[2:]]
+    index_lines += [f"图有未描述按边数降序保留，省略 {relationships['graph_only_omitted']} 条。"]
+    if not (system or {}).get("dependency_descriptions"):
+        index_lines += ["system 未提供关键依赖说明。"]
+    index_lines += ["", "## Key flows", ""]
+    if not relationships["candidate_flows"]:
+        index_lines += ["没有候选流程：" + (relationships["graph_reason"]
+                        if relationships["graph_state"] != "provided" else
+                        "没有已解析调用或没有零入度的入口单元") + "。"]
+    if not relationships["key_flows"]:
+        index_lines += ["system 未提供关键流程。"]
+    for flow in relationships["key_flows"]:
+        index_lines += [f"- **{link_text(flow['name'])}** · {literal_links(flow['description'])}"]
+        steps = []
+        for i, uid in enumerate(flow["steps"]):
+            steps.append(f"[{link_text(name_of(uid))}](nodes/{owner[uid]}.md#{anchor(uid)})"
+                         + ("（模型推断）" if i in flow["inferred_steps"] else ""))
+        index_lines += ["  " + " → ".join(steps)]
     if index_notes:
         index_lines += ["", "## Generation notes", ""] + [f"- {item}" for item in index_notes]
     (docs_dir / "INDEX.md").write_text("\n".join(index_lines) + "\n", encoding="utf-8")
@@ -414,6 +475,9 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
                         "capability": node.get("capability"), "summary": node.get("summary")}
                   for nid, node in sorted(nodes.items())},
         "depends_on": tree.get("depends_on") or [],
+        "node_dependencies": relationships["dependencies"],
+        "relationships": {k: v for k, v in relationships.items() if k not in {"dependencies", "key_flows"}},
+        "key_flows": relationships["key_flows"],
         "dispositions": dispositions,
         "symbol_index": symbol_index,
         "inventory": inventory,
@@ -425,6 +489,8 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
     (run_dir / "catalog.json").write_text(json.dumps(catalog, ensure_ascii=False, indent=2) + "\n",
                                           encoding="utf-8")
     return {"units_rendered": len(units), "nodes": len(nodes), "owner": owner,
+            "relationship_counts": relationships["counts"], "key_flows": len(relationships["key_flows"]),
+            "candidate_flows": len(relationships["candidate_flows"]),
             "ranges_map": ranges_map, "symbol_index": symbol_index,
             "index": str(docs_dir / "INDEX.md")}
 
@@ -721,6 +787,11 @@ def query(run_dir: Path, symbol_id: str, edges: str | None = None) -> dict[str, 
         raise SemanticError("--edges must be all or comma-separated import,call,cfg,dataflow")
     catalog = query_catalog(run_dir)
     table = catalog.get("edges") or {}
+    if symbol_id in catalog.get("nodes", {}):
+        return {"id": symbol_id, "name": catalog["nodes"][symbol_id]["title"],
+                **catalog["nodes"][symbol_id],
+                "dependencies": [e for e in catalog.get("node_dependencies", []) if e["from"] == symbol_id],
+                "depended_on_by": [e for e in catalog.get("node_dependencies", []) if e["to"] == symbol_id]}
     if symbol_id in catalog["symbols"]:
         record = {"id": symbol_id, **catalog["symbols"][symbol_id]}
         for direction in ("outgoing", "incoming"):
@@ -771,7 +842,7 @@ def query_text(record: dict) -> str:
 
     summary, remainder = summary_and_remainder(record)
     lines = [f"{record.get('display_name', record['name'])}  {record['id']}"]
-    for field in ("id_corrections", "signature", "signatures", "ranges", "summary", "explain", "extras",
+    for field in ("dependencies", "depended_on_by", "id_corrections", "signature", "signatures", "ranges", "summary", "explain", "extras",
                   "uncertainties", "relations", "reverse_relations", "folded_members",
                   "internal_edge_counts", "facts", "units", "symbols"):
         value = record.get(field)

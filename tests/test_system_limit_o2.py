@@ -28,7 +28,8 @@ def test_system_prompt_and_submit_share_node_limit(tmp_path, node_count):
     prompt = Path(item["prompt_file"]).read_text()
     limit = int(re.search(r"each at most (\d+) characters", prompt)[1])
     assert limit == max(2000, min(12000, 250 * node_count))
-    answer = {"overview": "x" * limit, "maintenance_navigation": "y" * limit}
+    answer = {"overview": "x" * limit, "maintenance_navigation": "y" * limit,
+              "dependency_descriptions": [], "key_flows": []}
     result = _answer_task(run, item, answer)
     assert result["accepted"], result
     accepted = json.loads((run / "host/accepted/system.json").read_text())

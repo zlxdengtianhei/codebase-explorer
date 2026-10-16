@@ -78,6 +78,93 @@ def region_edges(edges: list[dict], membership: dict[str, str]) -> list[dict]:
             for (a, b, k), n in sorted(counts.items())]
 
 
+def relationship_view(tree: dict, edges: list[dict], graph: dict | None, *, graph_only_limit: int = 40) -> dict:
+    """Compare exact node pairs; containment does not imply a dependency.
+
+    Direct primary ownership is shared with region rollup. Ancestor/descendant
+    pairs remain literal pairs, never expand to all descendants. Only resolved
+    call/import inputs are graph evidence; model relations are excluded.
+    """
+    from cbe.graph import graph_state
+
+    state, reason = graph_state(graph)
+    membership = {uid: n["id"] for n in tree.get("nodes", []) for uid in n.get("unit_ids", [])}
+    resolved = [e for e in edges if e["kind"] in {"call", "import"}
+                and e.get("provenance") != "model_inferred"] if state == "provided" else []
+    counts = Counter()
+    kinds = defaultdict(Counter)
+    for edge in region_edges(resolved, membership):
+        pair = edge["from"], edge["to"]
+        counts[pair] += edge["count"]
+        kinds[pair][edge["kind"]] += edge["count"]
+    node_ids = {n["id"] for n in tree.get("nodes", [])}
+    model = {(e["from"], e["to"]): e.get("basis", "") for e in tree.get("depends_on", [])
+             if e.get("from") in node_ids and e.get("to") in node_ids and e["from"] != e["to"]}
+    graph_only = sorted(counts.keys() - model.keys(), key=lambda p: (-counts[p], p))
+    pairs = sorted(model) + graph_only[:graph_only_limit]
+    dependencies = [{"from": a, "to": b,
+                     "source": "graph_confirmed" if (a, b) in counts and (a, b) in model else
+                               "model_inferred" if (a, b) in model else "graph_only",
+                     "count": counts[a, b], "kinds": dict(sorted(kinds[a, b].items())),
+                     "basis": model.get((a, b), ""), "description": ""} for a, b in pairs]
+    totals = {source: sum(e["source"] == source for e in dependencies)
+              for source in ("graph_confirmed", "model_inferred", "graph_only")}
+    totals["graph_only"] = len(graph_only)
+    return {"dependencies": dependencies, "counts": totals,
+            "graph_only_omitted": max(0, len(graph_only) - graph_only_limit),
+            "graph_state": state, "graph_reason": reason,
+            "candidate_flows": candidate_flows(resolved)}
+
+
+def candidate_flows(edges: list[dict], *, max_entries: int = 12, max_depth: int = 6,
+                    max_flows: int = 24) -> list[list[str]]:
+    """Stable bounded DFS from zero-incoming units, ranked by outgoing count.
+
+    Depth counts units (six steps). Cycles end at the last unique unit. Pure
+    cyclic components have no entry and intentionally yield no candidates.
+    """
+    adjacency = defaultdict(Counter)
+    incoming = set()
+    for e in edges:
+        if e["kind"] == "call" and e.get("provenance") != "model_inferred" and e["from"] != e["to"]:
+            adjacency[e["from"]][e["to"]] += e["count"]
+            incoming.add(e["to"])
+    entries = sorted(adjacency.keys() - incoming,
+                     key=lambda uid: (-sum(adjacency[uid].values()), uid))[:max_entries]
+    result = []
+    def visit(path):
+        if len(result) >= max_flows:
+            return
+        targets = sorted((uid for uid in adjacency[path[-1]] if uid not in path),
+                         key=lambda uid: (-adjacency[path[-1]][uid], uid))
+        if len(path) >= max_depth or not targets:
+            if len(path) > 1:
+                result.append(path)
+            return
+        for uid in targets:
+            if len(result) >= max_flows:
+                break
+            visit(path + [uid])
+    for uid in entries:
+        visit([uid])
+    return result
+
+
+def annotate_relationships(view: dict, system: dict, edges: list[dict]) -> dict:
+    """Publish model prose separately from the program's evidence labels."""
+    descriptions = {(e["from"], e["to"]): e["description"]
+                    for e in system.get("dependency_descriptions", [])}
+    calls = {(e["from"], e["to"]) for e in edges if e["kind"] == "call"
+             and e.get("provenance") != "model_inferred"} if view["graph_state"] == "provided" else set()
+    flows = []
+    for flow in system.get("key_flows", []):
+        steps = flow["steps"]
+        flows.append({**flow, "inferred_steps": [i for i in range(1, len(steps))
+                                                if (steps[i-1], steps[i]) not in calls]})
+    return {**view, "dependencies": [{**e, "description": descriptions.get((e["from"], e["to"]), "")}
+                                      for e in view["dependencies"]], "key_flows": flows}
+
+
 def partition(units: dict, edges: list[dict], limits: Limits, prompt, *, context: dict | None = None) -> list[dict]:
     """Pack indivisible files into balanced regions, then measure exact prompts.
 

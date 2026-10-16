@@ -647,11 +647,13 @@ def _detail_task(run_dir: Path, state: dict[str, Any], task: dict[str, Any], *, 
         context_diagnostics=diagnostics if with_diagnostics else None, issues=issues, embed=embed)
 
 
-def _system_inputs(run_dir: Path, state: dict[str, Any]) -> tuple[list[dict], int]:
-    """Use the same semantic nodes and character limit for prompting and acceptance."""
-    units, _ = _semantic_units(run_dir, state)
-    nodes = _semantic_tree(run_dir, state, units).get("nodes") or []
-    return nodes, checks.system_limit(len(nodes))
+def _system_inputs(run_dir: Path, state: dict[str, Any]) -> tuple[list[dict], int, dict, dict]:
+    """Use the same tree, evidence and character limit for prompt and acceptance."""
+    units, edges = _aggregation_inputs(run_dir, state)
+    tree = _semantic_tree(run_dir, state, units)
+    nodes = tree.get("nodes") or []
+    view = aggregation.relationship_view(tree, edges, _verified_context(run_dir, state).get("graph"))
+    return nodes, checks.system_limit(len(nodes)), view, units
 
 
 def _body(run_dir: Path, state: dict[str, Any], task: dict[str, Any], *, embed: bool) -> tuple[str, str]:
@@ -694,8 +696,8 @@ def _body(run_dir: Path, state: dict[str, Any], task: dict[str, Any], *, embed: 
         units = _module_output(run_dir, state, task["module"])
         return reading, prompts.review_prompt(
             units, _detail_task(run_dir, state, task, embed=embed, with_diagnostics=False))
-    nodes, limit = _system_inputs(run_dir, state)
-    return prompts.NO_FILE_RULES, prompts.system_prompt(nodes, limit)
+    nodes, limit, view, _ = _system_inputs(run_dir, state)
+    return prompts.NO_FILE_RULES, prompts.system_prompt(nodes, limit, view)
 
 
 def _previous_error(task: dict[str, Any]) -> str:
@@ -851,8 +853,18 @@ def _checks(run_dir: Path, state: dict[str, Any], task: dict[str, Any]) -> tuple
                 lambda value: checks.normalize_naming(value, modules))
     if task["kind"] == "review":
         return checks.check_review, checks.normalize_review
-    _, limit = _system_inputs(run_dir, state)
-    return (lambda value: checks.check_system(value, limit), lambda value: checks.normalize_system(value, limit))
+    _, limit, view, units = _system_inputs(run_dir, state)
+    options = dict(unit_ids=set(units), dependencies=view["dependencies"],
+                   has_candidates=bool(view["candidate_flows"]))
+    repaired = False
+    def strict(value):
+        checks.check_system(value, limit, normalized=repaired, **options)
+    def normalize(value):
+        nonlocal repaired
+        flags = checks.normalize_system(value, limit, **options)
+        repaired = True
+        return flags
+    return strict, normalize
 
 
 def _usage_entry(usage: dict[str, Any] | None, attempt: int) -> dict[str, Any] | None:
@@ -1351,6 +1363,9 @@ def _render(run_dir: Path, state: dict[str, Any]) -> None:
         comparison_scope="same_run_rerender")
     summary["aggregation_principles"] = principle_report
     summary["aggregation"] = state.get("aggregation", {})
+    summary["node_dependencies"] = meta["relationship_counts"]
+    summary["key_flows"] = meta["key_flows"]
+    summary["candidate_flows"] = meta["candidate_flows"]
     write_json(previous_path, principle_report)
     with (run_dir / "docs" / "INDEX.md").open("a", encoding="utf-8") as index:
         index.write(principles.markdown(principle_report))

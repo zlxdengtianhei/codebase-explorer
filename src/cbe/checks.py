@@ -62,10 +62,33 @@ def system_limit(node_count: int) -> int:
     return max(2000, min(12000, 250 * node_count))
 
 
-def check_system(value: dict[str, Any], limit: int = 2000) -> None:
+def check_system(value: dict[str, Any], limit: int = 2000, *, unit_ids=None, dependencies=None,
+                 has_candidates: bool = False, normalized: bool = False) -> None:
     for key in ("overview", "maintenance_navigation"):
         if not isinstance(value.get(key), str) or not value[key].strip() or len(value[key]) > limit:
             raise ValueError(f"{key} must be a nonempty concise string of at most {limit} characters")
+    descriptions = value.get("dependency_descriptions")
+    flows = value.get("key_flows")
+    if not isinstance(descriptions, list) or not isinstance(flows, list):
+        raise ValueError("dependency_descriptions and key_flows must be lists")
+    pairs = None if dependencies is None else {(e["from"], e["to"]) for e in dependencies}
+    for row in descriptions:
+        if (not isinstance(row, dict) or not isinstance(row.get("from"), str)
+                or not isinstance(row.get("to"), str) or not isinstance(row.get("description"), str)
+                or not row["description"].strip() or len(row["description"]) > 300
+                or (pairs is not None and (row["from"], row["to"]) not in pairs)):
+            raise ValueError("dependency description must name an existing pair and one sentence (<=300 characters)")
+    if pairs and not descriptions and not normalized:
+        raise ValueError("describe at least one existing dependency")
+    if (has_candidates and not (normalized and not flows) and not 3 <= len(flows) <= 7) or (not has_candidates and flows):
+        raise ValueError("key_flows must contain 3-7 flows when candidates exist, otherwise []")
+    for row in flows:
+        if (not isinstance(row, dict) or any(not isinstance(row.get(k), str) or not row[k].strip()
+                                           or len(row[k]) > 300 for k in ("name", "description"))
+                or not isinstance(row.get("steps"), list) or not 2 <= len(row["steps"]) <= 8
+                or any(not isinstance(uid, str) or (unit_ids is not None and uid not in unit_ids)
+                       for uid in row["steps"])):
+            raise ValueError("each key flow needs name, one sentence, and 2-8 existing unit ids")
 
 
 def check_review(value: dict[str, Any]) -> None:
@@ -132,7 +155,8 @@ def normalize_naming(value: Any, modules: list[Module]) -> list[str]:
     return flags
 
 
-def normalize_system(value: Any, limit: int) -> list[str]:
+def normalize_system(value: Any, limit: int, *, unit_ids=None, dependencies=None,
+                     has_candidates: bool = False) -> list[str]:
     if not isinstance(value, dict):
         raise ValueError("overview result is not a JSON object")
     flags: list[str] = []
@@ -143,7 +167,22 @@ def normalize_system(value: Any, limit: int) -> list[str]:
     if not value["maintenance_navigation"].strip():
         value["maintenance_navigation"] = "See the subsystem list below."
         flags.append("maintenance_navigation was empty")
-    check_system(value, limit)
+    # Invalid new sections become explicitly empty only after the last answer.
+    for key in ("dependency_descriptions", "key_flows"):
+        probe = {**value, "dependency_descriptions": [], "key_flows": []}
+        probe[key] = value.get(key)
+        try:
+            check_system(probe, limit, unit_ids=unit_ids, dependencies=dependencies,
+                         has_candidates=has_candidates, normalized=True)
+        except ValueError as exc:
+            value[key] = []
+            flags.append(f"{key} normalized to empty: {exc}")
+        else:
+            if not value[key] and ((key == "key_flows" and has_candidates)
+                                   or (key == "dependency_descriptions" and dependencies)):
+                flags.append(f"{key} empty after final invalid answer")
+    check_system(value, limit, unit_ids=unit_ids, dependencies=dependencies,
+                 has_candidates=has_candidates, normalized=True)
     return flags
 
 

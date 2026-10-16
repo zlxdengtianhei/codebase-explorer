@@ -42,8 +42,9 @@ def _semantic_answer(prompt: str) -> dict:
         return {"nodes": [{"id": "root", "parent": None, "title": "Root",
                            "capability": "All units of the repository under one semantic root.",
                            "summary": "Start here.", "unit_ids": ids}], "depends_on": []}
+    from test_host_run import _system_answer
     return {"overview": "A small work reservation package.",
-            "maintenance_navigation": "Open the root node."}
+            "maintenance_navigation": "Open the root node.", **_system_answer(prompt)}
 
 
 def test_completion_events_keep_reasoning_and_reject_tools() -> None:
@@ -453,7 +454,8 @@ def test_generate_resume_rejects_a_different_graph(tmp_path) -> None:
 
 def test_system_limit_grows_with_the_module_count() -> None:
     # A recorded GLM overview of 3147 characters once voided a whole 13-module run.
-    system = {"overview": "Overview.", "maintenance_navigation": "n" * 3147}
+    system = {"overview": "Overview.", "maintenance_navigation": "n" * 3147,
+              "dependency_descriptions": [], "key_flows": []}
     checks.check_system(system, checks.system_limit(13))
     with pytest.raises(ValueError, match="at most 2000"):
         checks.check_system({"overview": "x", "maintenance_navigation": "n" * 3147})
