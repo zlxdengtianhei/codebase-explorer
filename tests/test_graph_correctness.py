@@ -45,7 +45,7 @@ def test_language_tokens_and_non_python_file_resolution(tmp_path):
     assert resolver.resolve("main.go", 'import "fmt"') == [("external", "fmt")]
 
 
-def test_include_resolution_is_local_then_unique_and_angle_is_external(tmp_path):
+def test_include_resolution_is_local_then_unique_and_angle_resolves_repository(tmp_path):
     for path in ("a/local.h", "b/shared.h", "a/duplicate.h", "b/duplicate.h"):
         full = tmp_path / path
         full.parent.mkdir(exist_ok=True)
@@ -54,7 +54,9 @@ def test_include_resolution_is_local_then_unique_and_angle_is_external(tmp_path)
     assert resolver.resolve("a/main.c", '#include "local.h"') == [("resolved", "a/local.h")]
     assert resolver.resolve("a/main.c", '#include "shared.h"') == [("resolved", "b/shared.h")]
     assert resolver.resolve("main.c", '#include "duplicate.h"') == [("unresolved", None)]
-    assert resolver.resolve("a/main.c", '#include <local.h>') == [("external", "local.h")]
+    assert resolver.resolve("a/main.c", '#include <local.h>') == [("resolved", "a/local.h")]
+    assert resolver.resolve("a/main.c", '#include <stdio.h>') == [("external", "stdio.h")]
+    assert resolver.resolve("a/main.c", '#include <duplicate.h>') == [("external", "duplicate.h")]
     assert resolver.resolve("a/main.c", '#include "missing.h"') == [("unresolved", None)]
 
 

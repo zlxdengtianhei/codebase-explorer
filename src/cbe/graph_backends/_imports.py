@@ -19,6 +19,11 @@ class ImportResolver:
     def __init__(self, repo: Path, files=None):
         self.repo = repo
         self.files = repository_files(repo) if files is None else files
+        self.suffix_files = {}
+        for path in sorted(self.files):
+            parts = path.split("/")
+            for start in range(len(parts)):
+                self.suffix_files.setdefault("/".join(parts[start:]), []).append(path)
         self.python_roots = [""]
         if "src" in {p.split("/")[0] for p in self.files}:
             self.python_roots.append("src/")
@@ -84,13 +89,15 @@ class ImportResolver:
             if not match:
                 return [("unresolved", None)]
             delimiter, token = match.groups()
-            if delimiter == "<":
-                return [("external", token)]
             local = canonical_repo_path(str(PurePosixPath(path).parent / token))
-            if local in self.files:
+            if delimiter == '"' and local in self.files:
                 return [("resolved", local)]
-            matches = sorted(p for p in self.files if PurePosixPath(p).name == PurePosixPath(token).name)
-            return [("resolved", matches[0])] if len(matches) == 1 else [("unresolved", None)]
+            matches = self.suffix_files.get(token, [])
+            if delimiter == '"' and not matches:
+                matches = self.suffix_files.get(PurePosixPath(token).name, [])
+            if len(matches) == 1:
+                return [("resolved", matches[0])]
+            return [("external", token)] if delimiter == "<" else [("unresolved", None)]
         token = import_token(text, suffix)
         if not token:
             return [("unresolved", None)]
