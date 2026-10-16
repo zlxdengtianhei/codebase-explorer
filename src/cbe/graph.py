@@ -261,7 +261,10 @@ def analyze_graph(
     if not fragments:
         raise GraphError("no graph backend was available for the requested languages")
 
+    from cbe.graph_backends._imports import resolve_declarations
+
     nodes, edges = _merge(fragments)
+    nodes, edges = resolve_declarations(repo, nodes, edges)
     edges = _prefer_resolved_imports(edges)
     capabilities = _merge_capabilities(fragments, requested, extra_capabilities)
 
@@ -440,55 +443,19 @@ def _merge(fragments: list[dict]) -> tuple[list[dict], list[dict]]:
     return nodes, edges
 
 
-_IMPORT_INCLUDE = re.compile(r'#\s*include\s*(.+?)\s*$')
-_IMPORT_JS = re.compile(r"""(?:require|from)\s*\(?\s*(.+?)\s*[)\s]*$""")
-_IMPORT_FROM = re.compile(r"^from\s+([.\w]+)\s+import")
-_IMPORT_PY = re.compile(r"^import\s+([\w.]+)")
-_IMPORT_GO = re.compile(r"import\s+(?:\w+\s+)?(.+)$")
-
-
-def _import_token(expression: object) -> str | None:
-    if not expression:
-        return None
-    text = str(expression).strip()
-    if not text:
-        return None
-    for pattern in (_IMPORT_INCLUDE, _IMPORT_JS, _IMPORT_FROM, _IMPORT_PY, _IMPORT_GO):
-        match = pattern.search(text)
-        if match:
-            return _clean_import_token(match.group(1))
-    # A bare module specifier (dependency-cruiser / Grimp `expression`).
-    if " " not in text and "#" not in text and len(text) < 300:
-        return _clean_import_token(text)
-    return None
-
-
-def _clean_import_token(token: str) -> str | None:
-    cleaned = token.strip().strip("\"'<>").strip().lower().lstrip("./")
-    return cleaned or None
-
-
 def _prefer_resolved_imports(edges: list[dict]) -> list[dict]:
-    """Drop an unresolved import only when a resolved import matches it.
+    """Prefer file-resolving import backends over duplicate Joern declarations.
 
-    Matching requires the same file *and* the same declared target token, so a
-    resolved ``from good import ok`` can never erase an unrelated
-    ``import missing_dependency``.  Unmatched unresolved imports are retained
-    with their backend evidence.
+    Compare canonical endpoints, never language-dependent expression spellings.
+    Unresolved declarations remain visible because no target is established.
     """
-
-    resolved = [(edge.get("path"), _import_token(edge.get("expression")))
-                for edge in edges
-                if edge.get("kind") == "import" and edge.get("status") == "resolved"]
-    resolved_set = {(path, token) for path, token in resolved if token}
-    kept: list[dict] = []
-    for edge in edges:
-        if edge.get("kind") == "import" and edge.get("status") == "unresolved":
-            token = _import_token(edge.get("expression"))
-            if token and (edge.get("path"), token) in resolved_set:
-                continue
-        kept.append(edge)
-    return kept
+    resolved = {(e.get("source"), e.get("target")) for e in edges
+                if e.get("kind") == "import" and e.get("status") == "resolved"
+                and e.get("target") and e.get("backend") != "joern"}
+    return [e for e in edges if not (
+        e.get("kind") == "import" and e.get("backend") == "joern"
+        and e.get("status") == "resolved"
+        and (e.get("source"), e.get("target")) in resolved)]
 
 
 def _unavailable(backend: str, languages: list[str], kinds: tuple[str, ...]) -> list[dict]:
