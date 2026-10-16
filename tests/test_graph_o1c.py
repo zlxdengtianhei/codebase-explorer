@@ -51,3 +51,19 @@ def test_import_boundary_rejects_self_loop_and_diagnoses_library_collision():
     _, _, diagnostics = validate_identities([], edges[1:] + [dict(kind="import", status="external",
         source="file:lib/vtls/rustls.c", target="ext:rustls.h", expression="#include <rustls.h>")], set())
     assert diagnostics == []
+
+
+def test_function_types_and_nested_function_owners_are_not_classes():
+    from cbe.graph_backends._calls import CallResolver
+    methods = [dict(nodeId=1, file="ctx.py", fullName="ctx.py:<module>.AppContext.copy"),
+               dict(nodeId=2, file="ctx.py", fullName="ctx.py:<module>.inspect"),
+               dict(nodeId=3, file="ctx.py", fullName="ctx.py:<module>.inspect.wrapper")]
+    types = [dict(name="copy", fullName=methods[0]["fullName"], file="ctx.py", inherits=["ANY"]),
+             dict(name="inspect", fullName=methods[1]["fullName"], file="ctx.py", inherits=["ANY"]),
+             dict(name="AppContext", fullName="ctx.py:<module>.AppContext", file="ctx.py", inherits=[])]
+    resolver = CallResolver(methods, {"ctx.py"}, types)
+    assert "copy" not in resolver.classes and "inspect" not in resolver.classes
+    assert "AppContext" in resolver.classes
+    for full in ("copy.py:<module>.copy", "inspect.isfunction"):
+        assert resolver.resolve(dict(methodFullName=full, callees=[dict(fullName=full, external=True)]))[0] == "external"
+    assert resolver.resolve(dict(methodFullName="AppContext.missing", callees=[dict(external=True)]))[0] == "unresolved"

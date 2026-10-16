@@ -13,7 +13,11 @@ class CallResolver:
         self.by_pair: dict[str, list[int]] = {}
         self.by_full: dict[str, list[int]] = {}
         self.classes = {"Self"}
-        self.types = {t["fullName"]: t for t in (types or []) if t.get("file") in self.files}
+        method_names = {m.get("fullName") for m in methods}
+        # pysrc2cpg also emits TYPE_DECL for every function. Those entries
+        # have the exact identity of a method, unlike their owning class.
+        self.types = {t["fullName"]: t for t in (types or []) if t.get("file") in self.files
+                      and not (str(t.get("file", "")).endswith(".py") and t["fullName"] in method_names)}
         self.types_by_name = {}
         for full, entry in self.types.items():
             name = entry.get("name") or full.split(".")[-1]
@@ -28,7 +32,8 @@ class CallResolver:
             parts = name.split(".")
             if len(parts) >= 2 and not any(p.startswith("<") for p in parts[-2:]):
                 self.by_pair.setdefault(".".join(parts[-2:]), []).append(native)
-                if str(method.get("file", "")).endswith(".py") and ":<module>." in full:
+                if (str(method.get("file", "")).endswith(".py") and ":<module>." in full
+                        and full.rsplit(".", 1)[0] not in method_names):
                     self.classes.add(parts[-2])
 
     def inherited_targets(self, receiver, name, call):
