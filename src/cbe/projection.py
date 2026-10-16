@@ -195,7 +195,8 @@ def unit_graph(graph: dict, paths: list[str], inventory: dict[str, dict],
         if node.get("kind") == "cfg_node" and node.get("path") in wanted:
             owner = nodes.get(node.get("owner"), {})
             # All angle-bracket methods are analyzer-generated, including lambdas.
-            if "<" in str(owner.get("name", "")) and ">" in str(owner.get("name", "")):
+            method_name = str(owner.get("name", "")).rsplit(".", 1)[-1]
+            if "<" in method_name and ">" in method_name:
                 continue
             uid = endpoint(owner)
             if uid and symbol_kinds.get(uid) in {"function", "method"}:

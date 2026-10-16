@@ -123,6 +123,7 @@ def test_budget_and_exact_omissions_when_cross_calls_alone_overflow():
 
 def test_cfg_counts_are_from_nodes_and_do_not_export_dataflow():
     graph, inventory, chunks = _inputs()
+    graph["nodes"][0]["name"] = "a.py:<module>.A.f"
     for i, (label, line) in enumerate([("CONTROL_STRUCTURE", 3), ("RETURN", 5),
                                      ("CALL", 9), ("RETURN", 10), ("THROW", 8)]):
         graph["nodes"].append(_node(str(i), "a.py", line, kind="cfg_node", label=label, owner="a"))
@@ -137,7 +138,7 @@ def test_cfg_counts_are_from_nodes_and_do_not_export_dataflow():
     assert merged.count("CFG A:") == 1
     assert "returns=3" in merged
     for name in ("<lambda>", "f<metaClassAdapter>", "<metaClassCallHandler>", "<fakeNew>"):
-        graph["nodes"].extend([_node(name, "a.py", name=name),
+        graph["nodes"].extend([_node(name, "a.py", name="a.py:<module>.A." + name),
             _node(name + "-return", "a.py", 1, kind="cfg_node", label="RETURN", owner=name)])
     filtered = graph_projection.graph_text(graph_projection.unit_graph(graph, ["a.py"], inventory, chunks))
     assert filtered == merged
