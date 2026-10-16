@@ -261,3 +261,40 @@ def test_tool_call_only_response_is_classified(tmp_path, server, monkeypatch) ->
                                               "tool_calls": [{"id": "t1", "type": "function"}]}}]}
     result = _call(tmp_path, server, monkeypatch)
     assert result.error and result.error.startswith("tool_call_only"), result.error
+
+
+@pytest.mark.parametrize("content", ['{"units": []}', '{"units": ['])
+def test_length_finish_rejects_text_even_when_json_is_valid(tmp_path, server, monkeypatch, content):
+    _Handler.body = {"model": "served-flash", "choices": [{"finish_reason": "length",
+                     "message": {"content": content}}],
+                     "usage": {"prompt_tokens": 10, "completion_tokens": 20}}
+    result = _call(tmp_path, server, monkeypatch)
+    assert result.value is None and result.error.startswith("output_limit:")
+    assert result.raw_text == content and result.usage["output"] == 20
+    record = json.loads((tmp_path / "run/raw/module_1-1.api.json").read_text())
+    assert record["actual_model"] == "served-flash"
+
+
+def test_flash_request_defaults_and_explicit_config_override(tmp_path, server, monkeypatch):
+    _Handler.body = {"choices": [{"finish_reason": "stop", "message": {"content": "{}"}}]}
+    result = _call(tmp_path, server, monkeypatch, model="zai/glm-5.3-flash")
+    assert result.error is None
+    assert _Handler.captured["body"]["max_tokens"] == 49152
+    assert _Handler.captured["body"]["response_format"] == {"type": "json_object"}
+    assert _Handler.captured["body"]["reasoning_effort"] == "low"
+    config = tmp_path / "run/api.json"
+    config.write_text(json.dumps({"base_url": server, "max_tokens": 60000, "reasoning_effort": "high"}))
+    result = api_completion.invoke(task="x", attempt=1, prompt="x", repo=tmp_path,
+        run_dir=tmp_path / "run", model="zai/glm-5.3-flash", config=config,
+        timeout=10, csv_path=tmp_path / "run/calls.csv")
+    assert result.error is None
+    assert _Handler.captured["body"]["max_tokens"] == 60000
+    assert _Handler.captured["body"]["reasoning_effort"] == "high"
+
+
+def test_unknown_model_does_not_receive_reasoning_or_output_defaults(tmp_path, server, monkeypatch):
+    _Handler.body = {"choices": [{"message": {"content": "{}"}}]}
+    assert _call(tmp_path, server, monkeypatch).error is None
+    assert "max_tokens" not in _Handler.captured["body"]
+    assert "reasoning_effort" not in _Handler.captured["body"]
+

@@ -117,6 +117,48 @@ cbe generate /absolute/path/to/repo --host api \
 
 `--config /absolute/path/to/config.json` provides host configuration. API credentials stay in environment variables or the supported credential-file reference. If no credential is configured, CBE omits the Authorization header for endpoints that allow unauthenticated requests. Do not put credentials in a URL. The API client records returned usage and preserves unknown values when usage is absent. Failed completions retain a bounded, redacted provider response, available usage, and finish reason before text extraction; truncation is explicit. A response with only reasoning and no answer remains a failed attempt. Reported token counts are transport/accounting evidence; they do not prove that a model understood the code.
 
+For `--host api`, exact model `zai/glm-5.3-flash` selects resource defaults from
+`cbe/model_settings.py`: 1,800 seconds per call, `max_tokens: 49152` (including
+reasoning), `reasoning_effort: "low"`, JSON object response mode, and reading-batch target/max of
+8,000/10,000 source tokens. Whole files stay intact; a single file may exceed
+the batch maximum up to the existing 60,000-token file limit. Other API model
+IDs retain 420 seconds, no explicit output/reasoning limit, and the original
+20,000/25,000 batch sizes. OpenCode and Devin keep their existing defaults.
+
+Set API resource values with `--config`; explicit `--timeout` takes precedence
+over the config, which takes precedence over model defaults. For example:
+
+```json
+{
+  "timeout": 1800,
+  "max_tokens": 60000,
+  "reasoning_effort": "low",
+  "response_format": {"type": "json_object"},
+  "batch_target_tokens": 8000,
+  "batch_max_tokens": 10000
+}
+```
+
+The endpoint must support the configured request fields. Batch limits apply to
+new plans; `--resume` keeps the frozen batches. A response ending with `length`
+(or `max_tokens`/`max_output_tokens`) fails with `output_limit`, even if its JSON
+parses. The driver retries once with the error, then leaves the task failed for
+resume; truncated attempts cannot be accepted by final normalization. Increase
+`max_tokens` for resume or start a fresh run with smaller batch limits if needed.
+Timeouts and provider failures remain visible as their own errors. Only a
+source-bearing response whose reported input is too small is marked
+`source_not_delivered`.
+
+API `summary.json` sums observed input/output tokens, including returned failed
+calls. Missing-call counters and `usage_complete: false` identify an incomplete
+sum; absent usage is never estimated. Cache totals remain unknown when any
+cache counter is missing, with the known portion in `observed_cache_tokens`.
+API price is unknown (`priced_usd: null`) unless config supplies
+`"price_per_million": [INPUT, OUTPUT, CACHE]` in USD per million tokens; missing
+usage still prevents pricing. The raw API record includes `actual_model` from
+the provider response so gateway fallback can be distinguished from the
+requested model.
+
 The signed-in OpenCode and Devin drivers remain available:
 
 ```sh

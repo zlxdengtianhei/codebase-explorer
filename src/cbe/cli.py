@@ -41,7 +41,12 @@ def build_parser() -> argparse.ArgumentParser:
     generate_p.add_argument("--review", choices=REVIEW_MODES, default=DEFAULT_REVIEW)
     generate_p.add_argument("--resume", action="store_true",
                             help="continue the run in --run-dir (default: the repository's latest run)")
-    generate_p.add_argument("--timeout", type=int, default=420)
+    generate_p.add_argument("--timeout", type=int, default=None,
+                            help="seconds per call; overrides API config/model default (otherwise 420). "
+                                 "API zai/glm-5.3-flash: 1800s, max_tokens=49152, reasoning_effort=low, "
+                                 "JSON mode, batch target/max=8000/10000; override via --config JSON keys "
+                                 "timeout,max_tokens,reasoning_effort,response_format,batch_target_tokens,"
+                                 "batch_max_tokens,price_per_million")
 
     host_p = sub.add_parser("host", help="Host-agent driven generation: the CLI plans and checks, "
                             "the host agent (Claude Code, Codex) dispatches one subagent per task")
@@ -313,7 +318,7 @@ def main(argv: list[str] | None = None) -> int:
                     raise ValueError("header language differs from the frozen context; start a new plan")
             model = args.model or ("swe-2-medium" if args.host == "devin" else "zai-coding-plan/glm-5.3-flash")
             value = generate(repo, run_dir, model=model, config=args.config,
-                             jobs=args.jobs, review=args.review, timeout=args.timeout,
+                             jobs=args.jobs, review=args.review, timeout=args.timeout, default_timeout=420,
                              host=args.host, resume=args.resume, graph_path=args.graph,
                              api_base_url=args.base_url, api_key_env=args.api_key_env)
             print(json.dumps(value, ensure_ascii=False, indent=2))

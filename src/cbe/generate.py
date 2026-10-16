@@ -14,7 +14,7 @@ from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from pathlib import Path
 from typing import Any
 
-from cbe import usage
+from cbe import batching, usage
 from cbe.headless_completion import invoke
 
 
@@ -79,21 +79,19 @@ def _mark_result(csv_path: Path, task: str, attempt: int, result: str) -> None:
 DELIVERY_FLOOR = 0.5
 
 
-def _delivery_problem(run_dir: Path, csv_path: Path) -> tuple[str | None, str]:
-    """Return ("source_not_delivered", detail) when reported input is under half the source sent."""
-    if not csv_path.is_file():
-        return None, ""
+def _delivery_problem(run_dir: Path) -> tuple[str | None, str]:
+    """Report delivery failure only when a source-bearing call proved it.
+
+    Failed calls have no reported usage. Comparing their missing counts to all
+    source sent confuses timeout/provider failures with missing source.
+    """
     state = json.loads((run_dir / "host" / "state.json").read_text(encoding="utf-8"))
-    from cbe import host_run
-    sent = host_run.source_sent_tokens(state)
-    with csv_path.open(newline="", encoding="utf-8") as stream:
-        rows = list(csv.DictReader(stream))
-    # Cached input still reached the model, so count it; calls without usage add nothing.
-    reported = sum(int(row[field]) for row in rows for field in ("input_tokens", "cache_tokens") if row[field])
-    if sent <= 0 or not any(row["input_tokens"] for row in rows) or reported >= DELIVERY_FLOOR * sent:
-        return None, ""
-    return "source_not_delivered", (f"model-reported input {reported} tokens is under "
-                                    f"{int(DELIVERY_FLOOR * 100)}% of the {sent} source tokens sent")
+    failures = [(task_id, task["errors"][-1]) for task_id, task in state["tasks"].items()
+                if task["status"] == "failed" and task["errors"]
+                and task["errors"][-1].startswith("source_not_delivered")]
+    if failures:
+        return "source_not_delivered", "; ".join(f"{task}: {error}" for task, error in failures)
+    return None, ""
 
 
 # Tasks whose prompt embeds source bodies; names and system prompts embed none.
@@ -173,10 +171,10 @@ def _csv_task(task_id: str, review: str) -> str:
 
 
 def generate(repo: Path, run_dir: Path, *, model: str, config: Path | None = None,
-             jobs: int = 4, review: str | None = None, timeout: int = 360,
+             jobs: int = 4, review: str | None = None, timeout: int | None = None,
              host: str = "opencode", resume: bool = False,
              graph_path: Path | None = None, api_base_url: str | None = None,
-             api_key_env: str | None = None) -> dict[str, Any]:
+             api_key_env: str | None = None, default_timeout: int = 360) -> dict[str, Any]:
     """Script driver: the shared run state, with each task as one tool-free completion.
 
     A task failure never voids the run. Finished modules render; failed parts
@@ -193,7 +191,7 @@ def generate(repo: Path, run_dir: Path, *, model: str, config: Path | None = Non
     repo, run_dir = repo.resolve(), run_dir.resolve()
     if not repo.is_dir():
         raise GenerateError("repository root is not a directory")
-    if jobs < 1 or review not in host_run.REVIEW_MODES or timeout < 1:
+    if jobs < 1 or default_timeout < 1 or review not in host_run.REVIEW_MODES or (timeout is not None and timeout < 1):
         raise GenerateError("jobs and timeout must be positive; review must be none, sample, or all")
     if host not in {"opencode", "devin", "api"}:
         raise GenerateError("host must be opencode, devin or api")
@@ -226,6 +224,13 @@ def generate(repo: Path, run_dir: Path, *, model: str, config: Path | None = Non
         if not config.is_file():
             raise GenerateError(f"{host} config file does not exist")
     api_overrides: dict[str, Any] = {}
+    settings: dict[str, Any] = {}
+    if host == "api":
+        from cbe.model_settings import load_config
+        settings = load_config(config, model)
+    # Keep the historical Python default (360) and CLI default (420), while
+    # distinguishing an explicit --timeout from a model/config default.
+    timeout = timeout if timeout is not None else settings.get("timeout", default_timeout)
     if host == "api":
         # Apply the CLI overrides in memory only: never copy a user config that
         # may carry an auth header into the run directory.
@@ -238,7 +243,9 @@ def generate(repo: Path, run_dir: Path, *, model: str, config: Path | None = Non
         host_run.resume(run_dir, owner=host, graph_path=graph_path)
     else:
         host_run.plan(repo, run_dir, review=review, jobs=jobs, host=host, driver="script",
-                      graph_path=graph_path)
+                      graph_path=graph_path,
+                      batch_target_tokens=settings.get("batch_target_tokens", batching.TARGET_TOKENS),
+                      batch_max_tokens=settings.get("batch_max_tokens", batching.MAX_TOKENS))
     review = json.loads((run_dir / "host" / "state.json").read_text(encoding="utf-8"))["review"]
     csv_path = run_dir / "calls.csv"
     stopped: str | None = None
@@ -309,16 +316,19 @@ def generate(repo: Path, run_dir: Path, *, model: str, config: Path | None = Non
                     _mark_result(csv_path, csv_task, item["attempt"], "normalized")
     if stopped or preflight is not None:
         host_run.release(run_dir)
-    cost = usage.script_cost(run_dir, host=host) if csv_path.is_file() else {"calls": 0}
+    cost = (usage.script_cost(run_dir, host=host, price=settings.get("price_per_million"))
+            if csv_path.is_file() else {"calls": 0})
     if preflight is None:
-        host_run.mark_partial(run_dir, *_delivery_problem(run_dir, csv_path))
+        host_run.mark_partial(run_dir, *_delivery_problem(run_dir))
     result = host_run.finish(run_dir)
     summary = {**result, "status": result.get("status", "partial"),
                "stopped": stopped, "wall_seconds": round(time.monotonic() - started, 3),
                "run_dir": str(run_dir), "index": str(run_dir / "docs" / "INDEX.md"),
                "progress_log": str(run_dir / "progress.log"), "host": host, "model": model,
                "input_token_basis": ("Devin CLI reported input_tokens; cache inclusion is unverified"
-                                     if host == "devin" else "OpenCode noncached input tokens"),
+                                     if host == "devin" else
+                                     "provider prompt_tokens minus cached_tokens; cache reported separately"
+                                     if host == "api" else "OpenCode noncached input tokens"),
                **cost}
     (run_dir / "summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
     if preflight is not None:

@@ -156,7 +156,8 @@ def _subsystem(item: SourceFile, production_areas: set[str],
     return local_area
 
 
-def _pack_directory(files: list[SourceFile], *, strict: bool = False) -> list[list[SourceFile]]:
+def _pack_directory(files: list[SourceFile], *, strict: bool = False,
+                    target_tokens: int = TARGET_TOKENS, max_tokens: int = MAX_TOKENS) -> list[list[SourceFile]]:
     """Join imports first, then fill only within a specific source directory."""
     groups = {i: [item] for i, item in enumerate(sorted(files, key=lambda item: item.path))}
     tokens = {i: group[0].tokens for i, group in groups.items()}
@@ -185,13 +186,13 @@ def _pack_directory(files: list[SourceFile], *, strict: bool = False) -> list[li
         for offset, left in enumerate(ids):
             for right in ids[offset + 1:]:
                 combined_tokens = tokens[left] + tokens[right]
-                if combined_tokens > MAX_TOKENS:
+                if combined_tokens > max_tokens:
                     continue
                 weight = links[left].get(right, 0)
                 if weight:
                     # Stable ids retain group order after removals, hence the
                     # same left/right tie break as the original list indices.
-                    pairs.append((weight, -abs(TARGET_TOKENS - combined_tokens),
+                    pairs.append((weight, -abs(target_tokens - combined_tokens),
                                   -left, -right, left, right))
         if not pairs:
             break
@@ -212,10 +213,10 @@ def _pack_directory(files: list[SourceFile], *, strict: bool = False) -> list[li
     packed: list[list[SourceFile]] = []
     for group in sorted(groups.values(), key=lambda group: (-sum(item.tokens for item in group), group[0].path)):
         candidates = [existing for existing in packed
-                      if sum(item.tokens for item in existing + group) <= MAX_TOKENS]
+                      if sum(item.tokens for item in existing + group) <= max_tokens]
         if candidates:
             chosen = max(candidates, key=lambda existing: (
-                min(sum(item.tokens for item in existing + group), TARGET_TOKENS),
+                min(sum(item.tokens for item in existing + group), target_tokens),
                 -packed.index(existing)))
             chosen.extend(group)
         else:
@@ -223,9 +224,10 @@ def _pack_directory(files: list[SourceFile], *, strict: bool = False) -> list[li
     return packed
 
 
-def _directory_groups(files: list[SourceFile], *, strict_root: Path | None = None) -> list[list[SourceFile]]:
+def _directory_groups(files: list[SourceFile], *, strict_root: Path | None = None,
+                      target_tokens: int = TARGET_TOKENS, max_tokens: int = MAX_TOKENS) -> list[list[SourceFile]]:
     """Keep fitting subtrees whole; recurse only when a subtree is oversized."""
-    if sum(item.tokens for item in files) <= MAX_TOKENS:
+    if sum(item.tokens for item in files) <= max_tokens:
         return [files]
     parents = {Path(item.path).parent for item in files}
     common = Path(os.path.commonpath([str(parent) for parent in parents]))
@@ -236,8 +238,11 @@ def _directory_groups(files: list[SourceFile], *, strict_root: Path | None = Non
             continue
         relative = Path(item.path).relative_to(common)
         children.setdefault(relative.parts[0], []).append(item)
-    groups = _pack_directory(direct, strict=common == strict_root)
-    child_groups = [_directory_groups(children[name], strict_root=strict_root) for name in sorted(children)]
+    groups = _pack_directory(direct, strict=common == strict_root,
+                             target_tokens=target_tokens, max_tokens=max_tokens)
+    child_groups = [_directory_groups(children[name], strict_root=strict_root,
+                                     target_tokens=target_tokens, max_tokens=max_tokens)
+                    for name in sorted(children)]
     # Small sibling directories may share one module, but never cross an area
     # or a test/production boundary (the caller already partitioned both).
     small = [group for sibling in child_groups for group in sibling
@@ -245,11 +250,15 @@ def _directory_groups(files: list[SourceFile], *, strict_root: Path | None = Non
     groups.extend(group for sibling in child_groups for group in sibling
                   if sum(item.tokens for item in group) >= 4_000)
     if small:
-        groups.extend(_pack_directory([item for group in small for item in group]))
+        groups.extend(_pack_directory([item for group in small for item in group],
+                                      target_tokens=target_tokens, max_tokens=max_tokens))
     return groups
 
 
-def plan(files: list[SourceFile]) -> list[Module]:
+def plan(files: list[SourceFile], *, target_tokens: int = TARGET_TOKENS,
+         max_tokens: int = MAX_TOKENS) -> list[Module]:
+    if target_tokens < 1 or max_tokens < target_tokens:
+        raise BatchingError("batch limits require 0 < target_tokens <= max_tokens")
     for item in files:
         if item.tokens > MAX_SINGLE_FILE_TOKENS:
             raise BatchingError(f"one whole source file exceeds {MAX_SINGLE_FILE_TOKENS} tokens: {item.path}")
@@ -267,7 +276,8 @@ def plan(files: list[SourceFile]) -> list[Module]:
     bins: list[Module] = []
     for (area, is_test), members in sorted(partitions.items()):
         strict_root = Path(primary_root) if area == "core" and not is_test else None
-        for group in _directory_groups(members, strict_root=strict_root):
+        for group in _directory_groups(members, strict_root=strict_root,
+                                       target_tokens=target_tokens, max_tokens=max_tokens):
             bins.append(Module(len(bins), sorted(group, key=lambda item: item.path), area))
     return bins
 

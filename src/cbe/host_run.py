@@ -364,7 +364,8 @@ def _title(state: dict[str, Any], task: dict[str, Any]) -> str:
 
 def plan(repo: Path, run_dir: Path | None = None, *, review: str = DEFAULT_REVIEW, jobs: int = 4,
          host: str = "other", driver: str = "host",
-         graph_path: Path | None = None) -> dict[str, Any]:
+         graph_path: Path | None = None, batch_target_tokens: int = batching.TARGET_TOKENS,
+         batch_max_tokens: int = batching.MAX_TOKENS) -> dict[str, Any]:
     repo = repo.resolve()
     if not repo.is_dir():
         raise HostRunError("repository root is not a directory")
@@ -379,7 +380,7 @@ def plan(repo: Path, run_dir: Path | None = None, *, review: str = DEFAULT_REVIE
     if (state_dir(run_dir) / "state.json").exists():
         raise HostRunError("run directory already has a run; resume it or choose a fresh directory")
     files = batching.scan(repo)
-    modules = batching.plan(files)
+    modules = batching.plan(files, target_tokens=batch_target_tokens, max_tokens=batch_max_tokens)
     ast_inventory = symbols.build_inventory(
         {item.path: {"source": item.source, "digest": item.digest, "tokens": item.tokens}
          for item in files})
@@ -699,13 +700,11 @@ def _apply_submit(run_dir: Path, state: dict[str, Any], task: dict[str, Any], re
         except (ValueError, TypeError) as exc:
             error, value = f"schema_error:{exc}", None
     if error is not None and final:
-        # The re-ask already happened. Accept the newest usable answer, made
-        # compliant, rather than failing a task whose content is there. A
-        # source_not_delivered attempt is the exception: its answer was written
-        # without the source reaching the model, so it is never publishable.
-        undelivered = set(task.get("undelivered_attempts") or [])
-        if error.startswith("source_not_delivered"):
-            undelivered.add(attempt)  # recorded durably in the error branch below
+        # Answers without delivered source or with provider truncation must
+        # never be resurrected by the final-attempt normalizer.
+        undelivered = set(task.get("undelivered_attempts") or []) | set(task.get("unsafe_attempts") or [])
+        if error.startswith(("source_not_delivered", "output_limit")):
+            undelivered.add(attempt)
         for number in range(attempt, task.get("attempt_base", 0), -1):
             if number in undelivered:
                 continue
@@ -728,6 +727,8 @@ def _apply_submit(run_dir: Path, state: dict[str, Any], task: dict[str, Any], re
         task["errors"].append(error)
         if error.startswith("source_not_delivered"):
             task.setdefault("undelivered_attempts", []).append(attempt)
+        if error.startswith("output_limit"):
+            task.setdefault("unsafe_attempts", []).append(attempt)
         result.unlink(missing_ok=True)
         task["status"] = "failed" if final else "pending"
         if task["status"] == "failed":
