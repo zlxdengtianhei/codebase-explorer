@@ -68,7 +68,7 @@ Report cost after every run. The rule: **use the harness's exact numbers when it
 
 ## 读与查 / Read and query the result
 
-Start at `RUN/docs/INDEX.md`. Select a responsibility node for the maintenance question. Open that node page and select a unit. The page keeps the explanation, necessary boundary notes, uncertainties, and compact relation links. Its footer shows how to find the exact unit ID by name and file path.
+Start at `RUN/docs/INDEX.md`. Select a responsibility node for the maintenance question. Open that node page and select a unit. The page keeps the explanation, necessary boundary notes, uncertainties, and compact relation links. Its footer lists query/source commands and links to the ID lookup instructions in INDEX.
 
 Set `RUN` to the absolute run directory. Find an ID, then retrieve its complete explanation and evidence:
 

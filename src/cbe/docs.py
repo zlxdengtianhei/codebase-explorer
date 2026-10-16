@@ -237,12 +237,8 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
             block = _build_unit_block(uid, units, ranges_map, owner, dispositions,
                                       nodes, source_root, nodes_dir, name_of)
             lines += [f'<a id="{anchor(uid)}"></a>'] + block.splitlines() + [""]
-        lines += ["## 怎样查", "", "将 `RUN` 设为本次运行目录的绝对路径。用 `find` 搜索单元标题中的名字，",
-                  "从输出复制 `id` 并设为 `ID`。同名项按文件路径区分。",
-                  "`query` 返回解释、完整签名、全部范围、折叠成员、图边与状态、关系依据。",
-                  "`source` 从冻结源码取代码，并先核对摘要。", "", "```sh",
-                  'cbe find --run-dir "$RUN" --term "NAME"',
-                  'cbe query --run-dir "$RUN" --id "$ID"',
+        lines += ["## 怎样查", "", "将 `RUN` 设为绝对运行目录。按 [INDEX 的命令](../INDEX.md)查找 `ID`。",
+                  "", "```sh", 'cbe query --run-dir "$RUN" --id "$ID"',
                   'cbe source --run-dir "$RUN" --id "$ID" --context 2', "```", ""]
         (nodes_dir / f"{nid}.md").write_text("\n".join(lines).strip() + "\n", encoding="utf-8")
 
@@ -268,6 +264,7 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
                    'cbe query --run-dir "$RUN" --id "$ID"',
                    'cbe source --run-dir "$RUN" --id "$ID" --context 2', "```", "",
                    "`ID` 可为单元 id、符号 id 或文件路径。命令返回正文，不必再追页面位置。",
+                   "`source` 从冻结源码取代码，并先核对摘要。",
                    "图的反向边、状态和原始依据也在 catalog 中。", "", "## Responsibility tree", ""]
     for root in roots:
         index_lines.extend(outline(root, 0))
