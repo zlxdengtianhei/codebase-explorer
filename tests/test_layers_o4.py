@@ -260,7 +260,8 @@ def test_graph_edges_and_statuses_remain_available_in_both_directions(tmp_path):
     graph["edges"] = [{"id": "edge", "kind": "call", "source": "main", "target": "reserve",
                         "path": "src/pkg/cli.py", "line": 4, "column": 12, "status": "resolved",
                         "expression": "reserve_run(len(argv))"}]
-    graph["edges"].append({"id": "internal", "kind": "cfg", "source": "main", "target": "main"})
+    graph["edges"].extend({"id": f"internal-{i}", "kind": "cfg", "source": "main", "target": "main"}
+                          for i in range(2000))
     gp = tmp_path / "graph.json"
     gp.write_text(json.dumps(graph))
     run = Path(host_run.plan(repo, tmp_path / "run", review="none", graph_path=gp)["run_dir"])
@@ -271,7 +272,8 @@ def test_graph_edges_and_statuses_remain_available_in_both_directions(tmp_path):
     assert caller["outgoing"] == callee["incoming"] == ["edge"]
     assert catalog["edges"]["edge"]["status"] == "resolved"
     assert len(catalog["edges"]) == 1
-    assert caller["internal_edge_counts"] == {"cfg": 1, "dataflow": 0}
+    assert caller["internal_edge_counts"] == {"cfg": 2000, "dataflow": 0}
+    assert (run / "catalog.json").stat().st_size < 50000
     assert all(isinstance(e, str) for section in ("units", "symbols")
                for row in catalog[section].values() for d in ("outgoing", "incoming") for e in row[d])
     assert catalog["graph_ref"] == "context.json" and catalog["graph"] is None
@@ -280,7 +282,7 @@ def test_graph_edges_and_statuses_remain_available_in_both_directions(tmp_path):
     assert queried["outgoing"][0]["target_name"] == "reserve_run"
     assert "graph_nodes" not in queried and "unit_detail" not in queried
     assert docs.query(run, caller["id"], edges="all")["raw_edges"][0]["expression"] == "reserve_run(len(argv))"
-    assert docs.query(run, caller["id"], edges="cfg")["raw_edges"] == [graph["edges"][1]]
+    assert docs.query(run, caller["id"], edges="cfg")["raw_edges"] == graph["edges"][1:]
     assert cli.main(["query", "--run-dir", str(run), "--id", caller["id"]]) == 0
     # Ordinary reads work with the large frozen context unavailable.
     (run / "context.json").rename(run / "context.saved")
