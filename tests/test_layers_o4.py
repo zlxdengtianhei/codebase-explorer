@@ -172,16 +172,42 @@ def test_full_signatures_are_not_limited_to_prompt_signature_budget(tmp_path):
     repo = tmp_path / "repo"
     repo.mkdir()
     signature = "def many(" + ", ".join(f"arg_{i}: int = {i}" for i in range(90)) + "):"
-    (repo / "long.py").write_text(signature + "\n    return 1\n")
-    by_id, by_name = source_context.source_signatures("long.py", (repo / "long.py").read_text(), "python")
-    assert by_name["many"] == signature
+    body = "    value = arg_0\n" + "".join(f"    value += arg_{i}\n" for i in range(1, 90)) + "    return value\n"
+    (repo / "long.py").write_text(signature + "\n" + body)
+    by_id, by_location = source_context.source_signatures("long.py", (repo / "long.py").read_text(), "python")
+    assert by_location["many", 1] == signature
     assert next(iter(by_id.values())) == signature
+    # The symbol_id metadata is additive. Older segmented contexts still carry
+    # enough canonical identity in their ::sN suffix to recover the full header.
+    from cbe.records import build_records
+    from cbe.symbols import inventory_from_context
+    context = source_context.build_context(repo, max_segment_bytes=64)
+    for chunk in context["chunks"]:
+        chunk.pop("symbol_id", None)
+    inventory = inventory_from_context(context)
+    units = {row["id"]: {"id": row["id"], "kind": row["kind"], "explain": "A long signature."}
+             for row in inventory["long.py"]["symbols"]}
+    dispositions = {uid: {"how": "unit", "unit": uid} for uid in units}
+    records, _ = build_records(units, dispositions, inventory,
+                               {uid: docs.unit_ranges(uid, unit, inventory) for uid, unit in units.items()},
+                               {"long.py": (repo / "long.py").read_text()}, {"long.py": "python"}, context, None)
+    assert any(c["start_line"] > 1 for c in context["chunks"] if c["kind"] == "function")
+    assert all(row["signature"] == signature for row in records.values() if row["kind"] == "function")
+
+
+def test_legacy_overload_signatures_match_their_own_source_spans(tmp_path):
+    run, _, _, _, _, _, _, _ = _grouped_run(tmp_path)
+    overloaded = docs.query(run, "pkg/jobs.py::reserve")
+    implementation = docs.query(run, "pkg/jobs.py::reserve@5")
+    assert "value: int" in overloaded["signature"]
+    assert implementation["signature"] == "def reserve(value):"
+    assert implementation["ranges"][0]["lines"] == [[5, 8]]
 
 
 def test_arrow_signature_does_not_include_its_expression_body():
-    _, by_name = source_context.source_signatures("a.js", "export const add = (a, b) => a + b;\n", "javascript")
-    assert by_name["add"].endswith("=>")
-    assert "a + b" not in by_name["add"]
+    _, by_location = source_context.source_signatures("a.js", "export const add = (a, b) => a + b;\n", "javascript")
+    assert by_location["add", 1].endswith("=>")
+    assert "a + b" not in by_location["add", 1]
 
 
 def test_summary_metrics_use_the_published_artifacts_and_frozen_source(tmp_path):

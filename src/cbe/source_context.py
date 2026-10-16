@@ -1198,8 +1198,8 @@ def _plan_chunks(
     return plans, diagnostics
 
 
-def source_signatures(path: str, source: str, language: str) -> tuple[dict[str, str], dict[str, str]]:
-    """Full declaration signatures by canonical symbol ID and qualified name.
+def source_signatures(path: str, source: str, language: str) -> tuple[dict[str, str], dict[tuple[str, int], str]]:
+    """Full signatures by canonical ID and (qualified name, decorated start line).
 
     Prompt chunks intentionally cap their signatures. Published records reparse
     verified source with the same grammar and declaration boundaries, and retain
@@ -1216,7 +1216,8 @@ def source_signatures(path: str, source: str, language: str) -> tuple[dict[str, 
     raw = source.encode("utf-8")
     offsets = OffsetMap.from_bytes(raw)
     declarations = _extract_declarations(spec, offsets, parser.parse(raw).root_node, path)
-    by_id, by_name = {}, {}
+    by_id, by_location = {}, {}
+    starts = line_starts(offsets.text)
     for declaration in declarations:
         end = _body_start(offsets, declaration.node)
         if end < 0:
@@ -1227,8 +1228,9 @@ def source_signatures(path: str, source: str, language: str) -> tuple[dict[str, 
             end = declaration.end_byte
         signature = raw[declaration.start_byte:end].decode("utf-8").strip()
         by_id[declaration.symbol_id] = signature
-        by_name.setdefault(declaration.qualified_name, signature)
-    return by_id, by_name
+        start_line = _line_of(starts, offsets.char_of_byte(declaration.start_byte))
+        by_location[declaration.qualified_name, start_line] = signature
+    return by_id, by_location
 
 
 def _chunk_from_plan(plan: _ChunkPlan, offsets: OffsetMap, starts: tuple[int, ...]) -> dict[str, Any]:

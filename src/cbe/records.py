@@ -56,9 +56,10 @@ def build_records(units: dict, dispositions: dict, inventory: dict, ranges: dict
         for symbol in entry["symbols"]:
             sid = symbol["id"]
             chunk = chunks.get(sid, {})
-            declaration = chunk.get("symbol_id", sid)
-            by_id, by_name = signatures.get(path, ({}, {}))
-            signature = by_id.get(declaration, by_name.get(symbol["name"],
+            declaration = chunk.get("symbol_id") or re.sub(r"::s\d+$", "", sid)
+            by_id, by_location = signatures.get(path, ({}, {}))
+            location = (symbol["name"], symbol["lines"][0][0])
+            signature = by_id.get(declaration, by_location.get(location,
                                   chunk.get("signature") or ""))
             symbols[sid] = {"id": sid, "kind": symbol["kind"], "name": symbol["name"],
                             "file": path, "signature": signature,
