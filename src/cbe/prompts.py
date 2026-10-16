@@ -48,7 +48,9 @@ def unit_digest(unit: dict) -> dict:
     extras = [{"topic": extra.get("topic"), "note": extra.get("note")}
               for extra in unit.get("extras") or [] if isinstance(extra, dict)]
     uncertainties = [item for item in unit.get("uncertainties") or [] if isinstance(item, str)]
-    return {"id": unit.get("id"), "kind": unit.get("kind"),
+    from cbe.records import summary_sentence
+
+    return {"id": unit.get("id"), "kind": unit.get("kind"), "summary": summary_sentence(unit),
             "explain": unit.get("explain") or "", "extras": extras,
             "uncertainties": uncertainties, "relations": relations,
             "members": unit.get("members") or []}
@@ -92,6 +94,9 @@ def detail_prompt(paths: list[str], inventory: dict[str, dict], *,
         "conditions with their consequences, exception catch/propagate/fallback order, side "
         "effects and state, and collaboration with unproven boundaries. Do not restate the "
         "listing line by line; never paraphrase only the signature.",
+        "  summary (string, optional): one sentence, about 25 words or fewer, describing "
+        "the unit's responsibility. Used under the signature and in the tree/INDEX. "
+        "If omitted, the program uses the first explain sentence. This is guidance, not a hard limit.",
         "  extras (list, optional): {\"topic\": condition|failure|side_effect|field|contract, "
         "\"note\": <one clear statement>} only for a necessity the explain does not cover.",
         "  relations (list, optional): {\"target\": <inventory id or grp: id>, \"kind\": "
