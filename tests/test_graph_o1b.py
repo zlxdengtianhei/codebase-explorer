@@ -1,7 +1,7 @@
 """O1b inventory and merge-boundary regressions."""
 from cbe.graph import discover_sources, _prefer_resolved_imports
 from cbe.graph_backends.identity import repository_files, file_id
-from cbe.graph_backends._imports import ImportResolver
+from cbe.graph_backends.resolution import ImportResolver
 from cbe.graph_backends._calls import CallResolver
 
 
@@ -81,3 +81,16 @@ def test_depcruise_unresolvable_dependency_never_invents_file(tmp_path, monkeypa
     result = build_with_depcruise(tmp_path, tmp_path / "run", "depcruise", 10, ["javascript"])
     assert all(e["status"] == "unresolved" and e["target"] is None for e in result["edges"])
     assert {n["id"] for n in result["nodes"]} == {"file:main.js"}
+
+
+def test_frontend_diagnostic_retry_inherits_heap(tmp_path, monkeypatch):
+    import subprocess
+    from cbe.graph_backends import joern
+    seen = []
+    def run(argv, timeout, cwd, *, env=None):
+        seen.append(env)
+        return subprocess.CompletedProcess(argv, 1, "", "OutOfMemoryError: Java heap space")
+    monkeypatch.setattr(joern, "_run", run)
+    env = {"JAVA_TOOL_OPTIONS": "-Xmx64m"}
+    assert "OutOfMemoryError" in joern._frontend_error_from_direct_run("invoke the frontend: /tool/c2cpg input", tmp_path, 10, [], env=env)
+    assert seen == [env]

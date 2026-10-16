@@ -161,8 +161,19 @@ class ImportResolver:
 
 def import_token(text: str, suffix: str) -> str | None:
     """Select syntax by source language; Python must never hit JS's `from`."""
+    if suffix == ".py":
+        try:
+            statement = ast.parse(text).body[0]
+        except (SyntaxError, IndexError):
+            return None
+        if isinstance(statement, ast.ImportFrom):
+            return "." * statement.level + (statement.module or "")
+        if isinstance(statement, ast.Import) and len(statement.names) == 1:
+            return statement.names[0].name
+        return None
+    language = suffix_languages().get(suffix)
+    suffix = {"ruby": ".rb", "php": ".php"}.get(language, suffix)
     patterns = {
-        ".py": r"^(?:from\s+([.\w]+)\s+import|import\s+([\w.]+))",
         ".go": r'^import\s+(?:(?:\w+|\.)\s+)?["`]?([^"`\s]+)["`]?$',
         ".java": r"^import\s+(?:static\s+)?([\w.*]+)\s*;?$",
         ".kt": r"^import\s+([\w.*]+)(?:\s+as\s+\w+)?$",

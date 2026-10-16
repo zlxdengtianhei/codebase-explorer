@@ -17,6 +17,7 @@ import sys
 
 from ._paths import canonical_repo_path
 from .identity import repository_files, file_id, external_id
+from .resolution import ImportResolver
 
 DEPCRUISE_LANGUAGES = frozenset({"javascript", "typescript", "tsx"})
 _JS_EXTENSIONS = (".js", ".jsx", ".mjs", ".cjs", ".ts", ".mts", ".cts", ".tsx")
@@ -132,8 +133,6 @@ def build_with_grimp(repo, languages: list[str]) -> dict:
             {"path": None, "code": "backend_unavailable",
              "message": "grimp is not installed; Python import graph skipped (install the 'graphs' extra)"}],
             "capabilities": []}
-    from ._imports import ImportResolver
-
     resolver = ImportResolver(repo)
     packages = _top_level_python_packages(repo)
     if not packages:

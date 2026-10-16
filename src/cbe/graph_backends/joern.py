@@ -410,7 +410,7 @@ def build_with_joern(
         if not payload.get("methods"):
             # joern-parse may have exited 0 after a frontend failed to load the
             # project; recover the real cause instead of reporting empty success.
-            frontend_error = _frontend_error_from_direct_run(parse_output, run_dir, timeout, roots)
+            frontend_error = _frontend_error_from_direct_run(parse_output, run_dir, timeout, roots, env=joern_env)
             if frontend_error:
                 diagnostics.append({"path": None, "code": "frontend_error",
                                     "message": f"joern frontend {flag} reported an error while "
@@ -483,7 +483,7 @@ def _first_error_line(text: str, roots: list[str]) -> str | None:
 
 
 def _frontend_error_from_direct_run(parse_output: str, run_dir: Path, timeout: int,
-                                    roots: list[str]) -> str | None:
+                                    roots: list[str], *, env=None) -> str | None:
     """Re-run the exact frontend command ``joern-parse`` used, to capture its error.
 
     ``joern-parse`` can exit 0 while a frontend logged a load failure and wrote
@@ -501,7 +501,7 @@ def _frontend_error_from_direct_run(parse_output: str, run_dir: Path, timeout: i
     if not argv:
         return None
     try:
-        completed = _run(argv, timeout, run_dir)
+        completed = _run(argv, timeout, run_dir, env=env)
     except (OSError, subprocess.TimeoutExpired):
         return None
     return _first_error_line((completed.stdout or "") + "\n" + (completed.stderr or ""), roots)

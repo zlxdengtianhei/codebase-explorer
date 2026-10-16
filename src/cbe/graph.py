@@ -36,7 +36,10 @@ from datetime import datetime, timezone
 
 from cbe import source_context
 from cbe.graph_backends._paths import canonical_repo_path
-from cbe.graph_backends.identity import repository_files
+from cbe.graph_backends.identity import repository_files, validate_identities
+from cbe.graph_backends.resolution import resolve_declarations, import_token
+
+BACKEND_FAILURE_CODES = frozenset({"backend_error", "backend_timeout", "frontend_error", "backend_unavailable"})
 
 SCHEMA_GRAPH = "cbe-graph/1"
 
@@ -260,14 +263,11 @@ def analyze_graph(
     if not fragments:
         raise GraphError("no graph backend was available for the requested languages")
 
-    from cbe.graph_backends._imports import resolve_declarations
-
     nodes, edges = _merge(fragments)
     nodes, edges = resolve_declarations(repo, nodes, edges, files=repository_files(repo))
     # Use the final authority at the merge boundary even if a backend supplies
     # an invalid file identity or labels a repository suffix as external.
     files = repository_files(repo)
-    from cbe.graph_backends.identity import validate_identities
     nodes, edges, identity_diagnostics = validate_identities(nodes, edges, files)
     diagnostics.extend(identity_diagnostics)
     edges = _prefer_resolved_imports(edges)
@@ -320,8 +320,7 @@ def analyze_graph(
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(graph, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     if not ran:
-        causes = "; ".join(d["message"] for d in diagnostics if d.get("code") in {
-            "backend_error", "backend_timeout", "frontend_error", "backend_unavailable"})
+        causes = "; ".join(d["message"] for d in diagnostics if d.get("code") in BACKEND_FAILURE_CODES)
         raise GraphError("no graph backend completed" + (f": {causes}" if causes else ""))
     return graph
 
@@ -464,7 +463,6 @@ def _merge(fragments: list[dict]) -> tuple[list[dict], list[dict]]:
 def _prefer_resolved_imports(edges: list[dict]) -> list[dict]:
     """Merge resolved file evidence by endpoints, retaining every expression."""
     from pathlib import PurePosixPath
-    from cbe.graph_backends._imports import import_token
 
     def specifier(edge):
         return import_token(edge.get("expression") or "", PurePosixPath(edge.get("path") or "").suffix)

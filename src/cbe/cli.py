@@ -212,7 +212,7 @@ def main(argv: list[str] | None = None) -> int:
             print(json.dumps(available_languages(), ensure_ascii=False, indent=2))
             return 0
         if args.command == "graph":
-            from cbe.graph import analyze_graph, query_graph
+            from cbe.graph import analyze_graph, query_graph, BACKEND_FAILURE_CODES
 
             if args.graph_command == "build":
                 graph = analyze_graph(args.repo, args.output, backend=args.backend,
@@ -223,7 +223,7 @@ def main(argv: list[str] | None = None) -> int:
                                       dataflow_path_methods=args.dataflow_path_methods,
                                       max_paths_per_method=args.max_paths_per_method)
                 failures = [d["message"] for d in graph["diagnostics"]
-                            if d.get("code") in {"backend_error", "backend_timeout", "frontend_error", "no_backend_completed"}]
+                            if d.get("code") in BACKEND_FAILURE_CODES]
                 if failures:
                     print("cbe graph build: " + "; ".join(failures), file=sys.stderr)
                 value = {"output": str(args.output), "schema": graph["schema"],

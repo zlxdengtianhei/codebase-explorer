@@ -2,7 +2,7 @@
 from pathlib import Path
 
 from cbe.graph import _prefer_resolved_imports
-from cbe.graph_backends._imports import ImportResolver, import_token, resolve_declarations
+from cbe.graph_backends.resolution import ImportResolver, import_token, resolve_declarations
 
 
 def test_python_declarations_resolve_namespace_packages_and_dependencies(tmp_path):
