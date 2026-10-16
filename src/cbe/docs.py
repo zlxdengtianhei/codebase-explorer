@@ -642,6 +642,9 @@ def find_text(results: list[dict]) -> str:
 
 def query(run_dir: Path, symbol_id: str, edges: str | None = None) -> dict[str, Any]:
     """Compact object view; frozen graph is read only for explicit expansion."""
+    if edges is not None and edges != "all" and (
+            not edges or set(edges.split(",")) - {"import", "call", "cfg", "dataflow"}):
+        raise SemanticError("--edges must be all or comma-separated import,call,cfg,dataflow")
     catalog = query_catalog(run_dir)
     table = catalog.get("edges") or {}
     if symbol_id in catalog["symbols"]:
@@ -665,15 +668,20 @@ def query(run_dir: Path, symbol_id: str, edges: str | None = None) -> dict[str, 
         raise SemanticError(f"unknown unit, symbol or file: {symbol_id}")
     record["name"] = catalog.get("short_names", {}).get(symbol_id, record.get("name", symbol_id))
     if edges:
-        graph = json.loads((run_dir / "context.json").read_text(encoding="utf-8")).get("graph") or {}
+        from cbe.records import SourceOwnership, frozen_sources
+
+        context = json.loads((run_dir / "context.json").read_text(encoding="utf-8"))
+        graph = context.get("graph") or catalog.get("graph") or {}
         nodes = {n["id"]: n for n in graph.get("nodes") or []}
+        ownership = SourceOwnership(frozen_sources(context), context.get("chunks") or [],
+                                    catalog["symbols"])
+        members = {symbol_id, *record.get("folded_members", [])}
         def matches(edge):
-            node = nodes.get(edge.get("source"), {})
-            owner = nodes.get(node.get("owner"), node)
-            path = edge.get("path") or owner.get("path")
-            line = edge.get("line") or owner.get("start_line")
-            return any(r["path"] == path and any(a <= line <= b for a, b in r["lines"])
-                       for r in record.get("ranges", []) if isinstance(line, int))
+            if symbol_id in catalog["files"]:
+                node = nodes.get(edge.get("source"), {})
+                owner = nodes.get(node.get("owner"), node)
+                return (edge.get("path") or owner.get("path")) == symbol_id
+            return ownership.edge_source(edge, nodes) in members
         record["raw_edges"] = [e for e in graph.get("edges") or []
                                if (edges == "all" or e.get("kind") in edges.split(",")) and matches(e)]
     return record

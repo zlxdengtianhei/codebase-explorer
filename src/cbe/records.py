@@ -41,6 +41,51 @@ def frozen_sources(context: dict, paths: list[str] | None = None) -> dict[str, s
     return sources
 
 
+class SourceOwnership:
+    """Resolve coordinates to exclusive frozen chunks, including graph callers."""
+
+    def __init__(self, sources: dict[str, str], chunks: list[dict], symbol_ids):
+        self.starts = {}
+        self.blocks = defaultdict(list)
+        for path, text in sources.items():
+            raw = text.encode("utf-8")
+            self.starts[path] = (raw, [0] + [i + 1 for i, b in enumerate(raw) if b == 10])
+        for chunk in chunks:
+            if chunk["id"] in symbol_ids:
+                self.blocks[chunk["path"]].append(chunk)
+
+    def at(self, path, line, column=None):
+        """Return the symbol owning a one-based source coordinate, or None."""
+        if path not in self.starts or not isinstance(line, int) or line < 1:
+            return None
+        raw, offsets = self.starts[path]
+        if line > len(offsets):
+            return None
+        point = offsets[line - 1]
+        if column is None:
+            while point < len(raw) and raw[point] in b" \t":
+                point += 1
+        elif isinstance(column, int) and column >= 1:
+            end = offsets[line] if line < len(offsets) else len(raw)
+            text = raw[point:end].decode("utf-8")
+            if column > len(text) + 1:
+                return None
+            point += len(text[:column - 1].encode("utf-8"))
+        else:
+            return None
+        for chunk in self.blocks[path]:
+            if chunk.get("start_byte", -1) <= point < chunk.get("end_byte", -1):
+                return chunk["id"]
+        return None
+
+    def edge_source(self, edge: dict, nodes: dict):
+        source = nodes.get(edge.get("source"), {})
+        if edge.get("kind") == "call":
+            return self.at(edge.get("path") or source.get("path"), edge.get("line"), edge.get("column"))
+        owner = nodes.get(source.get("owner"), source)
+        return self.at(owner.get("path"), owner.get("start_line"))
+
+
 def build_records(units: dict, dispositions: dict, inventory: dict, ranges: dict,
                   sources: dict[str, str], languages: dict[str, str],
                   context: dict | None, graph: dict | None,
@@ -76,52 +121,19 @@ def build_records(units: dict, dispositions: dict, inventory: dict, ranges: dict
             if target in units:
                 reverse[target].append({"source": uid, **relation})
 
-    # Coordinates belong to exclusive chunks. Never assign a caller merely
-    # because its enclosing declaration spans the call's line.
-    blocks = defaultdict(list)
-    starts = {}
-    for path, text in sources.items():
-        raw = text.encode("utf-8")
-        starts[path] = (raw, [0] + [i + 1 for i, b in enumerate(raw) if b == 10])
-    for sid, chunk in chunks.items():
-        if sid in symbols:
-            blocks[chunk["path"]].append(chunk)
-
-    def at(path, line, column=None):
-        if path not in starts or not isinstance(line, int) or line < 1:
-            return None
-        raw, offsets = starts[path]
-        if line > len(offsets):
-            return None
-        point = offsets[line - 1]
-        if column is None:
-            while point < len(raw) and raw[point] in b" \t":
-                point += 1
-        elif isinstance(column, int) and column >= 1:
-            end = offsets[line] if line < len(offsets) else len(raw)
-            text = raw[point:end].decode("utf-8")
-            if column > len(text) + 1:
-                return None
-            point += len(text[:column - 1].encode("utf-8"))
-        else:
-            return None
-        for chunk in blocks[path]:
-            if chunk.get("start_byte", -1) <= point < chunk.get("end_byte", -1):
-                return chunk["id"]
-        return None
+    ownership = SourceOwnership(sources, list(chunks.values()), symbols)
 
     graph_nodes = {n["id"]: n for n in (graph or {}).get("nodes") or []}
     node_symbols = {}
     for nid, node in graph_nodes.items():
         owner = graph_nodes.get(node.get("owner"), node)
-        node_symbols[nid] = at(owner.get("path"), owner.get("start_line"))
+        node_symbols[nid] = ownership.at(owner.get("path"), owner.get("start_line"))
     outgoing, incoming = defaultdict(list), defaultdict(list)
     internal = defaultdict(lambda: defaultdict(int))
     edge_table = {} if edge_table is None else edge_table
     for edge in (graph or {}).get("edges") or []:
         source = graph_nodes.get(edge.get("source"), {})
-        caller = (at(edge.get("path") or source.get("path"), edge.get("line"), edge.get("column"))
-                  if edge.get("kind") == "call" else node_symbols.get(edge.get("source")))
+        caller = ownership.edge_source(edge, graph_nodes)
         callee = node_symbols.get(edge.get("target"))
         if edge.get("kind") in {"cfg", "dataflow"}:
             if caller:
