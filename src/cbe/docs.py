@@ -246,7 +246,8 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
             block = _build_unit_block(uid, units, ranges_map, owner, dispositions,
                                       nodes, source_root, nodes_dir, name_of, source_links)
             lines += [f'<a id="{anchor(uid)}"></a>'] + block.splitlines() + [""]
-        lines += ["## 怎样查", "", '按 [INDEX](../INDEX.md) 取本页单元 `ID`；`RUN` 为运行目录。',
+        lines += ["## 怎样查", "", '`RUN` 为运行目录。用本页单元标题查 `ID`（精确名称优先）：',
+                  '`cbe find --run-dir "$RUN" --term "单元标题"`。再用结果中的 `ID`：',
                   '`cbe query --run-dir "$RUN" --id "$ID"`；'
                   '`cbe source --run-dir "$RUN" --id "$ID" --context 2`。', ""]
         lines += [f"[{ref}]: {os.path.relpath(source_root / path, nodes_dir)}"
@@ -666,6 +667,9 @@ def find(run_dir: Path, term: str, limit: int = 25) -> list[dict[str, Any]]:
         results.append({"id": sid, "name": name, "kind": symbol.get("kind") or record.get("kind") or
                         ("file" if is_file else "symbol"), "location": format_ranges(ranges),
                         "summary": summary, "matched_fields": matched})
+    results.sort(key=lambda row: (0 if needle in {row["id"].casefold(), row["name"].casefold(),
+                                                  str(catalog["symbols"].get(row["id"], {}).get("display_name", "")).casefold()}
+                                 else 1))
     return results[:limit]
 
 

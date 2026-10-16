@@ -61,3 +61,22 @@ def test_verify_reports_broken_link_after_unmatched_code_delimiter(tmp_path, pre
     result = check()
     assert not result["ok"]
     assert any("missing-page.md" in item for item in result["detail"]["broken"])
+
+
+def test_every_page_title_finds_its_id_despite_many_incidental_matches(tmp_path):
+    run, _, _, _, _ = _run(tmp_path)
+    path = run / "catalog.json"
+    catalog = json.loads(path.read_text())
+    titles = re.findall(r'<a id="(u-[0-9a-f]+)"></a>\n### `([^`]+)`',
+                        (run / "docs/nodes/root.md").read_text())
+    # Incidental matches must not crowd a named unit out of the default limit.
+    catalog["symbols"] = {**{f"noise-{i}": {"name": f"noise-{i}", "explain": " ".join(t for _, t in titles)}
+                            for i in range(40)}, **catalog["symbols"]}
+    path.write_text(json.dumps(catalog))
+    for anchor, title in titles:
+        uid = next(uid for uid, row in catalog["units"].items() if row["anchor"] == "#" + anchor)
+        assert uid in [row["id"] for row in docs.find(run, title)]
+        assert docs.find(run, uid, limit=1)[0]["id"] == uid
+    footer = (run / "docs/nodes/root.md").read_text().split("## 怎样查")[1]
+    assert 'cbe find --run-dir "$RUN" --term' in footer
+    assert "按 [INDEX]" not in footer
