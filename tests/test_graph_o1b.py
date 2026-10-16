@@ -66,3 +66,18 @@ def test_repository_class_guesses_and_exact_inheritance():
     assert resolver.resolve(call("Child.missing"))[0] == "unresolved"
     assert resolver.resolve(call("Self.missing"))[0] == "unresolved"
     assert resolver.resolve(call("werkzeug.Response"))[0] == "external"
+
+
+def test_depcruise_unresolvable_dependency_never_invents_file(tmp_path, monkeypatch):
+    import json
+    import subprocess
+    from cbe.graph_backends.imports import build_with_depcruise
+    (tmp_path / "main.js").touch()
+    # This shape is emitted for polyglot ./helper.js and c1-jsrepo packages.
+    payload = dict(modules=[dict(source="main.js", dependencies=[
+        dict(module="./helper.js", resolved="./helper.js", couldNotResolve=True),
+        dict(module="react", resolved="react", couldNotResolve=True)])])
+    monkeypatch.setattr(subprocess, "run", lambda *a, **kw: subprocess.CompletedProcess(a, 0, json.dumps(payload), ""))
+    result = build_with_depcruise(tmp_path, tmp_path / "run", "depcruise", 10, ["javascript"])
+    assert all(e["status"] == "unresolved" and e["target"] is None for e in result["edges"])
+    assert {n["id"] for n in result["nodes"]} == {"file:main.js"}

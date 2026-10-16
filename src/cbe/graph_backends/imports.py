@@ -89,7 +89,10 @@ def build_with_depcruise(repo, run_dir, depcruise_bin, timeout: int, languages: 
             resolved = dep.get("resolved")
             expression = dep.get("module", "")
             counter += 1
-            if resolved and not dep.get("coreModule"):
+            if dep.get("couldNotResolve"):
+                target_id = None
+                status = "unresolved"
+            elif resolved and not dep.get("coreModule"):
                 target_rel = canonical_repo_path(resolved)
                 target_id = add_file(target_rel) if target_rel else None
                 status = "resolved" if target_id else "unresolved"
