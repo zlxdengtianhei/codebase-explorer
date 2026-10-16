@@ -1465,10 +1465,11 @@ def check_graph_source(repo: Path, graph: dict[str, Any], frozen_hashes: dict[st
             raise GraphSourceMismatch(rel, expected, actual,
                                       "boundary source drifted: content hash differs from current source")
     unmanifested: set[str] = set()
-    anchored = {anchor.get("path") for anchor in _graph_source_anchors(graph)}
+    # A path that is not a non-empty string cannot name repository source; such
+    # anchors stay external, as an unknown path does.
+    anchored = {path for anchor in _graph_source_anchors(graph)
+                if isinstance(path := anchor.get("path"), str) and path}
     for raw_path in anchored:
-        if not isinstance(raw_path, str) or not raw_path:
-            continue
         try:
             rel = _validate_relative(repo, raw_path)
         except ContextError:

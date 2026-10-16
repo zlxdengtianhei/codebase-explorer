@@ -423,6 +423,19 @@ def test_context_build_graph_errors_name_the_graph_file(tmp_path, capsys, proble
     assert (error["code"], error["path"]) == (code, str(graph_path))
 
 
+@pytest.mark.parametrize("where, value", [("nodes", ["sample.py"]), ("edges", {"file": "sample.py"})])
+def test_context_build_ignores_graph_anchors_whose_path_is_not_a_string(tmp_path, capsys, where, value):
+    from cbe import cli
+
+    graph = _graph_for(build_context(FIXTURES, paths=["sample.py", "sample.c"]), EDGES)
+    graph[where].append({"id": "odd", "path": value})
+    graph_path = tmp_path / "graph.json"
+    graph_path.write_text(json.dumps(graph))
+    status = cli.main(["context", "build", str(FIXTURES), "--path", "sample.py", "--graph", str(graph_path),
+                       "--output", str(tmp_path / "context.json")])
+    assert (status, capsys.readouterr().err) == (0, "")
+
+
 def test_context_for_paths_prunes_graph_but_keeps_boundary_nodes(tmp_path):
     base = build_context(FIXTURES, paths=["sample.py", "sample.c"])
     graph_path = tmp_path / "graph.json"
