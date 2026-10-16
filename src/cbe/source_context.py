@@ -1523,7 +1523,7 @@ def _prune_graph(graph: dict[str, Any] | None, selected: set[str]) -> dict[str, 
 
     kept_nodes = [node for node in nodes if node.get("id") in kept_ids]
     pruned: dict[str, Any] = {
-        key: value for key, value in graph.items() if key not in {"nodes", "edges", "source_manifest"}
+        key: value for key, value in graph.items() if key not in {"nodes", "edges", "source_manifest", "quality"}
     }
     pruned["nodes"] = kept_nodes
     pruned["edges"] = kept_edges

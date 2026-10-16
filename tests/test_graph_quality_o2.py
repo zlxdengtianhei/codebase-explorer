@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from cbe import cli, docs, graph
-from cbe.source_context import build_context
+from cbe.source_context import build_context, context_for_paths
 from test_host_run import _repo, _drive, _graph_for
 from cbe import host_run
 
@@ -134,7 +134,7 @@ def test_legacy_graph_readers(tmp_path, capsys):
     path.write_text(json.dumps(value))
     assert cli.main(["graph", "capabilities", "--graph", str(path)]) == 0
     assert json.loads(capsys.readouterr().out)["quality"] == graph.graph_quality(value)
-    assert graph.query_graph(value)["quality"] == graph.graph_quality(value)
+    assert "quality" not in graph.query_graph(value)
     (tmp_path / "main.py").write_text("pass\n")
     assert cli.main(["graph", "capabilities", "--graph", str(path), "--repo", str(tmp_path)]) == 0
     assert json.loads(capsys.readouterr().out)["quality"]["nodes_missing_files"]["count"] == 2
@@ -153,6 +153,25 @@ def test_legacy_graph_readers(tmp_path, capsys):
     assert "仅靠模型阅读源码" in index
 
 
+def test_query_slices_omit_whole_graph_quality(tmp_path, capsys):
+    value = bad_graph()
+    value["quality"] = graph.graph_quality(value)
+    original = copy.deepcopy(value)
+    path = tmp_path / "graph.json"
+    path.write_text(json.dumps(value))
+    assert cli.main(["graph", "query", "--graph", str(path), "--path", "main.py"]) == 0
+    assert "quality" not in json.loads(capsys.readouterr().out)
+    context = {"schema": "cbe-context/1", "files": [], "chunks": [], "graph": value}
+    assert "quality" not in context_for_paths(context, ["main.py"])["graph"]
+    context_path = tmp_path / "context.json"
+    context_path.write_text(json.dumps(context))
+    assert cli.main(["context", "query", "--context", str(context_path), "--path", "main.py"]) == 0
+    assert "quality" not in json.loads(capsys.readouterr().out)["graph"]
+    assert value == original
+    assert cli.main(["graph", "capabilities", "--graph", str(path)]) == 0
+    assert json.loads(capsys.readouterr().out)["quality"] == original["quality"]
+
+
 @pytest.mark.parametrize("mode", ["missing", "failed", "partial"])
 def test_index_coverage_without_successful_graph(tmp_path, mode):
     value = None if mode == "missing" else bad_graph()
@@ -168,4 +187,6 @@ def test_index_coverage_without_successful_graph(tmp_path, mode):
         assert "没有后端跑成" in index
     else:
         assert "python import: resolved 1/1 (100%)" in index and "ruby/cfg failed" in index
+        assert "图确认目标在仓外" in index and "图给出候选" in index
+        assert "其余状态" not in index
         assert "悬空边 1" in index

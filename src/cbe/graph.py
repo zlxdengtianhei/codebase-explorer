@@ -541,7 +541,6 @@ def query_graph(
         "edges": kept_edges,
         "capabilities": graph.get("capabilities", []),
         "diagnostics": diagnostics,
-        "quality": read_graph_quality(graph),
         "scope": {
             "paths": canonical_paths or None,
             "kind": kind,

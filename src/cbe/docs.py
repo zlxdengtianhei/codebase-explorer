@@ -250,7 +250,8 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
             index_lines += ["图不支持本次分析；关系仅靠模型阅读源码，可能不准确。"]
         else:
             index_lines += ["来源：静态分析图；resolved 表示图确认的关系（不保证语义正确）。"
-                            "其余状态及未覆盖的语言/关系种类仅靠模型阅读源码，可能不准确。"]
+                            "external 表示图确认目标在仓外；ambiguous 表示图给出候选。"
+                            "unresolved、unsupported 及未覆盖的语言/关系种类仅靠模型阅读源码，可能不准确。"]
         by_language: dict[str, list[dict]] = {}
         for row in quality["edge_counts"]:
             by_language.setdefault(row["language"], []).append(row)
