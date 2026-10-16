@@ -491,13 +491,16 @@ def _detail_task(run_dir: Path, state: dict[str, Any], task: dict[str, Any], *, 
     chunks = context.get("chunks") or []
     diagnostics = [row for row in context.get("diagnostics") or [] if row.get("path") in wanted]
     graph_file = None
-    if not embed and state.get("driver") != "script":
+    graph = context.get("graph")
+    has_evidence = (projection.graph_state(graph)[0] == "provided"
+                    and any(n.get("path") in wanted for n in graph.get("nodes", [])))
+    if not embed and state.get("driver") != "script" and has_evidence:
         # The canonical detail file is shared with review and repair for this
         # module: identical frozen evidence, independent of task id or issues.
         target = state_dir(run_dir) / "tasks" / f"module_{task['module'] + 1}.graph.txt"
         lines = projection.graph_prompt_lines(
             context.get("graph"), paths, embed=False, inventory=state["inventory"],
-            chunks=chunks, source_tokens=2**63, max_tokens=2**63)
+            chunks=chunks, source_tokens=None, max_tokens=None)
         target.write_text("\n".join(lines), encoding="utf-8")
         graph_file = str(target)
     return prompts.detail_prompt(
@@ -514,7 +517,7 @@ def _body(run_dir: Path, state: dict[str, Any], task: dict[str, Any], *, embed: 
     source is never sent twice. A missing graph is stated as not provided.
     """
     kind = task["kind"]
-    reading = prompts.NO_FILE_RULES if embed else prompts.FILE_TASK_RULES
+    reading = prompts.NO_FILE_RULES if embed or state.get("driver") == "script" else prompts.FILE_TASK_RULES
     if kind == "names":
         return prompts.NO_FILE_RULES, prompts.names_prompt(_modules(state))
     if kind in {"module", "repair"}:

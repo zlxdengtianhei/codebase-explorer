@@ -30,7 +30,7 @@ FILE_TASK_RULES = (
     "Read every listed source file completely with your file-reading tool; page through long files. "
     "Use only those source files, the supplied signatures, and the provided frozen graph evidence. "
     "Do not open other source files, execute repository code, search the web, or modify the repository. "
-    "You may Read the supplied graph evidence file for this batch. "
+    "You may Read a graph evidence file only when this task supplies its path. "
     "Separate observed syntax from inferred behavior; state uncertainty instead "
     "of inventing runtime facts. Be concise. Test functions and trivial accessors need no individual prose. "
     "Paths identify files; do not repeat large source passages.")
@@ -131,13 +131,10 @@ def detail_prompt(paths: list[str], inventory: dict[str, dict], *,
             text = "".join(c.get("text") or "" for c in rows)
         source_texts[path] = text
     source_tokens = sum(count_text_tokens(text) for text in source_texts.values())
-    if embed:
-        body += ["Graph access: this completion is tool-free; omitted evidence cannot be inspected.", ""]
-    elif graph_file:
-        body += [f"Graph access: Read the complete evidence for this batch at {graph_file}", ""]
-    body += graph_prompt_lines(graph, paths, embed=embed, inventory=inventory,
-                               chunks=chunks, source_tokens=source_tokens,
-                               max_tokens=graph_max_tokens, graph_file=graph_file)
+    graph_lines = graph_prompt_lines(graph, paths, embed=embed, inventory=inventory,
+                                    chunks=chunks, source_tokens=source_tokens,
+                                    max_tokens=graph_max_tokens, graph_file=graph_file)
+    body += graph_lines
     if context_diagnostics:
         body += ["SOURCE CONTEXT NOTES (program diagnostics, not model evidence):",
                  json.dumps(context_diagnostics[:10], ensure_ascii=False), ""]

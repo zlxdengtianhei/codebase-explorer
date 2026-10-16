@@ -510,19 +510,32 @@ def test_host_graph_file_and_review_repair_share_frozen_evidence(tmp_path: Path)
     assert "tool-free; omitted evidence cannot be inspected" in script
     assert ".graph.txt" not in script and "graph query" not in script
     assert not list((run_dir / "host" / "tasks").glob("*.graph.txt"))
-    _, body = host_run._body(run_dir, state, detail, embed=False)
-    target = run_dir / "host" / "tasks" / f"module_{number + 1}.graph.txt"
-    assert target.is_file() and str(target) in body
-    full = target.read_text()
-    assert "Omitted: none" in full
-    assert "graph query" not in body and "graph-query" not in prompts.FILE_TASK_RULES
-    expected = body.split("Graph access:", 1)[1].split("SOURCE FILES", 1)[0]
-    for kind in ("review", "repair"):
-        task = {**detail, "id": f"{kind}_{number + 1}", "kind": kind}
-        _, other = host_run._body(run_dir, state, task, embed=False)
-        assert other.split("Graph access:", 1)[1].split("SOURCE FILES", 1)[0] == expected
-        assert target.read_text() == full
-    assert len(list((run_dir / "host" / "tasks").glob("*.graph.txt"))) == 1
+    full = None
+    expected = None
+    seen = set()
+    for _ in range(30):
+        batch = host_run.next_tasks(run_dir)
+        if not batch["tasks"]:
+            break
+        for item in batch["tasks"]:
+            body = Path(item["prompt_file"]).read_text()
+            kind = item["kind"]
+            if kind in {"module", "review", "repair"} and item["task"].endswith(f"_{number + 1}"):
+                target = run_dir / "host" / "tasks" / f"module_{number + 1}.graph.txt"
+                assert target.is_file() and str(target) in body
+                assert "graph query" not in body
+                section = body.split("Graph access:", 1)[1].split("SOURCE FILES", 1)[0]
+                if expected is None:
+                    expected, full = section, target.read_text()
+                    assert "Omitted: none" in full
+                assert section == expected and target.read_text() == full
+                seen.add(kind)
+            decision = "needs_repair" if kind == "review" and "repair" not in seen else "accepted"
+            Path(item["output_file"]).write_text(json.dumps(_answer(item, body, decision=decision)))
+            result = host_run.submit(run_dir, item["task"])
+            assert result["accepted"], result
+    assert seen == {"module", "review", "repair"}
+
 
 
 def test_plan_rejects_a_graph_that_does_not_match_the_source(tmp_path: Path) -> None:
@@ -579,9 +592,21 @@ def test_script_driver_carries_the_graph_into_the_module_prompt(tmp_path: Path, 
     assert result["status"] == "complete"
     module_prompts = [prompt for task, prompt in seen.items()
                       if task.startswith("module_") and task[7:].isdigit()]
-    assert module_prompts and any("Graph access:" in prompt for prompt in module_prompts)
+    assert module_prompts and any("Batch-internal resolved calls:" in prompt or "Graph: internal=" in prompt
+                                  for prompt in module_prompts)
     assert all(".graph.txt" not in prompt and "graph query" not in prompt for prompt in module_prompts)
     assert not list((tmp_path / "run" / "host" / "tasks").glob("*.graph.txt"))
+    for task_file in (tmp_path / "run" / "host" / "tasks").glob("*.md"):
+        assert "graph evidence file" not in task_file.read_text()
+
+
+@pytest.mark.parametrize("graph", [None, {"schema": "wrong"},
+    {"schema": "cbe-graph/1", "nodes": [], "edges": [], "capabilities": []}])
+def test_graph_status_does_not_invite_file_reads(graph):
+    prompt = prompts.detail_prompt(["a.py"], {"a.py": {"symbols": []}}, graph=graph,
+                                   embed=False, graph_file="/missing.graph.txt")
+    assert "Graph access:" not in prompt
+    assert "/missing.graph.txt" not in prompt
 
 
 def test_summary_reports_structure_and_semantic_review_separately(tmp_path: Path) -> None:

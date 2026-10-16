@@ -322,7 +322,13 @@ def graph_prompt_lines(graph: Any, paths: list[str], *, embed: bool,
     budget = max(0, min(limits)) if limits else None
     text = graph_text(evidence, budget=budget)
     if text:
-        return [text, ""]
+        access = []
+        if budget is not None:
+            if embed:
+                access = ["Graph access: this completion is tool-free; omitted evidence cannot be inspected.", ""]
+            elif graph_file:
+                access = [f"Graph access: Read the complete evidence for this batch at {graph_file}", ""]
+        return access + [text, ""]
     # Like absent/failed graph notices, this is status, not relation payload.
     # A hard zero/tiny payload cap must never imply there were no relations.
     omitted = Counter()

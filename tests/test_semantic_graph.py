@@ -172,7 +172,7 @@ def test_default_and_configurable_source_token_caps():
             budget=min(source_tokens, cap))
         assert count_text_tokens(payload) <= min(source_tokens, cap)
         if payload:
-            assert "\n".join(lines).strip() == payload
+            assert payload in "\n".join(lines)
         else:
             assert lines[0].startswith("GRAPH STATUS (outside payload cap):")
 
