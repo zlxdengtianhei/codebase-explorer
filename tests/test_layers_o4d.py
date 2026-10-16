@@ -12,7 +12,7 @@ from test_layers_o4 import _run
 def test_edges_obey_exclusive_ownership_at_shared_boundary(tmp_path, capsys):
     repo = tmp_path / "repo"
     repo.mkdir()
-    text = "class MethodView:\n    marker = 1\n\n    def __init_subclass__(cls):\n        return cls\n"
+    text = "class MethodView:\n    marker = 1\n\n    def __init_subclass__(cls):\n        return cls\n\n    def other(self):\n        return self\n"
     (repo / "views.py").write_text(text)
     context = source_context.build_context(repo)
     inventory = inventory_from_context(context)
@@ -21,12 +21,13 @@ def test_edges_obey_exclusive_ownership_at_shared_boundary(tmp_path, capsys):
              for s in symbols}
     parent = next(s for s in symbols if s["name"] == "MethodView")
     child = next(s for s in symbols if s["name"] == "__init_subclass__")
+    other = next(s for s in symbols if s["name"] == "other")
     assert parent["lines"][-1][-1] == child["lines"][0][0]
     nodes = [{"id": s["id"], "path": "views.py", "start_line": s["lines"][0][0]}
-             for s in (parent, child)]
+             for s in (parent, child, other)]
     graph = {"nodes": nodes, "edges": [
         {"id": f"{i}-{kind}", "kind": kind, "source": s["id"], "target": s["id"]}
-        for i, s in enumerate((parent, child)) for kind in ("cfg", "dataflow")]}
+        for i, s in enumerate((parent, child, other)) for kind in ("cfg", "dataflow")]}
     context["graph"] = graph
     run = tmp_path / "run"
     run.mkdir()
@@ -44,14 +45,16 @@ def test_edges_obey_exclusive_ownership_at_shared_boundary(tmp_path, capsys):
     assert "--edges" in capsys.readouterr().err
     # A folded symbol still selects its own edges; the owning unit selects both.
     units.pop(child["id"])
-    units[parent["id"]]["members"] = [child["id"]]
+    units.pop(other["id"])
+    units[parent["id"]]["members"] = [child["id"], other["id"]]
     dispositions = {uid: {"how": "unit", "unit": uid} for uid in units}
     dispositions[child["id"]] = {"how": "grouped", "unit": parent["id"]}
+    dispositions[other["id"]] = {"how": "grouped", "unit": parent["id"]}
     docs.render(run_dir=run, source_root=repo, inventory=inventory, units=units,
                 dispositions=dispositions, tree={"nodes": [{"id": "root", "unit_ids": list(units)}]},
                 languages={"views.py": "python"}, context=context, graph=graph)
     assert [e["id"] for e in docs.query(run, child["id"], edges="cfg")["raw_edges"]] == ["1-cfg"]
-    assert len(docs.query(run, parent["id"], edges="cfg")["raw_edges"]) == 2
+    assert len(docs.query(run, parent["id"], edges="cfg")["raw_edges"]) == 3
 
 
 @pytest.mark.parametrize("prefix", ["Prose with a stray ` backtick.\n\n", "Prose with `` unmatched.\n\n", ""])
