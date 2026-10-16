@@ -99,7 +99,11 @@ cbe host submit --run-dir /absolute/path/to/run --task TASK
 cbe host verify --run-dir /absolute/path/to/run
 ```
 
-The skill describes the complete loop and the result contracts. Detail authors receive their assigned frozen source chunks and local graph evidence. The module stage receives structured explanations and relationships; it assigns each unit one primary place in a semantic tree. A directory or a dense set of import edges does not by itself define a module's responsibility.
+The skill describes the complete loop and the result contracts. Detail authors receive their assigned frozen source chunks and local graph evidence. The tree stage receives responsibility summaries, source locations and resolved unit edges with kind and count; it assigns each unit one primary place in a semantic tree. A directory or a dense set of import edges does not by itself define a module's responsibility.
+
+Large trees use program-selected candidate regions, one `tree_region-*` task per region, then a `tree` merge that attaches their accepted subtrees. Set `CBE_TREE_MAX_UNITS` and `CBE_TREE_MAX_TOKENS` before the first tree dispatch to configure the region limits; defaults are defined in `cbe.aggregation.Limits`. The plan records the chosen limits and each region's initial completion input tokens in `host/state.json`. A single summary larger than the token budget produces an explicit planning error. Region tasks wait for detail review and repair to settle; small runs keep one tree task.
+
+P1–P7 diagnostics appear in `summary.json` and at the end of INDEX. They are advisory and never request a rewrite. Set `CBE_TREE_MIN_GRAIN`, `CBE_TREE_MAX_GRAIN`, and `CBE_TREE_SHARED_MIN_EDGES` to adjust granularity and shared-utility reporting. P7 compares ids and titles with the prior rendered tree for identical detail input; its first observation is `not_checked`. This measures replay stability, not the stability of a fresh model completion.
 
 `--graph` is optional. Without it the context explicitly records that no analyzed graph was supplied. The model must not invent missing relations. `--review` selects `none`, `sample`, or `all`. Operational completion, structural validity, and semantic review are separate results.
 
