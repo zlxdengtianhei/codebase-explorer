@@ -68,17 +68,20 @@ Report cost after every run. The rule: **use the harness's exact numbers when it
 
 ## 读与查 / Read and query the result
 
-Start at `RUN/docs/INDEX.md`. Select a responsibility node for the maintenance question. Open that node page and select a unit. The page keeps the explanation, necessary boundary notes, uncertainties, and compact relation links. Its footer lists query/source commands and links to the ID lookup instructions in INDEX.
+Start at `RUN/docs/INDEX.md`. Select a responsibility node for the maintenance question. Open that node page and select a unit. The page keeps the explanation, necessary boundary notes, uncertainties, and compact relation links. Its footer shows how to find the selected title's ID and then query it.
 
 Set `RUN` to the absolute run directory. Find an ID, then retrieve its complete explanation and evidence:
 
 ```sh
 cbe find --run-dir "$RUN" --term "SEARCH_TERM"
 cbe query --run-dir "$RUN" --id "$ID"
+cbe query --run-dir "$RUN" --id "$ID" --json
+cbe query --run-dir "$RUN" --id "$ID" --edges cfg,dataflow
+cbe query --run-dir "$RUN" --id "$ID" --edges all --json
 cbe source --run-dir "$RUN" --id "$ID" --context 2
 ```
 
-`ID` can be a unit ID, inventory symbol ID, or file path. `query` returns explanation text, full signatures, all source ranges, folded members, relation evidence, and incoming and outgoing graph edges with their original statuses. A grouped symbol retains its own source range and includes its owning unit under `unit_detail`. A file query includes its symbols and associated units. An index-only symbol returns its recorded reason instead of invented prose.
+`ID` can be a unit ID, inventory symbol ID, or file path. `query` returns explanation text, full signatures, all source ranges, folded members, relation evidence, and incoming and outgoing call/import edges with their original statuses. CFG/dataflow edges are counted by default; use `--edges cfg,dataflow` or `--edges all` to expand original outgoing edges from the frozen graph. Use `--json` for the machine-readable object. A grouped symbol retains its own source range; take `unit_id` from `query --json` and query that ID for the owning unit and all its ranges. A file query lists its symbols and associated units. An index-only symbol returns its recorded reason instead of invented prose.
 
 `source` prints numbered code from `RUN/context.json`. It verifies each selected file's SHA-256 before printing any code. It reports a digest mismatch as an error. `--context N` adds N surrounding lines and must be nonnegative. Use this command to inspect the precise code behind an explanation.
 

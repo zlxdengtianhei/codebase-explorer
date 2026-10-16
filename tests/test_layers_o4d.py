@@ -102,3 +102,19 @@ def test_page_keeps_complete_explanation_with_or_without_summary(tmp_path, summa
     if summary:
         assert summary in body
     assert docs.query(run, uid)["explain"] == explain
+
+
+def test_product_read_query_instructions_use_available_commands(tmp_path, capsys):
+    import shlex
+    from pathlib import Path
+
+    run, ids, _, _, _ = _run(tmp_path)
+    skill = (Path(__file__).resolve().parents[1] / ".dsh/skills/codebase-explorer/SKILL.md").read_text()
+    section = skill.split("## 读与查 / Read and query the result")[1].split("## Script-driven")[0]
+    assert "unit_detail" not in section and "unit_id" in section
+    assert "--edges cfg,dataflow" in section and "--edges all --json" in section
+    for line in section.splitlines():
+        if line.startswith("cbe "):
+            args = shlex.split(line.replace("$RUN", str(run)).replace("$ID", ids[0]))
+            assert cli.main(args[1:]) == 0
+            capsys.readouterr()
