@@ -42,7 +42,7 @@ jobs:
                   if not member.isfile():
                       continue
                   relative = "/".join(member.name.split("/")[1:])
-                  assert relative in ("README.md", "LICENSE", "pyproject.toml", "PKG-INFO", ".gitignore") or relative.startswith(("src/cbe/", "src/cbe_install/", ".dsh/skills/codebase-explorer/")), relative
+                  assert relative in ("README.md", "LICENSE", "pyproject.toml", "PKG-INFO", ".gitignore") or relative.startswith(("src/cbe/", "src/cbe_install/", ".dsh/skills/codebase-explorer/", ".dsh/agents/")), relative
                   payload = archive.extractfile(member).read()
                   assert b"/Users/" not in payload and b"/home/" not in payload, relative
           PY

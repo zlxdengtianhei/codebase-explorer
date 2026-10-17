@@ -128,11 +128,15 @@ def test_product_read_query_instructions_use_available_commands(tmp_path, capsys
     section = skill.split("## 读与查 / Read and query the result")[1].split("## Script-driven")[0]
     assert "unit_detail" not in section and "unit_id" in section
     assert "--edges cfg,dataflow" in section and "--edges all --json" in section
+    placeholders = {"RUN": str(run), "ID": ids[0]}
+    ran = 0
     for line in section.splitlines():
         if line.startswith("cbe "):
-            args = shlex.split(line.replace("$RUN", str(run)).replace("$ID", ids[0]))
+            args = [placeholders.get(word, word) for word in shlex.split(line)]
             assert cli.main(args[1:]) == 0
             capsys.readouterr()
+            ran += 1
+    assert ran >= 6
 
 
 def test_json_queries_preserve_file_metadata_and_inventory_names(tmp_path, capsys):

@@ -30,6 +30,10 @@ FILE_TASK_RULES = (
     "Read every listed source file completely with your file-reading tool; page through long files. "
     "Use only those source files, the supplied signatures, and the provided frozen graph evidence. "
     "Do not open other source files, execute repository code, search the web, or modify the repository. "
+    "Use your file-reading tool for the listed files and your file-writing tool for the result file. "
+    "Do not run shell commands, scripts, or interpreters, not even to assemble or check the JSON: "
+    "in the user's harness each one asks for permission, and this task does not need them. "
+    "(If your harness has no file-reading or file-writing tool, use the plainest command that reads or writes that one file.) "
     "You may Read a graph evidence file only when this task supplies its path. "
     "Separate observed syntax from inferred behavior; state uncertainty instead "
     "of inventing runtime facts. Be concise. Test functions and trivial accessors need no individual prose. "
@@ -230,7 +234,9 @@ def tree_prompt(units: dict[str, dict], files: list[str], edges: list[dict] | No
 def review_prompt(units: dict | None, detail_task: str) -> str:
     """An independent reader checks one batch's accepted units against the same source."""
     return ("TASK: Check these structured detail units against the source. Return JSON "
-            "{\"decision\":\"accepted\" or \"needs_repair\",\"issues\":[...]} . Only report "
+            "{\"decision\":\"accepted\" or \"needs_repair\",\"issues\":[...]} . issues is a list of "
+            "strings, not objects: one sentence per issue that names the unit id and the problem, for "
+            "example \"issues\": [\"flask/app.py::method::Flask.run::123: says X but the code does Y\"]. Only report "
             "material unsupported or missing behavior, a wrong condition or failure surface, or a "
             "unit attributed to the wrong symbol. Do not judge writing style.\n"
             "DOCUMENTATION (structured units): " + json.dumps(units, ensure_ascii=False) + "\n\n" + detail_task)
