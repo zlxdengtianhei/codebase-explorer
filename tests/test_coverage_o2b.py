@@ -25,6 +25,6 @@ def test_relation_percentages_exclude_structural_edges(tmp_path):
     assert "python import: resolved 1/2 (50%), external 1/2 (50%)" in index
     assert "python call: resolved 1/4 (25%), unresolved 3/4 (75%)" in index
     assert "cfg=100" in index and "dataflow=100" in index
-    assert "结构边，不按状态算可信度" in index
+    assert "structural edges; only their counts are shown, without status ratios" in index
     assert not re.search(r"\b(?:cfg|dataflow):\s*\w+\s+\d+/\d+", index)
-    assert "/206" not in index and "状态比例按语言合计" not in index
+    assert "/206" not in index and "Status ratios aggregated by language" not in index

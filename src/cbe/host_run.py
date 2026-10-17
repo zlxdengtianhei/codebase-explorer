@@ -1365,6 +1365,7 @@ def _render(run_dir: Path, state: dict[str, Any]) -> None:
     summary["aggregation_principles"] = principle_report
     summary["aggregation"] = state.get("aggregation", {})
     summary["node_dependencies"] = meta["relationship_counts"]
+    summary["within_containment"] = meta["within_containment_count"]
     summary["key_flows"] = meta["key_flows"]
     summary["candidate_flows"] = meta["candidate_flows"]
     write_json(previous_path, principle_report)

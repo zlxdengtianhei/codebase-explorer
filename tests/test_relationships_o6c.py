@@ -86,8 +86,9 @@ def test_containment_counts_ancestor_direct_units_against_descendant_subtree_in_
     assert rows["parent", "child"]["count"] == 14
     assert rows["child", "parent"]["count"] == 2
     assert rows["parent", "child"]["source"] == rows["child", "parent"]["source"] == "containment"
-    assert view["counts"] == dict(graph_confirmed=0, model_inferred=0, graph_only=3)
-    assert rows["parent", "grandchild"]["source"] == "graph_only"
+    assert view["counts"] == dict(graph_confirmed=0, model_inferred=0, graph_only=0)
+    assert view["within_containment_count"] == 3
+    assert rows["parent", "grandchild"]["source"] == "within_containment"
     assert rows["parent", "grandchild"]["count"] == 1
     assert rows["parent", "grandchild"]["containment"] is True
 
@@ -97,7 +98,7 @@ def test_unmentioned_containment_preserves_direct_owner_pairs():
     tree["depends_on"] = []
     rows = aggregation.relationship_view(tree, [edge("a", "b", count=13), edge("a", "c")], graph())
     assert [(r["from"], r["to"], r["count"], r["source"], r["containment"]) for r in rows["dependencies"]] == [
-        ("parent", "child", 13, "graph_only", True), ("parent", "grandchild", 1, "graph_only", True)]
+        ("parent", "child", 13, "within_containment", True), ("parent", "grandchild", 1, "within_containment", True)]
 
 
 def test_pages_and_catalog_show_containment_counts_but_mermaid_excludes_both_kinds(tmp_path):
@@ -130,10 +131,11 @@ def test_pages_and_catalog_show_containment_counts_but_mermaid_excludes_both_kin
                             {"id": "pkg/jobs.py::reserve@5", "path": "pkg/jobs.py",
                              "start_byte": SRC.index("def reserve(value):"), "end_byte": SRC.index("class Pool:")}]})
     index = (run / "docs/INDEX.md").read_text()
-    assert "图确认与模型推断按两棵子树的单元计边，图有未描述按直属节点计边。" in index
-    assert "包含关系 · 1 edge(s)" in index
-    assert "图有未描述 · 包含内 · 1 edge(s)" in index
-    assert "包含关系 · 1 edge(s)" in (run / "docs/nodes/a.md").read_text()
+    assert "Graph-confirmed and model-inferred pairs count edges between two subtrees." in index
+    assert "Graph-only pairs count edges between direct node owners." in index
+    assert "containment · → 1 / ← 1 edge(s)" in index
+    assert "within containment · 1 edge(s)" in index
+    assert "containment · → 1 / ← 1 edge(s)" in (run / "docs/nodes/a.md").read_text()
     diagram = index.split("```mermaid\n", 1)[1].split("```", 1)[0]
     # There are exactly two sibling/container-disjoint tree edges to Empty.
     assert len(re.findall(r'^  n\d+ (?:-->|-\.->|==>) n\d+$', diagram, re.M)) == 2

@@ -83,7 +83,8 @@ def region_edges(edges: list[dict], membership: dict[str, str]) -> list[dict]:
             for (a, b, k), n in sorted(counts.items())]
 
 
-def relationship_view(tree: dict, edges: list[dict], graph: dict | None, *, graph_only_limit: int = 40) -> dict:
+def relationship_view(tree: dict, edges: list[dict], graph: dict | None, *, graph_only_limit: int = 40,
+                      within_containment_limit: int = 40) -> dict:
     """Compare disjoint subtrees; expose calls inside structural containment.
 
     Tree containment pairs count ancestor direct units versus descendant subtree.
@@ -117,7 +118,10 @@ def relationship_view(tree: dict, edges: list[dict], graph: dict | None, *, grap
     node_ids = set(nodes)
     model = {(e["from"], e["to"]): e.get("basis", "") for e in tree.get("depends_on", [])
              if e.get("from") in node_ids and e.get("to") in node_ids and e["from"] != e["to"]}
-    graph_only = sorted(counts.keys() - model.keys(), key=lambda p: (-counts[p], p))
+    unmentioned = counts.keys() - model.keys()
+    graph_only = sorted((p for p in unmentioned if not contains(*p)), key=lambda p: (-counts[p], p))
+    within_containment = sorted((p for p in unmentioned if contains(*p)), key=lambda p: (-counts[p], p))
+    reverse_counts = {}
     for a, b in model:
         if contains(a, b):
             ancestor, descendant = (a, b) if a in ancestors[b] else (b, a)
@@ -127,23 +131,29 @@ def relationship_view(tree: dict, edges: list[dict], graph: dict | None, *, grap
             pair_membership = {uid: nid for nid in (a, b) for uid in subtree_units[nid]}
         rolled = region_edges(resolved, pair_membership)
         pair_kinds = Counter()
+        reverse_counts[a, b] = sum(edge["count"] for edge in rolled
+                                   if (edge["from"], edge["to"]) == (b, a))
         for edge in rolled:
             if (edge["from"], edge["to"]) == (a, b):
                 pair_kinds[edge["kind"]] += edge["count"]
         counts[a, b] = sum(pair_kinds.values())
         kinds[a, b] = pair_kinds
-    pairs = sorted(model) + graph_only[:graph_only_limit]
+    pairs = sorted(model) + graph_only[:graph_only_limit] + within_containment[:within_containment_limit]
     dependencies = [{"from": a, "to": b,
                      "source": "containment" if contains(a, b) and (a, b) in model else
                                "graph_confirmed" if counts[a, b] and (a, b) in model else
-                               "model_inferred" if (a, b) in model else "graph_only",
+                               "model_inferred" if (a, b) in model else
+                               "within_containment" if contains(a, b) else "graph_only",
                      "count": counts[a, b],
+                     **({"reverse_count": reverse_counts[a, b]} if contains(a, b) and (a, b) in model else {}),
                      "containment": contains(a, b), "kinds": dict(sorted(kinds[a, b].items())),
                      "basis": model.get((a, b), ""), "description": ""} for a, b in pairs]
-    totals = {source: sum(e["source"] == source and not e["containment"] for e in dependencies)
+    totals = {source: sum(e["source"] == source for e in dependencies)
               for source in ("graph_confirmed", "model_inferred", "graph_only")}
     totals["graph_only"] = len(graph_only)
     return {"dependencies": dependencies, "counts": totals,
+            "within_containment_count": len(within_containment),
+            "within_containment_omitted": max(0, len(within_containment) - within_containment_limit),
             "graph_only_omitted": max(0, len(graph_only) - graph_only_limit),
             "graph_state": state, "graph_reason": reason,
             "candidate_flows": candidate_flows(resolved)}

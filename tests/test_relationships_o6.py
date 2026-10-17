@@ -33,10 +33,11 @@ def test_rollup_containment_is_not_dependency_and_omission():
     rows = result["dependencies"]
     assert [(r["from"], r["to"], r["source"], r["count"]) for r in rows] == [
         ("child", "other", "model_inferred", 0), ("root", "child", "containment", 5),
-        ("other", "child", "graph_only", 9)]
+        ("other", "child", "graph_only", 9), ("other", "root", "within_containment", 4)]
     assert rows[1]["containment"] and rows[1]["kinds"] == {"call": 2, "import": 3}
-    assert result["graph_only_omitted"] == 1
-    assert result["counts"] == dict(graph_confirmed=0, model_inferred=1, graph_only=2)
+    assert result["graph_only_omitted"] == 0
+    assert result["counts"] == dict(graph_confirmed=0, model_inferred=1, graph_only=1)
+    assert result["within_containment_count"] == 1
 
 
 @pytest.mark.parametrize("evidence", [None, {"schema": "cbe-graph/1", "nodes": [], "edges": [],
@@ -114,7 +115,7 @@ def test_missing_new_fields_reasked_then_normalized_via_host(tmp_path):
     assert accepted["key_flows"] == accepted["dependency_descriptions"] == []
     state = json.loads((run / "host/state.json").read_text())
     assert any("key_flows" in flag for flag in state["tasks"]["system"]["flags"])
-    assert "system 未提供关键流程" in (run / "docs/INDEX.md").read_text()
+    assert "The system response provided no key flows" in (run / "docs/INDEX.md").read_text()
     assert host_run.verify(run)["ok"]
 
 
@@ -151,7 +152,7 @@ def test_render_query_and_links_with_inferred_flow(tmp_path):
     assert "Depended on by" in (run / "docs/nodes/child.md").read_text()
     index = (run / "docs/INDEX.md").read_text()
     assert '```mermaid' not in index  # containment is never drawn as dependency
-    assert "包含关系 · 0 edge(s)" in index and "Uses its service." in index
+    assert "containment · → 0 / ← 0 edge(s)" in index and "Uses its service." in index
     assert host_run.verify(run)["ok"]
     view = aggregation.relationship_view(value, [], graph())
     system = dict(key_flows=[dict(name="Flow", description="Uses helpers.", steps=ids[:2])])

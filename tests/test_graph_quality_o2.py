@@ -149,8 +149,8 @@ def test_legacy_graph_readers(tmp_path, capsys):
     host_run.resume(run, graph_path=path)
     _drive(run)
     index = (run / "docs/INDEX.md").read_text()
-    assert "## 图覆盖" in index and "python" in index and "resolved" in index
-    assert "仅靠模型阅读源码" in index
+    assert "## Graph coverage" in index and "python" in index and "resolved" in index
+    assert "rely on model inference" in index
 
 
 def test_query_slices_omit_whole_graph_quality(tmp_path, capsys):
@@ -180,13 +180,13 @@ def test_index_coverage_without_successful_graph(tmp_path, mode):
     docs.render(run_dir=tmp_path, source_root=tmp_path, inventory={}, units={}, dispositions={},
                 tree={"nodes": []}, languages={}, graph=value)
     index = (tmp_path / "docs/INDEX.md").read_text()
-    assert "## 图覆盖" in index and "仅靠模型阅读源码" in index
+    assert "## Graph coverage" in index and ("inferred by the model from source" in index or "rely on model inference" in index)
     if mode == "missing":
-        assert "未提供图" in index
+        assert "No graph was provided" in index
     elif mode == "failed":
-        assert "没有后端跑成" in index
+        assert "No graph backend succeeded" in index
     else:
         assert "python import: resolved 1/1 (100%)" in index and "ruby/cfg failed" in index
-        assert "图确认目标在仓外" in index and "图给出候选" in index
-        assert "其余状态" not in index
-        assert "悬空边 1" in index
+        assert "External targets are outside the repository" in index and "ambiguous targets have multiple candidates" in index
+        assert "other statuses" not in index
+        assert "dangling edges 1" in index

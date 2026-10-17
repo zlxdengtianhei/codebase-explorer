@@ -47,5 +47,5 @@ def test_render_resolved_calls_and_inferred_transitions(tmp_path):
     index = (run / "docs/INDEX.md").read_text()
     assert f"nodes/root.md#{docs.anchor(a)}" in index
     assert f"nodes/helper.md#{docs.anchor(b)}" in index
-    assert "（模型推断）" in index and "图确认" in index
+    assert "(model-inferred)" in index and "graph-confirmed" in index
     assert all(row["ok"] for row in docs.verify(run, inventory, units, payload["dispositions"], tree))

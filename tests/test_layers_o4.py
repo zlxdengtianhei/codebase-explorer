@@ -41,8 +41,8 @@ def test_page_and_catalog_share_complete_records(tmp_path):
     assert "folds:" not in page and "kind:" not in page
     assert "### `class::" not in page and "### `function::" not in page
     assert "pkg/jobs.py:L" in page and "**Relations.**" not in page
-    assert "怎样查" in page and "cbe source --run-dir" in page
-    assert "给 agent 的读法" in (run / "docs/INDEX.md").read_text()
+    assert "Look up code" in page and "cbe source --run-dir" in page
+    assert "How to read this report" in (run / "docs/INDEX.md").read_text()
     for uid, original in units.items():
         record = catalog["units"][uid]
         for field in ("explain", "extras", "relations", "uncertainties", "members"):
@@ -100,7 +100,7 @@ def test_agent_query_prose_once_and_json_opt_in(tmp_path, capsys):
     residuals = [uid for uid in catalog["short_names"] if "::module_residual::" in uid]
     assert residuals
     for uid in residuals:
-        assert "模块代码（L" in catalog["short_names"][uid]
+        assert "module code (L" in catalog["short_names"][uid]
 
 
 def test_frozen_source_crlf_and_utf8_round_trip(tmp_path):

@@ -21,9 +21,9 @@ from cbe.symbols import SemanticError, inventory_ids
 # One repository file larger than this becomes its own inventory unit region set;
 # a chunk never has to fit a model context alone because batches group many.
 SCHEMA = "cbe-semantic/1"
-DEPENDENCY_STYLES = {"graph_confirmed": ("图确认", "-->"),
-                     "model_inferred": ("模型推断", "-.->"),
-                     "graph_only": ("图有未描述", "==>")}
+DEPENDENCY_STYLES = {"graph_confirmed": ("graph-confirmed", "-->"),
+                     "model_inferred": ("model-inferred", "-.->"),
+                     "graph_only": ("graph-only", "==>")}
 
 
 def unit_ranges(uid: str, unit: dict, inventory: dict[str, dict]) -> list[dict]:
@@ -135,16 +135,16 @@ def _build_unit_block(uid: str, units: dict, ranges_map: dict, owner: dict,
                  if isinstance(rel, dict) and isinstance(rel.get("target"), str)
                  and rel["target"].strip()]
     if relations:
-        labels = {"call": "调用", "inherit": "继承", "override": "覆盖", "import": "导入",
-                  "raise": "抛出", "use": "使用", "contract": "契约", "group": "分组"}
+        labels = {"call": "calls", "inherit": "inherits", "override": "overrides", "import": "imports",
+                  "raise": "raises", "use": "uses", "contract": "contract", "group": "group"}
         grouped: dict[str, list[str]] = {}
         for rel in relations:
-            label = labels.get(rel.get("kind"), rel.get("kind") or "使用")
+            label = labels.get(rel.get("kind"), rel.get("kind") or "uses")
             link = _relation_link(rel["target"], units, dispositions, owner, nodes,
                                   source_root, page_dir, name_of, source_links)
             if link not in grouped.setdefault(label, []):
                 grouped[label].append(link)
-        lines += ["；".join(f"{label}：{'、'.join(links)}" for label, links in grouped.items()), ""]
+        lines += ["; ".join(f"{label}: {', '.join(links)}" for label, links in grouped.items()), ""]
     uncertainties = [item for item in unit.get("uncertainties") or []
                      if isinstance(item, str) and item.strip()]
     if uncertainties:
@@ -208,7 +208,7 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
             base = parts[2]
         if "::module_residual::" in uid or symbol.get("kind") == "module_residual":
             spans = symbol["ranges"][0]["lines"]
-            base = f"{Path(symbol['file']).name} 模块代码（L{spans[0][0]}—L{spans[-1][1]}）"
+            base = f"{Path(symbol['file']).name} module code (L{spans[0][0]}–L{spans[-1][1]})"
         if base in taken:
             base = f"{uid.split('::', 1)[0]}:{base}"
         name = base
@@ -224,6 +224,7 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
     relationships = aggregation.annotate_relationships(
         aggregation.relationship_view(tree, unit_edges, graph), system or {}, unit_edges)
     labels = {source: style[0] for source, style in DEPENDENCY_STYLES.items()}
+    labels["within_containment"] = "within containment"
     edges_by_from: dict[str, list[dict]] = {nid: [] for nid in nodes}
     edges_by_to: dict[str, list[dict]] = {nid: [] for nid in nodes}
     for edge in relationships["dependencies"]:
@@ -232,10 +233,10 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
 
     def dependency_line(edge, target, prefix=""):
         return (f"- [{link_text(nodes[target].get('title') or target)}]({prefix}{target}.md) · "
-                + (f"包含关系 · {edge['count']} edge(s)（祖先直属单元与后代子树，按箭头方向）"
+                + (f"containment · → {edge['count']} / ← {edge['reverse_count']} edge(s) "
+                   f"(ancestor direct units and descendant subtree; → follows {code_text(edge['from'])} → {code_text(edge['to'])})"
                    if edge["source"] == "containment" else
-                   f"{labels[edge['source']]} · " + ("包含内 · " if edge.get("containment") else "")
-                   + f"{edge['count']} edge(s)")
+                   f"{labels[edge['source']]} · {edge['count']} edge(s)")
                 + (" · " + literal_links(edge["description"]) if edge["description"] else ""))
 
     from cbe.records import correction_notice
@@ -279,10 +280,10 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
             block = _build_unit_block(uid, units, ranges_map, owner, dispositions,
                                       nodes, source_root, nodes_dir, name_of, source_links)
             lines += [f'<a id="{anchor(uid)}"></a>'] + block.splitlines() + [""]
-        lines += ["## 怎样查", "", '`RUN` 为运行目录。用本页单元标题查 `ID`（精确名称优先）：',
-                  '`cbe find --run-dir "$RUN" --term "单元标题"`。再用结果中的 `ID`：',
-                  '`cbe query --run-dir "$RUN" --id "$ID"`；'
-                  '`cbe source --run-dir "$RUN" --id "$ID" --context 2`。', ""]
+        lines += ["## Look up code", "", '`RUN` is the run directory. Find `ID` by a unit title on this page (exact names first):',
+                  '`cbe find --run-dir "$RUN" --term "UNIT_TITLE"`. Then use an `ID` from the results:',
+                  '`cbe query --run-dir "$RUN" --id "$ID"`; '
+                  '`cbe source --run-dir "$RUN" --id "$ID" --context 2`.', ""]
         lines += [f"[{ref}]: {os.path.relpath(source_root / path, nodes_dir)}"
                   for path, ref in source_links.items()]
         (nodes_dir / f"{nid}.md").write_text("\n".join(lines).strip() + "\n", encoding="utf-8")
@@ -301,44 +302,44 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
         return rows
 
     roots = [nid for nid, node in nodes.items() if not node.get("parent")]
-    index_lines = ["# Codebase Explorer", "", "## 给 agent 的读法", "",
-                   "先读 INDEX 的责任树。按维护问题打开节点页，再选单元。",
-                   "节点页保留语义解释。完整签名、全部范围、折叠成员、关系依据和图边保存在 `catalog.json`。",
-                   "将 `RUN` 设为本次运行目录的绝对路径。先找 id，再查解释或冻结源码。", "", "```sh",
+    index_lines = ["# Codebase Explorer", "", "## How to read this report", "",
+                   "Start with the responsibility tree in INDEX. Open a node page for your maintenance question, then choose a unit.",
+                   "Node pages explain responsibilities. `catalog.json` stores full signatures, source ranges, folded members, relation evidence, and graph edges.",
+                   "Set `RUN` to the absolute path of this run directory. Find an id, then read its explanation or frozen source.", "", "```sh",
                    'cbe find --run-dir "$RUN" --term "SEARCH_TERM"',
                    'cbe query --run-dir "$RUN" --id "$ID"',
                    'cbe source --run-dir "$RUN" --id "$ID" --context 2', "```", "",
-                   "`ID` 可为单元 id、符号 id 或文件路径。命令返回正文，不必再追页面位置。",
-                   "`source` 从冻结源码取代码，并先核对摘要。",
-                   "图的反向边、状态和原始依据也在 catalog 中。", "", "## Responsibility tree", ""]
+                   "`ID` can be a unit id, symbol id, or file path. Commands return the content directly.",
+                   "`source` reads frozen source and verifies its digest first.",
+                   "The catalog also stores reverse graph edges, statuses, and raw evidence.", "", "## Responsibility tree", ""]
     for root in roots:
         index_lines.extend(outline(root, 0))
     index_lines += ["", "## Reading stats", "",
                     f"- units: {len(units)} · semantic nodes: {len(nodes)} · "
                     f"dispositioned inventory ids: {len(dispositions)}",
                     "- source ranges are program-derived from the inventory, never model-written"]
-    index_lines += ["", "## 图覆盖 / Graph coverage", ""]
+    index_lines += ["", "## Graph coverage", ""]
     if graph is None:
-        index_lines += ["未提供图；关系仅靠模型阅读源码推断，可能不准确。"]
+        index_lines += ["No graph was provided. Relations are inferred by the model from source and may be inaccurate."]
     else:
         from cbe.graph import read_graph_quality, graph_state
         quality = read_graph_quality(graph, repo=source_root)
         state, _ = graph_state(graph, quality=quality)
         if state == "failed":
-            index_lines += ["没有后端跑成；图不可作为关系证据，关系仅靠模型阅读源码。"]
+            index_lines += ["No graph backend succeeded. Relations are inferred by the model from source."]
         elif state == "empty":
-            index_lines += ["图为空，没有图确认的关系；关系仅靠模型阅读源码。"]
+            index_lines += ["The graph is empty. No relations are graph-confirmed; relations are inferred by the model from source."]
         elif state == "unsupported":
-            index_lines += ["图不支持本次分析；关系仅靠模型阅读源码，可能不准确。"]
+            index_lines += ["The graph does not support this analysis. Relations are inferred by the model from source and may be inaccurate."]
         else:
-            index_lines += ["来源：静态分析图；resolved 表示图确认的关系（不保证语义正确）。"
-                            "external 表示图确认目标在仓外；ambiguous 表示图给出候选。"
-                            "unresolved、unsupported 及未覆盖的语言/关系种类仅靠模型阅读源码，可能不准确。"]
+            index_lines += ["Source: static analysis graph. Resolved relations are graph-confirmed; this does not guarantee semantic correctness. "
+                            "External targets are outside the repository; ambiguous targets have multiple candidates. "
+                            "Unresolved or unsupported relations, and languages or relation kinds without coverage, rely on model inference and may be inaccurate."]
         by_language: dict[str, list[dict]] = {}
         for row in quality["edge_counts"]:
             by_language.setdefault(row["language"], []).append(row)
-        index_lines += ["import、call 的状态比例分别按各自边数计算；"
-                        "cfg、dataflow 是结构边，不按状态算可信度，仅列边数。"]
+        index_lines += ["Import and call status ratios use the edge count of each kind. "
+                        "CFG and dataflow are structural edges; only their counts are shown, without status ratios."]
         for language, rows in sorted(by_language.items()):
             by_kind = {row["kind"]: row for row in rows}
             relations = []
@@ -348,38 +349,41 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
                     continue
                 total = row["total"]
                 proportions = ", ".join(f"{status} {count}/{total} ({count / total:.0%})"
-                                        for status, count in row["statuses"].items() if count) if total else "无边"
+                                        for status, count in row["statuses"].items() if count) if total else "no edges"
                 relations.append(f"{language} {kind}: {proportions}")
             structural = ", ".join(f"{kind}={by_kind[kind]['total']}"
                                    for kind in ("cfg", "dataflow") if kind in by_kind)
             if relations:
-                index_lines += [" · ".join(relations) + "。"]
+                index_lines += [" · ".join(relations) + "."]
             if structural:
-                index_lines += [f"{language} 结构边：{structural}。"]
+                index_lines += [f"{language} structural edges: {structural}."]
         incomplete = quality["incomplete_capabilities"]
         if incomplete:
-            index_lines += ["不完整：" + "; ".join(
+            index_lines += ["Incomplete capabilities: " + "; ".join(
                 f"{c.get('language')}/{c.get('graph')} {c.get('status')}"
-                for c in incomplete) + "。"]
-        integrity = [f"悬空边 {quality['dangling_edges']['count']}",
-                     f"清单外节点 {quality['nodes_outside_manifest']['count']}",
-                     f"文件不存在的节点 {quality['nodes_missing_files']['count']}"
-                     if quality["file_existence_checked"] else "文件存在性未检查"]
+                for c in incomplete) + "."]
+        integrity = [f"dangling edges {quality['dangling_edges']['count']}",
+                     f"nodes outside manifest {quality['nodes_outside_manifest']['count']}",
+                     f"nodes with missing files {quality['nodes_missing_files']['count']}"
+                     if quality["file_existence_checked"] else "file existence not checked"]
         if quality["frontend_failures"]:
-            integrity.append("前端失败，见图 diagnostics")
+            integrity.append("frontend failed; see graph diagnostics")
         if quality["backend_completed"] is None:
-            integrity.append("后端完成状态未知")
-        index_lines += ["程序核：" + "；".join(integrity) + "。"]
+            integrity.append("backend completion unknown")
+        index_lines += ["Program checks: " + "; ".join(integrity) + "."]
     if system:
         index_lines += ["", "## Overview", "", literal_links(system["overview"]),
                         "", "## Maintenance navigation", "", literal_links(system["maintenance_navigation"])]
     index_lines += ["", "## Dependency view", "",
-                    "箭头从使用方指向被依赖方；包含关系不算依赖。图确认同时见于 tree 与已解析调用/import，"
-                    "模型推断仅见于 tree，图有未描述仅见于图。",
-                    "图确认与模型推断按两棵子树的单元计边，图有未描述按直属节点计边。"
-                    "包含关系另列祖先直属单元与后代子树之间的已解析边；包含内的图边不画入 Mermaid。"]
+                    "Arrows point from a user to its dependency. Containment is structural, not a dependency. "
+                    "Graph-confirmed pairs appear in both the tree and resolved call/import edges. "
+                    "Model-inferred pairs appear only in the tree. Graph-only pairs appear only in the graph.",
+                    "Graph-confirmed and model-inferred pairs count edges between two subtrees. "
+                    "Graph-only pairs count edges between direct node owners. "
+                    "Containment rows show resolved edges between ancestor direct units and a descendant subtree in both directions. "
+                    "Within containment rows count direct owner pairs separately. Neither kind of containment row appears in Mermaid or the three dependency totals."]
     if relationships["graph_state"] != "provided":
-        index_lines += ["没有可用图确认；仅列模型推断：" + relationships["graph_reason"] + "。"]
+        index_lines += ["No usable graph evidence; only model-inferred dependencies are listed: " + relationships["graph_reason"] + "."]
     degree = {}
     for edge in relationships["dependencies"]:
         if edge.get("containment"):
@@ -400,28 +404,37 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
             if not edge.get("containment") and edge["from"] in aliases and edge["to"] in aliases:
                 arrow = DEPENDENCY_STYLES[edge["source"]][1]
                 index_lines.append(f"  {aliases[edge['from']]} {arrow} {aliases[edge['to']]}")
-        index_lines += ["```", "", f"按连接数选 {len(selected)} 个节点；图例："
-                        + "；".join(f"`{arrow}` {label}" for label, arrow in DEPENDENCY_STYLES.values()) + "。"]
+        index_lines += ["```", "", f"Selected {len(selected)} nodes by connection count. Legend: "
+                        + "; ".join(f"`{arrow}` {label}" for label, arrow in DEPENDENCY_STYLES.values()) + "."]
     else:
-        index_lines += ["没有节点依赖。"]
+        index_lines += ["No node dependencies."]
     index_lines += ["", "## Dependency list", ""]
     for edge in relationships["dependencies"]:
+        if edge["source"] == "within_containment":
+            continue
         index_lines += [f"- [{link_text(nodes[edge['from']].get('title') or edge['from'])}]"
                         f"(nodes/{edge['from']}.md) → " + dependency_line(edge, edge["to"], "nodes/")[2:]]
-    index_lines += ["", f"图有未描述按边数降序保留，省略 {relationships['graph_only_omitted']} 条。"]
+    index_lines += ["", f"Graph-only pairs are ranked by edge count; {relationships['graph_only_omitted']} omitted.",
+                    "", "### Within containment", ""]
+    for edge in relationships["dependencies"]:
+        if edge["source"] == "within_containment":
+            index_lines += [f"- [{link_text(nodes[edge['from']].get('title') or edge['from'])}]"
+                            f"(nodes/{edge['from']}.md) → " + dependency_line(edge, edge["to"], "nodes/")[2:]]
+    index_lines += ["", f"Within containment: {relationships['within_containment_count']} pairs, ranked by edge count; "
+                    f"{relationships['within_containment_omitted']} omitted. Each graph list keeps at most 40 pairs independently."]
     if not (system or {}).get("dependency_descriptions"):
-        index_lines += ["", "system 未提供关键依赖说明。"]
+        index_lines += ["", "The system response provided no key dependency descriptions."]
     index_lines += ["", "## Key flows", ""]
     if not relationships["candidate_flows"]:
-        index_lines += ["没有候选流程：" + (relationships["graph_reason"]
+        index_lines += ["No candidate flows: " + (relationships["graph_reason"]
                         if relationships["graph_state"] != "provided" else
-                        "没有已解析调用或没有零入度的入口单元") + "。"]
+                        "no resolved calls or no entry units with zero incoming calls") + "."]
     displayed_flows = relationships["key_flows"]
     if not displayed_flows:
-        index_lines += ["system 未提供关键流程。"]
+        index_lines += ["The system response provided no key flows."]
         if relationships["candidate_flows"]:
-            index_lines += ["", "程序候选，未经模型挑选（前 5 条）：", ""]
-            displayed_flows = [dict(name=f"候选 {i}", description="程序从已解析调用提取。",
+            index_lines += ["", "Program candidates, not selected by the model (first 5):", ""]
+            displayed_flows = [dict(name=f"Candidate {i}", description="Extracted by the program from resolved calls.",
                                     steps=path, inferred_steps=[])
                                for i, path in enumerate(relationships["candidate_flows"][:5], 1)]
     for flow in displayed_flows:
@@ -429,7 +442,7 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
         steps = []
         for i, uid in enumerate(flow["steps"]):
             if i:
-                steps.append(" →（模型推断）→ " if i in flow["inferred_steps"] else " → ")
+                steps.append(" → (model-inferred) → " if i in flow["inferred_steps"] else " → ")
             steps.append(f"[{link_text(name_of(uid))}](nodes/{owner[uid]}.md#{anchor(uid)})")
         index_lines += ["  " + "".join(steps)]
     if index_notes:
@@ -506,7 +519,9 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
     (run_dir / "catalog.json").write_text(json.dumps(catalog, ensure_ascii=False, indent=2) + "\n",
                                           encoding="utf-8")
     return {"units_rendered": len(units), "nodes": len(nodes), "owner": owner,
-            "relationship_counts": relationships["counts"], "key_flows": len(relationships["key_flows"]),
+            "relationship_counts": relationships["counts"],
+            "within_containment_count": relationships["within_containment_count"],
+            "key_flows": len(relationships["key_flows"]),
             "candidate_flows": len(relationships["candidate_flows"]),
             "ranges_map": ranges_map, "symbol_index": symbol_index,
             "index": str(docs_dir / "INDEX.md")}
@@ -966,7 +981,7 @@ def layer_metrics(run_dir: Path) -> dict:
             stripped = line.strip()
             if stripped.startswith("### ") or '<a id="u-' in stripped:
                 in_units = True
-            if stripped.startswith("## 怎样查"):
+            if stripped.startswith("## Look up code"):
                 in_footer = True
             if path.name == "INDEX.md":
                 category = "index"

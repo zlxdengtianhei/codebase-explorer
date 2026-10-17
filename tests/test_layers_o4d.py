@@ -92,7 +92,7 @@ def test_every_page_title_finds_its_id_despite_many_incidental_matches(tmp_path)
         uid = next(uid for uid, row in catalog["units"].items() if row["anchor"] == "#" + anchor)
         assert uid in [row["id"] for row in docs.find(run, title)]
         assert docs.find(run, uid, limit=1)[0]["id"] == uid
-    footer = (run / "docs/nodes/root.md").read_text().split("## 怎样查")[1]
+    footer = (run / "docs/nodes/root.md").read_text().split("## Look up code")[1]
     assert 'cbe find --run-dir "$RUN" --term' in footer
     assert "按 [INDEX]" not in footer
 
@@ -125,7 +125,7 @@ def test_product_read_query_instructions_use_available_commands(tmp_path, capsys
 
     run, ids, _, _, _ = _run(tmp_path)
     skill = (Path(__file__).resolve().parents[1] / ".dsh/skills/codebase-explorer/SKILL.md").read_text()
-    section = skill.split("## 读与查 / Read and query the result")[1].split("## Script-driven")[0]
+    section = skill.split("## Read and query the result")[1].split("## Script-driven")[0]
     assert "unit_detail" not in section and "unit_id" in section
     assert "--edges cfg,dataflow" in section and "--edges all --json" in section
     placeholders = {"RUN": str(run), "ID": ids[0]}
@@ -162,9 +162,9 @@ def test_layer_metrics_count_footer_in_footer_category(tmp_path):
 
     run, _, _, _, _ = _run(tmp_path)
     page = (run / "docs/nodes/root.md").read_text()
-    before, footer = page.split("## 怎样查", 1)
+    before, footer = page.split("## Look up code", 1)
     footer, references = footer.split("[f1]:", 1)
-    expected = count_section_tokens([("before", before), ("footer", "## 怎样查" + footer),
+    expected = count_section_tokens([("before", before), ("footer", "## Look up code" + footer),
                                      ("references", "[f1]:" + references)])["footer"]
     metrics = docs.layer_metrics(run)
     assert expected > 0

@@ -17,13 +17,13 @@ EMPTY_PARTIAL_FAILURE["capabilities"].append(
 
 
 @pytest.mark.parametrize("value,state,prompt_text,index_text", [
-    (FAILED, "failed", "analysis failed or was unavailable", "没有后端跑成"),
-    (EMPTY, "empty", "provided and successfully empty", "图为空，没有图确认的关系"),
-    (EMPTY_PARTIAL_FAILURE, "empty", "provided and successfully empty", "图为空，没有图确认的关系"),
-    (None, "absent", "not provided", "未提供图"),
+    (FAILED, "failed", "analysis failed or was unavailable", "No graph backend succeeded"),
+    (EMPTY, "empty", "provided and successfully empty", "The graph is empty. No relations are graph-confirmed"),
+    (EMPTY_PARTIAL_FAILURE, "empty", "provided and successfully empty", "The graph is empty. No relations are graph-confirmed"),
+    (None, "absent", "not provided", "No graph was provided"),
     ({"schema": "cbe-graph/1", "nodes": [], "edges": [], "capabilities": [
         {"language": "ruby", "graph": "call", "status": "unsupported"}]},
-     "unsupported", "unsupported for this run", "图不支持本次分析"),
+     "unsupported", "unsupported for this run", "The graph does not support this analysis"),
 ])
 def test_prompt_and_index_share_availability(tmp_path, value, state, prompt_text, index_text):
     assert graph.graph_state(value)[0] == state
@@ -33,7 +33,7 @@ def test_prompt_and_index_share_availability(tmp_path, value, state, prompt_text
     docs.render(run_dir=tmp_path, source_root=tmp_path, inventory={}, units={}, dispositions={},
                 tree={"nodes": []}, languages={}, graph=value)
     index = (tmp_path / "docs/INDEX.md").read_text()
-    opening = index.split("## 图覆盖 / Graph coverage\n\n", 1)[1].splitlines()[0]
+    opening = index.split("## Graph coverage\n\n", 1)[1].splitlines()[0]
     assert opening.startswith(index_text)
 
 

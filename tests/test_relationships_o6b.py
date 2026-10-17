@@ -64,7 +64,7 @@ def test_evidence_words_reasked_and_only_bad_description_removed(text):
     flags = checks.normalize_system(value, 2000, **options)
     assert len(value["dependency_descriptions"]) == 1
     assert value["dependency_descriptions"][0]["description"] == "Uses child."
-    assert any("dependency_descriptions[1] removed" in f for f in flags)
+    assert any("dependency_descriptions[2] removed" in f for f in flags)
 
 
 def test_all_invalid_flows_normalize_to_empty_with_a_flag():
@@ -140,17 +140,17 @@ def test_three_mermaid_line_styles_and_full_legend(tmp_path):
     _, index, _ = render_example(tmp_path)
     diagram = index.split("```mermaid\n", 1)[1].split("```", 1)[0]
     assert all(arrow in diagram for arrow in (" --> ", " -.-> ", " ==> "))
-    legend = index.split("图例：", 1)[1].splitlines()[0]
-    assert all(label in legend for label in ("图确认", "模型推断", "图有未描述"))
+    legend = index.split("Legend: ", 1)[1].splitlines()[0]
+    assert all(label in legend for label in ("graph-confirmed", "model-inferred", "graph-only"))
     assert "#34;" in diagram and "#91;" in diagram
 
 
 def test_dependency_list_keeps_all_source_labels_and_separates_footnotes(tmp_path):
     _, index, _ = render_example(tmp_path)
     listing = index.split("## Dependency list\n", 1)[1].split("## Key flows", 1)[0]
-    assert all(f"· {label} ·" in listing for label in ("图确认", "模型推断", "图有未描述"))
-    assert "\n\n图有未描述按边数降序保留" in listing
-    assert "\n\nsystem 未提供关键依赖说明。" in listing
+    assert all(f"· {label} ·" in listing for label in ("graph-confirmed", "model-inferred", "graph-only"))
+    assert "\n\nGraph-only pairs are ranked by edge count" in listing
+    assert "\n\nThe system response provided no key dependency descriptions." in listing
 
 
 def test_mermaid_at_most_fifteen_nodes(tmp_path):
@@ -161,19 +161,19 @@ def test_mermaid_at_most_fifteen_nodes(tmp_path):
 
 def test_index_explains_unavailable_graph(tmp_path):
     _, index, _ = render_example(tmp_path, evidence=False)
-    assert "没有可用图确认；仅列模型推断：" in index
+    assert "No usable graph evidence; only model-inferred dependencies are listed:" in index
 
 
 def test_index_explains_unavailable_candidates(tmp_path):
     _, index, _ = render_example(tmp_path, evidence=False, flows=False)
-    assert "没有候选流程：" in index
+    assert "No candidate flows:" in index
 
 
 def test_all_bad_flows_fall_back_to_linked_program_candidates(tmp_path):
     run, index, result = render_example(tmp_path, flows=False)
     assert result["key_flows"] == 0 and result["candidate_flows"] == 1
-    assert "程序候选，未经模型挑选" in index
-    assert "**候选 1**" in index and f"nodes/a.md#{docs.anchor('pkg/jobs.py::Pool.submit')}" in index
+    assert "Program candidates, not selected by the model" in index
+    assert "**Candidate 1**" in index and f"nodes/a.md#{docs.anchor('pkg/jobs.py::Pool.submit')}" in index
     assert json.loads((run / "catalog.json").read_text())["key_flows"] == []
 
 
@@ -206,7 +206,7 @@ def test_final_missing_flows_with_real_graph_is_accepted_flagged_and_counted(tmp
     state = json.loads((run / "host/state.json").read_text())
     assert state["status"] == "complete" and host_run.verify(run)["ok"]
     assert any("key_flows" in f for f in state["tasks"]["system"]["flags"])
-    assert "程序候选，未经模型挑选" in (run / "docs/INDEX.md").read_text()
+    assert "Program candidates, not selected by the model" in (run / "docs/INDEX.md").read_text()
     summary = json.loads((run / "summary.json").read_text())
     assert summary["node_dependencies"] == dict(graph_confirmed=0, model_inferred=0, graph_only=0)
     assert summary["candidate_flows"] == 1 and summary["key_flows"] == 0
