@@ -126,10 +126,11 @@ def _sentences(page: Path) -> list[str]:
 
 
 def test_pages_never_tell_the_host_to_wait_for_a_notification() -> None:
-    """Claude Code delivers a completion notification only to an idle session and starts no new turn for it."""
+    """In some Claude Code sessions the completion notification after a hand-back started no new turn, so no page may tell the host to wait for one."""
     for page in PAGES:
         for sentence in _sentences(page):
-            if "notification" in sentence.lower():
+            lowered = sentence.lower()
+            if "notification" in lowered and "wait" in lowered:
                 assert re.search(r"\b(do not|never)\b", sentence, re.I), (page.name, sentence)
 
 
@@ -138,15 +139,19 @@ def test_claude_code_page_submits_on_the_hand_back_and_ends_the_turn() -> None:
     page = (SKILL_DIR / "references/claude-code.md").read_text(encoding="utf-8")
     assert "Async agent launched" in page
     assert "After you start the batch, end your turn." in page
-    assert "it starts your next turn" in page
+    assert "a new message that starts your next turn" in page
     assert "Submit that task at once, without the usage flags" in page
     assert "Do not poll `host/outbox/` or sleep in a loop" in page
+    assert "a task notification that also carries a usage block" in page
+    assert "Act on the first message that names the task" in page
     assert "Do not set the call to run in the background." not in page
     assert "returns when its subagent has ended" not in page
     skill = (SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
     assert "Never end your turn" not in skill
     assert "Do not poll the run directory or sleep in a loop" in skill
     assert "Do not wait for usage that arrives later" in skill
+    assert "a command that only the user can type" in skill
+    assert "the last `render` line in `RUN/progress.log`" in skill
 
 
 def test_claude_code_page_names_the_agent_that_cbe_install_installs() -> None:
