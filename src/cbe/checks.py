@@ -66,7 +66,8 @@ DEPENDENCY_EVIDENCE_WORDS = re.compile(
     r"\b(?:graph[-_ ]?(?:confirmed|only)|model[-_ ]?inferred)\b"
     r"|\bresolved\s+(?:calls?|edges?|imports?)\b"
     r"|\b\d+\s+(?:(?:static|resolved|call|import)\s+)*(?:calls?|edges?)\b"
-    r"|图确认|模型推断|图有未描述|\d+\s*条(?:调用|边)", re.IGNORECASE)
+    r"|\b(?:within[-_ ]containment|containment)\b"
+    r"|图确认|模型推断|图有未描述|包含关系|包含内|\d+\s*条(?:调用|边)", re.IGNORECASE)
 
 
 def check_system(value: dict[str, Any], limit: int = 2000, *, unit_ids=None, dependencies=None,
@@ -99,6 +100,7 @@ def check_system(value: dict[str, Any], limit: int = 2000, *, unit_ids=None, dep
     if (has_candidates and not (normalized and len(flows) <= 7) and not 3 <= len(flows) <= 7) or (not has_candidates and flows):
         errors.append("key_flows must contain 3-7 flows when candidates exist, otherwise []")
     flow_errors = []
+    flow_ids = []
     for index, row in enumerate(flows):
         if (not isinstance(row, dict) or any(not isinstance(row.get(k), str) or not row[k].strip()
                                            or len(row[k]) > 300 for k in ("name", "description"))
@@ -109,10 +111,16 @@ def check_system(value: dict[str, Any], limit: int = 2000, *, unit_ids=None, dep
                         if not isinstance(uid, str) or (unit_ids is not None and uid not in unit_ids)]
                        if isinstance(row, dict) and isinstance(row.get("steps"), list) else [])
             name = row.get("name", "") if isinstance(row, dict) else ""
-            flow_errors.append(f"key flow {index + 1} {name!r}: invalid unit ids {bad_ids!r}; "
-                               "each flow needs name, one sentence, and 2-8 existing unit ids; "
-                               "steps are unit ids from candidates, not node ids")
-    errors.extend(flow_errors)
+            flow_errors.append(f"key flow {index + 1} {name!r}: invalid unit ids {bad_ids!r}")
+            flow_ids.append(f"key flow {index + 1}: invalid unit ids {bad_ids!r}")
+    if flow_errors:
+        hint = ("each flow needs name, one sentence, and 2-8 existing unit ids; "
+                "steps are unit ids from candidates, not node ids")
+        # The host returns only the first 2,000 characters to the model. Put all
+        # offending ids first; drop names before losing a later flow's ids.
+        if len("; ".join(flow_errors + [hint] + errors)) > 2000:
+            flow_errors = flow_ids
+        errors = flow_errors + [hint] + errors
     if errors:
         raise ValueError("; ".join(errors))
 
@@ -212,7 +220,7 @@ def normalize_system(value: Any, limit: int, *, unit_ids=None, dependencies=None
                     reason = str(exc).replace("key flow 1 ", f"key flow {index + 1} ")
                     flags.append(f"key_flows[{index + 1}] removed: {reason}")
                 else:
-                    flags.append(f"{key}[{index}] removed: {exc}")
+                    flags.append(f"{key}[{index + 1}] removed: {exc}")
             else:
                 retained.append(row)
         if key == "key_flows" and len(retained) > 7:
