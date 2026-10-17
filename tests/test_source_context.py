@@ -289,7 +289,10 @@ def test_unknown_language_is_distinguishable_from_empty_success(tmp_path):
     # lets downstream readers reconstruct the frozen file.
     chunks = [c for c in context["chunks"] if c["path"] == "mystery.xyz"]
     assert "".join(c["text"] for c in chunks) == "hello\n"
-    assert ("mystery.xyz", "source_reassembly_fallback") in codes
+    assert ("mystery.xyz", "source_reassembly_fallback") not in codes
+    assert ("mystery.xyz", "context_fallback") in codes
+    note = next(d for d in context["diagnostics"] if d["code"] == "context_fallback")
+    assert note["reason"] == "unsupported_language"
 
 
 def test_missing_grammar_package_is_a_diagnostic(tmp_path, monkeypatch):
@@ -303,7 +306,9 @@ def test_missing_grammar_package_is_a_diagnostic(tmp_path, monkeypatch):
     context = build_context(tmp_path, paths=["a.py"])
     assert any(d["code"] == "grammar_unavailable" for d in context["diagnostics"])
     assert "".join(c["text"] for c in context["chunks"] if c["path"] == "a.py") == (tmp_path / "a.py").read_text()
-    assert any(d["code"] == "source_reassembly_fallback" for d in context["diagnostics"])
+    assert not any(d["code"] == "source_reassembly_fallback" for d in context["diagnostics"])
+    assert any(d["code"] == "context_fallback" and d["reason"] == "grammar_unavailable"
+               for d in context["diagnostics"])
 
 
 def test_syntax_error_keeps_coverage_and_reports():

@@ -17,9 +17,10 @@ Design rules that the implementation follows:
 * Oversized exclusive regions are split at grammar child boundaries only.
   A segment boundary is always a real syntax-tree boundary, never a character
   prefix cut.
-* Unknown languages, a missing grammar package, a UTF-8 decode failure and a
-  parse error are all distinguishable from "success with empty source".  A
-  parse error still yields a full-coverage partition plus a diagnostic.
+* Unknown languages, a missing grammar package and parse failures retain their
+  per-file diagnostics and use whole-file chunks for non-blank UTF-8 source.
+  A UTF-8 decode failure yields ``decode_error`` and no chunks for that file;
+  other files still build. Syntax errors retain grammar coverage plus a diagnostic.
 * Only tree-sitter grammars do the parsing.  The glue here maps grammar node
   kinds to chunk kinds and maps byte/char/line coordinates; it does not
   re-implement any language analysis.
@@ -1286,8 +1287,32 @@ def _checked_chunks(
     while retaining misleading declaration identities.
     """
     ordered = sorted(chunks, key=lambda chunk: chunk["start_byte"])
+    # No grammar output is a different condition from a broken partition.
+    # Keep the original diagnostic code as the reason shown to readers.
+    if not chunks:
+        try:
+            offsets = OffsetMap.from_bytes(raw)
+        except UnicodeDecodeError as exc:
+            if not any(row.get("path") == path and row.get("code") == "decode_error"
+                       for row in diagnostics):
+                diagnostics.append({"path": path, "code": "decode_error",
+                                    "message": f"UTF-8 decode failed: {exc}"})
+            return []
+        if not offsets.text.strip():
+            # The host's ensure_chunk_coverage records known_empty without a unit.
+            return []
+        cause = next((row for row in diagnostics if row.get("path") == path
+                      and row.get("code") in {"unsupported_language", "grammar_unavailable",
+                                              "parse_error", "file_too_large"}), None)
+        reason = cause["code"] if cause else "no_chunk_output"
+        diagnostic_code = "context_fallback"
+        message = (f"{reason}: {cause['message']}; " if cause else f"{reason}; ") + (
+            "froze one whole-file source chunk; declaration-level detail is unavailable")
+    else:
+        reason = ""
+        diagnostic_code = "source_reassembly_fallback"
+        message = ""
     cursor = 0
-    reason = ""
     for chunk in ordered:
         start, end = chunk["start_byte"], chunk["end_byte"]
         if start != cursor or not start <= end <= len(raw):
@@ -1308,8 +1333,9 @@ def _checked_chunks(
         raise ContextError("source_not_reassemblable",
                            f"{path}: cannot freeze byte-exact UTF-8 source: {exc}", path=path) from exc
     diagnostics.append({
-        "path": path, "code": "source_reassembly_fallback", "reason": reason,
-        "message": f"{reason}; froze one whole-file source chunk instead of declaration chunks",
+        "path": path, "code": diagnostic_code, "reason": reason,
+        "message": message or (f"{reason}; CBE could not reassemble its declaration chunks; "
+                               "froze one whole-file source chunk with coarser detail"),
     })
     if not raw:
         return []

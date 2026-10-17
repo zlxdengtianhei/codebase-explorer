@@ -535,10 +535,10 @@ def plan(repo: Path, run_dir: Path | None = None, *, review: str = DEFAULT_REVIE
                      "files": [item.path for item in module.files], "page": None} for module in modules],
         "tasks": tasks, "rendered": False, "verify": None,
     }
-    source_fallbacks = [row for row in context.get("diagnostics", [])
-                        if row.get("code") == "source_reassembly_fallback"]
-    if source_fallbacks:
-        state["source_reassembly_fallback"] = source_fallbacks
+    for code in ("source_reassembly_fallback", "context_fallback"):
+        fallbacks = [row for row in context.get("diagnostics", []) if row.get("code") == code]
+        if fallbacks:
+            state[code] = fallbacks
     host_dir = state_dir(run_dir)
     for name in ("tasks", "outbox", "accepted", "raw"):
         (host_dir / name).mkdir(parents=True, exist_ok=True)
@@ -1081,11 +1081,13 @@ def _summary(state: dict[str, Any]) -> dict[str, Any]:
     else:
         action = f"cbe host next --run-dir {run}"
     unknown = [f"{row['task']}#attempt-{row['attempt']}" for row in state.get("usage_unknown") or []]
-    source_fallbacks = state.get("source_reassembly_fallback", [])
+    source_fallbacks = {key: value
+                        for code in ("source_reassembly_fallback", "context_fallback")
+                        if (rows := state.get(code, []))
+                        for key, value in ((code + "_count", len(rows)), (code, rows))}
     return {"status": state["status"], "counts": counts, "leased": leased, "failed": failed,
             "ready": len(ready), "next_action": action, "usage_unknown": unknown,
-            **({"source_reassembly_fallback_count": len(source_fallbacks),
-                "source_reassembly_fallback": source_fallbacks} if source_fallbacks else {})}
+            **source_fallbacks}
 
 
 def status(run_dir: Path) -> dict[str, Any]:
@@ -1374,10 +1376,9 @@ def _render(run_dir: Path, state: dict[str, Any]) -> None:
                "wall_seconds": round(time.time() - epoch(state["created_at"]), 3),
                "run_dir": str(run_dir), "index": str(run_dir / "docs" / "INDEX.md"),
                "subagent_tasks": sum(task["attempts"] for task in state["tasks"].values())}
-    source_fallbacks = state.get("source_reassembly_fallback", [])
-    if source_fallbacks:
-        summary.update(source_reassembly_fallback_count=len(source_fallbacks),
-                       source_reassembly_fallback=source_fallbacks)
+    for code in ("source_reassembly_fallback", "context_fallback"):
+        if rows := state.get(code, []):
+            summary.update({code + "_count": len(rows), code: rows})
     fallbacks = _answer_fallbacks(state)
     if fallbacks:
         summary.update(answer_fallback_count=len(fallbacks), answer_fallback=fallbacks)
@@ -1529,11 +1530,10 @@ def _status_markdown(state: dict[str, Any]) -> str:
         correction_lines += ["", f"answer_fallback {len(fallbacks)}", ""]
         correction_lines += [f"- {row['task']}: accepted attempt {row['attempt']} "
                              f"(final attempt {row['final_attempt']})" for row in fallbacks]
-    source_fallbacks = state.get("source_reassembly_fallback", [])
-    if source_fallbacks:
-        correction_lines += ["", f"source_reassembly_fallback {len(source_fallbacks)}", ""]
-        correction_lines += [f"- {docs.code_text(row['path'])}: {row['message']}"
-                             for row in source_fallbacks]
+    for code in ("source_reassembly_fallback", "context_fallback"):
+        if rows := state.get(code, []):
+            correction_lines += ["", f"{code} {len(rows)}", ""]
+            correction_lines += [f"- {docs.code_text(row['path'])}: {row['message']}" for row in rows]
     lines = ["# CBE run status", "",
              f"Run `{state['run_tag']}` · status **{state['status']}** · updated {state['updated_at']} · "
              f"review {state['review']} · jobs {state['jobs']} · host {state['host']}", "",
