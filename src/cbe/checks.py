@@ -91,6 +91,7 @@ def check_system(value: dict[str, Any], limit: int = 2000, *, unit_ids=None, dep
         raise ValueError("describe at least one existing dependency")
     if (has_candidates and not (normalized and len(flows) <= 7) and not 3 <= len(flows) <= 7) or (not has_candidates and flows):
         raise ValueError("key_flows must contain 3-7 flows when candidates exist, otherwise []")
+    flow_errors = []
     for index, row in enumerate(flows):
         if (not isinstance(row, dict) or any(not isinstance(row.get(k), str) or not row[k].strip()
                                            or len(row[k]) > 300 for k in ("name", "description"))
@@ -101,9 +102,11 @@ def check_system(value: dict[str, Any], limit: int = 2000, *, unit_ids=None, dep
                         if not isinstance(uid, str) or (unit_ids is not None and uid not in unit_ids)]
                        if isinstance(row, dict) and isinstance(row.get("steps"), list) else [])
             name = row.get("name", "") if isinstance(row, dict) else ""
-            raise ValueError(f"key flow {index + 1} {name!r}: invalid unit ids {bad_ids!r}; "
-                             "each flow needs name, one sentence, and 2-8 existing unit ids; "
-                             "steps are unit ids from candidates, not node ids")
+            flow_errors.append(f"key flow {index + 1} {name!r}: invalid unit ids {bad_ids!r}; "
+                               "each flow needs name, one sentence, and 2-8 existing unit ids; "
+                               "steps are unit ids from candidates, not node ids")
+    if flow_errors:
+        raise ValueError("; ".join(flow_errors))
 
 
 def check_review(value: dict[str, Any]) -> None:

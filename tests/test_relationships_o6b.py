@@ -44,8 +44,9 @@ def test_final_answer_keeps_five_good_flows_and_names_bad_ids():
     for i in (2, 6):
         value["key_flows"][i]["steps"] = ["root", "child"]
     options = dict(unit_ids={"a", "c"}, dependencies=[{"from": "root", "to": "child"}], has_candidates=True)
-    with pytest.raises(ValueError, match="Flow 2.*root.*child.*not node ids"):
+    with pytest.raises(ValueError, match="Flow 2.*root.*child.*not node ids") as error:
         checks.check_system(value, **options)
+    assert "Flow 6" in str(error.value)
     flags = checks.normalize_system(value, 2000, **options)
     assert [f["name"] for f in value["key_flows"]] == ["Flow 0", "Flow 1", "Flow 3", "Flow 4", "Flow 5"]
     assert sum("removed" in flag for flag in flags) == 2
@@ -64,6 +65,25 @@ def test_evidence_words_reasked_and_only_bad_description_removed(text):
     assert len(value["dependency_descriptions"]) == 1
     assert value["dependency_descriptions"][0]["description"] == "Uses child."
     assert any("dependency_descriptions[1] removed" in f for f in flags)
+
+
+def test_all_invalid_flows_normalize_to_empty_with_a_flag():
+    value = answer()
+    for flow in value["key_flows"]:
+        flow["steps"] = ["root", "child"]
+    flags = checks.normalize_system(value, 2000, unit_ids={"a", "c"},
+                                    dependencies=[{"from": "root", "to": "child"}], has_candidates=True)
+    assert value["key_flows"] == []
+    assert any("retained 0" in flag for flag in flags)
+
+
+def test_one_good_final_flow_is_retained_and_flagged():
+    value = answer()
+    value["key_flows"] = value["key_flows"][:1]
+    flags = checks.normalize_system(value, 2000, unit_ids={"a", "c"},
+                                    dependencies=[{"from": "root", "to": "child"}], has_candidates=True)
+    assert len(value["key_flows"]) == 1
+    assert any("retained 1" in flag for flag in flags)
 
 
 def test_no_candidates_rejects_model_flows():
