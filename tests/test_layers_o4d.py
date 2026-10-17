@@ -172,6 +172,18 @@ def test_layer_metrics_count_footer_in_footer_category(tmp_path):
     assert sum(metrics["semantic_breakdown"].values()) == metrics["semantic_tokens"]
 
 
+def test_layer_metrics_keep_english_relation_links_in_relations(tmp_path):
+    from cbe.token_budget import count_section_tokens
+
+    run, _, _, _, _ = _run(tmp_path)
+    page = (run / "docs/nodes/root.md").read_text()
+    sections = [("relations" if re.search(r": \[.*\](?:\(|\[)", line.strip()) else "other", line)
+                for line in page.splitlines(keepends=True)]
+    expected = count_section_tokens(sections).get("relations", 0)
+    assert expected > 0
+    assert docs.layer_metrics(run)["semantic_breakdown"]["relations"] == expected
+
+
 def test_method_titles_keep_their_declaring_class(tmp_path):
     repo = tmp_path / "repo"
     repo.mkdir()

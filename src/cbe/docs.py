@@ -997,7 +997,7 @@ def layer_metrics(run_dir: Path) -> dict:
                 category = "heading_anchor"
             elif in_units and re.match(r"`.*` · \[", stripped):
                 category = "signature_location"
-            elif in_units and re.search(r"：\[.*\](?:\(|\[)", stripped):
+            elif in_units and re.search(r": \[.*\](?:\(|\[)", stripped):
                 category = "relations"
             else:
                 category = "node_text"
