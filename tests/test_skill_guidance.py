@@ -133,16 +133,19 @@ def test_pages_never_tell_the_host_to_wait_for_a_notification() -> None:
                 assert re.search(r"\b(do not|never)\b", sentence, re.I), (page.name, sentence)
 
 
-def test_claude_code_page_has_the_host_start_calls_that_return_when_the_subagent_ends() -> None:
+def test_claude_code_page_submits_on_the_hand_back_and_ends_the_turn() -> None:
+    """Claude Code 2.1.301 backgrounds every Agent call; the DONE hand-back starts the next turn, the later notification may not."""
     page = (SKILL_DIR / "references/claude-code.md").read_text(encoding="utf-8")
-    assert "Do not set the call to run in the background." in page
-    assert "returns when its subagent has ended" in page
     assert "Async agent launched" in page
-    assert "Submit that task as soon as its hand-back arrives, without the usage flags" in page
-    assert "Do not end your turn to wait for the later completion notification" in page
-    assert "host status --run-dir RUN` between checks" not in page
+    assert "After you start the batch, end your turn." in page
+    assert "it starts your next turn" in page
+    assert "Submit that task at once, without the usage flags" in page
+    assert "Do not poll `host/outbox/` or sleep in a loop" in page
+    assert "Do not set the call to run in the background." not in page
+    assert "returns when its subagent has ended" not in page
     skill = (SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
-    assert "Never end your turn to wait for a notification" in skill
+    assert "Never end your turn" not in skill
+    assert "Do not poll the run directory or sleep in a loop" in skill
     assert "Do not wait for usage that arrives later" in skill
 
 
