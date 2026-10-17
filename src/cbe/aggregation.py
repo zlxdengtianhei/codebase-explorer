@@ -84,11 +84,10 @@ def region_edges(edges: list[dict], membership: dict[str, str]) -> list[dict]:
 
 
 def relationship_view(tree: dict, edges: list[dict], graph: dict | None, *, graph_only_limit: int = 40) -> dict:
-    """Compare exact node pairs; containment does not imply a dependency.
+    """Compare disjoint tree subtrees; report containment without edge counts.
 
-    Direct primary ownership is shared with region rollup. Ancestor/descendant
-    pairs remain literal pairs, never expand to all descendants. Only resolved
-    call/import inputs are graph evidence; model relations are excluded.
+    Graph-only pairs use direct primary ownership to avoid repeating edges at
+    every ancestor level. Only resolved call/import inputs are graph evidence.
     """
     from cbe.graph import graph_state
 
@@ -96,23 +95,49 @@ def relationship_view(tree: dict, edges: list[dict], graph: dict | None, *, grap
     membership = {uid: n["id"] for n in tree.get("nodes", []) for uid in n.get("unit_ids", [])}
     resolved = [e for e in edges if e["kind"] in {"call", "import"}
                 and e.get("provenance") != "model_inferred"] if state == "provided" else []
+    nodes = {n["id"]: n for n in tree.get("nodes", [])}
+    ancestors = {}
+    for nid in nodes:
+        lineage, parent = set(), nodes[nid].get("parent")
+        while parent in nodes and parent not in lineage:
+            lineage.add(parent)
+            parent = nodes[parent].get("parent")
+        ancestors[nid] = lineage
+    def contains(a, b):
+        return a in ancestors[b] or b in ancestors[a]
+    subtree_units = {nid: {uid for uid, owner in membership.items()
+                           if owner == nid or nid in ancestors[owner]} for nid in nodes}
     counts = Counter()
     kinds = defaultdict(Counter)
     for edge in region_edges(resolved, membership):
         pair = edge["from"], edge["to"]
+        if contains(*pair):
+            continue
         counts[pair] += edge["count"]
         kinds[pair][edge["kind"]] += edge["count"]
-    node_ids = {n["id"] for n in tree.get("nodes", [])}
+    node_ids = set(nodes)
     model = {(e["from"], e["to"]): e.get("basis", "") for e in tree.get("depends_on", [])
              if e.get("from") in node_ids and e.get("to") in node_ids and e["from"] != e["to"]}
     graph_only = sorted(counts.keys() - model.keys(), key=lambda p: (-counts[p], p))
+    for a, b in model:
+        if contains(a, b):
+            continue
+        pair_membership = {uid: nid for nid in (a, b) for uid in subtree_units[nid]}
+        rolled = region_edges(resolved, pair_membership)
+        pair_kinds = Counter()
+        for edge in rolled:
+            if (edge["from"], edge["to"]) == (a, b):
+                pair_kinds[edge["kind"]] += edge["count"]
+        counts[a, b] = sum(pair_kinds.values())
+        kinds[a, b] = pair_kinds
     pairs = sorted(model) + graph_only[:graph_only_limit]
     dependencies = [{"from": a, "to": b,
-                     "source": "graph_confirmed" if (a, b) in counts and (a, b) in model else
+                     "source": "graph_confirmed" if counts[a, b] and (a, b) in model else
                                "model_inferred" if (a, b) in model else "graph_only",
-                     "count": counts[a, b], "kinds": dict(sorted(kinds[a, b].items())),
+                     "count": None if contains(a, b) else counts[a, b],
+                     "containment": contains(a, b), "kinds": dict(sorted(kinds[a, b].items())),
                      "basis": model.get((a, b), ""), "description": ""} for a, b in pairs]
-    totals = {source: sum(e["source"] == source for e in dependencies)
+    totals = {source: sum(e["source"] == source and not e["containment"] for e in dependencies)
               for source in ("graph_confirmed", "model_inferred", "graph_only")}
     totals["graph_only"] = len(graph_only)
     return {"dependencies": dependencies, "counts": totals,

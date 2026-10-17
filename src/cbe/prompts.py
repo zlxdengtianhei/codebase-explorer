@@ -236,13 +236,8 @@ def review_prompt(units: dict | None, detail_task: str) -> str:
             "DOCUMENTATION (structured units): " + json.dumps(units, ensure_ascii=False) + "\n\n" + detail_task)
 
 
-def system_prompt(nodes: list[dict], limit: int, relationships: dict | None = None) -> str:
-    """Bound graph context to 12k tokens: remove last candidates, then dependencies.
-
-    Candidate order is the program's stable traversal; dependency order keeps
-    tree pairs first, then graph-only pairs by descending count. Node summaries
-    retain the existing tree budget and are not truncated here.
-    """
+def system_relationship_context(relationships: dict | None = None) -> dict:
+    """The exact bounded relationship table shown to the system model."""
     from cbe.token_budget import count_text_tokens
 
     relationships = relationships or {"dependencies": [], "candidate_flows": []}
@@ -258,6 +253,12 @@ def system_prompt(nodes: list[dict], limit: int, relationships: dict | None = No
             break
         context[key].pop()
         context["prompt_omitted"][key] += 1
+    return context
+
+
+def system_prompt(nodes: list[dict], limit: int, relationships: dict | None = None) -> str:
+    """Bound graph context to 12k tokens: remove last candidates, then dependencies."""
+    context = system_relationship_context(relationships)
     summaries = [{"id": node.get("id"), "title": node.get("title"),
                   "capability": node.get("capability"), "summary": node.get("summary"),
                   "parent": node.get("parent"), "units": len(node.get("unit_ids") or [])}
@@ -268,7 +269,9 @@ def system_prompt(nodes: list[dict], limit: int, relationships: dict | None = No
             "a maintenance question; do not invent unseen details. Also return dependency_descriptions: "
             "[{\"from\":\"node id\",\"to\":\"node id\",\"description\":\"one sentence\"}], describing "
             "at least one key dependency when the table is nonempty (otherwise []). Use existing pairs only; "
-            "the program owns evidence labels. Return key_flows: [{\"name\":\"short name\","
+            "describe only who uses whom for what. Do not write evidence/source words "
+            "(graph-confirmed, model-inferred, graph-only, resolved) or call/edge counts; "
+            "the program supplies those labels and counts. Return key_flows: [{\"name\":\"short name\","
             "\"description\":\"one sentence\",\"steps\":[\"unit id\",\"unit id\"]}]. Select 3-7 key flows "
             "from candidates and keep their unit ids. If fewer than three candidates exist, you may describe "
             "distinct useful subpaths using those same ids. When there are no candidates, return []. "

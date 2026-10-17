@@ -21,6 +21,9 @@ from cbe.symbols import SemanticError, inventory_ids
 # One repository file larger than this becomes its own inventory unit region set;
 # a chunk never has to fit a model context alone because batches group many.
 SCHEMA = "cbe-semantic/1"
+DEPENDENCY_STYLES = {"graph_confirmed": ("图确认", "-->"),
+                     "model_inferred": ("模型推断", "-.->"),
+                     "graph_only": ("图有未描述", "==>")}
 
 
 def unit_ranges(uid: str, unit: dict, inventory: dict[str, dict]) -> list[dict]:
@@ -220,7 +223,7 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
     unit_edges = aggregation.unit_edges(units, edge_table)
     relationships = aggregation.annotate_relationships(
         aggregation.relationship_view(tree, unit_edges, graph), system or {}, unit_edges)
-    labels = {"graph_confirmed": "图确认", "model_inferred": "模型推断", "graph_only": "图有未描述"}
+    labels = {source: style[0] for source, style in DEPENDENCY_STYLES.items()}
     edges_by_from: dict[str, list[dict]] = {nid: [] for nid in nodes}
     edges_by_to: dict[str, list[dict]] = {nid: [] for nid in nodes}
     for edge in relationships["dependencies"]:
@@ -229,7 +232,8 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
 
     def dependency_line(edge, target, prefix=""):
         return (f"- [{link_text(nodes[target].get('title') or target)}]({prefix}{target}.md) · "
-                f"{labels[edge['source']]} · {edge['count']} edge(s)"
+                + ("包含关系，不比对" if edge.get("containment") else
+                   f"{labels[edge['source']]} · {edge['count']} edge(s)")
                 + (" · " + literal_links(edge["description"]) if edge["description"] else ""))
 
     from cbe.records import correction_notice
@@ -374,6 +378,8 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
         index_lines += ["没有可用图确认；仅列模型推断：" + relationships["graph_reason"] + "。"]
     degree = {}
     for edge in relationships["dependencies"]:
+        if edge.get("containment"):
+            continue
         for endpoint in (edge["from"], edge["to"]):
             degree[endpoint] = degree.get(endpoint, 0) + 1
     selected = sorted(degree, key=lambda nid: (-degree[nid], nid))[:15]
@@ -387,33 +393,41 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
         index_lines += [f'  {aliases[nid]}["{mermaid_label(nodes[nid].get("title") or nid)}"]'
                         for nid in selected]
         for edge in relationships["dependencies"]:
-            if edge["from"] in aliases and edge["to"] in aliases:
-                arrow = "-.->" if edge["source"] == "model_inferred" else "-->"
+            if not edge.get("containment") and edge["from"] in aliases and edge["to"] in aliases:
+                arrow = DEPENDENCY_STYLES[edge["source"]][1]
                 index_lines.append(f"  {aliases[edge['from']]} {arrow} {aliases[edge['to']]}")
-        index_lines += ["```", "", f"按连接数选 {len(selected)} 个节点；虚线为模型推断。"]
+        index_lines += ["```", "", f"按连接数选 {len(selected)} 个节点；图例："
+                        + "；".join(f"`{arrow}` {label}" for label, arrow in DEPENDENCY_STYLES.values()) + "。"]
     else:
         index_lines += ["没有节点依赖。"]
     index_lines += ["", "## Dependency list", ""]
     for edge in relationships["dependencies"]:
         index_lines += [f"- [{link_text(nodes[edge['from']].get('title') or edge['from'])}]"
                         f"(nodes/{edge['from']}.md) → " + dependency_line(edge, edge["to"], "nodes/")[2:]]
-    index_lines += [f"图有未描述按边数降序保留，省略 {relationships['graph_only_omitted']} 条。"]
+    index_lines += ["", f"图有未描述按边数降序保留，省略 {relationships['graph_only_omitted']} 条。"]
     if not (system or {}).get("dependency_descriptions"):
-        index_lines += ["system 未提供关键依赖说明。"]
+        index_lines += ["", "system 未提供关键依赖说明。"]
     index_lines += ["", "## Key flows", ""]
     if not relationships["candidate_flows"]:
         index_lines += ["没有候选流程：" + (relationships["graph_reason"]
                         if relationships["graph_state"] != "provided" else
                         "没有已解析调用或没有零入度的入口单元") + "。"]
-    if not relationships["key_flows"]:
+    displayed_flows = relationships["key_flows"]
+    if not displayed_flows:
         index_lines += ["system 未提供关键流程。"]
-    for flow in relationships["key_flows"]:
+        if relationships["candidate_flows"]:
+            index_lines += ["", "程序候选，未经模型挑选（前 5 条）：", ""]
+            displayed_flows = [dict(name=f"候选 {i}", description="程序从已解析调用提取。",
+                                    steps=path, inferred_steps=[])
+                               for i, path in enumerate(relationships["candidate_flows"][:5], 1)]
+    for flow in displayed_flows:
         index_lines += [f"- **{link_text(flow['name'])}** · {literal_links(flow['description'])}"]
         steps = []
         for i, uid in enumerate(flow["steps"]):
-            steps.append(f"[{link_text(name_of(uid))}](nodes/{owner[uid]}.md#{anchor(uid)})"
-                         + ("（模型推断）" if i in flow["inferred_steps"] else ""))
-        index_lines += ["  " + " → ".join(steps)]
+            if i:
+                steps.append(" →（模型推断）→ " if i in flow["inferred_steps"] else " → ")
+            steps.append(f"[{link_text(name_of(uid))}](nodes/{owner[uid]}.md#{anchor(uid)})")
+        index_lines += ["  " + "".join(steps)]
     if index_notes:
         index_lines += ["", "## Generation notes", ""] + [f"- {item}" for item in index_notes]
     (docs_dir / "INDEX.md").write_text("\n".join(index_lines) + "\n", encoding="utf-8")

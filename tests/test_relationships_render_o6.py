@@ -12,8 +12,9 @@ def test_render_resolved_calls_and_inferred_transitions(tmp_path):
     payload = _good_payload(inventory)
     units = {u["id"]: u for u in payload["units"]}
     a, b = "pkg/jobs.py::Pool.submit", "pkg/jobs.py::reserve@5"
-    tree = {"nodes": [dict(id="root", parent=None, title="Submit", unit_ids=[a]),
-                       dict(id="helper", parent="root", title="Reserve",
+    tree = {"nodes": [dict(id="top", parent=None, title="Top", unit_ids=[]),
+                       dict(id="root", parent="top", title="Submit", unit_ids=[a]),
+                       dict(id="helper", parent="top", title="Reserve",
                             unit_ids=sorted(set(units) - {a}))],
             "depends_on": [{"from": "root", "to": "helper", "basis": "Reserves values."}]}
     evidence = {"schema": "cbe-graph/1", "nodes": [

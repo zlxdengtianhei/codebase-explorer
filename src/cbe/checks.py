@@ -62,6 +62,12 @@ def system_limit(node_count: int) -> int:
     return max(2000, min(12000, 250 * node_count))
 
 
+DEPENDENCY_EVIDENCE_WORDS = re.compile(
+    r"\b(?:graph[-_ ]?(?:confirmed|only)|model[-_ ]?inferred|resolved)\b"
+    r"|\b\d+\s+(?:(?:static|resolved|call|import)\s+)*(?:calls?|edges?)\b"
+    r"|图确认|模型推断|图有未描述|\d+\s*条(?:调用|边)", re.IGNORECASE)
+
+
 def check_system(value: dict[str, Any], limit: int = 2000, *, unit_ids=None, dependencies=None,
                  has_candidates: bool = False, normalized: bool = False) -> None:
     for key in ("overview", "maintenance_navigation"):
@@ -78,17 +84,26 @@ def check_system(value: dict[str, Any], limit: int = 2000, *, unit_ids=None, dep
                 or not row["description"].strip() or len(row["description"]) > 300
                 or (pairs is not None and (row["from"], row["to"]) not in pairs)):
             raise ValueError("dependency description must name an existing pair and one sentence (<=300 characters)")
+        if DEPENDENCY_EVIDENCE_WORDS.search(row["description"]):
+            raise ValueError(f"dependency {row['from']} -> {row['to']}: describe who uses whom for what; "
+                             "omit evidence/source words and edge counts (the program supplies them)")
     if pairs and not descriptions and not normalized:
         raise ValueError("describe at least one existing dependency")
-    if (has_candidates and not (normalized and not flows) and not 3 <= len(flows) <= 7) or (not has_candidates and flows):
+    if (has_candidates and not (normalized and len(flows) <= 7) and not 3 <= len(flows) <= 7) or (not has_candidates and flows):
         raise ValueError("key_flows must contain 3-7 flows when candidates exist, otherwise []")
-    for row in flows:
+    for index, row in enumerate(flows):
         if (not isinstance(row, dict) or any(not isinstance(row.get(k), str) or not row[k].strip()
                                            or len(row[k]) > 300 for k in ("name", "description"))
                 or not isinstance(row.get("steps"), list) or not 2 <= len(row["steps"]) <= 8
                 or any(not isinstance(uid, str) or (unit_ids is not None and uid not in unit_ids)
                        for uid in row["steps"])):
-            raise ValueError("each key flow needs name, one sentence, and 2-8 existing unit ids")
+            bad_ids = ([uid for uid in row.get("steps", [])
+                        if not isinstance(uid, str) or (unit_ids is not None and uid not in unit_ids)]
+                       if isinstance(row, dict) and isinstance(row.get("steps"), list) else [])
+            name = row.get("name", "") if isinstance(row, dict) else ""
+            raise ValueError(f"key flow {index + 1} {name!r}: invalid unit ids {bad_ids!r}; "
+                             "each flow needs name, one sentence, and 2-8 existing unit ids; "
+                             "steps are unit ids from candidates, not node ids")
 
 
 def check_review(value: dict[str, Any]) -> None:
@@ -167,20 +182,32 @@ def normalize_system(value: Any, limit: int, *, unit_ids=None, dependencies=None
     if not value["maintenance_navigation"].strip():
         value["maintenance_navigation"] = "See the subsystem list below."
         flags.append("maintenance_navigation was empty")
-    # Invalid new sections become explicitly empty only after the last answer.
+    # Preserve each independently valid row after the final rejected answer.
     for key in ("dependency_descriptions", "key_flows"):
-        probe = {**value, "dependency_descriptions": [], "key_flows": []}
-        probe[key] = value.get(key)
-        try:
-            check_system(probe, limit, unit_ids=unit_ids, dependencies=dependencies,
-                         has_candidates=has_candidates, normalized=True)
-        except ValueError as exc:
+        rows = value.get(key)
+        if not isinstance(rows, list):
             value[key] = []
-            flags.append(f"{key} normalized to empty: {exc}")
-        else:
-            if not value[key] and ((key == "key_flows" and has_candidates)
-                                   or (key == "dependency_descriptions" and dependencies)):
-                flags.append(f"{key} empty after final invalid answer")
+            flags.append(f"{key} normalized to empty: must be a list")
+            continue
+        retained = []
+        for index, row in enumerate(rows):
+            probe = {**value, "dependency_descriptions": [], "key_flows": []}
+            probe[key] = [row]
+            try:
+                check_system(probe, limit, unit_ids=unit_ids, dependencies=dependencies,
+                             has_candidates=has_candidates, normalized=True)
+            except ValueError as exc:
+                flags.append(f"{key}[{index}] removed: {exc}")
+            else:
+                retained.append(row)
+        if key == "key_flows" and len(retained) > 7:
+            flags.append(f"key_flows trimmed from {len(retained)} to 7")
+            retained = retained[:7]
+        value[key] = retained
+        if key == "key_flows" and has_candidates and len(retained) < 3:
+            flags.append(f"key_flows retained {len(retained)} valid flows (fewer than 3) after final invalid answer")
+        elif not retained and dependencies and key == "dependency_descriptions":
+            flags.append("dependency_descriptions empty after final invalid answer")
     check_system(value, limit, unit_ids=unit_ids, dependencies=dependencies,
                  has_candidates=has_candidates, normalized=True)
     return flags

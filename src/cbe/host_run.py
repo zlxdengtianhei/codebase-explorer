@@ -854,8 +854,9 @@ def _checks(run_dir: Path, state: dict[str, Any], task: dict[str, Any]) -> tuple
     if task["kind"] == "review":
         return checks.check_review, checks.normalize_review
     _, limit, view, units = _system_inputs(run_dir, state)
-    options = dict(unit_ids=set(units), dependencies=view["dependencies"],
-                   has_candidates=bool(view["candidate_flows"]))
+    shown = prompts.system_relationship_context(view)
+    options = dict(unit_ids=set(units), dependencies=shown["dependencies"],
+                   has_candidates=bool(shown["candidate_flows"]))
     repaired = False
     def strict(value):
         checks.check_system(value, limit, normalized=repaired, **options)
