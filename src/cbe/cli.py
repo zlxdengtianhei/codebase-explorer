@@ -60,7 +60,8 @@ def build_parser() -> argparse.ArgumentParser:
     host_plan.add_argument("--host", default="other", help="label only, e.g. claude-code or codex")
     for name, text in (("next", "Lease ready tasks up to the concurrency limit and write their instruction files"),
                        ("submit", f"Check one subagent result: detail (module/repair) allows {DETAIL_MAX_ATTEMPTS} answers, "
-                                  f"others {MAX_ATTEMPTS}; normalize or fail on the final invalid answer"),
+                                  f"others {MAX_ATTEMPTS}; on the final invalid answer normalize newest to oldest "
+                                  "detail answers, accept the first passing answer with its attempt flagged, or fail"),
                        ("status", "Show every task's state, attempts, timing, output, and the next action"),
                        ("resume", "Continue from the run records: adopt finished results, release lost "
                         "leases, retry failed tasks"),
