@@ -60,12 +60,12 @@ def test_model_index_only_choices_and_large_groups_are_not_coverage_loss():
     assert checks.validate_details(grouped, ['jobs.py'], inventory, set()) == []
 
 
-def _drive(tmp_path, mode):
+def _drive(tmp_path, mode, *, driver='script', kind='module'):
     repo = tmp_path / 'repo'
     repo.mkdir()
     (repo / 'jobs.py').write_text(''.join(f'def f{i}():\n    return {i}\n\n' for i in range(25)))
     run = tmp_path / 'run'
-    host_run.plan(repo, run, review='none', jobs=20, driver='script')
+    host_run.plan(repo, run, review='all' if kind == 'repair' else 'none', jobs=20, driver=driver)
     attempts = 0
     rejections = []
     ids = []
@@ -77,13 +77,21 @@ def _drive(tmp_path, mode):
         for item in batch['tasks']:
             prompt = host_run.completion_prompt(run, item['task'])
             value = _semantic_answer(prompt)
-            if item['task'] == 'module_1':
+            if kind == 'repair' and item['kind'] == 'review':
+                value = {'decision': 'needs_repair', 'issues': ['Explain the boundary behavior.']}
+            if item['task'] == f'{kind}_1':
                 attempts += 1
                 if attempts == 2:
                     retry_prompt = prompt
                 ids = sorted(value['dispositions'])
                 assert len(ids) >= 20
-                if mode == 'small' or (mode == 'older_small' and attempts == 1):
+                if mode == 'older_id' and attempts < 3:
+                    good = value['units'][1]['id']
+                    bad = good.rsplit('::', 1)[0] + '::999999_tmp'
+                    value['units'][1].update(id=bad, explain=f'Answer from attempt {attempts}.')
+                    value['dispositions'][good]['unit'] = bad
+                elif mode == 'small' or (mode in {'older_small', 'older_schema'} and attempts < 3) or (mode == 'oldest' and attempts == 1):
+                    value['units'][1]['explain'] = f'Answer from attempt {attempts}.'
                     value['dispositions'].pop(ids[0])
                     # Include identity repair and an extra corrected key collision in the same submission.
                     good = value['units'][1]['id']
@@ -94,6 +102,8 @@ def _drive(tmp_path, mode):
                     value['dispositions'][duplicate + '_dup'] = copy.deepcopy(value['dispositions'][duplicate])
                     value['dispositions'][ids[4]] = {'how': 'index_only', 'unit': None,
                                                     'reason': 'Model selected index_only.'}
+                elif mode == 'older_schema':
+                    value = {'units': 'not an array', 'dispositions': {}}
                 elif mode != 'recover' or attempts == 1:
                     value.pop('dispositions')
                     value['units'][0]['kind'] = 'bad'
@@ -126,20 +136,49 @@ def test_small_fill_visible_separately_from_model_choices_and_identity_repairs(t
     assert sum(d['how'] == 'index_only' for d in accepted['dispositions'].values()) == 2
 
 
-@pytest.mark.parametrize('mode', ['collapse', 'older_small'])
-def test_final_overflow_fails_partial_and_resume_instead_of_publishing(tmp_path, mode):
-    run, rejected, ids, prompt = _drive(tmp_path, mode)
+@pytest.mark.parametrize('driver', ['script', 'host'])
+@pytest.mark.parametrize('kind', ['module', 'repair'])
+def test_final_overflow_fails_partial_and_resume_instead_of_publishing(tmp_path, driver, kind):
+    mode = 'collapse'
+    run, rejected, ids, prompt = _drive(tmp_path, mode, driver=driver, kind=kind)
     assert len(rejected) == 3 and rejected[-1]['task_status'] == 'failed'
     assert 'dispositions missing inventory ids' in rejected[-1]['error']
     assert ids[0] in rejected[-1]['error'] and f'{len(ids)}/{len(ids)} missing' in rejected[-1]['error']
     assert 'Every inventory symbol must have a disposition' in prompt
     if mode == 'collapse':
         assert rejected[0]['error'].startswith('schema_error:dispositions missing inventory ids')
-    assert not (run / 'host/accepted/module_1.json').exists()
+    assert not (run / f'host/accepted/{kind}_1.json').exists()
     summary = json.loads((run / 'summary.json').read_text())
     assert summary['status'] == 'partial' and summary['index_only_filled_count'] == 0
-    assert '--resume' in host_run.status(run)['next_action']
+    assert ('--resume' if driver == 'script' else 'host resume') in host_run.status(run)['next_action']
     assert not host_run.verify(run)['ok']
+
+
+@pytest.mark.parametrize('driver', ['script', 'host'])
+@pytest.mark.parametrize('kind', ['module', 'repair'])
+@pytest.mark.parametrize('mode,selected', [('older_id', 2), ('older_small', 2), ('older_schema', 2), ('oldest', 1)])
+def test_final_collapse_accepts_latest_earlier_qualifying_answer_and_reports_it(tmp_path, driver, kind, mode, selected):
+    run, rejected, ids, _ = _drive(tmp_path, mode, driver=driver, kind=kind)
+    task = f'{kind}_1'
+    assert len(rejected) == 2
+    summary = json.loads((run / 'summary.json').read_text())
+    assert summary['status'] == 'complete'
+    assert host_run.verify(run)['ok']
+    assert summary['answer_fallback_count'] == 1
+    assert summary['answer_fallback'] == [{'task': task, 'attempt': selected, 'final_attempt': 3}]
+    assert summary['index_only_filled_count'] == (0 if mode == 'older_id' else 1)
+    assert summary['id_corrected_count'] == (2 if mode == 'older_id' else 3)
+    accepted = json.loads((run / f'host/accepted/{task}.json').read_text())
+    assert accepted['units'][1]['explain'] == f'Answer from attempt {selected}.'
+    assert accepted['units'][1]['id'] in ids
+    if mode != 'older_id':
+        assert accepted['dispositions'][ids[0]]['how'] == 'index_only'
+    status = (run / 'STATUS.md').read_text()
+    assert 'answer_fallback 1' in status.splitlines()
+    assert f'{task}: accepted attempt {selected} (final attempt 3)' in status
+    assert f'answer_fallback: {task}: accepted attempt {selected}' in (run / 'docs/INDEX.md').read_text()
+    flags = json.loads((run / 'host/state.json').read_text())['tasks'][task]['flags']
+    assert f'answer_fallback: attempt {selected} (final attempt 3)' in flags
 
 
 def test_retry_can_supply_complete_dispositions_without_mechanical_fill(tmp_path):

@@ -158,7 +158,9 @@ new plans; `--resume` keeps the frozen batches. A response ending with `length`
 (or `max_tokens`/`max_output_tokens`) fails with `output_limit`, even if its JSON
 parses. Module and repair detail tasks allow 3 answers; other tasks allow 2.
 Each rejection includes the error; on the final invalid answer the driver
-normalizes usable content or fails the task for resume. Truncated attempts
+normalizes usable content. For module and repair details it tries answers from
+newest to oldest within the current round, accepting the first normalized answer
+that passes the same strict checks, or fails the task for resume if none passes. Truncated attempts
 cannot be accepted by final normalization. Increase
 `output_max_tokens` for resume or start a fresh run with smaller batch limits if needed.
 `output_max_tokens` caps API output (sent as the provider's `max_tokens` field);
@@ -255,9 +257,14 @@ answer may need one inventory disposition filled, or two when its batch has at
 least 40 inventory symbols. Missing dispositions and entries with invalid `how`
 share this allowance; an answer requiring every disposition to be filled is
 rejected. Retry diagnostics name missing or invalid IDs and the repair count.
-If the final answer still exceeds the allowance, the task fails
-and the run stays partial for resume; CBE does not silently replace it with
-index-only entries or an older answer. Explicit model-authored `index_only`
+If the final answer still fails any check, CBE tries earlier answers from newest
+to oldest in the current round, applying the same identity corrections, coverage
+allowance and strict checks. The first passing answer is accepted; if none passes,
+the task fails and the run stays partial for resume. A fallback is flagged as
+`answer_fallback: attempt N (final attempt M)`. `STATUS.md` and INDEX list the
+selected attempt separately from `id_corrected`; `summary.json` adds
+`answer_fallback_count` and `answer_fallback` rows with `task`, `attempt` and
+`final_attempt` when a fallback occurs. Explicit model-authored `index_only`
 choices and complete group dispositions are unaffected.
 
 `STATUS.md` and `summary.json` list `index_only_filled` separately from

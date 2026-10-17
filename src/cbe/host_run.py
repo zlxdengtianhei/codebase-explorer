@@ -665,8 +665,13 @@ def _body(run_dir: Path, state: dict[str, Any], task: dict[str, Any], *, embed: 
     """
     kind = task["kind"]
     reading = prompts.NO_FILE_RULES if embed or state.get("driver") == "script" else prompts.FILE_TASK_RULES
+    no_source = prompts.NO_FILE_RULES
+    if not embed and state.get("driver") != "script":
+        no_source += (" Use your file-writing tool to write the result JSON. "
+                      "Do not run shell commands, scripts, or interpreters, not even to assemble or check the JSON: "
+                      "in the user's harness each one asks for permission, and this task does not need them.")
     if kind == "names":
-        return prompts.NO_FILE_RULES, prompts.names_prompt(_modules(state))
+        return no_source, prompts.names_prompt(_modules(state))
     if kind in {"module", "repair"}:
         return reading, _detail_task(run_dir, state, task, embed=embed, with_diagnostics=True,
                                      issues=task.get("issues") if kind == "repair" else None)
@@ -691,13 +696,13 @@ def _body(run_dir: Path, state: dict[str, Any], task: dict[str, Any], *, embed: 
             if size > budget:
                 raise MergeBudgetError(f"tree merge input {size} exceeds token budget {budget}; "
                                    "increase CBE_TREE_MAX_TOKENS and replan; accepted region subtrees are retained")
-        return prompts.NO_FILE_RULES, body
+        return no_source, body
     if kind == "review":
         units = _module_output(run_dir, state, task["module"])
         return reading, prompts.review_prompt(
             units, _detail_task(run_dir, state, task, embed=embed, with_diagnostics=False))
     nodes, limit, view, _ = _system_inputs(run_dir, state)
-    return prompts.NO_FILE_RULES, prompts.system_prompt(nodes, limit, view)
+    return no_source, prompts.system_prompt(nodes, limit, view)
 
 
 def _previous_error(task: dict[str, Any]) -> str:
@@ -921,14 +926,15 @@ def _apply_submit(run_dir: Path, state: dict[str, Any], task: dict[str, Any], re
                 strict(parsed)
             except checks.MissingDispositionsError as exc:
                 if number == attempt:
-                    # A collapsed final answer must fail visibly, rather than
-                    # silently publishing either index-only fillers or an older answer.
                     error = f"schema_error:{exc}"
+                if task["kind"] not in {"module", "repair"}:
                     break
                 continue
             except (ValueError, TypeError):
                 continue
             value = parsed
+            if number < attempt and task["kind"] in {"module", "repair"}:
+                flags.append(f"answer_fallback: attempt {number} (final attempt {attempt})")
             task["normalized_from"] = error
             error = None
             break
@@ -1230,6 +1236,16 @@ def _identity_corrections(state: dict[str, Any]) -> list[dict[str, str]]:
     return rows
 
 
+def _answer_fallbacks(state: dict[str, Any]) -> list[dict[str, Any]]:
+    rows = []
+    for task in sorted(state["tasks"].values(), key=lambda row: row["id"]):
+        for flag in task.get("flags") or []:
+            match = re.fullmatch(r"answer_fallback: attempt (\d+) \(final attempt (\d+)\)", flag)
+            if match:
+                rows.append({"task": task["id"], "attempt": int(match[1]), "final_attempt": int(match[2])})
+    return rows
+
+
 def _index_only_fills(state: dict[str, Any]) -> list[dict[str, str]]:
     """Count program-created entries, including flags preserved in older runs."""
     rows = []
@@ -1290,6 +1306,9 @@ def _render(run_dir: Path, state: dict[str, Any]) -> None:
     if normalized:
         index_notes.append("Normalized after the final invalid answer (facts kept, shape fixed): "
                            + ", ".join(normalized) + ".")
+    for row in _answer_fallbacks(state):
+        index_notes.append(f"answer_fallback: {row['task']}: accepted attempt {row['attempt']} "
+                           f"after final attempt {row['final_attempt']} failed validation.")
     fill_counts: dict[str, int] = {}
     for row in _index_only_fills(state):
         task = state["tasks"][row["task"]]
@@ -1348,6 +1367,9 @@ def _render(run_dir: Path, state: dict[str, Any]) -> None:
                "wall_seconds": round(time.time() - epoch(state["created_at"]), 3),
                "run_dir": str(run_dir), "index": str(run_dir / "docs" / "INDEX.md"),
                "subagent_tasks": sum(task["attempts"] for task in state["tasks"].values())}
+    fallbacks = _answer_fallbacks(state)
+    if fallbacks:
+        summary.update(answer_fallback_count=len(fallbacks), answer_fallback=fallbacks)
     if reason:
         summary["partial_reason"], summary["partial_detail"] = reason, state.get("partial_detail", "")
     state["verify"] = verify_state(run_dir, state)
@@ -1491,6 +1513,11 @@ def _status_markdown(state: dict[str, Any]) -> str:
     correction_lines += ["", f"index_only_filled {len(fills)}", ""]
     correction_lines += [f"- {row['task']}: {docs.code_text(row['symbol'])} ({row['reason']})"
                          for row in fills]
+    fallbacks = _answer_fallbacks(state)
+    if fallbacks:
+        correction_lines += ["", f"answer_fallback {len(fallbacks)}", ""]
+        correction_lines += [f"- {row['task']}: accepted attempt {row['attempt']} "
+                             f"(final attempt {row['final_attempt']})" for row in fallbacks]
     lines = ["# CBE run status", "",
              f"Run `{state['run_tag']}` · status **{state['status']}** · updated {state['updated_at']} · "
              f"review {state['review']} · jobs {state['jobs']} · host {state['host']}", "",
@@ -1512,6 +1539,7 @@ def _status_markdown(state: dict[str, Any]) -> str:
             output = state["modules"][task["module"]]["page"]
         task_fills = sum(row["task"] == task["id"] for row in fills)
         shape_flags = [flag for flag in task["flags"] if not flag.startswith("id_corrected:")
+                       and not flag.startswith("answer_fallback:")
                        and not flag.endswith((": disposition missing; treated as index_only",
                                               ": invalid disposition; treated as index_only"))]
         identity_count = sum(flag.startswith("id_corrected:") for flag in task["flags"])
@@ -1519,6 +1547,9 @@ def _status_markdown(state: dict[str, Any]) -> str:
                 else f"normalized ({len(shape_flags)})" if shape_flags else "")
         if identity_count:
             note += ("; " if note else "") + f"id_corrected {identity_count}"
+        for row in fallbacks:
+            if row["task"] == task["id"]:
+                note += ("; " if note else "") + f"answer_fallback attempt {row['attempt']}"
         if task_fills:
             note += ("; " if note else "") + f"index_only_filled {task_fills}"
         lines.append(f"| {task['id']} | {_title(state, task) if task['module'] is not None else ''} | "

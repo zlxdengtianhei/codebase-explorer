@@ -49,6 +49,18 @@ def test_review_instruction_asks_for_strings_and_its_example_is_a_valid_answer(t
     checks.check_review({"decision": "needs_repair", "issues": issues})
 
 
+def test_nonreading_host_tasks_write_json_with_file_tools_without_commands(tmp_path: Path) -> None:
+    seen = _instruction_files(tmp_path)
+    for kind in ('names', 'tree', 'system'):
+        text = seen[kind]
+        assert 'your file-writing tool to write the result JSON' in text
+        assert 'Do not run shell commands, scripts, or interpreters' in text
+        assert 'asks for permission' in text
+        assert 'Do not read source files' in text
+        assert 'file-writing tool' not in seen[f'script:{kind}']
+        assert 'shell commands' not in seen[f'script:{kind}']
+
+
 def test_script_completions_do_not_mention_file_tools(tmp_path: Path) -> None:
     """A script-driven model has no tools; telling it about a file-writing tool would only confuse it."""
     seen = _instruction_files(tmp_path)
