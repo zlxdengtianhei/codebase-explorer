@@ -15,8 +15,8 @@ from importlib import resources
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path, PurePosixPath
 
-from . import (BUSINESS_MODULE, PRODUCT, RUNTIME_MODULES, RUNTIME_SKILLS, SKILLS,
-               SOURCE_PARENT_LEVEL, SOURCE_SCRIPT, SOURCE_SKILL_BASE)
+from . import (AGENTS_RESOURCE, BUSINESS_MODULE, PRODUCT, RUNTIME_MODULES, RUNTIME_SKILLS, SKILLS,
+               SOURCE_AGENT_BASE, SOURCE_PARENT_LEVEL, SOURCE_SCRIPT, SOURCE_SKILL_BASE)
 
 MANIFEST = ".skill-install.json"
 HOSTS = ("codex", "claude-code", "dsh", "opencode")
@@ -81,20 +81,40 @@ def _runtime_check() -> None:
         ) from exc
 
 
+def _checkout_root() -> Path | None:
+    """The author checkout this module runs from, or None inside an installed wheel."""
+    location = Path(__file__).resolve()
+    candidate = location.parents[SOURCE_PARENT_LEVEL]
+    if (
+        not {"site-packages", "dist-packages"}.intersection(location.parts)
+        and (candidate / "pyproject.toml").is_file()
+    ):
+        return candidate
+    return None
+
+
+def _agent_files() -> dict[str, bytes]:
+    """The Claude Code subagent definitions that ship with the skill, by file name."""
+    root = resources.files(__package__).joinpath("resources", AGENTS_RESOURCE)
+    if not root.is_dir() and (checkout := _checkout_root()) is not None:
+        root = checkout / SOURCE_AGENT_BASE
+    if not root.is_dir():
+        raise InstallError(f"wheel is missing the agent resources; rebuild {PRODUCT} from its release source")
+    found = {child.name: child.read_bytes() for child in root.iterdir() if child.is_file()}
+    if not found:
+        raise InstallError(f"wheel has no agent definitions; rebuild {PRODUCT} from its release source")
+    return found
+
+
 def _resource_files(skill: str) -> dict[str, bytes]:
     root = resources.files(__package__).joinpath("resources", skill)
     source_root: Path | None = None
     if not root.is_dir():
         # Development checkouts use the same canonical files as the wheel build.
         # A wheel without embedded resources never reaches into an author checkout.
-        location = Path(__file__).resolve()
-        candidate = location.parents[SOURCE_PARENT_LEVEL]
-        if (
-            not {"site-packages", "dist-packages"}.intersection(location.parts)
-            and (candidate / "pyproject.toml").is_file()
-        ):
-            source_root = candidate
-            root = candidate / SOURCE_SKILL_BASE / skill
+        source_root = _checkout_root()
+        if source_root is not None:
+            root = source_root / SOURCE_SKILL_BASE / skill
     if not root.is_dir():
         raise InstallError(f"wheel is missing skill resource {skill!r}; rebuild {PRODUCT} from its release source")
     found: dict[str, bytes] = {}
@@ -120,6 +140,22 @@ def _resource_files(skill: str) -> dict[str, bytes]:
     return found
 
 
+def _valid_file_list(files: object) -> bool:
+    return isinstance(files, dict) and not any(
+        not isinstance(name, str)
+        or not isinstance(digest, str)
+        or digest != digest.lower()
+        or len(digest) != 64
+        or not name
+        or "\\" in name
+        or PurePosixPath(name).is_absolute()
+        or ".." in PurePosixPath(name).parts
+        or PurePosixPath(name).as_posix() != name
+        or name == MANIFEST
+        for name, digest in files.items()
+    )
+
+
 def _read_manifest(destination: Path, skill: str) -> dict | None:
     path = destination / MANIFEST
     if not path.exists():
@@ -132,20 +168,7 @@ def _read_manifest(destination: Path, skill: str) -> dict | None:
         raise InstallError(f"cannot read ownership manifest {path}: {exc}") from exc
     if not isinstance(manifest, dict) or manifest.get("product") != PRODUCT or manifest.get("skill") != skill:
         raise InstallError(f"{path} belongs to another product or is invalid; inspect it before changing this skill")
-    files = manifest.get("files")
-    if not isinstance(files, dict) or any(
-        not isinstance(name, str)
-        or not isinstance(digest, str)
-        or digest != digest.lower()
-        or len(digest) != 64
-        or not name
-        or "\\" in name
-        or PurePosixPath(name).is_absolute()
-        or ".." in PurePosixPath(name).parts
-        or PurePosixPath(name).as_posix() != name
-        or name == MANIFEST
-        for name, digest in files.items()
-    ):
+    if not _valid_file_list(manifest.get("files")) or not _valid_file_list(manifest.get("agents", {})):
         raise InstallError(f"invalid file list in {path}; inspect it before changing this skill")
     return manifest
 
@@ -183,24 +206,69 @@ def _recover_backup(destination: Path) -> None:
     backup.rename(destination)
 
 
+def _agents_dir(root: Path) -> Path | None:
+    """Claude Code reads subagent definitions from the ``agents`` directory beside its ``skills`` directory."""
+    return root.parent / "agents" if root.name == "skills" and root.parent.name == ".claude" else None
+
+
+def _check_agent_files(agents_dir: Path, tracked: dict[str, str], *, allow_missing: bool) -> None:
+    """Every tracked agent file is the one this installer wrote. The directory itself may be a symlink."""
+    for name, expected in tracked.items():
+        path = agents_dir / name
+        if path.is_symlink():
+            raise InstallError(f"refusing symlinked installed path: {path}")
+        if not path.exists():
+            if allow_missing:
+                continue
+            raise InstallError(f"installed file was removed: {path}; restore it or resolve ownership manually")
+        if not path.is_file() or _digest(path.read_bytes()) != expected:
+            raise InstallError(f"user-modified installed file: {path}; save your edits before upgrading or uninstalling")
+
+
+def _write_agent_files(agents_dir: Path, agents: dict[str, bytes]) -> list[str]:
+    agents_dir.mkdir(parents=True, exist_ok=True)
+    lines = []
+    for name, data in agents.items():
+        path = agents_dir / name
+        if path.is_file() and path.read_bytes() == data:
+            continue
+        staged = agents_dir / f".{name}.{PRODUCT}.stage"
+        staged.write_bytes(data)
+        os.replace(staged, path)
+        lines.append(f"installed {path}")
+    return lines
+
+
 def _install_one(root: Path, skill: str) -> str:
     root.mkdir(parents=True, exist_ok=True)
     destination = root / skill
     _recover_backup(destination)
     _check_symlinks(destination)
     desired = _resource_files(skill)
+    agents_dir = _agents_dir(root)
+    agents = _agent_files() if agents_dir else {}
     prior = _read_manifest(destination, skill) if destination.exists() else None
     if destination.exists() and prior is None:
         raise InstallError(f"{destination} already exists without a {PRODUCT} ownership manifest; choose another directory")
     tracked = prior["files"] if prior else {}
+    tracked_agents = prior.get("agents", {}) if prior else {}
     if prior:
         _check_existing(destination, tracked)
     for rel in desired:
         path = destination / rel
         if path.exists() and rel not in tracked:
             raise InstallError(f"unowned file conflicts with release: {path}; move it before installing")
+    if agents_dir:
+        _check_agent_files(agents_dir, tracked_agents, allow_missing=True)
+        for name in agents.keys() - tracked_agents.keys():
+            path = agents_dir / name
+            if path.exists() or path.is_symlink():
+                raise InstallError(f"unowned file conflicts with release: {path}; move it before installing")
     hashes = {name: _digest(data) for name, data in desired.items()}
-    if prior and tracked == hashes and prior.get("version") == _release_version():
+    agent_hashes = {name: _digest(data) for name, data in agents.items()}
+    if (prior and tracked == hashes and tracked_agents == agent_hashes
+            and prior.get("version") == _release_version()
+            and all((agents_dir / name).is_file() for name in agents)):
         return f"unchanged {destination}"
 
     stage = Path(tempfile.mkdtemp(prefix=f".{skill}.stage-", dir=root))
@@ -220,6 +288,7 @@ def _install_one(root: Path, skill: str) -> str:
             "version": _release_version(),
             "runtime_python": str(_runtime_python()),
             "files": hashes,
+            **({"agents": agent_hashes} if agent_hashes else {}),
         }
         (stage / MANIFEST).write_text(json.dumps(manifest, sort_keys=True, indent=2) + "\n", encoding="utf-8")
         if destination.exists():
@@ -235,7 +304,8 @@ def _install_one(root: Path, skill: str) -> str:
     finally:
         if stage.exists():
             shutil.rmtree(stage)
-    return f"installed {destination}"
+    written = _write_agent_files(agents_dir, agents) if agents_dir else []
+    return "\n".join([f"installed {destination}", *written])
 
 
 def _uninstall_one(root: Path, skill: str) -> str:
@@ -248,17 +318,24 @@ def _uninstall_one(root: Path, skill: str) -> str:
     if prior is None:
         raise InstallError(f"{destination} has no {PRODUCT} ownership manifest; refusing to remove it")
     _check_existing(destination, prior["files"], allow_missing=True)
+    agents_dir = _agents_dir(root)
+    tracked_agents = prior.get("agents", {}) if agents_dir else {}
+    if agents_dir:
+        _check_agent_files(agents_dir, tracked_agents, allow_missing=True)
     for rel in prior["files"]:
         path = destination / rel
         if path.exists():
             path.unlink()
+    for name in tracked_agents:
+        (agents_dir / name).unlink(missing_ok=True)
     (destination / MANIFEST).unlink()
     for directory in sorted((p for p in destination.rglob("*") if p.is_dir()), key=lambda p: len(p.parts), reverse=True):
         if not any(directory.iterdir()):
             directory.rmdir()
     if not any(destination.iterdir()):
         destination.rmdir()
-    return f"uninstalled {destination}; user files preserved"
+    agents = f" and {len(tracked_agents)} agent file(s)" if tracked_agents else ""
+    return f"uninstalled {destination}{agents}; user files preserved"
 
 
 def _targets(args: argparse.Namespace) -> list[Path]:
@@ -308,7 +385,7 @@ def _prompt(args: argparse.Namespace) -> None:
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog=f"{PRODUCT}-install",
-        description=f"Install {PRODUCT} wheel-bundled agent skills without changing host configuration",
+        description=f"Install {PRODUCT} wheel-bundled agent skills, and the Claude Code subagent beside .claude/skills, without changing host configuration",
     )
     sub = parser.add_subparsers(dest="command", required=True)
     for command in ("install", "upgrade", "doctor", "uninstall"):
@@ -316,7 +393,7 @@ def _parser() -> argparse.ArgumentParser:
         part.add_argument("--host", action="append", choices=(*HOSTS, "all"), help="Repeat for multiple hosts")
         part.add_argument("--scope", choices=("project", "user"), default="project")
         part.add_argument("--project", help="Project root; used only with project scope")
-        part.add_argument("--dir", help="Explicit parent directory for skills; overrides host and scope")
+        part.add_argument("--dir", help="Explicit parent directory for skills; overrides host and scope. A directory named .claude/skills also gets the agents directory beside it")
         part.add_argument("--interactive", action="store_true", help="Ask for host and path even when stdin is redirected")
     return parser
 
@@ -328,10 +405,11 @@ def main(argv: list[str] | None = None) -> int:
             _runtime_check()
         for skill in SKILLS:
             _resource_files(skill)
+        _agent_files()
         if args.interactive or (args.command != "doctor" and not args.host and not args.dir and sys.stdin.isatty()):
             _prompt(args)
         if args.command == "doctor" and not args.host and not args.dir:
-            print(f"OK {PRODUCT} {_release_version()}: runtime and {len(SKILLS)} bundled skill(s)")
+            print(f"OK {PRODUCT} {_release_version()}: runtime, {len(SKILLS)} bundled skill(s), and {len(_agent_files())} Claude Code agent(s)")
             return 0
         for root in _targets(args):
             for skill in SKILLS:
@@ -346,6 +424,13 @@ def main(argv: list[str] | None = None) -> int:
                     if isinstance(runtime, str) and runtime and not Path(runtime).is_file():
                         raise InstallError(f"installed runtime no longer exists: {runtime}; reinstall the tool and upgrade this skill")
                     print(f"OK {destination} ({manifest.get('version', 'unknown')})")
+                    if agents_dir := _agents_dir(root):
+                        tracked_agents = manifest.get("agents", {})
+                        if tracked_agents.keys() != _agent_files().keys():
+                            raise InstallError(f"agent files are not installed in {agents_dir}; run {PRODUCT}-install upgrade")
+                        _check_agent_files(agents_dir, tracked_agents, allow_missing=False)
+                        for name in tracked_agents:
+                            print(f"OK {agents_dir / name}")
                 elif args.command == "uninstall":
                     print(_uninstall_one(root, skill))
                 else:

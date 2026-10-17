@@ -88,6 +88,8 @@ Install the bundled skill in the project where the agent will run:
 cbe-install install --host claude-code   # or --host codex
 ```
 
+For Claude Code this installs two things: the skill in `.claude/skills/` and the `cbe-writer` subagent in `.claude/agents/` (Read and Write tools only, so the subagents that write results cannot run shell commands). `--scope user` installs both under `~/.claude/`. `cbe-install` never overwrites a skill or agent file that it did not install, and `cbe-install uninstall` removes what it installed.
+
 The host uses its existing subagent facility and subscription. It drives the CLI's durable task loop:
 
 ```sh
@@ -263,7 +265,7 @@ by normalization and exclude the model's own
 `index_only` choices. INDEX notes identify the affected active module/repair;
 the note counts as program-written `index` text, outside `model_body`.
 
-Usage reports distinguish known counters, estimates, and missing values. Host-agent usage can be imported where the harness provides the corresponding session records. Unknown model prices remain `null` in JSON and `unknown` in the cost report, even when token counts are exact. `cbe host cost --price INPUT,OUTPUT,CACHE_WRITE,CACHE_READ` accepts supplied rates in USD per million tokens. `cbe host cost` prices exact rows by the model recorded in each transcript; `--model MODEL` prices only the rows that are still estimates, which `import-usage` lists as `tasks_without_exact_usage`. Claude Code reports a subagent's usage in a completion notification after its final reply; a task submitted before that notification still gets exact usage from `import-usage`. Price equivalents are not subscription invoices.
+Usage reports distinguish known counters, estimates, and missing values. Host-agent usage can be imported where the harness provides the corresponding session records. Unknown model prices remain `null` in JSON and `unknown` in the cost report, even when token counts are exact. `cbe host cost --price INPUT,OUTPUT,CACHE_WRITE,CACHE_READ` accepts supplied rates in USD per million tokens. `cbe host cost` prices exact rows by the model recorded in each transcript; `--model MODEL` prices only the rows that are still estimates, which `import-usage` lists as `tasks_without_exact_usage`. In Claude Code, an Agent call that is not in the background returns with the subagent's usage at the end of its result; a task submitted without usage still gets exact usage from `import-usage`. Price equivalents are not subscription invoices.
 
 ## Development
 

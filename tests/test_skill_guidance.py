@@ -119,3 +119,38 @@ def test_cost_needs_model_only_for_estimated_rows_and_adds_attempts(tmp_path: Pa
     priced = usage.cost(run_dir, model="claude-sonnet-5-5")
     assert all(row["usd_api_equivalent"] > 0 for row in priced["tasks"])
     assert priced["totals"]["usd"] > 0
+
+
+def _sentences(page: Path) -> list[str]:
+    return re.split(r"(?<=[.!?])\s+", " ".join(page.read_text(encoding="utf-8").split()))
+
+
+def test_pages_never_tell_the_host_to_wait_for_a_notification() -> None:
+    """Claude Code delivers a completion notification only to an idle session and starts no new turn for it."""
+    for page in PAGES:
+        for sentence in _sentences(page):
+            if "notification" in sentence.lower():
+                assert re.search(r"\b(do not|never)\b", sentence, re.I), (page.name, sentence)
+
+
+def test_claude_code_page_has_the_host_start_calls_that_return_when_the_subagent_ends() -> None:
+    page = (SKILL_DIR / "references/claude-code.md").read_text(encoding="utf-8")
+    assert "Do not set the call to run in the background." in page
+    assert "returns when its subagent has ended" in page
+    assert "Async agent launched" in page
+    assert "Submit that task as soon as its hand-back arrives, without the usage flags" in page
+    assert "Do not end your turn to wait for the later completion notification" in page
+    assert "host status --run-dir RUN` between checks" not in page
+    skill = (SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
+    assert "Never end your turn to wait for a notification" in skill
+    assert "Do not wait for usage that arrives later" in skill
+
+
+def test_claude_code_page_names_the_agent_that_cbe_install_installs() -> None:
+    page = (SKILL_DIR / "references/claude-code.md").read_text(encoding="utf-8")
+    shipped = {path.stem for path in (SKILL_DIR.parents[1] / "agents").glob("*.md")}
+    assert shipped == {"cbe-writer"}
+    assert ".claude/agents/cbe-writer.md" in page
+    subagent = next(line for line in page.splitlines() if line.startswith("- `subagent_type`"))
+    assert "`cbe-writer` once `cbe-install`" in subagent
+    assert "`general-purpose`" in subagent

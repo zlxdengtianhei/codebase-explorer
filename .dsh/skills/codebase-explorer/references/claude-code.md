@@ -6,10 +6,10 @@ Install a CBE build that ships with this Skill (the CLI and Skill are one build;
 
 ```sh
 uv tool install --python 3.13 /path/to/codebase-explorer
-"$(uv tool dir --bin)/cbe-install" install --host claude-code --scope project   # .claude/skills/codebase-explorer
+"$(uv tool dir --bin)/cbe-install" install --host claude-code --scope project   # .claude/skills/codebase-explorer and .claude/agents/cbe-writer.md
 ```
 
-Use `--scope user` for `~/.claude/skills`. Alternatively install the plugin, which also adds the `cbe-writer` subagent (Read and Write tools only):
+Use `--scope user` for `~/.claude/skills` and `~/.claude/agents`. `cbe-install` installs the skill and the `cbe-writer` subagent (Read and Write tools only, so a writing subagent cannot run commands). It does not overwrite a `cbe-writer.md` or skill directory that it did not install; `cbe-install uninstall` removes both. Alternatively install the plugin, which carries the same two parts:
 
 ```sh
 claude plugin marketplace add zlxdengtianhei/codebase-explorer
@@ -24,24 +24,23 @@ For each task from `cbe host next`, call the Agent tool with:
 
 - `description`: the task's `description` field, exactly (`cbe <run_tag> <task>`). `import-usage` matches transcripts by it.
 - `prompt`: the task's `dispatch_message`, exactly.
-- `subagent_type`: `cbe-writer` when the plugin is installed (it may be listed as `codebase-explorer:cbe-writer`); otherwise `general-purpose`.
+- `subagent_type`: `cbe-writer` once `cbe-install` (or the plugin) has installed it; the plugin's copy may be listed as `codebase-explorer:cbe-writer`. If the Agent tool does not list it, use `general-purpose`.
 - `model`: the model the user chose. If the user did not choose, `sonnet` is enough for module, naming, and overview tasks.
+- Do not set the call to run in the background.
 
 Issue one Agent call per task of a `next` batch, all in a single message, so the subagents run concurrently. `next` also returns a re-ask of a rejected task: start a new subagent for it too, with the same `description` and `prompt`.
 
-## Wait, then submit
+## Submit from the Agent results
 
-Agent calls usually run in the background. A call returns at once with `Async agent launched`, and Claude Code sends a notification when the subagent ends. The subagent's final reply (`DONE <task>`) arrives first. The usage block (`<usage>` with `subagent_tokens`, `tool_uses`, `duration_ms`) arrives later, in the completion notification. If an Agent call instead waits for the subagent, the usage block is at the end of its result.
-
-Keep `--jobs` subagents busy like this: on each completion notification, submit that task, then call `next` and start what it returns. Calling `next` before you submit a finished task leaves its slot taken.
-
-Submit with the numbers from the notification:
+A call that is not in the background returns when its subagent has ended. When you start a whole `next` batch in one message, the message returns when the last subagent has ended, and each result ends with a usage block (`<usage>` with `subagent_tokens`, `tool_uses`, `duration_ms`). Submit every task of the batch from those results, then call `next` and start what it returns. Calling `next` before you submit a finished task leaves its slot taken. A batch lasts as long as its slowest subagent; that is the price of never waiting for a notification.
 
 ```sh
-cbe host submit --run-dir RUN --task module_3 --usage-tokens 21480 --tool-uses 5 --duration-ms 48210 --usage-source claude-code-notification
+cbe host submit --run-dir RUN --task module_3 --usage-tokens 21480 --tool-uses 5 --duration-ms 48210 --usage-source claude-code-agent-result
 ```
 
-`subagent_tokens` is the size of that subagent's final context (input, cache, and output of its last turn), not the total it processed across turns. Keep it as a quick check only. If you submitted before the notification and passed no usage, nothing is lost: `import-usage` below recovers the exact usage.
+`subagent_tokens` is the size of that subagent's final context (input, cache, and output of its last turn), not the total it processed across turns. Keep it as a quick check only.
+
+If Claude Code still runs a call in the background (it returns at once with `Async agent launched`), each subagent first sends a hand-back message, `DONE <task>`, which reaches you as a new message. Submit that task as soon as its hand-back arrives, without the usage flags (the hand-back carries no usage; `import-usage` below adds exact usage after the run), then call `next` and start what it returns. Do not end your turn to wait for the later completion notification: it reaches you only when your turn is idle and does not start a new turn, so the run stops there.
 
 ## Permission prompts
 
