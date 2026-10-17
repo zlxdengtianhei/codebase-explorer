@@ -32,18 +32,18 @@ def test_rollup_containment_is_not_dependency_and_omission():
     result = aggregation.relationship_view(tree(), edges, graph(), graph_only_limit=1)
     rows = result["dependencies"]
     assert [(r["from"], r["to"], r["source"], r["count"]) for r in rows] == [
-        ("child", "other", "model_inferred", 0), ("root", "child", "model_inferred", None),
+        ("child", "other", "model_inferred", 0), ("root", "child", "containment", 5),
         ("other", "child", "graph_only", 9)]
-    assert rows[1]["containment"] and rows[1]["kinds"] == {}
-    assert result["graph_only_omitted"] == 0
-    assert result["counts"] == dict(graph_confirmed=0, model_inferred=1, graph_only=1)
+    assert rows[1]["containment"] and rows[1]["kinds"] == {"call": 2, "import": 3}
+    assert result["graph_only_omitted"] == 1
+    assert result["counts"] == dict(graph_confirmed=0, model_inferred=1, graph_only=2)
 
 
 @pytest.mark.parametrize("evidence", [None, {"schema": "cbe-graph/1", "nodes": [], "edges": [],
                                           "diagnostics": [{"code": "no_backend_completed"}]}])
 def test_without_usable_graph_only_model_dependencies(evidence):
     result = aggregation.relationship_view(tree(), [edge("a", "c")], evidence)
-    assert {r["source"] for r in result["dependencies"]} == {"model_inferred"}
+    assert {r["source"] for r in result["dependencies"]} == {"model_inferred", "containment"}
     assert result["candidate_flows"] == []
     assert result["graph_reason"]
 
@@ -144,14 +144,14 @@ def test_render_query_and_links_with_inferred_flow(tmp_path):
             assert _answer_task(run, item, _good(item, run))["accepted"]
     catalog = json.loads((run / "catalog.json").read_text())
     dep = catalog["node_dependencies"][0]
-    assert dep["source"] == "model_inferred" and dep["description"] == "Uses its service."
-    assert dep["containment"] and dep["count"] is None
+    assert dep["source"] == "containment" and dep["description"] == "Uses its service."
+    assert dep["containment"] and dep["count"] == 0
     assert docs.query(run, "root")["dependencies"] == [dep]
     assert docs.query(run, "child")["depended_on_by"] == [dep]
     assert "Depended on by" in (run / "docs/nodes/child.md").read_text()
     index = (run / "docs/INDEX.md").read_text()
     assert '```mermaid' not in index  # containment is never drawn as dependency
-    assert "包含关系，不比对" in index and "Uses its service." in index
+    assert "包含关系 · 0 edge(s)" in index and "Uses its service." in index
     assert host_run.verify(run)["ok"]
     view = aggregation.relationship_view(value, [], graph())
     system = dict(key_flows=[dict(name="Flow", description="Uses helpers.", steps=ids[:2])])

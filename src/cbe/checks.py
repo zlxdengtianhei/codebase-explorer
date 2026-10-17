@@ -63,34 +63,41 @@ def system_limit(node_count: int) -> int:
 
 
 DEPENDENCY_EVIDENCE_WORDS = re.compile(
-    r"\b(?:graph[-_ ]?(?:confirmed|only)|model[-_ ]?inferred|resolved)\b"
+    r"\b(?:graph[-_ ]?(?:confirmed|only)|model[-_ ]?inferred)\b"
+    r"|\bresolved\s+(?:calls?|edges?|imports?)\b"
     r"|\b\d+\s+(?:(?:static|resolved|call|import)\s+)*(?:calls?|edges?)\b"
     r"|图确认|模型推断|图有未描述|\d+\s*条(?:调用|边)", re.IGNORECASE)
 
 
 def check_system(value: dict[str, Any], limit: int = 2000, *, unit_ids=None, dependencies=None,
                  has_candidates: bool = False, normalized: bool = False) -> None:
+    errors = []
     for key in ("overview", "maintenance_navigation"):
         if not isinstance(value.get(key), str) or not value[key].strip() or len(value[key]) > limit:
-            raise ValueError(f"{key} must be a nonempty concise string of at most {limit} characters")
+            errors.append(f"{key} must be a nonempty concise string of at most {limit} characters")
     descriptions = value.get("dependency_descriptions")
     flows = value.get("key_flows")
-    if not isinstance(descriptions, list) or not isinstance(flows, list):
-        raise ValueError("dependency_descriptions and key_flows must be lists")
+    if not isinstance(descriptions, list):
+        errors.append("dependency_descriptions must be a list")
+        descriptions = []
+    if not isinstance(flows, list):
+        errors.append("key_flows must be a list")
+        flows = []
     pairs = None if dependencies is None else {(e["from"], e["to"]) for e in dependencies}
     for row in descriptions:
         if (not isinstance(row, dict) or not isinstance(row.get("from"), str)
                 or not isinstance(row.get("to"), str) or not isinstance(row.get("description"), str)
                 or not row["description"].strip() or len(row["description"]) > 300
                 or (pairs is not None and (row["from"], row["to"]) not in pairs)):
-            raise ValueError("dependency description must name an existing pair and one sentence (<=300 characters)")
+            errors.append("dependency description must name an existing pair and one sentence (<=300 characters)")
+            continue
         if DEPENDENCY_EVIDENCE_WORDS.search(row["description"]):
-            raise ValueError(f"dependency {row['from']} -> {row['to']}: describe who uses whom for what; "
-                             "omit evidence/source words and edge counts (the program supplies them)")
+            errors.append(f"dependency {row['from']} -> {row['to']}: describe who uses whom for what; "
+                          "omit evidence/source words and edge counts (the program supplies them)")
     if pairs and not descriptions and not normalized:
-        raise ValueError("describe at least one existing dependency")
+        errors.append("describe at least one existing dependency")
     if (has_candidates and not (normalized and len(flows) <= 7) and not 3 <= len(flows) <= 7) or (not has_candidates and flows):
-        raise ValueError("key_flows must contain 3-7 flows when candidates exist, otherwise []")
+        errors.append("key_flows must contain 3-7 flows when candidates exist, otherwise []")
     flow_errors = []
     for index, row in enumerate(flows):
         if (not isinstance(row, dict) or any(not isinstance(row.get(k), str) or not row[k].strip()
@@ -105,8 +112,9 @@ def check_system(value: dict[str, Any], limit: int = 2000, *, unit_ids=None, dep
             flow_errors.append(f"key flow {index + 1} {name!r}: invalid unit ids {bad_ids!r}; "
                                "each flow needs name, one sentence, and 2-8 existing unit ids; "
                                "steps are unit ids from candidates, not node ids")
-    if flow_errors:
-        raise ValueError("; ".join(flow_errors))
+    errors.extend(flow_errors)
+    if errors:
+        raise ValueError("; ".join(errors))
 
 
 def check_review(value: dict[str, Any]) -> None:
@@ -200,7 +208,11 @@ def normalize_system(value: Any, limit: int, *, unit_ids=None, dependencies=None
                 check_system(probe, limit, unit_ids=unit_ids, dependencies=dependencies,
                              has_candidates=has_candidates, normalized=True)
             except ValueError as exc:
-                flags.append(f"{key}[{index}] removed: {exc}")
+                if key == "key_flows":
+                    reason = str(exc).replace("key flow 1 ", f"key flow {index + 1} ")
+                    flags.append(f"key_flows[{index + 1}] removed: {reason}")
+                else:
+                    flags.append(f"{key}[{index}] removed: {exc}")
             else:
                 retained.append(row)
         if key == "key_flows" and len(retained) > 7:

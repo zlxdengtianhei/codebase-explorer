@@ -232,8 +232,10 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
 
     def dependency_line(edge, target, prefix=""):
         return (f"- [{link_text(nodes[target].get('title') or target)}]({prefix}{target}.md) · "
-                + ("包含关系，不比对" if edge.get("containment") else
-                   f"{labels[edge['source']]} · {edge['count']} edge(s)")
+                + (f"包含关系 · {edge['count']} edge(s)（祖先直属单元与后代子树，按箭头方向）"
+                   if edge["source"] == "containment" else
+                   f"{labels[edge['source']]} · " + ("包含内 · " if edge.get("containment") else "")
+                   + f"{edge['count']} edge(s)")
                 + (" · " + literal_links(edge["description"]) if edge["description"] else ""))
 
     from cbe.records import correction_notice
@@ -373,7 +375,9 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
                         "", "## Maintenance navigation", "", literal_links(system["maintenance_navigation"])]
     index_lines += ["", "## Dependency view", "",
                     "箭头从使用方指向被依赖方；包含关系不算依赖。图确认同时见于 tree 与已解析调用/import，"
-                    "模型推断仅见于 tree，图有未描述仅见于图。"]
+                    "模型推断仅见于 tree，图有未描述仅见于图。",
+                    "图确认与模型推断按两棵子树的单元计边，图有未描述按直属节点计边。"
+                    "包含关系另列祖先直属单元与后代子树之间的已解析边；包含内的图边不画入 Mermaid。"]
     if relationships["graph_state"] != "provided":
         index_lines += ["没有可用图确认；仅列模型推断：" + relationships["graph_reason"] + "。"]
     degree = {}

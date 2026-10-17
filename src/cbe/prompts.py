@@ -276,7 +276,7 @@ def system_prompt(nodes: list[dict], limit: int, relationships: dict | None = No
             "[{\"from\":\"node id\",\"to\":\"node id\",\"description\":\"one sentence\"}], describing "
             "at least one key dependency when the table is nonempty (otherwise []). Use existing pairs only; "
             "describe only who uses whom for what. Do not write evidence/source words "
-            "(graph-confirmed, model-inferred, graph-only, resolved) or call/edge counts; "
+            "(graph-confirmed, model-inferred, graph-only, resolved calls/edges/imports) or call/edge counts; "
             "the program supplies those labels and counts. Return key_flows: [{\"name\":\"short name\","
             "\"description\":\"one sentence\",\"steps\":[\"unit id\",\"unit id\"]}]. Select 3-7 key flows "
             "from candidates and keep their unit ids. If fewer than three candidates exist, you may describe "

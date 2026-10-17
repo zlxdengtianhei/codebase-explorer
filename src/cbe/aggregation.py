@@ -84,8 +84,9 @@ def region_edges(edges: list[dict], membership: dict[str, str]) -> list[dict]:
 
 
 def relationship_view(tree: dict, edges: list[dict], graph: dict | None, *, graph_only_limit: int = 40) -> dict:
-    """Compare disjoint tree subtrees; report containment without edge counts.
+    """Compare disjoint subtrees; expose calls inside structural containment.
 
+    Tree containment pairs count ancestor direct units versus descendant subtree.
     Graph-only pairs use direct primary ownership to avoid repeating edges at
     every ancestor level. Only resolved call/import inputs are graph evidence.
     """
@@ -111,8 +112,6 @@ def relationship_view(tree: dict, edges: list[dict], graph: dict | None, *, grap
     kinds = defaultdict(Counter)
     for edge in region_edges(resolved, membership):
         pair = edge["from"], edge["to"]
-        if contains(*pair):
-            continue
         counts[pair] += edge["count"]
         kinds[pair][edge["kind"]] += edge["count"]
     node_ids = set(nodes)
@@ -121,8 +120,11 @@ def relationship_view(tree: dict, edges: list[dict], graph: dict | None, *, grap
     graph_only = sorted(counts.keys() - model.keys(), key=lambda p: (-counts[p], p))
     for a, b in model:
         if contains(a, b):
-            continue
-        pair_membership = {uid: nid for nid in (a, b) for uid in subtree_units[nid]}
+            ancestor, descendant = (a, b) if a in ancestors[b] else (b, a)
+            pair_membership = {uid: ancestor for uid in nodes[ancestor].get("unit_ids", [])}
+            pair_membership.update({uid: descendant for uid in subtree_units[descendant]})
+        else:
+            pair_membership = {uid: nid for nid in (a, b) for uid in subtree_units[nid]}
         rolled = region_edges(resolved, pair_membership)
         pair_kinds = Counter()
         for edge in rolled:
@@ -132,9 +134,10 @@ def relationship_view(tree: dict, edges: list[dict], graph: dict | None, *, grap
         kinds[a, b] = pair_kinds
     pairs = sorted(model) + graph_only[:graph_only_limit]
     dependencies = [{"from": a, "to": b,
-                     "source": "graph_confirmed" if counts[a, b] and (a, b) in model else
+                     "source": "containment" if contains(a, b) and (a, b) in model else
+                               "graph_confirmed" if counts[a, b] and (a, b) in model else
                                "model_inferred" if (a, b) in model else "graph_only",
-                     "count": None if contains(a, b) else counts[a, b],
+                     "count": counts[a, b],
                      "containment": contains(a, b), "kinds": dict(sorted(kinds[a, b].items())),
                      "basis": model.get((a, b), ""), "description": ""} for a, b in pairs]
     totals = {source: sum(e["source"] == source and not e["containment"] for e in dependencies)

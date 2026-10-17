@@ -22,7 +22,7 @@ def test_sibling_containers_use_subtrees_but_graph_only_uses_primary_owners():
     view = aggregation.relationship_view(tree, [edge("a", "b", count=37)], graph())
     rows = {(r["from"], r["to"]): r for r in view["dependencies"]}
     assert (rows["left", "right"]["source"], rows["left", "right"]["count"]) == ("graph_confirmed", 37)
-    assert rows["top", "right"]["containment"] and rows["top", "right"]["count"] is None
+    assert rows["top", "right"]["containment"] and rows["top", "right"]["count"] == 0
     assert [(r["from"], r["to"]) for r in rows.values() if r["source"] == "graph_only"] == [("leaf-a", "leaf-b")]
 
 
@@ -54,7 +54,7 @@ def test_final_answer_keeps_five_good_flows_and_names_bad_ids():
 
 
 @pytest.mark.parametrize("text", ["Uses graph-confirmed calls.", "It is model-inferred.", "Uses graph-only edges.",
-                                  "Uses resolved dispatch.", "Uses 37 static call edges.", "Uses 3 calls."])
+                                  "Uses resolved calls.", "Uses 37 static call edges.", "Uses 3 calls."])
 def test_evidence_words_reasked_and_only_bad_description_removed(text):
     value = answer()
     value["dependency_descriptions"].append(dict(**{"from": "child", "to": "root"}, description=text))
