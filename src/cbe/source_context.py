@@ -837,6 +837,11 @@ def _extract_declarations(spec: GrammarSpec, offsets: OffsetMap, root: Any, path
             holder: list[int | None] = [start]
             for child in node.named_children:
                 visit(child, parent, scope, holder)
+            # Nested wrappers share ownership of the prefix. Once any inner
+            # declaration consumes it, later siblings of every outer wrapper
+            # must start at their own node, not at that outer wrapper's start.
+            if holder[0] is None:
+                prefix[0] = None
             return
 
         if ntype in spec.class_kinds:
@@ -1270,6 +1275,56 @@ def _chunk_from_plan(plan: _ChunkPlan, offsets: OffsetMap, starts: tuple[int, ..
 # ---------------------------------------------------------------------------
 
 
+def _checked_chunks(
+    path: str, language: str, raw: bytes, chunks: list[dict[str, Any]],
+    diagnostics: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Check the frozen partition before consumers can schedule model work.
+
+    Valid partitions pass through unchanged, including symbol identities.
+    A broken partition becomes one lossless file region; never repair spans
+    while retaining misleading declaration identities.
+    """
+    ordered = sorted(chunks, key=lambda chunk: chunk["start_byte"])
+    cursor = 0
+    reason = ""
+    for chunk in ordered:
+        start, end = chunk["start_byte"], chunk["end_byte"]
+        if start != cursor or not start <= end <= len(raw):
+            reason = f"non-contiguous chunk range [{start},{end}) at byte {cursor}"
+            break
+        cursor = end
+    if not reason and cursor != len(raw):
+        reason = f"chunk coverage ends at byte {cursor}, expected {len(raw)}"
+    assembled = b"".join(chunk["text"].encode("utf-8") for chunk in ordered)
+    if not reason and sha256_bytes(assembled) != sha256_bytes(raw):
+        reason = "reassembled source SHA-256 differs from the input file"
+    if not reason:
+        return chunks
+
+    try:
+        offsets = OffsetMap.from_bytes(raw)
+    except UnicodeDecodeError as exc:
+        raise ContextError("source_not_reassemblable",
+                           f"{path}: cannot freeze byte-exact UTF-8 source: {exc}", path=path) from exc
+    diagnostics.append({
+        "path": path, "code": "source_reassembly_fallback", "reason": reason,
+        "message": f"{reason}; froze one whole-file source chunk instead of declaration chunks",
+    })
+    if not raw:
+        return []
+    plan = _ChunkPlan(
+        path=path, language=language, kind="module_residual", name=PurePosixPath(path).name,
+        qualified_name="", symbol_id=canonical_symbol_id(path, "module_residual", "", 0),
+        parent_id=None, signature="", ancestors=(), start_byte=0, end_byte=len(raw),
+        full_start_byte=0, full_end_byte=len(raw), segment_index=0, segment_count=1,
+    )
+    fallback = _chunk_from_plan(plan, offsets, line_starts(offsets.text))
+    if sha256_text(fallback["text"]) != sha256_bytes(raw):  # fail before any model calls
+        raise ContextError("source_not_reassemblable", f"{path}: whole-file fallback SHA-256 mismatch", path=path)
+    return [fallback]
+
+
 def build_context(
     repo: Path | str,
     paths: list[str] | None = None,
@@ -1294,6 +1349,7 @@ def build_context(
     files: list[dict[str, Any]] = []
     chunks: list[dict[str, Any]] = []
     source_hashes: dict[str, str] = {}
+    raw_sources: dict[str, bytes] = {}
 
     for relative in selected:
         full = repo_path / PurePosixPath(relative)
@@ -1304,6 +1360,7 @@ def build_context(
             continue
 
         digest = sha256_bytes(raw)
+        raw_sources[relative] = raw
         source_hashes[relative] = digest
         spec = _grammar_for_suffix(PurePosixPath(relative).suffix)
         language = language_name(relative)
@@ -1398,6 +1455,14 @@ def build_context(
         diagnostics.extend(plan_diagnostics)
         starts = line_starts(offsets.text)
         chunks.extend(_chunk_from_plan(plan, offsets, starts) for plan in plans)
+
+    by_path: dict[str, list[dict[str, Any]]] = {}
+    for chunk in chunks:
+        by_path.setdefault(chunk["path"], []).append(chunk)
+    chunks = [chunk for file in files for chunk in _checked_chunks(
+        file["path"], file["language"], raw_sources[file["path"]],
+        by_path.get(file["path"], []), diagnostics,
+    )]
 
     graph: dict[str, Any] | None = None
     graph_status = "not_provided"

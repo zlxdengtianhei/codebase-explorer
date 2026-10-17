@@ -285,9 +285,11 @@ def test_unknown_language_is_distinguishable_from_empty_success(tmp_path):
     assert ("mystery.xyz", "unsupported_language") in codes
     assert ("empty.py", "unsupported_language") not in codes
     assert any(f["path"] == "empty.py" for f in context["files"])
-    # A failed file has no chunks; a successful empty file has no chunks either.
-    # The diagnostic is the only thing that distinguishes them.
-    assert not [c for c in context["chunks"] if c["path"] == "mystery.xyz"]
+    # The unsupported grammar stays visible even though the lossless fallback
+    # lets downstream readers reconstruct the frozen file.
+    chunks = [c for c in context["chunks"] if c["path"] == "mystery.xyz"]
+    assert "".join(c["text"] for c in chunks) == "hello\n"
+    assert ("mystery.xyz", "source_reassembly_fallback") in codes
 
 
 def test_missing_grammar_package_is_a_diagnostic(tmp_path, monkeypatch):
@@ -300,7 +302,8 @@ def test_missing_grammar_package_is_a_diagnostic(tmp_path, monkeypatch):
     monkeypatch.setattr(sc, "_make_parser", boom)
     context = build_context(tmp_path, paths=["a.py"])
     assert any(d["code"] == "grammar_unavailable" for d in context["diagnostics"])
-    assert not [c for c in context["chunks"] if c["path"] == "a.py"]
+    assert "".join(c["text"] for c in context["chunks"] if c["path"] == "a.py") == (tmp_path / "a.py").read_text()
+    assert any(d["code"] == "source_reassembly_fallback" for d in context["diagnostics"])
 
 
 def test_syntax_error_keeps_coverage_and_reports():
