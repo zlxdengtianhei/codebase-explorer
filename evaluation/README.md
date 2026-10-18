@@ -465,4 +465,6 @@ Not in this repository:
 | fmt | `b4ffa39` | `LICENSE` (and `doc/LICENSE-exception`) | MIT text; Copyright (c) 2012 - present, Victor Zverovich and {fmt} contributors |
 | gson | `e2292f9` | `LICENSE` | Apache-2.0 |
 
+In `evaluation/`, each round directory carries the upstream file under a name with the repository added, so that several can sit side by side: `e1-flask-pilot/`, `e2-flask/` and `e2b-flask-25steps/` have `LICENSE-flask.txt`, `e3-pytest/` has `LICENSE-pytest`, `e4-svelte/` has `LICENSE-svelte.md`, and `e5-curl/` has `COPYING-curl`. In `examples/`, each directory carries the file under its original name.
+
 The polyglot fixture was written for this evaluation; its license statement is in `examples/polyglot/`.
