@@ -33,7 +33,7 @@ This path documents the four core files of [cJSON](https://github.com/DaveGamble
 
    ```text
    {
-     "output": "/home/you/cbe-demo/context.json",
+     "output": "<HOME>/cbe-demo/context.json",
      "schema": "cbe-context/1",
      "files": 4,
      "chunks": 326,
