@@ -1,0 +1,52 @@
+{
+  "answer_records_audited": 154,
+  "saved_assistant_replies": 2382,
+  "recognized_cbe_action_objects": 105,
+  "non_dictionary_argument_objects": [
+    {
+      "file": "runs/e5/qa/answers/S-10-r0/q26.json",
+      "action": {
+        "name": "grep",
+        "path": "$WORK/runs/e5/qa/arms/S/repo/lib",
+        "pattern": "connclose"
+      }
+    },
+    {
+      "file": "runs/e5/qa/answers/S-10-r0/q26.json",
+      "action": {
+        "name": "grep",
+        "path": "$WORK/runs/e5/qa/arms/S/repo/lib",
+        "pattern": "premature"
+      }
+    },
+    {
+      "file": "runs/e5/qa/answers/C0-10-r0/q09.json",
+      "action": {
+        "name": "grep",
+        "arguments": "sub_filter_installed",
+        "path": "$WORK/runs/e5/qa/arms/C0/repo/lib/http_proxy.c"
+      }
+    },
+    {
+      "file": "runs/e5/qa/answers/C-10-r0/q00.json",
+      "action": {
+        "name": "grep",
+        "pattern": "Curl_cwriter_add",
+        "path": "$WORK/runs/e5/qa/arms/C/repo/lib"
+      }
+    },
+    {
+      "file": "runs/e5/qa/answers/C-10-r0/q00.json",
+      "action": {
+        "name": "grep",
+        "pattern": "Curl_cwriter_add",
+        "path": "$WORK/runs/e5/qa/arms/C/repo/lib/sendf.c"
+      }
+    }
+  ],
+  "cbe_compound_or_native_actions_not_classified": [],
+  "scope": "All154 QA answer records, every attempt and saved assistant response; one known local-processing response absent from source history is disclosed separately",
+  "parsed_first_action_not_equal_to_raw_object": [],
+  "non_dictionary_arguments_interpretation": "Five genuine grep attempts with malformed/missing argument dictionaries; retained as written tool intents, not non-tool metadata",
+  "compound_cbe_misses": 0
+}

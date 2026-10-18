@@ -1,0 +1,31 @@
+{
+  "qid": 34,
+  "question": "Why does the test that checks handler behavior when a stream handler exists on the root logger verify that the application logger's handlers list is empty after adding a stream handler to the root logger?",
+  "arm": "direct",
+  "answer": "To prevent duplicate log output. If the root logger has handlers, log records from the application logger propagate to the root logger and are emitted there. Adding a handler to the application logger would result in the message being logged twice.",
+  "valid": true,
+  "wall_seconds": 15.979936458985321,
+  "attempts": [
+    {
+      "answer": "To prevent duplicate log output. If the root logger has handlers, log records from the application logger propagate to the root logger and are emitted there. Adding a handler to the application logger would result in the message being logged twice.",
+      "valid": true,
+      "usage": {
+        "completion_tokens": 848,
+        "prompt_tokens": 116,
+        "total_tokens": 964,
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": null,
+          "audio_tokens": null,
+          "reasoning_tokens": 801,
+          "rejected_prediction_tokens": null
+        },
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 64
+        }
+      },
+      "response_model": "glm-5.3-flash"
+    }
+  ]
+}

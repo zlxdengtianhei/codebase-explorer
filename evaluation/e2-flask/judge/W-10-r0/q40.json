@@ -1,0 +1,125 @@
+{
+  "qid": 40,
+  "question": "Where in the error handler resolution method does the lookup sequence traverse blueprint scopes then HTTP status codes then exception class method resolution order?",
+  "arm": "W",
+  "max_steps": 10,
+  "repeat": 0,
+  "answer_valid": true,
+  "judge_model": "codex/gpt-6.1-sol",
+  "draws": [
+    {
+      "draw": 1,
+      "score": {
+        "correctness": 8,
+        "completeness": 9,
+        "relevance": 16,
+        "clarity": 14,
+        "reasoning": 8
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 88,
+            "prompt_tokens": 6447,
+            "total_tokens": 6535,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 39,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 8,\n  \"completeness\": 9,\n  \"relevance\": 16,\n  \"clarity\": 14,\n  \"reasoning\": 8\n}",
+          "wall_seconds": 3.3178736249683425
+        }
+      ]
+    },
+    {
+      "draw": 2,
+      "score": {
+        "correctness": 8,
+        "completeness": 9,
+        "relevance": 16,
+        "clarity": 14,
+        "reasoning": 8
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 92,
+            "prompt_tokens": 6447,
+            "total_tokens": 6539,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 43,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6272
+            }
+          },
+          "response": "{\n  \"correctness\": 8,\n  \"completeness\": 9,\n  \"relevance\": 16,\n  \"clarity\": 14,\n  \"reasoning\": 8\n}",
+          "wall_seconds": 3.501911833009217
+        }
+      ]
+    },
+    {
+      "draw": 3,
+      "score": {
+        "correctness": 8,
+        "completeness": 9,
+        "relevance": 16,
+        "clarity": 14,
+        "reasoning": 8
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 90,
+            "prompt_tokens": 6447,
+            "total_tokens": 6537,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 57,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6272
+            }
+          },
+          "response": "{\"correctness\":8,\"completeness\":9,\"relevance\":16,\"clarity\":14,\"reasoning\":8}",
+          "wall_seconds": 3.882954458007589
+        }
+      ]
+    }
+  ],
+  "score": {
+    "correctness": 8,
+    "completeness": 9,
+    "relevance": 16,
+    "clarity": 14,
+    "reasoning": 8
+  },
+  "total": 55,
+  "main_total_na5": 55,
+  "failure_type": null,
+  "judge_total_range": 0,
+  "wall_seconds": 10.7050447500078
+}

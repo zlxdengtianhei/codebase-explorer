@@ -1,0 +1,31 @@
+{
+  "qid": 3,
+  "question": "What architectural decisions are reflected by the dual inheritance from both AssertionError and UnicodeError in the debug-mode exception class for unexpected unicode or binary data regarding separation between validation failures and encoding issues in Flask's layered architecture?",
+  "arm": "direct",
+  "answer": "The dual inheritance encodes two deliberate architectural choices: by deriving from `UnicodeError`, the exception stays within Python's standard encoding-error hierarchy, so lower layers (request handling, WSGI conversion, user error handlers) can catch and process it as an ordinary encoding/decoding problem; by also deriving from `AssertionError`, Flask classifies the same condition as a developer-facing validation failure \u2014 an internal sanity check on data correctness that only surfaces in debug mode (e.g., via the interactive debugger) rather than as a normal runtime error. This lets Flask keep a clean separation: encoding issues remain handled generically at the runtime/library layer, while treating their unexpected occurrence as a bug belongs to the debug/development layer, with the single class able to be intercepted as either depending on which layer catches it.",
+  "valid": true,
+  "wall_seconds": 41.57549979200121,
+  "attempts": [
+    {
+      "answer": "The dual inheritance encodes two deliberate architectural choices: by deriving from `UnicodeError`, the exception stays within Python's standard encoding-error hierarchy, so lower layers (request handling, WSGI conversion, user error handlers) can catch and process it as an ordinary encoding/decoding problem; by also deriving from `AssertionError`, Flask classifies the same condition as a developer-facing validation failure \u2014 an internal sanity check on data correctness that only surfaces in debug mode (e.g., via the interactive debugger) rather than as a normal runtime error. This lets Flask keep a clean separation: encoding issues remain handled generically at the runtime/library layer, while treating their unexpected occurrence as a bug belongs to the debug/development layer, with the single class able to be intercepted as either depending on which layer catches it.",
+      "valid": true,
+      "usage": {
+        "completion_tokens": 1852,
+        "prompt_tokens": 120,
+        "total_tokens": 1972,
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": null,
+          "audio_tokens": null,
+          "reasoning_tokens": 1688,
+          "rejected_prediction_tokens": null
+        },
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 0
+        }
+      },
+      "response_model": "glm-5.3-flash"
+    }
+  ]
+}

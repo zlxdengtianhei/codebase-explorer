@@ -1,0 +1,31 @@
+{
+  "qid": 46,
+  "question": "Where does the route handler function that returns a list of dictionaries integrate with the framework's route decorator and static type checker configuration to validate return type annotations in the type checking test files?",
+  "arm": "direct",
+  "answer": "`tests/typechecker/plugin_test.py`",
+  "valid": true,
+  "wall_seconds": 63.91289500001585,
+  "attempts": [
+    {
+      "answer": "`tests/typechecker/plugin_test.py`",
+      "valid": true,
+      "usage": {
+        "completion_tokens": 1788,
+        "prompt_tokens": 115,
+        "total_tokens": 1903,
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": null,
+          "audio_tokens": null,
+          "reasoning_tokens": 1778,
+          "rejected_prediction_tokens": null
+        },
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 64
+        }
+      },
+      "response_model": "glm-5.3-flash"
+    }
+  ]
+}

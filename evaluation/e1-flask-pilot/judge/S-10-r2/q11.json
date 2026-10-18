@@ -1,0 +1,125 @@
+{
+  "qid": 11,
+  "question": "What hidden coupling exists between the decorator's state management and response lifecycle that causes issues with nested or conditional registration?",
+  "arm": "S",
+  "max_steps": 10,
+  "repeat": 2,
+  "answer_valid": true,
+  "judge_model": "codex/gpt-6.1-sol",
+  "draws": [
+    {
+      "draw": 1,
+      "score": {
+        "correctness": 2,
+        "completeness": 2,
+        "relevance": 4,
+        "clarity": 15,
+        "reasoning": 7
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 84,
+            "prompt_tokens": 7054,
+            "total_tokens": 7138,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 35,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 2,\n  \"completeness\": 2,\n  \"relevance\": 4,\n  \"clarity\": 15,\n  \"reasoning\": 7\n}",
+          "wall_seconds": 33.41006433399161
+        }
+      ]
+    },
+    {
+      "draw": 2,
+      "score": {
+        "correctness": 2,
+        "completeness": 2,
+        "relevance": 4,
+        "clarity": 15,
+        "reasoning": 8
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 86,
+            "prompt_tokens": 7054,
+            "total_tokens": 7140,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 37,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6912
+            }
+          },
+          "response": "{\n  \"correctness\": 2,\n  \"completeness\": 2,\n  \"relevance\": 4,\n  \"clarity\": 15,\n  \"reasoning\": 8\n}",
+          "wall_seconds": 23.34922745800577
+        }
+      ]
+    },
+    {
+      "draw": 3,
+      "score": {
+        "correctness": 2,
+        "completeness": 2,
+        "relevance": 4,
+        "clarity": 15,
+        "reasoning": 8
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 87,
+            "prompt_tokens": 7054,
+            "total_tokens": 7141,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 38,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6912
+            }
+          },
+          "response": "{\n  \"correctness\": 2,\n  \"completeness\": 2,\n  \"relevance\": 4,\n  \"clarity\": 15,\n  \"reasoning\": 8\n}",
+          "wall_seconds": 29.506121000042185
+        }
+      ]
+    }
+  ],
+  "score": {
+    "correctness": 2,
+    "completeness": 2,
+    "relevance": 4,
+    "clarity": 15,
+    "reasoning": 8
+  },
+  "total": 31,
+  "main_total_na5": 31,
+  "failure_type": null,
+  "judge_total_range": 1,
+  "wall_seconds": 86.26659354101866
+}

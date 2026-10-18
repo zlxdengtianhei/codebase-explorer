@@ -1,0 +1,125 @@
+{
+  "qid": 13,
+  "question": "In a build with Kerberos 5 SASL support through a GSS-API library, where is the per-connection Kerberos state (`struct kerberos5data`) kept, and where in the connection teardown is it released?\n\nBuild assumptions: HAVE_GSSAPI and USE_KERBEROS5 (not Windows SSPI), e.g. Linux with MIT Kerberos; IMAP, POP3 or SMTP using SASL GSSAPI.",
+  "arm": "C",
+  "max_steps": 10,
+  "repeat": 0,
+  "answer_valid": true,
+  "judge_model": "codex/gpt-6.1-sol",
+  "draws": [
+    {
+      "draw": 1,
+      "score": {
+        "correctness": 14,
+        "completeness": 13,
+        "relevance": 19,
+        "clarity": 17,
+        "reasoning": 15
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 96,
+            "prompt_tokens": 6876,
+            "total_tokens": 6972,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 47,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 14,\n  \"completeness\": 13,\n  \"relevance\": 19,\n  \"clarity\": 17,\n  \"reasoning\": 15\n}",
+          "wall_seconds": 6.1790283329901285
+        }
+      ]
+    },
+    {
+      "draw": 2,
+      "score": {
+        "correctness": 14,
+        "completeness": 13,
+        "relevance": 19,
+        "clarity": 16,
+        "reasoning": 14
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 101,
+            "prompt_tokens": 6876,
+            "total_tokens": 6977,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 52,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6656
+            }
+          },
+          "response": "{\n  \"correctness\": 14,\n  \"completeness\": 13,\n  \"relevance\": 19,\n  \"clarity\": 16,\n  \"reasoning\": 14\n}",
+          "wall_seconds": 4.687620082986541
+        }
+      ]
+    },
+    {
+      "draw": 3,
+      "score": {
+        "correctness": 14,
+        "completeness": 13,
+        "relevance": 19,
+        "clarity": 17,
+        "reasoning": 15
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 94,
+            "prompt_tokens": 6876,
+            "total_tokens": 6970,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 45,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6656
+            }
+          },
+          "response": "{\n  \"correctness\": 14,\n  \"completeness\": 13,\n  \"relevance\": 19,\n  \"clarity\": 17,\n  \"reasoning\": 15\n}",
+          "wall_seconds": 3.7818877499666996
+        }
+      ]
+    }
+  ],
+  "score": {
+    "correctness": 14,
+    "completeness": 13,
+    "relevance": 19,
+    "clarity": 17,
+    "reasoning": 15
+  },
+  "total": 78,
+  "main_total_na5": 78,
+  "failure_type": null,
+  "judge_total_range": 2,
+  "wall_seconds": 14.64919062500121
+}

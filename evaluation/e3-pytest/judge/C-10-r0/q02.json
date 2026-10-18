@@ -1,0 +1,125 @@
+{
+  "qid": 2,
+  "question": "What is the architectural separation in the pytest fixture resolution system that decouples fixture discovery and validation to enable the error reporting mechanism that distinguishes between missing fixtures and internal failures?",
+  "arm": "C",
+  "max_steps": 10,
+  "repeat": 0,
+  "answer_valid": true,
+  "judge_model": "codex/gpt-6.1-sol",
+  "draws": [
+    {
+      "draw": 1,
+      "score": {
+        "correctness": 6,
+        "completeness": 7,
+        "relevance": 14,
+        "clarity": 15,
+        "reasoning": 8
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 92,
+            "prompt_tokens": 6737,
+            "total_tokens": 6829,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 43,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 6,\n  \"completeness\": 7,\n  \"relevance\": 14,\n  \"clarity\": 15,\n  \"reasoning\": 8\n}",
+          "wall_seconds": 3.7133487919927575
+        }
+      ]
+    },
+    {
+      "draw": 2,
+      "score": {
+        "correctness": 6,
+        "completeness": 7,
+        "relevance": 14,
+        "clarity": 15,
+        "reasoning": 8
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 88,
+            "prompt_tokens": 6737,
+            "total_tokens": 6825,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 39,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6528
+            }
+          },
+          "response": "{\n  \"correctness\": 6,\n  \"completeness\": 7,\n  \"relevance\": 14,\n  \"clarity\": 15,\n  \"reasoning\": 8\n}",
+          "wall_seconds": 3.42712908401154
+        }
+      ]
+    },
+    {
+      "draw": 3,
+      "score": {
+        "correctness": 6,
+        "completeness": 7,
+        "relevance": 14,
+        "clarity": 15,
+        "reasoning": 8
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 95,
+            "prompt_tokens": 6737,
+            "total_tokens": 6832,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 46,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6528
+            }
+          },
+          "response": "{\n  \"correctness\": 6,\n  \"completeness\": 7,\n  \"relevance\": 14,\n  \"clarity\": 15,\n  \"reasoning\": 8\n}",
+          "wall_seconds": 3.5142790420213714
+        }
+      ]
+    }
+  ],
+  "score": {
+    "correctness": 6,
+    "completeness": 7,
+    "relevance": 14,
+    "clarity": 15,
+    "reasoning": 8
+  },
+  "total": 50,
+  "main_total_na5": 50,
+  "failure_type": null,
+  "judge_total_range": 0,
+  "wall_seconds": 10.6553251669975
+}

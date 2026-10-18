@@ -1,0 +1,125 @@
+{
+  "qid": 32,
+  "question": "In a synchronous, IPv4-only resolver build, why does every failed host name lookup become a negative DNS-cache entry, even when the failure may have been transient, such as an unreachable DNS server?\n\nBuild assumptions: CURLRES_SYNCH and CURLRES_IPV4 (no threaded resolver, no c-ares, IPv6 disabled); DoH not used; the host name is not an IP literal or localhost.",
+  "arm": "C",
+  "max_steps": 10,
+  "repeat": 0,
+  "answer_valid": true,
+  "judge_model": "codex/gpt-6.1-sol",
+  "draws": [
+    {
+      "draw": 1,
+      "score": {
+        "correctness": 12,
+        "completeness": 13,
+        "relevance": 15,
+        "clarity": 15,
+        "reasoning": 14
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 96,
+            "prompt_tokens": 7496,
+            "total_tokens": 7592,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 47,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 12,\n  \"completeness\": 13,\n  \"relevance\": 15,\n  \"clarity\": 15,\n  \"reasoning\": 14\n}",
+          "wall_seconds": 5.759849917027168
+        }
+      ]
+    },
+    {
+      "draw": 2,
+      "score": {
+        "correctness": 12,
+        "completeness": 13,
+        "relevance": 15,
+        "clarity": 16,
+        "reasoning": 15
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 123,
+            "prompt_tokens": 7496,
+            "total_tokens": 7619,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 74,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 7296
+            }
+          },
+          "response": "{\n  \"correctness\": 12,\n  \"completeness\": 13,\n  \"relevance\": 15,\n  \"clarity\": 16,\n  \"reasoning\": 15\n}",
+          "wall_seconds": 8.092748709022999
+        }
+      ]
+    },
+    {
+      "draw": 3,
+      "score": {
+        "correctness": 12,
+        "completeness": 13,
+        "relevance": 16,
+        "clarity": 16,
+        "reasoning": 15
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 96,
+            "prompt_tokens": 7496,
+            "total_tokens": 7592,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 47,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 12,\n  \"completeness\": 13,\n  \"relevance\": 16,\n  \"clarity\": 16,\n  \"reasoning\": 15\n}",
+          "wall_seconds": 4.703320667031221
+        }
+      ]
+    }
+  ],
+  "score": {
+    "correctness": 12,
+    "completeness": 13,
+    "relevance": 15,
+    "clarity": 16,
+    "reasoning": 15
+  },
+  "total": 71,
+  "main_total_na5": 71,
+  "failure_type": null,
+  "judge_total_range": 3,
+  "wall_seconds": 18.559268833021633
+}

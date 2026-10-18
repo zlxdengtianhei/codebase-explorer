@@ -1,0 +1,125 @@
+{
+  "qid": 13,
+  "question": "How does the Skip class integrate with pytest's mark evaluation framework to determine when a test should be skipped, and what is the relationship between the reason attribute and the evaluate_skip_marks() function that produces Skip instances?",
+  "arm": "C0",
+  "max_steps": 10,
+  "repeat": 0,
+  "answer_valid": true,
+  "judge_model": "codex/gpt-6.1-sol",
+  "draws": [
+    {
+      "draw": 1,
+      "score": {
+        "correctness": 12,
+        "completeness": 17,
+        "relevance": 16,
+        "clarity": 17,
+        "reasoning": 15
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 111,
+            "prompt_tokens": 7000,
+            "total_tokens": 7111,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 62,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 12,\n  \"completeness\": 17,\n  \"relevance\": 16,\n  \"clarity\": 17,\n  \"reasoning\": 15\n}",
+          "wall_seconds": 4.346631291962694
+        }
+      ]
+    },
+    {
+      "draw": 2,
+      "score": {
+        "correctness": 13,
+        "completeness": 18,
+        "relevance": 16,
+        "clarity": 17,
+        "reasoning": 16
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 107,
+            "prompt_tokens": 7000,
+            "total_tokens": 7107,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 58,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6784
+            }
+          },
+          "response": "{\n  \"correctness\": 13,\n  \"completeness\": 18,\n  \"relevance\": 16,\n  \"clarity\": 17,\n  \"reasoning\": 16\n}",
+          "wall_seconds": 4.7069586659781635
+        }
+      ]
+    },
+    {
+      "draw": 3,
+      "score": {
+        "correctness": 13,
+        "completeness": 18,
+        "relevance": 16,
+        "clarity": 17,
+        "reasoning": 16
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 98,
+            "prompt_tokens": 7000,
+            "total_tokens": 7098,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 49,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6784
+            }
+          },
+          "response": "{\n  \"correctness\": 13,\n  \"completeness\": 18,\n  \"relevance\": 16,\n  \"clarity\": 17,\n  \"reasoning\": 16\n}",
+          "wall_seconds": 8.040661667007953
+        }
+      ]
+    }
+  ],
+  "score": {
+    "correctness": 13,
+    "completeness": 18,
+    "relevance": 16,
+    "clarity": 17,
+    "reasoning": 16
+  },
+  "total": 80,
+  "main_total_na5": 80,
+  "failure_type": null,
+  "judge_total_range": 3,
+  "wall_seconds": 17.094889833999332
+}

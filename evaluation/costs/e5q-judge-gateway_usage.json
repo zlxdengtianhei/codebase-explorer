@@ -1,0 +1,55 @@
+{
+  "e5q2-closedbook": {
+    "requests": 165,
+    "input_tokens": 186727.0,
+    "output_tokens": 44214.0,
+    "cache_read_tokens": 886016.0,
+    "cache_write_tokens": 0.0,
+    "reasoning_tokens": 10514.0,
+    "cost_usd": 0.90422,
+    "total_tokens_including_cache": 1116957.0,
+    "statuses": {
+      "200": 165
+    }
+  },
+  "e5q2-closedbook-answer": {
+    "requests": 61,
+    "input_tokens": 9530.0,
+    "output_tokens": 1288928.0,
+    "cache_read_tokens": 4608.0,
+    "cache_write_tokens": 0.0,
+    "reasoning_tokens": 1222965.0,
+    "cost_usd": 0.64603,
+    "total_tokens_including_cache": 1303066.0,
+    "statuses": {
+      "200": 56,
+      "499": 5
+    }
+  },
+  "e5q2-refcheck": {
+    "requests": 165,
+    "input_tokens": 135693.0,
+    "output_tokens": 105400.0,
+    "cache_read_tokens": 812544.0,
+    "cache_write_tokens": 0.0,
+    "reasoning_tokens": 2666.0,
+    "cost_usd": 1.406661,
+    "total_tokens_including_cache": 1053637.0,
+    "statuses": {
+      "200": 165
+    }
+  },
+  "e5q2-sanity": {
+    "requests": 9,
+    "input_tokens": 6039.0,
+    "output_tokens": 1677.0,
+    "cache_read_tokens": 43008.0,
+    "cache_write_tokens": 0.0,
+    "reasoning_tokens": 0.0,
+    "cost_usd": 0.03315,
+    "total_tokens_including_cache": 50724.0,
+    "statuses": {
+      "200": 9
+    }
+  }
+}

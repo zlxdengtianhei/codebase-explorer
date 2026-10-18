@@ -1,0 +1,9 @@
+{
+  "main_judge_tokens": 5034172,
+  "main_answers": 120,
+  "main_judge_tokens_per_answer": 41951.433333333334,
+  "planned_secondary_answers": 40,
+  "answer_input_limit": 15000000,
+  "judge_limit": 2517086.0,
+  "formula": "1.5 * 40 * main combined judge tokens / 120"
+}

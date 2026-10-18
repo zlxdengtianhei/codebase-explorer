@@ -1,0 +1,125 @@
+{
+  "qid": 25,
+  "question": "How should the `isnosetest` method be refactored to separate the concern of attribute validation from test detection logic, and what design pattern would enable this separation while maintaining backward compatibility with nose-style test markers across the PyCollector hierarchy?",
+  "arm": "C",
+  "max_steps": 10,
+  "repeat": 0,
+  "answer_valid": true,
+  "judge_model": "codex/gpt-6.1-sol",
+  "draws": [
+    {
+      "draw": 1,
+      "score": {
+        "correctness": 10,
+        "completeness": 10,
+        "relevance": 17,
+        "clarity": 14,
+        "reasoning": 11
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 82,
+            "prompt_tokens": 6877,
+            "total_tokens": 6959,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 33,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 10,\n  \"completeness\": 10,\n  \"relevance\": 17,\n  \"clarity\": 14,\n  \"reasoning\": 11\n}",
+          "wall_seconds": 3.2663277920219116
+        }
+      ]
+    },
+    {
+      "draw": 2,
+      "score": {
+        "correctness": 11,
+        "completeness": 10,
+        "relevance": 17,
+        "clarity": 14,
+        "reasoning": 12
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 79,
+            "prompt_tokens": 6877,
+            "total_tokens": 6956,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 30,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6656
+            }
+          },
+          "response": "{\n  \"correctness\": 11,\n  \"completeness\": 10,\n  \"relevance\": 17,\n  \"clarity\": 14,\n  \"reasoning\": 12\n}",
+          "wall_seconds": 3.22793312498834
+        }
+      ]
+    },
+    {
+      "draw": 3,
+      "score": {
+        "correctness": 10,
+        "completeness": 9,
+        "relevance": 17,
+        "clarity": 14,
+        "reasoning": 11
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 103,
+            "prompt_tokens": 6877,
+            "total_tokens": 6980,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 54,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 10,\n  \"completeness\": 9,\n  \"relevance\": 17,\n  \"clarity\": 14,\n  \"reasoning\": 11\n}",
+          "wall_seconds": 3.433006250008475
+        }
+      ]
+    }
+  ],
+  "score": {
+    "correctness": 10,
+    "completeness": 10,
+    "relevance": 17,
+    "clarity": 14,
+    "reasoning": 11
+  },
+  "total": 62,
+  "main_total_na5": 62,
+  "failure_type": null,
+  "judge_total_range": 3,
+  "wall_seconds": 9.930450666986872
+}

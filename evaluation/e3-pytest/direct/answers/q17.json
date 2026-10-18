@@ -1,0 +1,31 @@
+{
+  "qid": 17,
+  "question": "How does the pytest_internalerror method iterate through split lines instead of directly passing the exception representation to write_line, and what control flow optimization could be applied if the exception representation format were guaranteed to be single-line?",
+  "arm": "direct",
+  "answer": "In `TerminalReporter.pytest_internalerror` (_pytest/terminal.py), the method converts the exception representation with str(excrepr) and calls split(\"\\n\") to break it into individual lines, then iterates over that list, prepending \"INTERNALERROR> \" to each line and writing it via self._write_line. It cannot simply pass excrepr to write_line because write_line (backed by the terminal writer's line method) appends one newline per call and would place the \"INTERNALERROR> \" marker only at the start of the string; since internal-error tracebacks are inherently multi-line, splitting and looping ensures every physical line of the traceback is prefixed and the output stays legible. If excrepr were guaranteed to be single-line, the for-loop and the split call could be removed entirely, collapsing the control flow to a single unconditional statement that concatenates the prefix onto str(excrepr) and makes one direct _write_line call \u2014 eliminating the loop-condition checks, the intermediate list, and the repeated write invocations.",
+  "valid": true,
+  "wall_seconds": 31.381641459011007,
+  "attempts": [
+    {
+      "answer": "In `TerminalReporter.pytest_internalerror` (_pytest/terminal.py), the method converts the exception representation with str(excrepr) and calls split(\"\\n\") to break it into individual lines, then iterates over that list, prepending \"INTERNALERROR> \" to each line and writing it via self._write_line. It cannot simply pass excrepr to write_line because write_line (backed by the terminal writer's line method) appends one newline per call and would place the \"INTERNALERROR> \" marker only at the start of the string; since internal-error tracebacks are inherently multi-line, splitting and looping ensures every physical line of the traceback is prefixed and the output stays legible. If excrepr were guaranteed to be single-line, the for-loop and the split call could be removed entirely, collapsing the control flow to a single unconditional statement that concatenates the prefix onto str(excrepr) and makes one direct _write_line call \u2014 eliminating the loop-condition checks, the intermediate list, and the repeated write invocations.",
+      "valid": true,
+      "usage": {
+        "completion_tokens": 1959,
+        "prompt_tokens": 121,
+        "total_tokens": 2080,
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": null,
+          "audio_tokens": null,
+          "reasoning_tokens": 1745,
+          "rejected_prediction_tokens": null
+        },
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 64
+        }
+      },
+      "response_model": "glm-5.3-flash"
+    }
+  ]
+}

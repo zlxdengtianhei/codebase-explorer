@@ -1,0 +1,125 @@
+{
+  "qid": 28,
+  "question": "Why does the CLI helper class that manages Flask application discovery implement lazy loading through a cached instance attribute rather than during initialization?",
+  "arm": "direct",
+  "max_steps": null,
+  "repeat": 0,
+  "answer_valid": true,
+  "judge_model": "codex/gpt-6.1-sol",
+  "draws": [
+    {
+      "draw": 1,
+      "score": {
+        "correctness": 14,
+        "completeness": 8,
+        "relevance": 20,
+        "clarity": 17,
+        "reasoning": 12
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 75,
+            "prompt_tokens": 5989,
+            "total_tokens": 6064,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 26,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 14,\n  \"completeness\": 8,\n  \"relevance\": 20,\n  \"clarity\": 17,\n  \"reasoning\": 12\n}",
+          "wall_seconds": 4.03492741601076
+        }
+      ]
+    },
+    {
+      "draw": 2,
+      "score": {
+        "correctness": 14,
+        "completeness": 8,
+        "relevance": 20,
+        "clarity": 17,
+        "reasoning": 12
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 85,
+            "prompt_tokens": 5989,
+            "total_tokens": 6074,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 36,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 14,\n  \"completeness\": 8,\n  \"relevance\": 20,\n  \"clarity\": 17,\n  \"reasoning\": 12\n}",
+          "wall_seconds": 3.9306929580052383
+        }
+      ]
+    },
+    {
+      "draw": 3,
+      "score": {
+        "correctness": 14,
+        "completeness": 8,
+        "relevance": 20,
+        "clarity": 17,
+        "reasoning": 12
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 87,
+            "prompt_tokens": 5989,
+            "total_tokens": 6076,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 38,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 5760
+            }
+          },
+          "response": "{\n  \"correctness\": 14,\n  \"completeness\": 8,\n  \"relevance\": 20,\n  \"clarity\": 17,\n  \"reasoning\": 12\n}",
+          "wall_seconds": 3.6292563340393826
+        }
+      ]
+    }
+  ],
+  "score": {
+    "correctness": 14,
+    "completeness": 8,
+    "relevance": 20,
+    "clarity": 17,
+    "reasoning": 12
+  },
+  "total": 71,
+  "main_total_na5": 71,
+  "failure_type": null,
+  "judge_total_range": 0,
+  "wall_seconds": 11.596700166002847
+}

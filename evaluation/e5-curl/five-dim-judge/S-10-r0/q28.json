@@ -1,0 +1,125 @@
+{
+  "qid": 28,
+  "question": "Once a connection's filter chain (for example TCP plus TLS) is fully connected and not shutting down, why does libcurl skip asking its filters, including the TLS backend's adjust_pollset hook, for socket events when the transfer itself wants neither to send nor to receive?\n\nBuild assumptions: Any TLS backend (in a CURL_WITH_MULTI_SSL build the multissl wrappers apply); multi interface.",
+  "arm": "S",
+  "max_steps": 10,
+  "repeat": 0,
+  "answer_valid": true,
+  "judge_model": "codex/gpt-6.1-sol",
+  "draws": [
+    {
+      "draw": 1,
+      "score": {
+        "correctness": 8,
+        "completeness": 9,
+        "relevance": 15,
+        "clarity": 15,
+        "reasoning": 10
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 95,
+            "prompt_tokens": 6861,
+            "total_tokens": 6956,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 46,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 8,\n  \"completeness\": 9,\n  \"relevance\": 15,\n  \"clarity\": 15,\n  \"reasoning\": 10\n}",
+          "wall_seconds": 4.583297665987629
+        }
+      ]
+    },
+    {
+      "draw": 2,
+      "score": {
+        "correctness": 7,
+        "completeness": 9,
+        "relevance": 15,
+        "clarity": 15,
+        "reasoning": 9
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 116,
+            "prompt_tokens": 6861,
+            "total_tokens": 6977,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 67,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6656
+            }
+          },
+          "response": "{\n  \"correctness\": 7,\n  \"completeness\": 9,\n  \"relevance\": 15,\n  \"clarity\": 15,\n  \"reasoning\": 9\n}",
+          "wall_seconds": 6.25801466597477
+        }
+      ]
+    },
+    {
+      "draw": 3,
+      "score": {
+        "correctness": 8,
+        "completeness": 9,
+        "relevance": 16,
+        "clarity": 15,
+        "reasoning": 10
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 115,
+            "prompt_tokens": 6861,
+            "total_tokens": 6976,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 66,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6656
+            }
+          },
+          "response": "{\n  \"correctness\": 8,\n  \"completeness\": 9,\n  \"relevance\": 16,\n  \"clarity\": 15,\n  \"reasoning\": 10\n}",
+          "wall_seconds": 6.069669832999352
+        }
+      ]
+    }
+  ],
+  "score": {
+    "correctness": 8,
+    "completeness": 9,
+    "relevance": 15,
+    "clarity": 15,
+    "reasoning": 10
+  },
+  "total": 57,
+  "main_total_na5": 57,
+  "failure_type": null,
+  "judge_total_range": 3,
+  "wall_seconds": 16.91363420797279
+}

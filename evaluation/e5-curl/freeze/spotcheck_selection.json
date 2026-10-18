@@ -1,0 +1,57 @@
+{
+  "rule": "Pick the 10 E5 answers for the judge spot-check (REPORT_RULES.md, 判分抽查).\n\nWritten by the main session on 10-18 before it read any E5 answer or score.\nRule: all three arms, mostly layers 3 and 4. Arms S 3, C0 3, C 4; per arm\none answer from layers 1-2 for S and C0 (none for C), the rest from layers\n3-4, so 8 of 10 are layer 3-4. Draws use random.Random(20261020) on the\nsorted cids of each (arm, layer band), arms in the order S, C0, C; a cid is\nnot reused across arms, so the 10 answers cover 10 different questions.",
+  "seed": 20261020,
+  "questions_sha256": "597ed0c8ea1685787de7b6ec5fadeace4d5b7ad9d0ff166d7f2def198b2440cd",
+  "picks": [
+    {
+      "arm": "S",
+      "cid": "B17",
+      "label_layer": 1
+    },
+    {
+      "arm": "S",
+      "cid": "B14",
+      "label_layer": 3
+    },
+    {
+      "arm": "S",
+      "cid": "B20",
+      "label_layer": 4
+    },
+    {
+      "arm": "C0",
+      "cid": "B03",
+      "label_layer": 2
+    },
+    {
+      "arm": "C0",
+      "cid": "A13",
+      "label_layer": 4
+    },
+    {
+      "arm": "C0",
+      "cid": "B01",
+      "label_layer": 3
+    },
+    {
+      "arm": "C",
+      "cid": "A04",
+      "label_layer": 3
+    },
+    {
+      "arm": "C",
+      "cid": "A06",
+      "label_layer": 4
+    },
+    {
+      "arm": "C",
+      "cid": "B07",
+      "label_layer": 3
+    },
+    {
+      "arm": "C",
+      "cid": "B23",
+      "label_layer": 3
+    }
+  ]
+}

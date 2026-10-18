@@ -1,0 +1,125 @@
+{
+  "qid": 1,
+  "question": "What is the validation logic in the FixtureFunctionMarker.__call__ method that prevents double-decoration of fixture functions, and what is the semantic difference between detecting a FixtureFunctionDefinition instance versus checking for pytestmark attributes?",
+  "arm": "C",
+  "max_steps": 10,
+  "repeat": 0,
+  "answer_valid": true,
+  "judge_model": "codex/gpt-6.1-sol",
+  "draws": [
+    {
+      "draw": 1,
+      "score": {
+        "correctness": 9,
+        "completeness": 8,
+        "relevance": 11,
+        "clarity": 14,
+        "reasoning": 10
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 92,
+            "prompt_tokens": 6964,
+            "total_tokens": 7056,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 43,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 9,\n  \"completeness\": 8,\n  \"relevance\": 11,\n  \"clarity\": 14,\n  \"reasoning\": 10\n}",
+          "wall_seconds": 4.09897579200333
+        }
+      ]
+    },
+    {
+      "draw": 2,
+      "score": {
+        "correctness": 9,
+        "completeness": 7,
+        "relevance": 11,
+        "clarity": 14,
+        "reasoning": 10
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 104,
+            "prompt_tokens": 6964,
+            "total_tokens": 7068,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 55,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6784
+            }
+          },
+          "response": "{\n  \"correctness\": 9,\n  \"completeness\": 7,\n  \"relevance\": 11,\n  \"clarity\": 14,\n  \"reasoning\": 10\n}",
+          "wall_seconds": 5.44162833300652
+        }
+      ]
+    },
+    {
+      "draw": 3,
+      "score": {
+        "correctness": 9,
+        "completeness": 7,
+        "relevance": 11,
+        "clarity": 14,
+        "reasoning": 10
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 94,
+            "prompt_tokens": 6964,
+            "total_tokens": 7058,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 45,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6784
+            }
+          },
+          "response": "{\n  \"correctness\": 9,\n  \"completeness\": 7,\n  \"relevance\": 11,\n  \"clarity\": 14,\n  \"reasoning\": 10\n}",
+          "wall_seconds": 3.4769544579903595
+        }
+      ]
+    }
+  ],
+  "score": {
+    "correctness": 9,
+    "completeness": 7,
+    "relevance": 11,
+    "clarity": 14,
+    "reasoning": 10
+  },
+  "total": 51,
+  "main_total_na5": 51,
+  "failure_type": null,
+  "judge_total_range": 1,
+  "wall_seconds": 13.018265624996275
+}

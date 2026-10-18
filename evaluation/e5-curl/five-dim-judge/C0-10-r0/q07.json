@@ -1,0 +1,125 @@
+{
+  "qid": 7,
+  "question": "When libcurl checks whether an idle pooled connection is healthy enough to reuse, an idle HTTP/1.1 connection whose socket shows pending input is rejected, but an idle HTTP/2 connection whose socket shows pending input can still be reused. Why does the source treat these two cases differently?\n\nBuild assumptions: nghttp2 enabled; HTTP/1.1 and HTTP/2 connections (TLS or cleartext) with no transfer attached; HTTP has no protocol-specific connection_is_dead handler; non-Windows.",
+  "arm": "C0",
+  "max_steps": 10,
+  "repeat": 0,
+  "answer_valid": true,
+  "judge_model": "codex/gpt-6.1-sol",
+  "draws": [
+    {
+      "draw": 1,
+      "score": {
+        "correctness": 8,
+        "completeness": 10,
+        "relevance": 18,
+        "clarity": 16,
+        "reasoning": 11
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 108,
+            "prompt_tokens": 7236,
+            "total_tokens": 7344,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 59,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 8,\n  \"completeness\": 10,\n  \"relevance\": 18,\n  \"clarity\": 16,\n  \"reasoning\": 11\n}",
+          "wall_seconds": 4.911388834007084
+        }
+      ]
+    },
+    {
+      "draw": 2,
+      "score": {
+        "correctness": 9,
+        "completeness": 10,
+        "relevance": 18,
+        "clarity": 16,
+        "reasoning": 12
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 99,
+            "prompt_tokens": 7236,
+            "total_tokens": 7335,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 50,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 7040
+            }
+          },
+          "response": "{\n  \"correctness\": 9,\n  \"completeness\": 10,\n  \"relevance\": 18,\n  \"clarity\": 16,\n  \"reasoning\": 12\n}",
+          "wall_seconds": 4.425168165995274
+        }
+      ]
+    },
+    {
+      "draw": 3,
+      "score": {
+        "correctness": 9,
+        "completeness": 10,
+        "relevance": 18,
+        "clarity": 16,
+        "reasoning": 12
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 97,
+            "prompt_tokens": 7236,
+            "total_tokens": 7333,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 48,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 7040
+            }
+          },
+          "response": "{\n  \"correctness\": 9,\n  \"completeness\": 10,\n  \"relevance\": 18,\n  \"clarity\": 16,\n  \"reasoning\": 12\n}",
+          "wall_seconds": 5.149837916949764
+        }
+      ]
+    }
+  ],
+  "score": {
+    "correctness": 9,
+    "completeness": 10,
+    "relevance": 18,
+    "clarity": 16,
+    "reasoning": 12
+  },
+  "total": 65,
+  "main_total_na5": 65,
+  "failure_type": null,
+  "judge_total_range": 2,
+  "wall_seconds": 14.487525041971821
+}

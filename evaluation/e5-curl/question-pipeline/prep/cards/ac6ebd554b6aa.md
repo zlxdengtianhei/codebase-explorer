@@ -1,0 +1,31 @@
+# ac6ebd554b6aa
+
+函数／公开声明：`is_reserved_char`
+文件：`lib/http_aws_sigv4.c:197`
+区域：认证（auth）
+类型：function；分派锚点：false
+建议层：4；可结合邻接单元和源码契约分析改动影响；设计理由须另核注释。
+
+仅来源于指定 Joern 图和源码；条件编译分支并存，不代表某种构建全部启用。
+公共声明的图根为同名 lib 实现；分派处不据词法匹配推断真实目标。
+
+## 两跳内已解析调用者
+
+- 1 跳：`normalize_query` — `lib/http_aws_sigv4.c:225`
+- 1 跳：`uri_encode_path` — `lib/http_aws_sigv4.c:202`
+- 2 跳：`canon_path` — `lib/http_aws_sigv4.c:674`
+- 2 跳：`canon_query` — `lib/http_aws_sigv4.c:700`
+
+## 两跳内已解析被调者
+
+- 图中无可列出的已解析邻接函数。
+
+## 相关函数指针表（词法引用；同文件或引用锚点／邻接函数）
+
+- 未匹配到相关表。
+
+## 相关间接调用点
+
+table_type_candidate_only 仅表示表类型相容；不是已解析调用关系。
+
+- 未匹配到相关调用点。

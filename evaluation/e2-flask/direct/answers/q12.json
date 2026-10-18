@@ -1,0 +1,31 @@
+{
+  "qid": 12,
+  "question": "How does the wrapper function that defers hash algorithm access until execution delay cryptographic availability validation until runtime to prevent import-time failures in restricted environments?",
+  "arm": "direct",
+  "answer": "It uses a **closure** (or `functools.partial`) to perform **lazy evaluation**. Instead of binding to the hash function object (e.g., `hashlib.md5`) at module import time, the wrapper stores the algorithm name as a string and resolves the algorithm via `hashlib.new(algorithm_name)` only inside the function body when it is invoked. This defers the cryptographic availability validation to runtime, preventing `ValueError` import failures in restricted environments like FIPS mode.",
+  "valid": true,
+  "wall_seconds": 88.05822562496178,
+  "attempts": [
+    {
+      "answer": "It uses a **closure** (or `functools.partial`) to perform **lazy evaluation**. Instead of binding to the hash function object (e.g., `hashlib.md5`) at module import time, the wrapper stores the algorithm name as a string and resolves the algorithm via `hashlib.new(algorithm_name)` only inside the function body when it is invoked. This defers the cryptographic availability validation to runtime, preventing `ValueError` import failures in restricted environments like FIPS mode.",
+      "valid": true,
+      "usage": {
+        "completion_tokens": 2717,
+        "prompt_tokens": 107,
+        "total_tokens": 2824,
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": null,
+          "audio_tokens": null,
+          "reasoning_tokens": 2614,
+          "rejected_prediction_tokens": null
+        },
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 64
+        }
+      },
+      "response_model": "glm-5.3-flash"
+    }
+  ]
+}

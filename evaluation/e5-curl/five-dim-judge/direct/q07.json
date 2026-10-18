@@ -1,0 +1,125 @@
+{
+  "qid": 7,
+  "question": "When libcurl checks whether an idle pooled connection is healthy enough to reuse, an idle HTTP/1.1 connection whose socket shows pending input is rejected, but an idle HTTP/2 connection whose socket shows pending input can still be reused. Why does the source treat these two cases differently?\n\nBuild assumptions: nghttp2 enabled; HTTP/1.1 and HTTP/2 connections (TLS or cleartext) with no transfer attached; HTTP has no protocol-specific connection_is_dead handler; non-Windows.",
+  "arm": "direct",
+  "max_steps": null,
+  "repeat": 0,
+  "answer_valid": true,
+  "judge_model": "codex/gpt-6.1-sol",
+  "draws": [
+    {
+      "draw": 1,
+      "score": {
+        "correctness": 8,
+        "completeness": 9,
+        "relevance": 19,
+        "clarity": 17,
+        "reasoning": 12
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 89,
+            "prompt_tokens": 6322,
+            "total_tokens": 6411,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 40,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 8,\n  \"completeness\": 9,\n  \"relevance\": 19,\n  \"clarity\": 17,\n  \"reasoning\": 12\n}",
+          "wall_seconds": 4.492610957997385
+        }
+      ]
+    },
+    {
+      "draw": 2,
+      "score": {
+        "correctness": 9,
+        "completeness": 9,
+        "relevance": 19,
+        "clarity": 17,
+        "reasoning": 12
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 93,
+            "prompt_tokens": 6322,
+            "total_tokens": 6415,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 60,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6144
+            }
+          },
+          "response": "{\"correctness\":9,\"completeness\":9,\"relevance\":19,\"clarity\":17,\"reasoning\":12}",
+          "wall_seconds": 3.7113812499446794
+        }
+      ]
+    },
+    {
+      "draw": 3,
+      "score": {
+        "correctness": 8,
+        "completeness": 8,
+        "relevance": 19,
+        "clarity": 17,
+        "reasoning": 12
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 85,
+            "prompt_tokens": 6322,
+            "total_tokens": 6407,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 36,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6144
+            }
+          },
+          "response": "{\n  \"correctness\": 8,\n  \"completeness\": 8,\n  \"relevance\": 19,\n  \"clarity\": 17,\n  \"reasoning\": 12\n}",
+          "wall_seconds": 3.8148564999573864
+        }
+      ]
+    }
+  ],
+  "score": {
+    "correctness": 8,
+    "completeness": 9,
+    "relevance": 19,
+    "clarity": 17,
+    "reasoning": 12
+  },
+  "total": 65,
+  "main_total_na5": 65,
+  "failure_type": null,
+  "judge_total_range": 2,
+  "wall_seconds": 12.019613417040091
+}

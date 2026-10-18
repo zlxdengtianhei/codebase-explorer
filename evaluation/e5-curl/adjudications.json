@@ -1,0 +1,23 @@
+{
+  "by": "main session aa6b2f08",
+  "basis": "D-70; cbe-s13 spot-check (scratch/cbe-s13_spotcheck_1018/REPLY.md) range note on B16; V13b note on B22",
+  "items": [
+    {
+      "cid": "B16",
+      "change": "r3 and r4: kind core->support, weight 2->1",
+      "reason": "Question asks for the vtls contract; r3 (only OpenSSL implements the hook) and r4 (OpenSSL digest choice) are implementation facts beyond the contract. Keep the facts, stop making them core so a contract-level answer is not denied core-complete. Core items left: r1, r2."
+    },
+    {
+      "cid": "B22",
+      "change": "none",
+      "reason": "livecookie overwrite protection is an indirect effect, not a necessary hop; rubric need not list every true fact."
+    },
+    {
+      "cid": "B11",
+      "change": "r1 text: accept the range-start form",
+      "new_text": "The answer must state that Curl_range() turns \"100-199\" into req.maxdownload = Y - X + 1 (100 bytes) and state.resume_from = X (the range start, 100); stating the formula with X or the value 100 both count.",
+      "reason": "E5q2 refcheck: the reference answer itself (\"resume_from to X\") failed r1 in 3/3 judge runs because r1 demanded the literal 100; the fact is the same. Rubric wording fix, decided at 04:5x after closed-book scores existed; B11 closed-book score is 0 and its upper bound with r1 satisfied is 16.67, so the filter decision cannot change."
+    }
+  ],
+  "note": "Apply at freeze (runs/e5q/freeze/freeze.py)."
+}

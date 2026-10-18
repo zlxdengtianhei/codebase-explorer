@@ -1,0 +1,125 @@
+{
+  "qid": 26,
+  "question": "Assume an FTP download with CURLOPT_RANGE set to \"100-199\" that completes without error. Why does libcurl close the FTP control connection at the end of this transfer instead of keeping it for reuse?\n\nBuild assumptions: FTP enabled; plain FTP download (not upload); passive or active data connection; the transfer is not premature.",
+  "arm": "S",
+  "max_steps": 25,
+  "repeat": 0,
+  "answer_valid": true,
+  "judge_model": "codex/gpt-6.1-sol",
+  "draws": [
+    {
+      "draw": 1,
+      "score": {
+        "correctness": 8,
+        "completeness": 8,
+        "relevance": 17,
+        "clarity": 14,
+        "reasoning": 10
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 103,
+            "prompt_tokens": 7044,
+            "total_tokens": 7147,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 54,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 8,\n  \"completeness\": 8,\n  \"relevance\": 17,\n  \"clarity\": 14,\n  \"reasoning\": 10\n}",
+          "wall_seconds": 8.29125099995872
+        }
+      ]
+    },
+    {
+      "draw": 2,
+      "score": {
+        "correctness": 8,
+        "completeness": 8,
+        "relevance": 17,
+        "clarity": 15,
+        "reasoning": 10
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 96,
+            "prompt_tokens": 7044,
+            "total_tokens": 7140,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 47,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6912
+            }
+          },
+          "response": "{\n  \"correctness\": 8,\n  \"completeness\": 8,\n  \"relevance\": 17,\n  \"clarity\": 15,\n  \"reasoning\": 10\n}",
+          "wall_seconds": 6.005015166010708
+        }
+      ]
+    },
+    {
+      "draw": 3,
+      "score": {
+        "correctness": 8,
+        "completeness": 8,
+        "relevance": 17,
+        "clarity": 15,
+        "reasoning": 10
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 99,
+            "prompt_tokens": 7044,
+            "total_tokens": 7143,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 50,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6912
+            }
+          },
+          "response": "{\n  \"correctness\": 8,\n  \"completeness\": 8,\n  \"relevance\": 17,\n  \"clarity\": 15,\n  \"reasoning\": 10\n}",
+          "wall_seconds": 3.9154035830288194
+        }
+      ]
+    }
+  ],
+  "score": {
+    "correctness": 8,
+    "completeness": 8,
+    "relevance": 17,
+    "clarity": 15,
+    "reasoning": 10
+  },
+  "total": 58,
+  "main_total_na5": 58,
+  "failure_type": null,
+  "judge_total_range": 1,
+  "wall_seconds": 18.234385334013496
+}

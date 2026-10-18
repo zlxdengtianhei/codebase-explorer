@@ -1,0 +1,2119 @@
+{
+  "S": {
+    "protocol": {
+      "applicable": true,
+      "all_agent_replies": 539,
+      "parsed_tool_replies": 472,
+      "unparsed_all_replies": 67,
+      "unparsed_all_ratio": 0.12430426716141002,
+      "loop_replies_excluding_final_answers": 490,
+      "unparsed_loop_replies": 19,
+      "unparsed_loop_ratio": 0.03877551020408163,
+      "definition": "All-reply ratio includes legitimate final answers; loop-only ratio counts explicit parse-retry prompts over tool observations plus parse-retry prompts."
+    },
+    "events": [],
+    "per_question": [
+      {
+        "qid": 0,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 1,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 2,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 3,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 4,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 5,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 6,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 7,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 8,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 9,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 10,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 11,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 12,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 13,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 14,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 15,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 16,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 17,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 18,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 19,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 20,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 21,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 22,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 23,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 24,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 25,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 26,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 27,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 28,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 29,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 30,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 31,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 32,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 33,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 34,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 35,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 36,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 37,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 38,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 39,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 40,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 41,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 42,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 43,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 44,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 45,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 46,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 47,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      }
+    ],
+    "find_executed": 0,
+    "query_executed": 0,
+    "executed_count": 0,
+    "successful_count": 0,
+    "success_rate_executed": null,
+    "tool_attempts": 0,
+    "blocked_attempts": 0,
+    "success_rate_attempted": null,
+    "help_executed": 0
+  },
+  "C0": {
+    "protocol": {
+      "applicable": true,
+      "all_agent_replies": 544,
+      "parsed_tool_replies": 488,
+      "unparsed_all_replies": 56,
+      "unparsed_all_ratio": 0.10294117647058823,
+      "loop_replies_excluding_final_answers": 495,
+      "unparsed_loop_replies": 8,
+      "unparsed_loop_ratio": 0.01616161616161616,
+      "definition": "All-reply ratio includes legitimate final answers; loop-only ratio counts explicit parse-retry prompts over tool observations plus parse-retry prompts."
+    },
+    "events": [],
+    "per_question": [
+      {
+        "qid": 0,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 1,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 2,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 3,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 4,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 5,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 6,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 7,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 8,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 9,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 10,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 11,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 12,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 13,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 14,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 15,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 16,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 17,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 18,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 19,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 20,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 21,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 22,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 23,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 24,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 25,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 26,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 27,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 28,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 29,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 30,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 31,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 32,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 33,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 34,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 35,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 36,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 37,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 38,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 39,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 40,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 41,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 42,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 43,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 44,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 45,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 46,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 47,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      }
+    ],
+    "find_executed": 0,
+    "query_executed": 0,
+    "executed_count": 0,
+    "successful_count": 0,
+    "success_rate_executed": null,
+    "tool_attempts": 0,
+    "blocked_attempts": 0,
+    "success_rate_attempted": null,
+    "help_executed": 0
+  },
+  "C": {
+    "protocol": {
+      "applicable": true,
+      "all_agent_replies": 550,
+      "parsed_tool_replies": 481,
+      "unparsed_all_replies": 69,
+      "unparsed_all_ratio": 0.12545454545454546,
+      "loop_replies_excluding_final_answers": 500,
+      "unparsed_loop_replies": 21,
+      "unparsed_loop_ratio": 0.042,
+      "definition": "All-reply ratio includes legitimate final answers; loop-only ratio counts explicit parse-retry prompts over tool observations plus parse-retry prompts."
+    },
+    "events": [
+      {
+        "qid": 11,
+        "attempt": 2,
+        "command": "$WORK/runs/e1/arms/C/bin/cbe query --help",
+        "kind": "query",
+        "help": true,
+        "through_tool_handler": true,
+        "blocked": false,
+        "executed": true,
+        "not_executed_at_cap": false,
+        "returncode": 0,
+        "error_text": false,
+        "success": true,
+        "nonempty_output": true,
+        "output_excerpt": "usage: python -m cbe query [-h] --run-dir RUN_DIR --id ID [--json]\n                           [--edges EDGES]\n\noptions:\n  -h, --help         show this help message and exit\n  --run-dir RUN_DIR\n  --id ID\n  --json             machine-readable object (no duplicate detail)\n  --edges EDGES      expand frozen raw edges: all or comma-separated kinds\n"
+      },
+      {
+        "qid": 11,
+        "attempt": 2,
+        "command": "$WORK/runs/e1/arms/C/bin/cbe find --help",
+        "kind": "find",
+        "help": true,
+        "through_tool_handler": true,
+        "blocked": false,
+        "executed": true,
+        "not_executed_at_cap": false,
+        "returncode": 0,
+        "error_text": false,
+        "success": true,
+        "nonempty_output": true,
+        "output_excerpt": "usage: python -m cbe find [-h] --run-dir RUN_DIR --term TERM [--limit LIMIT]\n                          [--json]\n\noptions:\n  -h, --help         show this help message and exit\n  --run-dir RUN_DIR\n  --term TERM\n  --limit LIMIT\n  --json             machine-readable locator fields\n"
+      },
+      {
+        "qid": 11,
+        "attempt": 2,
+        "command": "$WORK/runs/e1/arms/C/bin/cbe find --run-dir $WORK/runs/e1/arms/C/run --term after_this_request",
+        "kind": "find",
+        "help": false,
+        "through_tool_handler": true,
+        "blocked": false,
+        "executed": true,
+        "not_executed_at_cap": false,
+        "returncode": 0,
+        "error_text": false,
+        "success": true,
+        "nonempty_output": true,
+        "output_excerpt": "after_this_request | src/flask/ctx.py::function::after_this_request::3308 | function | src/flask/ctx.py:L117-L149 | Registers a function to run on the current request's response after the view returns. | match: id,signatures,signature,reverse_relations,outgoing,name,unit,facts,unit_id,display_name\n_AppCtxGlobals | src/flask/ctx.py::class::_AppCtxGlobals::635::s0 | class | src/flask/ctx.py:L29-L52 | Namespace object backing Flask's `g`, storing per-app-context data as arbitrary attributes in its instance dict. | match: incoming\n_AppCtxGlobals.get | src/flask/ctx.py::method::_AppCtxGlobals.get::"
+      },
+      {
+        "qid": 22,
+        "attempt": 1,
+        "command": "$WORK/runs/e1/arms/C/bin/cbe --help",
+        "kind": "help",
+        "help": true,
+        "through_tool_handler": true,
+        "blocked": false,
+        "executed": true,
+        "not_executed_at_cap": false,
+        "returncode": 0,
+        "error_text": false,
+        "success": true,
+        "nonempty_output": true,
+        "output_excerpt": "usage: python -m cbe [-h] [--version]\n                     {generate,host,languages,graph,context,find,query,source}\n                     ...\n\nCodebase Explorer: a navigable, source-grounded documentation map of a\nrepository\n\npositional arguments:\n  {generate,host,languages,graph,context,find,query,source}\n    generate            Generate documentation through an API, OpenCode, or\n                        Devin\n    host                Host-agent driven generation: the CLI plans and\n                        checks, the host agent (Claude Code, Codex) dispatches\n                        one subagen"
+      },
+      {
+        "qid": 22,
+        "attempt": 1,
+        "command": "$WORK/runs/e1/arms/C/bin/cbe query --run-dir $WORK/runs/e1/arms/C/run --path $WORK/runs/e1/arms/C/repo/src/flask/typing.py",
+        "kind": "query",
+        "help": false,
+        "through_tool_handler": true,
+        "blocked": false,
+        "executed": true,
+        "not_executed_at_cap": false,
+        "returncode": 2,
+        "error_text": false,
+        "success": false,
+        "nonempty_output": true,
+        "output_excerpt": "usage: python -m cbe query [-h] --run-dir RUN_DIR --id ID [--json]\n                           [--edges EDGES]\npython -m cbe query: error: the following arguments are required: --id\n"
+      },
+      {
+        "qid": 22,
+        "attempt": 1,
+        "command": "$WORK/runs/e1/arms/C/bin/cbe find --run-dir $WORK/runs/e1/arms/C/run --help",
+        "kind": "find",
+        "help": true,
+        "through_tool_handler": true,
+        "blocked": false,
+        "executed": true,
+        "not_executed_at_cap": false,
+        "returncode": 0,
+        "error_text": false,
+        "success": true,
+        "nonempty_output": true,
+        "output_excerpt": "usage: python -m cbe find [-h] --run-dir RUN_DIR --term TERM [--limit LIMIT]\n                          [--json]\n\noptions:\n  -h, --help         show this help message and exit\n  --run-dir RUN_DIR\n  --term TERM\n  --limit LIMIT\n  --json             machine-readable locator fields\n"
+      },
+      {
+        "qid": 29,
+        "attempt": 1,
+        "command": "$WORK/runs/e1/arms/C/bin/cbe find --run-dir $WORK/runs/e1/arms/C/run --term 'accessed'",
+        "kind": "find",
+        "help": false,
+        "through_tool_handler": true,
+        "blocked": false,
+        "executed": true,
+        "not_executed_at_cap": false,
+        "returncode": 0,
+        "error_text": false,
+        "success": true,
+        "nonempty_output": true,
+        "output_excerpt": "ConfigAttribute | src/flask/config.py::class::ConfigAttribute::257::s0 | class | src/flask/config.py:L20-L23 | A generic descriptor that forwards attribute access on an App to its config dictionary. | match: explain\nConfigAttribute.__init__ | src/flask/config.py::method::ConfigAttribute.__init__::350 | method | src/flask/config.py:L23-L27 | A generic descriptor that forwards attribute access on an App to its config dictionary. | match: explain\nConfigAttribute.__get__ | src/flask/config.py::method::ConfigAttribute.__get__::533 | method | src/flask/config.py:L29-L30 | A generic descriptor that f"
+      },
+      {
+        "qid": 29,
+        "attempt": 1,
+        "command": "$WORK/runs/e1/arms/C/bin/cbe query --run-dir $WORK/runs/e1/arms/C/run --id 'src/flask/sessions.py::method::SecureCookieSession.__getitem__::2755'",
+        "kind": "query",
+        "help": false,
+        "through_tool_handler": true,
+        "blocked": false,
+        "executed": true,
+        "not_executed_at_cap": false,
+        "returncode": 0,
+        "error_text": false,
+        "success": true,
+        "nonempty_output": true,
+        "output_excerpt": "SecureCookieSession.__getitem__  src/flask/sessions.py::method::SecureCookieSession.__getitem__::2755\nsignature: def __getitem__(self, key: str) -> t.Any:\nsignatures: {\"id\": \"src/flask/sessions.py::class::SecureCookieSession::1493::s0\", \"signature\": \"class SecureCookieSession(CallbackDict[str, t.Any], SessionMixin):\"}\nsignatures: {\"id\": \"src/flask/sessions.py::method::SecureCookieSession.__init__::2463::s0\", \"signature\": \"def __init__(\\n        self,\\n        initial: c.Mapping[str, t.Any] | c.Iterable[tuple[str, t.Any]] | None = None,\\n    ) -> None:\"}\nsignatures: {\"id\": \"src/flask/sessions.p"
+      },
+      {
+        "qid": 32,
+        "attempt": 1,
+        "command": "$WORK/runs/e1/arms/C/bin/cbe find --run-dir $WORK/runs/e1/arms/C/run --term 'SecureCookieSessionInterface'",
+        "kind": "find",
+        "help": false,
+        "through_tool_handler": true,
+        "blocked": false,
+        "executed": true,
+        "not_executed_at_cap": false,
+        "returncode": 0,
+        "error_text": false,
+        "success": true,
+        "nonempty_output": true,
+        "output_excerpt": "SecureCookieSessionInterface | src/flask/sessions.py::class::SecureCookieSessionInterface::11757::s0 | class | src/flask/sessions.py:L298-L317 | Default session backend storing sessions as signed, timestamped cookies via itsdangerous. | match: id,relations,members,signatures,signature,folded_members,reverse_relations,outgoing,incoming,name,unit,facts,unit_id,display_name\nFlask | src/flask/app.py::class::Flask::2694::s0 | class | src/flask/app.py:L81-L226 | Concrete WSGI application extending the sansio App: it adds a Click CLI group, serves the static folder, and implements request dispatch, e"
+      },
+      {
+        "qid": 32,
+        "attempt": 1,
+        "command": "$WORK/runs/e1/arms/C/bin/cbe query --run-dir $WORK/runs/e1/arms/C/run --id 'src/flask/sessions.py::method::Flask.process_response::52366' 2>/dev/null | head -60",
+        "kind": "query",
+        "help": false,
+        "through_tool_handler": true,
+        "blocked": true,
+        "executed": false,
+        "not_executed_at_cap": false,
+        "returncode": null,
+        "error_text": true,
+        "success": false,
+        "nonempty_output": true,
+        "output_excerpt": "Error: Command 'bash' is blocked by the environment."
+      },
+      {
+        "qid": 33,
+        "attempt": 1,
+        "command": "$WORK/runs/e1/arms/C/bin/cbe find --run-dir $WORK/runs/e1/arms/C/run --term \"PassDict\"",
+        "kind": "find",
+        "help": false,
+        "through_tool_handler": true,
+        "blocked": false,
+        "executed": true,
+        "not_executed_at_cap": false,
+        "returncode": 0,
+        "error_text": false,
+        "success": true,
+        "nonempty_output": true,
+        "output_excerpt": "PassDict | src/flask/json/tag.py::class::PassDict::3501::s0 | class | src/flask/json/tag.py:L119-L122 | Provide the concrete tag classes that give TaggedJSONSerializer lossless round-trips for common non-JSON Python types. | match: id,explain,members,signatures,signature,folded_members,outgoing,incoming,name,facts,display_name\nTagDict | src/flask/json/tag.py::class::TagDict::2803::s0 | class | src/flask/json/tag.py:L93-L103 | Provide the concrete tag classes that give TaggedJSONSerializer lossless round-trips for common non-JSON Python types. | match: explain,members,signatures,folded_members\n"
+      },
+      {
+        "qid": 33,
+        "attempt": 1,
+        "command": "$WORK/runs/e1/arms/C/bin/cbe query --run-dir $WORK/runs/e1/arms/C/run --id \"src/flask/json/tag.py::class::PassDict::3501::s0\"",
+        "kind": "query",
+        "help": false,
+        "through_tool_handler": true,
+        "blocked": false,
+        "executed": true,
+        "not_executed_at_cap": false,
+        "returncode": 0,
+        "error_text": false,
+        "success": true,
+        "nonempty_output": true,
+        "output_excerpt": "PassDict  src/flask/json/tag.py::class::PassDict::3501::s0\nsignature: class PassDict(JSONTag):\nsignatures: {\"id\": \"src/flask/json/tag.py::class::TagDict::2803::s0\", \"signature\": \"class TagDict(JSONTag):\"}\nsignatures: {\"id\": \"src/flask/json/tag.py::method::TagDict.check::3048\", \"signature\": \"def check(self, value: t.Any) -> bool:\"}\nsignatures: {\"id\": \"src/flask/json/tag.py::method::TagDict.to_json::3245\", \"signature\": \"def to_json(self, value: t.Any) -> t.Any:\"}\nsignatures: {\"id\": \"src/flask/json/tag.py::method::TagDict.to_python::3385\", \"signature\": \"def to_python(self, value: t.Any) -> t.Any:"
+      },
+      {
+        "qid": 36,
+        "attempt": 1,
+        "command": "$WORK/runs/e1/arms/C/bin/cbe query --run-dir $WORK/runs/e1/arms/C/run --help",
+        "kind": "query",
+        "help": true,
+        "through_tool_handler": true,
+        "blocked": false,
+        "executed": true,
+        "not_executed_at_cap": false,
+        "returncode": 0,
+        "error_text": false,
+        "success": true,
+        "nonempty_output": true,
+        "output_excerpt": "usage: python -m cbe query [-h] --run-dir RUN_DIR --id ID [--json]\n                           [--edges EDGES]\n\noptions:\n  -h, --help         show this help message and exit\n  --run-dir RUN_DIR\n  --id ID\n  --json             machine-readable object (no duplicate detail)\n  --edges EDGES      expand frozen raw edges: all or comma-separated kinds\n"
+      },
+      {
+        "qid": 40,
+        "attempt": 1,
+        "command": "$WORK/runs/e1/arms/C/bin/cbe find --run-dir $WORK/runs/e1/arms/C/run \"_find_error_handler\"",
+        "kind": "find",
+        "help": false,
+        "through_tool_handler": true,
+        "blocked": false,
+        "executed": true,
+        "not_executed_at_cap": false,
+        "returncode": 2,
+        "error_text": false,
+        "success": false,
+        "nonempty_output": true,
+        "output_excerpt": "usage: python -m cbe find [-h] --run-dir RUN_DIR --term TERM [--limit LIMIT]\n                          [--json]\npython -m cbe find: error: the following arguments are required: --term\n"
+      },
+      {
+        "qid": 40,
+        "attempt": 1,
+        "command": "$WORK/runs/e1/arms/C/bin/cbe find --run-dir $WORK/runs/e1/arms/C/run --term \"_find_error_handler\"",
+        "kind": "find",
+        "help": false,
+        "through_tool_handler": true,
+        "blocked": false,
+        "executed": true,
+        "not_executed_at_cap": false,
+        "returncode": 0,
+        "error_text": false,
+        "success": true,
+        "nonempty_output": true,
+        "output_excerpt": "Flask.handle_http_exception | src/flask/app.py::method::Flask.handle_http_exception::30095 | method | src/flask/app.py:L744-L777 | Handle an HTTPException by routing it to a registered error handler or returning it as the response. | match: explain,relations,outgoing\nFlask.handle_user_exception | src/flask/app.py::method::Flask.handle_user_exception::31441 | method | src/flask/app.py:L779-L809 | Handle an exception raised during dispatch. | match: explain,relations,outgoing\nFlask.handle_exception | src/flask/app.py::method::Flask.handle_exception::32618 | method | src/flask/app.py:L811-L862 | "
+      },
+      {
+        "qid": 45,
+        "attempt": 1,
+        "command": "$WORK/runs/e1/arms/C/bin/cbe query --help",
+        "kind": "query",
+        "help": true,
+        "through_tool_handler": true,
+        "blocked": false,
+        "executed": true,
+        "not_executed_at_cap": false,
+        "returncode": 0,
+        "error_text": false,
+        "success": true,
+        "nonempty_output": true,
+        "output_excerpt": "usage: python -m cbe query [-h] --run-dir RUN_DIR --id ID [--json]\n                           [--edges EDGES]\n\noptions:\n  -h, --help         show this help message and exit\n  --run-dir RUN_DIR\n  --id ID\n  --json             machine-readable object (no duplicate detail)\n  --edges EDGES      expand frozen raw edges: all or comma-separated kinds\n"
+      },
+      {
+        "qid": 47,
+        "attempt": 1,
+        "command": "$WORK/runs/e1/arms/C/bin/cbe find --run-dir $WORK/runs/e1/arms/C/run --help",
+        "kind": "find",
+        "help": true,
+        "through_tool_handler": true,
+        "blocked": false,
+        "executed": true,
+        "not_executed_at_cap": false,
+        "returncode": 0,
+        "error_text": false,
+        "success": true,
+        "nonempty_output": true,
+        "output_excerpt": "usage: python -m cbe find [-h] --run-dir RUN_DIR --term TERM [--limit LIMIT]\n                          [--json]\n\noptions:\n  -h, --help         show this help message and exit\n  --run-dir RUN_DIR\n  --term TERM\n  --limit LIMIT\n  --json             machine-readable locator fields\n"
+      },
+      {
+        "qid": 47,
+        "attempt": 1,
+        "command": "$WORK/runs/e1/arms/C/bin/cbe find --run-dir $WORK/runs/e1/arms/C/run --term _find_error_handler",
+        "kind": "find",
+        "help": false,
+        "through_tool_handler": true,
+        "blocked": false,
+        "executed": true,
+        "not_executed_at_cap": false,
+        "returncode": 0,
+        "error_text": false,
+        "success": true,
+        "nonempty_output": true,
+        "output_excerpt": "Flask.handle_http_exception | src/flask/app.py::method::Flask.handle_http_exception::30095 | method | src/flask/app.py:L744-L777 | Handle an HTTPException by routing it to a registered error handler or returning it as the response. | match: explain,relations,outgoing\nFlask.handle_user_exception | src/flask/app.py::method::Flask.handle_user_exception::31441 | method | src/flask/app.py:L779-L809 | Handle an exception raised during dispatch. | match: explain,relations,outgoing\nFlask.handle_exception | src/flask/app.py::method::Flask.handle_exception::32618 | method | src/flask/app.py:L811-L862 | "
+      }
+    ],
+    "per_question": [
+      {
+        "qid": 0,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 1,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 2,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 3,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 4,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 5,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 6,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 7,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 8,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 9,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 10,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 11,
+        "find_executed": 1,
+        "query_executed": 0,
+        "successes": 1,
+        "blocked_attempts": 0,
+        "tool_attempts": 1,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 12,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 13,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 14,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 15,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 16,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 17,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 18,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 19,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 20,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 21,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 22,
+        "find_executed": 0,
+        "query_executed": 1,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 1,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 23,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 24,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 25,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 26,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 27,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 28,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 29,
+        "find_executed": 1,
+        "query_executed": 1,
+        "successes": 2,
+        "blocked_attempts": 0,
+        "tool_attempts": 2,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 30,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 31,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 32,
+        "find_executed": 1,
+        "query_executed": 0,
+        "successes": 1,
+        "blocked_attempts": 1,
+        "tool_attempts": 2,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 33,
+        "find_executed": 1,
+        "query_executed": 1,
+        "successes": 2,
+        "blocked_attempts": 0,
+        "tool_attempts": 2,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 34,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 35,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 36,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 37,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 38,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 39,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 40,
+        "find_executed": 2,
+        "query_executed": 0,
+        "successes": 1,
+        "blocked_attempts": 0,
+        "tool_attempts": 2,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 41,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 42,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 43,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 44,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 45,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 46,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 47,
+        "find_executed": 1,
+        "query_executed": 0,
+        "successes": 1,
+        "blocked_attempts": 0,
+        "tool_attempts": 1,
+        "not_executed_at_cap": 0
+      }
+    ],
+    "find_executed": 7,
+    "query_executed": 3,
+    "executed_count": 10,
+    "successful_count": 8,
+    "success_rate_executed": 0.8,
+    "tool_attempts": 11,
+    "blocked_attempts": 1,
+    "success_rate_attempted": 0.7272727272727273,
+    "help_executed": 7
+  },
+  "W": {
+    "protocol": {
+      "applicable": true,
+      "all_agent_replies": 540,
+      "parsed_tool_replies": 483,
+      "unparsed_all_replies": 57,
+      "unparsed_all_ratio": 0.10555555555555556,
+      "loop_replies_excluding_final_answers": 490,
+      "unparsed_loop_replies": 8,
+      "unparsed_loop_ratio": 0.0163265306122449,
+      "definition": "All-reply ratio includes legitimate final answers; loop-only ratio counts explicit parse-retry prompts over tool observations plus parse-retry prompts."
+    },
+    "events": [],
+    "per_question": [
+      {
+        "qid": 0,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 1,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 2,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 3,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 4,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 5,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 6,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 7,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 8,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 9,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 10,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 11,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 12,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 13,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 14,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 15,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 16,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 17,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 18,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 19,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 20,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 21,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 22,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 23,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 24,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 25,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 26,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 27,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 28,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 29,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 30,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 31,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 32,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 33,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 34,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 35,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 36,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 37,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 38,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 39,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 40,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 41,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 42,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 43,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 44,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 45,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 46,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      },
+      {
+        "qid": 47,
+        "find_executed": 0,
+        "query_executed": 0,
+        "successes": 0,
+        "blocked_attempts": 0,
+        "tool_attempts": 0,
+        "not_executed_at_cap": 0
+      }
+    ],
+    "find_executed": 0,
+    "query_executed": 0,
+    "executed_count": 0,
+    "successful_count": 0,
+    "success_rate_executed": null,
+    "tool_attempts": 0,
+    "blocked_attempts": 0,
+    "success_rate_attempted": null,
+    "help_executed": 0
+  }
+}

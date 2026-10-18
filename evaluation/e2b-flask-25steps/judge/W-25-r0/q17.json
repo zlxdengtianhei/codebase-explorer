@@ -1,0 +1,125 @@
+{
+  "qid": 17,
+  "question": "How does the method that processes unhandled exceptions determine whether to re-raise them or convert them into HTTP 500 responses based on configuration state?",
+  "arm": "W",
+  "max_steps": 25,
+  "repeat": 0,
+  "answer_valid": true,
+  "judge_model": "codex/gpt-6.1-sol",
+  "draws": [
+    {
+      "draw": 1,
+      "score": {
+        "correctness": 13,
+        "completeness": 18,
+        "relevance": 17,
+        "clarity": 17,
+        "reasoning": 16
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 102,
+            "prompt_tokens": 6838,
+            "total_tokens": 6940,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 53,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 13,\n  \"completeness\": 18,\n  \"relevance\": 17,\n  \"clarity\": 17,\n  \"reasoning\": 16\n}",
+          "wall_seconds": 4.307128124986775
+        }
+      ]
+    },
+    {
+      "draw": 2,
+      "score": {
+        "correctness": 13,
+        "completeness": 18,
+        "relevance": 16,
+        "clarity": 17,
+        "reasoning": 16
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 105,
+            "prompt_tokens": 6838,
+            "total_tokens": 6943,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 56,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6656
+            }
+          },
+          "response": "{\n  \"correctness\": 13,\n  \"completeness\": 18,\n  \"relevance\": 16,\n  \"clarity\": 17,\n  \"reasoning\": 16\n}",
+          "wall_seconds": 3.797912209003698
+        }
+      ]
+    },
+    {
+      "draw": 3,
+      "score": {
+        "correctness": 14,
+        "completeness": 18,
+        "relevance": 17,
+        "clarity": 17,
+        "reasoning": 16
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 83,
+            "prompt_tokens": 6838,
+            "total_tokens": 6921,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 34,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6656
+            }
+          },
+          "response": "{\n  \"correctness\": 14,\n  \"completeness\": 18,\n  \"relevance\": 17,\n  \"clarity\": 17,\n  \"reasoning\": 16\n}",
+          "wall_seconds": 4.41020170802949
+        }
+      ]
+    }
+  ],
+  "score": {
+    "correctness": 13,
+    "completeness": 18,
+    "relevance": 17,
+    "clarity": 17,
+    "reasoning": 16
+  },
+  "total": 81,
+  "main_total_na5": 81,
+  "failure_type": null,
+  "judge_total_range": 2,
+  "wall_seconds": 12.516058666980825
+}

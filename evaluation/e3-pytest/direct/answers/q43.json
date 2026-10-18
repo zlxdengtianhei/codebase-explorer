@@ -1,0 +1,28 @@
+{
+  "qid": 43,
+  "question": "Where are the functions or methods in the assertion module that indirectly invoke the _HighlightFunc protocol through conditional lexer type selection between diff and python highlighting implementations?",
+  "arm": "direct",
+  "answer": "Error: Request timed out.",
+  "valid": false,
+  "wall_seconds": 720.069792208029,
+  "attempts": [
+    {
+      "answer": "Error: Request timed out.",
+      "valid": false,
+      "usage": null,
+      "response_model": null
+    },
+    {
+      "answer": "Error: Request timed out.",
+      "valid": false,
+      "usage": null,
+      "response_model": null
+    },
+    {
+      "answer": "Error: Request timed out.",
+      "valid": false,
+      "usage": null,
+      "response_model": null
+    }
+  ]
+}

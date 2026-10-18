@@ -1,0 +1,99 @@
+{
+  "seed": 20261017,
+  "qid_base": 0,
+  "qids": [
+    3,
+    4,
+    7,
+    10,
+    13,
+    22,
+    26,
+    34,
+    44,
+    46
+  ],
+  "design": "Type quotas What/How/Why/Where = 3/3/2/2 on swe_type from labels.json. A layer with only 1 question in the whole bank would be included with certainty (none here: layer 1 has 4). Remaining slots per type use largest-remainder allocation over layers by in-type proportion (floors first; remainder ties go to a layer not yet in the sample, then to the layer with fewer sampled questions, then to the lower layer). Inside each (type, layer) cell, qids are drawn with random.Random(20261017).sample over the sorted qid list, cells visited in order What, How, Why, Where and layer 1..4.",
+  "cell_sizes": {
+    "What": {
+      "2": 4,
+      "3": 3,
+      "4": 5
+    },
+    "How": {
+      "2": 3,
+      "3": 4,
+      "4": 5
+    },
+    "Why": {
+      "2": 4,
+      "4": 8
+    },
+    "Where": {
+      "1": 4,
+      "2": 3,
+      "3": 5
+    }
+  },
+  "allocation": {
+    "What": {
+      "2": 1,
+      "3": 1,
+      "4": 1
+    },
+    "How": {
+      "2": 1,
+      "3": 1,
+      "4": 1
+    },
+    "Why": {
+      "2": 1,
+      "4": 1
+    },
+    "Where": {
+      "1": 1,
+      "2": 0,
+      "3": 1
+    }
+  },
+  "drawn_by_cell": {
+    "How": {
+      "2": [
+        3
+      ],
+      "3": [
+        13
+      ],
+      "4": [
+        22
+      ]
+    },
+    "What": {
+      "3": [
+        4
+      ],
+      "4": [
+        7
+      ],
+      "2": [
+        10
+      ]
+    },
+    "Why": {
+      "4": [
+        26
+      ],
+      "2": [
+        34
+      ]
+    },
+    "Where": {
+      "1": [
+        44
+      ],
+      "3": [
+        46
+      ]
+    }
+  }
+}

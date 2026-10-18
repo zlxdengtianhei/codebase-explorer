@@ -1,0 +1,125 @@
+{
+  "qid": 4,
+  "question": "With CURLOPT_PROXYTYPE set to CURLPROXY_SOCKS5 (not CURLPROXY_SOCKS5_HOSTNAME), how does libcurl resolve the destination host and encode it into the SOCKS5 CONNECT request it sends to the proxy?\n\nBuild assumptions: IPv6 enabled (USE_IPV6); SOCKS5 proxy without GSS-API; no HTTP proxy in addition; CURLOPT_IPRESOLVE at its default; non-Windows.",
+  "arm": "direct",
+  "max_steps": null,
+  "repeat": 0,
+  "answer_valid": true,
+  "judge_model": "codex/gpt-6.1-sol",
+  "draws": [
+    {
+      "draw": 1,
+      "score": {
+        "correctness": 10,
+        "completeness": 9,
+        "relevance": 20,
+        "clarity": 18,
+        "reasoning": 12
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 111,
+            "prompt_tokens": 6251,
+            "total_tokens": 6362,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 62,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 10,\n  \"completeness\": 9,\n  \"relevance\": 20,\n  \"clarity\": 18,\n  \"reasoning\": 12\n}",
+          "wall_seconds": 5.762987625028472
+        }
+      ]
+    },
+    {
+      "draw": 2,
+      "score": {
+        "correctness": 10,
+        "completeness": 9,
+        "relevance": 20,
+        "clarity": 18,
+        "reasoning": 12
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 113,
+            "prompt_tokens": 6251,
+            "total_tokens": 6364,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 64,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6016
+            }
+          },
+          "response": "{\n  \"correctness\": 10,\n  \"completeness\": 9,\n  \"relevance\": 20,\n  \"clarity\": 18,\n  \"reasoning\": 12\n}",
+          "wall_seconds": 5.061392250005156
+        }
+      ]
+    },
+    {
+      "draw": 3,
+      "score": {
+        "correctness": 10,
+        "completeness": 8,
+        "relevance": 20,
+        "clarity": 18,
+        "reasoning": 11
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 102,
+            "prompt_tokens": 6251,
+            "total_tokens": 6353,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 53,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6016
+            }
+          },
+          "response": "{\n  \"correctness\": 10,\n  \"completeness\": 8,\n  \"relevance\": 20,\n  \"clarity\": 18,\n  \"reasoning\": 11\n}",
+          "wall_seconds": 4.076501083036419
+        }
+      ]
+    }
+  ],
+  "score": {
+    "correctness": 10,
+    "completeness": 9,
+    "relevance": 20,
+    "clarity": 18,
+    "reasoning": 12
+  },
+  "total": 69,
+  "main_total_na5": 69,
+  "failure_type": null,
+  "judge_total_range": 2,
+  "wall_seconds": 14.90191579196835
+}

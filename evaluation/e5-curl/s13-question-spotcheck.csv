@@ -1,0 +1,9 @@
+question_id,conclusion,reason_en
+B02,All supported; no substantive error,"share_ref_inc is at lib/curl_share.c:98, its sole caller is Curl_share_easy_link at line 467, and the path from setopt_share at lib/setopt.c:1411 matches all items."
+A12,All supported; no substantive error,"cf_socket_query at lib/cf-socket.c:1885-1889 uses got_first_byte for UDP and cf->connected otherwise, while cf_udp_connect sets connected as soon as it opens the socket."
+B03,Supported with mildly loose wording in r4; no substantive error,"The three containers, share selection, line 103, and the share branch in cpool_evict_conn all match the source."
+A23,All supported; no substantive error,"The final r3 says the second call is a no-op, matching curl_sspi.c:74-79."
+A25,All supported; no substantive error,"The final r4 states that write failure, short writes, and shutdown failure do not drain, matching tool_doswin.c:762-805."
+B24,All supported; no substantive error,"Ownership of shared HSTS-cache cleanup matches url.c:262-264, setopt.c:1230-1240, and curl_share.c:51,305,437,481."
+A06,All supported; no substantive error,"The comments, four Curl_peer_link calls, and creds condition in url_conn_reuse_adjust at url.c:1905-1941 match exactly."
+B16,Supported with coarse wording in r9 and broad question scope; no substantive error (scope risk not counted),"The final r5 matches dynbuf, SSL_CB_MAX_SIZE is 85, and dynbuf fit includes the terminating NUL."

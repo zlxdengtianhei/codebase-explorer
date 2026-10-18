@@ -1,0 +1,23 @@
+{
+  "started_utc": "2026-10-17T10:17:00.415913+00:00",
+  "last_judge_utc": "2026-10-17T11:56:27.826422+00:00",
+  "wall_seconds": 5967.41051697731,
+  "wall_hours": 1.6576140324936972,
+  "ideal_full192_hours": 3.4,
+  "ideal_new152_hours": 2.6916666666666664,
+  "ratio_to_full192": 0.48753353896873447,
+  "ratio_to_new152": 0.6158318386973488,
+  "answer_tokens": {
+    "input": 6272047,
+    "output": 627806
+  },
+  "judge_tokens": {
+    "input": 3093453,
+    "output": 44109
+  },
+  "answer_attempts": 161,
+  "judge_draws": 456,
+  "answer_unknown_usage_attempts": 7,
+  "judge_unknown_usage_calls": 0,
+  "judge_calls": 456
+}

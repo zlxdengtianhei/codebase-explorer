@@ -1,0 +1,31 @@
+{
+  "qid": 26,
+  "question": "Why does the TestShowFixtures class employ separate test methods for validating fixture documentation formatting across different contexts (trimmed docs, indented docs, first-line unindented, class-level fixtures) rather than consolidating these variations into parameterized tests?",
+  "arm": "direct",
+  "answer": "Each scenario requires its own inline fixture source file and its own full expected `pytest --fixtures` output (which must match docstring line breaks, indentation, and trimming exactly). Separate test methods keep each arrangement\u2013act\u2013assert cycle self-contained and readable; parametrizing would merely move large multi-line literal strings into parameter tuples without reducing real duplication, while making failures less immediately diagnosable. The tests were also added incrementally as documentation-formatting behaviors (e.g., docstring trimming, indented first lines, class-scope display) were introduced, so each new behavior naturally received a dedicated, independently named and isolated test.",
+  "valid": true,
+  "wall_seconds": 18.72464554203907,
+  "attempts": [
+    {
+      "answer": "Each scenario requires its own inline fixture source file and its own full expected `pytest --fixtures` output (which must match docstring line breaks, indentation, and trimming exactly). Separate test methods keep each arrangement\u2013act\u2013assert cycle self-contained and readable; parametrizing would merely move large multi-line literal strings into parameter tuples without reducing real duplication, while making failures less immediately diagnosable. The tests were also added incrementally as documentation-formatting behaviors (e.g., docstring trimming, indented first lines, class-scope display) were introduced, so each new behavior naturally received a dedicated, independently named and isolated test.",
+      "valid": true,
+      "usage": {
+        "completion_tokens": 810,
+        "prompt_tokens": 128,
+        "total_tokens": 938,
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": null,
+          "audio_tokens": null,
+          "reasoning_tokens": 682,
+          "rejected_prediction_tokens": null
+        },
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 64
+        }
+      },
+      "response_model": "glm-5.3-flash"
+    }
+  ]
+}

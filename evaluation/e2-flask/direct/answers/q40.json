@@ -1,0 +1,31 @@
+{
+  "qid": 40,
+  "question": "Where in the error handler resolution method does the lookup sequence traverse blueprint scopes then HTTP status codes then exception class method resolution order?",
+  "arm": "direct",
+  "answer": "`Flask._find_error_handler` in `flask/app.py` \u2014 its nested loops iterate `(*request.blueprints, None)` for blueprint scopes, then `(code, None)` for HTTP status codes, then `exc_class.__mro__` for the exception class resolution order.",
+  "valid": true,
+  "wall_seconds": 11.874783332983498,
+  "attempts": [
+    {
+      "answer": "`Flask._find_error_handler` in `flask/app.py` \u2014 its nested loops iterate `(*request.blueprints, None)` for blueprint scopes, then `(code, None)` for HTTP status codes, then `exc_class.__mro__` for the exception class resolution order.",
+      "valid": true,
+      "usage": {
+        "completion_tokens": 641,
+        "prompt_tokens": 104,
+        "total_tokens": 745,
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": null,
+          "audio_tokens": null,
+          "reasoning_tokens": 580,
+          "rejected_prediction_tokens": null
+        },
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 64
+        }
+      },
+      "response_model": "glm-5.3-flash"
+    }
+  ]
+}

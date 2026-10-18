@@ -1,0 +1,31 @@
+{
+  "qid": 23,
+  "question": "Why does the test design rely on injecting the TerminalReporter through a fixture request rather than directly instantiating it, and what architectural principle does this reflect about pytest's plugin system?",
+  "arm": "direct",
+  "answer": "It ensures access to the active, stateful singleton instance managed by the `PluginManager` (preserving the current test run's configuration and results) rather than creating a disconnected, empty instance. This reflects the **Dependency Injection** and **Plugin Architecture** principles (via `pluggy`), which prioritize loose coupling and centralized state management.",
+  "valid": true,
+  "wall_seconds": 26.620213665999472,
+  "attempts": [
+    {
+      "answer": "It ensures access to the active, stateful singleton instance managed by the `PluginManager` (preserving the current test run's configuration and results) rather than creating a disconnected, empty instance. This reflects the **Dependency Injection** and **Plugin Architecture** principles (via `pluggy`), which prioritize loose coupling and centralized state management.",
+      "valid": true,
+      "usage": {
+        "completion_tokens": 1258,
+        "prompt_tokens": 114,
+        "total_tokens": 1372,
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": null,
+          "audio_tokens": null,
+          "reasoning_tokens": 1188,
+          "rejected_prediction_tokens": null
+        },
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 64
+        }
+      },
+      "response_model": "glm-5.3-flash"
+    }
+  ]
+}

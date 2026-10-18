@@ -1,0 +1,37 @@
+{
+  "seed": 20261017,
+  "qids": [
+    4,
+    6,
+    14,
+    32,
+    41
+  ],
+  "qid_base": 0,
+  "type_quotas": {
+    "What": 2,
+    "How": 1,
+    "Why": 1,
+    "Where": 1
+  },
+  "layer_allocation": {
+    "What": {
+      "3": 1,
+      "2": 1,
+      "4": 0
+    },
+    "How": {
+      "2": 1,
+      "3": 0
+    },
+    "Why": {
+      "4": 1
+    },
+    "Where": {
+      "1": 1,
+      "3": 0
+    }
+  },
+  "method": "Largest remainder type allocation from pilot counts (3/3/2/2) to five; What/How remainder tie follows fixed What/How/Why/Where order; largest remainder layers within type, ascending layer tie; seed sample inside cells. Frozen before C/W answers.",
+  "authority": "Coordinator scope trim received 2026-10-17T07:08:26Z; direct user repeated same instruction."
+}

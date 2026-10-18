@@ -1,0 +1,125 @@
+{
+  "qid": 0,
+  "question": "In libcurl's client-writer chain, `Curl_cwriter_add()` makes sure the `cw-pause` writer exists before it links a new writer whose type carries `CURL_CW_FLAG_BLOWUP` (for example the gzip decoder). Based on the source, why must that pause-writer step happen before the new writer is linked into the chain?\n\nBuild assumptions: HTTP enabled; libz available so the gzip/deflate content decoders (flagged CURL_CW_FLAG_BLOWUP) are built; CURLOPT_ACCEPT_ENCODING set; any platform and TLS backend.",
+  "arm": "C",
+  "max_steps": 10,
+  "repeat": 0,
+  "answer_valid": true,
+  "judge_model": "codex/gpt-6.1-sol",
+  "draws": [
+    {
+      "draw": 1,
+      "score": {
+        "correctness": 3,
+        "completeness": 2,
+        "relevance": 10,
+        "clarity": 15,
+        "reasoning": 3
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 105,
+            "prompt_tokens": 7164,
+            "total_tokens": 7269,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 56,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 3,\n  \"completeness\": 2,\n  \"relevance\": 10,\n  \"clarity\": 15,\n  \"reasoning\": 3\n}",
+          "wall_seconds": 4.252563874993939
+        }
+      ]
+    },
+    {
+      "draw": 2,
+      "score": {
+        "correctness": 3,
+        "completeness": 2,
+        "relevance": 10,
+        "clarity": 15,
+        "reasoning": 3
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 93,
+            "prompt_tokens": 7164,
+            "total_tokens": 7257,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 44,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 3,\n  \"completeness\": 2,\n  \"relevance\": 10,\n  \"clarity\": 15,\n  \"reasoning\": 3\n}",
+          "wall_seconds": 3.586389624979347
+        }
+      ]
+    },
+    {
+      "draw": 3,
+      "score": {
+        "correctness": 3,
+        "completeness": 3,
+        "relevance": 10,
+        "clarity": 15,
+        "reasoning": 4
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 101,
+            "prompt_tokens": 7164,
+            "total_tokens": 7265,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 52,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 7040
+            }
+          },
+          "response": "{\n  \"correctness\": 3,\n  \"completeness\": 3,\n  \"relevance\": 10,\n  \"clarity\": 15,\n  \"reasoning\": 4\n}",
+          "wall_seconds": 3.720236041001044
+        }
+      ]
+    }
+  ],
+  "score": {
+    "correctness": 3,
+    "completeness": 2,
+    "relevance": 10,
+    "clarity": 15,
+    "reasoning": 3
+  },
+  "total": 33,
+  "main_total_na5": 33,
+  "failure_type": null,
+  "judge_total_range": 2,
+  "wall_seconds": 11.560099750000518
+}

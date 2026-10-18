@@ -1,0 +1,31 @@
+{
+  "qid": 1,
+  "question": "What is the purpose of the registration tracking flag in the blueprint collection class that prevents setup methods from being called after the blueprint has been registered once?",
+  "arm": "direct",
+  "answer": "The flag (`_got_registered_once`) marks whether a blueprint has already been registered on an application. A blueprint's setup methods (e.g. `route`, `add_url_rule`, `before_request`, `errorhandler`) work by recording deferred functions that are consumed once during registration; calling them afterward would be silently ignored because the deferred list has already been applied and cleared. The flag lets Flask raise an error (previously a deprecation warning) instead of silently dropping the late configuration, and directs developers to use nested blueprints for making changes after registration.",
+  "valid": true,
+  "wall_seconds": 44.60035174997756,
+  "attempts": [
+    {
+      "answer": "The flag (`_got_registered_once`) marks whether a blueprint has already been registered on an application. A blueprint's setup methods (e.g. `route`, `add_url_rule`, `before_request`, `errorhandler`) work by recording deferred functions that are consumed once during registration; calling them afterward would be silently ignored because the deferred list has already been applied and cleared. The flag lets Flask raise an error (previously a deprecation warning) instead of silently dropping the late configuration, and directs developers to use nested blueprints for making changes after registration.",
+      "valid": true,
+      "usage": {
+        "completion_tokens": 2290,
+        "prompt_tokens": 108,
+        "total_tokens": 2398,
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": null,
+          "audio_tokens": null,
+          "reasoning_tokens": 2176,
+          "rejected_prediction_tokens": null
+        },
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 0
+        }
+      },
+      "response_model": "glm-5.3-flash"
+    }
+  ]
+}

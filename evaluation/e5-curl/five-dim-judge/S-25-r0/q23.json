@@ -1,0 +1,125 @@
+{
+  "qid": 23,
+  "question": "When libcurl searches its connection pool for a connection to reuse, what conditions make it treat a pooled connection's origin as the same destination as the new transfer's origin?\n\nBuild assumptions: Default build with IPv6 and UNIX domain socket support; no proxy involved.",
+  "arm": "S",
+  "max_steps": 25,
+  "repeat": 0,
+  "answer_valid": true,
+  "judge_model": "codex/gpt-6.1-sol",
+  "draws": [
+    {
+      "draw": 1,
+      "score": {
+        "correctness": 14,
+        "completeness": 15,
+        "relevance": 16,
+        "clarity": 17,
+        "reasoning": 15
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 85,
+            "prompt_tokens": 6905,
+            "total_tokens": 6990,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 36,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 14,\n  \"completeness\": 15,\n  \"relevance\": 16,\n  \"clarity\": 17,\n  \"reasoning\": 15\n}",
+          "wall_seconds": 7.734037458023522
+        }
+      ]
+    },
+    {
+      "draw": 2,
+      "score": {
+        "correctness": 14,
+        "completeness": 14,
+        "relevance": 16,
+        "clarity": 16,
+        "reasoning": 14
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 111,
+            "prompt_tokens": 6905,
+            "total_tokens": 7016,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 62,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 14,\n  \"completeness\": 14,\n  \"relevance\": 16,\n  \"clarity\": 16,\n  \"reasoning\": 14\n}",
+          "wall_seconds": 7.488968167046551
+        }
+      ]
+    },
+    {
+      "draw": 3,
+      "score": {
+        "correctness": 14,
+        "completeness": 15,
+        "relevance": 16,
+        "clarity": 16,
+        "reasoning": 14
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 87,
+            "prompt_tokens": 6905,
+            "total_tokens": 6992,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 38,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6784
+            }
+          },
+          "response": "{\n  \"correctness\": 14,\n  \"completeness\": 15,\n  \"relevance\": 16,\n  \"clarity\": 16,\n  \"reasoning\": 14\n}",
+          "wall_seconds": 8.841098749951925
+        }
+      ]
+    }
+  ],
+  "score": {
+    "correctness": 14,
+    "completeness": 15,
+    "relevance": 16,
+    "clarity": 16,
+    "reasoning": 14
+  },
+  "total": 75,
+  "main_total_na5": 75,
+  "failure_type": null,
+  "judge_total_range": 3,
+  "wall_seconds": 24.11343708302593
+}

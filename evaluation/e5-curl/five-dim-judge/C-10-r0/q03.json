@@ -1,0 +1,125 @@
+{
+  "qid": 3,
+  "question": "When libcurl reuses a pooled connection for a new transfer, it replaces the reused connection's origin and via-peer with the values computed for the new transfer instead of keeping the connection's own. According to the source, why is that necessary?\n\nBuild assumptions: Proxy support enabled (CURL_DISABLE_PROXY not defined); HTTP; connection reuse allowed (no CURLOPT_FRESH_CONNECT, no CURLOPT_CONNECT_ONLY); any platform.",
+  "arm": "C",
+  "max_steps": 10,
+  "repeat": 0,
+  "answer_valid": true,
+  "judge_model": "codex/gpt-6.1-sol",
+  "draws": [
+    {
+      "draw": 1,
+      "score": {
+        "correctness": 13,
+        "completeness": 11,
+        "relevance": 16,
+        "clarity": 16,
+        "reasoning": 14
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 94,
+            "prompt_tokens": 6836,
+            "total_tokens": 6930,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 45,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 13,\n  \"completeness\": 11,\n  \"relevance\": 16,\n  \"clarity\": 16,\n  \"reasoning\": 14\n}",
+          "wall_seconds": 4.488521834020503
+        }
+      ]
+    },
+    {
+      "draw": 2,
+      "score": {
+        "correctness": 13,
+        "completeness": 11,
+        "relevance": 16,
+        "clarity": 16,
+        "reasoning": 14
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 96,
+            "prompt_tokens": 6836,
+            "total_tokens": 6932,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 47,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6656
+            }
+          },
+          "response": "{\n  \"correctness\": 13,\n  \"completeness\": 11,\n  \"relevance\": 16,\n  \"clarity\": 16,\n  \"reasoning\": 14\n}",
+          "wall_seconds": 3.817821291042492
+        }
+      ]
+    },
+    {
+      "draw": 3,
+      "score": {
+        "correctness": 13,
+        "completeness": 11,
+        "relevance": 16,
+        "clarity": 16,
+        "reasoning": 14
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 91,
+            "prompt_tokens": 6836,
+            "total_tokens": 6927,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 42,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6656
+            }
+          },
+          "response": "{\n  \"correctness\": 13,\n  \"completeness\": 11,\n  \"relevance\": 16,\n  \"clarity\": 16,\n  \"reasoning\": 14\n}",
+          "wall_seconds": 3.5909360839868896
+        }
+      ]
+    }
+  ],
+  "score": {
+    "correctness": 13,
+    "completeness": 11,
+    "relevance": 16,
+    "clarity": 16,
+    "reasoning": 14
+  },
+  "total": 70,
+  "main_total_na5": 70,
+  "failure_type": null,
+  "judge_total_range": 0,
+  "wall_seconds": 11.898739583033603
+}

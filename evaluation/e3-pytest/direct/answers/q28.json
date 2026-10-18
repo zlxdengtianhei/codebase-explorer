@@ -1,0 +1,31 @@
+{
+  "qid": 28,
+  "question": "Why would caching the Source object initialization in setup_class impact the performance characteristics of the TestAccesses test suite when executed repeatedly across multiple test runs?",
+  "arm": "direct",
+  "answer": "Caching the `Source` object in `setup_class` moves its expensive initialization work\u2014text parsing, de-indentation, line splitting, and potentially compilation\u2014so it happens **once per class** rather than once per test method or per run. The performance impact:\n\n1. **Amortized initialization cost**: `Source.__init__` performs CPU-intensive string and code processing. Without caching, every test in `TestAccesses` (and every repeated execution) would pay this cost. With caching, the cost is paid once and shared by all subsequent tests, converting O(n) initialization work into O(1) relative to the number of tests and runs.\n\n2. **Faster repeated runs**: Since the cached object lives as class-level state, subsequent test methods\u2014and repeated executions of the suite within the same session\u2014skip re-instantiation entirely, reducing total runtime, especially as the number of access tests grows.\n\n3. **Reduced object churn**: Avoiding repeated construction lowers allocation and garbage-collection overhead.\n\n4. **Trade-off**: The gain relies on the `Source` object being effectively immutable in these access tests; sharing it trades test isolation for speed, and any mutation would leak state across tests and runs.\n\nIn short: caching turns repeated expensive parsing/compilation into a single one-time cost, making the suite's repeated executions significantly cheaper at the expense of shared class-level state.",
+  "valid": true,
+  "wall_seconds": 25.41700762504479,
+  "attempts": [
+    {
+      "answer": "Caching the `Source` object in `setup_class` moves its expensive initialization work\u2014text parsing, de-indentation, line splitting, and potentially compilation\u2014so it happens **once per class** rather than once per test method or per run. The performance impact:\n\n1. **Amortized initialization cost**: `Source.__init__` performs CPU-intensive string and code processing. Without caching, every test in `TestAccesses` (and every repeated execution) would pay this cost. With caching, the cost is paid once and shared by all subsequent tests, converting O(n) initialization work into O(1) relative to the number of tests and runs.\n\n2. **Faster repeated runs**: Since the cached object lives as class-level state, subsequent test methods\u2014and repeated executions of the suite within the same session\u2014skip re-instantiation entirely, reducing total runtime, especially as the number of access tests grows.\n\n3. **Reduced object churn**: Avoiding repeated construction lowers allocation and garbage-collection overhead.\n\n4. **Trade-off**: The gain relies on the `Source` object being effectively immutable in these access tests; sharing it trades test isolation for speed, and any mutation would leak state across tests and runs.\n\nIn short: caching turns repeated expensive parsing/compilation into a single one-time cost, making the suite's repeated executions significantly cheaper at the expense of shared class-level state.",
+      "valid": true,
+      "usage": {
+        "completion_tokens": 1207,
+        "prompt_tokens": 108,
+        "total_tokens": 1315,
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": null,
+          "audio_tokens": null,
+          "reasoning_tokens": 923,
+          "rejected_prediction_tokens": null
+        },
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 64
+        }
+      },
+      "response_model": "glm-5.3-flash"
+    }
+  ]
+}

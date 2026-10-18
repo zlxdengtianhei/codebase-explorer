@@ -1,0 +1,125 @@
+{
+  "qid": 35,
+  "question": "For a Strict-Transport-Security response header received over HTTPS, through which functions does the header travel from response-header parsing to the function that allocates and stores a new HSTS entry?\n\nBuild assumptions: HTTP and HSTS enabled; HSTS turned on for the handle (data->hsts set, e.g. via CURLOPT_HSTS_CTRL); release build; header example: max-age=31536000; includeSubDomains.",
+  "arm": "C0",
+  "max_steps": 10,
+  "repeat": 0,
+  "answer_valid": true,
+  "judge_model": "codex/gpt-6.1-sol",
+  "draws": [
+    {
+      "draw": 1,
+      "score": {
+        "correctness": 12,
+        "completeness": 12,
+        "relevance": 17,
+        "clarity": 16,
+        "reasoning": 13
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 113,
+            "prompt_tokens": 7017,
+            "total_tokens": 7130,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 64,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 12,\n  \"completeness\": 12,\n  \"relevance\": 17,\n  \"clarity\": 16,\n  \"reasoning\": 13\n}",
+          "wall_seconds": 4.734206207969692
+        }
+      ]
+    },
+    {
+      "draw": 2,
+      "score": {
+        "correctness": 11,
+        "completeness": 12,
+        "relevance": 16,
+        "clarity": 16,
+        "reasoning": 13
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 92,
+            "prompt_tokens": 7017,
+            "total_tokens": 7109,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 43,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6784
+            }
+          },
+          "response": "{\n  \"correctness\": 11,\n  \"completeness\": 12,\n  \"relevance\": 16,\n  \"clarity\": 16,\n  \"reasoning\": 13\n}",
+          "wall_seconds": 3.6575240829843096
+        }
+      ]
+    },
+    {
+      "draw": 3,
+      "score": {
+        "correctness": 11,
+        "completeness": 12,
+        "relevance": 16,
+        "clarity": 16,
+        "reasoning": 12
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 106,
+            "prompt_tokens": 7017,
+            "total_tokens": 7123,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 57,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 11,\n  \"completeness\": 12,\n  \"relevance\": 16,\n  \"clarity\": 16,\n  \"reasoning\": 12\n}",
+          "wall_seconds": 4.144058708974626
+        }
+      ]
+    }
+  ],
+  "score": {
+    "correctness": 11,
+    "completeness": 12,
+    "relevance": 16,
+    "clarity": 16,
+    "reasoning": 13
+  },
+  "total": 68,
+  "main_total_na5": 68,
+  "failure_type": null,
+  "judge_total_range": 3,
+  "wall_seconds": 12.536403042031452
+}

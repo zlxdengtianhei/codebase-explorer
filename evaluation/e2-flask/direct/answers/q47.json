@@ -1,0 +1,31 @@
+{
+  "qid": 47,
+  "question": "Why does the linear traversal of the exception class hierarchy in _find_error_handler create performance overhead when handling errors in applications with deep exception inheritance chains and multiple registered error handlers?",
+  "arm": "direct",
+  "answer": "Because `_find_error_handler` doesn't index handlers for direct dispatch\u2014instead, on every error it walks the raised exception's entire MRO from the most specific class up through each ancestor (e.g., custom exception \u2192 HTTPException \u2192 Exception), performing handler-dictionary lookups at each level, and it does this twice (once for blueprint-level handlers, once for app-level handlers). The cost is therefore linear in the depth of the inheritance chain, multiplied across the handler maps, and since nothing is cached or memoized, the identical traversal is repeated for every single raised exception. In applications with deep inheritance chains, many hierarchy levels must be probed before a match is found (or all of them if no handler matches), and with many registered handlers the lookups and iteration over candidate classes accumulate, making error handling\u2014a hot path for failing requests\u2014disproportionately slow compared to an O(1) keyed lookup that a precomputed class-to-handler map would provide.",
+  "valid": true,
+  "wall_seconds": 50.306600958050694,
+  "attempts": [
+    {
+      "answer": "Because `_find_error_handler` doesn't index handlers for direct dispatch\u2014instead, on every error it walks the raised exception's entire MRO from the most specific class up through each ancestor (e.g., custom exception \u2192 HTTPException \u2192 Exception), performing handler-dictionary lookups at each level, and it does this twice (once for blueprint-level handlers, once for app-level handlers). The cost is therefore linear in the depth of the inheritance chain, multiplied across the handler maps, and since nothing is cached or memoized, the identical traversal is repeated for every single raised exception. In applications with deep inheritance chains, many hierarchy levels must be probed before a match is found (or all of them if no handler matches), and with many registered handlers the lookups and iteration over candidate classes accumulate, making error handling\u2014a hot path for failing requests\u2014disproportionately slow compared to an O(1) keyed lookup that a precomputed class-to-handler map would provide.",
+      "valid": true,
+      "usage": {
+        "completion_tokens": 698,
+        "prompt_tokens": 113,
+        "total_tokens": 811,
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": null,
+          "audio_tokens": null,
+          "reasoning_tokens": 501,
+          "rejected_prediction_tokens": null
+        },
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 64
+        }
+      },
+      "response_model": "glm-5.3-flash"
+    }
+  ]
+}

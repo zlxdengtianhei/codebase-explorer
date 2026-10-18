@@ -1,0 +1,125 @@
+{
+  "qid": 28,
+  "question": "Why would caching the Source object initialization in setup_class impact the performance characteristics of the TestAccesses test suite when executed repeatedly across multiple test runs?",
+  "arm": "C",
+  "max_steps": 10,
+  "repeat": 0,
+  "answer_valid": true,
+  "judge_model": "codex/gpt-6.1-sol",
+  "draws": [
+    {
+      "draw": 1,
+      "score": {
+        "correctness": 7,
+        "completeness": 8,
+        "relevance": 11,
+        "clarity": 14,
+        "reasoning": 7
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 99,
+            "prompt_tokens": 7051,
+            "total_tokens": 7150,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 50,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 7,\n  \"completeness\": 8,\n  \"relevance\": 11,\n  \"clarity\": 14,\n  \"reasoning\": 7\n}",
+          "wall_seconds": 5.926313208998181
+        }
+      ]
+    },
+    {
+      "draw": 2,
+      "score": {
+        "correctness": 7,
+        "completeness": 8,
+        "relevance": 10,
+        "clarity": 13,
+        "reasoning": 8
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 90,
+            "prompt_tokens": 7051,
+            "total_tokens": 7141,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 41,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6912
+            }
+          },
+          "response": "{\n  \"correctness\": 7,\n  \"completeness\": 8,\n  \"relevance\": 10,\n  \"clarity\": 13,\n  \"reasoning\": 8\n}",
+          "wall_seconds": 4.786077124997973
+        }
+      ]
+    },
+    {
+      "draw": 3,
+      "score": {
+        "correctness": 7,
+        "completeness": 8,
+        "relevance": 10,
+        "clarity": 14,
+        "reasoning": 7
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 106,
+            "prompt_tokens": 7051,
+            "total_tokens": 7157,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 57,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6912
+            }
+          },
+          "response": "{\n  \"correctness\": 7,\n  \"completeness\": 8,\n  \"relevance\": 10,\n  \"clarity\": 14,\n  \"reasoning\": 7\n}",
+          "wall_seconds": 7.0397736669983715
+        }
+      ]
+    }
+  ],
+  "score": {
+    "correctness": 7,
+    "completeness": 8,
+    "relevance": 10,
+    "clarity": 14,
+    "reasoning": 7
+  },
+  "total": 46,
+  "main_total_na5": 46,
+  "failure_type": null,
+  "judge_total_range": 1,
+  "wall_seconds": 17.754617874976248
+}

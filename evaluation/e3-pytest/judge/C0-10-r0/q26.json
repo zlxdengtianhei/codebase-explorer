@@ -1,0 +1,125 @@
+{
+  "qid": 26,
+  "question": "Why does the TestShowFixtures class employ separate test methods for validating fixture documentation formatting across different contexts (trimmed docs, indented docs, first-line unindented, class-level fixtures) rather than consolidating these variations into parameterized tests?",
+  "arm": "C0",
+  "max_steps": 10,
+  "repeat": 0,
+  "answer_valid": true,
+  "judge_model": "codex/gpt-6.1-sol",
+  "draws": [
+    {
+      "draw": 1,
+      "score": {
+        "correctness": 12,
+        "completeness": 13,
+        "relevance": 15,
+        "clarity": 16,
+        "reasoning": 13
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 88,
+            "prompt_tokens": 7128,
+            "total_tokens": 7216,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 39,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 12,\n  \"completeness\": 13,\n  \"relevance\": 15,\n  \"clarity\": 16,\n  \"reasoning\": 13\n}",
+          "wall_seconds": 6.865692667022813
+        }
+      ]
+    },
+    {
+      "draw": 2,
+      "score": {
+        "correctness": 11,
+        "completeness": 13,
+        "relevance": 14,
+        "clarity": 16,
+        "reasoning": 13
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 81,
+            "prompt_tokens": 7128,
+            "total_tokens": 7209,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 32,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6912
+            }
+          },
+          "response": "{\n  \"correctness\": 11,\n  \"completeness\": 13,\n  \"relevance\": 14,\n  \"clarity\": 16,\n  \"reasoning\": 13\n}",
+          "wall_seconds": 5.738037666014861
+        }
+      ]
+    },
+    {
+      "draw": 3,
+      "score": {
+        "correctness": 11,
+        "completeness": 13,
+        "relevance": 14,
+        "clarity": 16,
+        "reasoning": 13
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 106,
+            "prompt_tokens": 7128,
+            "total_tokens": 7234,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 57,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6912
+            }
+          },
+          "response": "{\n  \"correctness\": 11,\n  \"completeness\": 13,\n  \"relevance\": 14,\n  \"clarity\": 16,\n  \"reasoning\": 13\n}",
+          "wall_seconds": 3.8514322920236737
+        }
+      ]
+    }
+  ],
+  "score": {
+    "correctness": 11,
+    "completeness": 13,
+    "relevance": 14,
+    "clarity": 16,
+    "reasoning": 13
+  },
+  "total": 67,
+  "main_total_na5": 67,
+  "failure_type": null,
+  "judge_total_range": 2,
+  "wall_seconds": 16.456346291990485
+}

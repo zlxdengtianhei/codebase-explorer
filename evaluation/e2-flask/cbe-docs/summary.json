@@ -1,0 +1,1632 @@
+{
+  "status": "complete",
+  "driver": "script",
+  "host": "api",
+  "source_files": 65,
+  "source_tokens": 125125,
+  "modules": 18,
+  "units": 441,
+  "semantic_nodes": 76,
+  "published_pages": 77,
+  "pending": [],
+  "normalized": [
+    "tree_region-0001",
+    "tree_region-0002"
+  ],
+  "id_corrected_count": 0,
+  "id_corrected": [],
+  "index_only_filled_count": 0,
+  "index_only_filled": [],
+  "known_empty": [],
+  "wall_seconds": 2771.303,
+  "run_dir": "$WORK/runs/e1/cbe-flask/run",
+  "index": "$WORK/runs/e1/cbe-flask/run/docs/INDEX.md",
+  "subagent_tasks": 33,
+  "deterministic_checks_ok": true,
+  "aggregation_principles": {
+    "advisory": true,
+    "input_digest": "a8ef4cff19c64692abb9584caa0b454342f99320a1c526edfbd556995b2d47c1",
+    "identity": [
+      [
+        "app-context-and-globals",
+        "Application and Request Contexts"
+      ],
+      [
+        "blueprint-system",
+        "Blueprint System"
+      ],
+      [
+        "cli-system",
+        "Command-Line Interface"
+      ],
+      [
+        "concrete-app",
+        "Concrete WSGI Application"
+      ],
+      [
+        "configuration",
+        "Configuration Loading"
+      ],
+      [
+        "core-app-model",
+        "Sans-I/O Application Core"
+      ],
+      [
+        "debug-helpers",
+        "Diagnostics and Debug Errors"
+      ],
+      [
+        "error-handling-tests",
+        "Error Handler Tests"
+      ],
+      [
+        "flask-app-region",
+        "Flask App Region"
+      ],
+      [
+        "flask-capabilities-region",
+        "Flask Capabilities Region"
+      ],
+      [
+        "flask-framework",
+        "Flask Framework"
+      ],
+      [
+        "helpers-utilities",
+        "Shared Helpers"
+      ],
+      [
+        "json-support",
+        "JSON Serialization"
+      ],
+      [
+        "json-tests",
+        "JSON Test Suite"
+      ],
+      [
+        "logging",
+        "Application Logging"
+      ],
+      [
+        "logging-tests",
+        "Logging Test Suite"
+      ],
+      [
+        "r1-app-test-support",
+        "CLI Entry and Test Support"
+      ],
+      [
+        "r1-concrete-app",
+        "Concrete WSGI Application"
+      ],
+      [
+        "r1-contexts-teardown",
+        "App and Request Contexts"
+      ],
+      [
+        "r1-core-app-model",
+        "Sans-I/O Application Core"
+      ],
+      [
+        "r1-debug-helpers",
+        "Diagnostics and Debug Errors"
+      ],
+      [
+        "r1-error-handling",
+        "Exception and Error Handling"
+      ],
+      [
+        "r1-flask-framework",
+        "Flask Framework"
+      ],
+      [
+        "r1-json-support",
+        "JSON Serialization"
+      ],
+      [
+        "r1-logging",
+        "Application Logging"
+      ],
+      [
+        "r1-request-dispatch",
+        "Request Dispatch Pipeline"
+      ],
+      [
+        "r1-scaffold-shared-base",
+        "Scaffold Registration Base"
+      ],
+      [
+        "r1-sessions",
+        "Session Support"
+      ],
+      [
+        "r1-signals",
+        "Blinker Signals"
+      ],
+      [
+        "r1-templating",
+        "Template Rendering"
+      ],
+      [
+        "r1-tests",
+        "Test Suites and Fixture Apps"
+      ],
+      [
+        "r1-tests-client",
+        "Test Client Behavior Tests"
+      ],
+      [
+        "r1-tests-config",
+        "Configuration Tests"
+      ],
+      [
+        "r1-tests-fixture-apps",
+        "Fixture Applications"
+      ],
+      [
+        "r1-tests-functional",
+        "Functional Behavior Tests"
+      ],
+      [
+        "r1-tests-helpers",
+        "Helper and Resource Tests"
+      ],
+      [
+        "r1-url-building-resources",
+        "URL Building, Redirects, and Resources"
+      ],
+      [
+        "r2-app-context-and-globals",
+        "Application and Request Contexts"
+      ],
+      [
+        "r2-blueprint-app-integrations",
+        "App-Scope Blueprint Hooks"
+      ],
+      [
+        "r2-blueprint-registration",
+        "Blueprint Registration"
+      ],
+      [
+        "r2-blueprint-runtime",
+        "Concrete Blueprint Runtime"
+      ],
+      [
+        "r2-blueprint-system",
+        "Blueprint System"
+      ],
+      [
+        "r2-blueprint-tests",
+        "Blueprint Test Suite"
+      ],
+      [
+        "r2-cli-app-discovery",
+        "App Discovery and Loading"
+      ],
+      [
+        "r2-cli-command-group",
+        "FlaskGroup and App Context Commands"
+      ],
+      [
+        "r2-cli-server-commands",
+        "Run, Shell, and Routes Commands"
+      ],
+      [
+        "r2-cli-system",
+        "Command-Line Interface"
+      ],
+      [
+        "r2-cli-tests",
+        "CLI Test Suite"
+      ],
+      [
+        "r2-configuration",
+        "Configuration Loading"
+      ],
+      [
+        "r2-context-lifecycle-tests",
+        "Context and Signal Tests"
+      ],
+      [
+        "r2-environment-helpers",
+        "Environment and Path Helpers"
+      ],
+      [
+        "r2-error-handling-tests",
+        "Error Handler Tests"
+      ],
+      [
+        "r2-file-serving-helpers",
+        "File Serving Helpers"
+      ],
+      [
+        "r2-flask-framework",
+        "Flask Framework"
+      ],
+      [
+        "r2-helpers-utilities",
+        "Shared Helpers"
+      ],
+      [
+        "r2-json-tests",
+        "JSON Test Suite"
+      ],
+      [
+        "r2-logging-tests",
+        "Logging Test Suite"
+      ],
+      [
+        "r2-request-response-helpers",
+        "Request and Response Helpers"
+      ],
+      [
+        "r2-request-response-objects",
+        "Request and Response Wrappers"
+      ],
+      [
+        "r2-sansio-blueprint-core",
+        "Blueprint Deferred Setup"
+      ],
+      [
+        "r2-streaming-helpers",
+        "stream_with_context"
+      ],
+      [
+        "r2-templating-tests",
+        "Templating Test Suite"
+      ],
+      [
+        "r2-testing-support",
+        "Testing Support"
+      ],
+      [
+        "r2-type-check-fixtures",
+        "Type-Checking Fixtures"
+      ],
+      [
+        "r2-view-core",
+        "View and MethodView Core"
+      ],
+      [
+        "r2-view-system",
+        "Class-Based Views"
+      ],
+      [
+        "r2-view-tests",
+        "View and Async Dispatch Tests"
+      ],
+      [
+        "request-response-objects",
+        "Request and Response Wrappers"
+      ],
+      [
+        "sessions",
+        "Session Support"
+      ],
+      [
+        "signals",
+        "Blinker Signals"
+      ],
+      [
+        "templating",
+        "Template Rendering"
+      ],
+      [
+        "templating-tests",
+        "Templating Test Suite"
+      ],
+      [
+        "testing-support",
+        "Testing Support"
+      ],
+      [
+        "tests",
+        "Test Suites and Fixture Apps"
+      ],
+      [
+        "type-check-fixtures",
+        "Type-Checking Fixtures"
+      ],
+      [
+        "view-system",
+        "Class-Based Views"
+      ]
+    ],
+    "edge_counts_by_kind": {
+      "call": 289,
+      "relation": 202
+    },
+    "checks": [
+      {
+        "principle": "P1",
+        "ok": false,
+        "empty_or_duplicate_capabilities": [
+          "r1-core-app-model",
+          "core-app-model",
+          "r2-app-context-and-globals",
+          "r2-cli-system",
+          "r2-configuration",
+          "r2-blueprint-system",
+          "r2-request-response-objects",
+          "r2-view-system",
+          "r2-helpers-utilities",
+          "r2-testing-support",
+          "r2-json-tests",
+          "r2-templating-tests",
+          "r2-logging-tests",
+          "r2-error-handling-tests",
+          "r2-type-check-fixtures",
+          "app-context-and-globals",
+          "cli-system",
+          "configuration",
+          "blueprint-system",
+          "request-response-objects",
+          "view-system",
+          "helpers-utilities",
+          "testing-support",
+          "json-tests",
+          "templating-tests",
+          "logging-tests",
+          "error-handling-tests",
+          "type-check-fixtures"
+        ]
+      },
+      {
+        "principle": "P2",
+        "ok": false,
+        "modules": {
+          "flask-framework": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "flask-app-region": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "r1-flask-framework": {
+            "internal": 0,
+            "external": 4,
+            "internal_external_ratio": 0.0
+          },
+          "r1-core-app-model": {
+            "internal": 6,
+            "external": 24,
+            "internal_external_ratio": 0.25
+          },
+          "r1-scaffold-shared-base": {
+            "internal": 28,
+            "external": 65,
+            "internal_external_ratio": 0.4307692307692308
+          },
+          "r1-concrete-app": {
+            "internal": 0,
+            "external": 9,
+            "internal_external_ratio": 0.0
+          },
+          "r1-request-dispatch": {
+            "internal": 24,
+            "external": 19,
+            "internal_external_ratio": 1.263157894736842
+          },
+          "r1-error-handling": {
+            "internal": 12,
+            "external": 13,
+            "internal_external_ratio": 0.9230769230769231
+          },
+          "r1-contexts-teardown": {
+            "internal": 2,
+            "external": 31,
+            "internal_external_ratio": 0.06451612903225806
+          },
+          "r1-url-building-resources": {
+            "internal": 8,
+            "external": 15,
+            "internal_external_ratio": 0.5333333333333333
+          },
+          "r1-app-test-support": {
+            "internal": 0,
+            "external": 6,
+            "internal_external_ratio": 0.0
+          },
+          "r1-templating": {
+            "internal": 18,
+            "external": 8,
+            "internal_external_ratio": 2.25
+          },
+          "r1-json-support": {
+            "internal": 10,
+            "external": 1,
+            "internal_external_ratio": 10.0
+          },
+          "r1-sessions": {
+            "internal": 15,
+            "external": 2,
+            "internal_external_ratio": 7.5
+          },
+          "r1-logging": {
+            "internal": 2,
+            "external": 2,
+            "internal_external_ratio": 1.0
+          },
+          "r1-signals": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "r1-debug-helpers": {
+            "internal": 4,
+            "external": 6,
+            "internal_external_ratio": 0.6666666666666666
+          },
+          "r1-tests": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "r1-tests-functional": {
+            "internal": 1,
+            "external": 17,
+            "internal_external_ratio": 0.058823529411764705
+          },
+          "r1-tests-helpers": {
+            "internal": 14,
+            "external": 5,
+            "internal_external_ratio": 2.8
+          },
+          "r1-tests-config": {
+            "internal": 18,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "r1-tests-client": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "r1-tests-fixture-apps": {
+            "internal": 7,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "core-app-model": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "concrete-app": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "templating": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "json-support": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "sessions": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "logging": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "signals": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "debug-helpers": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "tests": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "flask-capabilities-region": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "r2-flask-framework": {
+            "internal": 0,
+            "external": 3,
+            "internal_external_ratio": 0.0
+          },
+          "r2-app-context-and-globals": {
+            "internal": 13,
+            "external": 14,
+            "internal_external_ratio": 0.9285714285714286
+          },
+          "r2-context-lifecycle-tests": {
+            "internal": 0,
+            "external": 18,
+            "internal_external_ratio": 0.0
+          },
+          "r2-cli-system": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "r2-cli-app-discovery": {
+            "internal": 18,
+            "external": 10,
+            "internal_external_ratio": 1.8
+          },
+          "r2-cli-command-group": {
+            "internal": 6,
+            "external": 13,
+            "internal_external_ratio": 0.46153846153846156
+          },
+          "r2-cli-server-commands": {
+            "internal": 5,
+            "external": 10,
+            "internal_external_ratio": 0.5
+          },
+          "r2-cli-tests": {
+            "internal": 1,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "r2-configuration": {
+            "internal": 9,
+            "external": 9,
+            "internal_external_ratio": 1.0
+          },
+          "r2-blueprint-system": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "r2-sansio-blueprint-core": {
+            "internal": 1,
+            "external": 18,
+            "internal_external_ratio": 0.05555555555555555
+          },
+          "r2-blueprint-registration": {
+            "internal": 11,
+            "external": 10,
+            "internal_external_ratio": 1.1
+          },
+          "r2-blueprint-app-integrations": {
+            "internal": 3,
+            "external": 23,
+            "internal_external_ratio": 0.13043478260869565
+          },
+          "r2-blueprint-runtime": {
+            "internal": 6,
+            "external": 2,
+            "internal_external_ratio": 3.0
+          },
+          "r2-blueprint-tests": {
+            "internal": 3,
+            "external": 1,
+            "internal_external_ratio": 3.0
+          },
+          "r2-request-response-objects": {
+            "internal": 9,
+            "external": 4,
+            "internal_external_ratio": 2.25
+          },
+          "r2-view-system": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "r2-view-core": {
+            "internal": 3,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "r2-view-tests": {
+            "internal": 10,
+            "external": 4,
+            "internal_external_ratio": 2.5
+          },
+          "r2-helpers-utilities": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "r2-file-serving-helpers": {
+            "internal": 4,
+            "external": 4,
+            "internal_external_ratio": 1.0
+          },
+          "r2-streaming-helpers": {
+            "internal": 1,
+            "external": 3,
+            "internal_external_ratio": 0.3333333333333333
+          },
+          "r2-request-response-helpers": {
+            "internal": 0,
+            "external": 2,
+            "internal_external_ratio": 0.0
+          },
+          "r2-environment-helpers": {
+            "internal": 0,
+            "external": 16,
+            "internal_external_ratio": 0.0
+          },
+          "r2-testing-support": {
+            "internal": 5,
+            "external": 17,
+            "internal_external_ratio": 0.29411764705882354
+          },
+          "r2-json-tests": {
+            "internal": 0,
+            "external": 11,
+            "internal_external_ratio": 0.0
+          },
+          "r2-templating-tests": {
+            "internal": 1,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "r2-logging-tests": {
+            "internal": 1,
+            "external": 3,
+            "internal_external_ratio": 0.3333333333333333
+          },
+          "r2-error-handling-tests": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "r2-type-check-fixtures": {
+            "internal": 1,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "app-context-and-globals": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "cli-system": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "configuration": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "blueprint-system": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "request-response-objects": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "view-system": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "helpers-utilities": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "testing-support": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "json-tests": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "templating-tests": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "logging-tests": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "error-handling-tests": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "type-check-fixtures": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          }
+        },
+        "scope": "direct primary ownership; incident cross-module edges counted at each endpoint"
+      },
+      {
+        "principle": "P3",
+        "ok": false,
+        "bounds": [
+          5,
+          30
+        ],
+        "out_of_bounds": {
+          "r1-flask-framework": 2,
+          "r1-app-test-support": 3,
+          "r1-logging": 4,
+          "r1-signals": 1,
+          "r2-flask-framework": 1,
+          "r2-file-serving-helpers": 3,
+          "r2-environment-helpers": 4,
+          "r2-error-handling-tests": 1,
+          "r2-type-check-fixtures": 4
+        },
+        "scope": "nodes with directly owned units; structural ancestors excluded"
+      },
+      {
+        "principle": "P4",
+        "ok": true,
+        "ownership_violations": {}
+      },
+      {
+        "principle": "P5",
+        "ok": false,
+        "min_edges_per_dependent_module": 3,
+        "min_dependent_modules": 2,
+        "shared_units": {
+          "src/flask/app.py::method::Flask.app_context::55804": {
+            "r2-context-lifecycle-tests": 11,
+            "r1-tests-functional": 3
+          },
+          "src/flask/sansio/scaffold.py::function::setupmethod::1379::s0": {
+            "r1-core-app-model": 11,
+            "r1-flask-framework": 2,
+            "r1-contexts-teardown": 2,
+            "r2-sansio-blueprint-core": 4,
+            "r2-blueprint-app-integrations": 13,
+            "r2-flask-framework": 1
+          },
+          "src/flask/sansio/scaffold.py::method::Scaffold.route::12610::s0": {
+            "r2-context-lifecycle-tests": 4,
+            "r1-tests-functional": 3,
+            "r2-json-tests": 11,
+            "r2-logging-tests": 2
+          }
+        },
+        "note": "dependency signal only, including utilities already separated; no automatic reassignment"
+      },
+      {
+        "principle": "P6",
+        "ok": true,
+        "modules": {
+          "flask-framework": {},
+          "flask-app-region": {},
+          "r1-flask-framework": {
+            "python": 2
+          },
+          "r1-core-app-model": {
+            "python": 12
+          },
+          "r1-scaffold-shared-base": {
+            "python": 16
+          },
+          "r1-concrete-app": {
+            "python": 6
+          },
+          "r1-request-dispatch": {
+            "python": 12
+          },
+          "r1-error-handling": {
+            "python": 7
+          },
+          "r1-contexts-teardown": {
+            "python": 6
+          },
+          "r1-url-building-resources": {
+            "python": 10
+          },
+          "r1-app-test-support": {
+            "python": 3
+          },
+          "r1-templating": {
+            "python": 16
+          },
+          "r1-json-support": {
+            "python": 11
+          },
+          "r1-sessions": {
+            "python": 6
+          },
+          "r1-logging": {
+            "python": 4
+          },
+          "r1-signals": {
+            "python": 1
+          },
+          "r1-debug-helpers": {
+            "python": 5
+          },
+          "r1-tests": {},
+          "r1-tests-functional": {
+            "python": 19
+          },
+          "r1-tests-helpers": {
+            "python": 15
+          },
+          "r1-tests-config": {
+            "python": 19
+          },
+          "r1-tests-client": {
+            "python": 25
+          },
+          "r1-tests-fixture-apps": {
+            "python": 20
+          },
+          "core-app-model": {},
+          "concrete-app": {},
+          "templating": {},
+          "json-support": {},
+          "sessions": {},
+          "logging": {},
+          "signals": {},
+          "debug-helpers": {},
+          "tests": {},
+          "flask-capabilities-region": {},
+          "r2-flask-framework": {
+            "python": 1
+          },
+          "r2-app-context-and-globals": {
+            "python": 8
+          },
+          "r2-context-lifecycle-tests": {
+            "python": 10
+          },
+          "r2-cli-system": {},
+          "r2-cli-app-discovery": {
+            "python": 8
+          },
+          "r2-cli-command-group": {
+            "python": 9
+          },
+          "r2-cli-server-commands": {
+            "python": 8
+          },
+          "r2-cli-tests": {
+            "python": 30
+          },
+          "r2-configuration": {
+            "python": 10
+          },
+          "r2-blueprint-system": {},
+          "r2-sansio-blueprint-core": {
+            "python": 9
+          },
+          "r2-blueprint-registration": {
+            "python": 5
+          },
+          "r2-blueprint-app-integrations": {
+            "python": 13
+          },
+          "r2-blueprint-runtime": {
+            "python": 5
+          },
+          "r2-blueprint-tests": {
+            "python": 18
+          },
+          "r2-request-response-objects": {
+            "python": 14
+          },
+          "r2-view-system": {},
+          "r2-view-core": {
+            "python": 5
+          },
+          "r2-view-tests": {
+            "python": 16
+          },
+          "r2-helpers-utilities": {},
+          "r2-file-serving-helpers": {
+            "python": 3
+          },
+          "r2-streaming-helpers": {
+            "python": 7
+          },
+          "r2-request-response-helpers": {
+            "python": 7
+          },
+          "r2-environment-helpers": {
+            "python": 4
+          },
+          "r2-testing-support": {
+            "python": 5
+          },
+          "r2-json-tests": {
+            "python": 7
+          },
+          "r2-templating-tests": {
+            "python": 11
+          },
+          "r2-logging-tests": {
+            "python": 8
+          },
+          "r2-error-handling-tests": {
+            "python": 1
+          },
+          "r2-type-check-fixtures": {
+            "python": 4
+          },
+          "app-context-and-globals": {},
+          "cli-system": {},
+          "configuration": {},
+          "blueprint-system": {},
+          "request-response-objects": {},
+          "view-system": {},
+          "helpers-utilities": {},
+          "testing-support": {},
+          "json-tests": {},
+          "templating-tests": {},
+          "logging-tests": {},
+          "error-handling-tests": {},
+          "type-check-fixtures": {}
+        },
+        "scope": "unit counts by language; a multi-language unit contributes once per language"
+      },
+      {
+        "principle": "P7",
+        "ok": null,
+        "status": "not_checked",
+        "reason": "no prior tree for the same detail input"
+      }
+    ],
+    "hierarchy": {
+      "ok": true,
+      "requires_intermediate_above_units": 30
+    },
+    "introduction_length": {
+      "ok": false,
+      "overlong": {
+        "core-app-model": {
+          "introduction_chars": 600,
+          "detail_chars": 0
+        },
+        "concrete-app": {
+          "introduction_chars": 495,
+          "detail_chars": 0
+        },
+        "templating": {
+          "introduction_chars": 494,
+          "detail_chars": 0
+        },
+        "json-support": {
+          "introduction_chars": 481,
+          "detail_chars": 0
+        },
+        "sessions": {
+          "introduction_chars": 535,
+          "detail_chars": 0
+        },
+        "logging": {
+          "introduction_chars": 386,
+          "detail_chars": 0
+        },
+        "signals": {
+          "introduction_chars": 323,
+          "detail_chars": 0
+        },
+        "debug-helpers": {
+          "introduction_chars": 448,
+          "detail_chars": 0
+        },
+        "tests": {
+          "introduction_chars": 450,
+          "detail_chars": 0
+        },
+        "app-context-and-globals": {
+          "introduction_chars": 433,
+          "detail_chars": 0
+        },
+        "cli-system": {
+          "introduction_chars": 353,
+          "detail_chars": 0
+        },
+        "configuration": {
+          "introduction_chars": 385,
+          "detail_chars": 0
+        },
+        "blueprint-system": {
+          "introduction_chars": 453,
+          "detail_chars": 0
+        },
+        "request-response-objects": {
+          "introduction_chars": 475,
+          "detail_chars": 0
+        },
+        "view-system": {
+          "introduction_chars": 374,
+          "detail_chars": 0
+        },
+        "helpers-utilities": {
+          "introduction_chars": 326,
+          "detail_chars": 0
+        },
+        "testing-support": {
+          "introduction_chars": 379,
+          "detail_chars": 0
+        },
+        "json-tests": {
+          "introduction_chars": 354,
+          "detail_chars": 0
+        },
+        "templating-tests": {
+          "introduction_chars": 421,
+          "detail_chars": 0
+        },
+        "logging-tests": {
+          "introduction_chars": 397,
+          "detail_chars": 0
+        },
+        "error-handling-tests": {
+          "introduction_chars": 347,
+          "detail_chars": 0
+        },
+        "type-check-fixtures": {
+          "introduction_chars": 380,
+          "detail_chars": 0
+        }
+      },
+      "scope": "capability+summary characters versus descendant explain characters"
+    }
+  },
+  "aggregation": {
+    "input_digest": "bdcff351a6601c9877b1d669c2514e3b52eac036e0329c3c9a56c12b00a40d70",
+    "limits": {
+      "max_units": 300,
+      "max_tokens": 64000
+    },
+    "regions": [
+      {
+        "id": "region-0001",
+        "unit_ids": [
+          "grp:app-py-module",
+          "grp:app-py-template-filter",
+          "grp:app-py-template-global",
+          "grp:app-py-template-test",
+          "grp:flask-py-module",
+          "grp:scaffold.py-http-verb-shortcuts",
+          "grp:scaffold.py-request-hook-registrars",
+          "grp:tag-py-value-tags",
+          "grp:templating.py-_stream",
+          "grp:test-basic-py-error-handling",
+          "grp:test-basic-py-flashing",
+          "grp:test-basic-py-options-and-method-routes",
+          "grp:test-basic-py-request-lifecycle-hooks",
+          "grp:test-basic-py-response-and-json",
+          "grp:test-basic-py-run-and-app-lifecycle",
+          "grp:test-basic-py-server-name-and-subdomains",
+          "grp:test-basic-py-session-behavior",
+          "grp:test-basic-py-url-mapping-and-routing",
+          "grp:test-basic-py-urls-static-and-g",
+          "grp:test_converters.py-custom-converters",
+          "grp:test_helpers.py-fakepath",
+          "grp:test_helpers.py-pybytesio",
+          "grp:test_helpers.py-test-abort-with-app",
+          "grp:test_helpers.py-test-app-aborter-class",
+          "grp:test_helpers.py-test-redirect-with-app",
+          "grp:test_helpers.py-testhelpers",
+          "grp:test_helpers.py-testnoimports",
+          "grp:test_helpers.py-testsendfile",
+          "grp:test_helpers.py-teststreaming",
+          "grp:test_helpers.py-testurlfor",
+          "grp:test_regression.py-abort-redirect",
+          "grp:test_reqctx.py-request-context",
+          "grp:test_request.py",
+          "grp:test_testing.py-test-blueprint-with-subdomain",
+          "grp:test_testing.py-test-cli-custom-obj",
+          "grp:test_testing.py-test-cli-invoke",
+          "grp:test_testing.py-test-cli-runner-class",
+          "grp:test_testing.py-test-client-json-no-app-context",
+          "grp:test_testing.py-test-client-open-environ",
+          "grp:test_testing.py-test-client-pop-all-preserved",
+          "grp:test_testing.py-test-environ-base-default",
+          "grp:test_testing.py-test-environ-base-modified",
+          "grp:test_testing.py-test-environ-defaults",
+          "grp:test_testing.py-test-environ-defaults-from-config",
+          "grp:test_testing.py-test-full-url-request",
+          "grp:test_testing.py-test-json-request-and-response",
+          "grp:test_testing.py-test-nosubdomain",
+          "grp:test_testing.py-test-redirect-keep-session",
+          "grp:test_testing.py-test-session-transactions",
+          "grp:test_testing.py-test-specify-url-scheme",
+          "grp:test_testing.py-test-subdomain",
+          "grp:test_testing.py-test-test-client-context-binding",
+          "grp:typing_error_handler-error-handler-signatures",
+          "src/flask/__main__.py::module_residual::::0",
+          "src/flask/app.py::class::Flask::2694::s0",
+          "src/flask/app.py::function::_make_timedelta::2508",
+          "src/flask/app.py::method::Flask.__call__::61389",
+          "src/flask/app.py::method::Flask.__init__::9384",
+          "src/flask/app.py::method::Flask.app_context::55804",
+          "src/flask/app.py::method::Flask.async_to_sync::39415",
+          "src/flask/app.py::method::Flask.create_jinja_environment::15677",
+          "src/flask/app.py::method::Flask.create_url_adapter::17147",
+          "src/flask/app.py::method::Flask.dispatch_request::35345",
+          "src/flask/app.py::method::Flask.do_teardown_appcontext::54929",
+          "src/flask/app.py::method::Flask.do_teardown_request::53584",
+          "src/flask/app.py::method::Flask.ensure_sync::38916",
+          "src/flask/app.py::method::Flask.finalize_request::37229",
+          "src/flask/app.py::method::Flask.full_dispatch_request::36613",
+          "src/flask/app.py::method::Flask.get_send_file_max_age::11772",
+          "src/flask/app.py::method::Flask.handle_exception::32618",
+          "src/flask/app.py::method::Flask.handle_http_exception::30095",
+          "src/flask/app.py::method::Flask.handle_user_exception::31441",
+          "src/flask/app.py::method::Flask.log_exception::34801",
+          "src/flask/app.py::method::Flask.make_default_options_response::38425",
+          "src/flask/app.py::method::Flask.make_response::45351",
+          "src/flask/app.py::method::Flask.make_shell_context::21630",
+          "src/flask/app.py::method::Flask.open_instance_resource::14803",
+          "src/flask/app.py::method::Flask.open_resource::13560",
+          "src/flask/app.py::method::Flask.preprocess_request::51235",
+          "src/flask/app.py::method::Flask.process_response::52366",
+          "src/flask/app.py::method::Flask.raise_routing_exception::19427",
+          "src/flask/app.py::method::Flask.request_context::56475",
+          "src/flask/app.py::method::Flask.run::22029",
+          "src/flask/app.py::method::Flask.send_static_file::12739",
+          "src/flask/app.py::method::Flask.test_cli_runner::29539",
+          "src/flask/app.py::method::Flask.test_client::27010",
+          "src/flask/app.py::method::Flask.test_request_context::57159",
+          "src/flask/app.py::method::Flask.update_template_context::20403",
+          "src/flask/app.py::method::Flask.url_for::40163",
+          "src/flask/app.py::method::Flask.wsgi_app::59470",
+          "src/flask/app.py::module_residual::::0",
+          "src/flask/debughelpers.py::class::DebugFilesKeyError::513::s0",
+          "src/flask/debughelpers.py::class::FormDataRoutingRedirect::1595",
+          "src/flask/debughelpers.py::function::_dump_loader_info::3587",
+          "src/flask/debughelpers.py::function::attach_enctype_error_multidict::2767::s0",
+          "src/flask/debughelpers.py::function::explain_template_loading_attempts::4190",
+          "src/flask/json/__init__.py::function::dump::1274",
+          "src/flask/json/__init__.py::function::dumps::221",
+          "src/flask/json/__init__.py::function::jsonify::4209",
+          "src/flask/json/__init__.py::function::load::3238",
+          "src/flask/json/__init__.py::function::loads::2282",
+          "src/flask/json/provider.py::class::DefaultJSONProvider::3966::s0",
+          "src/flask/json/provider.py::class::JSONProvider::318::s0",
+          "src/flask/json/provider.py::function::_default::3535",
+          "src/flask/json/tag.py::class::JSONTag::1625::s0",
+          "src/flask/json/tag.py::class::TaggedJSONSerializer::5911::s0",
+          "src/flask/logging.py::function::create_logger::1658",
+          "src/flask/logging.py::function::has_level_handler::809",
+          "src/flask/logging.py::function::wsgi_errors_stream::225",
+          "src/flask/logging.py::module_residual::::0",
+          "src/flask/sansio/app.py::class::App::1928::s0",
+          "src/flask/sansio/app.py::function::_make_timedelta::1742",
+          "src/flask/sansio/app.py::method::App.__init__::11781",
+          "src/flask/sansio/app.py::method::App._find_error_handler::32754",
+          "src/flask/sansio/app.py::method::App.add_url_rule::24967",
+          "src/flask/sansio/app.py::method::App.auto_find_instance_path::21122",
+          "src/flask/sansio/app.py::method::App.create_global_jinja_loader::21672",
+          "src/flask/sansio/app.py::method::App.debug::22701",
+          "src/flask/sansio/app.py::method::App.handle_url_build_error::36785",
+          "src/flask/sansio/app.py::method::App.inject_url_defaults::35953",
+          "src/flask/sansio/app.py::method::App.jinja_env::19568",
+          "src/flask/sansio/app.py::method::App.logger::18501",
+          "src/flask/sansio/app.py::method::App.make_aborter::20689",
+          "src/flask/sansio/app.py::method::App.make_config::19995",
+          "src/flask/sansio/app.py::method::App.name::17809",
+          "src/flask/sansio/app.py::method::App.redirect::35371",
+          "src/flask/sansio/app.py::method::App.register_blueprint::23448",
+          "src/flask/sansio/app.py::method::App.select_jinja_autoescape::22216",
+          "src/flask/sansio/app.py::method::App.shell_context_processor::32458",
+          "src/flask/sansio/app.py::method::App.should_ignore_error::34996",
+          "src/flask/sansio/app.py::method::App.teardown_appcontext::31103",
+          "src/flask/sansio/app.py::method::App.trap_http_exception::33713",
+          "src/flask/sansio/scaffold.py::class::Scaffold::1650::s0",
+          "src/flask/sansio/scaffold.py::function::_endpoint_from_view_func::26819",
+          "src/flask/sansio/scaffold.py::function::_find_package_path::27127",
+          "src/flask/sansio/scaffold.py::function::find_package::28907",
+          "src/flask/sansio/scaffold.py::function::setupmethod::1379::s0",
+          "src/flask/sansio/scaffold.py::method::Scaffold.__init__::2551",
+          "src/flask/sansio/scaffold.py::method::Scaffold._get_exc_class_and_code::25207",
+          "src/flask/sansio/scaffold.py::method::Scaffold.add_url_rule::13682",
+          "src/flask/sansio/scaffold.py::method::Scaffold.endpoint::16095::s0",
+          "src/flask/sansio/scaffold.py::method::Scaffold.errorhandler::22951::s0",
+          "src/flask/sansio/scaffold.py::method::Scaffold.register_error_handler::24706",
+          "src/flask/sansio/scaffold.py::method::Scaffold.route::12610::s0",
+          "src/flask/sansio/scaffold.py::method::Scaffold.static_folder::9033",
+          "src/flask/sansio/scaffold.py::method::Scaffold.static_url_path::9779",
+          "src/flask/sessions.py::class::NullSession::3146::s0",
+          "src/flask/sessions.py::class::SecureCookieSession::1493::s0",
+          "src/flask/sessions.py::class::SecureCookieSessionInterface::11757::s0",
+          "src/flask/sessions.py::class::SessionInterface::3754::s0",
+          "src/flask/sessions.py::class::SessionMixin::556::s0",
+          "src/flask/sessions.py::function::_lazy_sha1::11466",
+          "src/flask/signals.py::module_residual::::0",
+          "src/flask/templating.py::class::DispatchingJinjaLoader::1505::s0",
+          "src/flask/templating.py::class::Environment::1017",
+          "src/flask/templating.py::function::_default_template_ctx_processor::593",
+          "src/flask/templating.py::function::_render::4125",
+          "src/flask/templating.py::function::render_template::4528",
+          "src/flask/templating.py::function::render_template_string::5116",
+          "src/flask/templating.py::function::stream_template::6197",
+          "src/flask/templating.py::function::stream_template_string::6936",
+          "src/flask/templating.py::method::DispatchingJinjaLoader._get_source_explained::2047",
+          "src/flask/templating.py::method::DispatchingJinjaLoader._get_source_fast::2922",
+          "tests/test_apps/blueprintapp/__init__.py::module_residual::::0",
+          "tests/test_apps/blueprintapp/apps/admin/__init__.py::function::index2::279",
+          "tests/test_apps/blueprintapp/apps/admin/__init__.py::function::index::199",
+          "tests/test_apps/blueprintapp/apps/admin/__init__.py::module_residual::::0",
+          "tests/test_apps/blueprintapp/apps/frontend/__init__.py::function::index::137",
+          "tests/test_apps/blueprintapp/apps/frontend/__init__.py::function::missing_template::223",
+          "tests/test_apps/blueprintapp/apps/frontend/__init__.py::module_residual::::0",
+          "tests/test_apps/cliapp/factory.py::function::create_app2::70",
+          "tests/test_apps/cliapp/factory.py::function::create_app::26",
+          "tests/test_apps/cliapp/factory.py::function::no_app::146",
+          "tests/test_apps/cliapp/factory.py::module_residual::::0",
+          "tests/test_apps/cliapp/importerrorapp.py::module_residual::::0",
+          "tests/test_apps/cliapp/inner1/__init__.py::module_residual::::0",
+          "tests/test_apps/cliapp/multiapp.py::module_residual::::0",
+          "tests/test_apps/helloworld/hello.py::function::hello::49",
+          "tests/test_apps/helloworld/hello.py::module_residual::::0",
+          "tests/test_apps/helloworld/wsgi.py::module_residual::::0",
+          "tests/test_apps/subdomaintestmodule/__init__.py::module_residual::::0",
+          "tests/test_config.py::function::common_object_test::131",
+          "tests/test_config.py::function::test_config_from_class::3771::s0",
+          "tests/test_config.py::function::test_config_from_envvar::3991",
+          "tests/test_config.py::function::test_config_from_envvar_missing::4508",
+          "tests/test_config.py::function::test_config_from_file_json::571",
+          "tests/test_config.py::function::test_config_from_file_toml::816",
+          "tests/test_config.py::function::test_config_from_mapping::3089",
+          "tests/test_config.py::function::test_config_from_object::441",
+          "tests/test_config.py::function::test_config_from_pyfile::285",
+          "tests/test_config.py::function::test_config_missing::4994",
+          "tests/test_config.py::function::test_config_missing_file::5384",
+          "tests/test_config.py::function::test_custom_config_class::5810::s0",
+          "tests/test_config.py::function::test_from_prefixed_env::1167",
+          "tests/test_config.py::function::test_from_prefixed_env_custom_prefix::1881",
+          "tests/test_config.py::function::test_from_prefixed_env_nested::2134",
+          "tests/test_config.py::function::test_from_pyfile_weird_encoding::7361",
+          "tests/test_config.py::function::test_get_namespace::6253",
+          "tests/test_config.py::function::test_session_lifetime::6084",
+          "tests/test_config.py::module_residual::::0",
+          "tests/test_helpers.py::function::test_abort_no_app::5499",
+          "tests/test_helpers.py::function::test_open_resource::9784",
+          "tests/test_helpers.py::function::test_open_resource_exceptions::10017",
+          "tests/test_helpers.py::function::test_open_resource_with_encoding::10238",
+          "tests/test_helpers.py::function::test_redirect_no_app::5107",
+          "tests/test_request.py::function::test_limit_config::515",
+          "tests/test_request.py::function::test_max_content_length::152::s0",
+          "tests/test_request.py::function::test_trusted_hosts_config::1447::s0",
+          "tests/test_subclassing.py::function::test_suppressed_exception_logging::40::s0",
+          "tests/test_testing.py::function::test_environbuilder_json_dumps::2874",
+          "tests/test_testing.py::function::test_path_is_url::2662",
+          "tests/test_testing.py::function::test_reuse_client::6569",
+          "tests/test_testing.py::function::test_session_transaction_needs_cookies::5646",
+          "tests/test_testing.py::function::test_session_transactions_keep_context::5388",
+          "tests/test_testing.py::function::test_session_transactions_no_null_sessions::5088"
+        ],
+        "input_tokens": 34131
+      },
+      {
+        "id": "region-0002",
+        "unit_ids": [
+          "grp:blueprints-py-module-header",
+          "grp:config.py-configattribute",
+          "grp:conftest.py-fixtures",
+          "grp:test-blueprints-context-processing",
+          "grp:test-blueprints-endpoints",
+          "grp:test-blueprints-error-handling",
+          "grp:test-blueprints-nesting",
+          "grp:test-blueprints-prefix-slash",
+          "grp:test-blueprints-static-max-age",
+          "grp:test-blueprints-template-filters",
+          "grp:test-blueprints-template-tests",
+          "grp:test-blueprints-url-defaults",
+          "grp:test-blueprints-url-processors",
+          "grp:test-templating-context-and-rendering",
+          "grp:test-templating-escaping",
+          "grp:test-templating-filters",
+          "grp:test-templating-tests",
+          "grp:test_appctx.py-app-context",
+          "grp:test_async.py-async-support",
+          "grp:test_cli.py-test-app-cli-has-app-context",
+          "grp:test_cli.py-test-appgroup-app-context",
+          "grp:test_cli.py-test-cli-blueprints",
+          "grp:test_cli.py-test-find-best-app",
+          "grp:test_cli.py-test-flaskgroup-app-context",
+          "grp:test_cli.py-test-flaskgroup-debug",
+          "grp:test_cli.py-test-flaskgroup-nested",
+          "grp:test_cli.py-test-get-version",
+          "grp:test_cli.py-test-help-echo-exception",
+          "grp:test_cli.py-test-prepare-import",
+          "grp:test_cli.py-test-scriptinfo",
+          "grp:test_cli.py-test-with-appcontext",
+          "grp:test_cli.py-testroutes",
+          "grp:test_instance_config.py-instance-paths",
+          "grp:test_json.py-json-behavior",
+          "grp:test_json_tag.py",
+          "grp:test_user_error_handler.py-error-dispatch",
+          "grp:typing_app_decorators-before-and-after-request-and-teardown-hooks",
+          "grp:typing_route-return-type-signatures",
+          "src/flask/blueprints.py::class::Blueprint::456::s0",
+          "src/flask/blueprints.py::method::Blueprint.__init__::494",
+          "src/flask/blueprints.py::method::Blueprint.get_send_file_max_age::1699",
+          "src/flask/blueprints.py::method::Blueprint.open_resource::3487",
+          "src/flask/blueprints.py::method::Blueprint.send_static_file::2666",
+          "src/flask/cli.py::class::AppGroup::12759::s0",
+          "src/flask/cli.py::class::CertParamType::26557::s0",
+          "src/flask/cli.py::class::FlaskGroup::17209::s0",
+          "src/flask/cli.py::class::NoAppException::793",
+          "src/flask/cli.py::class::ScriptInfo::8628::s0",
+          "src/flask/cli.py::class::SeparatedPathType::29128",
+          "src/flask/cli.py::function::_called_with_wrong_args::2679",
+          "src/flask/cli.py::function::_env_file_callback::15909",
+          "src/flask/cli.py::function::_path_is_ancestor::23628",
+          "src/flask/cli.py::function::_set_app::14207",
+          "src/flask/cli.py::function::_set_debug::15159",
+          "src/flask/cli.py::function::_validate_key::27992",
+          "src/flask/cli.py::function::find_app_by_string::3429",
+          "src/flask/cli.py::function::find_best_app::897",
+          "src/flask/cli.py::function::get_version::8003",
+          "src/flask/cli.py::function::load_dotenv::23927",
+          "src/flask/cli.py::function::locate_app::7109",
+          "src/flask/cli.py::function::main::36763",
+          "src/flask/cli.py::function::prepare_import::6075",
+          "src/flask/cli.py::function::routes_command::34619",
+          "src/flask/cli.py::function::run_command::29710::s0",
+          "src/flask/cli.py::function::shell_command::32952",
+          "src/flask/cli.py::function::show_server_banner::26134",
+          "src/flask/cli.py::function::with_appcontext::11849::s0",
+          "src/flask/cli.py::method::AppGroup.command::13060::s0",
+          "src/flask/config.py::class::Config::1094::s0",
+          "src/flask/config.py::method::Config.from_envvar::3126",
+          "src/flask/config.py::method::Config.from_file::9243",
+          "src/flask/config.py::method::Config.from_mapping::10951",
+          "src/flask/config.py::method::Config.from_object::7574",
+          "src/flask/config.py::method::Config.from_prefixed_env::4172",
+          "src/flask/config.py::method::Config.from_pyfile::6295",
+          "src/flask/config.py::method::Config.get_namespace::11515",
+          "src/flask/ctx.py::class::AppContext::7168::s0",
+          "src/flask/ctx.py::class::RequestContext::8798::s0",
+          "src/flask/ctx.py::class::_AppCtxGlobals::635::s0",
+          "src/flask/ctx.py::function::after_this_request::3308",
+          "src/flask/ctx.py::function::copy_current_request_context::4440::s0",
+          "src/flask/ctx.py::function::has_app_context::6891",
+          "src/flask/ctx.py::function::has_request_context::5780",
+          "src/flask/globals.py::module_residual::::0",
+          "src/flask/helpers.py::function::_prepare_send_file_kwargs::13925",
+          "src/flask/helpers.py::function::_split_blueprint_path::23315",
+          "src/flask/helpers.py::function::abort::9184",
+          "src/flask/helpers.py::function::flash::10748",
+          "src/flask/helpers.py::function::get_debug_flag::647",
+          "src/flask/helpers.py::function::get_flashed_messages::12147",
+          "src/flask/helpers.py::function::get_load_dotenv::944",
+          "src/flask/helpers.py::function::get_root_path::21191",
+          "src/flask/helpers.py::function::get_template_attribute::9974",
+          "src/flask/helpers.py::function::make_response::4646",
+          "src/flask/helpers.py::function::redirect::8339",
+          "src/flask/helpers.py::function::send_file::14326",
+          "src/flask/helpers.py::function::send_from_directory::19608",
+          "src/flask/helpers.py::function::stream_with_context.decorator::3133",
+          "src/flask/helpers.py::function::stream_with_context.generator::3411",
+          "src/flask/helpers.py::function::stream_with_context::1360",
+          "src/flask/helpers.py::function::stream_with_context::1479",
+          "src/flask/helpers.py::function::stream_with_context::1651::s0",
+          "src/flask/helpers.py::function::stream_with_context::1651::s1",
+          "src/flask/helpers.py::function::stream_with_context::1651::s2",
+          "src/flask/helpers.py::function::url_for::6511",
+          "src/flask/sansio/blueprints.py::class::Blueprint::4397::s0",
+          "src/flask/sansio/blueprints.py::class::BlueprintSetupState::1306::s0",
+          "src/flask/sansio/blueprints.py::function::Blueprint._merge_blueprint_funcs.extend::15336",
+          "src/flask/sansio/blueprints.py::function::Blueprint.record_once.wrapper::9547",
+          "src/flask/sansio/blueprints.py::method::Blueprint.__init__::7005",
+          "src/flask/sansio/blueprints.py::method::Blueprint._check_setup_finished::8299",
+          "src/flask/sansio/blueprints.py::method::Blueprint._merge_blueprint_funcs::15265::s0",
+          "src/flask/sansio/blueprints.py::method::Blueprint.add_app_template_filter::18341::s0",
+          "src/flask/sansio/blueprints.py::method::Blueprint.add_app_template_global::20901::s0",
+          "src/flask/sansio/blueprints.py::method::Blueprint.add_app_template_test::19603::s0",
+          "src/flask/sansio/blueprints.py::method::Blueprint.add_url_rule::16654",
+          "src/flask/sansio/blueprints.py::method::Blueprint.after_app_request::21986",
+          "src/flask/sansio/blueprints.py::method::Blueprint.app_context_processor::22770",
+          "src/flask/sansio/blueprints.py::method::Blueprint.app_errorhandler::23224::s0",
+          "src/flask/sansio/blueprints.py::method::Blueprint.app_template_filter::17748::s0",
+          "src/flask/sansio/blueprints.py::method::Blueprint.app_template_global::20276::s0",
+          "src/flask/sansio/blueprints.py::method::Blueprint.app_template_test::18996::s0",
+          "src/flask/sansio/blueprints.py::method::Blueprint.app_url_defaults::24256",
+          "src/flask/sansio/blueprints.py::method::Blueprint.app_url_value_preprocessor::23804",
+          "src/flask/sansio/blueprints.py::method::Blueprint.before_app_request::21588",
+          "src/flask/sansio/blueprints.py::method::Blueprint.make_setup_state::9722",
+          "src/flask/sansio/blueprints.py::method::Blueprint.record::8831",
+          "src/flask/sansio/blueprints.py::method::Blueprint.record_once::9193::s0",
+          "src/flask/sansio/blueprints.py::method::Blueprint.register::10928",
+          "src/flask/sansio/blueprints.py::method::Blueprint.register_blueprint::10180",
+          "src/flask/sansio/blueprints.py::method::Blueprint.teardown_app_request::22377",
+          "src/flask/sansio/blueprints.py::method::BlueprintSetupState.add_url_rule::3319",
+          "src/flask/testing.py::class::EnvironBuilder::642::s0",
+          "src/flask/testing.py::class::FlaskCliRunner::8829::s0",
+          "src/flask/testing.py::class::FlaskClient::3374::s0",
+          "src/flask/testing.py::function::_get_werkzeug_version::3179",
+          "src/flask/views.py::class::MethodView::5146::s0",
+          "src/flask/views.py::class::View::305::s0",
+          "src/flask/views.py::method::MethodView.__init_subclass__::5935",
+          "src/flask/views.py::method::MethodView.dispatch_request::6467",
+          "src/flask/views.py::method::View.as_view::2933::s0",
+          "src/flask/wrappers.py::class::Request::430::s0",
+          "src/flask/wrappers.py::class::Response::8110",
+          "src/flask/wrappers.py::method::Request._load_form_data::7328",
+          "src/flask/wrappers.py::method::Request.blueprint::6316",
+          "src/flask/wrappers.py::method::Request.blueprints::6902",
+          "src/flask/wrappers.py::method::Request.endpoint::5857",
+          "src/flask/wrappers.py::method::Request.max_content_length::2132",
+          "src/flask/wrappers.py::method::Request.max_content_length::3417",
+          "src/flask/wrappers.py::method::Request.max_form_memory_size::3551",
+          "src/flask/wrappers.py::method::Request.max_form_memory_size::4583",
+          "src/flask/wrappers.py::method::Request.max_form_parts::4723",
+          "src/flask/wrappers.py::method::Request.max_form_parts::5735",
+          "src/flask/wrappers.py::method::Request.on_json_loading_failed::7830",
+          "src/flask/wrappers.py::method::Response.max_cookie_size::8953",
+          "tests/test_blueprints.py::function::test_app_request_processing::19910::s0",
+          "tests/test_blueprints.py::function::test_blueprint_renaming::27859::s0",
+          "tests/test_blueprints.py::function::test_request_processing::19240::s0",
+          "tests/test_blueprints.py::function::test_self_registration::27697",
+          "tests/test_blueprints.py::function::test_template_global::18638::s0",
+          "tests/test_blueprints.py::function::test_templates_and_static::4740",
+          "tests/test_blueprints.py::function::test_templates_list::7362",
+          "tests/test_blueprints.py::function::test_unique_blueprint_names::27160",
+          "tests/test_cli.py::function::dotenv_not_available::14704",
+          "tests/test_cli.py::function::test_cli_empty::19893",
+          "tests/test_cli.py::function::test_cli_name::964",
+          "tests/test_cli.py::function::test_disable_dotenv_from_env::16195",
+          "tests/test_cli.py::function::test_dotenv_optional::16015",
+          "tests/test_cli.py::function::test_dotenv_path::15759",
+          "tests/test_cli.py::function::test_help_echo_loading_error::10955",
+          "tests/test_cli.py::function::test_load_dotenv::14940",
+          "tests/test_cli.py::function::test_locate_app::4428",
+          "tests/test_cli.py::function::test_locate_app_raises::5090",
+          "tests/test_cli.py::function::test_locate_app_suppress_raise::5729",
+          "tests/test_cli.py::function::test_no_command_echo_loading_error::10574",
+          "tests/test_cli.py::function::test_run_cert_adhoc::17023",
+          "tests/test_cli.py::function::test_run_cert_import::17631",
+          "tests/test_cli.py::function::test_run_cert_no_ssl::18378",
+          "tests/test_cli.py::function::test_run_cert_path::16427",
+          "tests/test_cli.py::function::test_run_exclude_patterns::20217",
+          "tests/test_json_tag.py::function::test_custom_tag::938::s0",
+          "tests/test_json_tag.py::function::test_dump_load_unchanged::214",
+          "tests/test_json_tag.py::function::test_duplicate_tag::649::s0",
+          "tests/test_json_tag.py::function::test_tag_interface::1489",
+          "tests/test_json_tag.py::function::test_tag_order::1707::s0",
+          "tests/test_logging.py::function::reset_logging::199",
+          "tests/test_logging.py::function::test_existing_handler::1138",
+          "tests/test_logging.py::function::test_has_level_handler::1758",
+          "tests/test_logging.py::function::test_log_view_exception::2165::s0",
+          "tests/test_logging.py::function::test_logger::825",
+          "tests/test_logging.py::function::test_logger_debug::990",
+          "tests/test_logging.py::function::test_wsgi_errors_stream::1306::s0",
+          "tests/test_logging.py::module_residual::::0",
+          "tests/test_session_interface.py::function::test_open_session_with_endpoint::97::s0",
+          "tests/test_signals.py::function::test_appcontext_signals::3002::s0",
+          "tests/test_signals.py::function::test_appcontext_tearing_down_signal::4314::s0",
+          "tests/test_signals.py::function::test_before_render_template::597::s0",
+          "tests/test_signals.py::function::test_flash_signal::3625::s0",
+          "tests/test_signals.py::function::test_request_exception_signal::2483::s0",
+          "tests/test_signals.py::function::test_request_signals::1305::s0",
+          "tests/test_signals.py::function::test_template_rendered::15::s0",
+          "tests/test_signals.py::module_residual::::0",
+          "tests/test_templating.py::function::test_add_template_global::7945::s0",
+          "tests/test_templating.py::function::test_custom_jinja_env::12050::s0",
+          "tests/test_templating.py::function::test_custom_template_loader::8306::s0",
+          "tests/test_templating.py::function::test_iterable_loader::8749::s0",
+          "tests/test_templating.py::function::test_template_loader_debugging::10778::s0",
+          "tests/test_templating.py::function::test_templates_auto_reload::9251",
+          "tests/test_templating.py::function::test_templates_auto_reload_debug_run::10469::s0",
+          "tests/test_views.py::function::common_test::79",
+          "tests/test_views.py::function::test_basic_view::387::s0",
+          "tests/test_views.py::function::test_endpoint_override::4369::s0",
+          "tests/test_views.py::function::test_explicit_head::3937::s0",
+          "tests/test_views.py::function::test_implicit_head::3493::s0",
+          "tests/test_views.py::function::test_init_once::6335::s0",
+          "tests/test_views.py::function::test_method_based_view::643::s0",
+          "tests/test_views.py::function::test_methods_var_inheritance::4824::s0",
+          "tests/test_views.py::function::test_multiple_inheritance::5321::s0",
+          "tests/test_views.py::function::test_remove_method_from_parent::5841::s0",
+          "tests/test_views.py::function::test_view_decorators::1833::s0",
+          "tests/test_views.py::function::test_view_inheritance::1343::s0",
+          "tests/test_views.py::function::test_view_patching::901::s0",
+          "tests/test_views.py::function::test_view_provide_automatic_options_attr::2419::s0",
+          "tests/test_views.py::module_residual::::0",
+          "tests/type_check/typing_route.py::class::RenderTemplateView::2154::s0",
+          "tests/type_check/typing_route.py::class::StatusJSON::788"
+        ],
+        "input_tokens": 33638
+      }
+    ],
+    "merge_input_tokens": 3418
+  },
+  "node_dependencies": {
+    "graph_confirmed": 21,
+    "model_inferred": 33,
+    "graph_only": 43
+  },
+  "within_containment": 4,
+  "key_flows": 6,
+  "candidate_flows": 24,
+  "layers": {
+    "tokenizer": "o200k_base",
+    "source_tokens": 125125,
+    "semantic_tokens": 114713,
+    "semantic_breakdown": {
+      "model_body": 42895,
+      "signature_location": 15196,
+      "heading_anchor": 10176,
+      "relations": 5822,
+      "footer": 6992,
+      "index": 16076,
+      "node_text": 17556
+    },
+    "model_body_tokens": 42895,
+    "model_body_source_ratio": 0.3428171828171828,
+    "published_markdown_source_ratio": 0.9167872127872128,
+    "deterministic_tokens": 2751460,
+    "catalog_tokens": 2751460,
+    "frozen_graph_tokens": 0,
+    "frozen_graph_bytes": 56355745,
+    "semantic_source_ratio": 0.9167872127872128,
+    "deterministic_source_ratio": 21.98969030969031,
+    "scope": "Breakdown partitions full Markdown BPE tokens by the first byte's line: model_body is published unit explain, summary, extras and uncertainties; signature_location includes shared source-file reference definitions (including ones used by relations); heading_anchor, relations, footer, INDEX and node_text (including labels/whitespace and program-written ID correction notices) partition the rest. model_body/source and published_markdown/source use complete frozen files. semantic: all published Markdown (node pages + INDEX, including navigation, signatures and commands); deterministic: catalog.json as serialized, including preserved prose copies and edge references, excluding the graph field; frozen graph is excluded from token ratios (frozen_graph_tokens=0), reported separately as frozen_graph_bytes using UTF-8 JSON with ensure_ascii=False and compact separators; complete graph evidence is expanded only with query --edges; source: complete frozen files counted once; context source chunks, host prompts, raw answers and summary.json excluded; layers are storage measures, not disjoint content classes"
+  },
+  "semantic_review": {
+    "mode": "sample",
+    "reviewed": [
+      {
+        "module": 0,
+        "decision": "accepted",
+        "issues": [],
+        "repair": null
+      }
+    ],
+    "outcomes": {
+      "accepted": 1
+    },
+    "pending": [],
+    "note": "an independent reviewer read the source for each reviewed batch; this is not a whole-map proof"
+  },
+  "truth": "deterministic structure/coverage checks and the separate semantic review are different states; neither one proves prose truth",
+  "counts": {
+    "done": 24
+  },
+  "leased": [],
+  "failed": [],
+  "ready": 0,
+  "next_action": "done; open $WORK/runs/e1/cbe-flask/run/docs/INDEX.md, then run `cbe host cost --run-dir $WORK/runs/e1/cbe-flask/run`",
+  "usage_unknown": [],
+  "render_error": null,
+  "stopped": null,
+  "progress_log": "$WORK/runs/e1/cbe-flask/run/progress.log",
+  "model": "zai/glm-5.3-flash",
+  "input_token_basis": "provider prompt_tokens minus cached_tokens; cache reported separately",
+  "calls": 33,
+  "input_tokens": 501424,
+  "output_tokens": 340438,
+  "cache_tokens": 167424,
+  "token_totals_basis": "observed calls; missing usage is excluded, never estimated",
+  "calls_with_unknown_input": 0,
+  "calls_with_unknown_output": 0,
+  "observed_cache_tokens": 167424,
+  "calls_with_unknown_cache": 0,
+  "priced_usd": null,
+  "price_basis": "unknown; configure API price_per_million: [input, output, cache]",
+  "usage_complete": true,
+  "seconds": 4853.989
+}

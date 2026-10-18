@@ -1,0 +1,31 @@
+{
+  "qid": 10,
+  "question": "What is the architectural pattern of the test class that isolates request context lifecycle management from streaming response generation logic?",
+  "arm": "direct",
+  "answer": "A pytest fixture\u2011based dependency\u2011injection pattern: the request context lifecycle (push/pop) is handled by fixtures like `req_ctx` acting as context managers, while the test methods contain only the streaming generator logic \u2014 i.e., context-manager/fixture separation rather than inheritance-based setup.",
+  "valid": true,
+  "wall_seconds": 34.377628582995385,
+  "attempts": [
+    {
+      "answer": "A pytest fixture\u2011based dependency\u2011injection pattern: the request context lifecycle (push/pop) is handled by fixtures like `req_ctx` acting as context managers, while the test methods contain only the streaming generator logic \u2014 i.e., context-manager/fixture separation rather than inheritance-based setup.",
+      "valid": true,
+      "usage": {
+        "completion_tokens": 1704,
+        "prompt_tokens": 101,
+        "total_tokens": 1805,
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": null,
+          "audio_tokens": null,
+          "reasoning_tokens": 1644,
+          "rejected_prediction_tokens": null
+        },
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 64
+        }
+      },
+      "response_model": "glm-5.3-flash"
+    }
+  ]
+}

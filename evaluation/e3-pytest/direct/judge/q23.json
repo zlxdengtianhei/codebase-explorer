@@ -1,0 +1,125 @@
+{
+  "qid": 23,
+  "question": "Why does the test design rely on injecting the TerminalReporter through a fixture request rather than directly instantiating it, and what architectural principle does this reflect about pytest's plugin system?",
+  "arm": "direct",
+  "max_steps": null,
+  "repeat": 0,
+  "answer_valid": true,
+  "judge_model": "codex/gpt-6.1-sol",
+  "draws": [
+    {
+      "draw": 1,
+      "score": {
+        "correctness": 15,
+        "completeness": 12,
+        "relevance": 19,
+        "clarity": 17,
+        "reasoning": 14
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 81,
+            "prompt_tokens": 5809,
+            "total_tokens": 5890,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 32,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 15,\n  \"completeness\": 12,\n  \"relevance\": 19,\n  \"clarity\": 17,\n  \"reasoning\": 14\n}",
+          "wall_seconds": 2.9731234170030802
+        }
+      ]
+    },
+    {
+      "draw": 2,
+      "score": {
+        "correctness": 14,
+        "completeness": 12,
+        "relevance": 19,
+        "clarity": 17,
+        "reasoning": 15
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 87,
+            "prompt_tokens": 5809,
+            "total_tokens": 5896,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 38,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 14,\n  \"completeness\": 12,\n  \"relevance\": 19,\n  \"clarity\": 17,\n  \"reasoning\": 15\n}",
+          "wall_seconds": 2.77704391698353
+        }
+      ]
+    },
+    {
+      "draw": 3,
+      "score": {
+        "correctness": 15,
+        "completeness": 12,
+        "relevance": 19,
+        "clarity": 17,
+        "reasoning": 15
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 60,
+            "prompt_tokens": 5809,
+            "total_tokens": 5869,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 27,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 5632
+            }
+          },
+          "response": "{\"correctness\":15,\"completeness\":12,\"relevance\":19,\"clarity\":17,\"reasoning\":15}",
+          "wall_seconds": 1.9802133330376819
+        }
+      ]
+    }
+  ],
+  "score": {
+    "correctness": 15,
+    "completeness": 12,
+    "relevance": 19,
+    "clarity": 17,
+    "reasoning": 15
+  },
+  "total": 78,
+  "main_total_na5": 78,
+  "failure_type": null,
+  "judge_total_range": 1,
+  "wall_seconds": 7.730819708027411
+}

@@ -1,0 +1,457 @@
+{
+  "status": "complete",
+  "driver": "script",
+  "host": "api",
+  "source_files": 43,
+  "source_tokens": 38670,
+  "modules": 7,
+  "units": 155,
+  "semantic_nodes": 21,
+  "published_pages": 22,
+  "pending": [],
+  "normalized": [
+    "module_4"
+  ],
+  "id_corrected_count": 0,
+  "id_corrected": [],
+  "index_only_filled_count": 1,
+  "index_only_filled": [
+    {
+      "task": "module_4",
+      "symbol": "src/features/shebang.ts::method::ShebangPlugin.writeBundle::444",
+      "reason": "missing"
+    }
+  ],
+  "known_empty": [],
+  "wall_seconds": 992.676,
+  "run_dir": "$WORK/runs/e6/tsdown/run",
+  "index": "$WORK/runs/e6/tsdown/run/docs/INDEX.md",
+  "subagent_tasks": 21,
+  "deterministic_checks_ok": true,
+  "aggregation_principles": {
+    "advisory": true,
+    "input_digest": "e6f74946ee2f8cbdf001b9c6730d866e0ae39c80a8525250e551ab253d3834cd",
+    "identity": [
+      [
+        "asset-copying",
+        "Asset Copying"
+      ],
+      [
+        "build-orchestration",
+        "Build Orchestration"
+      ],
+      [
+        "cli",
+        "Command-Line Interface"
+      ],
+      [
+        "config",
+        "Configuration Resolution"
+      ],
+      [
+        "config-file-loading",
+        "Config File Discovery and Loading"
+      ],
+      [
+        "config-merging",
+        "User Config Normalization"
+      ],
+      [
+        "entry-resolution",
+        "Entry Resolution"
+      ],
+      [
+        "exe-output",
+        "Single-Executable Output"
+      ],
+      [
+        "externalization",
+        "Dependency Externalization"
+      ],
+      [
+        "general-and-fs",
+        "General and Filesystem Helpers"
+      ],
+      [
+        "logging",
+        "Logging"
+      ],
+      [
+        "output-shaping",
+        "Output File Naming and Formats"
+      ],
+      [
+        "package-metadata",
+        "Package Metadata Helpers"
+      ],
+      [
+        "package-publishing",
+        "Package Publishing"
+      ],
+      [
+        "plugin-pipeline",
+        "Bundled Rolldown Plugins"
+      ],
+      [
+        "reporting",
+        "Build Size Reporting"
+      ],
+      [
+        "rolldown-assembly",
+        "Rolldown Options Assembly"
+      ],
+      [
+        "shared-utils",
+        "Shared Utilities"
+      ],
+      [
+        "target-and-tsconfig",
+        "Target and Tsconfig Resolution"
+      ],
+      [
+        "tsdown",
+        "tsdown Build Tool"
+      ],
+      [
+        "workspace-resolution",
+        "Workspace Expansion"
+      ]
+    ],
+    "edge_counts_by_kind": {
+      "call": 211,
+      "relation": 139
+    },
+    "checks": [
+      {
+        "principle": "P1",
+        "ok": true,
+        "empty_or_duplicate_capabilities": []
+      },
+      {
+        "principle": "P2",
+        "ok": false,
+        "modules": {
+          "tsdown": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "cli": {
+            "internal": 2,
+            "external": 5,
+            "internal_external_ratio": 0.4
+          },
+          "build-orchestration": {
+            "internal": 20,
+            "external": 41,
+            "internal_external_ratio": 0.4878048780487805
+          },
+          "asset-copying": {
+            "internal": 2,
+            "external": 7,
+            "internal_external_ratio": 0.2857142857142857
+          },
+          "config": {
+            "internal": 0,
+            "external": 8,
+            "internal_external_ratio": 0.0
+          },
+          "config-file-loading": {
+            "internal": 10,
+            "external": 9,
+            "internal_external_ratio": 1.1111111111111112
+          },
+          "config-merging": {
+            "internal": 15,
+            "external": 36,
+            "internal_external_ratio": 0.4166666666666667
+          },
+          "workspace-resolution": {
+            "internal": 0,
+            "external": 7,
+            "internal_external_ratio": 0.0
+          },
+          "entry-resolution": {
+            "internal": 8,
+            "external": 19,
+            "internal_external_ratio": 0.42105263157894735
+          },
+          "target-and-tsconfig": {
+            "internal": 6,
+            "external": 8,
+            "internal_external_ratio": 0.75
+          },
+          "rolldown-assembly": {
+            "internal": 6,
+            "external": 34,
+            "internal_external_ratio": 0.17647058823529413
+          },
+          "plugin-pipeline": {
+            "internal": 0,
+            "external": 19,
+            "internal_external_ratio": 0.0
+          },
+          "externalization": {
+            "internal": 5,
+            "external": 21,
+            "internal_external_ratio": 0.23809523809523808
+          },
+          "output-shaping": {
+            "internal": 1,
+            "external": 9,
+            "internal_external_ratio": 0.1111111111111111
+          },
+          "exe-output": {
+            "internal": 6,
+            "external": 16,
+            "internal_external_ratio": 0.375
+          },
+          "package-publishing": {
+            "internal": 35,
+            "external": 37,
+            "internal_external_ratio": 0.9459459459459459
+          },
+          "reporting": {
+            "internal": 4,
+            "external": 10,
+            "internal_external_ratio": 0.4
+          },
+          "shared-utils": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "general-and-fs": {
+            "internal": 3,
+            "external": 130,
+            "internal_external_ratio": 0.023076923076923078
+          },
+          "logging": {
+            "internal": 9,
+            "external": 14,
+            "internal_external_ratio": 0.6428571428571429
+          },
+          "package-metadata": {
+            "internal": 0,
+            "external": 6,
+            "internal_external_ratio": 0.0
+          }
+        },
+        "scope": "direct primary ownership; incident cross-module edges counted at each endpoint"
+      },
+      {
+        "principle": "P3",
+        "ok": false,
+        "bounds": [
+          5,
+          30
+        ],
+        "out_of_bounds": {
+          "cli": 3,
+          "config-file-loading": 4,
+          "config-merging": 3,
+          "workspace-resolution": 1,
+          "package-metadata": 3
+        },
+        "scope": "nodes with directly owned units; structural ancestors excluded"
+      },
+      {
+        "principle": "P4",
+        "ok": true,
+        "ownership_violations": {}
+      },
+      {
+        "principle": "P5",
+        "ok": false,
+        "min_edges_per_dependent_module": 3,
+        "min_dependent_modules": 2,
+        "shared_units": {
+          "src/utils/general.ts::function::slash::683": {
+            "workspace-resolution": 3,
+            "build-orchestration": 2,
+            "externalization": 2,
+            "entry-resolution": 4,
+            "package-publishing": 7
+          },
+          "src/utils/general.ts::function::toArray::76": {
+            "config-merging": 6,
+            "config-file-loading": 1,
+            "asset-copying": 3,
+            "cli": 2,
+            "externalization": 3,
+            "entry-resolution": 2,
+            "target-and-tsconfig": 2,
+            "plugin-pipeline": 3
+          }
+        },
+        "note": "dependency signal only, including utilities already separated; no automatic reassignment"
+      },
+      {
+        "principle": "P6",
+        "ok": true,
+        "modules": {
+          "tsdown": {},
+          "cli": {
+            "typescript": 3
+          },
+          "build-orchestration": {
+            "typescript": 20
+          },
+          "asset-copying": {
+            "typescript": 8
+          },
+          "config": {
+            "typescript": 5
+          },
+          "config-file-loading": {
+            "typescript": 4
+          },
+          "config-merging": {
+            "typescript": 3
+          },
+          "workspace-resolution": {
+            "typescript": 1
+          },
+          "entry-resolution": {
+            "typescript": 6
+          },
+          "target-and-tsconfig": {
+            "typescript": 6
+          },
+          "rolldown-assembly": {
+            "typescript": 7
+          },
+          "plugin-pipeline": {
+            "typescript": 7
+          },
+          "externalization": {
+            "typescript": 9
+          },
+          "output-shaping": {
+            "typescript": 13
+          },
+          "exe-output": {
+            "typescript": 9
+          },
+          "package-publishing": {
+            "typescript": 17
+          },
+          "reporting": {
+            "typescript": 7
+          },
+          "shared-utils": {},
+          "general-and-fs": {
+            "typescript": 20
+          },
+          "logging": {
+            "typescript": 7
+          },
+          "package-metadata": {
+            "typescript": 3
+          }
+        },
+        "scope": "unit counts by language; a multi-language unit contributes once per language"
+      },
+      {
+        "principle": "P7",
+        "ok": null,
+        "status": "not_checked",
+        "reason": "no prior tree for the same detail input"
+      }
+    ],
+    "hierarchy": {
+      "ok": true,
+      "requires_intermediate_above_units": 30
+    },
+    "introduction_length": {
+      "ok": true,
+      "overlong": {},
+      "scope": "capability+summary characters versus descendant explain characters"
+    }
+  },
+  "aggregation": {
+    "input_digest": "a488df5f169e0be1599097d20ab01d54c890ba57e6607d55756703a44abba611",
+    "limits": {
+      "max_units": 300,
+      "max_tokens": 64000
+    },
+    "regions": []
+  },
+  "node_dependencies": {
+    "graph_confirmed": 31,
+    "model_inferred": 6,
+    "graph_only": 9
+  },
+  "within_containment": 0,
+  "key_flows": 7,
+  "candidate_flows": 24,
+  "layers": {
+    "tokenizer": "o200k_base",
+    "source_tokens": 38670,
+    "semantic_tokens": 40916,
+    "semantic_breakdown": {
+      "model_body": 13310,
+      "signature_location": 5663,
+      "heading_anchor": 3426,
+      "relations": 2981,
+      "footer": 1932,
+      "index": 7561,
+      "node_text": 6043
+    },
+    "model_body_tokens": 13310,
+    "model_body_source_ratio": 0.34419446599431086,
+    "published_markdown_source_ratio": 1.0580811998965607,
+    "deterministic_tokens": 621192,
+    "catalog_tokens": 621192,
+    "frozen_graph_tokens": 0,
+    "frozen_graph_bytes": 27159564,
+    "semantic_source_ratio": 1.0580811998965607,
+    "deterministic_source_ratio": 16.06392552366175,
+    "scope": "Breakdown partitions full Markdown BPE tokens by the first byte's line: model_body is published unit explain, summary, extras and uncertainties; signature_location includes shared source-file reference definitions (including ones used by relations); heading_anchor, relations, footer, INDEX and node_text (including labels/whitespace and program-written ID correction notices) partition the rest. model_body/source and published_markdown/source use complete frozen files. semantic: all published Markdown (node pages + INDEX, including navigation, signatures and commands); deterministic: catalog.json as serialized, including preserved prose copies and edge references, excluding the graph field; frozen graph is excluded from token ratios (frozen_graph_tokens=0), reported separately as frozen_graph_bytes using UTF-8 JSON with ensure_ascii=False and compact separators; complete graph evidence is expanded only with query --edges; source: complete frozen files counted once; context source chunks, host prompts, raw answers and summary.json excluded; layers are storage measures, not disjoint content classes"
+  },
+  "semantic_review": {
+    "mode": "sample",
+    "reviewed": [
+      {
+        "module": 3,
+        "decision": "needs_repair",
+        "issues": [
+          "src/features/shebang.ts::method::ShebangPlugin.writeBundle::444: is dispositioned as index_only ('no disposition returned') even though its chmod behavior is fully explained in unit ShebangPlugin::277::s0, so it should be grouped, not index_only"
+        ],
+        "repair": "done"
+      }
+    ],
+    "outcomes": {
+      "needs_repair": 1
+    },
+    "pending": [],
+    "note": "an independent reviewer read the source for each reviewed batch; this is not a whole-map proof"
+  },
+  "truth": "deterministic structure/coverage checks and the separate semantic review are different states; neither one proves prose truth",
+  "counts": {
+    "done": 12
+  },
+  "leased": [],
+  "failed": [],
+  "ready": 0,
+  "next_action": "done; open $WORK/runs/e6/tsdown/run/docs/INDEX.md, then run `cbe host cost --run-dir $WORK/runs/e6/tsdown/run`",
+  "usage_unknown": [],
+  "render_error": null,
+  "stopped": null,
+  "progress_log": "$WORK/runs/e6/tsdown/run/progress.log",
+  "model": "zai/glm-5.3-flash",
+  "input_token_basis": "provider prompt_tokens minus cached_tokens; cache reported separately",
+  "calls": 21,
+  "input_tokens": 234971,
+  "output_tokens": 114541,
+  "cache_tokens": 78016,
+  "token_totals_basis": "observed calls; missing usage is excluded, never estimated",
+  "calls_with_unknown_input": 0,
+  "calls_with_unknown_output": 0,
+  "observed_cache_tokens": 78016,
+  "calls_with_unknown_cache": 0,
+  "priced_usd": null,
+  "price_basis": "unknown; configure API price_per_million: [input, output, cache]",
+  "usage_complete": true,
+  "seconds": 1545.233
+}

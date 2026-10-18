@@ -1,0 +1,125 @@
+{
+  "qid": 27,
+  "question": "For an HTTPS transfer over a direct TCP connection, through which functions does the TLS handshake completion time travel from the TLS connection filter to the APPCONNECT progress timer?\n\nBuild assumptions: HTTPS without any proxy; no TLS early data; any single TLS backend; multi interface.",
+  "arm": "C0",
+  "max_steps": 10,
+  "repeat": 0,
+  "answer_valid": true,
+  "judge_model": "codex/gpt-6.1-sol",
+  "draws": [
+    {
+      "draw": 1,
+      "score": {
+        "correctness": 4,
+        "completeness": 4,
+        "relevance": 14,
+        "clarity": 15,
+        "reasoning": 7
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 92,
+            "prompt_tokens": 6821,
+            "total_tokens": 6913,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 43,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 4,\n  \"completeness\": 4,\n  \"relevance\": 14,\n  \"clarity\": 15,\n  \"reasoning\": 7\n}",
+          "wall_seconds": 3.996577290992718
+        }
+      ]
+    },
+    {
+      "draw": 2,
+      "score": {
+        "correctness": 4,
+        "completeness": 4,
+        "relevance": 14,
+        "clarity": 15,
+        "reasoning": 7
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 97,
+            "prompt_tokens": 6821,
+            "total_tokens": 6918,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 48,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 4,\n  \"completeness\": 4,\n  \"relevance\": 14,\n  \"clarity\": 15,\n  \"reasoning\": 7\n}",
+          "wall_seconds": 4.171874625026248
+        }
+      ]
+    },
+    {
+      "draw": 3,
+      "score": {
+        "correctness": 4,
+        "completeness": 4,
+        "relevance": 15,
+        "clarity": 16,
+        "reasoning": 6
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 100,
+            "prompt_tokens": 6821,
+            "total_tokens": 6921,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 51,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6656
+            }
+          },
+          "response": "{\n  \"correctness\": 4,\n  \"completeness\": 4,\n  \"relevance\": 15,\n  \"clarity\": 16,\n  \"reasoning\": 6\n}",
+          "wall_seconds": 4.234783457999583
+        }
+      ]
+    }
+  ],
+  "score": {
+    "correctness": 4,
+    "completeness": 4,
+    "relevance": 14,
+    "clarity": 15,
+    "reasoning": 7
+  },
+  "total": 44,
+  "main_total_na5": 44,
+  "failure_type": null,
+  "judge_total_range": 1,
+  "wall_seconds": 12.405315375013743
+}

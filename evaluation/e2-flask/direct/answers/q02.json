@@ -1,0 +1,31 @@
+{
+  "qid": 2,
+  "question": "What is the modular component registration architecture that separates static asset serving from the main application framework while preserving consistent caching behavior across both components?",
+  "arm": "direct",
+  "answer": "Blueprints",
+  "valid": true,
+  "wall_seconds": 10.102242708031554,
+  "attempts": [
+    {
+      "answer": "Blueprints",
+      "valid": true,
+      "usage": {
+        "completion_tokens": 403,
+        "prompt_tokens": 105,
+        "total_tokens": 508,
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": null,
+          "audio_tokens": null,
+          "reasoning_tokens": 399,
+          "rejected_prediction_tokens": null
+        },
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 0
+        }
+      },
+      "response_model": "glm-5.3-flash"
+    }
+  ]
+}

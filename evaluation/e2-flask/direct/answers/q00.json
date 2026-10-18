@@ -1,0 +1,31 @@
+{
+  "qid": 0,
+  "question": "What is the relationship between the ASCII-only encoding control parameter in the framework's JSON serialization provider and Unicode character representation in serialized output?",
+  "arm": "direct",
+  "answer": "In Flask's JSON serialization provider, the ASCII-only encoding control parameter is `ensure_ascii`. When set to `True` (the default), all non-ASCII Unicode characters are escaped as `\\uXXXX` sequences, producing strictly ASCII-compatible output. When set to `False`, non-ASCII Unicode characters are serialized directly in their original form, preserving multi-byte characters as-is.\n\nThe relationship is direct: this parameter determines whether serialized output represents Unicode characters as escaped sequences (ensuring ASCII compatibility) or as raw Unicode text (requiring proper character encoding like UTF-8 for correct transmission). Setting `app.json.ensure_ascii = False` in the provider configuration changes this behavior for all serialized responses.",
+  "valid": true,
+  "wall_seconds": 49.540972666989546,
+  "attempts": [
+    {
+      "answer": "In Flask's JSON serialization provider, the ASCII-only encoding control parameter is `ensure_ascii`. When set to `True` (the default), all non-ASCII Unicode characters are escaped as `\\uXXXX` sequences, producing strictly ASCII-compatible output. When set to `False`, non-ASCII Unicode characters are serialized directly in their original form, preserving multi-byte characters as-is.\n\nThe relationship is direct: this parameter determines whether serialized output represents Unicode characters as escaped sequences (ensuring ASCII compatibility) or as raw Unicode text (requiring proper character encoding like UTF-8 for correct transmission). Setting `app.json.ensure_ascii = False` in the provider configuration changes this behavior for all serialized responses.",
+      "valid": true,
+      "usage": {
+        "completion_tokens": 2268,
+        "prompt_tokens": 105,
+        "total_tokens": 2373,
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": null,
+          "audio_tokens": null,
+          "reasoning_tokens": 2128,
+          "rejected_prediction_tokens": null
+        },
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 0
+        }
+      },
+      "response_model": "glm-5.3-flash"
+    }
+  ]
+}

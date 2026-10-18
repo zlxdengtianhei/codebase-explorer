@@ -1,0 +1,125 @@
+{
+  "qid": 4,
+  "question": "What is the dependency chain in the test function that verifies subdomain routing through configuration, route registration, and request context creation?",
+  "arm": "S",
+  "max_steps": 25,
+  "repeat": 0,
+  "answer_valid": true,
+  "judge_model": "codex/gpt-6.1-sol",
+  "draws": [
+    {
+      "draw": 1,
+      "score": {
+        "correctness": 5,
+        "completeness": 5,
+        "relevance": 10,
+        "clarity": 16,
+        "reasoning": 10
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 87,
+            "prompt_tokens": 6843,
+            "total_tokens": 6930,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 38,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 5,\n  \"completeness\": 5,\n  \"relevance\": 10,\n  \"clarity\": 16,\n  \"reasoning\": 10\n}",
+          "wall_seconds": 4.335732540988829
+        }
+      ]
+    },
+    {
+      "draw": 2,
+      "score": {
+        "correctness": 6,
+        "completeness": 5,
+        "relevance": 11,
+        "clarity": 16,
+        "reasoning": 10
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 100,
+            "prompt_tokens": 6843,
+            "total_tokens": 6943,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 51,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 6,\n  \"completeness\": 5,\n  \"relevance\": 11,\n  \"clarity\": 16,\n  \"reasoning\": 10\n}",
+          "wall_seconds": 3.7934318330371752
+        }
+      ]
+    },
+    {
+      "draw": 3,
+      "score": {
+        "correctness": 6,
+        "completeness": 6,
+        "relevance": 12,
+        "clarity": 16,
+        "reasoning": 10
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 85,
+            "prompt_tokens": 6843,
+            "total_tokens": 6928,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 36,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6656
+            }
+          },
+          "response": "{\n  \"correctness\": 6,\n  \"completeness\": 6,\n  \"relevance\": 12,\n  \"clarity\": 16,\n  \"reasoning\": 10\n}",
+          "wall_seconds": 4.684953416988719
+        }
+      ]
+    }
+  ],
+  "score": {
+    "correctness": 6,
+    "completeness": 5,
+    "relevance": 11,
+    "clarity": 16,
+    "reasoning": 10
+  },
+  "total": 48,
+  "main_total_na5": 48,
+  "failure_type": null,
+  "judge_total_range": 4,
+  "wall_seconds": 12.830399750033394
+}

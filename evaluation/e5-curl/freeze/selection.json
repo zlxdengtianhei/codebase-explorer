@@ -1,0 +1,262 @@
+{
+  "seed": 20261018,
+  "secondary_seed": 20261019,
+  "rule": "Select and freeze the 40 E5 (curl) questions before any answering.\n\nRule (D-71): independent labels (label/labels.json) decide type and layer.\nTypes 10 each. Layers take what exists: layer 1 all, layer 2 What and How\n(Why is full from layer 4), layer 4 What all and Why 10 of 11, layer 3 fills\nthe rest by type. Random draws inside a cell use random.Random(SEED) on the\nsorted cids of that cell, cells in fixed order. Closed-book scores are only\nused for the >=70 exclusion (none excluded); answers do not exist yet.\nSecondary comparison: 20 of the 40, layer-stratified 1/4/9/6 (largest\nremainder, tie to the higher layer), random.Random(SEED + 1).",
+  "inputs": {
+    "A": "67e128d378d5ab82b256f4c0e19912e243ed0f1a0d9816c05f229df52faee187",
+    "B": "94dad9d9ae901061c20c939dd76b8d61857cb2dbece7043229adc2d2021dfcdb",
+    "labels": "2d439e68a2a7816c191d9381890a30ba322b160f20e89fb95aa2c8dc5b364988",
+    "filter": "a11ecd0fc39cd55cdbd3487b7470627c76c6cf176bb076460a1df04c19e938bd",
+    "adjudications": "66674f5ad5137a1da33357cf893c500349fca8c3fad61280464f6ce514fba77a",
+    "anchors": "56752958f4a19a6b29dfe11f5a3021cd34ed9fdd30fcb90448395c8629dedd00"
+  },
+  "cells": [
+    {
+      "type": "Where",
+      "layer": 1,
+      "available": 3,
+      "taken": 3,
+      "cids": [
+        "B02",
+        "B17",
+        "B21"
+      ],
+      "left_out": []
+    },
+    {
+      "type": "What",
+      "layer": 2,
+      "available": 5,
+      "taken": 5,
+      "cids": [
+        "A14",
+        "A26",
+        "B03",
+        "B06",
+        "B22"
+      ],
+      "left_out": []
+    },
+    {
+      "type": "How",
+      "layer": 2,
+      "available": 3,
+      "taken": 3,
+      "cids": [
+        "A05",
+        "A28",
+        "B18"
+      ],
+      "left_out": []
+    },
+    {
+      "type": "What",
+      "layer": 4,
+      "available": 1,
+      "taken": 1,
+      "cids": [
+        "B16"
+      ],
+      "left_out": []
+    },
+    {
+      "type": "Why",
+      "layer": 4,
+      "available": 11,
+      "taken": 10,
+      "cids": [
+        "A01",
+        "A06",
+        "A13",
+        "A27",
+        "B05",
+        "B11",
+        "B15",
+        "B20",
+        "B25",
+        "B26"
+      ],
+      "left_out": [
+        "A10"
+      ]
+    },
+    {
+      "type": "What",
+      "layer": 3,
+      "available": 8,
+      "taken": 4,
+      "cids": [
+        "A08",
+        "A24",
+        "B10",
+        "B24"
+      ],
+      "left_out": [
+        "A02",
+        "A20",
+        "A22",
+        "A25"
+      ]
+    },
+    {
+      "type": "How",
+      "layer": 3,
+      "available": 12,
+      "taken": 7,
+      "cids": [
+        "A07",
+        "A15",
+        "A16",
+        "A17",
+        "B01",
+        "B14",
+        "B23"
+      ],
+      "left_out": [
+        "B08",
+        "B09",
+        "B13",
+        "B19",
+        "B27"
+      ]
+    },
+    {
+      "type": "Where",
+      "layer": 3,
+      "available": 10,
+      "taken": 7,
+      "cids": [
+        "A04",
+        "A09",
+        "A18",
+        "A21",
+        "A23",
+        "B07",
+        "B28"
+      ],
+      "left_out": [
+        "A11",
+        "A19",
+        "B04"
+      ]
+    }
+  ],
+  "cells_not_used": {
+    "Why/2": [
+      "A12",
+      "B12"
+    ]
+  },
+  "left_out_total": [
+    "A02",
+    "A10",
+    "A11",
+    "A12",
+    "A19",
+    "A20",
+    "A22",
+    "A25",
+    "B04",
+    "B08",
+    "B09",
+    "B12",
+    "B13",
+    "B19",
+    "B27"
+  ],
+  "layer_counts": {
+    "1": 3,
+    "2": 8,
+    "3": 18,
+    "4": 11
+  },
+  "type_counts": {
+    "How": 10,
+    "What": 10,
+    "Where": 10,
+    "Why": 10
+  },
+  "layer34_share": 0.725,
+  "dispatch_anchor_count": 14,
+  "dispatch_anchor_layer34": 13,
+  "spotchecked_in_40": [
+    "A06",
+    "A23",
+    "B02",
+    "B03",
+    "B16",
+    "B24"
+  ],
+  "closed_book_median_40": 0.0,
+  "closed_book_zero_count_40": 28,
+  "secondary20": [
+    "A01",
+    "A04",
+    "A05",
+    "A08",
+    "A14",
+    "A16",
+    "A21",
+    "A23",
+    "B01",
+    "B05",
+    "B06",
+    "B10",
+    "B11",
+    "B15",
+    "B16",
+    "B21",
+    "B22",
+    "B23",
+    "B26",
+    "B28"
+  ],
+  "secondary_layer_counts": {
+    "1": 1,
+    "2": 4,
+    "3": 9,
+    "4": 6
+  },
+  "chosen": [
+    "A01",
+    "A04",
+    "A05",
+    "A06",
+    "A07",
+    "A08",
+    "A09",
+    "A13",
+    "A14",
+    "A15",
+    "A16",
+    "A17",
+    "A18",
+    "A21",
+    "A23",
+    "A24",
+    "A26",
+    "A27",
+    "A28",
+    "B01",
+    "B02",
+    "B03",
+    "B05",
+    "B06",
+    "B07",
+    "B10",
+    "B11",
+    "B14",
+    "B15",
+    "B16",
+    "B17",
+    "B18",
+    "B20",
+    "B21",
+    "B22",
+    "B23",
+    "B24",
+    "B25",
+    "B26",
+    "B28"
+  ]
+}

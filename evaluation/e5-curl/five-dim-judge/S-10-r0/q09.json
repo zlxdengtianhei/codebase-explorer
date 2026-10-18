@@ -1,0 +1,125 @@
+{
+  "qid": 9,
+  "question": "When libcurl tunnels through an HTTPS proxy with CONNECT, how does it decide whether the tunnel request is spoken in HTTP/1.x or HTTP/2, and how does that choice become part of the connection's filter chain?\n\nBuild assumptions: Proxy type CURLPROXY_HTTPS2 (HTTPS proxy that may negotiate HTTP/2); CURLOPT_HTTPPROXYTUNNEL=1; TCP tunnel (not CONNECT-UDP); OpenSSL; nghttp2 enabled (USE_NGHTTP2); non-Windows.",
+  "arm": "S",
+  "max_steps": 10,
+  "repeat": 0,
+  "answer_valid": true,
+  "judge_model": "codex/gpt-6.1-sol",
+  "draws": [
+    {
+      "draw": 1,
+      "score": {
+        "correctness": 15,
+        "completeness": 12,
+        "relevance": 14,
+        "clarity": 16,
+        "reasoning": 15
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 115,
+            "prompt_tokens": 7928,
+            "total_tokens": 8043,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 66,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 15,\n  \"completeness\": 12,\n  \"relevance\": 14,\n  \"clarity\": 16,\n  \"reasoning\": 15\n}",
+          "wall_seconds": 4.109691000019666
+        }
+      ]
+    },
+    {
+      "draw": 2,
+      "score": {
+        "correctness": 15,
+        "completeness": 12,
+        "relevance": 14,
+        "clarity": 16,
+        "reasoning": 15
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 107,
+            "prompt_tokens": 7928,
+            "total_tokens": 8035,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 58,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 7808
+            }
+          },
+          "response": "{\n  \"correctness\": 15,\n  \"completeness\": 12,\n  \"relevance\": 14,\n  \"clarity\": 16,\n  \"reasoning\": 15\n}",
+          "wall_seconds": 4.525218790979125
+        }
+      ]
+    },
+    {
+      "draw": 3,
+      "score": {
+        "correctness": 14,
+        "completeness": 12,
+        "relevance": 14,
+        "clarity": 16,
+        "reasoning": 14
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 87,
+            "prompt_tokens": 7928,
+            "total_tokens": 8015,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 38,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 14,\n  \"completeness\": 12,\n  \"relevance\": 14,\n  \"clarity\": 16,\n  \"reasoning\": 14\n}",
+          "wall_seconds": 4.02639554196503
+        }
+      ]
+    }
+  ],
+  "score": {
+    "correctness": 15,
+    "completeness": 12,
+    "relevance": 14,
+    "clarity": 16,
+    "reasoning": 15
+  },
+  "total": 72,
+  "main_total_na5": 72,
+  "failure_type": null,
+  "judge_total_range": 2,
+  "wall_seconds": 12.680528874974698
+}

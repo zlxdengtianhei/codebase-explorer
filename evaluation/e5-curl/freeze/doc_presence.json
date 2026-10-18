@@ -1,0 +1,2273 @@
+{
+  "rule": "Label each frozen E5 question: are its key units in the CBE docs?\n\nWritten by the main session after E5a generation and before any E5 answer\nexists (REPORT_RULES.md, \"关键单元是否在 CBE 文档里\"; D-71).\n\nRule as applied:\n- Read the `source` of every core rubric item. Split on ';' into entries.\n  An entry \"path: n1, n2\" gives the pairs (path, n1), (path, n2). An entry\n  without ':' names only a file: it has no function, is recorded under\n  `file_only`, and does not change the label.\n- Name clean-up: drop a leading \"struct \", \"union \" or \"enum \", a trailing\n  \"()\" and a trailing \" comment\" (B16 writes \"... comment\").\n- Pair status from catalog.json `symbols` with the same `file` and `name`:\n  \"unit\" if any such symbol has its own unit, else \"grouped\" if any is a\n  member of a group unit, else \"index_only\" if any is index-only, else\n  \"missing\" (no symbol with that file and name).\n- Label `in_docs` (\"在\"): every pair is \"unit\" or \"grouped\", i.e. described\n  in a CBE unit (its own or a group unit that lists it). Otherwise \"不在\".\n  This label is the one E5qa reports by.\n- `own_unit` (informational, not reported by): every pair is \"unit\".",
+  "inputs": {
+    "questions_frozen.jsonl": "597ed0c8ea1685787de7b6ec5fadeace4d5b7ad9d0ff166d7f2def198b2440cd",
+    "catalog.json": "48cc7560ce9aff78a8b07023839c7e1a8882926cc4e52a80b77df1bac8d700cf",
+    "catalog_path": "$WORK/runs/e5/cbe-curl/run/catalog.json",
+    "run_status_line": "Run `03f6c1` · status **complete** · updated 2026-10-18T05:56:03Z · review sample · jobs 2 · host api"
+  },
+  "counts": {
+    "在": 30,
+    "不在": 10,
+    "无可判": 0
+  },
+  "own_unit_count": 15,
+  "pair_status": {
+    "unit": 125,
+    "grouped": 35,
+    "missing": 13,
+    "index_only": 2
+  },
+  "questions": [
+    {
+      "cid": "A01",
+      "label_layer": 4,
+      "label_swe_type": "Why",
+      "in_docs": true,
+      "label": "在",
+      "own_unit": true,
+      "not_in_docs": [],
+      "pairs": [
+        {
+          "rubric": "r1",
+          "file": "lib/sendf.c",
+          "name": "Curl_cwriter_add",
+          "as_written": "Curl_cwriter_add",
+          "status": "unit",
+          "symbols": [
+            "lib/sendf.c::function::Curl_cwriter_add::13686"
+          ]
+        },
+        {
+          "rubric": "r2",
+          "file": "lib/content_encoding.c",
+          "name": "Curl_build_unencoding_stack",
+          "as_written": "Curl_build_unencoding_stack",
+          "status": "unit",
+          "symbols": [
+            "lib/content_encoding.c::function::Curl_build_unencoding_stack::21756",
+            "lib/content_encoding.c::function::Curl_build_unencoding_stack::25756"
+          ]
+        },
+        {
+          "rubric": "r2",
+          "file": "lib/headers.c",
+          "name": "Curl_headers_init",
+          "as_written": "Curl_headers_init",
+          "status": "unit",
+          "symbols": [
+            "lib/headers.c::function::Curl_headers_init::12887"
+          ]
+        },
+        {
+          "rubric": "r3",
+          "file": "lib/sendf.c",
+          "name": "Curl_cwriter_add",
+          "as_written": "Curl_cwriter_add",
+          "status": "unit",
+          "symbols": [
+            "lib/sendf.c::function::Curl_cwriter_add::13686"
+          ]
+        }
+      ],
+      "file_only": []
+    },
+    {
+      "cid": "A04",
+      "label_layer": 3,
+      "label_swe_type": "Where",
+      "in_docs": true,
+      "label": "在",
+      "own_unit": false,
+      "not_in_docs": [],
+      "pairs": [
+        {
+          "rubric": "r1",
+          "file": "lib/mime.c",
+          "name": "curl_mime_subparts",
+          "as_written": "curl_mime_subparts",
+          "status": "grouped",
+          "symbols": [
+            "lib/mime.c::function::curl_mime_subparts::42596",
+            "lib/mime.c::function::curl_mime_subparts::64020"
+          ]
+        },
+        {
+          "rubric": "r2",
+          "file": "lib/setopt.c",
+          "name": "setopt_mimepost",
+          "as_written": "setopt_mimepost",
+          "status": "unit",
+          "symbols": [
+            "lib/setopt.c::function::setopt_mimepost::38440"
+          ]
+        }
+      ],
+      "file_only": []
+    },
+    {
+      "cid": "A05",
+      "label_layer": 2,
+      "label_swe_type": "How",
+      "in_docs": true,
+      "label": "在",
+      "own_unit": true,
+      "not_in_docs": [],
+      "pairs": [
+        {
+          "rubric": "r1",
+          "file": "lib/uint-spbset.c",
+          "name": "uint32_spbset_get_chunk",
+          "as_written": "uint32_spbset_get_chunk",
+          "status": "unit",
+          "symbols": [
+            "lib/uint-spbset.c::function::uint32_spbset_get_chunk::4152"
+          ]
+        },
+        {
+          "rubric": "r2",
+          "file": "lib/uint-spbset.c",
+          "name": "uint32_spbset_get_chunk",
+          "as_written": "uint32_spbset_get_chunk",
+          "status": "unit",
+          "symbols": [
+            "lib/uint-spbset.c::function::uint32_spbset_get_chunk::4152"
+          ]
+        },
+        {
+          "rubric": "r3",
+          "file": "lib/uint-spbset.c",
+          "name": "uint32_spbset_get_chunk",
+          "as_written": "uint32_spbset_get_chunk",
+          "status": "unit",
+          "symbols": [
+            "lib/uint-spbset.c::function::uint32_spbset_get_chunk::4152"
+          ]
+        },
+        {
+          "rubric": "r3",
+          "file": "lib/uint-spbset.c",
+          "name": "uint32_spbset_unlink_empty",
+          "as_written": "uint32_spbset_unlink_empty",
+          "status": "unit",
+          "symbols": [
+            "lib/uint-spbset.c::function::uint32_spbset_unlink_empty::2428"
+          ]
+        }
+      ],
+      "file_only": [
+        {
+          "rubric": "r1",
+          "file": "lib/uint-spbset.h"
+        }
+      ]
+    },
+    {
+      "cid": "A06",
+      "label_layer": 4,
+      "label_swe_type": "Why",
+      "in_docs": true,
+      "label": "在",
+      "own_unit": true,
+      "not_in_docs": [],
+      "pairs": [
+        {
+          "rubric": "r1",
+          "file": "lib/url.c",
+          "name": "url_conn_reuse_adjust",
+          "as_written": "url_conn_reuse_adjust",
+          "status": "unit",
+          "symbols": [
+            "lib/url.c::function::url_conn_reuse_adjust::60061"
+          ]
+        },
+        {
+          "rubric": "r2",
+          "file": "lib/url.c",
+          "name": "url_conn_reuse_adjust",
+          "as_written": "url_conn_reuse_adjust",
+          "status": "unit",
+          "symbols": [
+            "lib/url.c::function::url_conn_reuse_adjust::60061"
+          ]
+        },
+        {
+          "rubric": "r3",
+          "file": "lib/url.c",
+          "name": "url_conn_reuse_adjust",
+          "as_written": "url_conn_reuse_adjust",
+          "status": "unit",
+          "symbols": [
+            "lib/url.c::function::url_conn_reuse_adjust::60061"
+          ]
+        }
+      ],
+      "file_only": []
+    },
+    {
+      "cid": "A07",
+      "label_layer": 3,
+      "label_swe_type": "How",
+      "in_docs": true,
+      "label": "在",
+      "own_unit": true,
+      "not_in_docs": [],
+      "pairs": [
+        {
+          "rubric": "r1",
+          "file": "lib/socks.c",
+          "name": "Curl_cf_socks_proxy_insert_after",
+          "as_written": "Curl_cf_socks_proxy_insert_after",
+          "status": "unit",
+          "symbols": [
+            "lib/socks.c::function::Curl_cf_socks_proxy_insert_after::40133"
+          ]
+        },
+        {
+          "rubric": "r2",
+          "file": "lib/socks.c",
+          "name": "Curl_cf_socks_proxy_insert_after",
+          "as_written": "Curl_cf_socks_proxy_insert_after",
+          "status": "unit",
+          "symbols": [
+            "lib/socks.c::function::Curl_cf_socks_proxy_insert_after::40133"
+          ]
+        },
+        {
+          "rubric": "r2",
+          "file": "lib/vdns/cf-dns.c",
+          "name": "cf_dns_add_resolve",
+          "as_written": "cf_dns_add_resolve",
+          "status": "unit",
+          "symbols": [
+            "lib/vdns/cf-dns.c::function::cf_dns_add_resolve::15266"
+          ]
+        },
+        {
+          "rubric": "r3",
+          "file": "lib/socks.c",
+          "name": "socks5_req1_init",
+          "as_written": "socks5_req1_init",
+          "status": "unit",
+          "symbols": [
+            "lib/socks.c::function::socks5_req1_init::23067"
+          ]
+        }
+      ],
+      "file_only": []
+    },
+    {
+      "cid": "A08",
+      "label_layer": 3,
+      "label_swe_type": "What",
+      "in_docs": false,
+      "label": "不在",
+      "own_unit": false,
+      "not_in_docs": [
+        "lib/cfilters.h: Curl_cft_query (missing)",
+        "lib/cfilters.h: CF_QUERY_REMOTE_ADDR (missing)"
+      ],
+      "pairs": [
+        {
+          "rubric": "r1",
+          "file": "lib/cfilters.c",
+          "name": "Curl_conn_get_remote_addr",
+          "as_written": "Curl_conn_get_remote_addr",
+          "status": "grouped",
+          "symbols": [
+            "lib/cfilters.c::function::Curl_conn_get_remote_addr::25034"
+          ]
+        },
+        {
+          "rubric": "r1",
+          "file": "lib/cfilters.c",
+          "name": "cf_get_remote_addr",
+          "as_written": "cf_get_remote_addr",
+          "status": "grouped",
+          "symbols": [
+            "lib/cfilters.c::function::cf_get_remote_addr::23879"
+          ]
+        },
+        {
+          "rubric": "r2",
+          "file": "lib/cfilters.h",
+          "name": "Curl_cft_query",
+          "as_written": "Curl_cft_query",
+          "status": "missing",
+          "symbols": []
+        },
+        {
+          "rubric": "r2",
+          "file": "lib/cfilters.c",
+          "name": "Curl_cf_def_query",
+          "as_written": "Curl_cf_def_query",
+          "status": "grouped",
+          "symbols": [
+            "lib/cfilters.c::function::Curl_cf_def_query::3417"
+          ]
+        },
+        {
+          "rubric": "r3",
+          "file": "lib/cf-socket.c",
+          "name": "cf_socket_query",
+          "as_written": "cf_socket_query",
+          "status": "unit",
+          "symbols": [
+            "lib/cf-socket.c::function::cf_socket_query::58825"
+          ]
+        },
+        {
+          "rubric": "r3",
+          "file": "lib/cfilters.h",
+          "name": "CF_QUERY_REMOTE_ADDR",
+          "as_written": "CF_QUERY_REMOTE_ADDR",
+          "status": "missing",
+          "symbols": []
+        }
+      ],
+      "file_only": []
+    },
+    {
+      "cid": "A09",
+      "label_layer": 3,
+      "label_swe_type": "Where",
+      "in_docs": true,
+      "label": "在",
+      "own_unit": false,
+      "not_in_docs": [],
+      "pairs": [
+        {
+          "rubric": "r3",
+          "file": "lib/cfilters.c",
+          "name": "Curl_conn_cf_needs_flush",
+          "as_written": "Curl_conn_cf_needs_flush",
+          "status": "grouped",
+          "symbols": [
+            "lib/cfilters.c::function::Curl_conn_cf_needs_flush::17771"
+          ]
+        },
+        {
+          "rubric": "r4",
+          "file": "lib/http2.c",
+          "name": "cf_h2_query",
+          "as_written": "cf_h2_query",
+          "status": "unit",
+          "symbols": [
+            "lib/http2.c::function::cf_h2_query::89754"
+          ]
+        }
+      ],
+      "file_only": []
+    },
+    {
+      "cid": "A13",
+      "label_layer": 4,
+      "label_swe_type": "Why",
+      "in_docs": true,
+      "label": "在",
+      "own_unit": true,
+      "not_in_docs": [],
+      "pairs": [
+        {
+          "rubric": "r1",
+          "file": "lib/conncache.c",
+          "name": "Curl_cpool_conn_seems_healthy",
+          "as_written": "Curl_cpool_conn_seems_healthy",
+          "status": "unit",
+          "symbols": [
+            "lib/conncache.c::function::Curl_cpool_conn_seems_healthy::32921"
+          ]
+        },
+        {
+          "rubric": "r2",
+          "file": "lib/http2.c",
+          "name": "http2_connisalive",
+          "as_written": "http2_connisalive",
+          "status": "unit",
+          "symbols": [
+            "lib/http2.c::function::http2_connisalive::18912"
+          ]
+        },
+        {
+          "rubric": "r3",
+          "file": "lib/http2.c",
+          "name": "http2_connisalive",
+          "as_written": "http2_connisalive",
+          "status": "unit",
+          "symbols": [
+            "lib/http2.c::function::http2_connisalive::18912"
+          ]
+        },
+        {
+          "rubric": "r3",
+          "file": "lib/http2.c",
+          "name": "h2_process_pending_input",
+          "as_written": "h2_process_pending_input",
+          "status": "unit",
+          "symbols": [
+            "lib/http2.c::function::h2_process_pending_input::17462"
+          ]
+        }
+      ],
+      "file_only": []
+    },
+    {
+      "cid": "A14",
+      "label_layer": 2,
+      "label_swe_type": "What",
+      "in_docs": true,
+      "label": "在",
+      "own_unit": true,
+      "not_in_docs": [],
+      "pairs": [
+        {
+          "rubric": "r1",
+          "file": "lib/vquic/cf-ngtcp2-cmn.c",
+          "name": "Curl_cf_ngtcp2_cmn_conn_is_alive",
+          "as_written": "Curl_cf_ngtcp2_cmn_conn_is_alive",
+          "status": "unit",
+          "symbols": [
+            "lib/vquic/cf-ngtcp2-cmn.c::function::Curl_cf_ngtcp2_cmn_conn_is_alive::64438"
+          ]
+        },
+        {
+          "rubric": "r2",
+          "file": "lib/vquic/cf-ngtcp2-cmn.c",
+          "name": "Curl_cf_ngtcp2_cmn_conn_is_alive",
+          "as_written": "Curl_cf_ngtcp2_cmn_conn_is_alive",
+          "status": "unit",
+          "symbols": [
+            "lib/vquic/cf-ngtcp2-cmn.c::function::Curl_cf_ngtcp2_cmn_conn_is_alive::64438"
+          ]
+        },
+        {
+          "rubric": "r3",
+          "file": "lib/vquic/cf-ngtcp2-cmn.c",
+          "name": "Curl_cf_ngtcp2_cmn_conn_is_alive",
+          "as_written": "Curl_cf_ngtcp2_cmn_conn_is_alive",
+          "status": "unit",
+          "symbols": [
+            "lib/vquic/cf-ngtcp2-cmn.c::function::Curl_cf_ngtcp2_cmn_conn_is_alive::64438"
+          ]
+        },
+        {
+          "rubric": "r3",
+          "file": "lib/vquic/cf-ngtcp2.c",
+          "name": "Curl_cf_ngtcp2_create",
+          "as_written": "Curl_cf_ngtcp2_create",
+          "status": "unit",
+          "symbols": [
+            "lib/vquic/cf-ngtcp2.c::function::Curl_cf_ngtcp2_create::35285"
+          ]
+        }
+      ],
+      "file_only": []
+    },
+    {
+      "cid": "A15",
+      "label_layer": 3,
+      "label_swe_type": "How",
+      "in_docs": true,
+      "label": "在",
+      "own_unit": false,
+      "not_in_docs": [],
+      "pairs": [
+        {
+          "rubric": "r2",
+          "file": "lib/http_proxy.c",
+          "name": "http_proxy_cf_connect",
+          "as_written": "http_proxy_cf_connect",
+          "status": "unit",
+          "symbols": [
+            "lib/http_proxy.c::function::http_proxy_cf_connect::16743"
+          ]
+        },
+        {
+          "rubric": "r2",
+          "file": "lib/cfilters.c",
+          "name": "Curl_conn_cf_get_alpn_negotiated",
+          "as_written": "Curl_conn_cf_get_alpn_negotiated",
+          "status": "grouped",
+          "symbols": [
+            "lib/cfilters.c::function::Curl_conn_cf_get_alpn_negotiated::23519"
+          ]
+        },
+        {
+          "rubric": "r3",
+          "file": "lib/http_proxy.c",
+          "name": "http_proxy_cf_connect",
+          "as_written": "http_proxy_cf_connect",
+          "status": "unit",
+          "symbols": [
+            "lib/http_proxy.c::function::http_proxy_cf_connect::16743"
+          ]
+        },
+        {
+          "rubric": "r4",
+          "file": "lib/http_proxy.c",
+          "name": "http_proxy_cf_connect",
+          "as_written": "http_proxy_cf_connect",
+          "status": "unit",
+          "symbols": [
+            "lib/http_proxy.c::function::http_proxy_cf_connect::16743"
+          ]
+        }
+      ],
+      "file_only": []
+    },
+    {
+      "cid": "A16",
+      "label_layer": 3,
+      "label_swe_type": "How",
+      "in_docs": true,
+      "label": "在",
+      "own_unit": false,
+      "not_in_docs": [],
+      "pairs": [
+        {
+          "rubric": "r1",
+          "file": "lib/cf-https-connect.c",
+          "name": "time_to_start_baller2",
+          "as_written": "time_to_start_baller2",
+          "status": "unit",
+          "symbols": [
+            "lib/cf-https-connect.c::function::time_to_start_baller2::6401"
+          ]
+        },
+        {
+          "rubric": "r2",
+          "file": "lib/cf-https-connect.c",
+          "name": "cf_hc_baller_reply_ms",
+          "as_written": "cf_hc_baller_reply_ms",
+          "status": "grouped",
+          "symbols": [
+            "lib/cf-https-connect.c::function::cf_hc_baller_reply_ms::2081"
+          ]
+        },
+        {
+          "rubric": "r3",
+          "file": "lib/vquic/cf-ngtcp2.c",
+          "name": "cf_ngtcp2_query",
+          "as_written": "cf_ngtcp2_query",
+          "status": "unit",
+          "symbols": [
+            "lib/vquic/cf-ngtcp2.c::function::cf_ngtcp2_query::32814"
+          ]
+        },
+        {
+          "rubric": "r3",
+          "file": "lib/vquic/cf-ngtcp2-cmn.c",
+          "name": "Curl_cf_ngtcp2_cmn_query",
+          "as_written": "Curl_cf_ngtcp2_cmn_query",
+          "status": "unit",
+          "symbols": [
+            "lib/vquic/cf-ngtcp2-cmn.c::function::Curl_cf_ngtcp2_cmn_query::67338"
+          ]
+        }
+      ],
+      "file_only": []
+    },
+    {
+      "cid": "A17",
+      "label_layer": 3,
+      "label_swe_type": "How",
+      "in_docs": true,
+      "label": "在",
+      "own_unit": false,
+      "not_in_docs": [],
+      "pairs": [
+        {
+          "rubric": "r1",
+          "file": "lib/http.c",
+          "name": "http_on_101_upgrade",
+          "as_written": "http_on_101_upgrade",
+          "status": "unit",
+          "symbols": [
+            "lib/http.c::function::http_on_101_upgrade::121660"
+          ]
+        },
+        {
+          "rubric": "r2",
+          "file": "lib/http2.c",
+          "name": "Curl_http2_upgrade",
+          "as_written": "Curl_http2_upgrade",
+          "status": "unit",
+          "symbols": [
+            "lib/http2.c::function::Curl_http2_upgrade::94090"
+          ]
+        },
+        {
+          "rubric": "r2",
+          "file": "lib/http2.c",
+          "name": "http2_cfilter_add",
+          "as_written": "http2_cfilter_add",
+          "status": "unit",
+          "symbols": [
+            "lib/http2.c::function::http2_cfilter_add::91431"
+          ]
+        },
+        {
+          "rubric": "r2",
+          "file": "lib/cfilters.c",
+          "name": "Curl_conn_cf_add",
+          "as_written": "Curl_conn_cf_add",
+          "status": "grouped",
+          "symbols": [
+            "lib/cfilters.c::function::Curl_conn_cf_add::8295"
+          ]
+        },
+        {
+          "rubric": "r3",
+          "file": "lib/http2.c",
+          "name": "Curl_http2_upgrade",
+          "as_written": "Curl_http2_upgrade",
+          "status": "unit",
+          "symbols": [
+            "lib/http2.c::function::Curl_http2_upgrade::94090"
+          ]
+        },
+        {
+          "rubric": "r4",
+          "file": "lib/http2.c",
+          "name": "cf_h2_ctx_open",
+          "as_written": "cf_h2_ctx_open",
+          "status": "unit",
+          "symbols": [
+            "lib/http2.c::function::cf_h2_ctx_open::80148"
+          ]
+        }
+      ],
+      "file_only": []
+    },
+    {
+      "cid": "A18",
+      "label_layer": 3,
+      "label_swe_type": "Where",
+      "in_docs": true,
+      "label": "在",
+      "own_unit": false,
+      "not_in_docs": [],
+      "pairs": [
+        {
+          "rubric": "r1",
+          "file": "lib/url.c",
+          "name": "url_match_multiplex_limits",
+          "as_written": "url_match_multiplex_limits",
+          "status": "grouped",
+          "symbols": [
+            "lib/url.c::function::url_match_multiplex_limits::21118"
+          ]
+        },
+        {
+          "rubric": "r2",
+          "file": "lib/cfilters.c",
+          "name": "Curl_conn_get_max_concurrent",
+          "as_written": "Curl_conn_get_max_concurrent",
+          "status": "grouped",
+          "symbols": [
+            "lib/cfilters.c::function::Curl_conn_get_max_concurrent::27107"
+          ]
+        },
+        {
+          "rubric": "r3",
+          "file": "lib/http2.c",
+          "name": "cf_h2_query",
+          "as_written": "cf_h2_query",
+          "status": "unit",
+          "symbols": [
+            "lib/http2.c::function::cf_h2_query::89754"
+          ]
+        }
+      ],
+      "file_only": []
+    },
+    {
+      "cid": "A21",
+      "label_layer": 3,
+      "label_swe_type": "Where",
+      "in_docs": true,
+      "label": "在",
+      "own_unit": false,
+      "not_in_docs": [],
+      "pairs": [
+        {
+          "rubric": "r1",
+          "file": "lib/vauth/vauth.c",
+          "name": "Curl_auth_krb5_get",
+          "as_written": "Curl_auth_krb5_get",
+          "status": "grouped",
+          "symbols": [
+            "lib/vauth/vauth.c::function::Curl_auth_krb5_get::5717"
+          ]
+        },
+        {
+          "rubric": "r2",
+          "file": "lib/url.c",
+          "name": "Curl_conn_meta_set",
+          "as_written": "Curl_conn_meta_set",
+          "status": "grouped",
+          "symbols": [
+            "lib/url.c::function::Curl_conn_meta_set::82632"
+          ]
+        },
+        {
+          "rubric": "r3",
+          "file": "lib/url.c",
+          "name": "Curl_conn_free",
+          "as_written": "Curl_conn_free",
+          "status": "unit",
+          "symbols": [
+            "lib/url.c::function::Curl_conn_free::14498"
+          ]
+        },
+        {
+          "rubric": "r3",
+          "file": "lib/hash.c",
+          "name": "Curl_hash_destroy",
+          "as_written": "Curl_hash_destroy",
+          "status": "unit",
+          "symbols": [
+            "lib/hash.c::function::Curl_hash_destroy::10958"
+          ]
+        },
+        {
+          "rubric": "r3",
+          "file": "lib/hash.c",
+          "name": "hash_elem_clear_ptr",
+          "as_written": "hash_elem_clear_ptr",
+          "status": "unit",
+          "symbols": [
+            "lib/hash.c::function::hash_elem_clear_ptr::6880"
+          ]
+        }
+      ],
+      "file_only": []
+    },
+    {
+      "cid": "A23",
+      "label_layer": 3,
+      "label_swe_type": "Where",
+      "in_docs": true,
+      "label": "在",
+      "own_unit": false,
+      "not_in_docs": [],
+      "pairs": [
+        {
+          "rubric": "r1",
+          "file": "lib/curl_sspi.c",
+          "name": "Curl_sspi_global_init",
+          "as_written": "Curl_sspi_global_init",
+          "status": "unit",
+          "symbols": [
+            "lib/curl_sspi.c::function::Curl_sspi_global_init::1731"
+          ]
+        },
+        {
+          "rubric": "r2",
+          "file": "lib/curl_sspi.c",
+          "name": "Curl_sspi_global_cleanup",
+          "as_written": "Curl_sspi_global_cleanup",
+          "status": "unit",
+          "symbols": [
+            "lib/curl_sspi.c::function::Curl_sspi_global_cleanup::2204"
+          ]
+        },
+        {
+          "rubric": "r3",
+          "file": "lib/easy.c",
+          "name": "curl_global_cleanup",
+          "as_written": "curl_global_cleanup",
+          "status": "unit",
+          "symbols": [
+            "lib/easy.c::function::curl_global_cleanup::7465"
+          ]
+        },
+        {
+          "rubric": "r3",
+          "file": "lib/vtls/vtls.c",
+          "name": "Curl_ssl_cleanup",
+          "as_written": "Curl_ssl_cleanup",
+          "status": "grouped",
+          "symbols": [
+            "lib/vtls/vtls.c::function::Curl_ssl_cleanup::20414"
+          ]
+        },
+        {
+          "rubric": "r3",
+          "file": "lib/vtls/schannel.c",
+          "name": "schannel_cleanup",
+          "as_written": "schannel_cleanup",
+          "status": "grouped",
+          "symbols": [
+            "lib/vtls/schannel.c::function::schannel_cleanup::93174"
+          ]
+        }
+      ],
+      "file_only": []
+    },
+    {
+      "cid": "A24",
+      "label_layer": 3,
+      "label_swe_type": "What",
+      "in_docs": false,
+      "label": "不在",
+      "own_unit": false,
+      "not_in_docs": [
+        "lib/curl_ctype.h: ISURLPUNTCS (missing)"
+      ],
+      "pairs": [
+        {
+          "rubric": "r1",
+          "file": "lib/http_aws_sigv4.c",
+          "name": "is_reserved_char",
+          "as_written": "is_reserved_char",
+          "status": "grouped",
+          "symbols": [
+            "lib/http_aws_sigv4.c::function::is_reserved_char::5608"
+          ]
+        },
+        {
+          "rubric": "r1",
+          "file": "lib/curl_ctype.h",
+          "name": "ISURLPUNTCS",
+          "as_written": "ISURLPUNTCS",
+          "status": "missing",
+          "symbols": []
+        },
+        {
+          "rubric": "r2",
+          "file": "lib/http_aws_sigv4.c",
+          "name": "uri_encode_path",
+          "as_written": "uri_encode_path",
+          "status": "unit",
+          "symbols": [
+            "lib/http_aws_sigv4.c::function::uri_encode_path::5697"
+          ]
+        },
+        {
+          "rubric": "r3",
+          "file": "lib/http_aws_sigv4.c",
+          "name": "normalize_query",
+          "as_written": "normalize_query",
+          "status": "unit",
+          "symbols": [
+            "lib/http_aws_sigv4.c::function::normalize_query::6392"
+          ]
+        }
+      ],
+      "file_only": []
+    },
+    {
+      "cid": "A26",
+      "label_layer": 2,
+      "label_swe_type": "What",
+      "in_docs": true,
+      "label": "在",
+      "own_unit": true,
+      "not_in_docs": [],
+      "pairs": [
+        {
+          "rubric": "r1",
+          "file": "src/tool_doswin.c",
+          "name": "truncate_dryrun",
+          "as_written": "truncate_dryrun",
+          "status": "unit",
+          "symbols": [
+            "src/tool_doswin.c::function::truncate_dryrun::3405"
+          ]
+        },
+        {
+          "rubric": "r2",
+          "file": "src/tool_doswin.c",
+          "name": "truncate_dryrun",
+          "as_written": "truncate_dryrun",
+          "status": "unit",
+          "symbols": [
+            "src/tool_doswin.c::function::truncate_dryrun::3405"
+          ]
+        },
+        {
+          "rubric": "r3",
+          "file": "src/tool_doswin.c",
+          "name": "truncate_dryrun",
+          "as_written": "truncate_dryrun",
+          "status": "unit",
+          "symbols": [
+            "src/tool_doswin.c::function::truncate_dryrun::3405"
+          ]
+        }
+      ],
+      "file_only": []
+    },
+    {
+      "cid": "A27",
+      "label_layer": 4,
+      "label_swe_type": "Why",
+      "in_docs": false,
+      "label": "不在",
+      "own_unit": false,
+      "not_in_docs": [
+        "src/tool_easysrc.c: easysrc_pending_reset (missing)",
+        "src/tool_easysrc.c: easysrc_pending_reset (missing)"
+      ],
+      "pairs": [
+        {
+          "rubric": "r1",
+          "file": "src/tool_easysrc.c",
+          "name": "easysrc_pending_reset",
+          "as_written": "easysrc_pending_reset",
+          "status": "missing",
+          "symbols": []
+        },
+        {
+          "rubric": "r1",
+          "file": "src/tool_easysrc.c",
+          "name": "easysrc_perform",
+          "as_written": "easysrc_perform",
+          "status": "unit",
+          "symbols": [
+            "src/tool_easysrc.c::function::easysrc_perform::4462"
+          ]
+        },
+        {
+          "rubric": "r2",
+          "file": "src/tool_easysrc.c",
+          "name": "easysrc_perform",
+          "as_written": "easysrc_perform",
+          "status": "unit",
+          "symbols": [
+            "src/tool_easysrc.c::function::easysrc_perform::4462"
+          ]
+        },
+        {
+          "rubric": "r3",
+          "file": "src/tool_easysrc.c",
+          "name": "easysrc_add",
+          "as_written": "easysrc_add",
+          "status": "unit",
+          "symbols": [
+            "src/tool_easysrc.c::function::easysrc_add::3389"
+          ]
+        },
+        {
+          "rubric": "r4",
+          "file": "src/tool_easysrc.c",
+          "name": "easysrc_pending_reset",
+          "as_written": "easysrc_pending_reset",
+          "status": "missing",
+          "symbols": []
+        }
+      ],
+      "file_only": []
+    },
+    {
+      "cid": "A28",
+      "label_layer": 2,
+      "label_swe_type": "How",
+      "in_docs": true,
+      "label": "在",
+      "own_unit": true,
+      "not_in_docs": [],
+      "pairs": [
+        {
+          "rubric": "r1",
+          "file": "src/tool_getparam.c",
+          "name": "GetSizeParameter",
+          "as_written": "GetSizeParameter",
+          "status": "unit",
+          "symbols": [
+            "src/tool_getparam.c::function::GetSizeParameter::26660"
+          ]
+        },
+        {
+          "rubric": "r2",
+          "file": "src/tool_getparam.c",
+          "name": "getunit",
+          "as_written": "getunit",
+          "status": "unit",
+          "symbols": [
+            "src/tool_getparam.c::function::getunit::25989"
+          ]
+        },
+        {
+          "rubric": "r3",
+          "file": "src/tool_getparam.c",
+          "name": "GetSizeParameter",
+          "as_written": "GetSizeParameter",
+          "status": "unit",
+          "symbols": [
+            "src/tool_getparam.c::function::GetSizeParameter::26660"
+          ]
+        }
+      ],
+      "file_only": []
+    },
+    {
+      "cid": "B01",
+      "label_layer": 3,
+      "label_swe_type": "How",
+      "in_docs": true,
+      "label": "在",
+      "own_unit": false,
+      "not_in_docs": [],
+      "pairs": [
+        {
+          "rubric": "r1",
+          "file": "lib/conncache.c",
+          "name": "cpool_discard_conn",
+          "as_written": "cpool_discard_conn",
+          "status": "unit",
+          "symbols": [
+            "lib/conncache.c::function::cpool_discard_conn::6143"
+          ]
+        },
+        {
+          "rubric": "r1",
+          "file": "lib/cshutdn.c",
+          "name": "Curl_cshutdn_try_once",
+          "as_written": "Curl_cshutdn_try_once",
+          "status": "unit",
+          "symbols": [
+            "lib/cshutdn.c::function::Curl_cshutdn_try_once::6825"
+          ]
+        },
+        {
+          "rubric": "r2",
+          "file": "lib/cshutdn.c",
+          "name": "Curl_cshutdn_try_once_idx",
+          "as_written": "Curl_cshutdn_try_once_idx",
+          "status": "unit",
+          "symbols": [
+            "lib/cshutdn.c::function::Curl_cshutdn_try_once_idx::4341"
+          ]
+        },
+        {
+          "rubric": "r3",
+          "file": "lib/cshutdn.c",
+          "name": "Curl_cshutdn_try_once_idx",
+          "as_written": "Curl_cshutdn_try_once_idx",
+          "status": "unit",
+          "symbols": [
+            "lib/cshutdn.c::function::Curl_cshutdn_try_once_idx::4341"
+          ]
+        },
+        {
+          "rubric": "r4",
+          "file": "lib/conncache.c",
+          "name": "cpool_discard_conn",
+          "as_written": "cpool_discard_conn",
+          "status": "unit",
+          "symbols": [
+            "lib/conncache.c::function::cpool_discard_conn::6143"
+          ]
+        },
+        {
+          "rubric": "r4",
+          "file": "lib/cshutdn.c",
+          "name": "Curl_cshutdn_add",
+          "as_written": "Curl_cshutdn_add",
+          "status": "grouped",
+          "symbols": [
+            "lib/cshutdn.c::function::Curl_cshutdn_add::14307"
+          ]
+        },
+        {
+          "rubric": "r5",
+          "file": "lib/multi.c",
+          "name": "multi_runsingle",
+          "as_written": "multi_runsingle",
+          "status": "unit",
+          "symbols": [
+            "lib/multi.c::function::multi_runsingle::85982"
+          ]
+        },
+        {
+          "rubric": "r5",
+          "file": "lib/cshutdn.c",
+          "name": "cshutdn_perform",
+          "as_written": "cshutdn_perform",
+          "status": "grouped",
+          "symbols": [
+            "lib/cshutdn.c::function::cshutdn_perform::10142"
+          ]
+        }
+      ],
+      "file_only": []
+    },
+    {
+      "cid": "B02",
+      "label_layer": 1,
+      "label_swe_type": "Where",
+      "in_docs": true,
+      "label": "在",
+      "own_unit": false,
+      "not_in_docs": [],
+      "pairs": [
+        {
+          "rubric": "r1",
+          "file": "lib/curl_share.c",
+          "name": "share_ref_inc",
+          "as_written": "share_ref_inc",
+          "status": "grouped",
+          "symbols": [
+            "lib/curl_share.c::function::share_ref_inc::2662"
+          ]
+        },
+        {
+          "rubric": "r2",
+          "file": "lib/curl_share.c",
+          "name": "Curl_share_easy_link",
+          "as_written": "Curl_share_easy_link",
+          "status": "unit",
+          "symbols": [
+            "lib/curl_share.c::function::Curl_share_easy_link::11325"
+          ]
+        },
+        {
+          "rubric": "r2",
+          "file": "lib/setopt.c",
+          "name": "setopt_share",
+          "as_written": "setopt_share",
+          "status": "unit",
+          "symbols": [
+            "lib/setopt.c::function::setopt_share::39243"
+          ]
+        }
+      ],
+      "file_only": []
+    },
+    {
+      "cid": "B03",
+      "label_layer": 2,
+      "label_swe_type": "What",
+      "in_docs": false,
+      "label": "不在",
+      "own_unit": false,
+      "not_in_docs": [
+        "lib/conncache.c: cpool_bundle (index_only)",
+        "lib/conncache.c: CPOOL_LOCK (missing)",
+        "lib/conncache.c: CPOOL_UNLOCK (missing)"
+      ],
+      "pairs": [
+        {
+          "rubric": "r1",
+          "file": "lib/conncache.c",
+          "name": "Curl_cpool_init",
+          "as_written": "Curl_cpool_init",
+          "status": "unit",
+          "symbols": [
+            "lib/conncache.c::function::Curl_cpool_init::8113"
+          ]
+        },
+        {
+          "rubric": "r1",
+          "file": "lib/conncache.c",
+          "name": "Curl_cpool_add",
+          "as_written": "Curl_cpool_add",
+          "status": "unit",
+          "symbols": [
+            "lib/conncache.c::function::Curl_cpool_add::18776"
+          ]
+        },
+        {
+          "rubric": "r2",
+          "file": "lib/conncache.c",
+          "name": "Curl_cpool_init",
+          "as_written": "Curl_cpool_init",
+          "status": "unit",
+          "symbols": [
+            "lib/conncache.c::function::Curl_cpool_init::8113"
+          ]
+        },
+        {
+          "rubric": "r2",
+          "file": "lib/conncache.c",
+          "name": "cpool_bundle",
+          "as_written": "struct cpool_bundle",
+          "status": "index_only",
+          "symbols": [
+            "lib/conncache.c::struct::cpool_bundle::2767"
+          ]
+        },
+        {
+          "rubric": "r2",
+          "file": "lib/conncache.c",
+          "name": "cpool_bundle_add_id",
+          "as_written": "cpool_bundle_add_id",
+          "status": "grouped",
+          "symbols": [
+            "lib/conncache.c::function::cpool_bundle_add_id::3825"
+          ]
+        },
+        {
+          "rubric": "r3",
+          "file": "lib/conncache.c",
+          "name": "cpool_conn_now_idle",
+          "as_written": "cpool_conn_now_idle",
+          "status": "unit",
+          "symbols": [
+            "lib/conncache.c::function::cpool_conn_now_idle::22948"
+          ]
+        },
+        {
+          "rubric": "r3",
+          "file": "lib/conncache.c",
+          "name": "cpool_get_oldest_idle",
+          "as_written": "cpool_get_oldest_idle",
+          "status": "grouped",
+          "symbols": [
+            "lib/conncache.c::function::cpool_get_oldest_idle::11777"
+          ]
+        },
+        {
+          "rubric": "r4",
+          "file": "lib/conncache.c",
+          "name": "Curl_cpool_init",
+          "as_written": "Curl_cpool_init",
+          "status": "unit",
+          "symbols": [
+            "lib/conncache.c::function::Curl_cpool_init::8113"
+          ]
+        },
+        {
+          "rubric": "r4",
+          "file": "lib/conncache.c",
+          "name": "CPOOL_LOCK",
+          "as_written": "CPOOL_LOCK",
+          "status": "missing",
+          "symbols": []
+        },
+        {
+          "rubric": "r4",
+          "file": "lib/conncache.c",
+          "name": "CPOOL_UNLOCK",
+          "as_written": "CPOOL_UNLOCK",
+          "status": "missing",
+          "symbols": []
+        }
+      ],
+      "file_only": []
+    },
+    {
+      "cid": "B05",
+      "label_layer": 4,
+      "label_swe_type": "Why",
+      "in_docs": false,
+      "label": "不在",
+      "own_unit": false,
+      "not_in_docs": [
+        "include/curl/multi.h: CURLMNWC_CLEAR_CONNS (missing)"
+      ],
+      "pairs": [
+        {
+          "rubric": "r1",
+          "file": "lib/multi.c",
+          "name": "curl_multi_setopt",
+          "as_written": "curl_multi_setopt",
+          "status": "unit",
+          "symbols": [
+            "lib/multi.c::function::curl_multi_setopt::104804"
+          ]
+        },
+        {
+          "rubric": "r1",
+          "file": "lib/conncache.c",
+          "name": "Curl_cpool_nw_changed",
+          "as_written": "Curl_cpool_nw_changed",
+          "status": "grouped",
+          "symbols": [
+            "lib/conncache.c::function::Curl_cpool_nw_changed::31552"
+          ]
+        },
+        {
+          "rubric": "r2",
+          "file": "lib/conncache.c",
+          "name": "cpool_reap_no_reuse",
+          "as_written": "cpool_reap_no_reuse",
+          "status": "grouped",
+          "symbols": [
+            "lib/conncache.c::function::cpool_reap_no_reuse::31201"
+          ]
+        },
+        {
+          "rubric": "r2",
+          "file": "lib/conncache.c",
+          "name": "cpool_conn_can_be_closed",
+          "as_written": "cpool_conn_can_be_closed",
+          "status": "grouped",
+          "symbols": [
+            "lib/conncache.c::function::cpool_conn_can_be_closed::10635"
+          ]
+        },
+        {
+          "rubric": "r3",
+          "file": "include/curl/multi.h",
+          "name": "CURLMNWC_CLEAR_CONNS",
+          "as_written": "CURLMNWC_CLEAR_CONNS",
+          "status": "missing",
+          "symbols": []
+        },
+        {
+          "rubric": "r4",
+          "file": "lib/url.c",
+          "name": "url_match_connect_config",
+          "as_written": "url_match_connect_config",
+          "status": "grouped",
+          "symbols": [
+            "lib/url.c::function::url_match_connect_config::17830"
+          ]
+        }
+      ],
+      "file_only": []
+    },
+    {
+      "cid": "B06",
+      "label_layer": 2,
+      "label_swe_type": "What",
+      "in_docs": true,
+      "label": "在",
+      "own_unit": false,
+      "not_in_docs": [],
+      "pairs": [
+        {
+          "rubric": "r1",
+          "file": "lib/url.c",
+          "name": "url_match_destination",
+          "as_written": "url_match_destination",
+          "status": "grouped",
+          "symbols": [
+            "lib/url.c::function::url_match_destination::27709"
+          ]
+        },
+        {
+          "rubric": "r2",
+          "file": "lib/peer.c",
+          "name": "Curl_peer_same_destination",
+          "as_written": "Curl_peer_same_destination",
+          "status": "unit",
+          "symbols": [
+            "lib/peer.c::function::Curl_peer_same_destination::9443"
+          ]
+        },
+        {
+          "rubric": "r2",
+          "file": "lib/peer.c",
+          "name": "peer_same_zoneid",
+          "as_written": "peer_same_zoneid",
+          "status": "unit",
+          "symbols": [
+            "lib/peer.c::function::peer_same_zoneid::9314"
+          ]
+        },
+        {
+          "rubric": "r3",
+          "file": "lib/peer.c",
+          "name": "peer_same_hostname",
+          "as_written": "peer_same_hostname",
+          "status": "unit",
+          "symbols": [
+            "lib/peer.c::function::peer_same_hostname::8653"
+          ]
+        }
+      ],
+      "file_only": []
+    },
+    {
+      "cid": "B07",
+      "label_layer": 3,
+      "label_swe_type": "Where",
+      "in_docs": true,
+      "label": "在",
+      "own_unit": true,
+      "not_in_docs": [],
+      "pairs": [
+        {
+          "rubric": "r1",
+          "file": "lib/ftp.c",
+          "name": "ftp_pollset",
+          "as_written": "ftp_pollset",
+          "status": "unit",
+          "symbols": [
+            "lib/ftp.c::function::ftp_pollset::22949"
+          ]
+        },
+        {
+          "rubric": "r3",
+          "file": "lib/pingpong.c",
+          "name": "Curl_pp_pollset",
+          "as_written": "Curl_pp_pollset",
+          "status": "unit",
+          "symbols": [
+            "lib/pingpong.c::function::Curl_pp_pollset::10351"
+          ]
+        }
+      ],
+      "file_only": []
+    },
+    {
+      "cid": "B10",
+      "label_layer": 3,
+      "label_swe_type": "What",
+      "in_docs": false,
+      "label": "不在",
+      "own_unit": false,
+      "not_in_docs": [
+        "lib/vssh/libssh.c: Curl_protocol_sftp (missing)"
+      ],
+      "pairs": [
+        {
+          "rubric": "r1",
+          "file": "lib/vssh/libssh.c",
+          "name": "myssh_quote_error",
+          "as_written": "myssh_quote_error",
+          "status": "unit",
+          "symbols": [
+            "lib/vssh/libssh.c::function::myssh_quote_error::17918"
+          ]
+        },
+        {
+          "rubric": "r1",
+          "file": "lib/vssh/libssh.c",
+          "name": "myssh_to_ERROR",
+          "as_written": "myssh_to_ERROR",
+          "status": "unit",
+          "symbols": [
+            "lib/vssh/libssh.c::function::myssh_to_ERROR::10635"
+          ]
+        },
+        {
+          "rubric": "r1",
+          "file": "lib/vssh/libssh.c",
+          "name": "myssh_to_SFTP_CLOSE",
+          "as_written": "myssh_to_SFTP_CLOSE",
+          "status": "unit",
+          "symbols": [
+            "lib/vssh/libssh.c::function::myssh_to_SFTP_CLOSE::10879"
+          ]
+        },
+        {
+          "rubric": "r1",
+          "file": "lib/vssh/libssh.c",
+          "name": "myssh_in_SFTP_QUOTE_RMDIR",
+          "as_written": "myssh_in_SFTP_QUOTE_RMDIR",
+          "status": "grouped",
+          "symbols": [
+            "lib/vssh/libssh.c::function::myssh_in_SFTP_QUOTE_RMDIR::59982"
+          ]
+        },
+        {
+          "rubric": "r2",
+          "file": "lib/vssh/libssh.c",
+          "name": "myssh_statemachine",
+          "as_written": "myssh_statemachine",
+          "status": "unit",
+          "symbols": [
+            "lib/vssh/libssh.c::function::myssh_statemachine::67692"
+          ]
+        },
+        {
+          "rubric": "r3",
+          "file": "lib/vssh/libssh.c",
+          "name": "myssh_statemachine",
+          "as_written": "myssh_statemachine",
+          "status": "unit",
+          "symbols": [
+            "lib/vssh/libssh.c::function::myssh_statemachine::67692"
+          ]
+        },
+        {
+          "rubric": "r4",
+          "file": "lib/vssh/libssh.c",
+          "name": "sftp_doing",
+          "as_written": "sftp_doing",
+          "status": "unit",
+          "symbols": [
+            "lib/vssh/libssh.c::function::sftp_doing::86038"
+          ]
+        },
+        {
+          "rubric": "r4",
+          "file": "lib/vssh/libssh.c",
+          "name": "myssh_multi_statemach",
+          "as_written": "myssh_multi_statemach",
+          "status": "unit",
+          "symbols": [
+            "lib/vssh/libssh.c::function::myssh_multi_statemach::73773"
+          ]
+        },
+        {
+          "rubric": "r4",
+          "file": "lib/vssh/libssh.c",
+          "name": "Curl_protocol_sftp",
+          "as_written": "Curl_protocol_sftp",
+          "status": "missing",
+          "symbols": []
+        },
+        {
+          "rubric": "r4",
+          "file": "lib/multi.c",
+          "name": "protocol_doing",
+          "as_written": "protocol_doing",
+          "status": "grouped",
+          "symbols": [
+            "lib/multi.c::function::protocol_doing::60105"
+          ]
+        }
+      ],
+      "file_only": []
+    },
+    {
+      "cid": "B11",
+      "label_layer": 4,
+      "label_swe_type": "Why",
+      "in_docs": false,
+      "label": "不在",
+      "own_unit": false,
+      "not_in_docs": [
+        "lib/ftp-int.h: dont_check (missing)"
+      ],
+      "pairs": [
+        {
+          "rubric": "r1",
+          "file": "lib/curl_range.c",
+          "name": "Curl_range",
+          "as_written": "Curl_range",
+          "status": "unit",
+          "symbols": [
+            "lib/curl_range.c::function::Curl_range::1373"
+          ]
+        },
+        {
+          "rubric": "r2",
+          "file": "lib/ftp.c",
+          "name": "ftp_do_more",
+          "as_written": "ftp_do_more",
+          "status": "unit",
+          "symbols": [
+            "lib/ftp.c::function::ftp_do_more::69443"
+          ]
+        },
+        {
+          "rubric": "r2",
+          "file": "lib/ftp-int.h",
+          "name": "dont_check",
+          "as_written": "dont_check",
+          "status": "missing",
+          "symbols": []
+        },
+        {
+          "rubric": "r3",
+          "file": "lib/ftp.c",
+          "name": "ftp_done_secondary_socket",
+          "as_written": "ftp_done_secondary_socket",
+          "status": "unit",
+          "symbols": [
+            "lib/ftp.c::function::ftp_done_secondary_socket::117424"
+          ]
+        },
+        {
+          "rubric": "r3",
+          "file": "lib/ftp.c",
+          "name": "close_secondarysocket",
+          "as_written": "close_secondarysocket",
+          "status": "unit",
+          "symbols": [
+            "lib/ftp.c::function::close_secondarysocket::9914"
+          ]
+        },
+        {
+          "rubric": "r4",
+          "file": "lib/ftp.c",
+          "name": "ftp_done_control_reply",
+          "as_written": "ftp_done_control_reply",
+          "status": "unit",
+          "symbols": [
+            "lib/ftp.c::function::ftp_done_control_reply::118190"
+          ]
+        }
+      ],
+      "file_only": []
+    },
+    {
+      "cid": "B14",
+      "label_layer": 3,
+      "label_swe_type": "How",
+      "in_docs": true,
+      "label": "在",
+      "own_unit": false,
+      "not_in_docs": [],
+      "pairs": [
+        {
+          "rubric": "r1",
+          "file": "lib/vtls/vtls.c",
+          "name": "ssl_cf_connect",
+          "as_written": "ssl_cf_connect",
+          "status": "unit",
+          "symbols": [
+            "lib/vtls/vtls.c::function::ssl_cf_connect::26265"
+          ]
+        },
+        {
+          "rubric": "r2",
+          "file": "lib/connect.c",
+          "name": "Curl_conn_connect",
+          "as_written": "Curl_conn_connect",
+          "status": "unit",
+          "symbols": [
+            "lib/connect.c::function::Curl_conn_connect::7822"
+          ]
+        },
+        {
+          "rubric": "r2",
+          "file": "lib/connect.c",
+          "name": "conn_report_stats",
+          "as_written": "conn_report_stats",
+          "status": "unit",
+          "symbols": [
+            "lib/connect.c::function::conn_report_stats::7113"
+          ]
+        },
+        {
+          "rubric": "r2",
+          "file": "lib/cfilters.c",
+          "name": "Curl_conn_cntrl_report_stats",
+          "as_written": "Curl_conn_cntrl_report_stats",
+          "status": "grouped",
+          "symbols": [
+            "lib/cfilters.c::function::Curl_conn_cntrl_report_stats::11555"
+          ]
+        },
+        {
+          "rubric": "r3",
+          "file": "lib/vtls/vtls.c",
+          "name": "ssl_cf_cntrl",
+          "as_written": "ssl_cf_cntrl",
+          "status": "unit",
+          "symbols": [
+            "lib/vtls/vtls.c::function::ssl_cf_cntrl::35516"
+          ]
+        }
+      ],
+      "file_only": []
+    },
+    {
+      "cid": "B15",
+      "label_layer": 4,
+      "label_swe_type": "Why",
+      "in_docs": false,
+      "label": "不在",
+      "own_unit": false,
+      "not_in_docs": [
+        "lib/vtls/vtls_int.h: Curl_ssl (index_only)"
+      ],
+      "pairs": [
+        {
+          "rubric": "r1",
+          "file": "lib/cfilters.c",
+          "name": "Curl_conn_adjust_pollset",
+          "as_written": "Curl_conn_adjust_pollset",
+          "status": "grouped",
+          "symbols": [
+            "lib/cfilters.c::function::Curl_conn_adjust_pollset::18984"
+          ]
+        },
+        {
+          "rubric": "r2",
+          "file": "lib/cfilters.c",
+          "name": "Curl_conn_adjust_pollset",
+          "as_written": "Curl_conn_adjust_pollset",
+          "status": "grouped",
+          "symbols": [
+            "lib/cfilters.c::function::Curl_conn_adjust_pollset::18984"
+          ]
+        },
+        {
+          "rubric": "r3",
+          "file": "lib/vtls/vtls.c",
+          "name": "ssl_cf_adjust_pollset",
+          "as_written": "ssl_cf_adjust_pollset",
+          "status": "grouped",
+          "symbols": [
+            "lib/vtls/vtls.c::function::ssl_cf_adjust_pollset::34010"
+          ]
+        },
+        {
+          "rubric": "r3",
+          "file": "lib/vtls/vtls_int.h",
+          "name": "Curl_ssl",
+          "as_written": "struct Curl_ssl",
+          "status": "index_only",
+          "symbols": [
+            "lib/vtls/vtls_int.h::struct::Curl_ssl::5095"
+          ]
+        }
+      ],
+      "file_only": []
+    },
+    {
+      "cid": "B16",
+      "label_layer": 4,
+      "label_swe_type": "What",
+      "in_docs": false,
+      "label": "不在",
+      "own_unit": false,
+      "not_in_docs": [
+        "lib/vtls/vtls.h: Curl_ssl_get_channel_binding (missing)"
+      ],
+      "pairs": [
+        {
+          "rubric": "r1",
+          "file": "lib/vtls/vtls.h",
+          "name": "Curl_ssl_get_channel_binding",
+          "as_written": "Curl_ssl_get_channel_binding comment",
+          "status": "missing",
+          "symbols": []
+        },
+        {
+          "rubric": "r2",
+          "file": "lib/vtls/vtls.c",
+          "name": "Curl_ssl_get_channel_binding",
+          "as_written": "Curl_ssl_get_channel_binding",
+          "status": "grouped",
+          "symbols": [
+            "lib/vtls/vtls.c::function::Curl_ssl_get_channel_binding::6108"
+          ]
+        }
+      ],
+      "file_only": [
+        {
+          "rubric": "r2",
+          "file": "lib/vtls/vtls.h"
+        }
+      ]
+    },
+    {
+      "cid": "B17",
+      "label_layer": 1,
+      "label_swe_type": "Where",
+      "in_docs": true,
+      "label": "在",
+      "own_unit": true,
+      "not_in_docs": [],
+      "pairs": [
+        {
+          "rubric": "r1",
+          "file": "lib/vdns/doh.c",
+          "name": "Curl_doh",
+          "as_written": "Curl_doh",
+          "status": "unit",
+          "symbols": [
+            "lib/vdns/doh.c::function::Curl_doh::13328"
+          ]
+        },
+        {
+          "rubric": "r2",
+          "file": "lib/vdns/hostip.c",
+          "name": "hostip_resolv_start",
+          "as_written": "hostip_resolv_start",
+          "status": "unit",
+          "symbols": [
+            "lib/vdns/hostip.c::function::hostip_resolv_start::17317"
+          ]
+        }
+      ],
+      "file_only": []
+    },
+    {
+      "cid": "B18",
+      "label_layer": 2,
+      "label_swe_type": "How",
+      "in_docs": true,
+      "label": "在",
+      "own_unit": true,
+      "not_in_docs": [],
+      "pairs": [
+        {
+          "rubric": "r1",
+          "file": "lib/vdns/cf-dns.c",
+          "name": "cf_dns_connect",
+          "as_written": "cf_dns_connect",
+          "status": "unit",
+          "symbols": [
+            "lib/vdns/cf-dns.c::function::cf_dns_connect::8970"
+          ]
+        },
+        {
+          "rubric": "r2",
+          "file": "lib/vdns/cf-dns.c",
+          "name": "cf_dns_report",
+          "as_written": "cf_dns_report",
+          "status": "unit",
+          "symbols": [
+            "lib/vdns/cf-dns.c::function::cf_dns_report::3786::s0",
+            "lib/vdns/cf-dns.c::function::cf_dns_report::3786::s1"
+          ]
+        },
+        {
+          "rubric": "r3",
+          "file": "lib/vdns/cf-dns.c",
+          "name": "cf_dns_report",
+          "as_written": "cf_dns_report",
+          "status": "unit",
+          "symbols": [
+            "lib/vdns/cf-dns.c::function::cf_dns_report::3786::s0",
+            "lib/vdns/cf-dns.c::function::cf_dns_report::3786::s1"
+          ]
+        }
+      ],
+      "file_only": []
+    },
+    {
+      "cid": "B20",
+      "label_layer": 4,
+      "label_swe_type": "Why",
+      "in_docs": true,
+      "label": "在",
+      "own_unit": true,
+      "not_in_docs": [],
+      "pairs": [
+        {
+          "rubric": "r1",
+          "file": "lib/vdns/hostip4.c",
+          "name": "Curl_ipv4_resolve_r",
+          "as_written": "Curl_ipv4_resolve_r",
+          "status": "unit",
+          "symbols": [
+            "lib/vdns/hostip4.c::function::Curl_ipv4_resolve_r::3338"
+          ]
+        },
+        {
+          "rubric": "r2",
+          "file": "lib/vdns/hostip.c",
+          "name": "hostip_resolv_start",
+          "as_written": "hostip_resolv_start",
+          "status": "unit",
+          "symbols": [
+            "lib/vdns/hostip.c::function::hostip_resolv_start::17317"
+          ]
+        },
+        {
+          "rubric": "r3",
+          "file": "lib/vdns/hostip.c",
+          "name": "hostip_resolv",
+          "as_written": "hostip_resolv",
+          "status": "unit",
+          "symbols": [
+            "lib/vdns/hostip.c::function::hostip_resolv::21654"
+          ]
+        }
+      ],
+      "file_only": []
+    },
+    {
+      "cid": "B21",
+      "label_layer": 1,
+      "label_swe_type": "Where",
+      "in_docs": true,
+      "label": "在",
+      "own_unit": true,
+      "not_in_docs": [],
+      "pairs": [
+        {
+          "rubric": "r1",
+          "file": "lib/http.c",
+          "name": "http_header_s",
+          "as_written": "http_header_s",
+          "status": "unit",
+          "symbols": [
+            "lib/http.c::function::http_header_s::110761"
+          ]
+        },
+        {
+          "rubric": "r2",
+          "file": "lib/cookie.c",
+          "name": "Curl_secure_context",
+          "as_written": "Curl_secure_context",
+          "status": "unit",
+          "symbols": [
+            "lib/cookie.c::function::Curl_secure_context::38405"
+          ]
+        },
+        {
+          "rubric": "r3",
+          "file": "lib/cookie.c",
+          "name": "parse_cookie_header",
+          "as_written": "parse_cookie_header",
+          "status": "unit",
+          "symbols": [
+            "lib/cookie.c::function::parse_cookie_header::15705"
+          ]
+        },
+        {
+          "rubric": "r3",
+          "file": "lib/cookie.c",
+          "name": "Curl_cookie_add",
+          "as_written": "Curl_cookie_add",
+          "status": "unit",
+          "symbols": [
+            "lib/cookie.c::function::Curl_cookie_add::28980"
+          ]
+        }
+      ],
+      "file_only": []
+    },
+    {
+      "cid": "B22",
+      "label_layer": 2,
+      "label_swe_type": "What",
+      "in_docs": true,
+      "label": "在",
+      "own_unit": true,
+      "not_in_docs": [],
+      "pairs": [
+        {
+          "rubric": "r1",
+          "file": "lib/cookie.c",
+          "name": "Curl_cookie_run",
+          "as_written": "Curl_cookie_run",
+          "status": "unit",
+          "symbols": [
+            "lib/cookie.c::function::Curl_cookie_run::49136"
+          ]
+        },
+        {
+          "rubric": "r1",
+          "file": "lib/transfer.c",
+          "name": "Curl_pretransfer",
+          "as_written": "Curl_pretransfer",
+          "status": "unit",
+          "symbols": [
+            "lib/transfer.c::function::Curl_pretransfer::13141"
+          ]
+        },
+        {
+          "rubric": "r2",
+          "file": "lib/cookie.c",
+          "name": "Curl_flush_cookies",
+          "as_written": "Curl_flush_cookies",
+          "status": "unit",
+          "symbols": [
+            "lib/cookie.c::function::Curl_flush_cookies::48108"
+          ]
+        },
+        {
+          "rubric": "r3",
+          "file": "lib/cookie.c",
+          "name": "Curl_cookie_add",
+          "as_written": "Curl_cookie_add",
+          "status": "unit",
+          "symbols": [
+            "lib/cookie.c::function::Curl_cookie_add::28980"
+          ]
+        },
+        {
+          "rubric": "r3",
+          "file": "lib/transfer.c",
+          "name": "Curl_pretransfer",
+          "as_written": "Curl_pretransfer",
+          "status": "unit",
+          "symbols": [
+            "lib/transfer.c::function::Curl_pretransfer::13141"
+          ]
+        }
+      ],
+      "file_only": []
+    },
+    {
+      "cid": "B23",
+      "label_layer": 3,
+      "label_swe_type": "How",
+      "in_docs": true,
+      "label": "在",
+      "own_unit": true,
+      "not_in_docs": [],
+      "pairs": [
+        {
+          "rubric": "r1",
+          "file": "lib/http.c",
+          "name": "http_header_s",
+          "as_written": "http_header_s",
+          "status": "unit",
+          "symbols": [
+            "lib/http.c::function::http_header_s::110761"
+          ]
+        },
+        {
+          "rubric": "r2",
+          "file": "lib/hsts.c",
+          "name": "Curl_hsts_parse",
+          "as_written": "Curl_hsts_parse",
+          "status": "unit",
+          "symbols": [
+            "lib/hsts.c::function::Curl_hsts_parse::6286"
+          ]
+        },
+        {
+          "rubric": "r3",
+          "file": "lib/hsts.c",
+          "name": "hsts_create",
+          "as_written": "hsts_create",
+          "status": "unit",
+          "symbols": [
+            "lib/hsts.c::function::hsts_create::3223"
+          ]
+        }
+      ],
+      "file_only": []
+    },
+    {
+      "cid": "B24",
+      "label_layer": 3,
+      "label_swe_type": "What",
+      "in_docs": false,
+      "label": "不在",
+      "own_unit": false,
+      "not_in_docs": [
+        "lib/setopt.c: CURLOPT_HSTS_CTRL (missing)",
+        "lib/setopt.c: CURLOPT_HSTS (missing)"
+      ],
+      "pairs": [
+        {
+          "rubric": "r1",
+          "file": "lib/curl_share.c",
+          "name": "Curl_share_easy_link",
+          "as_written": "Curl_share_easy_link",
+          "status": "unit",
+          "symbols": [
+            "lib/curl_share.c::function::Curl_share_easy_link::11325"
+          ]
+        },
+        {
+          "rubric": "r2",
+          "file": "lib/url.c",
+          "name": "Curl_close",
+          "as_written": "Curl_close",
+          "status": "unit",
+          "symbols": [
+            "lib/url.c::function::Curl_close::4997"
+          ]
+        },
+        {
+          "rubric": "r2",
+          "file": "lib/setopt.c",
+          "name": "CURLOPT_HSTS_CTRL",
+          "as_written": "CURLOPT_HSTS_CTRL",
+          "status": "missing",
+          "symbols": []
+        },
+        {
+          "rubric": "r2",
+          "file": "lib/setopt.c",
+          "name": "CURLOPT_HSTS",
+          "as_written": "CURLOPT_HSTS",
+          "status": "missing",
+          "symbols": []
+        },
+        {
+          "rubric": "r3",
+          "file": "lib/curl_share.c",
+          "name": "curl_share_setopt",
+          "as_written": "curl_share_setopt",
+          "status": "unit",
+          "symbols": [
+            "lib/curl_share.c::function::curl_share_setopt::4942"
+          ]
+        },
+        {
+          "rubric": "r3",
+          "file": "lib/curl_share.c",
+          "name": "share_destroy",
+          "as_written": "share_destroy",
+          "status": "unit",
+          "symbols": [
+            "lib/curl_share.c::function::share_destroy::1250"
+          ]
+        }
+      ],
+      "file_only": []
+    },
+    {
+      "cid": "B25",
+      "label_layer": 4,
+      "label_swe_type": "Why",
+      "in_docs": true,
+      "label": "在",
+      "own_unit": false,
+      "not_in_docs": [],
+      "pairs": [
+        {
+          "rubric": "r1",
+          "file": "lib/vtls/vtls_scache.c",
+          "name": "cf_ssl_scache_get",
+          "as_written": "cf_ssl_scache_get",
+          "status": "unit",
+          "symbols": [
+            "lib/vtls/vtls_scache.c::function::cf_ssl_scache_get::11316"
+          ]
+        },
+        {
+          "rubric": "r1",
+          "file": "lib/vtls/vtls_scache.c",
+          "name": "Curl_ssl_session_import",
+          "as_written": "Curl_ssl_session_import",
+          "status": "grouped",
+          "symbols": [
+            "lib/vtls/vtls_scache.c::function::Curl_ssl_session_import::37242"
+          ]
+        },
+        {
+          "rubric": "r2",
+          "file": "lib/vtls/vtls_scache.c",
+          "name": "cf_ssl_scache_get",
+          "as_written": "cf_ssl_scache_get",
+          "status": "unit",
+          "symbols": [
+            "lib/vtls/vtls_scache.c::function::cf_ssl_scache_get::11316"
+          ]
+        },
+        {
+          "rubric": "r2",
+          "file": "src/tool_ssls.c",
+          "name": "tool_ssls_easy",
+          "as_written": "tool_ssls_easy",
+          "status": "unit",
+          "symbols": [
+            "src/tool_ssls.c::function::tool_ssls_easy::1314"
+          ]
+        },
+        {
+          "rubric": "r3",
+          "file": "src/tool_operate.c",
+          "name": "share_setup",
+          "as_written": "share_setup",
+          "status": "unit",
+          "symbols": [
+            "src/tool_operate.c::function::share_setup::71345"
+          ]
+        },
+        {
+          "rubric": "r3",
+          "file": "lib/curl_share.c",
+          "name": "curl_share_setopt",
+          "as_written": "curl_share_setopt",
+          "status": "unit",
+          "symbols": [
+            "lib/curl_share.c::function::curl_share_setopt::4942"
+          ]
+        },
+        {
+          "rubric": "r4",
+          "file": "src/tool_operate.c",
+          "name": "operate",
+          "as_written": "operate",
+          "status": "unit",
+          "symbols": [
+            "src/tool_operate.c::function::operate::71863"
+          ]
+        }
+      ],
+      "file_only": []
+    },
+    {
+      "cid": "B26",
+      "label_layer": 4,
+      "label_swe_type": "Why",
+      "in_docs": true,
+      "label": "在",
+      "own_unit": false,
+      "not_in_docs": [],
+      "pairs": [
+        {
+          "rubric": "r1",
+          "file": "lib/mime.c",
+          "name": "curl_mime_free",
+          "as_written": "curl_mime_free",
+          "status": "unit",
+          "symbols": [
+            "lib/mime.c::function::curl_mime_free::30955",
+            "lib/mime.c::function::curl_mime_free::62644"
+          ]
+        },
+        {
+          "rubric": "r2",
+          "file": "lib/mime.c",
+          "name": "mime_subparts_unbind",
+          "as_written": "mime_subparts_unbind",
+          "status": "grouped",
+          "symbols": [
+            "lib/mime.c::function::mime_subparts_unbind::30224"
+          ]
+        },
+        {
+          "rubric": "r3",
+          "file": "lib/mime.c",
+          "name": "Curl_mime_set_subparts",
+          "as_written": "Curl_mime_set_subparts",
+          "status": "unit",
+          "symbols": [
+            "lib/mime.c::function::Curl_mime_set_subparts::41099"
+          ]
+        }
+      ],
+      "file_only": []
+    },
+    {
+      "cid": "B28",
+      "label_layer": 3,
+      "label_swe_type": "Where",
+      "in_docs": true,
+      "label": "在",
+      "own_unit": false,
+      "not_in_docs": [],
+      "pairs": [
+        {
+          "rubric": "r1",
+          "file": "lib/mime.c",
+          "name": "curl_mime_init",
+          "as_written": "curl_mime_init",
+          "status": "unit",
+          "symbols": [
+            "lib/mime.c::function::curl_mime_init::34912",
+            "lib/mime.c::function::curl_mime_init::62572"
+          ]
+        },
+        {
+          "rubric": "r2",
+          "file": "lib/rand.c",
+          "name": "Curl_rand_alnum",
+          "as_written": "Curl_rand_alnum",
+          "status": "unit",
+          "symbols": [
+            "lib/rand.c::function::Curl_rand_alnum::5549"
+          ]
+        },
+        {
+          "rubric": "r3",
+          "file": "lib/rand.c",
+          "name": "randit",
+          "as_written": "randit",
+          "status": "unit",
+          "symbols": [
+            "lib/rand.c::function::randit::2574"
+          ]
+        },
+        {
+          "rubric": "r3",
+          "file": "lib/vtls/vtls.c",
+          "name": "Curl_ssl_random",
+          "as_written": "Curl_ssl_random",
+          "status": "grouped",
+          "symbols": [
+            "lib/vtls/vtls.c::function::Curl_ssl_random::10082"
+          ]
+        }
+      ],
+      "file_only": [
+        {
+          "rubric": "r1",
+          "file": "lib/mime.h"
+        }
+      ]
+    }
+  ]
+}

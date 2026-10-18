@@ -1,0 +1,125 @@
+{
+  "qid": 20,
+  "question": "How does the namespace object that stores application-level data during an application context maintain thread-safety and context isolation when accessed concurrently through the contextvars mechanism?",
+  "arm": "W",
+  "max_steps": 10,
+  "repeat": 0,
+  "answer_valid": true,
+  "judge_model": "codex/gpt-6.1-sol",
+  "draws": [
+    {
+      "draw": 1,
+      "score": {
+        "correctness": 14,
+        "completeness": 18,
+        "relevance": 16,
+        "clarity": 16,
+        "reasoning": 14
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 86,
+            "prompt_tokens": 7607,
+            "total_tokens": 7693,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 37,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 14,\n  \"completeness\": 18,\n  \"relevance\": 16,\n  \"clarity\": 16,\n  \"reasoning\": 14\n}",
+          "wall_seconds": 5.358871457981877
+        }
+      ]
+    },
+    {
+      "draw": 2,
+      "score": {
+        "correctness": 14,
+        "completeness": 18,
+        "relevance": 16,
+        "clarity": 16,
+        "reasoning": 14
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 109,
+            "prompt_tokens": 7607,
+            "total_tokens": 7716,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 60,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 7424
+            }
+          },
+          "response": "{\n  \"correctness\": 14,\n  \"completeness\": 18,\n  \"relevance\": 16,\n  \"clarity\": 16,\n  \"reasoning\": 14\n}",
+          "wall_seconds": 4.883759874966927
+        }
+      ]
+    },
+    {
+      "draw": 3,
+      "score": {
+        "correctness": 14,
+        "completeness": 18,
+        "relevance": 16,
+        "clarity": 16,
+        "reasoning": 14
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 106,
+            "prompt_tokens": 7607,
+            "total_tokens": 7713,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 57,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 7424
+            }
+          },
+          "response": "{\n  \"correctness\": 14,\n  \"completeness\": 18,\n  \"relevance\": 16,\n  \"clarity\": 16,\n  \"reasoning\": 14\n}",
+          "wall_seconds": 3.9306464589899406
+        }
+      ]
+    }
+  ],
+  "score": {
+    "correctness": 14,
+    "completeness": 18,
+    "relevance": 16,
+    "clarity": 16,
+    "reasoning": 14
+  },
+  "total": 78,
+  "main_total_na5": 78,
+  "failure_type": null,
+  "judge_total_range": 0,
+  "wall_seconds": 14.174274083983619
+}

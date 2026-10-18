@@ -1,0 +1,11 @@
+question_id,conclusion,reason_en
+4,Partly correct,"The files and line numbers for configuration, blueprint registration, and request contexts are correct, but the claims that Werkzeug sets request.blueprint, url_for is in sansio/app.py, and request.blueprints drives URL construction and guarantees subdomains are incorrect."
+6,Correct,"FakePath.__fspath__ returns self.path and all line numbers are correct, although a minor passage incorrectly associates the static_folder setter with this test."
+11,Correct,"All after_this_request line numbers and behavior were verified, but problems from nested or conditional registration are speculation without such failure behavior in the source."
+12,Correct,"The _lazy_sha1 location, digest_method, get_signing_serializer, and docstring are correct, while CHANGES.rst and issue 5448 cannot be checked in this source copy."
+14,Correct,"All three fallbacks in CertParamType.convert, their line numbers, and the --cert option are supported by the source."
+20,Correct,"_AppCtxGlobals itself does not guarantee thread safety and isolation comes from ContextVar, with correct line numbers, while the docs/reqcontext.rst citation cannot be checked."
+32,Partly correct,"Line numbers, call sites, and the absence of caching are correct, but Flask source does not support the claimed cryptographic initialization overhead or a high-concurrency bottleneck."
+41,Correct,TestUrlFor is at tests/test_helpers.py:102 and all six method names and behaviors are correct.
+46,Correct,"The typing_route.py, scaffold.py, typing.py, and app.py references are correct, while pyproject.toml:127-146 cannot be checked."
+47,Partly correct,"The three loops, line 841, and complexity formula are correct, but the answer omits empty-map skipping, overstates a critical bottleneck, and suggests reversing a lookup order that implements most-specific-first behavior."

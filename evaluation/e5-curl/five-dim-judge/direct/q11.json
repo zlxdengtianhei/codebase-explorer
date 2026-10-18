@@ -1,0 +1,16 @@
+{
+  "qid": 11,
+  "question": "For a cleartext http:// request sent as HTTP/1.1 with an `Upgrade: h2c` offer (CURL_HTTP_VERSION_2_0), how does libcurl switch the connection to HTTP/2 when the server answers `101 Switching Protocols`, and how does the original request continue on the new protocol?\n\nBuild assumptions: nghttp2 enabled (USE_NGHTTP2); http:// URL; CURLOPT_HTTP_VERSION = CURL_HTTP_VERSION_2_0; no proxy; non-Windows.",
+  "arm": "direct",
+  "max_steps": null,
+  "repeat": 0,
+  "answer_valid": false,
+  "judge_model": "codex/gpt-6.1-sol",
+  "draws": [],
+  "score": null,
+  "total": null,
+  "main_total_na5": 5,
+  "failure_type": "no_answer",
+  "judge_total_range": null,
+  "wall_seconds": 1.2167030945420265e-05
+}

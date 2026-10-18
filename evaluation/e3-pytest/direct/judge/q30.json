@@ -1,0 +1,125 @@
+{
+  "qid": 30,
+  "question": "Why does the repeated fixture instantiation and teardown cycle in test_package_fixture_complex impact performance when scaling to hundreds of package-scoped fixtures with autouse dependencies?",
+  "arm": "direct",
+  "max_steps": null,
+  "repeat": 0,
+  "answer_valid": true,
+  "judge_model": "codex/gpt-6.1-sol",
+  "draws": [
+    {
+      "draw": 1,
+      "score": {
+        "correctness": 12,
+        "completeness": 12,
+        "relevance": 18,
+        "clarity": 16,
+        "reasoning": 13
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 83,
+            "prompt_tokens": 6055,
+            "total_tokens": 6138,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 34,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 12,\n  \"completeness\": 12,\n  \"relevance\": 18,\n  \"clarity\": 16,\n  \"reasoning\": 13\n}",
+          "wall_seconds": 2.80068491701968
+        }
+      ]
+    },
+    {
+      "draw": 2,
+      "score": {
+        "correctness": 12,
+        "completeness": 12,
+        "relevance": 17,
+        "clarity": 16,
+        "reasoning": 13
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 97,
+            "prompt_tokens": 6055,
+            "total_tokens": 6152,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 48,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 5888
+            }
+          },
+          "response": "{\n  \"correctness\": 12,\n  \"completeness\": 12,\n  \"relevance\": 17,\n  \"clarity\": 16,\n  \"reasoning\": 13\n}",
+          "wall_seconds": 3.2283414999837987
+        }
+      ]
+    },
+    {
+      "draw": 3,
+      "score": {
+        "correctness": 12,
+        "completeness": 12,
+        "relevance": 17,
+        "clarity": 16,
+        "reasoning": 13
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 97,
+            "prompt_tokens": 6055,
+            "total_tokens": 6152,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 48,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 12,\n  \"completeness\": 12,\n  \"relevance\": 17,\n  \"clarity\": 16,\n  \"reasoning\": 13\n}",
+          "wall_seconds": 3.256999624951277
+        }
+      ]
+    }
+  ],
+  "score": {
+    "correctness": 12,
+    "completeness": 12,
+    "relevance": 17,
+    "clarity": 16,
+    "reasoning": 13
+  },
+  "total": 70,
+  "main_total_na5": 70,
+  "failure_type": null,
+  "judge_total_range": 1,
+  "wall_seconds": 9.286408165993635
+}

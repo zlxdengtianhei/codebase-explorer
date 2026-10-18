@@ -1,0 +1,125 @@
+{
+  "qid": 9,
+  "question": "What is the sentinel value abstraction pattern that NotSetType implements within the pytest compatibility layer to decouple internal state representation from external API contracts?",
+  "arm": "direct",
+  "max_steps": null,
+  "repeat": 0,
+  "answer_valid": true,
+  "judge_model": "codex/gpt-6.1-sol",
+  "draws": [
+    {
+      "draw": 1,
+      "score": {
+        "correctness": 18,
+        "completeness": 10,
+        "relevance": 20,
+        "clarity": 18,
+        "reasoning": 14
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 47,
+            "prompt_tokens": 5913,
+            "total_tokens": 5960,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 0,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 18,\n  \"completeness\": 10,\n  \"relevance\": 20,\n  \"clarity\": 18,\n  \"reasoning\": 14\n}",
+          "wall_seconds": 3.0150672500021756
+        }
+      ]
+    },
+    {
+      "draw": 2,
+      "score": {
+        "correctness": 19,
+        "completeness": 11,
+        "relevance": 20,
+        "clarity": 18,
+        "reasoning": 14
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 76,
+            "prompt_tokens": 5913,
+            "total_tokens": 5989,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 43,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 5760
+            }
+          },
+          "response": "{\"correctness\":19,\"completeness\":11,\"relevance\":20,\"clarity\":18,\"reasoning\":14}",
+          "wall_seconds": 3.2116218750015832
+        }
+      ]
+    },
+    {
+      "draw": 3,
+      "score": {
+        "correctness": 18,
+        "completeness": 11,
+        "relevance": 20,
+        "clarity": 18,
+        "reasoning": 14
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 81,
+            "prompt_tokens": 5913,
+            "total_tokens": 5994,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 48,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 5760
+            }
+          },
+          "response": "{\"correctness\":18,\"completeness\":11,\"relevance\":20,\"clarity\":18,\"reasoning\":14}",
+          "wall_seconds": 3.4810476670390926
+        }
+      ]
+    }
+  ],
+  "score": {
+    "correctness": 18,
+    "completeness": 11,
+    "relevance": 20,
+    "clarity": 18,
+    "reasoning": 14
+  },
+  "total": 81,
+  "main_total_na5": 81,
+  "failure_type": null,
+  "judge_total_range": 2,
+  "wall_seconds": 9.70923566701822
+}

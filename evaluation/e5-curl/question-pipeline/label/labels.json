@@ -1,0 +1,341 @@
+{
+ "method": "Manual semantic annotation by cbe-l13 from the 56 question texts and build_assumptions in questions_only.jsonl only (candidates, answers and source not read when labeling). swe_type follows the opening wording of each question (What, How, Why, Where). Layer precedence: design/impact (4) > cross-unit flow (3) > unit behavior (2) > definition location (1); Where does not automatically mean layer 1, and a question that asks for a unit's behavior plus its callers or users, or a value or state traced across functions, is labeled 3. A Why question is labeled 4 when its reason concerns interaction with, or impact on, other components, and 2 when the reason is local to one function. Borderline calls are named in the reason.",
+ "labels": [
+  {
+   "cid": "A01",
+   "swe_type": "Why",
+   "layer": 4,
+   "reason": "Asks why the pause writer must exist before a blow-up-flagged decoder is linked; an ordering constraint between two writers and the chain, so a design reason (borderline 2, since it is one function)."
+  },
+  {
+   "cid": "A02",
+   "swe_type": "What",
+   "layer": 3,
+   "reason": "Asks for the order in which the transfer-encoding and content-encoding writers handle body bytes across the whole writer chain; cross-unit flow."
+  },
+  {
+   "cid": "A03",
+   "swe_type": "How",
+   "layer": 3,
+   "reason": "Asks how the writer chain is created during CONNECT and torn down before the real request; lifecycle across several units."
+  },
+  {
+   "cid": "A04",
+   "swe_type": "Where",
+   "layer": 3,
+   "reason": "Locates one public function, but also asks for the internal function shared with the MIMEPOST handler and the argument that differs between two call sites in different units; cross-unit (borderline 1/2)."
+  },
+  {
+   "cid": "A05",
+   "swe_type": "How",
+   "layer": 2,
+   "reason": "Asks for the algorithm that finds or creates a storage chunk when a number is added to one sparse bitset; unit behavior."
+  },
+  {
+   "cid": "A06",
+   "swe_type": "Why",
+   "layer": 4,
+   "reason": "Asks why a reused connection's origin and via-peer must be overwritten, i.e. what would go wrong if the old values stayed; impact and design reason."
+  },
+  {
+   "cid": "A07",
+   "swe_type": "How",
+   "layer": 3,
+   "reason": "Asks how the destination is resolved and then encoded into the SOCKS5 request; spans the resolution choice and the proxy state machine."
+  },
+  {
+   "cid": "A08",
+   "swe_type": "What",
+   "layer": 3,
+   "reason": "Asks what the filters' query callbacks must do so one function can return the address; spans the chain walk and several filters' callbacks (borderline 4, since it is an interface contract)."
+  },
+  {
+   "cid": "A09",
+   "swe_type": "Where",
+   "layer": 3,
+   "reason": "Asks along which call path, through which filter and based on which buffers the pending-send decision is made; cross-unit call path, not pure location."
+  },
+  {
+   "cid": "A10",
+   "swe_type": "Why",
+   "layer": 4,
+   "reason": "Asks why the setup filter discards the whole sub-chain instead of reconnecting the existing filters; design reason about filter state after the connection closed."
+  },
+  {
+   "cid": "A11",
+   "swe_type": "Where",
+   "layer": 3,
+   "reason": "Asks at which step the setup-only filters are removed and by which criterion; tracing from connect completion to the removal makes it cross-unit rather than pure location."
+  },
+  {
+   "cid": "A12",
+   "swe_type": "Why",
+   "layer": 2,
+   "reason": "Asks why one query branch answers from different state for UDP than for TCP; reason is local to one function (borderline 4)."
+  },
+  {
+   "cid": "A13",
+   "swe_type": "Why",
+   "layer": 4,
+   "reason": "Asks why the liveness check treats pending input differently for HTTP/1.1 and HTTP/2; a protocol-dependent policy spanning the generic check and protocol behavior; design reason."
+  },
+  {
+   "cid": "A14",
+   "swe_type": "What",
+   "layer": 2,
+   "reason": "Asks for the conditions inside one filter's liveness check; unit behavior."
+  },
+  {
+   "cid": "A15",
+   "swe_type": "How",
+   "layer": 3,
+   "reason": "Asks how the tunnel's HTTP version is decided and how that choice becomes part of the filter chain; cross-unit."
+  },
+  {
+   "cid": "A16",
+   "swe_type": "How",
+   "layer": 3,
+   "reason": "Asks how the HTTP/3 attempt's reply signal reaches the racing logic and changes when the HTTP/2 attempt starts; cross-unit signal flow."
+  },
+  {
+   "cid": "A17",
+   "swe_type": "How",
+   "layer": 3,
+   "reason": "Asks how the connection switches to HTTP/2 after a 101 reply and how the original request continues on it; cross-unit flow."
+  },
+  {
+   "cid": "A18",
+   "swe_type": "Where",
+   "layer": 3,
+   "reason": "Asks where the concurrency limit comes from, from the reuse check down to the holder of the value; traces one value across several functions."
+  },
+  {
+   "cid": "A19",
+   "swe_type": "Where",
+   "layer": 3,
+   "reason": "Asks where each DES key is expanded and which routine then uses it for the response; traces one data step from key setup to its consumer (borderline 2)."
+  },
+  {
+   "cid": "A20",
+   "swe_type": "What",
+   "layer": 3,
+   "reason": "Asks for the combined conditions that select the GSSAPI mechanism and how Kerberos availability is determined; spans the SASL decision and an availability probe (borderline 2)."
+  },
+  {
+   "cid": "A21",
+   "swe_type": "Where",
+   "layer": 3,
+   "reason": "Asks where per-connection state is kept and where it is released in teardown; state lifetime across creation and the teardown path."
+  },
+  {
+   "cid": "A22",
+   "swe_type": "What",
+   "layer": 3,
+   "reason": "Asks under which conditions stored Digest state is dropped when redirects are followed; state lifecycle across redirect handling and auth code (borderline 2)."
+  },
+  {
+   "cid": "A23",
+   "swe_type": "Where",
+   "layer": 3,
+   "reason": "Asks where a global pointer is set, where it is cleared and what clearing does; state lifecycle across init and cleanup (borderline 2)."
+  },
+  {
+   "cid": "A24",
+   "swe_type": "What",
+   "layer": 3,
+   "reason": "Asks which characters one predicate accepts and how the path and query encoders use it; unit behavior plus its users (borderline 2)."
+  },
+  {
+   "cid": "A25",
+   "swe_type": "What",
+   "layer": 3,
+   "reason": "Asks what one cleanup function releases and from which places it is invoked; unit behavior plus caller tracing (borderline 2)."
+  },
+  {
+   "cid": "A26",
+   "swe_type": "What",
+   "layer": 2,
+   "reason": "Asks which truncation positions one function rejects and what each check prevents; unit behavior."
+  },
+  {
+   "cid": "A27",
+   "swe_type": "Why",
+   "layer": 4,
+   "reason": "Asks why the generated program resets the handle between transfers but not after the last one; design reason of the code generator and handle reuse."
+  },
+  {
+   "cid": "A28",
+   "swe_type": "How",
+   "layer": 2,
+   "reason": "Asks how one size-parsing routine turns a fractional value with a unit suffix into bytes; unit behavior of an algorithm."
+  },
+  {
+   "cid": "B01",
+   "swe_type": "How",
+   "layer": 3,
+   "reason": "Asks how a graceful shutdown that cannot finish at once is driven from the first attempt to the final free; multi-step flow across the pool, multi handle and filters."
+  },
+  {
+   "cid": "B02",
+   "swe_type": "Where",
+   "layer": 1,
+   "reason": "Asks in which function and file one reference count is incremented; location of a single statement."
+  },
+  {
+   "cid": "B03",
+   "swe_type": "What",
+   "layer": 2,
+   "reason": "Asks for the data structures set up by one init function and the purpose of each; unit-level structure explanation (borderline 3, since purposes show in other pool functions)."
+  },
+  {
+   "cid": "B04",
+   "swe_type": "Where",
+   "layer": 3,
+   "reason": "Asks where each connection left in a share's pool is shut down and freed when no multi handle exists; flow from share cleanup through pool destruction and shutdown."
+  },
+  {
+   "cid": "B05",
+   "swe_type": "Why",
+   "layer": 4,
+   "reason": "Asks why the no_reuse bit is set even on connections that are not closed now; impact and design reason of a network-change policy."
+  },
+  {
+   "cid": "B06",
+   "swe_type": "What",
+   "layer": 2,
+   "reason": "Asks for the conditions under which one comparison treats two origins as the same destination; unit behavior of the matching logic."
+  },
+  {
+   "cid": "B07",
+   "swe_type": "Where",
+   "layer": 3,
+   "reason": "Asks which function tells the multi handle which socket events to wait for across two FTP phases; 'by which function' traces the multi-to-protocol hook, so cross-unit (borderline 1)."
+  },
+  {
+   "cid": "B08",
+   "swe_type": "How",
+   "layer": 3,
+   "reason": "Asks how one SFTP quote command runs from string parsing through the state machine to the next entry, including a server refusal; multi-state flow."
+  },
+  {
+   "cid": "B09",
+   "swe_type": "How",
+   "layer": 3,
+   "reason": "Asks how a wildcard transfer finds matching files and then downloads them one after another; flow across listing, matching and download steps."
+  },
+  {
+   "cid": "B10",
+   "swe_type": "What",
+   "layer": 3,
+   "reason": "Asks what mechanism carries a failure from state handlers that return libssh codes back through the doing callback to the multi handle; error flow across states (borderline 4, since it is a contract)."
+  },
+  {
+   "cid": "B11",
+   "swe_type": "Why",
+   "layer": 4,
+   "reason": "Asks why the control connection is closed after a ranged download instead of being kept for reuse; design reason with impact on connection state."
+  },
+  {
+   "cid": "B12",
+   "swe_type": "Why",
+   "layer": 2,
+   "reason": "Asks why one function passes block as FALSE to the pingpong state machine; local choice in one function, tied to non-blocking use (borderline 4)."
+  },
+  {
+   "cid": "B13",
+   "swe_type": "How",
+   "layer": 3,
+   "reason": "Asks how a random-bytes call reaches a concrete TLS backend, including backend selection when none is set; flow across the multi-SSL dispatch layers."
+  },
+  {
+   "cid": "B14",
+   "swe_type": "How",
+   "layer": 3,
+   "reason": "Asks through which functions the handshake completion time travels to the APPCONNECT timer; call and data path across the TLS filter and progress code."
+  },
+  {
+   "cid": "B15",
+   "swe_type": "Why",
+   "layer": 4,
+   "reason": "Asks why the filters, including the TLS backend hook, are not polled when the transfer wants neither send nor receive; design reason spanning the multi handle, the chain and the backend."
+  },
+  {
+   "cid": "B16",
+   "swe_type": "What",
+   "layer": 4,
+   "reason": "Asks for the contract the TLS layer sets for backends that supply channel-binding data; interface contract coupling the layer, its backends and a consumer (borderline 2/3)."
+  },
+  {
+   "cid": "B17",
+   "swe_type": "Where",
+   "layer": 1,
+   "reason": "Asks which function launches the DoH requests and in which file; pure location of one named responsibility."
+  },
+  {
+   "cid": "B18",
+   "swe_type": "How",
+   "layer": 2,
+   "reason": "Asks how one DNS filter decides whether, when and in what form to print the resolved addresses; logic inside one filter (borderline 3)."
+  },
+  {
+   "cid": "B19",
+   "swe_type": "How",
+   "layer": 3,
+   "reason": "Asks how a finished DoH probe response turns into addresses for the waiting transfer; flow across the DoH code, the resolver cache and the transfer."
+  },
+  {
+   "cid": "B20",
+   "swe_type": "Why",
+   "layer": 4,
+   "reason": "Asks why every failed lookup becomes a negative cache entry even when the failure may be transient; design tradeoff."
+  },
+  {
+   "cid": "B21",
+   "swe_type": "Where",
+   "layer": 1,
+   "reason": "Asks where in lib/ the one decision about storing a Secure cookie over plain http is made; location of one decision point (borderline 2/3)."
+  },
+  {
+   "cid": "B22",
+   "swe_type": "What",
+   "layer": 2,
+   "reason": "Asks what one flag in the cookie jar controls inside the cookie engine; unit behavior of one field (borderline 3, since its uses are spread over functions)."
+  },
+  {
+   "cid": "B23",
+   "swe_type": "How",
+   "layer": 3,
+   "reason": "Asks through which functions a header travels from response-header parsing to the HSTS store; call path across units."
+  },
+  {
+   "cid": "B24",
+   "swe_type": "What",
+   "layer": 3,
+   "reason": "Asks which ownership rules decide which handle frees the HSTS cache; ownership lifecycle across the easy handle and the share (borderline 4)."
+  },
+  {
+   "cid": "B25",
+   "swe_type": "Why",
+   "layer": 4,
+   "reason": "Asks why saved TLS sessions are imported through a fresh easy handle with the shared handle attached; design reason about where the session cache lives."
+  },
+  {
+   "cid": "B26",
+   "swe_type": "Why",
+   "layer": 4,
+   "reason": "Asks why unbinding from the owning part comes before freeing parts; ordering reason about back-references between objects, i.e. impact if reversed (borderline 2)."
+  },
+  {
+   "cid": "B27",
+   "swe_type": "How",
+   "layer": 3,
+   "reason": "Asks how a socket-activity call reaches the affected transfers and returns the next timeout; flow across the socket API, the multi handle and the timer."
+  },
+  {
+   "cid": "B28",
+   "swe_type": "Where",
+   "layer": 3,
+   "reason": "Asks where the boundary characters come from; traces a data source from the mime code through the random-byte layers (borderline 2)."
+  }
+ ]
+}

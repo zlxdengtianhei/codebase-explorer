@@ -1,0 +1,1280 @@
+{
+  "status": "complete",
+  "driver": "script",
+  "host": "api",
+  "source_files": 86,
+  "source_tokens": 159691,
+  "modules": 18,
+  "units": 376,
+  "semantic_nodes": 49,
+  "published_pages": 50,
+  "pending": [],
+  "normalized": [],
+  "id_corrected_count": 0,
+  "id_corrected": [],
+  "index_only_filled_count": 0,
+  "index_only_filled": [],
+  "known_empty": [],
+  "wall_seconds": 2891.644,
+  "run_dir": "$WORK/runs/e6/gson/run",
+  "index": "$WORK/runs/e6/gson/run/docs/INDEX.md",
+  "subagent_tasks": 36,
+  "deterministic_checks_ok": true,
+  "aggregation_principles": {
+    "advisory": true,
+    "input_digest": "0312ad60e65ba6a5f3d767f8fd91ada6fead18c92961c70b0d2a41a539850e4c",
+    "identity": [
+      [
+        "adapter-framework",
+        "TypeAdapter Framework"
+      ],
+      [
+        "adapter-pipeline",
+        "Type Adapter Pipeline and Object Construction"
+      ],
+      [
+        "builtin-adapters",
+        "Built-in Type Adapters"
+      ],
+      [
+        "configuration",
+        "Builder and Naming Configuration"
+      ],
+      [
+        "conversion-api",
+        "Public API, Facade and Builder Configuration"
+      ],
+      [
+        "default-adapters",
+        "Built-in Type Adapter Factories"
+      ],
+      [
+        "dom-tree",
+        "JSON DOM Tree"
+      ],
+      [
+        "facade-api",
+        "Gson Facade and Conversion API"
+      ],
+      [
+        "gson-json-library",
+        "Gson JSON Library"
+      ],
+      [
+        "infrastructure",
+        "Internal Utilities and Data Structures"
+      ],
+      [
+        "internal-infrastructure",
+        "Internal Utilities and Data Structures"
+      ],
+      [
+        "internal-support",
+        "Internal Support Utilities"
+      ],
+      [
+        "json-element-model",
+        "JSON Element Exceptions"
+      ],
+      [
+        "json-representation",
+        "JSON Streaming and DOM Representation"
+      ],
+      [
+        "object-construction",
+        "Object Construction Strategy"
+      ],
+      [
+        "public-api",
+        "Public Contracts and Annotations"
+      ],
+      [
+        "r1-adapter-framework",
+        "TypeAdapter Framework"
+      ],
+      [
+        "r1-builtin-adapters",
+        "Built-in Type Adapters"
+      ],
+      [
+        "r1-facade-api",
+        "Gson Facade and Conversion API"
+      ],
+      [
+        "r1-gson-root",
+        "Gson JSON Binding Library"
+      ],
+      [
+        "r1-internal-support",
+        "Internal Support Utilities"
+      ],
+      [
+        "r1-java-time-adapters",
+        "java.time Adapters"
+      ],
+      [
+        "r1-json-element-model",
+        "JSON Element Model and Exceptions"
+      ],
+      [
+        "r1-reflection-policy",
+        "Exclusion and Reflection Policy"
+      ],
+      [
+        "r1-streaming-json",
+        "Streaming JSON Reading"
+      ],
+      [
+        "r1-tree-adapter-bridge",
+        "Tree-Style Serializer Bridge"
+      ],
+      [
+        "r1-type-model",
+        "Runtime Generic Type Model"
+      ],
+      [
+        "r2-collection-map-adapters",
+        "Collection, Map, and Tree Adapters"
+      ],
+      [
+        "r2-configuration",
+        "Builder and Naming Configuration"
+      ],
+      [
+        "r2-date-time-adapters",
+        "Date and Time Adapters"
+      ],
+      [
+        "r2-default-adapters",
+        "Built-in Type Adapter Factories"
+      ],
+      [
+        "r2-dom-tree",
+        "JSON DOM Tree"
+      ],
+      [
+        "r2-gson",
+        "Gson JSON Library"
+      ],
+      [
+        "r2-infrastructure",
+        "Internal Utilities and Data Structures"
+      ],
+      [
+        "r2-jsonadapter-annotation-factory",
+        "@JsonAdapter Annotation Handling"
+      ],
+      [
+        "r2-linkedtreemap",
+        "Insertion-Ordered AVL Map"
+      ],
+      [
+        "r2-object-construction",
+        "Object Construction Strategy"
+      ],
+      [
+        "r2-primitive-adapters",
+        "Primitive and Utility Type Adapters"
+      ],
+      [
+        "r2-public-api",
+        "Public Contracts and Annotations"
+      ],
+      [
+        "r2-reflective-binding",
+        "Reflection-Based Object Binding"
+      ],
+      [
+        "r2-reflective-type-adapter-factory",
+        "ReflectiveTypeAdapterFactory"
+      ],
+      [
+        "r2-streaming",
+        "Streaming JSON Writer and Lexical Model"
+      ],
+      [
+        "r2-tree-writer",
+        "Tree-Bound Writer"
+      ],
+      [
+        "reflection-policy",
+        "Exclusion and Reflection Policy"
+      ],
+      [
+        "reflective-binding",
+        "Reflection Policy and Object Binding"
+      ],
+      [
+        "reflective-type-adapter-factory",
+        "Reflection-Based Object Binding"
+      ],
+      [
+        "streaming",
+        "Streaming JSON Writer and Lexical Model"
+      ],
+      [
+        "streaming-json",
+        "Streaming JSON Reading"
+      ],
+      [
+        "type-model",
+        "Runtime Generic Type Model"
+      ]
+    ],
+    "edge_counts_by_kind": {
+      "call": 755,
+      "relation": 296
+    },
+    "checks": [
+      {
+        "principle": "P1",
+        "ok": false,
+        "empty_or_duplicate_capabilities": [
+          "r1-facade-api",
+          "r1-type-model",
+          "r1-builtin-adapters",
+          "r1-streaming-json",
+          "r1-internal-support",
+          "r2-configuration",
+          "r2-dom-tree",
+          "r2-streaming",
+          "r2-infrastructure",
+          "r2-default-adapters",
+          "r2-reflective-binding",
+          "facade-api",
+          "configuration",
+          "type-model",
+          "builtin-adapters",
+          "default-adapters",
+          "streaming-json",
+          "streaming",
+          "dom-tree",
+          "reflective-type-adapter-factory",
+          "infrastructure",
+          "internal-support"
+        ]
+      },
+      {
+        "principle": "P2",
+        "ok": false,
+        "modules": {
+          "gson-json-library": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "r1-gson-root": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "r1-facade-api": {
+            "internal": 27,
+            "external": 106,
+            "internal_external_ratio": 0.25471698113207547
+          },
+          "r1-type-model": {
+            "internal": 70,
+            "external": 86,
+            "internal_external_ratio": 0.813953488372093
+          },
+          "r1-adapter-framework": {
+            "internal": 5,
+            "external": 18,
+            "internal_external_ratio": 0.2777777777777778
+          },
+          "r1-tree-adapter-bridge": {
+            "internal": 8,
+            "external": 26,
+            "internal_external_ratio": 0.3076923076923077
+          },
+          "r1-builtin-adapters": {
+            "internal": 28,
+            "external": 21,
+            "internal_external_ratio": 1.3333333333333333
+          },
+          "r1-java-time-adapters": {
+            "internal": 27,
+            "external": 13,
+            "internal_external_ratio": 2.076923076923077
+          },
+          "r1-streaming-json": {
+            "internal": 206,
+            "external": 30,
+            "internal_external_ratio": 6.866666666666666
+          },
+          "r1-reflection-policy": {
+            "internal": 45,
+            "external": 56,
+            "internal_external_ratio": 0.8035714285714286
+          },
+          "r1-json-element-model": {
+            "internal": 4,
+            "external": 5,
+            "internal_external_ratio": 0.8
+          },
+          "r1-internal-support": {
+            "internal": 30,
+            "external": 17,
+            "internal_external_ratio": 1.7647058823529411
+          },
+          "r2-gson": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "r2-public-api": {
+            "internal": 4,
+            "external": 12,
+            "internal_external_ratio": 0.3333333333333333
+          },
+          "r2-configuration": {
+            "internal": 4,
+            "external": 49,
+            "internal_external_ratio": 0.08163265306122448
+          },
+          "r2-dom-tree": {
+            "internal": 14,
+            "external": 70,
+            "internal_external_ratio": 0.2
+          },
+          "r2-tree-writer": {
+            "internal": 15,
+            "external": 17,
+            "internal_external_ratio": 0.8823529411764706
+          },
+          "r2-streaming": {
+            "internal": 49,
+            "external": 50,
+            "internal_external_ratio": 0.98
+          },
+          "r2-infrastructure": {
+            "internal": 1,
+            "external": 42,
+            "internal_external_ratio": 0.023809523809523808
+          },
+          "r2-linkedtreemap": {
+            "internal": 27,
+            "external": 18,
+            "internal_external_ratio": 1.5
+          },
+          "r2-object-construction": {
+            "internal": 17,
+            "external": 30,
+            "internal_external_ratio": 0.5666666666666667
+          },
+          "r2-default-adapters": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "r2-primitive-adapters": {
+            "internal": 0,
+            "external": 32,
+            "internal_external_ratio": 0.0
+          },
+          "r2-collection-map-adapters": {
+            "internal": 12,
+            "external": 56,
+            "internal_external_ratio": 0.21428571428571427
+          },
+          "r2-date-time-adapters": {
+            "internal": 6,
+            "external": 28,
+            "internal_external_ratio": 0.21428571428571427
+          },
+          "r2-reflective-binding": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "r2-reflective-type-adapter-factory": {
+            "internal": 18,
+            "external": 50,
+            "internal_external_ratio": 0.36
+          },
+          "r2-jsonadapter-annotation-factory": {
+            "internal": 10,
+            "external": 16,
+            "internal_external_ratio": 0.625
+          },
+          "conversion-api": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "facade-api": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "public-api": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "configuration": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "type-model": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "adapter-pipeline": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "adapter-framework": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "builtin-adapters": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "default-adapters": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "object-construction": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "json-representation": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "streaming-json": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "streaming": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "dom-tree": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "json-element-model": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "reflective-binding": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "reflection-policy": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "reflective-type-adapter-factory": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "internal-infrastructure": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "infrastructure": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "internal-support": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          }
+        },
+        "scope": "direct primary ownership; incident cross-module edges counted at each endpoint"
+      },
+      {
+        "principle": "P3",
+        "ok": false,
+        "bounds": [
+          5,
+          30
+        ],
+        "out_of_bounds": {
+          "r1-streaming-json": 69,
+          "r1-json-element-model": 4
+        },
+        "scope": "nodes with directly owned units; structural ancestors excluded"
+      },
+      {
+        "principle": "P4",
+        "ok": true,
+        "ownership_violations": {}
+      },
+      {
+        "principle": "P5",
+        "ok": false,
+        "min_edges_per_dependent_module": 3,
+        "min_dependent_modules": 2,
+        "shared_units": {
+          "grp:jsonwriter-config-accessors": {
+            "r2-dom-tree": 2,
+            "r1-facade-api": 26,
+            "r2-tree-writer": 8
+          },
+          "grp:reflectionhelper-tostring-helpers": {
+            "r2-reflective-type-adapter-factory": 5,
+            "r2-object-construction": 3
+          },
+          "grp:type-token-class": {
+            "r1-facade-api": 12,
+            "r1-java-time-adapters": 2,
+            "r2-reflective-type-adapter-factory": 9,
+            "r2-primitive-adapters": 6,
+            "r2-configuration": 3,
+            "r2-object-construction": 2,
+            "r1-reflection-policy": 1,
+            "r1-builtin-adapters": 8,
+            "r2-collection-map-adapters": 7,
+            "r2-date-time-adapters": 7,
+            "r2-jsonadapter-annotation-factory": 8,
+            "r1-tree-adapter-bridge": 9,
+            "r1-adapter-framework": 1
+          },
+          "grp:typeadapters-factory-helpers": {
+            "r2-configuration": 9,
+            "r2-date-time-adapters": 3
+          },
+          "gson/src/main/java/com/google/gson/Gson.java::method::Gson.getAdapter::16136": {
+            "r1-java-time-adapters": 7,
+            "r2-reflective-type-adapter-factory": 2,
+            "r1-builtin-adapters": 4,
+            "r2-collection-map-adapters": 6,
+            "r1-adapter-framework": 2,
+            "r2-date-time-adapters": 2
+          },
+          "gson/src/main/java/com/google/gson/JsonPrimitive.java::class::JsonPrimitive::1169::s0": {
+            "r2-collection-map-adapters": 5,
+            "r1-streaming-json": 6
+          },
+          "gson/src/main/java/com/google/gson/TypeAdapter.java::method::TypeAdapter.nullSafe::11203": {
+            "r1-java-time-adapters": 4,
+            "r2-primitive-adapters": 3,
+            "r2-jsonadapter-annotation-factory": 2
+          },
+          "gson/src/main/java/com/google/gson/internal/Streams.java::class::Streams::1281::s0": {
+            "r1-facade-api": 5,
+            "r2-dom-tree": 4,
+            "r1-adapter-framework": 2,
+            "r2-collection-map-adapters": 2,
+            "r1-tree-adapter-bridge": 1
+          },
+          "gson/src/main/java/com/google/gson/internal/TroubleshootingGuide.java::class::TroubleshootingGuide::35::s0": {
+            "r1-type-model": 3,
+            "r2-primitive-adapters": 3,
+            "r2-object-construction": 2,
+            "r2-reflective-type-adapter-factory": 1,
+            "r1-reflection-policy": 2,
+            "r1-streaming-json": 4
+          }
+        },
+        "note": "dependency signal only, including utilities already separated; no automatic reassignment"
+      },
+      {
+        "principle": "P6",
+        "ok": false,
+        "modules": {
+          "gson-json-library": {},
+          "r1-gson-root": {},
+          "r1-facade-api": {
+            "java": 17
+          },
+          "r1-type-model": {
+            "java": 19
+          },
+          "r1-adapter-framework": {
+            "java": 12,
+            "unknown": 1
+          },
+          "r1-tree-adapter-bridge": {
+            "java": 12,
+            "unknown": 1
+          },
+          "r1-builtin-adapters": {
+            "java": 25
+          },
+          "r1-java-time-adapters": {
+            "java": 9
+          },
+          "r1-streaming-json": {
+            "java": 69
+          },
+          "r1-reflection-policy": {
+            "java": 26
+          },
+          "r1-json-element-model": {
+            "java": 4
+          },
+          "r1-internal-support": {
+            "java": 10
+          },
+          "r2-gson": {},
+          "r2-public-api": {
+            "java": 18
+          },
+          "r2-configuration": {
+            "java": 11
+          },
+          "r2-dom-tree": {
+            "java": 8
+          },
+          "r2-tree-writer": {
+            "java": 20,
+            "unknown": 2
+          },
+          "r2-streaming": {
+            "java": 22
+          },
+          "r2-infrastructure": {
+            "java": 8
+          },
+          "r2-linkedtreemap": {
+            "java": 10
+          },
+          "r2-object-construction": {
+            "java": 12
+          },
+          "r2-default-adapters": {},
+          "r2-primitive-adapters": {
+            "java": 8
+          },
+          "r2-collection-map-adapters": {
+            "java": 15
+          },
+          "r2-date-time-adapters": {
+            "java": 15
+          },
+          "r2-reflective-binding": {},
+          "r2-reflective-type-adapter-factory": {
+            "java": 14
+          },
+          "r2-jsonadapter-annotation-factory": {
+            "java": 8
+          },
+          "conversion-api": {},
+          "facade-api": {},
+          "public-api": {},
+          "configuration": {},
+          "type-model": {},
+          "adapter-pipeline": {},
+          "adapter-framework": {},
+          "builtin-adapters": {},
+          "default-adapters": {},
+          "object-construction": {},
+          "json-representation": {},
+          "streaming-json": {},
+          "streaming": {},
+          "dom-tree": {},
+          "json-element-model": {},
+          "reflective-binding": {},
+          "reflection-policy": {},
+          "reflective-type-adapter-factory": {},
+          "internal-infrastructure": {},
+          "infrastructure": {},
+          "internal-support": {}
+        },
+        "scope": "unit counts by language; a multi-language unit contributes once per language"
+      },
+      {
+        "principle": "P7",
+        "ok": null,
+        "status": "not_checked",
+        "reason": "no prior tree for the same detail input"
+      }
+    ],
+    "hierarchy": {
+      "ok": true,
+      "requires_intermediate_above_units": 30
+    },
+    "introduction_length": {
+      "ok": false,
+      "overlong": {
+        "conversion-api": {
+          "introduction_chars": 599,
+          "detail_chars": 0
+        },
+        "facade-api": {
+          "introduction_chars": 468,
+          "detail_chars": 0
+        },
+        "public-api": {
+          "introduction_chars": 411,
+          "detail_chars": 0
+        },
+        "configuration": {
+          "introduction_chars": 305,
+          "detail_chars": 0
+        },
+        "type-model": {
+          "introduction_chars": 512,
+          "detail_chars": 0
+        },
+        "adapter-pipeline": {
+          "introduction_chars": 502,
+          "detail_chars": 0
+        },
+        "adapter-framework": {
+          "introduction_chars": 354,
+          "detail_chars": 0
+        },
+        "builtin-adapters": {
+          "introduction_chars": 357,
+          "detail_chars": 0
+        },
+        "default-adapters": {
+          "introduction_chars": 397,
+          "detail_chars": 0
+        },
+        "object-construction": {
+          "introduction_chars": 462,
+          "detail_chars": 0
+        },
+        "json-representation": {
+          "introduction_chars": 488,
+          "detail_chars": 0
+        },
+        "streaming-json": {
+          "introduction_chars": 436,
+          "detail_chars": 0
+        },
+        "streaming": {
+          "introduction_chars": 367,
+          "detail_chars": 0
+        },
+        "dom-tree": {
+          "introduction_chars": 401,
+          "detail_chars": 0
+        },
+        "json-element-model": {
+          "introduction_chars": 372,
+          "detail_chars": 0
+        },
+        "reflective-binding": {
+          "introduction_chars": 429,
+          "detail_chars": 0
+        },
+        "reflection-policy": {
+          "introduction_chars": 478,
+          "detail_chars": 0
+        },
+        "reflective-type-adapter-factory": {
+          "introduction_chars": 443,
+          "detail_chars": 0
+        },
+        "internal-infrastructure": {
+          "introduction_chars": 493,
+          "detail_chars": 0
+        },
+        "infrastructure": {
+          "introduction_chars": 431,
+          "detail_chars": 0
+        },
+        "internal-support": {
+          "introduction_chars": 345,
+          "detail_chars": 0
+        }
+      },
+      "scope": "capability+summary characters versus descendant explain characters"
+    }
+  },
+  "aggregation": {
+    "input_digest": "7e972ca10ab566ee62ecd270291f05206119faaa258df52df1e3f80f34c9a888",
+    "limits": {
+      "max_units": 300,
+      "max_tokens": 64000
+    },
+    "regions": [
+      {
+        "id": "region-0001",
+        "unit_ids": [
+          "grp:arraytypeadapter.java-class",
+          "grp:enumtypeadapter.java-class",
+          "grp:excluder.java-exclusion-predicates",
+          "grp:excluder.java-fluent-builders",
+          "grp:exclusionstrategy-java",
+          "grp:fieldnamingstrategy-interface",
+          "grp:formattingstyle-java",
+          "grp:gson-fromjson-overloads",
+          "grp:gson-internal-gsontypes-generic-array-type-impl",
+          "grp:gson-internal-gsontypes-parameterized-type-impl",
+          "grp:gson-internal-gsontypes-wildcard-type-impl",
+          "grp:gson-tojson-convenience",
+          "grp:gson-tojson-element",
+          "grp:gson-tojsontree-overloads",
+          "grp:iso8601utils-parse-helpers",
+          "grp:javaTimeTypeAdapters-integer-field-adapters",
+          "grp:javaTimeTypeAdapters-javaTimeFactory",
+          "grp:javaTimeTypeAdapters-localDateTime",
+          "grp:javaTimeTypeAdapters-offsetDateTime",
+          "grp:javaTimeTypeAdapters-offsetTime",
+          "grp:javaTimeTypeAdapters-zoneId",
+          "grp:javaTimeTypeAdapters-zonedDateTime",
+          "grp:jsonadapterannotationtypeadapterfactory-java-residual",
+          "grp:jsonparser-java",
+          "grp:jsonstreamparser-java",
+          "grp:jsonsyntaxexception-java",
+          "grp:numbertypeadapter.java-class",
+          "grp:objecttypeadapter.java-class",
+          "grp:reflectionaccessfilter-interface-and-helpers",
+          "grp:reflectionhelper-classifier-helpers",
+          "grp:reflectionhelper-record-abstraction",
+          "grp:reflectionhelper-record-exception-factories",
+          "grp:reflectionhelper-tostring-helpers",
+          "grp:serializationdelegatingtypeadapter.java-class",
+          "grp:treetypeadapter-java-residual",
+          "grp:type-token-class",
+          "grp:typeAdapterRuntimeTypeWrapper-constructor",
+          "grp:typeadapter-nullsafetypeadapter",
+          "gson/src/main/java/com/google/gson/Gson.java::class::Gson.FutureTypeAdapter::58334::s0",
+          "gson/src/main/java/com/google/gson/Gson.java::class::Gson::7521::s0",
+          "gson/src/main/java/com/google/gson/Gson.java::constructor::Gson.Gson::12586",
+          "gson/src/main/java/com/google/gson/Gson.java::method::Gson.assertFullConsumption::57630",
+          "gson/src/main/java/com/google/gson/Gson.java::method::Gson.fromJson::51582",
+          "gson/src/main/java/com/google/gson/Gson.java::method::Gson.getAdapter::16136",
+          "gson/src/main/java/com/google/gson/Gson.java::method::Gson.getDelegateAdapter::21665",
+          "gson/src/main/java/com/google/gson/Gson.java::method::Gson.newJsonReader::36893",
+          "gson/src/main/java/com/google/gson/Gson.java::method::Gson.newJsonWriter::35898",
+          "gson/src/main/java/com/google/gson/Gson.java::method::Gson.toJson::30635",
+          "gson/src/main/java/com/google/gson/Gson.java::method::Gson.toJson::34024",
+          "gson/src/main/java/com/google/gson/JsonNull.java::class::JsonNull::748::s0",
+          "gson/src/main/java/com/google/gson/JsonParseException.java::class::JsonParseException::1324::s0",
+          "gson/src/main/java/com/google/gson/JsonSerializationContext.java::method::JsonSerializationContext.serialize::1168",
+          "gson/src/main/java/com/google/gson/JsonSerializer.java::method::JsonSerializer.serialize::3464",
+          "gson/src/main/java/com/google/gson/LongSerializationPolicy.java::enum::LongSerializationPolicy::915::s0",
+          "gson/src/main/java/com/google/gson/ToNumberStrategy.java::method::ToNumberStrategy.readNumber::3025",
+          "gson/src/main/java/com/google/gson/TypeAdapter.java::class::TypeAdapter::5279::s0",
+          "gson/src/main/java/com/google/gson/TypeAdapter.java::method::TypeAdapter.nullSafe::11203",
+          "gson/src/main/java/com/google/gson/TypeAdapter.java::method::TypeAdapter.toJson::6644",
+          "gson/src/main/java/com/google/gson/TypeAdapter.java::method::TypeAdapter.toJsonTree::7248",
+          "gson/src/main/java/com/google/gson/annotations/package-info.java::module_residual::::0",
+          "gson/src/main/java/com/google/gson/internal/Excluder.java::class::Excluder::1804::s0",
+          "gson/src/main/java/com/google/gson/internal/Excluder.java::method::Excluder.create::3744::s0",
+          "gson/src/main/java/com/google/gson/internal/Excluder.java::method::Excluder.excludeClass::6587",
+          "gson/src/main/java/com/google/gson/internal/Excluder.java::method::Excluder.excludeField::5119",
+          "gson/src/main/java/com/google/gson/internal/GsonTypes.java::class::GsonTypes::1283::s0",
+          "gson/src/main/java/com/google/gson/internal/GsonTypes.java::method::GsonTypes.arrayOf::1976",
+          "gson/src/main/java/com/google/gson/internal/GsonTypes.java::method::GsonTypes.canonicalize::3383",
+          "gson/src/main/java/com/google/gson/internal/GsonTypes.java::method::GsonTypes.equals::5908",
+          "gson/src/main/java/com/google/gson/internal/GsonTypes.java::method::GsonTypes.getCollectionElementType::11014",
+          "gson/src/main/java/com/google/gson/internal/GsonTypes.java::method::GsonTypes.getGenericSupertype::8246",
+          "gson/src/main/java/com/google/gson/internal/GsonTypes.java::method::GsonTypes.getMapKeyAndValueTypes::11482",
+          "gson/src/main/java/com/google/gson/internal/GsonTypes.java::method::GsonTypes.getRawType::4246",
+          "gson/src/main/java/com/google/gson/internal/GsonTypes.java::method::GsonTypes.getSupertype::9725",
+          "gson/src/main/java/com/google/gson/internal/GsonTypes.java::method::GsonTypes.newParameterizedTypeWithOwner::1630",
+          "gson/src/main/java/com/google/gson/internal/GsonTypes.java::method::GsonTypes.resolve::12248",
+          "gson/src/main/java/com/google/gson/internal/GsonTypes.java::method::GsonTypes.resolve::12434",
+          "gson/src/main/java/com/google/gson/internal/GsonTypes.java::method::GsonTypes.resolveTypeVariable::16670",
+          "gson/src/main/java/com/google/gson/internal/GsonTypes.java::method::GsonTypes.subtypeOf::2424",
+          "gson/src/main/java/com/google/gson/internal/GsonTypes.java::method::GsonTypes.supertypeOf::2915",
+          "gson/src/main/java/com/google/gson/internal/NonNullElementWrapperList.java::class::NonNullElementWrapperList::1153::s0",
+          "gson/src/main/java/com/google/gson/internal/NumberLimits.java::class::NumberLimits::242::s0",
+          "gson/src/main/java/com/google/gson/internal/NumberLimits.java::method::NumberLimits.parseBigDecimal::585",
+          "gson/src/main/java/com/google/gson/internal/NumberLimits.java::method::NumberLimits.parseBigInteger::985",
+          "gson/src/main/java/com/google/gson/internal/ObjectConstructor.java::interface::ObjectConstructor::911::s0",
+          "gson/src/main/java/com/google/gson/internal/PreJava9DateFormatProvider.java::class::PreJava9DateFormatProvider::824::s0",
+          "gson/src/main/java/com/google/gson/internal/Primitives.java::class::Primitives::810::s0",
+          "gson/src/main/java/com/google/gson/internal/ReflectionAccessFilterHelper.java::class::ReflectionAccessFilterHelper.AccessChecker::2944::s0",
+          "gson/src/main/java/com/google/gson/internal/ReflectionAccessFilterHelper.java::class::ReflectionAccessFilterHelper::903::s0",
+          "gson/src/main/java/com/google/gson/internal/ReflectionAccessFilterHelper.java::method::ReflectionAccessFilterHelper.canAccess::2687",
+          "gson/src/main/java/com/google/gson/internal/ReflectionAccessFilterHelper.java::method::ReflectionAccessFilterHelper.getFilterResult::2278",
+          "gson/src/main/java/com/google/gson/internal/ReflectionAccessFilterHelper.java::method::ReflectionAccessFilterHelper.isAndroidType::1459",
+          "gson/src/main/java/com/google/gson/internal/ReflectionAccessFilterHelper.java::method::ReflectionAccessFilterHelper.isJavaType::1232",
+          "gson/src/main/java/com/google/gson/internal/UnsafeAllocator.java::class::UnsafeAllocator::900::s0",
+          "gson/src/main/java/com/google/gson/internal/bind/ArrayTypeAdapter.java::constructor::ArrayTypeAdapter.ArrayTypeAdapter::2113",
+          "gson/src/main/java/com/google/gson/internal/bind/ArrayTypeAdapter.java::method::ArrayTypeAdapter.create::1310",
+          "gson/src/main/java/com/google/gson/internal/bind/ArrayTypeAdapter.java::method::ArrayTypeAdapter.read::2391",
+          "gson/src/main/java/com/google/gson/internal/bind/ArrayTypeAdapter.java::method::ArrayTypeAdapter.write::3250",
+          "gson/src/main/java/com/google/gson/internal/bind/EnumTypeAdapter.java::constructor::EnumTypeAdapter.EnumTypeAdapter::2326",
+          "gson/src/main/java/com/google/gson/internal/bind/EnumTypeAdapter.java::method::EnumTypeAdapter.calculateHashMapCapacity::2063",
+          "gson/src/main/java/com/google/gson/internal/bind/EnumTypeAdapter.java::method::EnumTypeAdapter.create::1375",
+          "gson/src/main/java/com/google/gson/internal/bind/EnumTypeAdapter.java::method::EnumTypeAdapter.read::4309",
+          "gson/src/main/java/com/google/gson/internal/bind/EnumTypeAdapter.java::method::EnumTypeAdapter.write::4685",
+          "gson/src/main/java/com/google/gson/internal/bind/IgnoreJRERequirement.java::annotation::IgnoreJRERequirement::202",
+          "gson/src/main/java/com/google/gson/internal/bind/JavaTimeTypeAdapters.java::method::JavaTimeTypeAdapters.get::1908",
+          "gson/src/main/java/com/google/gson/internal/bind/JavaTimeTypeAdapters.java::method::JavaTimeTypeAdapters.requireNonNullField::16141",
+          "gson/src/main/java/com/google/gson/internal/bind/JsonTreeReader.java::class::JsonTreeReader::1274::s2",
+          "gson/src/main/java/com/google/gson/internal/bind/JsonTreeReader.java::method::JsonTreeReader.beginArray::2871",
+          "gson/src/main/java/com/google/gson/internal/bind/JsonTreeReader.java::method::JsonTreeReader.beginObject::3304",
+          "gson/src/main/java/com/google/gson/internal/bind/JsonTreeReader.java::method::JsonTreeReader.close::10131",
+          "gson/src/main/java/com/google/gson/internal/bind/JsonTreeReader.java::method::JsonTreeReader.endArray::3082",
+          "gson/src/main/java/com/google/gson/internal/bind/JsonTreeReader.java::method::JsonTreeReader.endObject::3496",
+          "gson/src/main/java/com/google/gson/internal/bind/JsonTreeReader.java::method::JsonTreeReader.expect::5838",
+          "gson/src/main/java/com/google/gson/internal/bind/JsonTreeReader.java::method::JsonTreeReader.getCharacterOffset::12831",
+          "gson/src/main/java/com/google/gson/internal/bind/JsonTreeReader.java::method::JsonTreeReader.getPath::11629",
+          "gson/src/main/java/com/google/gson/internal/bind/JsonTreeReader.java::method::JsonTreeReader.hasNext::3821",
+          "gson/src/main/java/com/google/gson/internal/bind/JsonTreeReader.java::method::JsonTreeReader.isAllAscii::13067",
+          "gson/src/main/java/com/google/gson/internal/bind/JsonTreeReader.java::method::JsonTreeReader.locationString::12901",
+          "gson/src/main/java/com/google/gson/internal/bind/JsonTreeReader.java::method::JsonTreeReader.nextBoolean::6950",
+          "gson/src/main/java/com/google/gson/internal/bind/JsonTreeReader.java::method::JsonTreeReader.nextDouble::7376",
+          "gson/src/main/java/com/google/gson/internal/bind/JsonTreeReader.java::method::JsonTreeReader.nextInt::8950",
+          "gson/src/main/java/com/google/gson/internal/bind/JsonTreeReader.java::method::JsonTreeReader.nextJsonElement::9687",
+          "gson/src/main/java/com/google/gson/internal/bind/JsonTreeReader.java::method::JsonTreeReader.nextLong::8209",
+          "gson/src/main/java/com/google/gson/internal/bind/JsonTreeReader.java::method::JsonTreeReader.nextName::6058",
+          "gson/src/main/java/com/google/gson/internal/bind/JsonTreeReader.java::method::JsonTreeReader.nextNull::7202",
+          "gson/src/main/java/com/google/gson/internal/bind/JsonTreeReader.java::method::JsonTreeReader.nextString::6508",
+          "gson/src/main/java/com/google/gson/internal/bind/JsonTreeReader.java::method::JsonTreeReader.numberFormatException::13560",
+          "gson/src/main/java/com/google/gson/internal/bind/JsonTreeReader.java::method::JsonTreeReader.peek::4156",
+          "gson/src/main/java/com/google/gson/internal/bind/JsonTreeReader.java::method::JsonTreeReader.peekStack::5622",
+          "gson/src/main/java/com/google/gson/internal/bind/JsonTreeReader.java::method::JsonTreeReader.popStack::5691",
+          "gson/src/main/java/com/google/gson/internal/bind/JsonTreeReader.java::method::JsonTreeReader.promoteNameToValue::10896",
+          "gson/src/main/java/com/google/gson/internal/bind/JsonTreeReader.java::method::JsonTreeReader.push::11313",
+          "gson/src/main/java/com/google/gson/internal/bind/JsonTreeReader.java::method::JsonTreeReader.skipValue::10254",
+          "gson/src/main/java/com/google/gson/internal/bind/JsonTreeReader.java::method::JsonTreeReader.validateAscii::13246",
+          "gson/src/main/java/com/google/gson/internal/bind/NumberTypeAdapter.java::method::NumberTypeAdapter.getFactory::1974",
+          "gson/src/main/java/com/google/gson/internal/bind/NumberTypeAdapter.java::method::NumberTypeAdapter.newFactory::1551::s0",
+          "gson/src/main/java/com/google/gson/internal/bind/NumberTypeAdapter.java::method::NumberTypeAdapter.read::2234",
+          "gson/src/main/java/com/google/gson/internal/bind/NumberTypeAdapter.java::method::NumberTypeAdapter.write::2659",
+          "gson/src/main/java/com/google/gson/internal/bind/ObjectTypeAdapter.java::method::ObjectTypeAdapter.getFactory::2210",
+          "gson/src/main/java/com/google/gson/internal/bind/ObjectTypeAdapter.java::method::ObjectTypeAdapter.newFactory::1783::s0",
+          "gson/src/main/java/com/google/gson/internal/bind/ObjectTypeAdapter.java::method::ObjectTypeAdapter.read::3491",
+          "gson/src/main/java/com/google/gson/internal/bind/ObjectTypeAdapter.java::method::ObjectTypeAdapter.readTerminal::2979",
+          "gson/src/main/java/com/google/gson/internal/bind/ObjectTypeAdapter.java::method::ObjectTypeAdapter.tryBeginNesting::2580",
+          "gson/src/main/java/com/google/gson/internal/bind/ObjectTypeAdapter.java::method::ObjectTypeAdapter.write::4961",
+          "gson/src/main/java/com/google/gson/internal/bind/SerializationDelegatingTypeAdapter.java::method::SerializationDelegatingTypeAdapter.getSerializationDelegate::1029",
+          "gson/src/main/java/com/google/gson/internal/bind/TreeTypeAdapter.java::class::TreeTypeAdapter.GsonContextImpl::6932::s0",
+          "gson/src/main/java/com/google/gson/internal/bind/TreeTypeAdapter.java::class::TreeTypeAdapter.SingleTypeFactory::5302::s0",
+          "gson/src/main/java/com/google/gson/internal/bind/TreeTypeAdapter.java::class::TreeTypeAdapter::1484::s0",
+          "gson/src/main/java/com/google/gson/internal/bind/TreeTypeAdapter.java::method::TreeTypeAdapter.delegate::3660",
+          "gson/src/main/java/com/google/gson/internal/bind/TreeTypeAdapter.java::method::TreeTypeAdapter.getSerializationDelegate::4173",
+          "gson/src/main/java/com/google/gson/internal/bind/TreeTypeAdapter.java::method::TreeTypeAdapter.newFactory::4378",
+          "gson/src/main/java/com/google/gson/internal/bind/TreeTypeAdapter.java::method::TreeTypeAdapter.newFactoryWithMatchRawType::4647",
+          "gson/src/main/java/com/google/gson/internal/bind/TreeTypeAdapter.java::method::TreeTypeAdapter.newTypeHierarchyFactory::5110",
+          "gson/src/main/java/com/google/gson/internal/bind/TreeTypeAdapter.java::method::TreeTypeAdapter.read::2974",
+          "gson/src/main/java/com/google/gson/internal/bind/TreeTypeAdapter.java::method::TreeTypeAdapter.write::3299",
+          "gson/src/main/java/com/google/gson/internal/bind/TypeAdapterRuntimeTypeWrapper.java::method::TypeAdapterRuntimeTypeWrapper.getRuntimeTypeIfMoreSpecific::3850",
+          "gson/src/main/java/com/google/gson/internal/bind/TypeAdapterRuntimeTypeWrapper.java::method::TypeAdapterRuntimeTypeWrapper.isReflective::3185",
+          "gson/src/main/java/com/google/gson/internal/bind/TypeAdapterRuntimeTypeWrapper.java::method::TypeAdapterRuntimeTypeWrapper.write::1408",
+          "gson/src/main/java/com/google/gson/internal/bind/TypeAdapterRuntimeTypeWrapper.java::module_residual::::0",
+          "gson/src/main/java/com/google/gson/internal/bind/util/ISO8601Utils.java::class::ISO8601Utils::1422::s0",
+          "gson/src/main/java/com/google/gson/internal/bind/util/ISO8601Utils.java::method::ISO8601Utils.format::3005",
+          "gson/src/main/java/com/google/gson/internal/bind/util/ISO8601Utils.java::method::ISO8601Utils.parse::5200",
+          "gson/src/main/java/com/google/gson/internal/reflect/ReflectionHelper.java::class::ReflectionHelper::964::s0",
+          "gson/src/main/java/com/google/gson/internal/reflect/ReflectionHelper.java::method::ReflectionHelper.getAccessibleObjectDescription::3296",
+          "gson/src/main/java/com/google/gson/internal/reflect/ReflectionHelper.java::method::ReflectionHelper.getInaccessibleTroubleshootingSuffix::1437",
+          "gson/src/main/java/com/google/gson/internal/reflect/ReflectionHelper.java::method::ReflectionHelper.makeAccessible::2293",
+          "gson/src/main/java/com/google/gson/internal/reflect/ReflectionHelper.java::method::ReflectionHelper.tryMakeAccessible::6261",
+          "gson/src/main/java/com/google/gson/stream/JsonReader.java::class::JsonReader::7786::s0",
+          "gson/src/main/java/com/google/gson/stream/JsonReader.java::method::JsonReader.beginArray::18357",
+          "gson/src/main/java/com/google/gson/stream/JsonReader.java::method::JsonReader.beginObject::19415",
+          "gson/src/main/java/com/google/gson/stream/JsonReader.java::method::JsonReader.checkLenient::56006",
+          "gson/src/main/java/com/google/gson/stream/JsonReader.java::method::JsonReader.close::48520",
+          "gson/src/main/java/com/google/gson/stream/JsonReader.java::method::JsonReader.consumeNonExecutePrefix::63521",
+          "gson/src/main/java/com/google/gson/stream/JsonReader.java::method::JsonReader.doPeek::21726",
+          "gson/src/main/java/com/google/gson/stream/JsonReader.java::method::JsonReader.endArray::18894",
+          "gson/src/main/java/com/google/gson/stream/JsonReader.java::method::JsonReader.endObject::19920",
+          "gson/src/main/java/com/google/gson/stream/JsonReader.java::method::JsonReader.fillBuffer::52598",
+          "gson/src/main/java/com/google/gson/stream/JsonReader.java::method::JsonReader.getPath::57518",
+          "gson/src/main/java/com/google/gson/stream/JsonReader.java::method::JsonReader.isLiteral::31730",
+          "gson/src/main/java/com/google/gson/stream/JsonReader.java::method::JsonReader.locationString::57340",
+          "gson/src/main/java/com/google/gson/stream/JsonReader.java::method::JsonReader.nextBoolean::34578",
+          "gson/src/main/java/com/google/gson/stream/JsonReader.java::method::JsonReader.nextDouble::36053",
+          "gson/src/main/java/com/google/gson/stream/JsonReader.java::method::JsonReader.nextInt::46288",
+          "gson/src/main/java/com/google/gson/stream/JsonReader.java::method::JsonReader.nextLong::38047",
+          "gson/src/main/java/com/google/gson/stream/JsonReader.java::method::JsonReader.nextName::32389",
+          "gson/src/main/java/com/google/gson/stream/JsonReader.java::method::JsonReader.nextNonWhitespace::53619",
+          "gson/src/main/java/com/google/gson/stream/JsonReader.java::method::JsonReader.nextNull::35203",
+          "gson/src/main/java/com/google/gson/stream/JsonReader.java::method::JsonReader.nextQuotedValue::40245",
+          "gson/src/main/java/com/google/gson/stream/JsonReader.java::method::JsonReader.nextString::33475",
+          "gson/src/main/java/com/google/gson/stream/JsonReader.java::method::JsonReader.nextUnquotedValue::42841",
+          "gson/src/main/java/com/google/gson/stream/JsonReader.java::method::JsonReader.peek::20675",
+          "gson/src/main/java/com/google/gson/stream/JsonReader.java::method::JsonReader.peekKeyword::26593",
+          "gson/src/main/java/com/google/gson/stream/JsonReader.java::method::JsonReader.peekNumber::28222",
+          "gson/src/main/java/com/google/gson/stream/JsonReader.java::method::JsonReader.promoteNameToValue::64335",
+          "gson/src/main/java/com/google/gson/stream/JsonReader.java::method::JsonReader.push::51837",
+          "gson/src/main/java/com/google/gson/stream/JsonReader.java::method::JsonReader.readEscapeCharacter::60794",
+          "gson/src/main/java/com/google/gson/stream/JsonReader.java::method::JsonReader.recordPromotedName::33072",
+          "gson/src/main/java/com/google/gson/stream/JsonReader.java::method::JsonReader.skipQuotedValue::44285",
+          "gson/src/main/java/com/google/gson/stream/JsonReader.java::method::JsonReader.skipTo::56771",
+          "gson/src/main/java/com/google/gson/stream/JsonReader.java::method::JsonReader.skipToEndOfLine::56412",
+          "gson/src/main/java/com/google/gson/stream/JsonReader.java::method::JsonReader.skipUnquotedValue::45048",
+          "gson/src/main/java/com/google/gson/stream/JsonReader.java::method::JsonReader.skipValue::49479",
+          "gson/src/main/java/com/google/gson/stream/JsonReader.java::method::JsonReader.syntaxError::62735",
+          "gson/src/main/java/com/google/gson/stream/JsonReader.java::method::JsonReader.unexpectedTokenError::62970",
+          "gson/src/main/java/com/google/gson/stream/JsonReader.java::method::JsonReader.validateAscii::64041",
+          "gson/src/main/java/com/google/gson/stream/JsonReader.java::method::JsonReader.validateString::42217"
+        ],
+        "input_tokens": 51615
+      },
+      {
+        "id": "region-0002",
+        "unit_ids": [
+          "grp:collectiontypeadapterfactory.java-class",
+          "grp:constructorconstructor-java-instance-creator-constructor",
+          "grp:constructorconstructor-java-throwing-object-constructor",
+          "grp:fieldattributes-java",
+          "grp:fieldnamingpolicy-field-naming-policy",
+          "grp:instancecreator-java",
+          "grp:jsonarray-class",
+          "grp:jsondeserializer-java",
+          "grp:jsonelement-class",
+          "grp:jsonelementtypeadapter.java-class",
+          "grp:jsonioexception-java",
+          "grp:jsonobject-class",
+          "grp:jsontreereader-java-residual",
+          "grp:jsontreewriter-java-residual",
+          "grp:jsonwriter-array-object-scopes",
+          "grp:jsonwriter-config-accessors",
+          "grp:jsonwriter-stack-helpers",
+          "grp:jsonwriter-value-overloads",
+          "grp:linkedtreemap.java-avl-rebalance-rotations",
+          "grp:linkedtreemap.java-lookup-helpers",
+          "grp:linkedtreemap.java-serialization-replacement",
+          "grp:reflectiveTypeAdapterFactory-adapter",
+          "grp:reflectiveTypeAdapterFactory-boundField",
+          "grp:reflectiveTypeAdapterFactory-class-header",
+          "grp:reflectiveTypeAdapterFactory-create",
+          "grp:reflectiveTypeAdapterFactory-createBoundField",
+          "grp:reflectiveTypeAdapterFactory-fieldReflectionAdapter",
+          "grp:reflectiveTypeAdapterFactory-fieldsData",
+          "grp:reflectiveTypeAdapterFactory-recordAdapter",
+          "grp:tonumberpolicy-java",
+          "grp:typeadapterfactory-java",
+          "grp:typeadapters-big-numbers",
+          "grp:typeadapters-calendar-locale",
+          "grp:typeadapters-char-string",
+          "grp:typeadapters-class-bitset-boolean",
+          "grp:typeadapters-factory-helpers",
+          "grp:typeadapters-float-double",
+          "grp:typeadapters-integer-like",
+          "grp:typeadapters-net-id",
+          "gson/src/main/java/com/google/gson/FieldNamingPolicy.java::method::FieldNamingPolicy.separateCamelCase::6102",
+          "gson/src/main/java/com/google/gson/FieldNamingPolicy.java::method::FieldNamingPolicy.upperCaseFirstLetter::6599",
+          "gson/src/main/java/com/google/gson/GsonBuilder.java::class::GsonBuilder::3792::s0",
+          "gson/src/main/java/com/google/gson/GsonBuilder.java::constructor::GsonBuilder.GsonBuilder::7724",
+          "gson/src/main/java/com/google/gson/GsonBuilder.java::method::GsonBuilder.addDateTypeAdapters::46815",
+          "gson/src/main/java/com/google/gson/GsonBuilder.java::method::GsonBuilder.createFactories::41829",
+          "gson/src/main/java/com/google/gson/GsonBuilder.java::method::GsonBuilder.newImmutableList::45458",
+          "gson/src/main/java/com/google/gson/GsonBuilder.java::method::GsonBuilder.registerTypeAdapter::32926",
+          "gson/src/main/java/com/google/gson/GsonBuilder.java::method::GsonBuilder.registerTypeHierarchyAdapter::36721",
+          "gson/src/main/java/com/google/gson/JsonDeserializationContext.java::method::JsonDeserializationContext.deserialize::1578",
+          "gson/src/main/java/com/google/gson/JsonPrimitive.java::class::JsonPrimitive::1169::s0",
+          "gson/src/main/java/com/google/gson/JsonPrimitive.java::method::JsonPrimitive.equals::10354",
+          "gson/src/main/java/com/google/gson/JsonPrimitive.java::method::JsonPrimitive.hashCode::7910",
+          "gson/src/main/java/com/google/gson/JsonPrimitive.java::method::JsonPrimitive.hashOfDoubleValue::9951",
+          "gson/src/main/java/com/google/gson/JsonPrimitive.java::method::JsonPrimitive.isIntegral::11748",
+          "gson/src/main/java/com/google/gson/Strictness.java::enum::Strictness::760",
+          "gson/src/main/java/com/google/gson/annotations/Expose.java::annotation::Expose::2803",
+          "gson/src/main/java/com/google/gson/annotations/Expose.java::module_residual::::0",
+          "gson/src/main/java/com/google/gson/annotations/JsonAdapter.java::annotation::JsonAdapter::4407",
+          "gson/src/main/java/com/google/gson/annotations/JsonAdapter.java::module_residual::::0",
+          "gson/src/main/java/com/google/gson/annotations/SerializedName.java::annotation::SerializedName::2800",
+          "gson/src/main/java/com/google/gson/annotations/SerializedName.java::module_residual::::0",
+          "gson/src/main/java/com/google/gson/annotations/Since.java::annotation::Since::2103",
+          "gson/src/main/java/com/google/gson/annotations/Since.java::module_residual::::0",
+          "gson/src/main/java/com/google/gson/annotations/Until.java::annotation::Until::2430",
+          "gson/src/main/java/com/google/gson/annotations/Until.java::module_residual::::0",
+          "gson/src/main/java/com/google/gson/internal/ConstructorConstructor.java::class::ConstructorConstructor::1594::s0",
+          "gson/src/main/java/com/google/gson/internal/ConstructorConstructor.java::method::ConstructorConstructor.checkInstantiable::2418",
+          "gson/src/main/java/com/google/gson/internal/ConstructorConstructor.java::method::ConstructorConstructor.get::3666",
+          "gson/src/main/java/com/google/gson/internal/ConstructorConstructor.java::method::ConstructorConstructor.get::4032",
+          "gson/src/main/java/com/google/gson/internal/ConstructorConstructor.java::method::ConstructorConstructor.newCollectionConstructor::12489",
+          "gson/src/main/java/com/google/gson/internal/ConstructorConstructor.java::method::ConstructorConstructor.newDefaultConstructor::8561",
+          "gson/src/main/java/com/google/gson/internal/ConstructorConstructor.java::method::ConstructorConstructor.newDefaultImplementationConstructor::11432",
+          "gson/src/main/java/com/google/gson/internal/ConstructorConstructor.java::method::ConstructorConstructor.newMapConstructor::13223",
+          "gson/src/main/java/com/google/gson/internal/ConstructorConstructor.java::method::ConstructorConstructor.newSpecialCollectionConstructor::7046",
+          "gson/src/main/java/com/google/gson/internal/ConstructorConstructor.java::method::ConstructorConstructor.newUnsafeAllocator::14000",
+          "gson/src/main/java/com/google/gson/internal/JavaVersion.java::class::JavaVersion::703::s0",
+          "gson/src/main/java/com/google/gson/internal/JsonReaderInternalAccess.java::class::JsonReaderInternalAccess::788::s0",
+          "gson/src/main/java/com/google/gson/internal/LazilyParsedNumber.java::class::LazilyParsedNumber::885::s0",
+          "gson/src/main/java/com/google/gson/internal/LinkedTreeMap.java::class::LinkedTreeMap.EntrySet::17224::s0",
+          "gson/src/main/java/com/google/gson/internal/LinkedTreeMap.java::class::LinkedTreeMap.KeySet::18072::s0",
+          "gson/src/main/java/com/google/gson/internal/LinkedTreeMap.java::class::LinkedTreeMap.LinkedTreeMapIterator::16279::s0",
+          "gson/src/main/java/com/google/gson/internal/LinkedTreeMap.java::class::LinkedTreeMap.Node::14054::s0",
+          "gson/src/main/java/com/google/gson/internal/LinkedTreeMap.java::class::LinkedTreeMap::1500::s0",
+          "gson/src/main/java/com/google/gson/internal/LinkedTreeMap.java::method::LinkedTreeMap.find::4374",
+          "gson/src/main/java/com/google/gson/internal/LinkedTreeMap.java::method::LinkedTreeMap.removeInternal::7417",
+          "gson/src/main/java/com/google/gson/internal/Streams.java::class::Streams.AppendableWriter.CurrentWrite::4501::s0",
+          "gson/src/main/java/com/google/gson/internal/Streams.java::class::Streams.AppendableWriter::2771::s0",
+          "gson/src/main/java/com/google/gson/internal/Streams.java::class::Streams::1281::s0",
+          "gson/src/main/java/com/google/gson/internal/Streams.java::method::Streams.parse::1468",
+          "gson/src/main/java/com/google/gson/internal/TroubleshootingGuide.java::class::TroubleshootingGuide::35::s0",
+          "gson/src/main/java/com/google/gson/internal/bind/CollectionTypeAdapterFactory.java::method::CollectionTypeAdapterFactory.Adapter.read::2936",
+          "gson/src/main/java/com/google/gson/internal/bind/CollectionTypeAdapterFactory.java::method::CollectionTypeAdapterFactory.Adapter.write::3365",
+          "gson/src/main/java/com/google/gson/internal/bind/CollectionTypeAdapterFactory.java::method::CollectionTypeAdapterFactory.create::1501",
+          "gson/src/main/java/com/google/gson/internal/bind/DefaultDateTypeAdapter.java::class::DefaultDateTypeAdapter.DateType::3520::s0",
+          "gson/src/main/java/com/google/gson/internal/bind/DefaultDateTypeAdapter.java::class::DefaultDateTypeAdapter::2142::s0",
+          "gson/src/main/java/com/google/gson/internal/bind/DefaultDateTypeAdapter.java::constructor::DefaultDateTypeAdapter.DefaultDateTypeAdapter::4713",
+          "gson/src/main/java/com/google/gson/internal/bind/DefaultDateTypeAdapter.java::constructor::DefaultDateTypeAdapter.DefaultDateTypeAdapter::5030",
+          "gson/src/main/java/com/google/gson/internal/bind/DefaultDateTypeAdapter.java::method::DefaultDateTypeAdapter.create::2954",
+          "gson/src/main/java/com/google/gson/internal/bind/DefaultDateTypeAdapter.java::method::DefaultDateTypeAdapter.deserializeToDate::6208",
+          "gson/src/main/java/com/google/gson/internal/bind/DefaultDateTypeAdapter.java::method::DefaultDateTypeAdapter.read::5976",
+          "gson/src/main/java/com/google/gson/internal/bind/DefaultDateTypeAdapter.java::method::DefaultDateTypeAdapter.toString::6998",
+          "gson/src/main/java/com/google/gson/internal/bind/DefaultDateTypeAdapter.java::method::DefaultDateTypeAdapter.write::5534",
+          "gson/src/main/java/com/google/gson/internal/bind/JsonAdapterAnnotationTypeAdapterFactory.java::class::JsonAdapterAnnotationTypeAdapterFactory::1257::s1",
+          "gson/src/main/java/com/google/gson/internal/bind/JsonAdapterAnnotationTypeAdapterFactory.java::method::JsonAdapterAnnotationTypeAdapterFactory.areSameFactories::6927",
+          "gson/src/main/java/com/google/gson/internal/bind/JsonAdapterAnnotationTypeAdapterFactory.java::method::JsonAdapterAnnotationTypeAdapterFactory.create::3149",
+          "gson/src/main/java/com/google/gson/internal/bind/JsonAdapterAnnotationTypeAdapterFactory.java::method::JsonAdapterAnnotationTypeAdapterFactory.createAdapter::3632",
+          "gson/src/main/java/com/google/gson/internal/bind/JsonAdapterAnnotationTypeAdapterFactory.java::method::JsonAdapterAnnotationTypeAdapterFactory.getAnnotation::2933",
+          "gson/src/main/java/com/google/gson/internal/bind/JsonAdapterAnnotationTypeAdapterFactory.java::method::JsonAdapterAnnotationTypeAdapterFactory.getTypeAdapter::4615",
+          "gson/src/main/java/com/google/gson/internal/bind/JsonAdapterAnnotationTypeAdapterFactory.java::method::JsonAdapterAnnotationTypeAdapterFactory.isClassJsonAdapterFactory::7300",
+          "gson/src/main/java/com/google/gson/internal/bind/JsonAdapterAnnotationTypeAdapterFactory.java::method::JsonAdapterAnnotationTypeAdapterFactory.putFactoryAndGetCurrent::4278",
+          "gson/src/main/java/com/google/gson/internal/bind/JsonElementTypeAdapter.java::method::JsonElementTypeAdapter.read::2548",
+          "gson/src/main/java/com/google/gson/internal/bind/JsonElementTypeAdapter.java::method::JsonElementTypeAdapter.readTerminal::1921",
+          "gson/src/main/java/com/google/gson/internal/bind/JsonElementTypeAdapter.java::method::JsonElementTypeAdapter.tryBeginNesting::1520",
+          "gson/src/main/java/com/google/gson/internal/bind/JsonElementTypeAdapter.java::method::JsonElementTypeAdapter.write::4060",
+          "gson/src/main/java/com/google/gson/internal/bind/JsonTreeWriter.java::class::JsonTreeWriter::1093::s3",
+          "gson/src/main/java/com/google/gson/internal/bind/JsonTreeWriter.java::method::JsonTreeWriter.beginArray::3058",
+          "gson/src/main/java/com/google/gson/internal/bind/JsonTreeWriter.java::method::JsonTreeWriter.beginObject::3613",
+          "gson/src/main/java/com/google/gson/internal/bind/JsonTreeWriter.java::method::JsonTreeWriter.close::6789",
+          "gson/src/main/java/com/google/gson/internal/bind/JsonTreeWriter.java::method::JsonTreeWriter.endArray::3247",
+          "gson/src/main/java/com/google/gson/internal/bind/JsonTreeWriter.java::method::JsonTreeWriter.endObject::3808",
+          "gson/src/main/java/com/google/gson/internal/bind/JsonTreeWriter.java::method::JsonTreeWriter.flush::6732",
+          "gson/src/main/java/com/google/gson/internal/bind/JsonTreeWriter.java::method::JsonTreeWriter.get::2292",
+          "gson/src/main/java/com/google/gson/internal/bind/JsonTreeWriter.java::method::JsonTreeWriter.jsonValue::6603",
+          "gson/src/main/java/com/google/gson/internal/bind/JsonTreeWriter.java::method::JsonTreeWriter.name::4176",
+          "gson/src/main/java/com/google/gson/internal/bind/JsonTreeWriter.java::method::JsonTreeWriter.nullValue::6464",
+          "gson/src/main/java/com/google/gson/internal/bind/JsonTreeWriter.java::method::JsonTreeWriter.peek::2465",
+          "gson/src/main/java/com/google/gson/internal/bind/JsonTreeWriter.java::method::JsonTreeWriter.put::2541",
+          "gson/src/main/java/com/google/gson/internal/bind/JsonTreeWriter.java::method::JsonTreeWriter.value::4658",
+          "gson/src/main/java/com/google/gson/internal/bind/JsonTreeWriter.java::method::JsonTreeWriter.value::4869",
+          "gson/src/main/java/com/google/gson/internal/bind/JsonTreeWriter.java::method::JsonTreeWriter.value::5024",
+          "gson/src/main/java/com/google/gson/internal/bind/JsonTreeWriter.java::method::JsonTreeWriter.value::5236",
+          "gson/src/main/java/com/google/gson/internal/bind/JsonTreeWriter.java::method::JsonTreeWriter.value::5557",
+          "gson/src/main/java/com/google/gson/internal/bind/JsonTreeWriter.java::method::JsonTreeWriter.value::5881",
+          "gson/src/main/java/com/google/gson/internal/bind/JsonTreeWriter.java::method::JsonTreeWriter.value::6033",
+          "gson/src/main/java/com/google/gson/internal/bind/MapTypeAdapterFactory.java::class::MapTypeAdapterFactory.Adapter::5835::s0",
+          "gson/src/main/java/com/google/gson/internal/bind/MapTypeAdapterFactory.java::class::MapTypeAdapterFactory::3807::s0",
+          "gson/src/main/java/com/google/gson/internal/bind/MapTypeAdapterFactory.java::method::MapTypeAdapterFactory.Adapter.keyToString::9120",
+          "gson/src/main/java/com/google/gson/internal/bind/MapTypeAdapterFactory.java::method::MapTypeAdapterFactory.Adapter.read::6369",
+          "gson/src/main/java/com/google/gson/internal/bind/MapTypeAdapterFactory.java::method::MapTypeAdapterFactory.Adapter.write::7612",
+          "gson/src/main/java/com/google/gson/internal/bind/MapTypeAdapterFactory.java::method::MapTypeAdapterFactory.create::4242",
+          "gson/src/main/java/com/google/gson/internal/bind/ReflectiveTypeAdapterFactory.java::class::ReflectiveTypeAdapterFactory::2289::s13",
+          "gson/src/main/java/com/google/gson/internal/bind/ReflectiveTypeAdapterFactory.java::method::ReflectiveTypeAdapterFactory.checkAccessible::6282",
+          "gson/src/main/java/com/google/gson/internal/bind/ReflectiveTypeAdapterFactory.java::method::ReflectiveTypeAdapterFactory.createDuplicateFieldException::12747",
+          "gson/src/main/java/com/google/gson/internal/bind/ReflectiveTypeAdapterFactory.java::method::ReflectiveTypeAdapterFactory.getBoundFields::13352",
+          "gson/src/main/java/com/google/gson/internal/bind/ReflectiveTypeAdapterFactory.java::method::ReflectiveTypeAdapterFactory.getFieldNames::3349",
+          "gson/src/main/java/com/google/gson/internal/bind/ReflectiveTypeAdapterFactory.java::module_residual::::0",
+          "gson/src/main/java/com/google/gson/internal/bind/TypeAdapters.java::class::TypeAdapters.IntegerFieldsTypeAdapter::28599::s0",
+          "gson/src/main/java/com/google/gson/internal/bind/TypeAdapters.java::method::TypeAdapters.javaTimeTypeAdapterFactory::32597",
+          "gson/src/main/java/com/google/gson/internal/sql/SqlDateTypeAdapter.java::class::SqlDateTypeAdapter::1417::s0",
+          "gson/src/main/java/com/google/gson/internal/sql/SqlTimeTypeAdapter.java::class::SqlTimeTypeAdapter::1439::s0",
+          "gson/src/main/java/com/google/gson/internal/sql/SqlTimestampTypeAdapter.java::class::SqlTimestampTypeAdapter::948::s0",
+          "gson/src/main/java/com/google/gson/internal/sql/SqlTypesSupport.java::class::SqlTypesSupport::1506::s0",
+          "gson/src/main/java/com/google/gson/package-info.java::module_residual::::0",
+          "gson/src/main/java/com/google/gson/stream/JsonScope.java::class::JsonScope::743::s1",
+          "gson/src/main/java/com/google/gson/stream/JsonToken.java::enum::JsonToken::744",
+          "gson/src/main/java/com/google/gson/stream/JsonWriter.java::class::JsonWriter::5813::s0",
+          "gson/src/main/java/com/google/gson/stream/JsonWriter.java::method::JsonWriter.alwaysCreatesValidJsonNumber::23898",
+          "gson/src/main/java/com/google/gson/stream/JsonWriter.java::method::JsonWriter.beforeName::25645",
+          "gson/src/main/java/com/google/gson/stream/JsonWriter.java::method::JsonWriter.beforeValue::26193",
+          "gson/src/main/java/com/google/gson/stream/JsonWriter.java::method::JsonWriter.close::23541",
+          "gson/src/main/java/com/google/gson/stream/JsonWriter.java::method::JsonWriter.flush::23219",
+          "gson/src/main/java/com/google/gson/stream/JsonWriter.java::method::JsonWriter.jsonValue::22872",
+          "gson/src/main/java/com/google/gson/stream/JsonWriter.java::method::JsonWriter.name::16922",
+          "gson/src/main/java/com/google/gson/stream/JsonWriter.java::method::JsonWriter.newline::25248",
+          "gson/src/main/java/com/google/gson/stream/JsonWriter.java::method::JsonWriter.nullValue::22086",
+          "gson/src/main/java/com/google/gson/stream/JsonWriter.java::method::JsonWriter.setFormattingStyle::9651",
+          "gson/src/main/java/com/google/gson/stream/JsonWriter.java::method::JsonWriter.setIndent::9028",
+          "gson/src/main/java/com/google/gson/stream/JsonWriter.java::method::JsonWriter.string::24404",
+          "gson/src/main/java/com/google/gson/stream/JsonWriter.java::method::JsonWriter.writeDeferredName::17408",
+          "gson/src/main/java/com/google/gson/stream/MalformedJsonException.java::class::MalformedJsonException::880::s3",
+          "gson/src/main/java/module-info.java::module_residual::::0"
+        ],
+        "input_tokens": 37812
+      }
+    ],
+    "merge_input_tokens": 2862
+  },
+  "node_dependencies": {
+    "graph_confirmed": 22,
+    "model_inferred": 23,
+    "graph_only": 58
+  },
+  "within_containment": 0,
+  "key_flows": 7,
+  "candidate_flows": 24,
+  "layers": {
+    "tokenizer": "o200k_base",
+    "source_tokens": 159691,
+    "semantic_tokens": 104076,
+    "semantic_breakdown": {
+      "model_body": 39804,
+      "signature_location": 16990,
+      "heading_anchor": 9239,
+      "relations": 7648,
+      "footer": 4508,
+      "index": 12643,
+      "node_text": 13244
+    },
+    "model_body_tokens": 39804,
+    "model_body_source_ratio": 0.24925637637687784,
+    "published_markdown_source_ratio": 0.6517336606320957,
+    "deterministic_tokens": 2403732,
+    "catalog_tokens": 2403732,
+    "frozen_graph_tokens": 0,
+    "frozen_graph_bytes": 43512528,
+    "semantic_source_ratio": 0.6517336606320957,
+    "deterministic_source_ratio": 15.052394937723479,
+    "scope": "Breakdown partitions full Markdown BPE tokens by the first byte's line: model_body is published unit explain, summary, extras and uncertainties; signature_location includes shared source-file reference definitions (including ones used by relations); heading_anchor, relations, footer, INDEX and node_text (including labels/whitespace and program-written ID correction notices) partition the rest. model_body/source and published_markdown/source use complete frozen files. semantic: all published Markdown (node pages + INDEX, including navigation, signatures and commands); deterministic: catalog.json as serialized, including preserved prose copies and edge references, excluding the graph field; frozen graph is excluded from token ratios (frozen_graph_tokens=0), reported separately as frozen_graph_bytes using UTF-8 JSON with ensure_ascii=False and compact separators; complete graph evidence is expanded only with query --edges; source: complete frozen files counted once; context source chunks, host prompts, raw answers and summary.json excluded; layers are storage measures, not disjoint content classes"
+  },
+  "semantic_review": {
+    "mode": "sample",
+    "reviewed": [
+      {
+        "module": 15,
+        "decision": "needs_repair",
+        "issues": [
+          "gson/src/main/java/com/google/gson/stream/JsonReader.java::method::JsonReader.doPeek::21726: says the ']' fall-through (for lenient \",]\") goes to END_ARRAY, but in the source the fall-through lands in the ';'/',' case and yields a lenient PEEKED_NULL placeholder, while END_ARRAY only comes from ']' when peekStack is EMPTY_ARRAY.",
+          "gson/src/main/java/com/google/gson/stream/JsonReader.java::method::JsonReader.nextNonWhitespace::53619: says a lone '/' is returned, but checkLenient() is called after the '/' is seen and before the peek switch, so in STRICT or LEGACY_STRICT mode any '/' that does not start a comment throws MalformedJsonException instead of being returned.",
+          "gson/src/main/java/com/google/gson/stream/JsonReader.java::method::JsonReader.nextDouble::36053: states that on success the literal is recorded via recordPromotedName, but the PEEKED_LONG early return skips recordPromotedName (and the same applies to nextLong and nextInt's PEEKED_LONG early returns)."
+        ],
+        "repair": "done"
+      }
+    ],
+    "outcomes": {
+      "needs_repair": 1
+    },
+    "pending": [],
+    "note": "an independent reviewer read the source for each reviewed batch; this is not a whole-map proof"
+  },
+  "truth": "deterministic structure/coverage checks and the separate semantic review are different states; neither one proves prose truth",
+  "counts": {
+    "done": 25
+  },
+  "leased": [],
+  "failed": [],
+  "ready": 0,
+  "next_action": "done; open $WORK/runs/e6/gson/run/docs/INDEX.md, then run `cbe host cost --run-dir $WORK/runs/e6/gson/run`",
+  "usage_unknown": [],
+  "render_error": null,
+  "stopped": null,
+  "progress_log": "$WORK/runs/e6/gson/run/progress.log",
+  "model": "zai/glm-5.3-flash",
+  "input_token_basis": "provider prompt_tokens minus cached_tokens; cache reported separately",
+  "calls": 36,
+  "input_tokens": 538607,
+  "output_tokens": 414639,
+  "cache_tokens": 231168,
+  "token_totals_basis": "observed calls; missing usage is excluded, never estimated",
+  "calls_with_unknown_input": 0,
+  "calls_with_unknown_output": 0,
+  "observed_cache_tokens": 231168,
+  "calls_with_unknown_cache": 0,
+  "priced_usd": null,
+  "price_basis": "unknown; configure API price_per_million: [input, output, cache]",
+  "usage_complete": true,
+  "seconds": 5245.614
+}

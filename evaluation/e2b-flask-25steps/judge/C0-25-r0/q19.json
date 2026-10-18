@@ -1,0 +1,125 @@
+{
+  "qid": 19,
+  "question": "How does the callback-based modification tracking in the session class that inherits from CallbackDict ensure consistency between in-memory session state and persisted cookie data across concurrent requests?",
+  "arm": "C0",
+  "max_steps": 25,
+  "repeat": 0,
+  "answer_valid": true,
+  "judge_model": "codex/gpt-6.1-sol",
+  "draws": [
+    {
+      "draw": 1,
+      "score": {
+        "correctness": 13,
+        "completeness": 19,
+        "relevance": 16,
+        "clarity": 16,
+        "reasoning": 14
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 108,
+            "prompt_tokens": 7320,
+            "total_tokens": 7428,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 59,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 13,\n  \"completeness\": 19,\n  \"relevance\": 16,\n  \"clarity\": 16,\n  \"reasoning\": 14\n}",
+          "wall_seconds": 3.833313624956645
+        }
+      ]
+    },
+    {
+      "draw": 2,
+      "score": {
+        "correctness": 13,
+        "completeness": 19,
+        "relevance": 16,
+        "clarity": 15,
+        "reasoning": 14
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 102,
+            "prompt_tokens": 7320,
+            "total_tokens": 7422,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 53,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 7168
+            }
+          },
+          "response": "{\n  \"correctness\": 13,\n  \"completeness\": 19,\n  \"relevance\": 16,\n  \"clarity\": 15,\n  \"reasoning\": 14\n}",
+          "wall_seconds": 3.6366055840044282
+        }
+      ]
+    },
+    {
+      "draw": 3,
+      "score": {
+        "correctness": 13,
+        "completeness": 19,
+        "relevance": 16,
+        "clarity": 16,
+        "reasoning": 14
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 103,
+            "prompt_tokens": 7320,
+            "total_tokens": 7423,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 54,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 7168
+            }
+          },
+          "response": "{\n  \"correctness\": 13,\n  \"completeness\": 19,\n  \"relevance\": 16,\n  \"clarity\": 16,\n  \"reasoning\": 14\n}",
+          "wall_seconds": 4.68452808301663
+        }
+      ]
+    }
+  ],
+  "score": {
+    "correctness": 13,
+    "completeness": 19,
+    "relevance": 16,
+    "clarity": 16,
+    "reasoning": 14
+  },
+  "total": 78,
+  "main_total_na5": 78,
+  "failure_type": null,
+  "judge_total_range": 1,
+  "wall_seconds": 12.155550167022739
+}

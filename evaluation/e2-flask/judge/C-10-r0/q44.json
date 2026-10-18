@@ -1,0 +1,125 @@
+{
+  "qid": 44,
+  "question": "Where does the inheritance chain between parent and child configuration classes affect configuration resolution when loading from a class object?",
+  "arm": "C",
+  "max_steps": 10,
+  "repeat": 0,
+  "answer_valid": true,
+  "judge_model": "codex/gpt-6.1-sol",
+  "draws": [
+    {
+      "draw": 1,
+      "score": {
+        "correctness": 19,
+        "completeness": 17,
+        "relevance": 17,
+        "clarity": 18,
+        "reasoning": 19
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 67,
+            "prompt_tokens": 6420,
+            "total_tokens": 6487,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 34,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\"correctness\":19,\"completeness\":17,\"relevance\":17,\"clarity\":18,\"reasoning\":19}",
+          "wall_seconds": 4.1282404999947175
+        }
+      ]
+    },
+    {
+      "draw": 2,
+      "score": {
+        "correctness": 19,
+        "completeness": 18,
+        "relevance": 17,
+        "clarity": 18,
+        "reasoning": 19
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 90,
+            "prompt_tokens": 6420,
+            "total_tokens": 6510,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 41,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6272
+            }
+          },
+          "response": "{\n  \"correctness\": 19,\n  \"completeness\": 18,\n  \"relevance\": 17,\n  \"clarity\": 18,\n  \"reasoning\": 19\n}",
+          "wall_seconds": 3.75933187501505
+        }
+      ]
+    },
+    {
+      "draw": 3,
+      "score": {
+        "correctness": 19,
+        "completeness": 18,
+        "relevance": 17,
+        "clarity": 18,
+        "reasoning": 19
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 105,
+            "prompt_tokens": 6420,
+            "total_tokens": 6525,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 56,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6272
+            }
+          },
+          "response": "{\n  \"correctness\": 19,\n  \"completeness\": 18,\n  \"relevance\": 17,\n  \"clarity\": 18,\n  \"reasoning\": 19\n}",
+          "wall_seconds": 5.699171958025545
+        }
+      ]
+    }
+  ],
+  "score": {
+    "correctness": 19,
+    "completeness": 18,
+    "relevance": 17,
+    "clarity": 18,
+    "reasoning": 19
+  },
+  "total": 91,
+  "main_total_na5": 91,
+  "failure_type": null,
+  "judge_total_range": 1,
+  "wall_seconds": 13.587793042010162
+}

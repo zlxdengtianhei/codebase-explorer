@@ -1,0 +1,3925 @@
+{
+  "C-10-r0": {
+    "counts": {
+      "observation_chars": 1567083,
+      "truncations": 31,
+      "truncations_missing_field_recovered": 1,
+      "tool_calls": 406,
+      "steps_all_attempts": 420,
+      "grep_executed": 169,
+      "grep_with_pipe": 58,
+      "all_replies": 461,
+      "unparsed_replies": 53,
+      "multi_call_replies": 57,
+      "loop_replies": 420,
+      "unparsed_loop_replies": 14,
+      "bash_blocked": 53,
+      "written_tools": 486,
+      "written_not_executed": 80,
+      "multi_call_ratio": 0.12364425162689804,
+      "unparsed_ratio": 0.11496746203904555,
+      "grep_pipe_ratio": 0.3431952662721893,
+      "find_query_requested": 20,
+      "find_query_executed": 20,
+      "find_query_blocked": 0,
+      "find_query_success": 15,
+      "find_query_written_not_executed": 3,
+      "find_query_written": 23,
+      "help_requested": 22,
+      "help_executed": 19,
+      "help_blocked": 3,
+      "help_success": 19,
+      "help_written_not_executed": 3,
+      "help_written": 25
+    },
+    "events": [
+      {
+        "qid": 0,
+        "cid": "A01",
+        "attempt": 1,
+        "kind": "--help",
+        "help": true,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe --help",
+        "requested": false,
+        "executed": false,
+        "blocked": false,
+        "success": false,
+        "written_not_executed": true,
+        "returncode": null
+      },
+      {
+        "qid": 0,
+        "cid": "A01",
+        "attempt": 1,
+        "kind": "query",
+        "help": true,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --help",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": true,
+        "written_not_executed": false,
+        "returncode": 0
+      },
+      {
+        "qid": 6,
+        "cid": "A09",
+        "attempt": 1,
+        "kind": "query",
+        "help": true,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --run-dir $WORK/runs/e5/qa/arms/C/run --help 2>&1 | head -50",
+        "requested": true,
+        "executed": false,
+        "blocked": true,
+        "success": false,
+        "written_not_executed": false,
+        "returncode": null
+      },
+      {
+        "qid": 9,
+        "cid": "A15",
+        "attempt": 1,
+        "kind": "--help",
+        "help": true,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe --help",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": true,
+        "written_not_executed": false,
+        "returncode": 0
+      },
+      {
+        "qid": 9,
+        "cid": "A15",
+        "attempt": 1,
+        "kind": "find",
+        "help": true,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --help",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": true,
+        "written_not_executed": false,
+        "returncode": 0
+      },
+      {
+        "qid": 9,
+        "cid": "A15",
+        "attempt": 1,
+        "kind": "find",
+        "help": false,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --term CONNECT --limit 30",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": true,
+        "written_not_executed": false,
+        "returncode": 0
+      },
+      {
+        "qid": 11,
+        "cid": "A17",
+        "attempt": 1,
+        "kind": "--help",
+        "help": true,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe --help",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": true,
+        "written_not_executed": false,
+        "returncode": 0
+      },
+      {
+        "qid": 11,
+        "cid": "A17",
+        "attempt": 1,
+        "kind": "query",
+        "help": true,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --run-dir $WORK/runs/e5/qa/arms/C/run --help",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": true,
+        "written_not_executed": false,
+        "returncode": 0
+      },
+      {
+        "qid": 11,
+        "cid": "A17",
+        "attempt": 1,
+        "kind": "find",
+        "help": true,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --help",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": true,
+        "written_not_executed": false,
+        "returncode": 0
+      },
+      {
+        "qid": 11,
+        "cid": "A17",
+        "attempt": 1,
+        "kind": "find",
+        "help": false,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --term \"Switching Protocols\" --limit 20",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": true,
+        "written_not_executed": false,
+        "returncode": 0
+      },
+      {
+        "qid": 11,
+        "cid": "A17",
+        "attempt": 1,
+        "kind": "query",
+        "help": false,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --run-dir $WORK/runs/e5/qa/arms/C/run --id http_on_101_upgrade",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": false,
+        "written_not_executed": false,
+        "returncode": 2
+      },
+      {
+        "qid": 11,
+        "cid": "A17",
+        "attempt": 1,
+        "kind": "query",
+        "help": false,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --run-dir $WORK/runs/e5/qa/arms/C/run --id \"lib/http.c::function::http_on_101_upgrade::121660\"",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": true,
+        "written_not_executed": false,
+        "returncode": 0
+      },
+      {
+        "qid": 12,
+        "cid": "A18",
+        "attempt": 1,
+        "kind": "query",
+        "help": true,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --help; $WORK/runs/e5/qa/arms/C/bin/cbe find --help",
+        "requested": true,
+        "executed": false,
+        "blocked": true,
+        "success": false,
+        "written_not_executed": false,
+        "returncode": null
+      },
+      {
+        "qid": 12,
+        "cid": "A18",
+        "attempt": 1,
+        "kind": "--help",
+        "help": true,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe --help",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": true,
+        "written_not_executed": false,
+        "returncode": 0
+      },
+      {
+        "qid": 12,
+        "cid": "A18",
+        "attempt": 1,
+        "kind": "find",
+        "help": true,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --help",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": true,
+        "written_not_executed": false,
+        "returncode": 0
+      },
+      {
+        "qid": 12,
+        "cid": "A18",
+        "attempt": 1,
+        "kind": "find",
+        "help": false,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --term multiplex --limit 40",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": true,
+        "written_not_executed": false,
+        "returncode": 0
+      },
+      {
+        "qid": 12,
+        "cid": "A18",
+        "attempt": 1,
+        "kind": "query",
+        "help": false,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --run-dir $WORK/runs/e5/qa/arms/C/run lib/url.c::function::xfer_may_multiplex::15685",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": false,
+        "written_not_executed": false,
+        "returncode": 2
+      },
+      {
+        "qid": 12,
+        "cid": "A18",
+        "attempt": 1,
+        "kind": "query",
+        "help": false,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --run-dir $WORK/runs/e5/qa/arms/C/run --id lib/url.c::function::xfer_may_multiplex::15685",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": true,
+        "written_not_executed": false,
+        "returncode": 0
+      },
+      {
+        "qid": 12,
+        "cid": "A18",
+        "attempt": 1,
+        "kind": "query",
+        "help": false,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --run-dir $WORK/runs/e5/qa/arms/C/run --id lib/url.c::function::url_match_multiplex_limits::21118",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": true,
+        "written_not_executed": false,
+        "returncode": 0
+      },
+      {
+        "qid": 14,
+        "cid": "A23",
+        "attempt": 1,
+        "kind": "query",
+        "help": true,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --help",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": true,
+        "written_not_executed": false,
+        "returncode": 0
+      },
+      {
+        "qid": 14,
+        "cid": "A23",
+        "attempt": 1,
+        "kind": "find",
+        "help": true,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --help",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": true,
+        "written_not_executed": false,
+        "returncode": 0
+      },
+      {
+        "qid": 14,
+        "cid": "A23",
+        "attempt": 1,
+        "kind": "find",
+        "help": false,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --term Curl_pSecFn",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": true,
+        "written_not_executed": false,
+        "returncode": 0
+      },
+      {
+        "qid": 15,
+        "cid": "A24",
+        "attempt": 1,
+        "kind": "find",
+        "help": true,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --help",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": true,
+        "written_not_executed": false,
+        "returncode": 0
+      },
+      {
+        "qid": 17,
+        "cid": "A27",
+        "attempt": 1,
+        "kind": "query",
+        "help": true,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --help",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": true,
+        "written_not_executed": false,
+        "returncode": 0
+      },
+      {
+        "qid": 17,
+        "cid": "A27",
+        "attempt": 1,
+        "kind": "find",
+        "help": true,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --help",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": true,
+        "written_not_executed": false,
+        "returncode": 0
+      },
+      {
+        "qid": 17,
+        "cid": "A27",
+        "attempt": 1,
+        "kind": "find",
+        "help": false,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --term libcurl --limit 20",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": true,
+        "written_not_executed": false,
+        "returncode": 0
+      },
+      {
+        "qid": 21,
+        "cid": "B03",
+        "attempt": 1,
+        "kind": "query",
+        "help": true,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --help",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": true,
+        "written_not_executed": false,
+        "returncode": 0
+      },
+      {
+        "qid": 21,
+        "cid": "B03",
+        "attempt": 1,
+        "kind": "find",
+        "help": false,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run Curl_cpool_init",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": false,
+        "written_not_executed": false,
+        "returncode": 2
+      },
+      {
+        "qid": 21,
+        "cid": "B03",
+        "attempt": 1,
+        "kind": "find",
+        "help": false,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --term Curl_cpool_init",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": true,
+        "written_not_executed": false,
+        "returncode": 0
+      },
+      {
+        "qid": 21,
+        "cid": "B03",
+        "attempt": 1,
+        "kind": "query",
+        "help": false,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --run-dir $WORK/runs/e5/qa/arms/C/run --id lib/conncache.c::function::Curl_cpool_init::8113",
+        "requested": false,
+        "executed": false,
+        "blocked": false,
+        "success": false,
+        "written_not_executed": true,
+        "returncode": null
+      },
+      {
+        "qid": 23,
+        "cid": "B06",
+        "attempt": 1,
+        "kind": "--help",
+        "help": true,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe --help",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": true,
+        "written_not_executed": false,
+        "returncode": 0
+      },
+      {
+        "qid": 23,
+        "cid": "B06",
+        "attempt": 1,
+        "kind": "find",
+        "help": false,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run connection reuse",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": false,
+        "written_not_executed": false,
+        "returncode": 2
+      },
+      {
+        "qid": 23,
+        "cid": "B06",
+        "attempt": 1,
+        "kind": "find",
+        "help": false,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --term \"connection reuse\" --limit 20",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": true,
+        "written_not_executed": false,
+        "returncode": 0
+      },
+      {
+        "qid": 23,
+        "cid": "B06",
+        "attempt": 1,
+        "kind": "query",
+        "help": false,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --run-dir $WORK/runs/e5/qa/arms/C/run lib/conncache.c",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": false,
+        "written_not_executed": false,
+        "returncode": 2
+      },
+      {
+        "qid": 23,
+        "cid": "B06",
+        "attempt": 1,
+        "kind": "query",
+        "help": false,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --run-dir $WORK/runs/e5/qa/arms/C/run --id \"lib/conncache.c::function::Curl_cpool_find::25051\"",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": true,
+        "written_not_executed": false,
+        "returncode": 0
+      },
+      {
+        "qid": 23,
+        "cid": "B06",
+        "attempt": 1,
+        "kind": "find",
+        "help": false,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --term destination --limit 30",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": true,
+        "written_not_executed": false,
+        "returncode": 0
+      },
+      {
+        "qid": 26,
+        "cid": "B11",
+        "attempt": 1,
+        "kind": "--help",
+        "help": true,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe --help",
+        "requested": false,
+        "executed": false,
+        "blocked": false,
+        "success": false,
+        "written_not_executed": true,
+        "returncode": null
+      },
+      {
+        "qid": 27,
+        "cid": "B14",
+        "attempt": 1,
+        "kind": "query",
+        "help": true,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --help",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": true,
+        "written_not_executed": false,
+        "returncode": 0
+      },
+      {
+        "qid": 27,
+        "cid": "B14",
+        "attempt": 1,
+        "kind": "find",
+        "help": true,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --help",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": true,
+        "written_not_executed": false,
+        "returncode": 0
+      },
+      {
+        "qid": 27,
+        "cid": "B14",
+        "attempt": 1,
+        "kind": "find",
+        "help": false,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --term appconnect --limit 20",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": true,
+        "written_not_executed": false,
+        "returncode": 0
+      },
+      {
+        "qid": 34,
+        "cid": "B22",
+        "attempt": 1,
+        "kind": "query",
+        "help": true,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --help",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": true,
+        "written_not_executed": false,
+        "returncode": 0
+      },
+      {
+        "qid": 34,
+        "cid": "B22",
+        "attempt": 1,
+        "kind": "find",
+        "help": true,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --help",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": true,
+        "written_not_executed": false,
+        "returncode": 0
+      },
+      {
+        "qid": 34,
+        "cid": "B22",
+        "attempt": 1,
+        "kind": "find",
+        "help": false,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --term cookie_run --limit 20",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": true,
+        "written_not_executed": false,
+        "returncode": 0
+      },
+      {
+        "qid": 34,
+        "cid": "B22",
+        "attempt": 1,
+        "kind": "query",
+        "help": false,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --run-dir $WORK/runs/e5/qa/arms/C/run --id 'lib/cookie.c::function::Curl_cookie_run::49136' --edges all",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": true,
+        "written_not_executed": false,
+        "returncode": 0
+      },
+      {
+        "qid": 38,
+        "cid": "B26",
+        "attempt": 1,
+        "kind": "query",
+        "help": true,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --run-dir $WORK/runs/e5/qa/arms/C/run --help 2>&1 | head -40; echo ---; $WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --help 2>&1 | head -40",
+        "requested": false,
+        "executed": false,
+        "blocked": false,
+        "success": false,
+        "written_not_executed": true,
+        "returncode": null
+      },
+      {
+        "qid": 38,
+        "cid": "B26",
+        "attempt": 1,
+        "kind": "query",
+        "help": false,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --run-dir $WORK/runs/e5/qa/arms/C/run curl_mime_free 2>&1 | head -60",
+        "requested": false,
+        "executed": false,
+        "blocked": false,
+        "success": false,
+        "written_not_executed": true,
+        "returncode": null
+      },
+      {
+        "qid": 38,
+        "cid": "B26",
+        "attempt": 1,
+        "kind": "find",
+        "help": false,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run curl_mime_free 2>&1 | head -60",
+        "requested": false,
+        "executed": false,
+        "blocked": false,
+        "success": false,
+        "written_not_executed": true,
+        "returncode": null
+      },
+      {
+        "qid": 39,
+        "cid": "B28",
+        "attempt": 1,
+        "kind": "query",
+        "help": true,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --help 2>&1 | head -40",
+        "requested": true,
+        "executed": false,
+        "blocked": true,
+        "success": false,
+        "written_not_executed": false,
+        "returncode": null
+      }
+    ],
+    "per_question": [
+      {
+        "qid": 0,
+        "cid": "A01",
+        "events": [
+          {
+            "qid": 0,
+            "cid": "A01",
+            "attempt": 1,
+            "kind": "--help",
+            "help": true,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe --help",
+            "requested": false,
+            "executed": false,
+            "blocked": false,
+            "success": false,
+            "written_not_executed": true,
+            "returncode": null
+          },
+          {
+            "qid": 0,
+            "cid": "A01",
+            "attempt": 1,
+            "kind": "query",
+            "help": true,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --help",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": true,
+            "written_not_executed": false,
+            "returncode": 0
+          }
+        ]
+      },
+      {
+        "qid": 1,
+        "cid": "A04",
+        "events": []
+      },
+      {
+        "qid": 2,
+        "cid": "A05",
+        "events": []
+      },
+      {
+        "qid": 3,
+        "cid": "A06",
+        "events": []
+      },
+      {
+        "qid": 4,
+        "cid": "A07",
+        "events": []
+      },
+      {
+        "qid": 5,
+        "cid": "A08",
+        "events": []
+      },
+      {
+        "qid": 6,
+        "cid": "A09",
+        "events": [
+          {
+            "qid": 6,
+            "cid": "A09",
+            "attempt": 1,
+            "kind": "query",
+            "help": true,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --run-dir $WORK/runs/e5/qa/arms/C/run --help 2>&1 | head -50",
+            "requested": true,
+            "executed": false,
+            "blocked": true,
+            "success": false,
+            "written_not_executed": false,
+            "returncode": null
+          }
+        ]
+      },
+      {
+        "qid": 7,
+        "cid": "A13",
+        "events": []
+      },
+      {
+        "qid": 8,
+        "cid": "A14",
+        "events": []
+      },
+      {
+        "qid": 9,
+        "cid": "A15",
+        "events": [
+          {
+            "qid": 9,
+            "cid": "A15",
+            "attempt": 1,
+            "kind": "--help",
+            "help": true,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe --help",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": true,
+            "written_not_executed": false,
+            "returncode": 0
+          },
+          {
+            "qid": 9,
+            "cid": "A15",
+            "attempt": 1,
+            "kind": "find",
+            "help": true,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --help",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": true,
+            "written_not_executed": false,
+            "returncode": 0
+          },
+          {
+            "qid": 9,
+            "cid": "A15",
+            "attempt": 1,
+            "kind": "find",
+            "help": false,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --term CONNECT --limit 30",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": true,
+            "written_not_executed": false,
+            "returncode": 0
+          }
+        ]
+      },
+      {
+        "qid": 10,
+        "cid": "A16",
+        "events": []
+      },
+      {
+        "qid": 11,
+        "cid": "A17",
+        "events": [
+          {
+            "qid": 11,
+            "cid": "A17",
+            "attempt": 1,
+            "kind": "--help",
+            "help": true,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe --help",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": true,
+            "written_not_executed": false,
+            "returncode": 0
+          },
+          {
+            "qid": 11,
+            "cid": "A17",
+            "attempt": 1,
+            "kind": "query",
+            "help": true,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --run-dir $WORK/runs/e5/qa/arms/C/run --help",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": true,
+            "written_not_executed": false,
+            "returncode": 0
+          },
+          {
+            "qid": 11,
+            "cid": "A17",
+            "attempt": 1,
+            "kind": "find",
+            "help": true,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --help",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": true,
+            "written_not_executed": false,
+            "returncode": 0
+          },
+          {
+            "qid": 11,
+            "cid": "A17",
+            "attempt": 1,
+            "kind": "find",
+            "help": false,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --term \"Switching Protocols\" --limit 20",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": true,
+            "written_not_executed": false,
+            "returncode": 0
+          },
+          {
+            "qid": 11,
+            "cid": "A17",
+            "attempt": 1,
+            "kind": "query",
+            "help": false,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --run-dir $WORK/runs/e5/qa/arms/C/run --id http_on_101_upgrade",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": false,
+            "written_not_executed": false,
+            "returncode": 2
+          },
+          {
+            "qid": 11,
+            "cid": "A17",
+            "attempt": 1,
+            "kind": "query",
+            "help": false,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --run-dir $WORK/runs/e5/qa/arms/C/run --id \"lib/http.c::function::http_on_101_upgrade::121660\"",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": true,
+            "written_not_executed": false,
+            "returncode": 0
+          }
+        ]
+      },
+      {
+        "qid": 12,
+        "cid": "A18",
+        "events": [
+          {
+            "qid": 12,
+            "cid": "A18",
+            "attempt": 1,
+            "kind": "query",
+            "help": true,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --help; $WORK/runs/e5/qa/arms/C/bin/cbe find --help",
+            "requested": true,
+            "executed": false,
+            "blocked": true,
+            "success": false,
+            "written_not_executed": false,
+            "returncode": null
+          },
+          {
+            "qid": 12,
+            "cid": "A18",
+            "attempt": 1,
+            "kind": "--help",
+            "help": true,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe --help",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": true,
+            "written_not_executed": false,
+            "returncode": 0
+          },
+          {
+            "qid": 12,
+            "cid": "A18",
+            "attempt": 1,
+            "kind": "find",
+            "help": true,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --help",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": true,
+            "written_not_executed": false,
+            "returncode": 0
+          },
+          {
+            "qid": 12,
+            "cid": "A18",
+            "attempt": 1,
+            "kind": "find",
+            "help": false,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --term multiplex --limit 40",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": true,
+            "written_not_executed": false,
+            "returncode": 0
+          },
+          {
+            "qid": 12,
+            "cid": "A18",
+            "attempt": 1,
+            "kind": "query",
+            "help": false,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --run-dir $WORK/runs/e5/qa/arms/C/run lib/url.c::function::xfer_may_multiplex::15685",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": false,
+            "written_not_executed": false,
+            "returncode": 2
+          },
+          {
+            "qid": 12,
+            "cid": "A18",
+            "attempt": 1,
+            "kind": "query",
+            "help": false,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --run-dir $WORK/runs/e5/qa/arms/C/run --id lib/url.c::function::xfer_may_multiplex::15685",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": true,
+            "written_not_executed": false,
+            "returncode": 0
+          },
+          {
+            "qid": 12,
+            "cid": "A18",
+            "attempt": 1,
+            "kind": "query",
+            "help": false,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --run-dir $WORK/runs/e5/qa/arms/C/run --id lib/url.c::function::url_match_multiplex_limits::21118",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": true,
+            "written_not_executed": false,
+            "returncode": 0
+          }
+        ]
+      },
+      {
+        "qid": 13,
+        "cid": "A21",
+        "events": []
+      },
+      {
+        "qid": 14,
+        "cid": "A23",
+        "events": [
+          {
+            "qid": 14,
+            "cid": "A23",
+            "attempt": 1,
+            "kind": "query",
+            "help": true,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --help",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": true,
+            "written_not_executed": false,
+            "returncode": 0
+          },
+          {
+            "qid": 14,
+            "cid": "A23",
+            "attempt": 1,
+            "kind": "find",
+            "help": true,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --help",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": true,
+            "written_not_executed": false,
+            "returncode": 0
+          },
+          {
+            "qid": 14,
+            "cid": "A23",
+            "attempt": 1,
+            "kind": "find",
+            "help": false,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --term Curl_pSecFn",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": true,
+            "written_not_executed": false,
+            "returncode": 0
+          }
+        ]
+      },
+      {
+        "qid": 15,
+        "cid": "A24",
+        "events": [
+          {
+            "qid": 15,
+            "cid": "A24",
+            "attempt": 1,
+            "kind": "find",
+            "help": true,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --help",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": true,
+            "written_not_executed": false,
+            "returncode": 0
+          }
+        ]
+      },
+      {
+        "qid": 16,
+        "cid": "A26",
+        "events": []
+      },
+      {
+        "qid": 17,
+        "cid": "A27",
+        "events": [
+          {
+            "qid": 17,
+            "cid": "A27",
+            "attempt": 1,
+            "kind": "query",
+            "help": true,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --help",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": true,
+            "written_not_executed": false,
+            "returncode": 0
+          },
+          {
+            "qid": 17,
+            "cid": "A27",
+            "attempt": 1,
+            "kind": "find",
+            "help": true,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --help",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": true,
+            "written_not_executed": false,
+            "returncode": 0
+          },
+          {
+            "qid": 17,
+            "cid": "A27",
+            "attempt": 1,
+            "kind": "find",
+            "help": false,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --term libcurl --limit 20",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": true,
+            "written_not_executed": false,
+            "returncode": 0
+          }
+        ]
+      },
+      {
+        "qid": 18,
+        "cid": "A28",
+        "events": []
+      },
+      {
+        "qid": 19,
+        "cid": "B01",
+        "events": []
+      },
+      {
+        "qid": 20,
+        "cid": "B02",
+        "events": []
+      },
+      {
+        "qid": 21,
+        "cid": "B03",
+        "events": [
+          {
+            "qid": 21,
+            "cid": "B03",
+            "attempt": 1,
+            "kind": "query",
+            "help": true,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --help",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": true,
+            "written_not_executed": false,
+            "returncode": 0
+          },
+          {
+            "qid": 21,
+            "cid": "B03",
+            "attempt": 1,
+            "kind": "find",
+            "help": false,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run Curl_cpool_init",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": false,
+            "written_not_executed": false,
+            "returncode": 2
+          },
+          {
+            "qid": 21,
+            "cid": "B03",
+            "attempt": 1,
+            "kind": "find",
+            "help": false,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --term Curl_cpool_init",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": true,
+            "written_not_executed": false,
+            "returncode": 0
+          },
+          {
+            "qid": 21,
+            "cid": "B03",
+            "attempt": 1,
+            "kind": "query",
+            "help": false,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --run-dir $WORK/runs/e5/qa/arms/C/run --id lib/conncache.c::function::Curl_cpool_init::8113",
+            "requested": false,
+            "executed": false,
+            "blocked": false,
+            "success": false,
+            "written_not_executed": true,
+            "returncode": null
+          }
+        ]
+      },
+      {
+        "qid": 22,
+        "cid": "B05",
+        "events": []
+      },
+      {
+        "qid": 23,
+        "cid": "B06",
+        "events": [
+          {
+            "qid": 23,
+            "cid": "B06",
+            "attempt": 1,
+            "kind": "--help",
+            "help": true,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe --help",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": true,
+            "written_not_executed": false,
+            "returncode": 0
+          },
+          {
+            "qid": 23,
+            "cid": "B06",
+            "attempt": 1,
+            "kind": "find",
+            "help": false,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run connection reuse",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": false,
+            "written_not_executed": false,
+            "returncode": 2
+          },
+          {
+            "qid": 23,
+            "cid": "B06",
+            "attempt": 1,
+            "kind": "find",
+            "help": false,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --term \"connection reuse\" --limit 20",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": true,
+            "written_not_executed": false,
+            "returncode": 0
+          },
+          {
+            "qid": 23,
+            "cid": "B06",
+            "attempt": 1,
+            "kind": "query",
+            "help": false,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --run-dir $WORK/runs/e5/qa/arms/C/run lib/conncache.c",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": false,
+            "written_not_executed": false,
+            "returncode": 2
+          },
+          {
+            "qid": 23,
+            "cid": "B06",
+            "attempt": 1,
+            "kind": "query",
+            "help": false,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --run-dir $WORK/runs/e5/qa/arms/C/run --id \"lib/conncache.c::function::Curl_cpool_find::25051\"",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": true,
+            "written_not_executed": false,
+            "returncode": 0
+          },
+          {
+            "qid": 23,
+            "cid": "B06",
+            "attempt": 1,
+            "kind": "find",
+            "help": false,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --term destination --limit 30",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": true,
+            "written_not_executed": false,
+            "returncode": 0
+          }
+        ]
+      },
+      {
+        "qid": 24,
+        "cid": "B07",
+        "events": []
+      },
+      {
+        "qid": 25,
+        "cid": "B10",
+        "events": []
+      },
+      {
+        "qid": 26,
+        "cid": "B11",
+        "events": [
+          {
+            "qid": 26,
+            "cid": "B11",
+            "attempt": 1,
+            "kind": "--help",
+            "help": true,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe --help",
+            "requested": false,
+            "executed": false,
+            "blocked": false,
+            "success": false,
+            "written_not_executed": true,
+            "returncode": null
+          }
+        ]
+      },
+      {
+        "qid": 27,
+        "cid": "B14",
+        "events": [
+          {
+            "qid": 27,
+            "cid": "B14",
+            "attempt": 1,
+            "kind": "query",
+            "help": true,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --help",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": true,
+            "written_not_executed": false,
+            "returncode": 0
+          },
+          {
+            "qid": 27,
+            "cid": "B14",
+            "attempt": 1,
+            "kind": "find",
+            "help": true,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --help",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": true,
+            "written_not_executed": false,
+            "returncode": 0
+          },
+          {
+            "qid": 27,
+            "cid": "B14",
+            "attempt": 1,
+            "kind": "find",
+            "help": false,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --term appconnect --limit 20",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": true,
+            "written_not_executed": false,
+            "returncode": 0
+          }
+        ]
+      },
+      {
+        "qid": 28,
+        "cid": "B15",
+        "events": []
+      },
+      {
+        "qid": 29,
+        "cid": "B16",
+        "events": []
+      },
+      {
+        "qid": 30,
+        "cid": "B17",
+        "events": []
+      },
+      {
+        "qid": 31,
+        "cid": "B18",
+        "events": []
+      },
+      {
+        "qid": 32,
+        "cid": "B20",
+        "events": []
+      },
+      {
+        "qid": 33,
+        "cid": "B21",
+        "events": []
+      },
+      {
+        "qid": 34,
+        "cid": "B22",
+        "events": [
+          {
+            "qid": 34,
+            "cid": "B22",
+            "attempt": 1,
+            "kind": "query",
+            "help": true,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --help",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": true,
+            "written_not_executed": false,
+            "returncode": 0
+          },
+          {
+            "qid": 34,
+            "cid": "B22",
+            "attempt": 1,
+            "kind": "find",
+            "help": true,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --help",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": true,
+            "written_not_executed": false,
+            "returncode": 0
+          },
+          {
+            "qid": 34,
+            "cid": "B22",
+            "attempt": 1,
+            "kind": "find",
+            "help": false,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --term cookie_run --limit 20",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": true,
+            "written_not_executed": false,
+            "returncode": 0
+          },
+          {
+            "qid": 34,
+            "cid": "B22",
+            "attempt": 1,
+            "kind": "query",
+            "help": false,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --run-dir $WORK/runs/e5/qa/arms/C/run --id 'lib/cookie.c::function::Curl_cookie_run::49136' --edges all",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": true,
+            "written_not_executed": false,
+            "returncode": 0
+          }
+        ]
+      },
+      {
+        "qid": 35,
+        "cid": "B23",
+        "events": []
+      },
+      {
+        "qid": 36,
+        "cid": "B24",
+        "events": []
+      },
+      {
+        "qid": 37,
+        "cid": "B25",
+        "events": []
+      },
+      {
+        "qid": 38,
+        "cid": "B26",
+        "events": [
+          {
+            "qid": 38,
+            "cid": "B26",
+            "attempt": 1,
+            "kind": "query",
+            "help": true,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --run-dir $WORK/runs/e5/qa/arms/C/run --help 2>&1 | head -40; echo ---; $WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --help 2>&1 | head -40",
+            "requested": false,
+            "executed": false,
+            "blocked": false,
+            "success": false,
+            "written_not_executed": true,
+            "returncode": null
+          },
+          {
+            "qid": 38,
+            "cid": "B26",
+            "attempt": 1,
+            "kind": "query",
+            "help": false,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --run-dir $WORK/runs/e5/qa/arms/C/run curl_mime_free 2>&1 | head -60",
+            "requested": false,
+            "executed": false,
+            "blocked": false,
+            "success": false,
+            "written_not_executed": true,
+            "returncode": null
+          },
+          {
+            "qid": 38,
+            "cid": "B26",
+            "attempt": 1,
+            "kind": "find",
+            "help": false,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run curl_mime_free 2>&1 | head -60",
+            "requested": false,
+            "executed": false,
+            "blocked": false,
+            "success": false,
+            "written_not_executed": true,
+            "returncode": null
+          }
+        ]
+      },
+      {
+        "qid": 39,
+        "cid": "B28",
+        "events": [
+          {
+            "qid": 39,
+            "cid": "B28",
+            "attempt": 1,
+            "kind": "query",
+            "help": true,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --help 2>&1 | head -40",
+            "requested": true,
+            "executed": false,
+            "blocked": true,
+            "success": false,
+            "written_not_executed": false,
+            "returncode": null
+          }
+        ]
+      }
+    ]
+  },
+  "C-25-r0": {
+    "counts": {
+      "observation_chars": 1408518,
+      "truncations": 34,
+      "truncations_missing_field_recovered": 1,
+      "tool_calls": 396,
+      "steps_all_attempts": 427,
+      "grep_executed": 204,
+      "grep_with_pipe": 63,
+      "all_replies": 440,
+      "unparsed_replies": 44,
+      "multi_call_replies": 63,
+      "loop_replies": 423,
+      "unparsed_loop_replies": 27,
+      "bash_blocked": 36,
+      "written_tools": 469,
+      "written_not_executed": 73,
+      "multi_call_ratio": 0.1431818181818182,
+      "unparsed_ratio": 0.1,
+      "grep_pipe_ratio": 0.3088235294117647,
+      "find_query_requested": 38,
+      "find_query_executed": 38,
+      "find_query_blocked": 0,
+      "find_query_success": 33,
+      "find_query_written_not_executed": 4,
+      "find_query_written": 42,
+      "help_requested": 12,
+      "help_executed": 12,
+      "help_blocked": 0,
+      "help_success": 12,
+      "help_written_not_executed": 3,
+      "help_written": 15
+    },
+    "events": [
+      {
+        "qid": 1,
+        "cid": "A04",
+        "attempt": 1,
+        "kind": "query",
+        "help": false,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --run-dir $WORK/runs/e5/qa/arms/C/run curl_mime_subparts",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": false,
+        "written_not_executed": false,
+        "returncode": 2
+      },
+      {
+        "qid": 1,
+        "cid": "A04",
+        "attempt": 1,
+        "kind": "find",
+        "help": true,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --help",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": true,
+        "written_not_executed": false,
+        "returncode": 0
+      },
+      {
+        "qid": 1,
+        "cid": "A04",
+        "attempt": 1,
+        "kind": "find",
+        "help": false,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --term \"curl_mime_subparts\" --limit 20",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": true,
+        "written_not_executed": false,
+        "returncode": 0
+      },
+      {
+        "qid": 1,
+        "cid": "A04",
+        "attempt": 1,
+        "kind": "find",
+        "help": false,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --term \"MIMEPOST\" --limit 10",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": true,
+        "written_not_executed": false,
+        "returncode": 0
+      },
+      {
+        "qid": 1,
+        "cid": "A04",
+        "attempt": 1,
+        "kind": "query",
+        "help": false,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --run-dir $WORK/runs/e5/qa/arms/C/run --id \"lib/mime.c::function::curl_mime_subparts::42596\"",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": true,
+        "written_not_executed": false,
+        "returncode": 0
+      },
+      {
+        "qid": 1,
+        "cid": "A04",
+        "attempt": 1,
+        "kind": "query",
+        "help": false,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --run-dir $WORK/runs/e5/qa/arms/C/run --id \"lib/setopt.c::function::setopt_mimepost::38440\"",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": true,
+        "written_not_executed": false,
+        "returncode": 0
+      },
+      {
+        "qid": 5,
+        "cid": "A08",
+        "attempt": 3,
+        "kind": "query",
+        "help": true,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --run-dir $WORK/runs/e5/qa/arms/C/run --help",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": true,
+        "written_not_executed": false,
+        "returncode": 0
+      },
+      {
+        "qid": 5,
+        "cid": "A08",
+        "attempt": 3,
+        "kind": "find",
+        "help": true,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --help",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": true,
+        "written_not_executed": false,
+        "returncode": 0
+      },
+      {
+        "qid": 5,
+        "cid": "A08",
+        "attempt": 3,
+        "kind": "find",
+        "help": false,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --term cf_get_remote_addr --limit 10",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": true,
+        "written_not_executed": false,
+        "returncode": 0
+      },
+      {
+        "qid": 14,
+        "cid": "A23",
+        "attempt": 1,
+        "kind": "query",
+        "help": true,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --help",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": true,
+        "written_not_executed": false,
+        "returncode": 0
+      },
+      {
+        "qid": 14,
+        "cid": "A23",
+        "attempt": 1,
+        "kind": "find",
+        "help": true,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --help",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": true,
+        "written_not_executed": false,
+        "returncode": 0
+      },
+      {
+        "qid": 14,
+        "cid": "A23",
+        "attempt": 1,
+        "kind": "find",
+        "help": false,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --term Curl_sspi_global_init --limit 20",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": true,
+        "written_not_executed": false,
+        "returncode": 0
+      },
+      {
+        "qid": 14,
+        "cid": "A23",
+        "attempt": 1,
+        "kind": "find",
+        "help": false,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --term Curl_sspi_global_cleanup --limit 20",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": true,
+        "written_not_executed": false,
+        "returncode": 0
+      },
+      {
+        "qid": 14,
+        "cid": "A23",
+        "attempt": 1,
+        "kind": "find",
+        "help": false,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --term schannel_cleanup --limit 20",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": true,
+        "written_not_executed": false,
+        "returncode": 0
+      },
+      {
+        "qid": 22,
+        "cid": "B05",
+        "attempt": 1,
+        "kind": "query",
+        "help": true,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --help",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": true,
+        "written_not_executed": false,
+        "returncode": 0
+      },
+      {
+        "qid": 22,
+        "cid": "B05",
+        "attempt": 1,
+        "kind": "find",
+        "help": true,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --help",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": true,
+        "written_not_executed": false,
+        "returncode": 0
+      },
+      {
+        "qid": 22,
+        "cid": "B05",
+        "attempt": 1,
+        "kind": "find",
+        "help": false,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --term cpool_reap_no_reuse --limit 20",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": true,
+        "written_not_executed": false,
+        "returncode": 0
+      },
+      {
+        "qid": 23,
+        "cid": "B06",
+        "attempt": 1,
+        "kind": "query",
+        "help": true,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --run-dir $WORK/runs/e5/qa/arms/C/run --help 2>&1 | head -50; echo ---; $WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --help 2>&1 | head -50",
+        "requested": false,
+        "executed": false,
+        "blocked": false,
+        "success": false,
+        "written_not_executed": true,
+        "returncode": null
+      },
+      {
+        "qid": 25,
+        "cid": "B10",
+        "attempt": 1,
+        "kind": "query",
+        "help": true,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --help",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": true,
+        "written_not_executed": false,
+        "returncode": 0
+      },
+      {
+        "qid": 25,
+        "cid": "B10",
+        "attempt": 1,
+        "kind": "find",
+        "help": true,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --help",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": true,
+        "written_not_executed": false,
+        "returncode": 0
+      },
+      {
+        "qid": 25,
+        "cid": "B10",
+        "attempt": 1,
+        "kind": "find",
+        "help": false,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --term libssh.c --limit 10",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": true,
+        "written_not_executed": false,
+        "returncode": 0
+      },
+      {
+        "qid": 25,
+        "cid": "B10",
+        "attempt": 1,
+        "kind": "find",
+        "help": false,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --term ssh_doing --limit 10",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": true,
+        "written_not_executed": false,
+        "returncode": 0
+      },
+      {
+        "qid": 25,
+        "cid": "B10",
+        "attempt": 1,
+        "kind": "find",
+        "help": false,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --term myssh_doing --limit 10",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": true,
+        "written_not_executed": false,
+        "returncode": 0
+      },
+      {
+        "qid": 25,
+        "cid": "B10",
+        "attempt": 1,
+        "kind": "find",
+        "help": false,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --term 'sftp_doing' --limit 10 --json",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": true,
+        "written_not_executed": false,
+        "returncode": 0
+      },
+      {
+        "qid": 25,
+        "cid": "B10",
+        "attempt": 1,
+        "kind": "find",
+        "help": false,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --term 'myssh_multi_statemach' --limit 5 --json",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": true,
+        "written_not_executed": false,
+        "returncode": 0
+      },
+      {
+        "qid": 25,
+        "cid": "B10",
+        "attempt": 1,
+        "kind": "find",
+        "help": false,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --term 'myssh_statemach' --limit 8 --json",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": true,
+        "written_not_executed": false,
+        "returncode": 0
+      },
+      {
+        "qid": 25,
+        "cid": "B10",
+        "attempt": 1,
+        "kind": "query",
+        "help": false,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --run-dir $WORK/runs/e5/qa/arms/C/run --id 'lib/vssh/libssh.c::function::myssh_statemachine::67692' --edges all",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": true,
+        "written_not_executed": false,
+        "returncode": 0
+      },
+      {
+        "qid": 25,
+        "cid": "B10",
+        "attempt": 1,
+        "kind": "query",
+        "help": false,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --run-dir $WORK/runs/e5/qa/arms/C/run --id 'lib/vssh/libssh.c::function::sftp_doing::86038' --edges all",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": true,
+        "written_not_executed": false,
+        "returncode": 0
+      },
+      {
+        "qid": 25,
+        "cid": "B10",
+        "attempt": 1,
+        "kind": "query",
+        "help": false,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --run-dir $WORK/runs/e5/qa/arms/C/run --id 'lib/vssh/libssh.c::function::myssh_multi_statemach::73773' --edges all",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": true,
+        "written_not_executed": false,
+        "returncode": 0
+      },
+      {
+        "qid": 26,
+        "cid": "B11",
+        "attempt": 1,
+        "kind": "query",
+        "help": true,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --help",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": true,
+        "written_not_executed": false,
+        "returncode": 0
+      },
+      {
+        "qid": 26,
+        "cid": "B11",
+        "attempt": 1,
+        "kind": "find",
+        "help": true,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --help",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": true,
+        "written_not_executed": false,
+        "returncode": 0
+      },
+      {
+        "qid": 26,
+        "cid": "B11",
+        "attempt": 1,
+        "kind": "find",
+        "help": false,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --term \"ftp_done\" --limit 20",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": true,
+        "written_not_executed": false,
+        "returncode": 0
+      },
+      {
+        "qid": 26,
+        "cid": "B11",
+        "attempt": 1,
+        "kind": "query",
+        "help": false,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --run-dir $WORK/runs/e5/qa/arms/C/run --id \"lib/ftp.c::function::ftp_done_status::114269\"",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": true,
+        "written_not_executed": false,
+        "returncode": 0
+      },
+      {
+        "qid": 26,
+        "cid": "B11",
+        "attempt": 1,
+        "kind": "query",
+        "help": false,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --run-dir $WORK/runs/e5/qa/arms/C/run --id \"lib/ftp.c::function::ftp_done::121896\" --edges all",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": true,
+        "written_not_executed": false,
+        "returncode": 0
+      },
+      {
+        "qid": 26,
+        "cid": "B11",
+        "attempt": 1,
+        "kind": "query",
+        "help": false,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --run-dir $WORK/runs/e5/qa/arms/C/run --id \"lib/ftp.c::function::ftp_done_control_reply::118190\" --json",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": true,
+        "written_not_executed": false,
+        "returncode": 0
+      },
+      {
+        "qid": 26,
+        "cid": "B11",
+        "attempt": 1,
+        "kind": "find",
+        "help": false,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --term \"RETR_SIZE\" --limit 10",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": true,
+        "written_not_executed": false,
+        "returncode": 0
+      },
+      {
+        "qid": 26,
+        "cid": "B11",
+        "attempt": 1,
+        "kind": "find",
+        "help": false,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --term \"RETR\" --limit 15",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": true,
+        "written_not_executed": false,
+        "returncode": 0
+      },
+      {
+        "qid": 26,
+        "cid": "B11",
+        "attempt": 1,
+        "kind": "find",
+        "help": false,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --term \"ftp_state_retr\" --limit 10",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": true,
+        "written_not_executed": false,
+        "returncode": 0
+      },
+      {
+        "qid": 28,
+        "cid": "B15",
+        "attempt": 1,
+        "kind": "--help",
+        "help": true,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe --help",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": true,
+        "written_not_executed": false,
+        "returncode": 0
+      },
+      {
+        "qid": 28,
+        "cid": "B15",
+        "attempt": 1,
+        "kind": "find",
+        "help": true,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --help",
+        "requested": false,
+        "executed": false,
+        "blocked": false,
+        "success": false,
+        "written_not_executed": true,
+        "returncode": null
+      },
+      {
+        "qid": 28,
+        "cid": "B15",
+        "attempt": 1,
+        "kind": "find",
+        "help": false,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run mstate_perform_pollset",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": false,
+        "written_not_executed": false,
+        "returncode": 2
+      },
+      {
+        "qid": 28,
+        "cid": "B15",
+        "attempt": 1,
+        "kind": "find",
+        "help": false,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --term mstate_perform_pollset --limit 5",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": true,
+        "written_not_executed": false,
+        "returncode": 0
+      },
+      {
+        "qid": 28,
+        "cid": "B15",
+        "attempt": 1,
+        "kind": "query",
+        "help": false,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --run-dir $WORK/runs/e5/qa/arms/C/run --id lib/multi.c::function::mstate_perform_pollset::35691",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": true,
+        "written_not_executed": false,
+        "returncode": 0
+      },
+      {
+        "qid": 28,
+        "cid": "B15",
+        "attempt": 1,
+        "kind": "query",
+        "help": false,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --run-dir $WORK/runs/e5/qa/arms/C/run --term Curl_ssl_adjust_pollset --limit 5",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": false,
+        "written_not_executed": false,
+        "returncode": 2
+      },
+      {
+        "qid": 28,
+        "cid": "B15",
+        "attempt": 1,
+        "kind": "query",
+        "help": false,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --run-dir $WORK/runs/e5/qa/arms/C/run --term ssl_cf_adjust_pollset --limit 5",
+        "requested": false,
+        "executed": false,
+        "blocked": false,
+        "success": false,
+        "written_not_executed": true,
+        "returncode": null
+      },
+      {
+        "qid": 28,
+        "cid": "B15",
+        "attempt": 1,
+        "kind": "find",
+        "help": false,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --term Curl_ssl_adjust_pollset --limit 5",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": true,
+        "written_not_executed": false,
+        "returncode": 0
+      },
+      {
+        "qid": 28,
+        "cid": "B15",
+        "attempt": 1,
+        "kind": "find",
+        "help": false,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --term ssl_cf_adjust_pollset --limit 5",
+        "requested": false,
+        "executed": false,
+        "blocked": false,
+        "success": false,
+        "written_not_executed": true,
+        "returncode": null
+      },
+      {
+        "qid": 28,
+        "cid": "B15",
+        "attempt": 1,
+        "kind": "find",
+        "help": false,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --term multissl_adjust_pollset --limit 5",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": true,
+        "written_not_executed": false,
+        "returncode": 0
+      },
+      {
+        "qid": 28,
+        "cid": "B15",
+        "attempt": 1,
+        "kind": "find",
+        "help": false,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --term ssl_cf_adjust_pollset --limit 5",
+        "requested": false,
+        "executed": false,
+        "blocked": false,
+        "success": false,
+        "written_not_executed": true,
+        "returncode": null
+      },
+      {
+        "qid": 28,
+        "cid": "B15",
+        "attempt": 1,
+        "kind": "find",
+        "help": false,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --term ssl_cf_adjust --limit 5",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": true,
+        "written_not_executed": false,
+        "returncode": 0
+      },
+      {
+        "qid": 28,
+        "cid": "B15",
+        "attempt": 1,
+        "kind": "find",
+        "help": false,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --term ssl_cf_connect --limit 5",
+        "requested": false,
+        "executed": false,
+        "blocked": false,
+        "success": false,
+        "written_not_executed": true,
+        "returncode": null
+      },
+      {
+        "qid": 28,
+        "cid": "B15",
+        "attempt": 1,
+        "kind": "find",
+        "help": false,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --term ssl_cf_adjust_pollset --limit 3 --json",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": true,
+        "written_not_executed": false,
+        "returncode": 0
+      },
+      {
+        "qid": 33,
+        "cid": "B21",
+        "attempt": 1,
+        "kind": "query",
+        "help": true,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --help 2>&1 | head -40; echo ---; $WORK/runs/e5/qa/arms/C/bin/cbe find --help 2>&1 | head -40",
+        "requested": false,
+        "executed": false,
+        "blocked": false,
+        "success": false,
+        "written_not_executed": true,
+        "returncode": null
+      },
+      {
+        "qid": 34,
+        "cid": "B22",
+        "attempt": 1,
+        "kind": "find",
+        "help": false,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --term \"Curl_cookie_run\"",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": true,
+        "written_not_executed": false,
+        "returncode": 0
+      },
+      {
+        "qid": 34,
+        "cid": "B22",
+        "attempt": 1,
+        "kind": "query",
+        "help": false,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --run-dir $WORK/runs/e5/qa/arms/C/run --term \"Curl_cookie_add\"",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": false,
+        "written_not_executed": false,
+        "returncode": 2
+      },
+      {
+        "qid": 34,
+        "cid": "B22",
+        "attempt": 1,
+        "kind": "query",
+        "help": false,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --run-dir $WORK/runs/e5/qa/arms/C/run --id \"lib/cookie.c::function::Curl_cookie_add::0\"",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": false,
+        "written_not_executed": false,
+        "returncode": 2
+      },
+      {
+        "qid": 34,
+        "cid": "B22",
+        "attempt": 1,
+        "kind": "find",
+        "help": false,
+        "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --term \"Curl_cookie_add\"",
+        "requested": true,
+        "executed": true,
+        "blocked": false,
+        "success": true,
+        "written_not_executed": false,
+        "returncode": 0
+      }
+    ],
+    "per_question": [
+      {
+        "qid": 0,
+        "cid": "A01",
+        "events": []
+      },
+      {
+        "qid": 1,
+        "cid": "A04",
+        "events": [
+          {
+            "qid": 1,
+            "cid": "A04",
+            "attempt": 1,
+            "kind": "query",
+            "help": false,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --run-dir $WORK/runs/e5/qa/arms/C/run curl_mime_subparts",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": false,
+            "written_not_executed": false,
+            "returncode": 2
+          },
+          {
+            "qid": 1,
+            "cid": "A04",
+            "attempt": 1,
+            "kind": "find",
+            "help": true,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --help",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": true,
+            "written_not_executed": false,
+            "returncode": 0
+          },
+          {
+            "qid": 1,
+            "cid": "A04",
+            "attempt": 1,
+            "kind": "find",
+            "help": false,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --term \"curl_mime_subparts\" --limit 20",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": true,
+            "written_not_executed": false,
+            "returncode": 0
+          },
+          {
+            "qid": 1,
+            "cid": "A04",
+            "attempt": 1,
+            "kind": "find",
+            "help": false,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --term \"MIMEPOST\" --limit 10",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": true,
+            "written_not_executed": false,
+            "returncode": 0
+          },
+          {
+            "qid": 1,
+            "cid": "A04",
+            "attempt": 1,
+            "kind": "query",
+            "help": false,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --run-dir $WORK/runs/e5/qa/arms/C/run --id \"lib/mime.c::function::curl_mime_subparts::42596\"",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": true,
+            "written_not_executed": false,
+            "returncode": 0
+          },
+          {
+            "qid": 1,
+            "cid": "A04",
+            "attempt": 1,
+            "kind": "query",
+            "help": false,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --run-dir $WORK/runs/e5/qa/arms/C/run --id \"lib/setopt.c::function::setopt_mimepost::38440\"",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": true,
+            "written_not_executed": false,
+            "returncode": 0
+          }
+        ]
+      },
+      {
+        "qid": 2,
+        "cid": "A05",
+        "events": []
+      },
+      {
+        "qid": 5,
+        "cid": "A08",
+        "events": [
+          {
+            "qid": 5,
+            "cid": "A08",
+            "attempt": 3,
+            "kind": "query",
+            "help": true,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --run-dir $WORK/runs/e5/qa/arms/C/run --help",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": true,
+            "written_not_executed": false,
+            "returncode": 0
+          },
+          {
+            "qid": 5,
+            "cid": "A08",
+            "attempt": 3,
+            "kind": "find",
+            "help": true,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --help",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": true,
+            "written_not_executed": false,
+            "returncode": 0
+          },
+          {
+            "qid": 5,
+            "cid": "A08",
+            "attempt": 3,
+            "kind": "find",
+            "help": false,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --term cf_get_remote_addr --limit 10",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": true,
+            "written_not_executed": false,
+            "returncode": 0
+          }
+        ]
+      },
+      {
+        "qid": 8,
+        "cid": "A14",
+        "events": []
+      },
+      {
+        "qid": 10,
+        "cid": "A16",
+        "events": []
+      },
+      {
+        "qid": 13,
+        "cid": "A21",
+        "events": []
+      },
+      {
+        "qid": 14,
+        "cid": "A23",
+        "events": [
+          {
+            "qid": 14,
+            "cid": "A23",
+            "attempt": 1,
+            "kind": "query",
+            "help": true,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --help",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": true,
+            "written_not_executed": false,
+            "returncode": 0
+          },
+          {
+            "qid": 14,
+            "cid": "A23",
+            "attempt": 1,
+            "kind": "find",
+            "help": true,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --help",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": true,
+            "written_not_executed": false,
+            "returncode": 0
+          },
+          {
+            "qid": 14,
+            "cid": "A23",
+            "attempt": 1,
+            "kind": "find",
+            "help": false,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --term Curl_sspi_global_init --limit 20",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": true,
+            "written_not_executed": false,
+            "returncode": 0
+          },
+          {
+            "qid": 14,
+            "cid": "A23",
+            "attempt": 1,
+            "kind": "find",
+            "help": false,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --term Curl_sspi_global_cleanup --limit 20",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": true,
+            "written_not_executed": false,
+            "returncode": 0
+          },
+          {
+            "qid": 14,
+            "cid": "A23",
+            "attempt": 1,
+            "kind": "find",
+            "help": false,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --term schannel_cleanup --limit 20",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": true,
+            "written_not_executed": false,
+            "returncode": 0
+          }
+        ]
+      },
+      {
+        "qid": 19,
+        "cid": "B01",
+        "events": []
+      },
+      {
+        "qid": 22,
+        "cid": "B05",
+        "events": [
+          {
+            "qid": 22,
+            "cid": "B05",
+            "attempt": 1,
+            "kind": "query",
+            "help": true,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --help",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": true,
+            "written_not_executed": false,
+            "returncode": 0
+          },
+          {
+            "qid": 22,
+            "cid": "B05",
+            "attempt": 1,
+            "kind": "find",
+            "help": true,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --help",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": true,
+            "written_not_executed": false,
+            "returncode": 0
+          },
+          {
+            "qid": 22,
+            "cid": "B05",
+            "attempt": 1,
+            "kind": "find",
+            "help": false,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --term cpool_reap_no_reuse --limit 20",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": true,
+            "written_not_executed": false,
+            "returncode": 0
+          }
+        ]
+      },
+      {
+        "qid": 23,
+        "cid": "B06",
+        "events": [
+          {
+            "qid": 23,
+            "cid": "B06",
+            "attempt": 1,
+            "kind": "query",
+            "help": true,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --run-dir $WORK/runs/e5/qa/arms/C/run --help 2>&1 | head -50; echo ---; $WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --help 2>&1 | head -50",
+            "requested": false,
+            "executed": false,
+            "blocked": false,
+            "success": false,
+            "written_not_executed": true,
+            "returncode": null
+          }
+        ]
+      },
+      {
+        "qid": 25,
+        "cid": "B10",
+        "events": [
+          {
+            "qid": 25,
+            "cid": "B10",
+            "attempt": 1,
+            "kind": "query",
+            "help": true,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --help",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": true,
+            "written_not_executed": false,
+            "returncode": 0
+          },
+          {
+            "qid": 25,
+            "cid": "B10",
+            "attempt": 1,
+            "kind": "find",
+            "help": true,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --help",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": true,
+            "written_not_executed": false,
+            "returncode": 0
+          },
+          {
+            "qid": 25,
+            "cid": "B10",
+            "attempt": 1,
+            "kind": "find",
+            "help": false,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --term libssh.c --limit 10",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": true,
+            "written_not_executed": false,
+            "returncode": 0
+          },
+          {
+            "qid": 25,
+            "cid": "B10",
+            "attempt": 1,
+            "kind": "find",
+            "help": false,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --term ssh_doing --limit 10",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": true,
+            "written_not_executed": false,
+            "returncode": 0
+          },
+          {
+            "qid": 25,
+            "cid": "B10",
+            "attempt": 1,
+            "kind": "find",
+            "help": false,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --term myssh_doing --limit 10",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": true,
+            "written_not_executed": false,
+            "returncode": 0
+          },
+          {
+            "qid": 25,
+            "cid": "B10",
+            "attempt": 1,
+            "kind": "find",
+            "help": false,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --term 'sftp_doing' --limit 10 --json",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": true,
+            "written_not_executed": false,
+            "returncode": 0
+          },
+          {
+            "qid": 25,
+            "cid": "B10",
+            "attempt": 1,
+            "kind": "find",
+            "help": false,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --term 'myssh_multi_statemach' --limit 5 --json",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": true,
+            "written_not_executed": false,
+            "returncode": 0
+          },
+          {
+            "qid": 25,
+            "cid": "B10",
+            "attempt": 1,
+            "kind": "find",
+            "help": false,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --term 'myssh_statemach' --limit 8 --json",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": true,
+            "written_not_executed": false,
+            "returncode": 0
+          },
+          {
+            "qid": 25,
+            "cid": "B10",
+            "attempt": 1,
+            "kind": "query",
+            "help": false,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --run-dir $WORK/runs/e5/qa/arms/C/run --id 'lib/vssh/libssh.c::function::myssh_statemachine::67692' --edges all",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": true,
+            "written_not_executed": false,
+            "returncode": 0
+          },
+          {
+            "qid": 25,
+            "cid": "B10",
+            "attempt": 1,
+            "kind": "query",
+            "help": false,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --run-dir $WORK/runs/e5/qa/arms/C/run --id 'lib/vssh/libssh.c::function::sftp_doing::86038' --edges all",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": true,
+            "written_not_executed": false,
+            "returncode": 0
+          },
+          {
+            "qid": 25,
+            "cid": "B10",
+            "attempt": 1,
+            "kind": "query",
+            "help": false,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --run-dir $WORK/runs/e5/qa/arms/C/run --id 'lib/vssh/libssh.c::function::myssh_multi_statemach::73773' --edges all",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": true,
+            "written_not_executed": false,
+            "returncode": 0
+          }
+        ]
+      },
+      {
+        "qid": 26,
+        "cid": "B11",
+        "events": [
+          {
+            "qid": 26,
+            "cid": "B11",
+            "attempt": 1,
+            "kind": "query",
+            "help": true,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --help",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": true,
+            "written_not_executed": false,
+            "returncode": 0
+          },
+          {
+            "qid": 26,
+            "cid": "B11",
+            "attempt": 1,
+            "kind": "find",
+            "help": true,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --help",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": true,
+            "written_not_executed": false,
+            "returncode": 0
+          },
+          {
+            "qid": 26,
+            "cid": "B11",
+            "attempt": 1,
+            "kind": "find",
+            "help": false,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --term \"ftp_done\" --limit 20",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": true,
+            "written_not_executed": false,
+            "returncode": 0
+          },
+          {
+            "qid": 26,
+            "cid": "B11",
+            "attempt": 1,
+            "kind": "query",
+            "help": false,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --run-dir $WORK/runs/e5/qa/arms/C/run --id \"lib/ftp.c::function::ftp_done_status::114269\"",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": true,
+            "written_not_executed": false,
+            "returncode": 0
+          },
+          {
+            "qid": 26,
+            "cid": "B11",
+            "attempt": 1,
+            "kind": "query",
+            "help": false,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --run-dir $WORK/runs/e5/qa/arms/C/run --id \"lib/ftp.c::function::ftp_done::121896\" --edges all",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": true,
+            "written_not_executed": false,
+            "returncode": 0
+          },
+          {
+            "qid": 26,
+            "cid": "B11",
+            "attempt": 1,
+            "kind": "query",
+            "help": false,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --run-dir $WORK/runs/e5/qa/arms/C/run --id \"lib/ftp.c::function::ftp_done_control_reply::118190\" --json",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": true,
+            "written_not_executed": false,
+            "returncode": 0
+          },
+          {
+            "qid": 26,
+            "cid": "B11",
+            "attempt": 1,
+            "kind": "find",
+            "help": false,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --term \"RETR_SIZE\" --limit 10",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": true,
+            "written_not_executed": false,
+            "returncode": 0
+          },
+          {
+            "qid": 26,
+            "cid": "B11",
+            "attempt": 1,
+            "kind": "find",
+            "help": false,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --term \"RETR\" --limit 15",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": true,
+            "written_not_executed": false,
+            "returncode": 0
+          },
+          {
+            "qid": 26,
+            "cid": "B11",
+            "attempt": 1,
+            "kind": "find",
+            "help": false,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --term \"ftp_state_retr\" --limit 10",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": true,
+            "written_not_executed": false,
+            "returncode": 0
+          }
+        ]
+      },
+      {
+        "qid": 28,
+        "cid": "B15",
+        "events": [
+          {
+            "qid": 28,
+            "cid": "B15",
+            "attempt": 1,
+            "kind": "--help",
+            "help": true,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe --help",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": true,
+            "written_not_executed": false,
+            "returncode": 0
+          },
+          {
+            "qid": 28,
+            "cid": "B15",
+            "attempt": 1,
+            "kind": "find",
+            "help": true,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --help",
+            "requested": false,
+            "executed": false,
+            "blocked": false,
+            "success": false,
+            "written_not_executed": true,
+            "returncode": null
+          },
+          {
+            "qid": 28,
+            "cid": "B15",
+            "attempt": 1,
+            "kind": "find",
+            "help": false,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run mstate_perform_pollset",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": false,
+            "written_not_executed": false,
+            "returncode": 2
+          },
+          {
+            "qid": 28,
+            "cid": "B15",
+            "attempt": 1,
+            "kind": "find",
+            "help": false,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --term mstate_perform_pollset --limit 5",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": true,
+            "written_not_executed": false,
+            "returncode": 0
+          },
+          {
+            "qid": 28,
+            "cid": "B15",
+            "attempt": 1,
+            "kind": "query",
+            "help": false,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --run-dir $WORK/runs/e5/qa/arms/C/run --id lib/multi.c::function::mstate_perform_pollset::35691",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": true,
+            "written_not_executed": false,
+            "returncode": 0
+          },
+          {
+            "qid": 28,
+            "cid": "B15",
+            "attempt": 1,
+            "kind": "query",
+            "help": false,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --run-dir $WORK/runs/e5/qa/arms/C/run --term Curl_ssl_adjust_pollset --limit 5",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": false,
+            "written_not_executed": false,
+            "returncode": 2
+          },
+          {
+            "qid": 28,
+            "cid": "B15",
+            "attempt": 1,
+            "kind": "query",
+            "help": false,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --run-dir $WORK/runs/e5/qa/arms/C/run --term ssl_cf_adjust_pollset --limit 5",
+            "requested": false,
+            "executed": false,
+            "blocked": false,
+            "success": false,
+            "written_not_executed": true,
+            "returncode": null
+          },
+          {
+            "qid": 28,
+            "cid": "B15",
+            "attempt": 1,
+            "kind": "find",
+            "help": false,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --term Curl_ssl_adjust_pollset --limit 5",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": true,
+            "written_not_executed": false,
+            "returncode": 0
+          },
+          {
+            "qid": 28,
+            "cid": "B15",
+            "attempt": 1,
+            "kind": "find",
+            "help": false,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --term ssl_cf_adjust_pollset --limit 5",
+            "requested": false,
+            "executed": false,
+            "blocked": false,
+            "success": false,
+            "written_not_executed": true,
+            "returncode": null
+          },
+          {
+            "qid": 28,
+            "cid": "B15",
+            "attempt": 1,
+            "kind": "find",
+            "help": false,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --term multissl_adjust_pollset --limit 5",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": true,
+            "written_not_executed": false,
+            "returncode": 0
+          },
+          {
+            "qid": 28,
+            "cid": "B15",
+            "attempt": 1,
+            "kind": "find",
+            "help": false,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --term ssl_cf_adjust_pollset --limit 5",
+            "requested": false,
+            "executed": false,
+            "blocked": false,
+            "success": false,
+            "written_not_executed": true,
+            "returncode": null
+          },
+          {
+            "qid": 28,
+            "cid": "B15",
+            "attempt": 1,
+            "kind": "find",
+            "help": false,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --term ssl_cf_adjust --limit 5",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": true,
+            "written_not_executed": false,
+            "returncode": 0
+          },
+          {
+            "qid": 28,
+            "cid": "B15",
+            "attempt": 1,
+            "kind": "find",
+            "help": false,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --term ssl_cf_connect --limit 5",
+            "requested": false,
+            "executed": false,
+            "blocked": false,
+            "success": false,
+            "written_not_executed": true,
+            "returncode": null
+          },
+          {
+            "qid": 28,
+            "cid": "B15",
+            "attempt": 1,
+            "kind": "find",
+            "help": false,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --term ssl_cf_adjust_pollset --limit 3 --json",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": true,
+            "written_not_executed": false,
+            "returncode": 0
+          }
+        ]
+      },
+      {
+        "qid": 29,
+        "cid": "B16",
+        "events": []
+      },
+      {
+        "qid": 33,
+        "cid": "B21",
+        "events": [
+          {
+            "qid": 33,
+            "cid": "B21",
+            "attempt": 1,
+            "kind": "query",
+            "help": true,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --help 2>&1 | head -40; echo ---; $WORK/runs/e5/qa/arms/C/bin/cbe find --help 2>&1 | head -40",
+            "requested": false,
+            "executed": false,
+            "blocked": false,
+            "success": false,
+            "written_not_executed": true,
+            "returncode": null
+          }
+        ]
+      },
+      {
+        "qid": 34,
+        "cid": "B22",
+        "events": [
+          {
+            "qid": 34,
+            "cid": "B22",
+            "attempt": 1,
+            "kind": "find",
+            "help": false,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --term \"Curl_cookie_run\"",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": true,
+            "written_not_executed": false,
+            "returncode": 0
+          },
+          {
+            "qid": 34,
+            "cid": "B22",
+            "attempt": 1,
+            "kind": "query",
+            "help": false,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --run-dir $WORK/runs/e5/qa/arms/C/run --term \"Curl_cookie_add\"",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": false,
+            "written_not_executed": false,
+            "returncode": 2
+          },
+          {
+            "qid": 34,
+            "cid": "B22",
+            "attempt": 1,
+            "kind": "query",
+            "help": false,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe query --run-dir $WORK/runs/e5/qa/arms/C/run --id \"lib/cookie.c::function::Curl_cookie_add::0\"",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": false,
+            "written_not_executed": false,
+            "returncode": 2
+          },
+          {
+            "qid": 34,
+            "cid": "B22",
+            "attempt": 1,
+            "kind": "find",
+            "help": false,
+            "command": "$WORK/runs/e5/qa/arms/C/bin/cbe find --run-dir $WORK/runs/e5/qa/arms/C/run --term \"Curl_cookie_add\"",
+            "requested": true,
+            "executed": true,
+            "blocked": false,
+            "success": true,
+            "written_not_executed": false,
+            "returncode": 0
+          }
+        ]
+      }
+    ]
+  },
+  "C0-10-r0": {
+    "counts": {
+      "observation_chars": 1864267,
+      "truncations": 34,
+      "truncations_missing_field_recovered": 0,
+      "tool_calls": 445,
+      "steps_all_attempts": 465,
+      "grep_executed": 233,
+      "grep_with_pipe": 84,
+      "all_replies": 506,
+      "unparsed_replies": 56,
+      "multi_call_replies": 58,
+      "loop_replies": 460,
+      "unparsed_loop_replies": 15,
+      "bash_blocked": 50,
+      "written_tools": 585,
+      "written_not_executed": 140,
+      "multi_call_ratio": 0.11462450592885376,
+      "unparsed_ratio": 0.11067193675889328,
+      "grep_pipe_ratio": 0.3605150214592275,
+      "find_query_requested": 0,
+      "find_query_executed": 0,
+      "find_query_blocked": 0,
+      "find_query_success": 0,
+      "find_query_written_not_executed": 0,
+      "find_query_written": 0,
+      "help_requested": 0,
+      "help_executed": 0,
+      "help_blocked": 0,
+      "help_success": 0,
+      "help_written_not_executed": 0,
+      "help_written": 0
+    },
+    "events": [],
+    "per_question": [
+      {
+        "qid": 0,
+        "cid": "A01",
+        "events": []
+      },
+      {
+        "qid": 1,
+        "cid": "A04",
+        "events": []
+      },
+      {
+        "qid": 2,
+        "cid": "A05",
+        "events": []
+      },
+      {
+        "qid": 3,
+        "cid": "A06",
+        "events": []
+      },
+      {
+        "qid": 4,
+        "cid": "A07",
+        "events": []
+      },
+      {
+        "qid": 5,
+        "cid": "A08",
+        "events": []
+      },
+      {
+        "qid": 6,
+        "cid": "A09",
+        "events": []
+      },
+      {
+        "qid": 7,
+        "cid": "A13",
+        "events": []
+      },
+      {
+        "qid": 8,
+        "cid": "A14",
+        "events": []
+      },
+      {
+        "qid": 9,
+        "cid": "A15",
+        "events": []
+      },
+      {
+        "qid": 10,
+        "cid": "A16",
+        "events": []
+      },
+      {
+        "qid": 11,
+        "cid": "A17",
+        "events": []
+      },
+      {
+        "qid": 12,
+        "cid": "A18",
+        "events": []
+      },
+      {
+        "qid": 13,
+        "cid": "A21",
+        "events": []
+      },
+      {
+        "qid": 14,
+        "cid": "A23",
+        "events": []
+      },
+      {
+        "qid": 15,
+        "cid": "A24",
+        "events": []
+      },
+      {
+        "qid": 16,
+        "cid": "A26",
+        "events": []
+      },
+      {
+        "qid": 17,
+        "cid": "A27",
+        "events": []
+      },
+      {
+        "qid": 18,
+        "cid": "A28",
+        "events": []
+      },
+      {
+        "qid": 19,
+        "cid": "B01",
+        "events": []
+      },
+      {
+        "qid": 20,
+        "cid": "B02",
+        "events": []
+      },
+      {
+        "qid": 21,
+        "cid": "B03",
+        "events": []
+      },
+      {
+        "qid": 22,
+        "cid": "B05",
+        "events": []
+      },
+      {
+        "qid": 23,
+        "cid": "B06",
+        "events": []
+      },
+      {
+        "qid": 24,
+        "cid": "B07",
+        "events": []
+      },
+      {
+        "qid": 25,
+        "cid": "B10",
+        "events": []
+      },
+      {
+        "qid": 26,
+        "cid": "B11",
+        "events": []
+      },
+      {
+        "qid": 27,
+        "cid": "B14",
+        "events": []
+      },
+      {
+        "qid": 28,
+        "cid": "B15",
+        "events": []
+      },
+      {
+        "qid": 29,
+        "cid": "B16",
+        "events": []
+      },
+      {
+        "qid": 30,
+        "cid": "B17",
+        "events": []
+      },
+      {
+        "qid": 31,
+        "cid": "B18",
+        "events": []
+      },
+      {
+        "qid": 32,
+        "cid": "B20",
+        "events": []
+      },
+      {
+        "qid": 33,
+        "cid": "B21",
+        "events": []
+      },
+      {
+        "qid": 34,
+        "cid": "B22",
+        "events": []
+      },
+      {
+        "qid": 35,
+        "cid": "B23",
+        "events": []
+      },
+      {
+        "qid": 36,
+        "cid": "B24",
+        "events": []
+      },
+      {
+        "qid": 37,
+        "cid": "B25",
+        "events": []
+      },
+      {
+        "qid": 38,
+        "cid": "B26",
+        "events": []
+      },
+      {
+        "qid": 39,
+        "cid": "B28",
+        "events": []
+      }
+    ]
+  },
+  "S-10-r0": {
+    "counts": {
+      "observation_chars": 1656769,
+      "truncations": 23,
+      "truncations_missing_field_recovered": 5,
+      "tool_calls": 444,
+      "steps_all_attempts": 474,
+      "grep_executed": 244,
+      "grep_with_pipe": 88,
+      "all_replies": 511,
+      "unparsed_replies": 66,
+      "multi_call_replies": 78,
+      "loop_replies": 470,
+      "unparsed_loop_replies": 26,
+      "bash_blocked": 53,
+      "written_tools": 632,
+      "written_not_executed": 188,
+      "multi_call_ratio": 0.15264187866927592,
+      "unparsed_ratio": 0.12915851272015655,
+      "grep_pipe_ratio": 0.36065573770491804,
+      "find_query_requested": 0,
+      "find_query_executed": 0,
+      "find_query_blocked": 0,
+      "find_query_success": 0,
+      "find_query_written_not_executed": 0,
+      "find_query_written": 0,
+      "help_requested": 0,
+      "help_executed": 0,
+      "help_blocked": 0,
+      "help_success": 0,
+      "help_written_not_executed": 0,
+      "help_written": 0
+    },
+    "events": [],
+    "per_question": [
+      {
+        "qid": 0,
+        "cid": "A01",
+        "events": []
+      },
+      {
+        "qid": 1,
+        "cid": "A04",
+        "events": []
+      },
+      {
+        "qid": 2,
+        "cid": "A05",
+        "events": []
+      },
+      {
+        "qid": 3,
+        "cid": "A06",
+        "events": []
+      },
+      {
+        "qid": 4,
+        "cid": "A07",
+        "events": []
+      },
+      {
+        "qid": 5,
+        "cid": "A08",
+        "events": []
+      },
+      {
+        "qid": 6,
+        "cid": "A09",
+        "events": []
+      },
+      {
+        "qid": 7,
+        "cid": "A13",
+        "events": []
+      },
+      {
+        "qid": 8,
+        "cid": "A14",
+        "events": []
+      },
+      {
+        "qid": 9,
+        "cid": "A15",
+        "events": []
+      },
+      {
+        "qid": 10,
+        "cid": "A16",
+        "events": []
+      },
+      {
+        "qid": 11,
+        "cid": "A17",
+        "events": []
+      },
+      {
+        "qid": 12,
+        "cid": "A18",
+        "events": []
+      },
+      {
+        "qid": 13,
+        "cid": "A21",
+        "events": []
+      },
+      {
+        "qid": 14,
+        "cid": "A23",
+        "events": []
+      },
+      {
+        "qid": 15,
+        "cid": "A24",
+        "events": []
+      },
+      {
+        "qid": 16,
+        "cid": "A26",
+        "events": []
+      },
+      {
+        "qid": 17,
+        "cid": "A27",
+        "events": []
+      },
+      {
+        "qid": 18,
+        "cid": "A28",
+        "events": []
+      },
+      {
+        "qid": 19,
+        "cid": "B01",
+        "events": []
+      },
+      {
+        "qid": 20,
+        "cid": "B02",
+        "events": []
+      },
+      {
+        "qid": 21,
+        "cid": "B03",
+        "events": []
+      },
+      {
+        "qid": 22,
+        "cid": "B05",
+        "events": []
+      },
+      {
+        "qid": 23,
+        "cid": "B06",
+        "events": []
+      },
+      {
+        "qid": 24,
+        "cid": "B07",
+        "events": []
+      },
+      {
+        "qid": 25,
+        "cid": "B10",
+        "events": []
+      },
+      {
+        "qid": 26,
+        "cid": "B11",
+        "events": []
+      },
+      {
+        "qid": 27,
+        "cid": "B14",
+        "events": []
+      },
+      {
+        "qid": 28,
+        "cid": "B15",
+        "events": []
+      },
+      {
+        "qid": 29,
+        "cid": "B16",
+        "events": []
+      },
+      {
+        "qid": 30,
+        "cid": "B17",
+        "events": []
+      },
+      {
+        "qid": 31,
+        "cid": "B18",
+        "events": []
+      },
+      {
+        "qid": 32,
+        "cid": "B20",
+        "events": []
+      },
+      {
+        "qid": 33,
+        "cid": "B21",
+        "events": []
+      },
+      {
+        "qid": 34,
+        "cid": "B22",
+        "events": []
+      },
+      {
+        "qid": 35,
+        "cid": "B23",
+        "events": []
+      },
+      {
+        "qid": 36,
+        "cid": "B24",
+        "events": []
+      },
+      {
+        "qid": 37,
+        "cid": "B25",
+        "events": []
+      },
+      {
+        "qid": 38,
+        "cid": "B26",
+        "events": []
+      },
+      {
+        "qid": 39,
+        "cid": "B28",
+        "events": []
+      }
+    ]
+  },
+  "S-25-r0": {
+    "counts": {
+      "observation_chars": 1761592,
+      "truncations": 56,
+      "truncations_missing_field_recovered": 0,
+      "tool_calls": 402,
+      "steps_all_attempts": 447,
+      "grep_executed": 265,
+      "grep_with_pipe": 79,
+      "all_replies": 464,
+      "unparsed_replies": 61,
+      "multi_call_replies": 22,
+      "loop_replies": 446,
+      "unparsed_loop_replies": 44,
+      "bash_blocked": 26,
+      "written_tools": 430,
+      "written_not_executed": 28,
+      "multi_call_ratio": 0.04741379310344827,
+      "unparsed_ratio": 0.1314655172413793,
+      "grep_pipe_ratio": 0.2981132075471698,
+      "find_query_requested": 0,
+      "find_query_executed": 0,
+      "find_query_blocked": 0,
+      "find_query_success": 0,
+      "find_query_written_not_executed": 0,
+      "find_query_written": 0,
+      "help_requested": 0,
+      "help_executed": 0,
+      "help_blocked": 0,
+      "help_success": 0,
+      "help_written_not_executed": 0,
+      "help_written": 0
+    },
+    "events": [],
+    "per_question": [
+      {
+        "qid": 0,
+        "cid": "A01",
+        "events": []
+      },
+      {
+        "qid": 1,
+        "cid": "A04",
+        "events": []
+      },
+      {
+        "qid": 2,
+        "cid": "A05",
+        "events": []
+      },
+      {
+        "qid": 5,
+        "cid": "A08",
+        "events": []
+      },
+      {
+        "qid": 8,
+        "cid": "A14",
+        "events": []
+      },
+      {
+        "qid": 10,
+        "cid": "A16",
+        "events": []
+      },
+      {
+        "qid": 13,
+        "cid": "A21",
+        "events": []
+      },
+      {
+        "qid": 14,
+        "cid": "A23",
+        "events": []
+      },
+      {
+        "qid": 19,
+        "cid": "B01",
+        "events": []
+      },
+      {
+        "qid": 22,
+        "cid": "B05",
+        "events": []
+      },
+      {
+        "qid": 23,
+        "cid": "B06",
+        "events": []
+      },
+      {
+        "qid": 25,
+        "cid": "B10",
+        "events": []
+      },
+      {
+        "qid": 26,
+        "cid": "B11",
+        "events": []
+      },
+      {
+        "qid": 28,
+        "cid": "B15",
+        "events": []
+      },
+      {
+        "qid": 29,
+        "cid": "B16",
+        "events": []
+      },
+      {
+        "qid": 33,
+        "cid": "B21",
+        "events": []
+      },
+      {
+        "qid": 34,
+        "cid": "B22",
+        "events": []
+      }
+    ]
+  },
+  "direct": null
+}

@@ -1,0 +1,16 @@
+{
+  "qid": 10,
+  "question": "For an https:// URL, libcurl may race a first connection attempt over HTTP/3 against a second attempt over HTTP/2. In an ngtcp2 build, how does the HTTP/3 attempt's 'has the server replied yet' signal reach the racing logic, and how does it affect when the HTTP/2 attempt is started?\n\nBuild assumptions: USE_NGTCP2 and USE_NGHTTP3 plus nghttp2; OpenSSL; CURLOPT_HTTP_VERSION set so that the first attempt is h3 and the second h2 (e.g. CURL_HTTP_VERSION_3 with fallback allowed); no HTTPS-RR records; no proxy; non-Windows.",
+  "arm": "direct",
+  "max_steps": null,
+  "repeat": 0,
+  "answer_valid": false,
+  "judge_model": "codex/gpt-6.1-sol",
+  "draws": [],
+  "score": null,
+  "total": null,
+  "main_total_na5": 5,
+  "failure_type": "no_answer",
+  "judge_total_range": null,
+  "wall_seconds": 1.0124989785254002e-05
+}

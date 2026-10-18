@@ -1,0 +1,16 @@
+{
+  "qid": 27,
+  "question": "For an HTTPS transfer over a direct TCP connection, through which functions does the TLS handshake completion time travel from the TLS connection filter to the APPCONNECT progress timer?\n\nBuild assumptions: HTTPS without any proxy; no TLS early data; any single TLS backend; multi interface.",
+  "arm": "direct",
+  "max_steps": null,
+  "repeat": 0,
+  "answer_valid": false,
+  "judge_model": "codex/gpt-6.1-sol",
+  "draws": [],
+  "score": null,
+  "total": null,
+  "main_total_na5": 5,
+  "failure_type": "no_answer",
+  "judge_total_range": null,
+  "wall_seconds": 9.457988198846579e-06
+}

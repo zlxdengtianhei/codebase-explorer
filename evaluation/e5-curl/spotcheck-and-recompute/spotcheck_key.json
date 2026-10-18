@@ -1,0 +1,916 @@
+{
+ "replacements": [
+  {
+   "arm": "C",
+   "replaced": "A04",
+   "by": "B24",
+   "new_is_na": false
+  }
+ ],
+ "key": [
+  {
+   "id": "X01",
+   "arm": "C0",
+   "cid": "B03",
+   "judge_score": 100.0,
+   "judge_items": {
+    "r1": {
+     "satisfied": true,
+     "votes": [
+      true,
+      true,
+      true
+     ]
+    },
+    "r2": {
+     "satisfied": true,
+     "votes": [
+      true,
+      true,
+      true
+     ]
+    },
+    "r3": {
+     "satisfied": true,
+     "votes": [
+      true,
+      true,
+      true
+     ]
+    },
+    "r4": {
+     "satisfied": true,
+     "votes": [
+      true,
+      true,
+      true
+     ]
+    },
+    "r5": {
+     "satisfied": true,
+     "votes": [
+      true,
+      true,
+      true
+     ]
+    },
+    "r6": {
+     "satisfied": true,
+     "votes": [
+      true,
+      true,
+      true
+     ]
+    },
+    "r7": {
+     "satisfied": true,
+     "votes": [
+      true,
+      true,
+      true
+     ]
+    },
+    "r8": {
+     "satisfied": true,
+     "votes": [
+      false,
+      true,
+      true
+     ]
+    },
+    "r9": {
+     "satisfied": true,
+     "votes": [
+      true,
+      true,
+      true
+     ]
+    },
+    "n1": {
+     "satisfied": false,
+     "votes": [
+      false,
+      false,
+      false
+     ]
+    }
+   }
+  },
+  {
+   "id": "X02",
+   "arm": "C",
+   "cid": "A06",
+   "judge_score": 18.181818181818183,
+   "judge_items": {
+    "r1": {
+     "satisfied": true,
+     "votes": [
+      true,
+      true,
+      true
+     ]
+    },
+    "r2": {
+     "satisfied": false,
+     "votes": [
+      false,
+      false,
+      false
+     ]
+    },
+    "r3": {
+     "satisfied": false,
+     "votes": [
+      false,
+      false,
+      false
+     ]
+    },
+    "r4": {
+     "satisfied": false,
+     "votes": [
+      false,
+      false,
+      false
+     ]
+    },
+    "r5": {
+     "satisfied": false,
+     "votes": [
+      false,
+      false,
+      false
+     ]
+    },
+    "r6": {
+     "satisfied": false,
+     "votes": [
+      false,
+      false,
+      false
+     ]
+    },
+    "r7": {
+     "satisfied": false,
+     "votes": [
+      false,
+      false,
+      false
+     ]
+    },
+    "r8": {
+     "satisfied": false,
+     "votes": [
+      false,
+      false,
+      false
+     ]
+    },
+    "n1": {
+     "satisfied": false,
+     "votes": [
+      false,
+      false,
+      false
+     ]
+    },
+    "n2": {
+     "satisfied": false,
+     "votes": [
+      false,
+      false,
+      false
+     ]
+    }
+   }
+  },
+  {
+   "id": "X03",
+   "arm": "C",
+   "cid": "B24",
+   "judge_score": 66.66666666666666,
+   "judge_items": {
+    "r1": {
+     "satisfied": true,
+     "votes": [
+      true,
+      true,
+      true
+     ]
+    },
+    "r2": {
+     "satisfied": true,
+     "votes": [
+      true,
+      true,
+      true
+     ]
+    },
+    "r3": {
+     "satisfied": true,
+     "votes": [
+      true,
+      true,
+      true
+     ]
+    },
+    "r4": {
+     "satisfied": true,
+     "votes": [
+      true,
+      true,
+      true
+     ]
+    },
+    "r5": {
+     "satisfied": false,
+     "votes": [
+      false,
+      false,
+      false
+     ]
+    },
+    "r6": {
+     "satisfied": false,
+     "votes": [
+      false,
+      false,
+      false
+     ]
+    },
+    "r7": {
+     "satisfied": false,
+     "votes": [
+      false,
+      false,
+      false
+     ]
+    },
+    "r8": {
+     "satisfied": true,
+     "votes": [
+      true,
+      true,
+      true
+     ]
+    },
+    "r9": {
+     "satisfied": false,
+     "votes": [
+      false,
+      false,
+      false
+     ]
+    },
+    "n1": {
+     "satisfied": false,
+     "votes": [
+      false,
+      false,
+      false
+     ]
+    }
+   }
+  },
+  {
+   "id": "X04",
+   "arm": "C",
+   "cid": "B07",
+   "judge_score": 0,
+   "judge_items": {
+    "r1": {
+     "satisfied": false,
+     "votes": [
+      false,
+      false,
+      false
+     ]
+    },
+    "r2": {
+     "satisfied": false,
+     "votes": [
+      false,
+      false,
+      false
+     ]
+    },
+    "r3": {
+     "satisfied": false,
+     "votes": [
+      false,
+      false,
+      false
+     ]
+    },
+    "r4": {
+     "satisfied": false,
+     "votes": [
+      false,
+      false,
+      false
+     ]
+    },
+    "r5": {
+     "satisfied": false,
+     "votes": [
+      false,
+      false,
+      false
+     ]
+    },
+    "r6": {
+     "satisfied": false,
+     "votes": [
+      false,
+      false,
+      false
+     ]
+    },
+    "r7": {
+     "satisfied": false,
+     "votes": [
+      false,
+      false,
+      false
+     ]
+    },
+    "r8": {
+     "satisfied": false,
+     "votes": [
+      false,
+      false,
+      false
+     ]
+    },
+    "n1": {
+     "satisfied": false,
+     "votes": [
+      false,
+      false,
+      false
+     ]
+    }
+   }
+  },
+  {
+   "id": "X05",
+   "arm": "C",
+   "cid": "B23",
+   "judge_score": 33.33333333333333,
+   "judge_items": {
+    "r1": {
+     "satisfied": false,
+     "votes": [
+      false,
+      false,
+      false
+     ]
+    },
+    "r2": {
+     "satisfied": false,
+     "votes": [
+      false,
+      false,
+      false
+     ]
+    },
+    "r3": {
+     "satisfied": true,
+     "votes": [
+      true,
+      true,
+      true
+     ]
+    },
+    "r4": {
+     "satisfied": false,
+     "votes": [
+      false,
+      false,
+      false
+     ]
+    },
+    "r5": {
+     "satisfied": true,
+     "votes": [
+      true,
+      true,
+      true
+     ]
+    },
+    "r6": {
+     "satisfied": true,
+     "votes": [
+      true,
+      true,
+      true
+     ]
+    },
+    "r7": {
+     "satisfied": false,
+     "votes": [
+      false,
+      false,
+      false
+     ]
+    },
+    "r8": {
+     "satisfied": false,
+     "votes": [
+      false,
+      false,
+      false
+     ]
+    },
+    "r9": {
+     "satisfied": false,
+     "votes": [
+      false,
+      false,
+      false
+     ]
+    },
+    "n1": {
+     "satisfied": false,
+     "votes": [
+      false,
+      false,
+      false
+     ]
+    }
+   }
+  },
+  {
+   "id": "X06",
+   "arm": "S",
+   "cid": "B14",
+   "judge_score": 0,
+   "judge_items": {
+    "r1": {
+     "satisfied": false,
+     "votes": [
+      false,
+      false,
+      false
+     ]
+    },
+    "r2": {
+     "satisfied": false,
+     "votes": [
+      false,
+      false,
+      false
+     ]
+    },
+    "r3": {
+     "satisfied": false,
+     "votes": [
+      false,
+      false,
+      false
+     ]
+    },
+    "r4": {
+     "satisfied": false,
+     "votes": [
+      false,
+      false,
+      false
+     ]
+    },
+    "r5": {
+     "satisfied": false,
+     "votes": [
+      false,
+      false,
+      false
+     ]
+    },
+    "r6": {
+     "satisfied": false,
+     "votes": [
+      false,
+      false,
+      false
+     ]
+    },
+    "r7": {
+     "satisfied": false,
+     "votes": [
+      false,
+      false,
+      false
+     ]
+    },
+    "r8": {
+     "satisfied": false,
+     "votes": [
+      false,
+      false,
+      false
+     ]
+    },
+    "r9": {
+     "satisfied": false,
+     "votes": [
+      false,
+      false,
+      false
+     ]
+    },
+    "r10": {
+     "satisfied": false,
+     "votes": [
+      false,
+      false,
+      false
+     ]
+    },
+    "n1": {
+     "satisfied": false,
+     "votes": [
+      false,
+      false,
+      false
+     ]
+    }
+   }
+  },
+  {
+   "id": "X07",
+   "arm": "S",
+   "cid": "B17",
+   "judge_score": 16.666666666666664,
+   "judge_items": {
+    "r1": {
+     "satisfied": true,
+     "votes": [
+      true,
+      true,
+      true
+     ]
+    },
+    "r2": {
+     "satisfied": false,
+     "votes": [
+      false,
+      false,
+      false
+     ]
+    },
+    "r3": {
+     "satisfied": false,
+     "votes": [
+      false,
+      false,
+      false
+     ]
+    },
+    "r4": {
+     "satisfied": false,
+     "votes": [
+      false,
+      false,
+      false
+     ]
+    },
+    "r5": {
+     "satisfied": false,
+     "votes": [
+      false,
+      false,
+      false
+     ]
+    },
+    "r6": {
+     "satisfied": false,
+     "votes": [
+      false,
+      false,
+      false
+     ]
+    },
+    "r7": {
+     "satisfied": false,
+     "votes": [
+      false,
+      false,
+      false
+     ]
+    },
+    "r8": {
+     "satisfied": false,
+     "votes": [
+      false,
+      false,
+      false
+     ]
+    },
+    "r9": {
+     "satisfied": false,
+     "votes": [
+      false,
+      false,
+      false
+     ]
+    },
+    "r10": {
+     "satisfied": false,
+     "votes": [
+      false,
+      false,
+      false
+     ]
+    },
+    "n1": {
+     "satisfied": false,
+     "votes": [
+      false,
+      false,
+      false
+     ]
+    }
+   }
+  },
+  {
+   "id": "X08",
+   "arm": "S",
+   "cid": "B20",
+   "judge_score": 18.181818181818183,
+   "judge_items": {
+    "r1": {
+     "satisfied": false,
+     "votes": [
+      false,
+      false,
+      false
+     ]
+    },
+    "r2": {
+     "satisfied": false,
+     "votes": [
+      false,
+      false,
+      false
+     ]
+    },
+    "r3": {
+     "satisfied": false,
+     "votes": [
+      false,
+      false,
+      false
+     ]
+    },
+    "r4": {
+     "satisfied": false,
+     "votes": [
+      false,
+      false,
+      false
+     ]
+    },
+    "r5": {
+     "satisfied": false,
+     "votes": [
+      true,
+      false,
+      false
+     ]
+    },
+    "r6": {
+     "satisfied": true,
+     "votes": [
+      true,
+      true,
+      true
+     ]
+    },
+    "r7": {
+     "satisfied": true,
+     "votes": [
+      true,
+      true,
+      false
+     ]
+    },
+    "r8": {
+     "satisfied": false,
+     "votes": [
+      false,
+      false,
+      false
+     ]
+    },
+    "n1": {
+     "satisfied": false,
+     "votes": [
+      false,
+      false,
+      false
+     ]
+    }
+   }
+  },
+  {
+   "id": "X09",
+   "arm": "C0",
+   "cid": "A13",
+   "judge_score": 16.666666666666664,
+   "judge_items": {
+    "r1": {
+     "satisfied": false,
+     "votes": [
+      false,
+      false,
+      false
+     ]
+    },
+    "r2": {
+     "satisfied": true,
+     "votes": [
+      true,
+      true,
+      true
+     ]
+    },
+    "r3": {
+     "satisfied": false,
+     "votes": [
+      false,
+      false,
+      false
+     ]
+    },
+    "r4": {
+     "satisfied": false,
+     "votes": [
+      false,
+      false,
+      false
+     ]
+    },
+    "r5": {
+     "satisfied": false,
+     "votes": [
+      false,
+      false,
+      false
+     ]
+    },
+    "r6": {
+     "satisfied": false,
+     "votes": [
+      false,
+      false,
+      false
+     ]
+    },
+    "r7": {
+     "satisfied": false,
+     "votes": [
+      false,
+      false,
+      false
+     ]
+    },
+    "r8": {
+     "satisfied": false,
+     "votes": [
+      false,
+      false,
+      false
+     ]
+    },
+    "r9": {
+     "satisfied": false,
+     "votes": [
+      false,
+      false,
+      false
+     ]
+    },
+    "n1": {
+     "satisfied": false,
+     "votes": [
+      false,
+      false,
+      false
+     ]
+    },
+    "n2": {
+     "satisfied": false,
+     "votes": [
+      false,
+      false,
+      false
+     ]
+    }
+   }
+  },
+  {
+   "id": "X10",
+   "arm": "C0",
+   "cid": "B01",
+   "judge_score": 86.66666666666667,
+   "judge_items": {
+    "r1": {
+     "satisfied": true,
+     "votes": [
+      true,
+      true,
+      true
+     ]
+    },
+    "r2": {
+     "satisfied": false,
+     "votes": [
+      false,
+      false,
+      false
+     ]
+    },
+    "r3": {
+     "satisfied": true,
+     "votes": [
+      true,
+      true,
+      true
+     ]
+    },
+    "r4": {
+     "satisfied": true,
+     "votes": [
+      true,
+      true,
+      true
+     ]
+    },
+    "r5": {
+     "satisfied": true,
+     "votes": [
+      true,
+      true,
+      true
+     ]
+    },
+    "r6": {
+     "satisfied": true,
+     "votes": [
+      true,
+      true,
+      true
+     ]
+    },
+    "r7": {
+     "satisfied": true,
+     "votes": [
+      true,
+      true,
+      true
+     ]
+    },
+    "r8": {
+     "satisfied": true,
+     "votes": [
+      true,
+      true,
+      true
+     ]
+    },
+    "r9": {
+     "satisfied": true,
+     "votes": [
+      true,
+      true,
+      true
+     ]
+    },
+    "r10": {
+     "satisfied": true,
+     "votes": [
+      true,
+      true,
+      true
+     ]
+    },
+    "n1": {
+     "satisfied": false,
+     "votes": [
+      false,
+      false,
+      false
+     ]
+    },
+    "n2": {
+     "satisfied": false,
+     "votes": [
+      false,
+      false,
+      false
+     ]
+    }
+   }
+  }
+ ]
+}

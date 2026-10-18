@@ -1,0 +1,125 @@
+{
+  "qid": 38,
+  "question": "Why does curl_mime_free() begin by unbinding the mime handle from the part it may be attached to, before it frees any parts?\n\nBuild assumptions: MIME support enabled (CURL_DISABLE_MIME not defined).",
+  "arm": "C",
+  "max_steps": 10,
+  "repeat": 0,
+  "answer_valid": true,
+  "judge_model": "codex/gpt-6.1-sol",
+  "draws": [
+    {
+      "draw": 1,
+      "score": {
+        "correctness": 9,
+        "completeness": 8,
+        "relevance": 18,
+        "clarity": 14,
+        "reasoning": 10
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 100,
+            "prompt_tokens": 7002,
+            "total_tokens": 7102,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 51,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 9,\n  \"completeness\": 8,\n  \"relevance\": 18,\n  \"clarity\": 14,\n  \"reasoning\": 10\n}",
+          "wall_seconds": 3.979642749996856
+        }
+      ]
+    },
+    {
+      "draw": 2,
+      "score": {
+        "correctness": 9,
+        "completeness": 8,
+        "relevance": 18,
+        "clarity": 14,
+        "reasoning": 10
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 99,
+            "prompt_tokens": 7002,
+            "total_tokens": 7101,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 50,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6784
+            }
+          },
+          "response": "{\n  \"correctness\": 9,\n  \"completeness\": 8,\n  \"relevance\": 18,\n  \"clarity\": 14,\n  \"reasoning\": 10\n}",
+          "wall_seconds": 4.169612542027608
+        }
+      ]
+    },
+    {
+      "draw": 3,
+      "score": {
+        "correctness": 8,
+        "completeness": 8,
+        "relevance": 18,
+        "clarity": 14,
+        "reasoning": 10
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 94,
+            "prompt_tokens": 7002,
+            "total_tokens": 7096,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 45,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6784
+            }
+          },
+          "response": "{\n  \"correctness\": 8,\n  \"completeness\": 8,\n  \"relevance\": 18,\n  \"clarity\": 14,\n  \"reasoning\": 10\n}",
+          "wall_seconds": 4.479108625033405
+        }
+      ]
+    }
+  ],
+  "score": {
+    "correctness": 9,
+    "completeness": 8,
+    "relevance": 18,
+    "clarity": 14,
+    "reasoning": 10
+  },
+  "total": 59,
+  "main_total_na5": 59,
+  "failure_type": null,
+  "judge_total_range": 1,
+  "wall_seconds": 12.62944474996766
+}

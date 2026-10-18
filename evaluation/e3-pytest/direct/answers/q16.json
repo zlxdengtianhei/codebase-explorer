@@ -1,0 +1,31 @@
+{
+  "qid": 16,
+  "question": "How does the TestReadme class separate the concerns of cache directory verification from test execution orchestration to maintain architectural layering between test setup, execution, and assertion phases?",
+  "arm": "direct",
+  "answer": "TestReadme (in testing/test_doctest.py) keeps these concerns separate by delegating directory management to the injected `pytester` fixture and communicating between phases only through narrow abstractions:\n\n1. **Setup (directory/cache concern)**: The `pytester` fixture owns the lifecycle of the isolated temporary directory (`pytester.path`, created and torn down by the fixture machinery, not the test). The test only performs one arrangement step \u2014 placing the README into that sandbox (`pytester.copy_example(\"README.rst\")` / copying the README file) \u2014 so it never manages, inspects, or cleans up directories itself.\n\n2. **Execution (orchestration concern)**: `pytester.inline_run(\"--doctest-glob=*README*\")` (or `runpytest`) encapsulates actually running pytest against that directory. The test class contains no process-spawning, config, or collection logic; it just invokes the run API and receives a result object (`reprec`/`RunResult`).\n\n3. **Assertion (verification concern)**: Verification is done exclusively on the returned recorder object via `reprec.assertoutcome(passed=1)` (or `result.stdout.fnmatch_lines([...])`), decoupling outcome checking from both how the environment was prepared and how the run was launched.\n\nThus the layering is maintained through fixture-driven dependency injection plus a result-object boundary: the fixture abstraction owns the temporary/cache environment, the runner API owns execution, and the hook recorder/result object owns assertions \u2014 the test method is a linear arrange\u2013act\u2013assert pipeline where each phase interacts only through those interfaces rather than touching shared state directly.",
+  "valid": true,
+  "wall_seconds": 32.282997541013174,
+  "attempts": [
+    {
+      "answer": "TestReadme (in testing/test_doctest.py) keeps these concerns separate by delegating directory management to the injected `pytester` fixture and communicating between phases only through narrow abstractions:\n\n1. **Setup (directory/cache concern)**: The `pytester` fixture owns the lifecycle of the isolated temporary directory (`pytester.path`, created and torn down by the fixture machinery, not the test). The test only performs one arrangement step \u2014 placing the README into that sandbox (`pytester.copy_example(\"README.rst\")` / copying the README file) \u2014 so it never manages, inspects, or cleans up directories itself.\n\n2. **Execution (orchestration concern)**: `pytester.inline_run(\"--doctest-glob=*README*\")` (or `runpytest`) encapsulates actually running pytest against that directory. The test class contains no process-spawning, config, or collection logic; it just invokes the run API and receives a result object (`reprec`/`RunResult`).\n\n3. **Assertion (verification concern)**: Verification is done exclusively on the returned recorder object via `reprec.assertoutcome(passed=1)` (or `result.stdout.fnmatch_lines([...])`), decoupling outcome checking from both how the environment was prepared and how the run was launched.\n\nThus the layering is maintained through fixture-driven dependency injection plus a result-object boundary: the fixture abstraction owns the temporary/cache environment, the runner API owns execution, and the hook recorder/result object owns assertions \u2014 the test method is a linear arrange\u2013act\u2013assert pipeline where each phase interacts only through those interfaces rather than touching shared state directly.",
+      "valid": true,
+      "usage": {
+        "completion_tokens": 1724,
+        "prompt_tokens": 113,
+        "total_tokens": 1837,
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": null,
+          "audio_tokens": null,
+          "reasoning_tokens": 1391,
+          "rejected_prediction_tokens": null
+        },
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 64
+        }
+      },
+      "response_model": "glm-5.3-flash"
+    }
+  ]
+}

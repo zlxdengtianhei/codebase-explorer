@@ -1,0 +1,31 @@
+{
+  "qid": 27,
+  "question": "Why does the method that opens application package resources relative to the root path restrict file opening to read-only modes?",
+  "arm": "direct",
+  "answer": "Because resources inside an application package are treated as immutable, read-only data: they may be stored in locations where writing is impossible or unsafe (e.g., zip/egg archives, system-wide installs, read-only filesystems), and modifying package contents at runtime is never valid. `open_resource()` therefore only accepts \"r\" or \"rb\" modes, raising a ValueError otherwise, to guarantee it behaves correctly regardless of how the application is deployed and to prevent accidental corruption of the application's bundled assets.",
+  "valid": true,
+  "wall_seconds": 10.637764292012434,
+  "attempts": [
+    {
+      "answer": "Because resources inside an application package are treated as immutable, read-only data: they may be stored in locations where writing is impossible or unsafe (e.g., zip/egg archives, system-wide installs, read-only filesystems), and modifying package contents at runtime is never valid. `open_resource()` therefore only accepts \"r\" or \"rb\" modes, raising a ValueError otherwise, to guarantee it behaves correctly regardless of how the application is deployed and to prevent accidental corruption of the application's bundled assets.",
+      "valid": true,
+      "usage": {
+        "completion_tokens": 445,
+        "prompt_tokens": 101,
+        "total_tokens": 546,
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": null,
+          "audio_tokens": null,
+          "reasoning_tokens": 343,
+          "rejected_prediction_tokens": null
+        },
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 64
+        }
+      },
+      "response_model": "glm-5.3-flash"
+    }
+  ]
+}

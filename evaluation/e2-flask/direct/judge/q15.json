@@ -1,0 +1,125 @@
+{
+  "qid": 15,
+  "question": "How does the deferred registration mechanism ensure that custom template filters registered through the blueprint's application-level filter registration method are accessible in the template rendering environment when the blueprint is mounted with a URL path prefix?",
+  "arm": "direct",
+  "max_steps": null,
+  "repeat": 0,
+  "answer_valid": true,
+  "judge_model": "codex/gpt-6.1-sol",
+  "draws": [
+    {
+      "draw": 1,
+      "score": {
+        "correctness": 14,
+        "completeness": 16,
+        "relevance": 20,
+        "clarity": 18,
+        "reasoning": 16
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 99,
+            "prompt_tokens": 6141,
+            "total_tokens": 6240,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 50,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 14,\n  \"completeness\": 16,\n  \"relevance\": 20,\n  \"clarity\": 18,\n  \"reasoning\": 16\n}",
+          "wall_seconds": 3.7408252920140512
+        }
+      ]
+    },
+    {
+      "draw": 2,
+      "score": {
+        "correctness": 14,
+        "completeness": 15,
+        "relevance": 20,
+        "clarity": 18,
+        "reasoning": 17
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 86,
+            "prompt_tokens": 6141,
+            "total_tokens": 6227,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 37,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6016
+            }
+          },
+          "response": "{\n  \"correctness\": 14,\n  \"completeness\": 15,\n  \"relevance\": 20,\n  \"clarity\": 18,\n  \"reasoning\": 17\n}",
+          "wall_seconds": 3.7982882499927655
+        }
+      ]
+    },
+    {
+      "draw": 3,
+      "score": {
+        "correctness": 14,
+        "completeness": 15,
+        "relevance": 20,
+        "clarity": 18,
+        "reasoning": 16
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 98,
+            "prompt_tokens": 6141,
+            "total_tokens": 6239,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 49,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6016
+            }
+          },
+          "response": "{\n  \"correctness\": 14,\n  \"completeness\": 15,\n  \"relevance\": 20,\n  \"clarity\": 18,\n  \"reasoning\": 16\n}",
+          "wall_seconds": 3.764449374983087
+        }
+      ]
+    }
+  ],
+  "score": {
+    "correctness": 14,
+    "completeness": 15,
+    "relevance": 20,
+    "clarity": 18,
+    "reasoning": 16
+  },
+  "total": 83,
+  "main_total_na5": 83,
+  "failure_type": null,
+  "judge_total_range": 1,
+  "wall_seconds": 11.305454958986957
+}

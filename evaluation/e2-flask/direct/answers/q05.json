@@ -1,0 +1,31 @@
+{
+  "qid": 5,
+  "question": "What mechanisms ensure that template processing functions registered during modular component registration are accessible when templates are rendered using the shared template environment?",
+  "arm": "direct",
+  "answer": "Blueprint registration uses **deferred functions** replayed against an app-level setup state, which inject everything into the single shared Jinja environment:\n\n1. **Deferred registration (`Blueprint._deferred`)** \u2013 Decorators like `@bp.app_template_filter`, `@bp.app_template_global`, `@bp.app_template_test`, `@bp.app_context_processor`, and `@bp.context_processor` don't touch an app immediately (none exists yet); they append closures that capture the function.\n\n2. **`Blueprint.register()` / `BlueprintSetupState`** \u2013 When `app.register_blueprint(bp)` runs, it creates a `BlueprintSetupState` (holding `app`, `blueprint`, `options`) and executes each deferred closure with that state. The closures then write to app-level structures:\n   - template filters/globals/tests are set directly on the shared `app.jinja_env` (e.g., `state.app.jinja_env.filters[name] = f`)\n   - context processors are appended to `app.template_context_processors`, keyed by `None` (app-wide, via `app_context_processor`) or by the blueprint's name (blueprint-scoped).\n\n3. **Single shared Jinja environment** \u2013 `Flask.create_jinja_environment` builds one cached `app.jinja_env` (with a `DispatchingJinjaLoader` that searches app and blueprint template folders), so all registered filters/globals/tests are available to every rendered template.\n\n4. **`Flask.update_template_context` at render time** \u2013 `render_template` calls this, which merges the results of the app-wide (`None`) context processors and the current request's blueprint's processors into the template context before rendering.",
+  "valid": true,
+  "wall_seconds": 46.82704545900924,
+  "attempts": [
+    {
+      "answer": "Blueprint registration uses **deferred functions** replayed against an app-level setup state, which inject everything into the single shared Jinja environment:\n\n1. **Deferred registration (`Blueprint._deferred`)** \u2013 Decorators like `@bp.app_template_filter`, `@bp.app_template_global`, `@bp.app_template_test`, `@bp.app_context_processor`, and `@bp.context_processor` don't touch an app immediately (none exists yet); they append closures that capture the function.\n\n2. **`Blueprint.register()` / `BlueprintSetupState`** \u2013 When `app.register_blueprint(bp)` runs, it creates a `BlueprintSetupState` (holding `app`, `blueprint`, `options`) and executes each deferred closure with that state. The closures then write to app-level structures:\n   - template filters/globals/tests are set directly on the shared `app.jinja_env` (e.g., `state.app.jinja_env.filters[name] = f`)\n   - context processors are appended to `app.template_context_processors`, keyed by `None` (app-wide, via `app_context_processor`) or by the blueprint's name (blueprint-scoped).\n\n3. **Single shared Jinja environment** \u2013 `Flask.create_jinja_environment` builds one cached `app.jinja_env` (with a `DispatchingJinjaLoader` that searches app and blueprint template folders), so all registered filters/globals/tests are available to every rendered template.\n\n4. **`Flask.update_template_context` at render time** \u2013 `render_template` calls this, which merges the results of the app-wide (`None`) context processors and the current request's blueprint's processors into the template context before rendering.",
+      "valid": true,
+      "usage": {
+        "completion_tokens": 2056,
+        "prompt_tokens": 103,
+        "total_tokens": 2159,
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": null,
+          "audio_tokens": null,
+          "reasoning_tokens": 1710,
+          "rejected_prediction_tokens": null
+        },
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 0
+        }
+      },
+      "response_model": "glm-5.3-flash"
+    }
+  ]
+}

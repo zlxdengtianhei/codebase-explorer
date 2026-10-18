@@ -1,0 +1,293 @@
+{
+  "method": "Manual semantic annotation from the 48 question texts only (answers and source not read when labeling). swe_type follows the opening wording of the question (What/How/Why/Where); for qids 3, 12, 23, 25 this differs from the file-position block (0-11/12-23/24-35/36-47). Layer precedence: design/impact (4) > cross-unit flow (3) > unit behavior (2) > definition location (1); Where does not automatically mean layer 1. Zero-based qid is the original JSONL row.",
+  "labels": [
+    {
+      "qid": 0,
+      "swe_type": "What",
+      "layer": 2,
+      "reason": "Explains the return value and .ret exit-code meaning of one fixture method; unit behavior."
+    },
+    {
+      "qid": 1,
+      "swe_type": "What",
+      "layer": 2,
+      "reason": "Asks for the validation logic inside one method (__call__) and one isinstance-versus-attribute check; unit behavior."
+    },
+    {
+      "qid": 2,
+      "swe_type": "What",
+      "layer": 4,
+      "reason": "Asks for an architectural separation (discovery versus validation) and what it enables; design."
+    },
+    {
+      "qid": 3,
+      "swe_type": "How",
+      "layer": 2,
+      "reason": "Branching logic of one classmethod (outcome and longrepr by exception type and phase); unit behavior. Wording is 'How' although the file position is in the What block."
+    },
+    {
+      "qid": 4,
+      "swe_type": "What",
+      "layer": 3,
+      "reason": "Asks for a dependency chain across a test class, the fixture system, parametrization, Pytester and request resolution; cross-unit."
+    },
+    {
+      "qid": 5,
+      "swe_type": "What",
+      "layer": 4,
+      "reason": "Asks for the defensive layering pattern in the exception-handling design and why it stops cascading failures; design (borderline 2, since it is one small function)."
+    },
+    {
+      "qid": 6,
+      "swe_type": "What",
+      "layer": 4,
+      "reason": "Asks for the impact of the Path-to-LEGACY_PATH conversion on the dependency chain and on test isolation if it failed; impact analysis."
+    },
+    {
+      "qid": 7,
+      "swe_type": "What",
+      "layer": 4,
+      "reason": "Asks for the architectural pattern that decouples two completer implementations so they can evolve independently; design."
+    },
+    {
+      "qid": 8,
+      "swe_type": "What",
+      "layer": 3,
+      "reason": "Asks which external context (module globals, os.sep, the evaluation namespace) a skipif test needs; spans the test module and mark evaluation."
+    },
+    {
+      "qid": 9,
+      "swe_type": "What",
+      "layer": 4,
+      "reason": "Asks for the sentinel abstraction pattern and how it decouples internal state from the external API contract; design (borderline 2, since it is one small class)."
+    },
+    {
+      "qid": 10,
+      "swe_type": "What",
+      "layer": 2,
+      "reason": "Conditional logic of one function (write_captured_output) and the meaning of the logging modes; unit behavior."
+    },
+    {
+      "qid": 11,
+      "swe_type": "What",
+      "layer": 3,
+      "reason": "Asks for the dependency between evaluate_skip_marks and pytester getitem across item creation and mark evaluation; cross-unit."
+    },
+    {
+      "qid": 12,
+      "swe_type": "What",
+      "layer": 2,
+      "reason": "Failure path of one validation step inside parametrize and its dependence on the function signature; unit behavior. Wording is 'What' although the file position is in the How block."
+    },
+    {
+      "qid": 13,
+      "swe_type": "How",
+      "layer": 3,
+      "reason": "Asks how Skip, its reason attribute and evaluate_skip_marks() fit into mark evaluation; cross-unit."
+    },
+    {
+      "qid": 14,
+      "swe_type": "How",
+      "layer": 2,
+      "reason": "Algorithm of one method (two glob strategies, prefix_dir stripping after sorting); unit behavior."
+    },
+    {
+      "qid": 15,
+      "swe_type": "How",
+      "layer": 4,
+      "reason": "Asks for a refactoring strategy (parametrize while staying backward compatible); design advice, borderline 2 since the target is a trivial test."
+    },
+    {
+      "qid": 16,
+      "swe_type": "How",
+      "layer": 4,
+      "reason": "Asks how a test class separates verification from execution to keep architectural layering; design."
+    },
+    {
+      "qid": 17,
+      "swe_type": "How",
+      "layer": 2,
+      "reason": "Loop over split lines in one hook method, plus a local control-flow optimization; unit behavior."
+    },
+    {
+      "qid": 18,
+      "swe_type": "How",
+      "layer": 3,
+      "reason": "Asks how import_path resolves module identity and keeps sys.modules consistent across repeated imports; spans resolution, sys.path and sys.modules."
+    },
+    {
+      "qid": 19,
+      "swe_type": "How",
+      "layer": 3,
+      "reason": "Asks how capture is isolated per phase and reported separately across fixture scopes; spans capture manager, fixtures and reports."
+    },
+    {
+      "qid": 20,
+      "swe_type": "How",
+      "layer": 3,
+      "reason": "Asks how parametrize, callspec and the fixture request params interact for non-hashable items; spans several units."
+    },
+    {
+      "qid": 21,
+      "swe_type": "How",
+      "layer": 4,
+      "reason": "Asks how one helper class decouples execution from XML validation and parsing; separation-of-responsibility design."
+    },
+    {
+      "qid": 22,
+      "swe_type": "How",
+      "layer": 4,
+      "reason": "Asks how the plugin manager architecture should be redesigned to enforce registration policy; design."
+    },
+    {
+      "qid": 23,
+      "swe_type": "Why",
+      "layer": 4,
+      "reason": "Asks why the test injects TerminalReporter via a fixture request and what architectural principle that reflects; design. Wording is 'Why' although the file position is in the How block."
+    },
+    {
+      "qid": 24,
+      "swe_type": "Why",
+      "layer": 4,
+      "reason": "Asks why subprocess testing is used instead of inline runs and what design constraints follow; design rationale."
+    },
+    {
+      "qid": 25,
+      "swe_type": "How",
+      "layer": 4,
+      "reason": "Asks how isnosetest should be refactored, with which design pattern, keeping backward compatibility across a class hierarchy; design. Wording is 'How' although the file position is in the Why block."
+    },
+    {
+      "qid": 26,
+      "swe_type": "Why",
+      "layer": 4,
+      "reason": "Asks why the tests are separate methods rather than parametrized; test-design tradeoff."
+    },
+    {
+      "qid": 27,
+      "swe_type": "Why",
+      "layer": 4,
+      "reason": "Asks why register_assert_rewrite in __init__.py is used instead of conftest-based rewriting and what it reveals about the architecture; design."
+    },
+    {
+      "qid": 28,
+      "swe_type": "Why",
+      "layer": 4,
+      "reason": "Asks about the performance effect of caching Source initialization in setup_class over repeated runs; performance impact."
+    },
+    {
+      "qid": 29,
+      "swe_type": "Why",
+      "layer": 4,
+      "reason": "Asks about the memory and traversal performance effect of repeated FNMatcher instantiation on large trees; performance impact."
+    },
+    {
+      "qid": 30,
+      "swe_type": "Why",
+      "layer": 4,
+      "reason": "Asks about the performance effect of repeated fixture setup and teardown when scaling to hundreds of package-scoped fixtures; performance impact."
+    },
+    {
+      "qid": 31,
+      "swe_type": "Why",
+      "layer": 2,
+      "reason": "Asks why one small cache class uses the dict protocol (__missing__) for lazy computation; unit behavior."
+    },
+    {
+      "qid": 32,
+      "swe_type": "Why",
+      "layer": 4,
+      "reason": "Asks about the performance effect of repeated getitem plus evaluate_xfail_marks and which caches could mitigate it; performance impact."
+    },
+    {
+      "qid": 33,
+      "swe_type": "Why",
+      "layer": 2,
+      "reason": "Asks what one test checks (@file argument handling) and why paths are stored in a file; local behavior of one parser feature."
+    },
+    {
+      "qid": 34,
+      "swe_type": "Why",
+      "layer": 2,
+      "reason": "Asks how one function (ensure_deletable) behaves when two of its failure branches trigger at once; unit behavior (borderline 4 because of the 'cascading failures' wording)."
+    },
+    {
+      "qid": 35,
+      "swe_type": "Why",
+      "layer": 2,
+      "reason": "Asks how snap() and writeorg() keep one class's buffer consistent with the original stream; unit behavior inside SysCapture."
+    },
+    {
+      "qid": 36,
+      "swe_type": "Where",
+      "layer": 1,
+      "reason": "Asks for the file and line range of a named class, plus its place in the module structure; mainly location (borderline 2/3 for the module-structure clause)."
+    },
+    {
+      "qid": 37,
+      "swe_type": "Where",
+      "layer": 3,
+      "reason": "Asks for the marker data flow from an autouse fixture through the request object to several tests, and the mechanism that makes applymarker visible; cross-unit flow."
+    },
+    {
+      "qid": 38,
+      "swe_type": "Where",
+      "layer": 2,
+      "reason": "Asks how one cache dict inside _is_marked_for_rewrite prevents repeated decisions; unit behavior of one function plus its cache."
+    },
+    {
+      "qid": 39,
+      "swe_type": "Where",
+      "layer": 3,
+      "reason": "Asks for the flow from _early_rewrite_bailout through shared state to find_spec's filesystem work; cross-method state flow."
+    },
+    {
+      "qid": 40,
+      "swe_type": "Where",
+      "layer": 3,
+      "reason": "Asks for the flow from pytester.inline_run through the test pipeline to the tmp_path check when the uid has no user entry; cross-unit flow."
+    },
+    {
+      "qid": 41,
+      "swe_type": "Where",
+      "layer": 1,
+      "reason": "Asks where in LocalPath.__init__ the strpath assignment is; pure location of one line of logic."
+    },
+    {
+      "qid": 42,
+      "swe_type": "Where",
+      "layer": 1,
+      "reason": "Asks where the line-wrapping logic lives in ReprFuncArgs; locating a piece of logic in a named class."
+    },
+    {
+      "qid": 43,
+      "swe_type": "Where",
+      "layer": 3,
+      "reason": "Asks which functions reach _HighlightFunc indirectly through lexer selection; traces indirect calls across the assertion module."
+    },
+    {
+      "qid": 44,
+      "swe_type": "Where",
+      "layer": 1,
+      "reason": "Asks where in one test function the hasmarkup attribute is bound; location of a line in a named function."
+    },
+    {
+      "qid": 45,
+      "swe_type": "Where",
+      "layer": 2,
+      "reason": "Asks about the order and side effects of three setattr calls in one method (MockTiming.patch); unit behavior."
+    },
+    {
+      "qid": 46,
+      "swe_type": "Where",
+      "layer": 3,
+      "reason": "Asks for the subprocess mechanism runpytest_subprocess delegates to and how collection-time exceptions propagate; traces a delegation chain."
+    },
+    {
+      "qid": 47,
+      "swe_type": "Where",
+      "layer": 2,
+      "reason": "Asks where LocalPath is defined and how its comparison operators allow mixed-type comparison; location plus unit behavior, so layer 2 by precedence."
+    }
+  ]
+}

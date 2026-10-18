@@ -1,0 +1,31 @@
+{
+  "qid": 33,
+  "question": "Why does the pass-through dictionary tag class's JSON conversion method apply recursive tagging only to dictionary values while avoiding tagging keys?",
+  "arm": "direct",
+  "answer": "Because a dict is already a valid JSON object and doesn't need a tag itself \u2014 hence \"pass-through\" \u2014 but its values may be arbitrary Python objects (datetimes, UUIDs, etc.) that do need tags, so each value is recursively run through `serializer.tag()`. Keys, in contrast, must be strings to serve as JSON object keys, so they're inherently JSON-safe and cannot carry a tag (a tagged list like `{\" d\": ...}` isn't a legal key); leaving them untouched keeps the output valid JSON, with non-string keys handled instead by the separate `TagDict` (\" dict\") tag.",
+  "valid": true,
+  "wall_seconds": 80.78157475002808,
+  "attempts": [
+    {
+      "answer": "Because a dict is already a valid JSON object and doesn't need a tag itself \u2014 hence \"pass-through\" \u2014 but its values may be arbitrary Python objects (datetimes, UUIDs, etc.) that do need tags, so each value is recursively run through `serializer.tag()`. Keys, in contrast, must be strings to serve as JSON object keys, so they're inherently JSON-safe and cannot carry a tag (a tagged list like `{\" d\": ...}` isn't a legal key); leaving them untouched keeps the output valid JSON, with non-string keys handled instead by the separate `TagDict` (\" dict\") tag.",
+      "valid": true,
+      "usage": {
+        "completion_tokens": 4763,
+        "prompt_tokens": 103,
+        "total_tokens": 4866,
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": null,
+          "audio_tokens": null,
+          "reasoning_tokens": 4634,
+          "rejected_prediction_tokens": null
+        },
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 64
+        }
+      },
+      "response_model": "glm-5.3-flash"
+    }
+  ]
+}

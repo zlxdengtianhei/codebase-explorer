@@ -1,0 +1,125 @@
+{
+  "qid": 29,
+  "question": "What contract does libcurl's vtls layer define for TLS backends that supply channel-binding data through Curl_ssl_get_channel_binding()?\n\nBuild assumptions: Single TLS backend build (not CURL_WITH_MULTI_SSL); OpenSSL 3 where OpenSSL is discussed; GSS-API with GSS_C_CHANNEL_BOUND_FLAG for the Negotiate consumer.",
+  "arm": "C0",
+  "max_steps": 10,
+  "repeat": 0,
+  "answer_valid": true,
+  "judge_model": "codex/gpt-6.1-sol",
+  "draws": [
+    {
+      "draw": 1,
+      "score": {
+        "correctness": 5,
+        "completeness": 7,
+        "relevance": 16,
+        "clarity": 14,
+        "reasoning": 9
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 101,
+            "prompt_tokens": 7303,
+            "total_tokens": 7404,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 52,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 5,\n  \"completeness\": 7,\n  \"relevance\": 16,\n  \"clarity\": 14,\n  \"reasoning\": 9\n}",
+          "wall_seconds": 4.9477398750022985
+        }
+      ]
+    },
+    {
+      "draw": 2,
+      "score": {
+        "correctness": 5,
+        "completeness": 7,
+        "relevance": 16,
+        "clarity": 15,
+        "reasoning": 8
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 126,
+            "prompt_tokens": 7303,
+            "total_tokens": 7429,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 77,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 5,\n  \"completeness\": 7,\n  \"relevance\": 16,\n  \"clarity\": 15,\n  \"reasoning\": 8\n}",
+          "wall_seconds": 6.607965167029761
+        }
+      ]
+    },
+    {
+      "draw": 3,
+      "score": {
+        "correctness": 6,
+        "completeness": 7,
+        "relevance": 16,
+        "clarity": 15,
+        "reasoning": 9
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 102,
+            "prompt_tokens": 7303,
+            "total_tokens": 7405,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 53,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 7168
+            }
+          },
+          "response": "{\n  \"correctness\": 6,\n  \"completeness\": 7,\n  \"relevance\": 16,\n  \"clarity\": 15,\n  \"reasoning\": 9\n}",
+          "wall_seconds": 4.946090542012826
+        }
+      ]
+    }
+  ],
+  "score": {
+    "correctness": 5,
+    "completeness": 7,
+    "relevance": 16,
+    "clarity": 15,
+    "reasoning": 9
+  },
+  "total": 52,
+  "main_total_na5": 52,
+  "failure_type": null,
+  "judge_total_range": 2,
+  "wall_seconds": 16.502706166997086
+}

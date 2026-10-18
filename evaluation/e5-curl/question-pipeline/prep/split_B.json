@@ -1,0 +1,401 @@
+{
+  "anchors": [
+    {
+      "card": "cards/a2e5f0be18f8b.md",
+      "file": "lib/cshutdn.c",
+      "id": "a2e5f0be18f8b",
+      "is_dispatch": true,
+      "name": "Curl_cshutdn_try_once_idx",
+      "region": "pool",
+      "suggested_layer": 3
+    },
+    {
+      "card": "cards/a8b5f1b8f5970.md",
+      "file": "lib/curl_share.c",
+      "id": "a8b5f1b8f5970",
+      "is_dispatch": false,
+      "name": "share_ref_inc",
+      "region": "pool",
+      "suggested_layer": 1
+    },
+    {
+      "card": "cards/a4e2ba6aa40fc.md",
+      "file": "lib/conncache.c",
+      "id": "a4e2ba6aa40fc",
+      "is_dispatch": false,
+      "name": "Curl_cpool_init",
+      "region": "pool",
+      "suggested_layer": 2
+    },
+    {
+      "card": "cards/a5b858bd6f757.md",
+      "file": "lib/curl_share.c",
+      "id": "a5b858bd6f757",
+      "is_dispatch": false,
+      "name": "share_destroy",
+      "region": "pool",
+      "suggested_layer": 3
+    },
+    {
+      "card": "cards/a5a407ff5080c.md",
+      "file": "lib/conncache.c",
+      "id": "a5a407ff5080c",
+      "is_dispatch": false,
+      "name": "cpool_reap_no_reuse",
+      "region": "pool",
+      "suggested_layer": 4
+    },
+    {
+      "card": "cards/aac795cc2dd98.md",
+      "file": "lib/peer.c",
+      "id": "aac795cc2dd98",
+      "is_dispatch": false,
+      "name": "peer_same_hostname",
+      "region": "pool",
+      "suggested_layer": 3
+    },
+    {
+      "card": "cards/aff41121226d2.md",
+      "file": "lib/curl_share.c",
+      "id": "aff41121226d2",
+      "is_dispatch": false,
+      "name": "curl_share_setopt",
+      "region": "pool",
+      "suggested_layer": 4
+    },
+    {
+      "card": "cards/aa1a4186da9e2.md",
+      "file": "lib/ftp.c",
+      "id": "aa1a4186da9e2",
+      "is_dispatch": false,
+      "name": "ftp_pollset",
+      "region": "protocols",
+      "suggested_layer": 1
+    },
+    {
+      "card": "cards/a151f03001f64.md",
+      "file": "lib/vssh/libssh2.c",
+      "id": "a151f03001f64",
+      "is_dispatch": false,
+      "name": "ssh_state_sftp_quote_rmdir",
+      "region": "protocols",
+      "suggested_layer": 2
+    },
+    {
+      "card": "cards/a126060d4455d.md",
+      "file": "lib/ftp.c",
+      "id": "a126060d4455d",
+      "is_dispatch": false,
+      "name": "ftp_do",
+      "region": "protocols",
+      "suggested_layer": 3
+    },
+    {
+      "card": "cards/aa668a40f3f04.md",
+      "file": "lib/vssh/libssh.c",
+      "id": "aa668a40f3f04",
+      "is_dispatch": false,
+      "name": "sftp_doing",
+      "region": "protocols",
+      "suggested_layer": 4
+    },
+    {
+      "card": "cards/a149820c887f0.md",
+      "file": "lib/ftp.c",
+      "id": "a149820c887f0",
+      "is_dispatch": false,
+      "name": "ftp_done_secondary_socket",
+      "region": "protocols",
+      "suggested_layer": 3
+    },
+    {
+      "card": "cards/a63b4295c40d3.md",
+      "file": "lib/imap.c",
+      "id": "a63b4295c40d3",
+      "is_dispatch": false,
+      "name": "imap_multi_statemach",
+      "region": "protocols",
+      "suggested_layer": 4
+    },
+    {
+      "card": "cards/a28b6e79a77c9.md",
+      "file": "lib/ftp.c",
+      "id": "a28b6e79a77c9",
+      "is_dispatch": false,
+      "name": "ftp_port_default_host",
+      "region": "protocols",
+      "suggested_layer": 3
+    },
+    {
+      "card": "cards/a882cabe79b75.md",
+      "file": "lib/vtls/vtls.c",
+      "id": "a882cabe79b75",
+      "is_dispatch": true,
+      "name": "multissl_random",
+      "region": "tls",
+      "suggested_layer": 3
+    },
+    {
+      "card": "cards/a4f4ce1ef4e35.md",
+      "file": "lib/vtls/vtls.c",
+      "id": "a4f4ce1ef4e35",
+      "is_dispatch": true,
+      "name": "multissl_recv_plain",
+      "region": "tls",
+      "suggested_layer": 4
+    },
+    {
+      "card": "cards/a5dbbffb69d3c.md",
+      "file": "lib/vtls/vtls.c",
+      "id": "a5dbbffb69d3c",
+      "is_dispatch": true,
+      "name": "ssl_cf_connect",
+      "region": "tls",
+      "suggested_layer": 3
+    },
+    {
+      "card": "cards/afdc9d824dc04.md",
+      "file": "lib/vtls/vtls.c",
+      "id": "afdc9d824dc04",
+      "is_dispatch": true,
+      "name": "multissl_adjust_pollset",
+      "region": "tls",
+      "suggested_layer": 4
+    },
+    {
+      "card": "cards/a021610de97ec.md",
+      "file": "lib/vtls/vtls.c",
+      "id": "a021610de97ec",
+      "is_dispatch": true,
+      "name": "Curl_ssl_get_channel_binding",
+      "region": "tls",
+      "suggested_layer": 3
+    },
+    {
+      "card": "cards/a78461d61540b.md",
+      "file": "lib/vtls/vtls.c",
+      "id": "a78461d61540b",
+      "is_dispatch": true,
+      "name": "multissl_init",
+      "region": "tls",
+      "suggested_layer": 4
+    },
+    {
+      "card": "cards/a17dc4a0dbb90.md",
+      "file": "lib/vtls/vtls.c",
+      "id": "a17dc4a0dbb90",
+      "is_dispatch": true,
+      "name": "Curl_ssl_version",
+      "region": "tls",
+      "suggested_layer": 3
+    },
+    {
+      "card": "cards/ade21b964f1c5.md",
+      "file": "lib/vdns/doh.c",
+      "id": "ade21b964f1c5",
+      "is_dispatch": false,
+      "name": "Curl_doh",
+      "region": "dns",
+      "suggested_layer": 1
+    },
+    {
+      "card": "cards/a9e0e07cede46.md",
+      "file": "lib/vdns/cf-dns.c",
+      "id": "a9e0e07cede46",
+      "is_dispatch": false,
+      "name": "cf_dns_report",
+      "region": "dns",
+      "suggested_layer": 2
+    },
+    {
+      "card": "cards/aedd953745d6e.md",
+      "file": "lib/vdns/doh.c",
+      "id": "aedd953745d6e",
+      "is_dispatch": false,
+      "name": "de_init",
+      "region": "dns",
+      "suggested_layer": 3
+    },
+    {
+      "card": "cards/aad128bacc41b.md",
+      "file": "lib/vdns/hostip4.c",
+      "id": "aad128bacc41b",
+      "is_dispatch": false,
+      "name": "Curl_ipv4_resolve_r",
+      "region": "dns",
+      "suggested_layer": 4
+    },
+    {
+      "card": "cards/adabbeecb7e4c.md",
+      "file": "lib/vdns/dnscache.c",
+      "id": "adabbeecb7e4c",
+      "is_dispatch": false,
+      "name": "Curl_dnscache_clear",
+      "region": "dns",
+      "suggested_layer": 3
+    },
+    {
+      "card": "cards/ac8c002a495eb.md",
+      "file": "lib/vdns/cf-dns.c",
+      "id": "ac8c002a495eb",
+      "is_dispatch": false,
+      "name": "Curl_conn_dns_add_addr_resolve",
+      "region": "dns",
+      "suggested_layer": 4
+    },
+    {
+      "card": "cards/a6e50676b10fb.md",
+      "file": "lib/vdns/asyn-thrdd.c",
+      "id": "a6e50676b10fb",
+      "is_dispatch": false,
+      "name": "Curl_async_thrdd_multi_set_props",
+      "region": "dns",
+      "suggested_layer": 3
+    },
+    {
+      "card": "cards/ace5a1d789e47.md",
+      "file": "lib/cookie.c",
+      "id": "ace5a1d789e47",
+      "is_dispatch": false,
+      "name": "Curl_secure_context",
+      "region": "persistence",
+      "suggested_layer": 1
+    },
+    {
+      "card": "cards/a77bd2e79a822.md",
+      "file": "lib/cookie.c",
+      "id": "a77bd2e79a822",
+      "is_dispatch": false,
+      "name": "Curl_cookie_run",
+      "region": "persistence",
+      "suggested_layer": 2
+    },
+    {
+      "card": "cards/a1c30d470a508.md",
+      "file": "lib/hsts.c",
+      "id": "a1c30d470a508",
+      "is_dispatch": false,
+      "name": "hsts_create",
+      "region": "persistence",
+      "suggested_layer": 3
+    },
+    {
+      "card": "cards/af785db4e0c06.md",
+      "file": "lib/hsts.c",
+      "id": "af785db4e0c06",
+      "is_dispatch": false,
+      "name": "Curl_hsts_init",
+      "region": "persistence",
+      "suggested_layer": 4
+    },
+    {
+      "card": "cards/a81b15e149445.md",
+      "file": "lib/altsvc.c",
+      "id": "a81b15e149445",
+      "is_dispatch": false,
+      "name": "Curl_altsvc_load",
+      "region": "persistence",
+      "suggested_layer": 3
+    },
+    {
+      "card": "cards/a63e1d4d941db.md",
+      "file": "lib/cookie.c",
+      "id": "a63e1d4d941db",
+      "is_dispatch": false,
+      "name": "cookiehash",
+      "region": "persistence",
+      "suggested_layer": 4
+    },
+    {
+      "card": "cards/adbb046810ffb.md",
+      "file": "lib/altsvc.c",
+      "id": "adbb046810ffb",
+      "is_dispatch": false,
+      "name": "altsvc_debugtime",
+      "region": "persistence",
+      "suggested_layer": 3
+    },
+    {
+      "card": "cards/a71b78ae68086.md",
+      "file": "include/curl/curl.h",
+      "id": "a71b78ae68086",
+      "is_dispatch": false,
+      "name": "curl_easy_ssls_import",
+      "region": "public_api",
+      "suggested_layer": 1
+    },
+    {
+      "card": "cards/a24e4410170f4.md",
+      "file": "include/curl/curl.h",
+      "id": "a24e4410170f4",
+      "is_dispatch": false,
+      "name": "curl_mime_free",
+      "region": "public_api",
+      "suggested_layer": 2
+    },
+    {
+      "card": "cards/adc6e9adf6f3b.md",
+      "file": "include/curl/multi.h",
+      "id": "adc6e9adf6f3b",
+      "is_dispatch": false,
+      "name": "curl_multi_socket",
+      "region": "public_api",
+      "suggested_layer": 3
+    },
+    {
+      "card": "cards/a59964a32bc82.md",
+      "file": "include/curl/curl.h",
+      "id": "a59964a32bc82",
+      "is_dispatch": false,
+      "name": "curl_mime_init",
+      "region": "public_api",
+      "suggested_layer": 4
+    },
+    {
+      "card": "cards/a0b22ec49dc1f.md",
+      "file": "include/curl/urlapi.h",
+      "id": "a0b22ec49dc1f",
+      "is_dispatch": false,
+      "name": "curl_url_cleanup",
+      "region": "public_api",
+      "suggested_layer": 3
+    },
+    {
+      "card": "cards/a91eea9902a18.md",
+      "file": "include/curl/curl.h",
+      "id": "a91eea9902a18",
+      "is_dispatch": false,
+      "name": "curl_mime_name",
+      "region": "public_api",
+      "suggested_layer": 4
+    },
+    {
+      "card": "cards/acefcf32d64ce.md",
+      "file": "include/curl/curl.h",
+      "id": "acefcf32d64ce",
+      "is_dispatch": false,
+      "name": "curl_slist_append",
+      "region": "public_api",
+      "suggested_layer": 3
+    }
+  ],
+  "candidate_question_count": 28,
+  "candidate_region_quota": {
+    "dns": 4,
+    "persistence": 4,
+    "pool": 6,
+    "protocols": 6,
+    "public_api": 4,
+    "tls": 4
+  },
+  "instructions": "按清单固定顺序使用锚点，不自行换锚点；多余锚点作为顺序补位；最终每区域至多6题且src至少4题。层与题型配额由主会话跨两路统一分配，建议层不是最终题面标签。",
+  "regions": [
+    "pool",
+    "protocols",
+    "tls",
+    "dns",
+    "persistence",
+    "public_api"
+  ],
+  "split": "B"
+}

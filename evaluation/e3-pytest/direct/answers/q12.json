@@ -1,0 +1,37 @@
+{
+  "qid": 12,
+  "question": "What is the failure mechanism when the parametrize method's validation of indirect parameter names detects that an indirect parameter references a non-existent function argument, and how does this depend on the function signature?",
+  "arm": "direct",
+  "answer": "In `Metafunc.parametrize`, the check is done by `_validate_if_using_arg_names`: it iterates over the parsed argnames and, for each name, tests `arg not in self.fixturenames`. If an indirect parameter name is not found there, the method immediately calls `outcomes.fail()`, which raises a `Failed` exception (an `OutcomeException`, a `BaseException` subclass, raised with `pytrace=False`) carrying the message `In function \"<function>\": <kind> '<name>' is not available in function signature`, where `<kind>` is `\"fixture\"` if the name appears in the `indirect` list/tuple and `\"argument\"` otherwise. Since this runs during collection (via the `pytest_generate_tests` hook), the raised exception aborts generation of the parametrized calls and surfaces as a collection error, so the affected tests are never created or run. The check depends on the function signature because `self.fixturenames` is the names-closure derived from the test function's declared parameters plus its fixture dependencies: a name is treated as an \"argument\" and must be explicitly declared in the test function's signature, while a name listed in `indirect` is treated as a \"fixture\" and need not be in the signature at all\u2014only existing as a fixture; a name present in neither place triggers the failure.",
+  "valid": true,
+  "wall_seconds": 371.14283358404646,
+  "attempts": [
+    {
+      "answer": "Error: Request timed out.",
+      "valid": false,
+      "usage": null,
+      "response_model": null
+    },
+    {
+      "answer": "In `Metafunc.parametrize`, the check is done by `_validate_if_using_arg_names`: it iterates over the parsed argnames and, for each name, tests `arg not in self.fixturenames`. If an indirect parameter name is not found there, the method immediately calls `outcomes.fail()`, which raises a `Failed` exception (an `OutcomeException`, a `BaseException` subclass, raised with `pytrace=False`) carrying the message `In function \"<function>\": <kind> '<name>' is not available in function signature`, where `<kind>` is `\"fixture\"` if the name appears in the `indirect` list/tuple and `\"argument\"` otherwise. Since this runs during collection (via the `pytest_generate_tests` hook), the raised exception aborts generation of the parametrized calls and surfaces as a collection error, so the affected tests are never created or run. The check depends on the function signature because `self.fixturenames` is the names-closure derived from the test function's declared parameters plus its fixture dependencies: a name is treated as an \"argument\" and must be explicitly declared in the test function's signature, while a name listed in `indirect` is treated as a \"fixture\" and need not be in the signature at all\u2014only existing as a fixture; a name present in neither place triggers the failure.",
+      "valid": true,
+      "usage": {
+        "completion_tokens": 7184,
+        "prompt_tokens": 117,
+        "total_tokens": 7301,
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": null,
+          "audio_tokens": null,
+          "reasoning_tokens": 6906,
+          "rejected_prediction_tokens": null
+        },
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 64
+        }
+      },
+      "response_model": "glm-5.3-flash"
+    }
+  ]
+}

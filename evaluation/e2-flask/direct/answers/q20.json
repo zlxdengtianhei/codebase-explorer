@@ -1,0 +1,31 @@
+{
+  "qid": 20,
+  "question": "How does the namespace object that stores application-level data during an application context maintain thread-safety and context isolation when accessed concurrently through the contextvars mechanism?",
+  "arm": "direct",
+  "answer": "The namespace object (`g`) maintains thread-safety and isolation because it is stored within the `AppContext`, which is managed by a `contextvars.ContextVar`. This mechanism ensures that each thread or asynchronous task has its own isolated execution context. Consequently, data assigned to `g` in one context is not visible to others, preventing race conditions and shared mutable state.",
+  "valid": true,
+  "wall_seconds": 54.41510737495264,
+  "attempts": [
+    {
+      "answer": "The namespace object (`g`) maintains thread-safety and isolation because it is stored within the `AppContext`, which is managed by a `contextvars.ContextVar`. This mechanism ensures that each thread or asynchronous task has its own isolated execution context. Consequently, data assigned to `g` in one context is not visible to others, preventing race conditions and shared mutable state.",
+      "valid": true,
+      "usage": {
+        "completion_tokens": 1033,
+        "prompt_tokens": 109,
+        "total_tokens": 1142,
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": null,
+          "audio_tokens": null,
+          "reasoning_tokens": 957,
+          "rejected_prediction_tokens": null
+        },
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 64
+        }
+      },
+      "response_model": "glm-5.3-flash"
+    }
+  ]
+}

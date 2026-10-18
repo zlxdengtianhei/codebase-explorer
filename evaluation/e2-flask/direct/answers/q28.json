@@ -1,0 +1,31 @@
+{
+  "qid": 28,
+  "question": "Why does the CLI helper class that manages Flask application discovery implement lazy loading through a cached instance attribute rather than during initialization?",
+  "arm": "direct",
+  "answer": "To prevent importing the application code when the CLI is used for operations that do not require the app object (such as `--help` or listing commands), which improves performance and ensures the CLI remains functional even if the application fails to import due to errors or missing configuration.",
+  "valid": true,
+  "wall_seconds": 35.21321383398026,
+  "attempts": [
+    {
+      "answer": "To prevent importing the application code when the CLI is used for operations that do not require the app object (such as `--help` or listing commands), which improves performance and ensures the CLI remains functional even if the application fails to import due to errors or missing configuration.",
+      "valid": true,
+      "usage": {
+        "completion_tokens": 1737,
+        "prompt_tokens": 103,
+        "total_tokens": 1840,
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": null,
+          "audio_tokens": null,
+          "reasoning_tokens": 1681,
+          "rejected_prediction_tokens": null
+        },
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 64
+        }
+      },
+      "response_model": "glm-5.3-flash"
+    }
+  ]
+}

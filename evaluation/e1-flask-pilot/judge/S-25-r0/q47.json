@@ -1,0 +1,125 @@
+{
+  "qid": 47,
+  "question": "Why does the linear traversal of the exception class hierarchy in _find_error_handler create performance overhead when handling errors in applications with deep exception inheritance chains and multiple registered error handlers?",
+  "arm": "S",
+  "max_steps": 25,
+  "repeat": 0,
+  "answer_valid": true,
+  "judge_model": "codex/gpt-6.1-sol",
+  "draws": [
+    {
+      "draw": 1,
+      "score": {
+        "correctness": 13,
+        "completeness": 16,
+        "relevance": 17,
+        "clarity": 16,
+        "reasoning": 14
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 103,
+            "prompt_tokens": 7110,
+            "total_tokens": 7213,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 54,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 13,\n  \"completeness\": 16,\n  \"relevance\": 17,\n  \"clarity\": 16,\n  \"reasoning\": 14\n}",
+          "wall_seconds": 15.002701791992877
+        }
+      ]
+    },
+    {
+      "draw": 2,
+      "score": {
+        "correctness": 13,
+        "completeness": 16,
+        "relevance": 17,
+        "clarity": 16,
+        "reasoning": 14
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 92,
+            "prompt_tokens": 7110,
+            "total_tokens": 7202,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 43,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6912
+            }
+          },
+          "response": "{\n  \"correctness\": 13,\n  \"completeness\": 16,\n  \"relevance\": 17,\n  \"clarity\": 16,\n  \"reasoning\": 14\n}",
+          "wall_seconds": 12.781192042049952
+        }
+      ]
+    },
+    {
+      "draw": 3,
+      "score": {
+        "correctness": 13,
+        "completeness": 16,
+        "relevance": 17,
+        "clarity": 16,
+        "reasoning": 14
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 106,
+            "prompt_tokens": 7110,
+            "total_tokens": 7216,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 57,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6912
+            }
+          },
+          "response": "{\n  \"correctness\": 13,\n  \"completeness\": 16,\n  \"relevance\": 17,\n  \"clarity\": 16,\n  \"reasoning\": 14\n}",
+          "wall_seconds": 16.770079666981474
+        }
+      ]
+    }
+  ],
+  "score": {
+    "correctness": 13,
+    "completeness": 16,
+    "relevance": 17,
+    "clarity": 16,
+    "reasoning": 14
+  },
+  "total": 76,
+  "main_total_na5": 76,
+  "failure_type": null,
+  "judge_total_range": 0,
+  "wall_seconds": 44.56214345799526
+}

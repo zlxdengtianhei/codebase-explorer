@@ -1,0 +1,125 @@
+{
+  "qid": 18,
+  "question": "How does the method that registers URL rules on blueprint objects defer registration by storing an anonymous function in the deferred setup functions list instead of immediately calling the setup state's registration method?",
+  "arm": "C0",
+  "max_steps": 10,
+  "repeat": 0,
+  "answer_valid": true,
+  "judge_model": "codex/gpt-6.1-sol",
+  "draws": [
+    {
+      "draw": 1,
+      "score": {
+        "correctness": 14,
+        "completeness": 17,
+        "relevance": 16,
+        "clarity": 16,
+        "reasoning": 16
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 109,
+            "prompt_tokens": 7204,
+            "total_tokens": 7313,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 60,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 14,\n  \"completeness\": 17,\n  \"relevance\": 16,\n  \"clarity\": 16,\n  \"reasoning\": 16\n}",
+          "wall_seconds": 4.437977249966934
+        }
+      ]
+    },
+    {
+      "draw": 2,
+      "score": {
+        "correctness": 15,
+        "completeness": 17,
+        "relevance": 16,
+        "clarity": 17,
+        "reasoning": 17
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 96,
+            "prompt_tokens": 7204,
+            "total_tokens": 7300,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 47,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 15,\n  \"completeness\": 17,\n  \"relevance\": 16,\n  \"clarity\": 17,\n  \"reasoning\": 17\n}",
+          "wall_seconds": 4.14736504200846
+        }
+      ]
+    },
+    {
+      "draw": 3,
+      "score": {
+        "correctness": 15,
+        "completeness": 16,
+        "relevance": 16,
+        "clarity": 16,
+        "reasoning": 17
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 106,
+            "prompt_tokens": 7204,
+            "total_tokens": 7310,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 57,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 7040
+            }
+          },
+          "response": "{\n  \"correctness\": 15,\n  \"completeness\": 16,\n  \"relevance\": 16,\n  \"clarity\": 16,\n  \"reasoning\": 17\n}",
+          "wall_seconds": 4.228685167036019
+        }
+      ]
+    }
+  ],
+  "score": {
+    "correctness": 15,
+    "completeness": 17,
+    "relevance": 16,
+    "clarity": 16,
+    "reasoning": 17
+  },
+  "total": 81,
+  "main_total_na5": 81,
+  "failure_type": null,
+  "judge_total_range": 3,
+  "wall_seconds": 12.815827999962494
+}

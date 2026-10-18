@@ -1,0 +1,125 @@
+{
+  "qid": 12,
+  "question": "How does the wrapper function that defers hash algorithm access until execution delay cryptographic availability validation until runtime to prevent import-time failures in restricted environments?",
+  "arm": "S",
+  "max_steps": 10,
+  "repeat": 2,
+  "answer_valid": true,
+  "judge_model": "codex/gpt-6.1-sol",
+  "draws": [
+    {
+      "draw": 1,
+      "score": {
+        "correctness": 15,
+        "completeness": 17,
+        "relevance": 18,
+        "clarity": 18,
+        "reasoning": 16
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 94,
+            "prompt_tokens": 6604,
+            "total_tokens": 6698,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 45,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 15,\n  \"completeness\": 17,\n  \"relevance\": 18,\n  \"clarity\": 18,\n  \"reasoning\": 16\n}",
+          "wall_seconds": 18.299103000026662
+        }
+      ]
+    },
+    {
+      "draw": 2,
+      "score": {
+        "correctness": 15,
+        "completeness": 17,
+        "relevance": 19,
+        "clarity": 18,
+        "reasoning": 17
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 82,
+            "prompt_tokens": 6604,
+            "total_tokens": 6686,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 33,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6400
+            }
+          },
+          "response": "{\n  \"correctness\": 15,\n  \"completeness\": 17,\n  \"relevance\": 19,\n  \"clarity\": 18,\n  \"reasoning\": 17\n}",
+          "wall_seconds": 14.39834716700716
+        }
+      ]
+    },
+    {
+      "draw": 3,
+      "score": {
+        "correctness": 15,
+        "completeness": 17,
+        "relevance": 19,
+        "clarity": 18,
+        "reasoning": 16
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 86,
+            "prompt_tokens": 6604,
+            "total_tokens": 6690,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 37,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6400
+            }
+          },
+          "response": "{\n  \"correctness\": 15,\n  \"completeness\": 17,\n  \"relevance\": 19,\n  \"clarity\": 18,\n  \"reasoning\": 16\n}",
+          "wall_seconds": 14.22883933398407
+        }
+      ]
+    }
+  ],
+  "score": {
+    "correctness": 15,
+    "completeness": 17,
+    "relevance": 19,
+    "clarity": 18,
+    "reasoning": 16
+  },
+  "total": 85,
+  "main_total_na5": 85,
+  "failure_type": null,
+  "judge_total_range": 2,
+  "wall_seconds": 46.926960916025564
+}

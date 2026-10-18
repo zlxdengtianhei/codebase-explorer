@@ -1,0 +1,31 @@
+{
+  "qid": 37,
+  "question": "Where does the data flow of marker information propagate from the autouse fixture in test_accessmarker_dynamic through the request object to multiple test functions, and what control flow mechanism ensures that dynamically applied markers via applymarker are visible to all dependent tests in the same scope?",
+  "arm": "direct",
+  "answer": "The marker data flows from the autouse fixture, which calls `request.applymarker(...)`, into the `FixtureRequest`/`SubRequest` object \u2014 `applymarker` delegates to `request.node.add_marker()`, which appends a `Mark` object to the test node's `own_markers` list. Each test function then reads it back through the same `request` object via `request.node.get_closest_marker(...)`, which checks the node's `own_markers` and, if not found, walks up the parent chain (class \u2192 module \u2192 session nodes).\n\nThe control flow mechanism that guarantees visibility is pytest's fixture setup ordering: an autouse fixture in a given scope is always instantiated before any test function (or other non-autouse fixtures) at that scope runs, so the marker is already attached to the node during the fixture's setup phase before each dependent test executes \u2014 i.e., the scope-based fixture setup/teardown lifecycle.",
+  "valid": true,
+  "wall_seconds": 28.583146542019676,
+  "attempts": [
+    {
+      "answer": "The marker data flows from the autouse fixture, which calls `request.applymarker(...)`, into the `FixtureRequest`/`SubRequest` object \u2014 `applymarker` delegates to `request.node.add_marker()`, which appends a `Mark` object to the test node's `own_markers` list. Each test function then reads it back through the same `request` object via `request.node.get_closest_marker(...)`, which checks the node's `own_markers` and, if not found, walks up the parent chain (class \u2192 module \u2192 session nodes).\n\nThe control flow mechanism that guarantees visibility is pytest's fixture setup ordering: an autouse fixture in a given scope is always instantiated before any test function (or other non-autouse fixtures) at that scope runs, so the marker is already attached to the node during the fixture's setup phase before each dependent test executes \u2014 i.e., the scope-based fixture setup/teardown lifecycle.",
+      "valid": true,
+      "usage": {
+        "completion_tokens": 1596,
+        "prompt_tokens": 131,
+        "total_tokens": 1727,
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": null,
+          "audio_tokens": null,
+          "reasoning_tokens": 1403,
+          "rejected_prediction_tokens": null
+        },
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 64
+        }
+      },
+      "response_model": "glm-5.3-flash"
+    }
+  ]
+}

@@ -1,0 +1,765 @@
+{
+  "status": "running",
+  "driver": "script",
+  "host": "api",
+  "source_files": 20,
+  "source_tokens": 185053,
+  "modules": 11,
+  "units": 258,
+  "semantic_nodes": 48,
+  "published_pages": 49,
+  "pending": [
+    "module_1",
+    "module_3"
+  ],
+  "normalized": [],
+  "id_corrected_count": 0,
+  "id_corrected": [],
+  "index_only_filled_count": 0,
+  "index_only_filled": [],
+  "known_empty": [],
+  "wall_seconds": 3876.149,
+  "run_dir": "$WORK/runs/e6/fmt/run",
+  "index": "$WORK/runs/e6/fmt/run/docs/INDEX.md",
+  "subagent_tasks": 24,
+  "deterministic_checks_ok": false,
+  "aggregation_principles": {
+    "advisory": true,
+    "input_digest": "3b05a816aaef7ff893dd5f6ea2f81ffaf250b094e0965bf28955301878e27ce6",
+    "identity": [
+      [
+        "args-h",
+        "Dynamic Argument Stores"
+      ],
+      [
+        "chrono-calendar",
+        "Calendar & Time-Point Formatters"
+      ],
+      [
+        "chrono-duration",
+        "Duration Formatting"
+      ],
+      [
+        "chrono-h",
+        "Chrono Formatting"
+      ],
+      [
+        "chrono-parse",
+        "Chrono Spec Parsing"
+      ],
+      [
+        "chrono-tm",
+        "std::tm Formatting"
+      ],
+      [
+        "color-format-api",
+        "Styled Formatting API"
+      ],
+      [
+        "color-h",
+        "Terminal Color & Styling"
+      ],
+      [
+        "color-model",
+        "Style Model"
+      ],
+      [
+        "compile-entry",
+        "Compiled Format Entry Points"
+      ],
+      [
+        "compile-h",
+        "Compile-Time Format Strings"
+      ],
+      [
+        "compile-parser",
+        "Compile-Time Parser"
+      ],
+      [
+        "compile-repr",
+        "Compiled Piece Representation"
+      ],
+      [
+        "core-errors",
+        "Error Reporting"
+      ],
+      [
+        "core-file-output",
+        "FILE Output Backend"
+      ],
+      [
+        "core-float",
+        "Floating-Point Shortest Formatting"
+      ],
+      [
+        "core-format-engine",
+        "Core Format Engine"
+      ],
+      [
+        "core-locale",
+        "Locale Support"
+      ],
+      [
+        "core-runtime",
+        "Core Runtime & Engine"
+      ],
+      [
+        "enum-dispatch",
+        "Enum Formatter Dispatch"
+      ],
+      [
+        "enum-h",
+        "Enum Formatting"
+      ],
+      [
+        "enum-lookup",
+        "Enumerator Identifier Lookup"
+      ],
+      [
+        "fmt-c",
+        "C API"
+      ],
+      [
+        "fmt-c-impl",
+        "C ABI Implementation"
+      ],
+      [
+        "fmt-c-interface",
+        "C ABI Surface"
+      ],
+      [
+        "fmt-lib",
+        "fmt Formatting Library"
+      ],
+      [
+        "os",
+        "OS & File I/O"
+      ],
+      [
+        "os-impl-error",
+        "OS Error Reporting"
+      ],
+      [
+        "os-impl-file",
+        "File I/O Implementation"
+      ],
+      [
+        "os-interface",
+        "OS Header Interface"
+      ],
+      [
+        "ostream-h",
+        "std::ostream Support"
+      ],
+      [
+        "printf-engine",
+        "printf Engine & API"
+      ],
+      [
+        "printf-h",
+        "printf Compatibility"
+      ],
+      [
+        "printf-spec",
+        "printf Spec Parsing"
+      ],
+      [
+        "printf-support",
+        "printf Arg Visitors"
+      ],
+      [
+        "ranges-formatters",
+        "Range Formatters"
+      ],
+      [
+        "ranges-h",
+        "Range Formatting"
+      ],
+      [
+        "ranges-join",
+        "Join Formatting"
+      ],
+      [
+        "ranges-traits",
+        "Range Detection Traits"
+      ],
+      [
+        "std-error-exception",
+        "Error & Exception Formatters"
+      ],
+      [
+        "std-h",
+        "std Type Formatters"
+      ],
+      [
+        "std-type-name",
+        "Type Name Formatting"
+      ],
+      [
+        "std-values",
+        "Value & Utility Formatters"
+      ],
+      [
+        "std-vocab-alt",
+        "Vocabulary Alternative Formatters"
+      ],
+      [
+        "xchar-core",
+        "Exotic Char Format Core"
+      ],
+      [
+        "xchar-entry",
+        "Wide Format Entry Points"
+      ],
+      [
+        "xchar-fstring",
+        "Wide Format Strings & Args"
+      ],
+      [
+        "xchar-h",
+        "Wide & Exotic Char Support"
+      ]
+    ],
+    "edge_counts_by_kind": {
+      "call": 68,
+      "relation": 217
+    },
+    "checks": [
+      {
+        "principle": "P1",
+        "ok": true,
+        "empty_or_duplicate_capabilities": []
+      },
+      {
+        "principle": "P2",
+        "ok": false,
+        "modules": {
+          "fmt-lib": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "core-runtime": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "core-format-engine": {
+            "internal": 1,
+            "external": 2,
+            "internal_external_ratio": 0.5
+          },
+          "core-errors": {
+            "internal": 6,
+            "external": 57,
+            "internal_external_ratio": 0.10526315789473684
+          },
+          "core-float": {
+            "internal": 5,
+            "external": 11,
+            "internal_external_ratio": 0.45454545454545453
+          },
+          "core-file-output": {
+            "internal": 1,
+            "external": 1,
+            "internal_external_ratio": 1.0
+          },
+          "core-locale": {
+            "internal": 2,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "args-h": {
+            "internal": 10,
+            "external": 2,
+            "internal_external_ratio": 5.0
+          },
+          "compile-h": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "compile-repr": {
+            "internal": 3,
+            "external": 7,
+            "internal_external_ratio": 0.42857142857142855
+          },
+          "compile-parser": {
+            "internal": 4,
+            "external": 6,
+            "internal_external_ratio": 0.6666666666666666
+          },
+          "compile-entry": {
+            "internal": 5,
+            "external": 3,
+            "internal_external_ratio": 1.6666666666666667
+          },
+          "chrono-h": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "chrono-parse": {
+            "internal": 4,
+            "external": 5,
+            "internal_external_ratio": 0.8
+          },
+          "chrono-duration": {
+            "internal": 18,
+            "external": 9,
+            "internal_external_ratio": 2.0
+          },
+          "chrono-tm": {
+            "internal": 16,
+            "external": 19,
+            "internal_external_ratio": 0.8421052631578947
+          },
+          "chrono-calendar": {
+            "internal": 4,
+            "external": 4,
+            "internal_external_ratio": 1.0
+          },
+          "color-h": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "color-model": {
+            "internal": 7,
+            "external": 14,
+            "internal_external_ratio": 0.5
+          },
+          "color-format-api": {
+            "internal": 10,
+            "external": 8,
+            "internal_external_ratio": 1.25
+          },
+          "enum-h": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "enum-lookup": {
+            "internal": 8,
+            "external": 1,
+            "internal_external_ratio": 8.0
+          },
+          "enum-dispatch": {
+            "internal": 5,
+            "external": 1,
+            "internal_external_ratio": 5.0
+          },
+          "fmt-c": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "fmt-c-interface": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "fmt-c-impl": {
+            "internal": 4,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "os": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "os-interface": {
+            "internal": 6,
+            "external": 1,
+            "internal_external_ratio": 6.0
+          },
+          "os-impl-file": {
+            "internal": 3,
+            "external": 1,
+            "internal_external_ratio": 3.0
+          },
+          "os-impl-error": {
+            "internal": 6,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "ostream-h": {
+            "internal": 7,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "printf-h": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "printf-support": {
+            "internal": 1,
+            "external": 3,
+            "internal_external_ratio": 0.3333333333333333
+          },
+          "printf-spec": {
+            "internal": 2,
+            "external": 13,
+            "internal_external_ratio": 0.15384615384615385
+          },
+          "printf-engine": {
+            "internal": 9,
+            "external": 11,
+            "internal_external_ratio": 0.8181818181818182
+          },
+          "ranges-h": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "ranges-traits": {
+            "internal": 0,
+            "external": 7,
+            "internal_external_ratio": 0.0
+          },
+          "ranges-formatters": {
+            "internal": 2,
+            "external": 13,
+            "internal_external_ratio": 0.15384615384615385
+          },
+          "ranges-join": {
+            "internal": 2,
+            "external": 3,
+            "internal_external_ratio": 0.6666666666666666
+          },
+          "std-h": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "std-vocab-alt": {
+            "internal": 5,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "std-type-name": {
+            "internal": 3,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "std-error-exception": {
+            "internal": 2,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "std-values": {
+            "internal": 1,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "xchar-h": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "xchar-fstring": {
+            "internal": 2,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "xchar-core": {
+            "internal": 6,
+            "external": 11,
+            "internal_external_ratio": 0.5454545454545454
+          },
+          "xchar-entry": {
+            "internal": 3,
+            "external": 11,
+            "internal_external_ratio": 0.2727272727272727
+          }
+        },
+        "scope": "direct primary ownership; incident cross-module edges counted at each endpoint"
+      },
+      {
+        "principle": "P3",
+        "ok": false,
+        "bounds": [
+          5,
+          30
+        ],
+        "out_of_bounds": {
+          "core-runtime": 2,
+          "core-format-engine": 4,
+          "core-locale": 4,
+          "compile-parser": 3,
+          "chrono-calendar": 3,
+          "fmt-c-interface": 3,
+          "fmt-c-impl": 3,
+          "ranges-traits": 1,
+          "ranges-join": 3,
+          "std-type-name": 4,
+          "std-error-exception": 4
+        },
+        "scope": "nodes with directly owned units; structural ancestors excluded"
+      },
+      {
+        "principle": "P4",
+        "ok": true,
+        "ownership_violations": {}
+      },
+      {
+        "principle": "P5",
+        "ok": false,
+        "min_edges_per_dependent_module": 3,
+        "min_dependent_modules": 2,
+        "shared_units": {
+          "include/fmt/format-inl.h::function::assert_fail::1007": {
+            "color-model": 4,
+            "core-float": 11,
+            "core-file-output": 1,
+            "args-h": 2,
+            "chrono-tm": 7,
+            "chrono-duration": 2
+          },
+          "include/fmt/format-inl.h::function::report_error::4933": {
+            "color-model": 2,
+            "printf-spec": 10,
+            "ranges-formatters": 8,
+            "ranges-join": 1,
+            "core-format-engine": 1,
+            "printf-engine": 7
+          }
+        },
+        "note": "dependency signal only, including utilities already separated; no automatic reassignment"
+      },
+      {
+        "principle": "P6",
+        "ok": true,
+        "modules": {
+          "fmt-lib": {},
+          "core-runtime": {
+            "cpp": 2
+          },
+          "core-format-engine": {
+            "cpp": 4
+          },
+          "core-errors": {
+            "cpp": 7
+          },
+          "core-float": {
+            "cpp": 8
+          },
+          "core-file-output": {
+            "cpp": 11
+          },
+          "core-locale": {
+            "cpp": 4
+          },
+          "args-h": {
+            "cpp": 12
+          },
+          "compile-h": {},
+          "compile-repr": {
+            "cpp": 6
+          },
+          "compile-parser": {
+            "cpp": 3
+          },
+          "compile-entry": {
+            "cpp": 6
+          },
+          "chrono-h": {},
+          "chrono-parse": {
+            "cpp": 5
+          },
+          "chrono-duration": {
+            "cpp": 12
+          },
+          "chrono-tm": {
+            "cpp": 12
+          },
+          "chrono-calendar": {
+            "cpp": 3
+          },
+          "color-h": {},
+          "color-model": {
+            "cpp": 7
+          },
+          "color-format-api": {
+            "cpp": 11
+          },
+          "enum-h": {},
+          "enum-lookup": {
+            "cpp": 8
+          },
+          "enum-dispatch": {
+            "cpp": 5
+          },
+          "fmt-c": {},
+          "fmt-c-interface": {
+            "cpp": 3
+          },
+          "fmt-c-impl": {
+            "cpp": 3
+          },
+          "os": {},
+          "os-interface": {
+            "cpp": 7
+          },
+          "os-impl-file": {
+            "cpp": 23
+          },
+          "os-impl-error": {
+            "cpp": 6
+          },
+          "ostream-h": {
+            "cpp": 6
+          },
+          "printf-h": {},
+          "printf-support": {
+            "cpp": 8
+          },
+          "printf-spec": {
+            "cpp": 5
+          },
+          "printf-engine": {
+            "cpp": 10
+          },
+          "ranges-h": {},
+          "ranges-traits": {
+            "cpp": 1
+          },
+          "ranges-formatters": {
+            "cpp": 6
+          },
+          "ranges-join": {
+            "cpp": 3
+          },
+          "std-h": {},
+          "std-vocab-alt": {
+            "cpp": 6
+          },
+          "std-type-name": {
+            "cpp": 4
+          },
+          "std-error-exception": {
+            "cpp": 4
+          },
+          "std-values": {
+            "cpp": 8
+          },
+          "xchar-h": {},
+          "xchar-fstring": {
+            "cpp": 6
+          },
+          "xchar-core": {
+            "cpp": 8
+          },
+          "xchar-entry": {
+            "cpp": 15
+          }
+        },
+        "scope": "unit counts by language; a multi-language unit contributes once per language"
+      },
+      {
+        "principle": "P7",
+        "ok": null,
+        "status": "not_checked",
+        "reason": "no prior tree for the same detail input"
+      }
+    ],
+    "hierarchy": {
+      "ok": true,
+      "requires_intermediate_above_units": 30
+    },
+    "introduction_length": {
+      "ok": true,
+      "overlong": {},
+      "scope": "capability+summary characters versus descendant explain characters"
+    }
+  },
+  "aggregation": {
+    "input_digest": "bec4f741ffecf195347911169d6c5701de13171fb2d3b4a179f477154da2aed7",
+    "limits": {
+      "max_units": 300,
+      "max_tokens": 64000
+    },
+    "regions": []
+  },
+  "node_dependencies": {
+    "graph_confirmed": 7,
+    "model_inferred": 17,
+    "graph_only": 4
+  },
+  "within_containment": 0,
+  "key_flows": 7,
+  "candidate_flows": 16,
+  "layers": {
+    "tokenizer": "o200k_base",
+    "source_tokens": 185053,
+    "semantic_tokens": 73642,
+    "semantic_breakdown": {
+      "model_body": 31570,
+      "signature_location": 9776,
+      "heading_anchor": 6044,
+      "relations": 5450,
+      "footer": 4416,
+      "index": 8432,
+      "node_text": 7954
+    },
+    "model_body_tokens": 31570,
+    "model_body_source_ratio": 0.17059977411876598,
+    "published_markdown_source_ratio": 0.3979508573219564,
+    "deterministic_tokens": 2403298,
+    "catalog_tokens": 2403298,
+    "frozen_graph_tokens": 0,
+    "frozen_graph_bytes": 36442893,
+    "semantic_source_ratio": 0.3979508573219564,
+    "deterministic_source_ratio": 12.987079377259487,
+    "scope": "Breakdown partitions full Markdown BPE tokens by the first byte's line: model_body is published unit explain, summary, extras and uncertainties; signature_location includes shared source-file reference definitions (including ones used by relations); heading_anchor, relations, footer, INDEX and node_text (including labels/whitespace and program-written ID correction notices) partition the rest. model_body/source and published_markdown/source use complete frozen files. semantic: all published Markdown (node pages + INDEX, including navigation, signatures and commands); deterministic: catalog.json as serialized, including preserved prose copies and edge references, excluding the graph field; frozen graph is excluded from token ratios (frozen_graph_tokens=0), reported separately as frozen_graph_bytes using UTF-8 JSON with ensure_ascii=False and compact separators; complete graph evidence is expanded only with query --edges; source: complete frozen files counted once; context source chunks, host prompts, raw answers and summary.json excluded; layers are storage measures, not disjoint content classes"
+  },
+  "semantic_review": {
+    "mode": "sample",
+    "reviewed": [],
+    "outcomes": {},
+    "pending": [
+      "review_1"
+    ],
+    "note": "an independent reviewer read the source for each reviewed batch; this is not a whole-map proof"
+  },
+  "truth": "deterministic structure/coverage checks and the separate semantic review are different states; neither one proves prose truth",
+  "counts": {
+    "done": 12,
+    "failed": 2,
+    "pending": 1
+  },
+  "leased": [],
+  "failed": [
+    {
+      "task": "module_1",
+      "error": "schema_error:dispositions missing inventory ids: 5/624 missing (automatic index_only limit 2). Every inventory symbol must have a disposition: unit, grouped or index_only; return the complete dispositions object. First 5 missing ids: ['include/fmt/format.h::function::count_digits::44027', 'include/f"
+    },
+    {
+      "task": "module_3",
+      "error": "schema_error:dispositions missing inventory ids: 3/612 missing (automatic index_only limit 2). Every inventory symbol must have a disposition: unit, grouped or index_only; return the complete dispositions object. First 3 missing ids: ['include/fmt/core.h::class::get.basic_format_args::87384::s12', '"
+    }
+  ],
+  "ready": 0,
+  "next_action": "partial: docs are rendered and 2 task(s) are pending; fix the cause, then `cbe generate $WORK/eval/fmt-b4ffa39 --resume --run-dir $WORK/runs/e6/fmt/run`",
+  "usage_unknown": [],
+  "render_error": null,
+  "stopped": null,
+  "progress_log": "$WORK/runs/e6/fmt/run/progress.log",
+  "model": "zai/glm-5.3-flash",
+  "input_token_basis": "provider prompt_tokens minus cached_tokens; cache reported separately",
+  "calls": 24,
+  "input_tokens": 440683,
+  "output_tokens": 536964,
+  "cache_tokens": 414336,
+  "token_totals_basis": "observed calls; missing usage is excluded, never estimated",
+  "calls_with_unknown_input": 0,
+  "calls_with_unknown_output": 0,
+  "observed_cache_tokens": 414336,
+  "calls_with_unknown_cache": 0,
+  "priced_usd": null,
+  "price_basis": "unknown; configure API price_per_million: [input, output, cache]",
+  "usage_complete": true,
+  "seconds": 7071.188
+}

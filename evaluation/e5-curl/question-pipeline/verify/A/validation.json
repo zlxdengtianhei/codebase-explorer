@@ -1,0 +1,19 @@
+{
+  "candidate_sha256": "d61c109f6284d2869c9cb228b97d45d1f46cdd3cb8e3b804b63e0f94efbaba9e",
+  "source_commit_label": "2c04412d8",
+  "questions": 28,
+  "verdicts": {
+    "fix": 12,
+    "keep": 15,
+    "drop": 1
+  },
+  "rubric_items": 253,
+  "item_statuses": {
+    "成立": 236,
+    "部分": 16,
+    "不成立": 1
+  },
+  "accepted_questions": 27,
+  "checks": "PASS: exact cid coverage, rubric item identity/order, required fields/evidence, no question/build/metadata changes, keep originals unchanged, fixed weights/kinds unchanged, >=6 positives and >=2 core",
+  "scope": "Static source review only; no cbe or curl runtime tests."
+}

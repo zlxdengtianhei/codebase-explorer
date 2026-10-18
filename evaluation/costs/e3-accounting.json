@@ -1,0 +1,19 @@
+{
+  "started_utc": "2026-10-17T22:10:58.450129+00:00",
+  "answer_wall_seconds": 10197.937254190445,
+  "answer_and_judge_wall_seconds": 10211.416651010513,
+  "answer_concurrency": 4,
+  "memory_free_percent": 50,
+  "answer_tokens": {
+    "input": 6877001,
+    "output": 749505
+  },
+  "judge_tokens": {
+    "input": 3014565,
+    "output": 42860
+  },
+  "answer_attempts": 161,
+  "answer_unknown_usage_attempts": 13,
+  "judge_calls": 432,
+  "judge_unknown_usage_calls": 0
+}

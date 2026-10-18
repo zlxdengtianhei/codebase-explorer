@@ -1,0 +1,31 @@
+{
+  "qid": 41,
+  "question": "Where is the test class that validates URL generation with anchors, schemes, and HTTP methods defined?",
+  "arm": "direct",
+  "answer": "The `TestUrls` class in `tests/test_basic.py`.",
+  "valid": true,
+  "wall_seconds": 42.47698020801181,
+  "attempts": [
+    {
+      "answer": "The `TestUrls` class in `tests/test_basic.py`.",
+      "valid": true,
+      "usage": {
+        "completion_tokens": 395,
+        "prompt_tokens": 98,
+        "total_tokens": 493,
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": null,
+          "audio_tokens": null,
+          "reasoning_tokens": 380,
+          "rejected_prediction_tokens": null
+        },
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 64
+        }
+      },
+      "response_model": "glm-5.3-flash"
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "qid": 24,
+  "question": "Why does the class that handles UUID serialization in the tagged JSON serialization system enable bidirectional conversion between UUID instances and their hexadecimal string representations?",
+  "arm": "direct",
+  "answer": "Because JSON has no native UUID type, the TagUUID serializer must convert UUID objects into a tagged hex string so they can be stored in JSON-based sessions, and convert them back into real UUID objects on load so the session data round-trips with its original types preserved.",
+  "valid": true,
+  "wall_seconds": 8.282076041970868,
+  "attempts": [
+    {
+      "answer": "Because JSON has no native UUID type, the TagUUID serializer must convert UUID objects into a tagged hex string so they can be stored in JSON-based sessions, and convert them back into real UUID objects on load so the session data round-trips with its original types preserved.",
+      "valid": true,
+      "usage": {
+        "completion_tokens": 338,
+        "prompt_tokens": 106,
+        "total_tokens": 444,
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": null,
+          "audio_tokens": null,
+          "reasoning_tokens": 282,
+          "rejected_prediction_tokens": null
+        },
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 64
+        }
+      },
+      "response_model": "glm-5.3-flash"
+    }
+  ]
+}

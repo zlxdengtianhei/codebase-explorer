@@ -1,0 +1,125 @@
+{
+  "qid": 12,
+  "question": "What is the failure mechanism when the parametrize method's validation of indirect parameter names detects that an indirect parameter references a non-existent function argument, and how does this depend on the function signature?",
+  "arm": "C0",
+  "max_steps": 10,
+  "repeat": 0,
+  "answer_valid": true,
+  "judge_model": "codex/gpt-6.1-sol",
+  "draws": [
+    {
+      "draw": 1,
+      "score": {
+        "correctness": 4,
+        "completeness": 7,
+        "relevance": 14,
+        "clarity": 13,
+        "reasoning": 6
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 106,
+            "prompt_tokens": 7022,
+            "total_tokens": 7128,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 57,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 4,\n  \"completeness\": 7,\n  \"relevance\": 14,\n  \"clarity\": 13,\n  \"reasoning\": 6\n}",
+          "wall_seconds": 5.347466416016687
+        }
+      ]
+    },
+    {
+      "draw": 2,
+      "score": {
+        "correctness": 4,
+        "completeness": 7,
+        "relevance": 15,
+        "clarity": 13,
+        "reasoning": 6
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 113,
+            "prompt_tokens": 7022,
+            "total_tokens": 7135,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 64,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6784
+            }
+          },
+          "response": "{\n  \"correctness\": 4,\n  \"completeness\": 7,\n  \"relevance\": 15,\n  \"clarity\": 13,\n  \"reasoning\": 6\n}",
+          "wall_seconds": 5.1623629159876145
+        }
+      ]
+    },
+    {
+      "draw": 3,
+      "score": {
+        "correctness": 4,
+        "completeness": 7,
+        "relevance": 15,
+        "clarity": 13,
+        "reasoning": 6
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 106,
+            "prompt_tokens": 7022,
+            "total_tokens": 7128,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 57,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 4,\n  \"completeness\": 7,\n  \"relevance\": 15,\n  \"clarity\": 13,\n  \"reasoning\": 6\n}",
+          "wall_seconds": 7.536617083998863
+        }
+      ]
+    }
+  ],
+  "score": {
+    "correctness": 4,
+    "completeness": 7,
+    "relevance": 15,
+    "clarity": 13,
+    "reasoning": 6
+  },
+  "total": 45,
+  "main_total_na5": 45,
+  "failure_type": null,
+  "judge_total_range": 1,
+  "wall_seconds": 18.05218279204564
+}

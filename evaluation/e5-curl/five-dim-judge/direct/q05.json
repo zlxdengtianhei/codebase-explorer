@@ -1,0 +1,125 @@
+{
+  "qid": 5,
+  "question": "TFTP and FTP's PORT handling obtain the peer's socket address through `Curl_conn_get_remote_addr()`. What behavior does that function require from the `query` callbacks of the connection filters in the chain in order to return the address?\n\nBuild assumptions: TFTP and FTP enabled; direct connection without proxies; IPv4 or IPv6; any platform.",
+  "arm": "direct",
+  "max_steps": null,
+  "repeat": 0,
+  "answer_valid": true,
+  "judge_model": "codex/gpt-6.1-sol",
+  "draws": [
+    {
+      "draw": 1,
+      "score": {
+        "correctness": 6,
+        "completeness": 8,
+        "relevance": 19,
+        "clarity": 15,
+        "reasoning": 9
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 99,
+            "prompt_tokens": 6077,
+            "total_tokens": 6176,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 50,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 6,\n  \"completeness\": 8,\n  \"relevance\": 19,\n  \"clarity\": 15,\n  \"reasoning\": 9\n}",
+          "wall_seconds": 3.868217832990922
+        }
+      ]
+    },
+    {
+      "draw": 2,
+      "score": {
+        "correctness": 5,
+        "completeness": 7,
+        "relevance": 18,
+        "clarity": 13,
+        "reasoning": 8
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 47,
+            "prompt_tokens": 6077,
+            "total_tokens": 6124,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 0,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 5,\n  \"completeness\": 7,\n  \"relevance\": 18,\n  \"clarity\": 13,\n  \"reasoning\": 8\n}",
+          "wall_seconds": 3.2461805409984663
+        }
+      ]
+    },
+    {
+      "draw": 3,
+      "score": {
+        "correctness": 5,
+        "completeness": 7,
+        "relevance": 19,
+        "clarity": 15,
+        "reasoning": 8
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 82,
+            "prompt_tokens": 6077,
+            "total_tokens": 6159,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 49,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\"correctness\":5,\"completeness\":7,\"relevance\":19,\"clarity\":15,\"reasoning\":8}",
+          "wall_seconds": 3.6669528749771416
+        }
+      ]
+    }
+  ],
+  "score": {
+    "correctness": 5,
+    "completeness": 7,
+    "relevance": 19,
+    "clarity": 15,
+    "reasoning": 8
+  },
+  "total": 54,
+  "main_total_na5": 54,
+  "failure_type": null,
+  "judge_total_range": 6,
+  "wall_seconds": 10.782330166955944
+}

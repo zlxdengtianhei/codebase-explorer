@@ -1,0 +1,31 @@
+{
+  "qid": 25,
+  "question": "Why does the asynchronous HTTP method view class inherit from the synchronous HTTP method dispatch base class rather than implementing async dispatch independently?",
+  "arm": "direct",
+  "answer": "Because the dispatch logic itself \u2014 looking up the handler by the request method name, falling back to `get` for `HEAD` requests, and collecting the allowed `methods` \u2014 is identical whether the handlers are sync or async. The only difference is that an async handler's return value must be awaited, and that is handled by wrapping the handler call (e.g. via `current_app.ensure_sync`) rather than by rewriting dispatch. By inheriting from the synchronous `MethodView`/dispatch base, the async class reuses all of this shared behavior and stays compatible with `as_view`, routing, and registration machinery, instead of duplicating and having to maintain a divergent copy of the dispatch algorithm.",
+  "valid": true,
+  "wall_seconds": 45.19681833300274,
+  "attempts": [
+    {
+      "answer": "Because the dispatch logic itself \u2014 looking up the handler by the request method name, falling back to `get` for `HEAD` requests, and collecting the allowed `methods` \u2014 is identical whether the handlers are sync or async. The only difference is that an async handler's return value must be awaited, and that is handled by wrapping the handler call (e.g. via `current_app.ensure_sync`) rather than by rewriting dispatch. By inheriting from the synchronous `MethodView`/dispatch base, the async class reuses all of this shared behavior and stays compatible with `as_view`, routing, and registration machinery, instead of duplicating and having to maintain a divergent copy of the dispatch algorithm.",
+      "valid": true,
+      "usage": {
+        "completion_tokens": 2311,
+        "prompt_tokens": 103,
+        "total_tokens": 2414,
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": null,
+          "audio_tokens": null,
+          "reasoning_tokens": 2167,
+          "rejected_prediction_tokens": null
+        },
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 64
+        }
+      },
+      "response_model": "glm-5.3-flash"
+    }
+  ]
+}

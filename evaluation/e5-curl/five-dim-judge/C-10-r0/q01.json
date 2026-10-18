@@ -1,0 +1,16 @@
+{
+  "qid": 1,
+  "question": "Where in lib/ is the public API `curl_mime_subparts()` implemented, and which internal function does it share with the CURLOPT_MIMEPOST option handler? State which argument differs between the two call sites.\n\nBuild assumptions: MIME support enabled (CURL_DISABLE_MIME not defined); HTTP enabled; any platform.",
+  "arm": "C",
+  "max_steps": 10,
+  "repeat": 0,
+  "answer_valid": false,
+  "judge_model": "codex/gpt-6.1-sol",
+  "draws": [],
+  "score": null,
+  "total": null,
+  "main_total_na5": 5,
+  "failure_type": "no_answer",
+  "judge_total_range": null,
+  "wall_seconds": 1.5409896150231361e-06
+}

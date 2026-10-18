@@ -1,0 +1,31 @@
+{
+  "qid": 5,
+  "question": "What is the defensive layering pattern established by the exception handling architecture in _format_repr_exception to prevent cascading failures when repr() operations fail during error reporting?",
+  "arm": "direct",
+  "answer": "A nested try/except fallback cascade where each formatting step that could itself fail is individually guarded: (1) formatting the exception's repr is wrapped so that if it raises, the handler degrades to a hardcoded \"unpresentable exception (...)\" message built from the inner failure; (2) the object's repr is independently guarded the same way, degrading to a type-name-plus-string representation; (3) at every layer, KeyboardInterrupt and SystemExit are explicitly re-raised rather than swallowed. This ensures error reporting can never crash from cascading exceptions while still preserving control-flow exceptions.",
+  "valid": true,
+  "wall_seconds": 19.643500416947063,
+  "attempts": [
+    {
+      "answer": "A nested try/except fallback cascade where each formatting step that could itself fail is individually guarded: (1) formatting the exception's repr is wrapped so that if it raises, the handler degrades to a hardcoded \"unpresentable exception (...)\" message built from the inner failure; (2) the object's repr is independently guarded the same way, degrading to a type-name-plus-string representation; (3) at every layer, KeyboardInterrupt and SystemExit are explicitly re-raised rather than swallowed. This ensures error reporting can never crash from cascading exceptions while still preserving control-flow exceptions.",
+      "valid": true,
+      "usage": {
+        "completion_tokens": 861,
+        "prompt_tokens": 111,
+        "total_tokens": 972,
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": null,
+          "audio_tokens": null,
+          "reasoning_tokens": 741,
+          "rejected_prediction_tokens": null
+        },
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 64
+        }
+      },
+      "response_model": "glm-5.3-flash"
+    }
+  ]
+}
