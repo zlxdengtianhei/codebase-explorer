@@ -5,7 +5,7 @@ os.environ.setdefault('TMP', os.environ.get('TMPDIR', '/tmp'))
 import json, datetime, sys
 from pathlib import Path
 R = Path(__file__).resolve().parent
-OUT = Path(os.path.expandvars('$HOME/context-infra-lab-1/adhoc_jobs/codebase_explorer_20261016/scratch/opt_e4/e4q_result.md'))
+OUT = Path(os.path.expandvars('$TASK_DIR/scratch/opt_e4/e4q_result.md'))
 
 def load(name):
     return json.loads((R / name).read_text())

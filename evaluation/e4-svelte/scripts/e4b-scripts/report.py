@@ -58,7 +58,7 @@ for label, get in measures:
     fmt = pct if '/源码' in label else f
     lines.append(f'|{label}|{fmt(min(vals))}—{fmt(max(vals))}|{fmt(statistics.median(vals))}|' if vals else f'|{label}|NA|NA|')
 lines += ['', '三次最终均完整；首轮 partial 已在阶段表单列，区间采用含唯一续跑的各次总和。', '收尾压缩明细见 e4b-scripts/compression.json；每次 context/catalog 留明文（磁盘不足 10 GiB 时按任务规定仅留 r1 明文）。', '核验：已读指定 verification skill；输入 SHA、页/token 重算、分项合计、网关请求/时窗/模型/summary 差值与输出身份见 e4b-scripts/verification.json。作者自验可交主会话复核；不含文档语义真值与覆盖度独立验收。', 'CBE 记账问题：续跑重建 region 任务时复用 task/attempt，_mark_result 会改写 calls.csv 首个匹配行的结果标签；首轮快照 first-calls.csv 与 first-raw/ 已保留，受影响行见 metrics.json 的 overwritten_first_call_labels。表中 result/attempt 分布为 CBE 最终 CSV 原样读数，含此标签归属限制；网关/summary/原始 API 的 token 与请求数独立核对，不受此标签改写影响。', 'CBE 首轮具体失败：r1 module_31 的 dispositions 含占位 ID/未定义单元，module_56 缺 disposition，module_61 返回 inventory 外 ID；r2 module_43 缺少 100/100 inventory dispositions；r3 module_12 缺少 80/170 dispositions，module_58 引用未定义的占位单元。首轮完整缺失任务与错误分别见 metrics.json 的 first_pending/first_pending_errors，早期失败快照 e4b-scripts/first-failures.json；按规定各只续跑一次，最终未完成任务及错误见各 metrics.json 的 failed_tasks。', 'CBE 观察：默认 schema 重试/末轮规范化可能保留 answer_fallback、id_corrected 或其他标记，不能把 complete/verify 当作文档语义正确；具体任务、错误与标记在 metrics.json、host/state.json、raw/。']
-path = Path(os.path.expandvars('$HOME/context-infra-lab-1/adhoc_jobs/codebase_explorer_20261016/scratch/opt_e4/e4b_result.md'))
+path = Path(os.path.expandvars('$TASK_DIR/scratch/opt_e4/e4b_result.md'))
 path.parent.mkdir(parents=True, exist_ok=True)
 path.write_text('\n'.join(lines) + '\n')
 print(path, len(lines), 'lines')

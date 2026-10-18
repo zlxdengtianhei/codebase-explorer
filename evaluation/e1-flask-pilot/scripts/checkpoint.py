@@ -14,7 +14,7 @@ for folder in sorted((E / 'answers').iterdir()):
     groups[folder.name] = {'n': len(rs), 'valid': sum((r['valid'] for r in rs)), 'judged': len(list((E / 'judge' / folder.name).glob('q*.json')))}
 cbe = json.loads((E / 'cbe-flask/run/summary.json').read_text()) if (E / 'cbe-flask/run/summary.json').exists() else {}
 readiness = json.loads((E / 'W-READY.json').read_text()) if (E / 'W-READY.json').exists() else None
-state = {'utc': now.isoformat(), 'cbe': cbe.get('status'), 'groups': groups, 'W_ready': readiness.get('complete') if readiness is not None else None, 'W_readiness': readiness, 'peer_reports': [p.name for p in Path(os.path.expandvars('$HOME/context-infra-lab-1/adhoc_jobs/codebase_explorer_20261016/scratch/opt_e1')).glob('*result*.md')], 'markers': {s: (E / s).exists() for s in ['primary-S-C0-C-DONE', 'pipeline-DONE', 'judge-DONE', 'postprocess-DONE']}, 'disk': subprocess.check_output(['df', '-h', str(E)], text=True).splitlines()[-1]}
+state = {'utc': now.isoformat(), 'cbe': cbe.get('status'), 'groups': groups, 'W_ready': readiness.get('complete') if readiness is not None else None, 'W_readiness': readiness, 'peer_reports': [p.name for p in Path(os.path.expandvars('$TASK_DIR/scratch/opt_e1')).glob('*result*.md')], 'markers': {s: (E / s).exists() for s in ['primary-S-C0-C-DONE', 'pipeline-DONE', 'judge-DONE', 'postprocess-DONE']}, 'disk': subprocess.check_output(['df', '-h', str(E)], text=True).splitlines()[-1]}
 (E / 'STATUS.json').write_text(json.dumps(state, indent=2))
 print(json.dumps({**state, 'groups': {k: f"{v['n']}/{v['valid']}/{v['judged']}" for k, v in groups.items()}}, separators=(',', ':')), flush=True)
 last = E / 'monitor-heartbeat.json'

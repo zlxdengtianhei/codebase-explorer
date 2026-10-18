@@ -31,6 +31,6 @@
     "STATUS.md": "fea50213ecd443d5c201009830711a28ab750ebb93d9d24300157ad20c1ee5fe",
     "evidence_manifest.json": "b61a320c220f14bb5cbe08e1c8ba2a48e6ebf49b0b5aee6641d7a8765a5f132d"
   },
-  "report_path": "$HOME/context-infra-lab-1/adhoc_jobs/codebase_explorer_20261016/scratch/opt_e5/v13b_result.md",
+  "report_path": "$TASK_DIR/scratch/opt_e5/v13b_result.md",
   "report_sha256": "12ce3cb28fd2ee90bd7491f632fcf64e8a76f3e265694639294b19ff6a6b11bf"
 }

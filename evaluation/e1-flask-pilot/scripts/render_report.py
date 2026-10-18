@@ -5,7 +5,7 @@ os.environ.setdefault('TMP', os.environ.get('TMPDIR', '/tmp'))
 import collections, csv, json, statistics
 from pathlib import Path
 E = Path(__file__).resolve().parent
-DEST = Path(os.path.expandvars('$HOME/context-infra-lab-1/adhoc_jobs/codebase_explorer_20261016/scratch/opt_e1/e1b_result.md'))
+DEST = Path(os.path.expandvars('$TASK_DIR/scratch/opt_e1/e1b_result.md'))
 
 def read(p, default=None):
     return json.loads(p.read_text()) if p.exists() else default

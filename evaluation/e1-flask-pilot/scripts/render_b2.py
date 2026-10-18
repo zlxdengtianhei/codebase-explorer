@@ -7,7 +7,7 @@ from pathlib import Path
 E = Path(__file__).resolve().parent
 B = E / 'b2'
 m = json.loads((E / 'metrics.json').read_text())
-out = Path(os.path.expandvars('$HOME/context-infra-lab-1/adhoc_jobs/codebase_explorer_20261016/scratch/opt_e1/e1b2_result.md'))
+out = Path(os.path.expandvars('$TASK_DIR/scratch/opt_e1/e1b2_result.md'))
 rows = []
 
 def add(s=''):

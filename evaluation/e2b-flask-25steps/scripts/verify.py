@@ -66,7 +66,7 @@ spec.loader.exec_module(scanner)
 check('credential scanner positive and negative controls', all(scanner.self_test().values()))
 leaks = []
 scan_paths = [p for p in E.rglob('*') if p.is_file() and (not p.is_symlink()) and (p.suffix in ['.json', '.jsonl', '.log', '.txt', '.md', '.csv', '.py', '.stdout'])]
-report = Path(os.path.expandvars('$HOME/context-infra-lab-1/adhoc_jobs/codebase_explorer_20261016/scratch/opt_e2/e2b_result.md'))
+report = Path(os.path.expandvars('$TASK_DIR/scratch/opt_e2/e2b_result.md'))
 if report.exists():
     scan_paths.append(report)
 for p in scan_paths:

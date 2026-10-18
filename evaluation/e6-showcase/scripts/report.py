@@ -4,7 +4,7 @@ os.environ.setdefault('TMP', os.environ.get('TMPDIR', '/tmp'))
 import json, decimal, re
 from pathlib import Path
 BASE = Path(os.path.expandvars('$WORK/runs/e6'))
-REPORT = Path(os.path.expandvars('$HOME/context-infra-lab-1/adhoc_jobs/codebase_explorer_20261016/scratch/opt_e6/e6_result.md'))
+REPORT = Path(os.path.expandvars('$TASK_DIR/scratch/opt_e6/e6_result.md'))
 
 def j(x):
     text = json.dumps(x, ensure_ascii=False, separators=(',', ':'))

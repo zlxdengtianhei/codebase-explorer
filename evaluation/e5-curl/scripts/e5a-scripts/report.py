@@ -94,6 +94,6 @@ add('CBE记账问题：resume2重用region task/attempt后，改写resume1已成
 add('调用/attempt/result分布按CBE最终CSV原样报，标签有上述归属限制；各轮calls/raw快照已保留，网关与token总账不受影响。')
 add('verification-independent.json：19项作者自验全通过；输入SHA与token、Markdown与去引用token由独立tiktoken从原件重算；主会话可独立复核。')
 add('未做：语义真值与问答测评，依任务包另派；不得用complete/verify替代语义正确结论。')
-path = pathlib.Path(os.path.expandvars('$HOME/context-infra-lab-1/adhoc_jobs/codebase_explorer_20261016/scratch/opt_e5/e5a_result.md'))
+path = pathlib.Path(os.path.expandvars('$TASK_DIR/scratch/opt_e5/e5a_result.md'))
 path.write_text('\n'.join(lines) + '\n')
 print(path, len(lines))

@@ -212,7 +212,7 @@ The harness patch now has relative a/ and b/ file headers and the manifest-speci
 
 Changed 401 `[fN]:` definitions to upstream GitHub /blob/<full-commit>/ links. Counts: tsdown 41, ruby_llm 113, cjson 14, fmt 48, gson 85. Repositories were taken from local remote configuration; commits were taken from E6 inputs.json. Evaluation document source-link targets remain as recorded, apart from path redaction.
 
-Polyglot has no upstream repository commit: its recorded 64-character identifier is a fixture content digest. Its 35 source-reference definitions remain unchanged; no commit or URL was guessed. A coordinator decision is needed on publishing the fixture itself or explaining those references. Affected references:
+Polyglot has no upstream repository commit: its recorded 64-character identifier is a fixture content digest. Its 35 source-reference definitions remain unchanged; no commit or URL was guessed. The fixture was later published with the example; see the follow-up section below. Affected references:
 
 - `examples/polyglot/docs/nodes/closure-functional-patterns.md` → `../../../../../../eval/polyglot-6b19d76/src/sample.py` (fixture content digest, no pinned upstream git commit).
 - `examples/polyglot/docs/nodes/closure-functional-patterns.md` → `../../../../../../eval/polyglot-6b19d76/src/sample.go` (fixture content digest, no pinned upstream git commit).
@@ -283,9 +283,11 @@ Keep compressed catalogs in the repository and instruct readers to run `gzip -dk
 
 ## Final checks
 
-The copied scanner is adapted outside this directory to enumerate final staged files and each final tar archive member. Original matching patterns and 96 SWE-QA / 59 rubric probes are retained; scan outputs, exact commands, interpreter version, dependency freeze, copy/redaction ledgers, and integrity results are under the private publish-try directory. Final privacy counts and measured sizes are recorded in the accompanying P16 result report.
+The copied scanner is adapted outside this directory to enumerate final staged files and each final tar archive member. Original matching patterns and 96 SWE-QA / 59 rubric probes are retained; scan outputs, exact commands, interpreter version, dependency freeze, copy/redaction ledgers, and integrity results were kept with the private working files and are not published.
 
-## Coordinator follow-up (10-18 21:06 CEST, session aa6b2f08)
+## Follow-up before publishing
 
 - polyglot: the fixture has no upstream repository; it is this project's own test fixture (MIT, see examples/polyglot/LICENSE). Its 23 source files were copied from the pruned copy `polyglot-6b19d76` into `examples/polyglot/source/`, and the 35 `[fN]:` reference lines in 9 pages were rewritten to relative paths into `source/`; every rewritten link resolves.
 - E6 catalogs stay compressed (`catalog.json.gz`, 2.2 MB for six repos instead of about 30 MB); each example page tells readers to run `gzip -dk examples/<repo>/catalog.json.gz` before `cbe find` or `cbe query`.
+- A later independent scan found 9 truncated user-name fragments in `ls -l` output inside `evaluation/e3-pytest/answers.tar.gz` (2 members) and `evaluation/e5-curl/answers.tar.gz` (7 members). They were replaced with `owner`, and both archives were rebuilt with the same member order and normalized headers.
+- The private task-directory prefix in 21 historical scripts and records, and in 2 members of `evaluation/e5-curl/question-pipeline.tar.gz`, was replaced with `$TASK_DIR`.

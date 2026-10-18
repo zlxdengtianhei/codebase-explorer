@@ -7,7 +7,7 @@ from pathlib import Path
 R = Path(os.path.expandvars('$WORK'))
 E = R / 'runs/e3'
 OLD = R / 'runs/e1'
-TASK = Path(os.path.expandvars('$HOME/context-infra-lab-1/adhoc_jobs/codebase_explorer_20261016'))
+TASK = Path(os.path.expandvars('$TASK_DIR'))
 for name in ['harness', 'venv']:
     p = E / name
     if not p.exists():

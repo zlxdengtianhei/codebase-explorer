@@ -33,7 +33,7 @@ if result.returncode:
 run('accounting.py')
 run('verify_b2.py')
 run('render_b2.py')
-report = Path(os.path.expandvars('$HOME/context-infra-lab-1/adhoc_jobs/codebase_explorer_20261016/scratch/opt_e1/e1b2_result.md'))
+report = Path(os.path.expandvars('$TASK_DIR/scratch/opt_e1/e1b2_result.md'))
 key = os.environ['MAGPIE_API_KEY'].encode()
 assert key not in report.read_bytes()
 (B / 'report-READY').write_text(datetime.datetime.now(datetime.timezone.utc).isoformat())

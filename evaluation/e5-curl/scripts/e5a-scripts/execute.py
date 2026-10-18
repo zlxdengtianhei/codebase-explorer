@@ -7,7 +7,7 @@ root = Path(os.path.expandvars('$WORK'))
 scripts = Path(__file__).resolve().parent
 out = root / 'runs/e5/cbe-curl'
 run = out / 'run'
-progress = Path(os.path.expandvars('$HOME/context-infra-lab-1/adhoc_jobs/codebase_explorer_20261016/scratch/opt_e5/e5a_progress.md'))
+progress = Path(os.path.expandvars('$TASK_DIR/scratch/opt_e5/e5a_progress.md'))
 (out / 'api-config.json').write_text(json.dumps({'extra_headers': {'X-Magpie-Agent': 'codebase-explorer', 'X-Magpie-Session': 'e5-cbe-curl'}}, indent=2))
 env = os.environ.copy()
 env.update(PYTHONDONTWRITEBYTECODE='1', PYTHONPATH=str(root / 'eval-cbe2/src'))

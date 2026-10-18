@@ -396,9 +396,9 @@ Generation runs used in this evaluation (all `zai/glm-5.3-flash` through `--host
 | cJSON (E6) | 34,364 | 13 | 0.084977 | 29.182% | 86.401% | yes | 0 |
 | fmt (E6) | 185,053 | 30 | 0.544564 | 17.060% | 39.363% | no (still partial) | 2 |
 | gson (E6) | 159,691 | 36 | 0.295048 | 24.926% | 65.173% | yes | 0 |
-| polyglot (E6 rerun under 3.12) | 1,708 | 13 | 0.028016 | not recorded | 800.8% | yes | 0 |
+| polyglot (E6 rerun under 3.12) | 1,708 | 13 | 0.028016 | 186.300% | 800.8% | yes | 0 |
 
-Notes: Incomplete first passes came mostly from GLM-5.3-Flash producing malformed module answers (`schema_error` in 46 / 52 / 57 of 128 / 136 / 144 calls on svelte, 78 of 194 on pytest, 112 of 341 on curl). Resumes used the same settings, with no code change and no manual repair. The published-Markdown ratio moves by about 0.7–0.9 points with the run directory's location, because `[fN]:` lines hold relative paths. The query layer (`context.json`, `catalog.json`) and graphs are reported in bytes only and are not in the ratios.
+Notes: Incomplete first passes came mostly from GLM-5.3-Flash producing malformed module answers (`schema_error` in 46 / 52 / 57 of 128 / 136 / 144 calls on svelte, 78 of 194 on pytest, 112 of 341 on curl). Resumes used the same settings, with no code change and no manual repair. The published-Markdown ratio moves by about 0.7–0.9 points with the run directory's location, because `[fN]:` lines hold relative paths. The copies in `examples/` were changed after the runs: their `[fN]:` lines now hold permanent links to the upstream commits (polyglot: relative links into `source/`). Recounting the published `docs/**/*.md` gives 0.5–3.7 points more than this table for the five other examples and 22.5 points less for polyglot; the table keeps the values recorded by the runs. polyglot's source has only 1,708 tokens, so its ratios are not comparable with the others. The query layer (`context.json`, `catalog.json`) and graphs are reported in bytes only and are not in the ratios.
 
 ## Limitations
 

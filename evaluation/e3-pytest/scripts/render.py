@@ -5,7 +5,7 @@ os.environ.setdefault('TMP', os.environ.get('TMPDIR', '/tmp'))
 import json, datetime, gzip, collections, re
 from pathlib import Path
 E = Path(__file__).resolve().parent
-DEST = Path(os.path.expandvars('$HOME/context-infra-lab-1/adhoc_jobs/codebase_explorer_20261016/scratch/opt_e3/e3_result.md'))
+DEST = Path(os.path.expandvars('$TASK_DIR/scratch/opt_e3/e3_result.md'))
 
 def read(p):
     if p.exists():

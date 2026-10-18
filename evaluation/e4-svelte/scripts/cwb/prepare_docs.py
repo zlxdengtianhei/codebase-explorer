@@ -10,7 +10,7 @@ kind = sys.argv[1]
 src = Path(sys.argv[2]).resolve()
 flat = R / (kind + '-flat') if kind.startswith('cbe') else src
 if kind.startswith('cbe'):
-    script = Path(os.path.expandvars('$HOME/context-infra-lab-1/adhoc_jobs/codebase_explorer_20261016/evidence/e92_research/scripts/cbe_to_cwb_input.py'))
+    script = Path(os.path.expandvars('$TASK_DIR/evidence/e92_research/scripts/cbe_to_cwb_input.py'))
     subprocess.run([sys.executable, str(script), str(src), str(flat)], check=True)
     sources = list((src / 'nodes').glob('*.md'))
     parents = sum((bool(re.search('^Parent:', p.read_text(), re.M)) for p in sources))

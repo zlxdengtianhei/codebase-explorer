@@ -5,7 +5,7 @@ os.environ.setdefault('TMP', os.environ.get('TMPDIR', '/tmp'))
 import json
 from pathlib import Path
 E = Path(__file__).resolve().parent
-OUT = Path(os.path.expandvars('$HOME/context-infra-lab-1/adhoc_jobs/codebase_explorer_20261016/scratch/opt_e2/e2a_result.md'))
+OUT = Path(os.path.expandvars('$TASK_DIR/scratch/opt_e2/e2a_result.md'))
 
 def main():
     m = json.loads((E / 'metrics.json').read_text())

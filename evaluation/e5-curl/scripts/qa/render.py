@@ -7,7 +7,7 @@ from pathlib import Path
 E = Path(__file__).resolve().parent
 R = E.parents[2]
 read = lambda p: json.loads(p.read_text())
-REPORT = Path(os.path.expandvars('$HOME/context-infra-lab-1/adhoc_jobs/codebase_explorer_20261016/scratch/opt_e5/e5qa_result.md'))
+REPORT = Path(os.path.expandvars('$TASK_DIR/scratch/opt_e5/e5qa_result.md'))
 
 def num(v):
     return 'NA' if v is None else f'{v:.2f}'

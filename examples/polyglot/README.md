@@ -49,7 +49,7 @@ signatures: {"id": "python_case.py::method::Worker.close::669", "signature": "as
 | Source tokens (`o200k_base`) | 1,708 |
 | Gateway requests, including resumes | 13 |
 | Gateway cost, USD (gateway price table) | 0.028016 |
-| Model-written text / source | not recorded |
+| Model-written text / source | 186.300% (the source has only 1,708 tokens, so this is not comparable with the other examples) |
 | Published Markdown / source | 800.8% |
 | First pass complete / resumes | yes / 0 |
 

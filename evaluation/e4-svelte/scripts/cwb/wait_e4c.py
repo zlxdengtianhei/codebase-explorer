@@ -5,7 +5,7 @@ os.environ.setdefault('TMP', os.environ.get('TMPDIR', '/tmp'))
 import json, time, datetime
 from pathlib import Path
 R = Path(__file__).resolve().parent
-report = Path(os.path.expandvars('$HOME/context-infra-lab-1/adhoc_jobs/codebase_explorer_20261016/scratch/opt_e4/e4c_result.md'))
+report = Path(os.path.expandvars('$TASK_DIR/scratch/opt_e4/e4c_result.md'))
 start = time.time()
 deadline = start + 8 * 3600
 while time.time() < deadline:
