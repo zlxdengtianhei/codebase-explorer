@@ -39,6 +39,106 @@
 - A frozen graph that no longer matches the planned source stops a run with
   "frozen graph does not match the planned source: …"; `context build` and the
   run use the same check.
+- The package is organized by responsibility: `batching`, `symbols`, `checks`,
+  `projection`, `prompts`, `docs`, `records`, `usage`, `model_settings`,
+  `aggregation` and `principles` sit beside `host_run` (run state) and
+  `generate` (script driver). The `ir`, `parser`, `inventory`, `semantic`,
+  `syntax_facts`, `callable_contracts` and `adapters` modules are removed.
+- `graph build --joern-heap SIZE` sets the Joern JVM maximum heap. A backend
+  failure keeps its cause in the graph diagnostics and prints one line to stderr.
+- `graph build --max-methods` limits only CFG export and is unlimited by
+  default. Omitted methods are counted, and the CFG capability is `partial`
+  when any are omitted. Truncated dataflow is `partial` with its omitted edge
+  count.
+- Graph output includes a `quality` audit: edge counts by status, dangling
+  edges, nodes outside the manifest or with missing files, and incomplete
+  capabilities. `graph capabilities --repo` recomputes it against the current
+  files, and INDEX shows it under "Graph coverage".
+- Import and call targets are `resolved` only with repository evidence. Joern
+  include declarations resolve per language to repository files; an angle
+  include that matches several files stays `unresolved` with its candidates;
+  guessed Python call targets stay `unresolved`; Grimp modules map to existing
+  files.
+- Detail tasks receive a bounded graph excerpt for their batch (outgoing and
+  incoming calls, ambiguous, external and unresolved targets, package outline,
+  CFG summary) with omitted counts. Host tasks also get the batch's complete
+  graph evidence as a file.
+- Detail prompts size each explanation by the unit's source size (as a
+  reference, not a ceiling), ask for every behavior-changing branch and failure
+  path, and keep members that have their own units out of the class explanation.
+- The responsibility tree is built bottom-up from accepted detail units: their
+  summaries, source locations and counted unit edges. Large runs split into
+  program-chosen `tree_region-*` tasks and a `tree` merge (defaults 300 units
+  and 64,000 input tokens; `CBE_TREE_MAX_UNITS`, `CBE_TREE_MAX_TOKENS`). The
+  tree task waits until reviews and repairs settle; detail tasks start beside
+  the naming task. Model-written relations are a separate `kind=relation`,
+  `provenance=model_inferred` category. Advisory P1–P7 checks appear in
+  `summary.json` and INDEX.
+- INDEX publishes the system overview, maintenance navigation, a dependency view
+  and key flows. Dependency pairs are labelled graph-confirmed, model-inferred
+  or graph-only, each with its own Mermaid line style; containment rows stay
+  separate and out of Mermaid. Key flows link unit IDs; when the model gives
+  none, INDEX lists five program candidates and says that the model did not
+  select them.
+- Program-written text in the generated documents is English: labels, the
+  INDEX introduction and notes, dependency source labels and generation notes.
+  Model prose keeps its own language.
+- New `cbe source --run-dir RUN --id ID [--context N]` prints numbered frozen
+  source after checking each file's SHA-256.
+- `cbe find` prints one line per match (name, ID, kind, location, short
+  summary, matched fields), exact name or ID matches first; `--json` prints the
+  same rows as objects. A unit whose ID CBE corrected is marked.
+- `cbe query` prints compact text by default: the explanation once, one line
+  per relation or edge, ranges as `path:Lstart-Lend`. `--json` returns the full
+  record, including disposition, owning unit and page anchor. Tree node IDs
+  are accepted. `catalog.json` stores symbol-level call and import edges once
+  and only counts CFG and dataflow edges; `query --edges all` (or a list of
+  kinds) expands them from the frozen graph.
+- INDEX and every node page give ready-to-run `find`, `query` and `source`
+  commands.
+- `summary.json` splits the published Markdown tokens into seven additive parts
+  and reports model-written unit text ÷ source and published Markdown ÷ source
+  (o200k). The frozen graph is reported in bytes.
+- API runs with the exact model `zai/glm-5.3-flash` use tuned defaults: 1,800 s
+  per call, 49,152 output tokens, low reasoning effort, JSON mode and
+  8,000/10,000-token reading batches. Other models keep the previous defaults.
+  `--config` overrides them, `--timeout` overrides the config, and
+  `generate --help` prints the table.
+- API config is validated before planning: malformed JSON, unknown keys and
+  invalid values exit 2. `price_per_million` prices a run. A response that ends
+  at the output limit fails with `output_limit` and is never accepted by
+  normalization. The raw API record keeps the provider's `actual_model`.
+- Module and repair detail tasks allow 3 answers; other tasks allow 2. After the
+  last invalid detail answer, CBE tries earlier answers from newest to oldest
+  and accepts the first that passes the strict checks, flagged
+  `answer_fallback`; if none passes, the task fails and the run stays partial
+  for resume.
+- A detail unit ID that differs from a batch inventory ID only in a suffix or
+  offset is corrected when the match is unique; the page, `query`, `find`,
+  STATUS and `summary.json` show the correction (`id_corrected`). Unit IDs that
+  match nothing are rejected. One missing or invalid disposition (two in a
+  batch of 40 or more symbols) is filled as `index_only` (`index_only_filled`);
+  an answer that needs more is rejected.
+- Model prose shaped like a Markdown link renders as literal text; code spans
+  stay verbatim.
+- `cbe host verify` exits 3 when a check fails and marks the run `partial`;
+  `cbe generate` exits 3 for a partial run. Status output names each failed
+  task and the resume command for the driver that ran it.
+- Before model work is planned, each file's chunks must cover it without gaps
+  and reassemble to its SHA-256; a file that fails becomes one verified
+  whole-file region (`source_reassembly_fallback`). A whole-file fallback for a
+  missing grammar is reported per file as `context_fallback` with its cause, in
+  diagnostics, STATUS and summaries. A non-UTF-8 file gets `decode_error` and
+  no chunks while the rest of the build continues. TypeScript declarations
+  inside nested wrappers no longer get overlapping chunks.
+- `cbe-install --host claude-code` also installs the `cbe-writer` subagent
+  (Read and Write tools only) in `.claude/agents/`; `doctor` and `uninstall`
+  cover it, and it never overwrites a file it did not install.
+- The skill follows how Claude Code runs subagents: example commands avoid
+  quoted shell variables, so an allow-listed `cbe` runs without prompts;
+  subagents only read and write files; the host submits each task on its
+  `DONE` hand-back without usage, and `cbe host import-usage` adds exact usage
+  later. `cbe host cost --model` prices only the rows that are still estimates.
 
 ## 2.1.1
 
