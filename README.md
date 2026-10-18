@@ -579,6 +579,18 @@ We evaluated CBE 2.2.0.dev0 in six rounds with one answering model (`zai/glm-5.3
 
 The generated documents for the six showcase repositories are in [`examples/`](examples/). Each directory has a README that says how to read the documents and how to run `cbe find` and `cbe query` on them.
 
+## Walkthrough video
+
+A narrated walkthrough in English, with subtitles, follows CBE on cJSON: the generated map, `cbe find` and `cbe query`, how a run works, how to install and use CBE, and what the evaluation measured, with its conditions.
+
+[![Walkthrough video: Codebase Explorer on cJSON](docs/media/walkthrough-cover.png)](https://github.com/zlxdengtianhei/codebase-explorer/releases/tag/walkthrough-v2.2.0.dev0)
+
+- Overview, chapters 0–2 (2:48): [cbe-overview.mp4](https://github.com/zlxdengtianhei/codebase-explorer/releases/download/walkthrough-v2.2.0.dev0/cbe-overview.mp4)
+- Full walkthrough (18:54): [cbe-walkthrough.mp4](https://github.com/zlxdengtianhei/codebase-explorer/releases/download/walkthrough-v2.2.0.dev0/cbe-walkthrough.mp4), subtitles [cbe-walkthrough.srt](https://github.com/zlxdengtianhei/codebase-explorer/releases/download/walkthrough-v2.2.0.dev0/cbe-walkthrough.srt)
+- Chapters: 00:00 Find the answer · 00:33 What CBE is · 02:02 How it works · 04:19 Walk through cJSON · 08:15 Use CBE · 12:51 Scope and languages · 14:27 Evaluation, with conditions · 17:42 Limits and next steps
+
+The evaluation chapter shows only results that come with their conditions; the curl reading is in [evaluation/README.md](evaluation/README.md#q-a-curl-e5). The narration uses the Kokoro-82M voice model (Apache-2.0); the release notes list all credits and licenses.
+
 ## Development
 
 ```sh
