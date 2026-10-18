@@ -1,0 +1,253 @@
+{
+ "items": 103,
+ "agree": 93,
+ "agreement": 0.903,
+ "kappa": 0.789,
+ "table_judge_s15": {
+  "TT": 31,
+  "TF": 0,
+  "FT": 10,
+  "FF": 62
+ },
+ "per_answer": [
+  {
+   "id": "X01",
+   "arm": "C0",
+   "cid": "B03",
+   "items": 10,
+   "agree": 10,
+   "judge_score": 100.0,
+   "s15_score": 100.0
+  },
+  {
+   "id": "X02",
+   "arm": "C",
+   "cid": "A06",
+   "items": 10,
+   "agree": 9,
+   "judge_score": 18.18,
+   "s15_score": 36.36
+  },
+  {
+   "id": "X03",
+   "arm": "C",
+   "cid": "B24",
+   "items": 10,
+   "agree": 10,
+   "judge_score": 66.67,
+   "s15_score": 66.67
+  },
+  {
+   "id": "X04",
+   "arm": "C",
+   "cid": "B07",
+   "items": 9,
+   "agree": 9,
+   "judge_score": 0,
+   "s15_score": 0
+  },
+  {
+   "id": "X05",
+   "arm": "C",
+   "cid": "B23",
+   "items": 10,
+   "agree": 8,
+   "judge_score": 33.33,
+   "s15_score": 58.33
+  },
+  {
+   "id": "X06",
+   "arm": "S",
+   "cid": "B14",
+   "items": 11,
+   "agree": 10,
+   "judge_score": 0,
+   "s15_score": 15.38
+  },
+  {
+   "id": "X07",
+   "arm": "S",
+   "cid": "B17",
+   "items": 11,
+   "agree": 11,
+   "judge_score": 16.67,
+   "s15_score": 16.67
+  },
+  {
+   "id": "X08",
+   "arm": "S",
+   "cid": "B20",
+   "items": 9,
+   "agree": 5,
+   "judge_score": 18.18,
+   "s15_score": 81.82
+  },
+  {
+   "id": "X09",
+   "arm": "C0",
+   "cid": "A13",
+   "items": 11,
+   "agree": 10,
+   "judge_score": 16.67,
+   "s15_score": 25.0
+  },
+  {
+   "id": "X10",
+   "arm": "C0",
+   "cid": "B01",
+   "items": 12,
+   "agree": 11,
+   "judge_score": 86.67,
+   "s15_score": 100.0
+  }
+ ],
+ "disagreements": [
+  {
+   "id": "X02",
+   "arm": "C",
+   "cid": "A06",
+   "rubric": "r2",
+   "kind": "core",
+   "judge": false,
+   "judge_votes": [
+    false,
+    false,
+    false
+   ],
+   "s15": true
+  },
+  {
+   "id": "X05",
+   "arm": "C",
+   "cid": "B23",
+   "rubric": "r2",
+   "kind": "core",
+   "judge": false,
+   "judge_votes": [
+    false,
+    false,
+    false
+   ],
+   "s15": true
+  },
+  {
+   "id": "X05",
+   "arm": "C",
+   "cid": "B23",
+   "rubric": "r7",
+   "kind": "support",
+   "judge": false,
+   "judge_votes": [
+    false,
+    false,
+    false
+   ],
+   "s15": true
+  },
+  {
+   "id": "X06",
+   "arm": "S",
+   "cid": "B14",
+   "rubric": "r1",
+   "kind": "core",
+   "judge": false,
+   "judge_votes": [
+    false,
+    false,
+    false
+   ],
+   "s15": true
+  },
+  {
+   "id": "X08",
+   "arm": "S",
+   "cid": "B20",
+   "rubric": "r1",
+   "kind": "core",
+   "judge": false,
+   "judge_votes": [
+    false,
+    false,
+    false
+   ],
+   "s15": true
+  },
+  {
+   "id": "X08",
+   "arm": "S",
+   "cid": "B20",
+   "rubric": "r2",
+   "kind": "core",
+   "judge": false,
+   "judge_votes": [
+    false,
+    false,
+    false
+   ],
+   "s15": true
+  },
+  {
+   "id": "X08",
+   "arm": "S",
+   "cid": "B20",
+   "rubric": "r3",
+   "kind": "core",
+   "judge": false,
+   "judge_votes": [
+    false,
+    false,
+    false
+   ],
+   "s15": true
+  },
+  {
+   "id": "X08",
+   "arm": "S",
+   "cid": "B20",
+   "rubric": "r5",
+   "kind": "support",
+   "judge": false,
+   "judge_votes": [
+    true,
+    false,
+    false
+   ],
+   "s15": true
+  },
+  {
+   "id": "X09",
+   "arm": "C0",
+   "cid": "A13",
+   "rubric": "r8",
+   "kind": "support",
+   "judge": false,
+   "judge_votes": [
+    false,
+    false,
+    false
+   ],
+   "s15": true
+  },
+  {
+   "id": "X10",
+   "arm": "C0",
+   "cid": "B01",
+   "rubric": "r2",
+   "kind": "core",
+   "judge": false,
+   "judge_votes": [
+    false,
+    false,
+    false
+   ],
+   "s15": true
+  }
+ ],
+ "mean_judge_score": 35.64,
+ "mean_s15_score": 50.02,
+ "mean_abs_score_diff": 14.39,
+ "main_session_check_pick": [
+  "X03",
+  "X10"
+ ]
+}

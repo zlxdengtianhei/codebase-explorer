@@ -1,0 +1,16 @@
+{
+  "qid": 43,
+  "question": "Where are the functions or methods in the assertion module that indirectly invoke the _HighlightFunc protocol through conditional lexer type selection between diff and python highlighting implementations?",
+  "arm": "direct",
+  "max_steps": null,
+  "repeat": 0,
+  "answer_valid": false,
+  "judge_model": "codex/gpt-6.1-sol",
+  "draws": [],
+  "score": null,
+  "total": null,
+  "main_total_na5": 5,
+  "failure_type": "no_answer",
+  "judge_total_range": null,
+  "wall_seconds": 7.917056791484356e-06
+}

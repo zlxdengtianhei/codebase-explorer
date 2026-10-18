@@ -1,0 +1,31 @@
+{
+  "qid": 13,
+  "question": "How does the decorator that copies request contexts handle isolation of lightweight concurrent execution contexts while preserving session data across execution boundaries?",
+  "arm": "direct",
+  "answer": "It captures the current request context and pushes it onto the local stack of the new execution context, preserving session accessibility while ensuring stack isolation for the specific thread or task.",
+  "valid": true,
+  "wall_seconds": 38.36899870901834,
+  "attempts": [
+    {
+      "answer": "It captures the current request context and pushes it onto the local stack of the new execution context, preserving session accessibility while ensuring stack isolation for the specific thread or task.",
+      "valid": true,
+      "usage": {
+        "completion_tokens": 1834,
+        "prompt_tokens": 102,
+        "total_tokens": 1936,
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": null,
+          "audio_tokens": null,
+          "reasoning_tokens": 1799,
+          "rejected_prediction_tokens": null
+        },
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 64
+        }
+      },
+      "response_model": "glm-5.3-flash"
+    }
+  ]
+}

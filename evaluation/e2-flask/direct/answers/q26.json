@@ -1,0 +1,31 @@
+{
+  "qid": 26,
+  "question": "Why does the CLI helper class that manages Flask application loading provide both a direct callable factory parameter and an import path parameter as alternative instantiation mechanisms?",
+  "arm": "direct",
+  "answer": "`ScriptInfo` (used by `FlaskGroup`) supports both because they serve different invocation contexts:\n\n- **`create_app` (callable)**: for programmatic use \u2014 tests, extensions, or custom CLI commands that already hold a factory function in memory and want to bypass any import/discovery logic, including factories that aren't importable at a dotted path.\n\n- **`app_import_path` (string)**: for declarative use \u2014 the app location arrives as a string (the `FLASK_APP` env var or `--app` command-line option), so it must be resolved lazily via import when `load_app()` is actually called, enabling deferred loading and configuration-driven app discovery.\n\nTogether they cover both \"I have the factory object now\" and \"I only have a serializable description of where to find it.\"",
+  "valid": true,
+  "wall_seconds": 11.799846874957439,
+  "attempts": [
+    {
+      "answer": "`ScriptInfo` (used by `FlaskGroup`) supports both because they serve different invocation contexts:\n\n- **`create_app` (callable)**: for programmatic use \u2014 tests, extensions, or custom CLI commands that already hold a factory function in memory and want to bypass any import/discovery logic, including factories that aren't importable at a dotted path.\n\n- **`app_import_path` (string)**: for declarative use \u2014 the app location arrives as a string (the `FLASK_APP` env var or `--app` command-line option), so it must be resolved lazily via import when `load_app()` is actually called, enabling deferred loading and configuration-driven app discovery.\n\nTogether they cover both \"I have the factory object now\" and \"I only have a serializable description of where to find it.\"",
+      "valid": true,
+      "usage": {
+        "completion_tokens": 487,
+        "prompt_tokens": 107,
+        "total_tokens": 594,
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": null,
+          "audio_tokens": null,
+          "reasoning_tokens": 316,
+          "rejected_prediction_tokens": null
+        },
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 64
+        }
+      },
+      "response_model": "glm-5.3-flash"
+    }
+  ]
+}

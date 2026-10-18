@@ -1,0 +1,39 @@
+{
+  "passed": true,
+  "source": "All raw five-dimensional calls and rubric responses, including any retry calls",
+  "counts": {
+    "five_answers": 34,
+    "five_requests": 102,
+    "rubric_answers": 34,
+    "rubric_requests": 102
+  },
+  "tokens": {
+    "five_input": 722334,
+    "five_output": 10141,
+    "rubric_input": 664641,
+    "rubric_output": 66612
+  },
+  "combined": 1463728,
+  "ledger_exact_match": true,
+  "paired_qids": [
+    0,
+    1,
+    2,
+    5,
+    8,
+    10,
+    13,
+    14,
+    19,
+    22,
+    23,
+    25,
+    26,
+    28,
+    29,
+    33,
+    34
+  ],
+  "cap": 2517086.0,
+  "stopped": false
+}

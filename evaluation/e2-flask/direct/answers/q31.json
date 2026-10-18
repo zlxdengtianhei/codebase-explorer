@@ -1,0 +1,31 @@
+{
+  "qid": 31,
+  "question": "Why does the test that validates blueprint names cannot contain dots ensure that creating a modular route component with names containing dot characters raises a ValueError?",
+  "arm": "direct",
+  "answer": "Because Flask uses the dot as a separator between the blueprint name and the endpoint name in URL routing (e.g., `blueprint_name.endpoint`). If a blueprint name itself contained a dot, the resulting endpoint strings would become ambiguous and break endpoint resolution, so Flask deliberately raises a ValueError to reject such names at creation time.",
+  "valid": true,
+  "wall_seconds": 7.774180667009205,
+  "attempts": [
+    {
+      "answer": "Because Flask uses the dot as a separator between the blueprint name and the endpoint name in URL routing (e.g., `blueprint_name.endpoint`). If a blueprint name itself contained a dot, the resulting endpoint strings would become ambiguous and break endpoint resolution, so Flask deliberately raises a ValueError to reject such names at creation time.",
+      "valid": true,
+      "usage": {
+        "completion_tokens": 235,
+        "prompt_tokens": 106,
+        "total_tokens": 341,
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": null,
+          "audio_tokens": null,
+          "reasoning_tokens": 169,
+          "rejected_prediction_tokens": null
+        },
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 64
+        }
+      },
+      "response_model": "glm-5.3-flash"
+    }
+  ]
+}

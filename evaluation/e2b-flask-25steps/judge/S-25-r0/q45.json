@@ -1,0 +1,125 @@
+{
+  "qid": 45,
+  "question": "Where in the request processing flow does the orchestration between the method that loads session data at request start and the method that persists session data at request end occur to handle concurrent requests with potential race conditions?",
+  "arm": "S",
+  "max_steps": 25,
+  "repeat": 0,
+  "answer_valid": true,
+  "judge_model": "codex/gpt-6.1-sol",
+  "draws": [
+    {
+      "draw": 1,
+      "score": {
+        "correctness": 15,
+        "completeness": 15,
+        "relevance": 18,
+        "clarity": 17,
+        "reasoning": 15
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 99,
+            "prompt_tokens": 6613,
+            "total_tokens": 6712,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 50,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 15,\n  \"completeness\": 15,\n  \"relevance\": 18,\n  \"clarity\": 17,\n  \"reasoning\": 15\n}",
+          "wall_seconds": 2.9370268750353716
+        }
+      ]
+    },
+    {
+      "draw": 2,
+      "score": {
+        "correctness": 16,
+        "completeness": 15,
+        "relevance": 18,
+        "clarity": 17,
+        "reasoning": 16
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 130,
+            "prompt_tokens": 6613,
+            "total_tokens": 6743,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 97,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6400
+            }
+          },
+          "response": "{\"correctness\":16,\"completeness\":15,\"relevance\":18,\"clarity\":17,\"reasoning\":16}",
+          "wall_seconds": 3.863043666991871
+        }
+      ]
+    },
+    {
+      "draw": 3,
+      "score": {
+        "correctness": 15,
+        "completeness": 15,
+        "relevance": 18,
+        "clarity": 17,
+        "reasoning": 15
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 99,
+            "prompt_tokens": 6613,
+            "total_tokens": 6712,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 50,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6400
+            }
+          },
+          "response": "{\n  \"correctness\": 15,\n  \"completeness\": 15,\n  \"relevance\": 18,\n  \"clarity\": 17,\n  \"reasoning\": 15\n}",
+          "wall_seconds": 3.319785958970897
+        }
+      ]
+    }
+  ],
+  "score": {
+    "correctness": 15,
+    "completeness": 15,
+    "relevance": 18,
+    "clarity": 17,
+    "reasoning": 15
+  },
+  "total": 80,
+  "main_total_na5": 80,
+  "failure_type": null,
+  "judge_total_range": 2,
+  "wall_seconds": 10.12055562500609
+}

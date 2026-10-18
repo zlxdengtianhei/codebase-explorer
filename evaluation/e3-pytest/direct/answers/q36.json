@@ -1,0 +1,31 @@
+{
+  "qid": 36,
+  "question": "Where is the precise file location and line range where the DataclassWithOneItem class is defined, and how does its definition relate to the module structure of the pytest testing infrastructure?",
+  "arm": "direct",
+  "answer": "**File:** `testing/python/fixtures.py`\n**Location:** Module level, near the end of the file (roughly lines 1930\u20131945, immediately above the dataclass parametrization tests such as `test_parametrize_with_dataclass_on_parameter_name` / `test_parametrize_with_dataclass_instances`, added for issue #8118).\n\n**Relation to module structure:** It is a small `@dataclasses.dataclass` helper (with a single field) declared at the top level of pytest's fixtures test module, alongside the other module-level test fixtures/classes (e.g., `TestParams`, `TestErrors`, `TestShowFixtures`, `TestFixtureMarker`). The dataclass-parametrize tests at the end of the module use it as a parameter value to verify that pytest's fixture/parametrize machinery correctly handles unhashable, single-field dataclass instances without internal errors.",
+  "valid": true,
+  "wall_seconds": 190.20851112500532,
+  "attempts": [
+    {
+      "answer": "**File:** `testing/python/fixtures.py`\n**Location:** Module level, near the end of the file (roughly lines 1930\u20131945, immediately above the dataclass parametrization tests such as `test_parametrize_with_dataclass_on_parameter_name` / `test_parametrize_with_dataclass_instances`, added for issue #8118).\n\n**Relation to module structure:** It is a small `@dataclasses.dataclass` helper (with a single field) declared at the top level of pytest's fixtures test module, alongside the other module-level test fixtures/classes (e.g., `TestParams`, `TestErrors`, `TestShowFixtures`, `TestFixtureMarker`). The dataclass-parametrize tests at the end of the module use it as a parameter value to verify that pytest's fixture/parametrize machinery correctly handles unhashable, single-field dataclass instances without internal errors.",
+      "valid": true,
+      "usage": {
+        "completion_tokens": 9508,
+        "prompt_tokens": 115,
+        "total_tokens": 9623,
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": null,
+          "audio_tokens": null,
+          "reasoning_tokens": 9323,
+          "rejected_prediction_tokens": null
+        },
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 64
+        }
+      },
+      "response_model": "glm-5.3-flash"
+    }
+  ]
+}

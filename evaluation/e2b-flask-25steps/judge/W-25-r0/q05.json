@@ -1,0 +1,125 @@
+{
+  "qid": 5,
+  "question": "What mechanisms ensure that template processing functions registered during modular component registration are accessible when templates are rendered using the shared template environment?",
+  "arm": "W",
+  "max_steps": 25,
+  "repeat": 0,
+  "answer_valid": true,
+  "judge_model": "codex/gpt-6.1-sol",
+  "draws": [
+    {
+      "draw": 1,
+      "score": {
+        "correctness": 11,
+        "completeness": 10,
+        "relevance": 9,
+        "clarity": 14,
+        "reasoning": 12
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 115,
+            "prompt_tokens": 7415,
+            "total_tokens": 7530,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 66,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 11,\n  \"completeness\": 10,\n  \"relevance\": 9,\n  \"clarity\": 14,\n  \"reasoning\": 12\n}",
+          "wall_seconds": 7.6611578749725595
+        }
+      ]
+    },
+    {
+      "draw": 2,
+      "score": {
+        "correctness": 11,
+        "completeness": 10,
+        "relevance": 9,
+        "clarity": 15,
+        "reasoning": 12
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 105,
+            "prompt_tokens": 7415,
+            "total_tokens": 7520,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 56,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 7296
+            }
+          },
+          "response": "{\n  \"correctness\": 11,\n  \"completeness\": 10,\n  \"relevance\": 9,\n  \"clarity\": 15,\n  \"reasoning\": 12\n}",
+          "wall_seconds": 5.461374165955931
+        }
+      ]
+    },
+    {
+      "draw": 3,
+      "score": {
+        "correctness": 11,
+        "completeness": 11,
+        "relevance": 9,
+        "clarity": 15,
+        "reasoning": 12
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 112,
+            "prompt_tokens": 7415,
+            "total_tokens": 7527,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 63,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 7296
+            }
+          },
+          "response": "{\n  \"correctness\": 11,\n  \"completeness\": 11,\n  \"relevance\": 9,\n  \"clarity\": 15,\n  \"reasoning\": 12\n}",
+          "wall_seconds": 4.130771374970209
+        }
+      ]
+    }
+  ],
+  "score": {
+    "correctness": 11,
+    "completeness": 10,
+    "relevance": 9,
+    "clarity": 15,
+    "reasoning": 12
+  },
+  "total": 57,
+  "main_total_na5": 57,
+  "failure_type": null,
+  "judge_total_range": 2,
+  "wall_seconds": 17.254537208005786
+}

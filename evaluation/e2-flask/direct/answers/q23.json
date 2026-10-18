@@ -1,0 +1,31 @@
+{
+  "qid": 23,
+  "question": "How does the subclass initialization hook in the HTTP method-dispatching view class resolve conflicting methods attributes when inheriting from multiple parent classes?",
+  "arm": "direct",
+  "answer": "It uses `MethodView.__init_subclass__`, which runs at subclass creation and, if the subclass does not define its own `methods` in `cls.__dict__`, builds a union of the `methods` sets from all classes in `cls.__bases__` (adding `\"head\"` automatically when `\"get\"` is present) and assigns that merged set as the subclass's `methods`; an explicitly declared `methods` on the subclass always takes precedence over the inherited merge.",
+  "valid": true,
+  "wall_seconds": 10.51949966698885,
+  "attempts": [
+    {
+      "answer": "It uses `MethodView.__init_subclass__`, which runs at subclass creation and, if the subclass does not define its own `methods` in `cls.__dict__`, builds a union of the `methods` sets from all classes in `cls.__bases__` (adding `\"head\"` automatically when `\"get\"` is present) and assigns that merged set as the subclass's `methods`; an explicitly declared `methods` on the subclass always takes precedence over the inherited merge.",
+      "valid": true,
+      "usage": {
+        "completion_tokens": 546,
+        "prompt_tokens": 106,
+        "total_tokens": 652,
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": null,
+          "audio_tokens": null,
+          "reasoning_tokens": 447,
+          "rejected_prediction_tokens": null
+        },
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 64
+        }
+      },
+      "response_model": "glm-5.3-flash"
+    }
+  ]
+}

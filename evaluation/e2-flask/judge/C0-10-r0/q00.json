@@ -1,0 +1,125 @@
+{
+  "qid": 0,
+  "question": "What is the relationship between the ASCII-only encoding control parameter in the framework's JSON serialization provider and Unicode character representation in serialized output?",
+  "arm": "C0",
+  "max_steps": 10,
+  "repeat": 0,
+  "answer_valid": true,
+  "judge_model": "codex/gpt-6.1-sol",
+  "draws": [
+    {
+      "draw": 1,
+      "score": {
+        "correctness": 15,
+        "completeness": 20,
+        "relevance": 17,
+        "clarity": 17,
+        "reasoning": 17
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 113,
+            "prompt_tokens": 6489,
+            "total_tokens": 6602,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 64,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 15,\n  \"completeness\": 20,\n  \"relevance\": 17,\n  \"clarity\": 17,\n  \"reasoning\": 17\n}",
+          "wall_seconds": 4.23592224996537
+        }
+      ]
+    },
+    {
+      "draw": 2,
+      "score": {
+        "correctness": 15,
+        "completeness": 19,
+        "relevance": 16,
+        "clarity": 17,
+        "reasoning": 16
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 82,
+            "prompt_tokens": 6489,
+            "total_tokens": 6571,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 49,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6272
+            }
+          },
+          "response": "{\"correctness\":15,\"completeness\":19,\"relevance\":16,\"clarity\":17,\"reasoning\":16}",
+          "wall_seconds": 3.8538547080243006
+        }
+      ]
+    },
+    {
+      "draw": 3,
+      "score": {
+        "correctness": 15,
+        "completeness": 19,
+        "relevance": 17,
+        "clarity": 17,
+        "reasoning": 17
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 88,
+            "prompt_tokens": 6489,
+            "total_tokens": 6577,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 39,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6272
+            }
+          },
+          "response": "{\n  \"correctness\": 15,\n  \"completeness\": 19,\n  \"relevance\": 17,\n  \"clarity\": 17,\n  \"reasoning\": 17\n}",
+          "wall_seconds": 3.6476925419992767
+        }
+      ]
+    }
+  ],
+  "score": {
+    "correctness": 15,
+    "completeness": 19,
+    "relevance": 17,
+    "clarity": 17,
+    "reasoning": 17
+  },
+  "total": 85,
+  "main_total_na5": 85,
+  "failure_type": null,
+  "judge_total_range": 3,
+  "wall_seconds": 11.74176795897074
+}

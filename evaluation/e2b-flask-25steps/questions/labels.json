@@ -1,0 +1,293 @@
+{
+  "method": "Manual semantic annotation from original questions only. Layer precedence: design/impact > cross-unit flow > unit behavior > definition location; Where does not automatically mean layer 1. Zero-based qid is original JSONL row.",
+  "labels": [
+    {
+      "qid": 0,
+      "swe_type": "What",
+      "layer": 2,
+      "reason": "Explain a local method, parameter, or algorithm."
+    },
+    {
+      "qid": 1,
+      "swe_type": "What",
+      "layer": 2,
+      "reason": "Explain a local method, parameter, or algorithm."
+    },
+    {
+      "qid": 2,
+      "swe_type": "What",
+      "layer": 4,
+      "reason": "Explain architectural choice, tradeoff, coupling, or performance implication."
+    },
+    {
+      "qid": 3,
+      "swe_type": "What",
+      "layer": 4,
+      "reason": "Explain architectural choice, tradeoff, coupling, or performance implication."
+    },
+    {
+      "qid": 4,
+      "swe_type": "What",
+      "layer": 3,
+      "reason": "Trace calls, data, contexts, or deferred registration across units."
+    },
+    {
+      "qid": 5,
+      "swe_type": "What",
+      "layer": 3,
+      "reason": "Trace calls, data, contexts, or deferred registration across units."
+    },
+    {
+      "qid": 6,
+      "swe_type": "What",
+      "layer": 2,
+      "reason": "Explain a local method, parameter, or algorithm."
+    },
+    {
+      "qid": 7,
+      "swe_type": "What",
+      "layer": 3,
+      "reason": "Trace calls, data, contexts, or deferred registration across units."
+    },
+    {
+      "qid": 8,
+      "swe_type": "What",
+      "layer": 3,
+      "reason": "Trace calls, data, contexts, or deferred registration across units."
+    },
+    {
+      "qid": 9,
+      "swe_type": "What",
+      "layer": 2,
+      "reason": "Explain a local method, parameter, or algorithm."
+    },
+    {
+      "qid": 10,
+      "swe_type": "What",
+      "layer": 4,
+      "reason": "Explain architectural choice, tradeoff, coupling, or performance implication."
+    },
+    {
+      "qid": 11,
+      "swe_type": "What",
+      "layer": 4,
+      "reason": "Explain architectural choice, tradeoff, coupling, or performance implication."
+    },
+    {
+      "qid": 12,
+      "swe_type": "How",
+      "layer": 2,
+      "reason": "Explain a local method, parameter, or algorithm."
+    },
+    {
+      "qid": 13,
+      "swe_type": "How",
+      "layer": 3,
+      "reason": "Trace calls, data, contexts, or deferred registration across units."
+    },
+    {
+      "qid": 14,
+      "swe_type": "How",
+      "layer": 2,
+      "reason": "Explain a local method, parameter, or algorithm."
+    },
+    {
+      "qid": 15,
+      "swe_type": "How",
+      "layer": 3,
+      "reason": "Trace calls, data, contexts, or deferred registration across units."
+    },
+    {
+      "qid": 16,
+      "swe_type": "How",
+      "layer": 2,
+      "reason": "Explain a local method, parameter, or algorithm."
+    },
+    {
+      "qid": 17,
+      "swe_type": "How",
+      "layer": 2,
+      "reason": "Explain a local method, parameter, or algorithm."
+    },
+    {
+      "qid": 18,
+      "swe_type": "How",
+      "layer": 3,
+      "reason": "Trace calls, data, contexts, or deferred registration across units."
+    },
+    {
+      "qid": 19,
+      "swe_type": "How",
+      "layer": 4,
+      "reason": "Explain architectural choice, tradeoff, coupling, or performance implication."
+    },
+    {
+      "qid": 20,
+      "swe_type": "How",
+      "layer": 3,
+      "reason": "Trace calls, data, contexts, or deferred registration across units."
+    },
+    {
+      "qid": 21,
+      "swe_type": "How",
+      "layer": 2,
+      "reason": "Explain a local method, parameter, or algorithm."
+    },
+    {
+      "qid": 22,
+      "swe_type": "How",
+      "layer": 4,
+      "reason": "Explain architectural choice, tradeoff, coupling, or performance implication."
+    },
+    {
+      "qid": 23,
+      "swe_type": "How",
+      "layer": 2,
+      "reason": "Explain a local method, parameter, or algorithm."
+    },
+    {
+      "qid": 24,
+      "swe_type": "Why",
+      "layer": 4,
+      "reason": "Explain architectural choice, tradeoff, coupling, or performance implication."
+    },
+    {
+      "qid": 25,
+      "swe_type": "Why",
+      "layer": 4,
+      "reason": "Explain architectural choice, tradeoff, coupling, or performance implication."
+    },
+    {
+      "qid": 26,
+      "swe_type": "Why",
+      "layer": 4,
+      "reason": "Explain architectural choice, tradeoff, coupling, or performance implication."
+    },
+    {
+      "qid": 27,
+      "swe_type": "Why",
+      "layer": 4,
+      "reason": "Explain architectural choice, tradeoff, coupling, or performance implication."
+    },
+    {
+      "qid": 28,
+      "swe_type": "Why",
+      "layer": 4,
+      "reason": "Explain architectural choice, tradeoff, coupling, or performance implication."
+    },
+    {
+      "qid": 29,
+      "swe_type": "Why",
+      "layer": 4,
+      "reason": "Explain architectural choice, tradeoff, coupling, or performance implication."
+    },
+    {
+      "qid": 30,
+      "swe_type": "Why",
+      "layer": 4,
+      "reason": "Explain architectural choice, tradeoff, coupling, or performance implication."
+    },
+    {
+      "qid": 31,
+      "swe_type": "Why",
+      "layer": 4,
+      "reason": "Explain architectural choice, tradeoff, coupling, or performance implication."
+    },
+    {
+      "qid": 32,
+      "swe_type": "Why",
+      "layer": 4,
+      "reason": "Explain architectural choice, tradeoff, coupling, or performance implication."
+    },
+    {
+      "qid": 33,
+      "swe_type": "Why",
+      "layer": 2,
+      "reason": "Explain a local method, parameter, or algorithm."
+    },
+    {
+      "qid": 34,
+      "swe_type": "Why",
+      "layer": 4,
+      "reason": "Explain architectural choice, tradeoff, coupling, or performance implication."
+    },
+    {
+      "qid": 35,
+      "swe_type": "Where",
+      "layer": 3,
+      "reason": "Trace calls, data, contexts, or deferred registration across units."
+    },
+    {
+      "qid": 36,
+      "swe_type": "Where",
+      "layer": 3,
+      "reason": "Trace calls, data, contexts, or deferred registration across units."
+    },
+    {
+      "qid": 37,
+      "swe_type": "Where",
+      "layer": 3,
+      "reason": "Trace calls, data, contexts, or deferred registration across units."
+    },
+    {
+      "qid": 38,
+      "swe_type": "Where",
+      "layer": 2,
+      "reason": "Explain a local method, parameter, or algorithm."
+    },
+    {
+      "qid": 39,
+      "swe_type": "Where",
+      "layer": 2,
+      "reason": "Explain a local method, parameter, or algorithm."
+    },
+    {
+      "qid": 40,
+      "swe_type": "Where",
+      "layer": 3,
+      "reason": "Trace calls, data, contexts, or deferred registration across units."
+    },
+    {
+      "qid": 41,
+      "swe_type": "Where",
+      "layer": 1,
+      "reason": "Locate a named class or definition."
+    },
+    {
+      "qid": 42,
+      "swe_type": "Where",
+      "layer": 3,
+      "reason": "Trace calls, data, contexts, or deferred registration across units."
+    },
+    {
+      "qid": 43,
+      "swe_type": "Where",
+      "layer": 3,
+      "reason": "Trace calls, data, contexts, or deferred registration across units."
+    },
+    {
+      "qid": 44,
+      "swe_type": "Where",
+      "layer": 3,
+      "reason": "Trace calls, data, contexts, or deferred registration across units."
+    },
+    {
+      "qid": 45,
+      "swe_type": "Where",
+      "layer": 3,
+      "reason": "Trace calls, data, contexts, or deferred registration across units."
+    },
+    {
+      "qid": 46,
+      "swe_type": "Where",
+      "layer": 3,
+      "reason": "Trace calls, data, contexts, or deferred registration across units."
+    },
+    {
+      "qid": 47,
+      "swe_type": "Why",
+      "layer": 4,
+      "reason": "Explain architectural choice, tradeoff, coupling, or performance implication."
+    }
+  ]
+}

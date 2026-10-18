@@ -1,0 +1,125 @@
+{
+  "qid": 19,
+  "question": "How does the pytest capture framework ensure that stdout and stderr captured during setup and teardown phases are correctly isolated and reported separately from the test execution phase, particularly when multiple fixtures at different scopes are involved?",
+  "arm": "direct",
+  "max_steps": null,
+  "repeat": 0,
+  "answer_valid": true,
+  "judge_model": "codex/gpt-6.1-sol",
+  "draws": [
+    {
+      "draw": 1,
+      "score": {
+        "correctness": 11,
+        "completeness": 11,
+        "relevance": 18,
+        "clarity": 16,
+        "reasoning": 13
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 96,
+            "prompt_tokens": 6437,
+            "total_tokens": 6533,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 47,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 11,\n  \"completeness\": 11,\n  \"relevance\": 18,\n  \"clarity\": 16,\n  \"reasoning\": 13\n}",
+          "wall_seconds": 3.8309070419636555
+        }
+      ]
+    },
+    {
+      "draw": 2,
+      "score": {
+        "correctness": 11,
+        "completeness": 12,
+        "relevance": 18,
+        "clarity": 16,
+        "reasoning": 13
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 83,
+            "prompt_tokens": 6437,
+            "total_tokens": 6520,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 34,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6272
+            }
+          },
+          "response": "{\n  \"correctness\": 11,\n  \"completeness\": 12,\n  \"relevance\": 18,\n  \"clarity\": 16,\n  \"reasoning\": 13\n}",
+          "wall_seconds": 3.023101166996639
+        }
+      ]
+    },
+    {
+      "draw": 3,
+      "score": {
+        "correctness": 11,
+        "completeness": 12,
+        "relevance": 18,
+        "clarity": 16,
+        "reasoning": 13
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 94,
+            "prompt_tokens": 6437,
+            "total_tokens": 6531,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 45,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6272
+            }
+          },
+          "response": "{\n  \"correctness\": 11,\n  \"completeness\": 12,\n  \"relevance\": 18,\n  \"clarity\": 16,\n  \"reasoning\": 13\n}",
+          "wall_seconds": 3.4188554160064086
+        }
+      ]
+    }
+  ],
+  "score": {
+    "correctness": 11,
+    "completeness": 12,
+    "relevance": 18,
+    "clarity": 16,
+    "reasoning": 13
+  },
+  "total": 70,
+  "main_total_na5": 70,
+  "failure_type": null,
+  "judge_total_range": 1,
+  "wall_seconds": 10.273265166033525
+}

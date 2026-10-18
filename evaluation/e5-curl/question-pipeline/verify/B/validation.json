@@ -1,0 +1,36 @@
+{
+  "validated_at": "2026-10-18T02:26:13+02:00",
+  "questions": 28,
+  "rubric_items": 278,
+  "published_questions": 28,
+  "verdict_counts": {
+    "fix": 12,
+    "keep": 16,
+    "drop": 0
+  },
+  "item_counts": {
+    "成立": 265,
+    "部分": 12,
+    "不成立": 1,
+    "源码判不了": 0
+  },
+  "changed_rubric_texts": 13,
+  "original_question_and_build_assumptions_preserved": true,
+  "only_changed_rubric_text_and_reference_answer": true,
+  "keep_records_unchanged_except_verify_notes": true,
+  "all_nonpassing_items_corrected": true,
+  "all_questions_minimum_6_positive_2_core": true,
+  "negative_items_reviewed_as_wrong_claims": true,
+  "candidate_unchanged": true,
+  "reviewed_source_files_unchanged": true,
+  "candidate_sha256": "53c1d939c928d55dd6a26db3e3fc1c39103c0ee51517b1529e36caf4bf77275a",
+  "artifact_sha256": {
+    "verdicts.jsonl": "0b519b62d717879178f37b74f63361a62b6e061b1d2e082f19e1e82f58eb7565",
+    "questions_verified.jsonl": "94dad9d9ae901061c20c939dd76b8d61857cb2dbece7043229adc2d2021dfcdb",
+    "dropped.md": "a538d3c5815b909a0544a06cb413f4121ec50d0c50ffa54f9521f95b9c79e1c0",
+    "STATUS.md": "fea50213ecd443d5c201009830711a28ab750ebb93d9d24300157ad20c1ee5fe",
+    "evidence_manifest.json": "b61a320c220f14bb5cbe08e1c8ba2a48e6ebf49b0b5aee6641d7a8765a5f132d"
+  },
+  "report_path": "$TASK_DIR/scratch/opt_e5/v13b_result.md",
+  "report_sha256": "12ce3cb28fd2ee90bd7491f632fcf64e8a76f3e265694639294b19ff6a6b11bf"
+}

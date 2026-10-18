@@ -1,0 +1,31 @@
+{
+  "qid": 45,
+  "question": "Where in the request processing flow does the orchestration between the method that loads session data at request start and the method that persists session data at request end occur to handle concurrent requests with potential race conditions?",
+  "arm": "direct",
+  "answer": "The orchestration occurs in `Flask.wsgi_app` (flask/app.py), which manages the request context lifecycle: `RequestContext.push()` (flask/ctx.py) calls the session interface's `open_session` to load session data at request start, and after dispatching (`full_dispatch_request`), `RequestContext.pop()` calls `save_session` to persist it at request end \u2014 each request gets its own isolated request context, so concurrent requests don't share session state.",
+  "valid": true,
+  "wall_seconds": 13.99004170804983,
+  "attempts": [
+    {
+      "answer": "The orchestration occurs in `Flask.wsgi_app` (flask/app.py), which manages the request context lifecycle: `RequestContext.push()` (flask/ctx.py) calls the session interface's `open_session` to load session data at request start, and after dispatching (`full_dispatch_request`), `RequestContext.pop()` calls `save_session` to persist it at request end \u2014 each request gets its own isolated request context, so concurrent requests don't share session state.",
+      "valid": true,
+      "usage": {
+        "completion_tokens": 713,
+        "prompt_tokens": 119,
+        "total_tokens": 832,
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": null,
+          "audio_tokens": null,
+          "reasoning_tokens": 612,
+          "rejected_prediction_tokens": null
+        },
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 64
+        }
+      },
+      "response_model": "glm-5.3-flash"
+    }
+  ]
+}

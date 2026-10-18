@@ -1,0 +1,31 @@
+{
+  "qid": 4,
+  "question": "What is the dependency chain between the TestRequestScopeAccess class, the pytest fixture system, the parametrization mechanism, the Pytester fixture, and the internal request attribute resolution logic that validates request object attributes are correctly scoped?",
+  "arm": "direct",
+  "answer": "**Dependency chain (all in pytest's own test suite + internals):**\n\n1. **Parametrization mechanism** \u2014 `TestRequestScopeAccess` (in `testing/python/fixtures.py`) sets a class-level `pytestmark = pytest.mark.parametrize((\"scope\", \"ok\", \"error\"), [...])`. At collection time, `Metafunc.parametrize` expands `test_scope_access` into multiple `Function` items, one per fixture scope, storing each scope plus its \"ok\"/\"error\" attribute lists in the item's callspec; the values are injected into the test call through the same parameter/fixture-request machinery used at setup.\n\n2. **Pytester fixture** \u2014 each expanded test requests the built-in `pytester` fixture (`_pytest/pytester.py`), which the fixture system resolves (itself depending on the session-scoped `tmp_path_factory`), yielding a `Pytester` sandbox object.\n\n3. **Fixture system exercised** \u2014 the test uses `pytester.makepyfile()` to write a synthetic module defining `@pytest.fixture(scope=<parametrized scope>)` and a test consuming it, then runs it via `pytester.runpytest()`. In that inner run, `FixtureManager` (`_pytest/fixtures.py`) collects the fixture definition and setup creates a `FixtureRequest`/`SubRequest` whose `_scope` equals the parametrized `Scope`.\n\n4. **Internal request attribute resolution logic** \u2014 the generated fixture accesses scope-sensitive attributes on the request (`request.function`, `request.cls`/`class`, `request.module`, `request.session`). `FixtureRequest`'s properties in `_pytest/fixtures.py` resolve each by comparing the request's scope against the attribute's scope \u2014 `function` only for `Scope.Function`, `cls` for function/class, `module` for function/class/module, `session` always \u2014 returning the corresponding node/object (`_pyfuncitem.obj`, parent `Class`/`Module`, session) or raising `AttributeError` (\"\u2026not available in <scope>-scoped context\"; historically `ScopeMismatch`) when the attribute's scope is narrower than the fixture's scope.\n\n5. **Validation closes the loop** \u2014 `test_scope_access` asserts that the \"ok\" attributes resolve without error and the \"error\" attributes raise, confirming correct scoping.\n\n**Chain summary:** `pytest.mark.parametrize` (class-level `pytestmark`) \u2192 `Metafunc` expands `TestRequestScopeAccess.test_scope_access` into per-scope cases \u2192 each case receives the `pytester` fixture \u2192 `Pytester` generates and runs a sandboxed module \u2192 inner pytest's fixture system instantiates a `FixtureRequest`/`SubRequest` with that scope \u2192 scope-checking attribute-resolution properties on the request permit/raise \u2192 the outer test validates the results.",
+  "valid": true,
+  "wall_seconds": 195.0407786249998,
+  "attempts": [
+    {
+      "answer": "**Dependency chain (all in pytest's own test suite + internals):**\n\n1. **Parametrization mechanism** \u2014 `TestRequestScopeAccess` (in `testing/python/fixtures.py`) sets a class-level `pytestmark = pytest.mark.parametrize((\"scope\", \"ok\", \"error\"), [...])`. At collection time, `Metafunc.parametrize` expands `test_scope_access` into multiple `Function` items, one per fixture scope, storing each scope plus its \"ok\"/\"error\" attribute lists in the item's callspec; the values are injected into the test call through the same parameter/fixture-request machinery used at setup.\n\n2. **Pytester fixture** \u2014 each expanded test requests the built-in `pytester` fixture (`_pytest/pytester.py`), which the fixture system resolves (itself depending on the session-scoped `tmp_path_factory`), yielding a `Pytester` sandbox object.\n\n3. **Fixture system exercised** \u2014 the test uses `pytester.makepyfile()` to write a synthetic module defining `@pytest.fixture(scope=<parametrized scope>)` and a test consuming it, then runs it via `pytester.runpytest()`. In that inner run, `FixtureManager` (`_pytest/fixtures.py`) collects the fixture definition and setup creates a `FixtureRequest`/`SubRequest` whose `_scope` equals the parametrized `Scope`.\n\n4. **Internal request attribute resolution logic** \u2014 the generated fixture accesses scope-sensitive attributes on the request (`request.function`, `request.cls`/`class`, `request.module`, `request.session`). `FixtureRequest`'s properties in `_pytest/fixtures.py` resolve each by comparing the request's scope against the attribute's scope \u2014 `function` only for `Scope.Function`, `cls` for function/class, `module` for function/class/module, `session` always \u2014 returning the corresponding node/object (`_pyfuncitem.obj`, parent `Class`/`Module`, session) or raising `AttributeError` (\"\u2026not available in <scope>-scoped context\"; historically `ScopeMismatch`) when the attribute's scope is narrower than the fixture's scope.\n\n5. **Validation closes the loop** \u2014 `test_scope_access` asserts that the \"ok\" attributes resolve without error and the \"error\" attributes raise, confirming correct scoping.\n\n**Chain summary:** `pytest.mark.parametrize` (class-level `pytestmark`) \u2192 `Metafunc` expands `TestRequestScopeAccess.test_scope_access` into per-scope cases \u2192 each case receives the `pytester` fixture \u2192 `Pytester` generates and runs a sandboxed module \u2192 inner pytest's fixture system instantiates a `FixtureRequest`/`SubRequest` with that scope \u2192 scope-checking attribute-resolution properties on the request permit/raise \u2192 the outer test validates the results.",
+      "valid": true,
+      "usage": {
+        "completion_tokens": 10846,
+        "prompt_tokens": 124,
+        "total_tokens": 10970,
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": null,
+          "audio_tokens": null,
+          "reasoning_tokens": 10266,
+          "rejected_prediction_tokens": null
+        },
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 64
+        }
+      },
+      "response_model": "glm-5.3-flash"
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "qid": 30,
+  "question": "Why does the repeated fixture instantiation and teardown cycle in test_package_fixture_complex impact performance when scaling to hundreds of package-scoped fixtures with autouse dependencies?",
+  "arm": "direct",
+  "answer": "Package-scoped fixtures are finalized and re-created at every package boundary, so with hundreds of them the setup/teardown work multiplies as (number of packages) \u00d7 (number of package-scoped fixtures) instead of being amortized once per session. At each package transition pytest must run every fixture's finalizer through the SetupState teardown stack and then re-execute each factory function, none of which is cached across scope boundaries. Autouse dependencies compound this: every test item's fixture closure must include the autouse fixtures and their transitive package-scoped dependencies, so pytest recomputes and re-verifies these closures per test during setup, walks the full dependency chain for resolution, and re-instantiates the chain once per package. The net effect is heavy finalizer-stack push/pop churn, repeated dependency-resolution and closure-computation overhead, and increased object allocation/GC pressure that scales linearly with packages and tests rather than remaining constant.",
+  "valid": true,
+  "wall_seconds": 27.97833279200131,
+  "attempts": [
+    {
+      "answer": "Package-scoped fixtures are finalized and re-created at every package boundary, so with hundreds of them the setup/teardown work multiplies as (number of packages) \u00d7 (number of package-scoped fixtures) instead of being amortized once per session. At each package transition pytest must run every fixture's finalizer through the SetupState teardown stack and then re-execute each factory function, none of which is cached across scope boundaries. Autouse dependencies compound this: every test item's fixture closure must include the autouse fixtures and their transitive package-scoped dependencies, so pytest recomputes and re-verifies these closures per test during setup, walks the full dependency chain for resolution, and re-instantiates the chain once per package. The net effect is heavy finalizer-stack push/pop churn, repeated dependency-resolution and closure-computation overhead, and increased object allocation/GC pressure that scales linearly with packages and tests rather than remaining constant.",
+      "valid": true,
+      "usage": {
+        "completion_tokens": 1321,
+        "prompt_tokens": 109,
+        "total_tokens": 1430,
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": null,
+          "audio_tokens": null,
+          "reasoning_tokens": 1129,
+          "rejected_prediction_tokens": null
+        },
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 64
+        }
+      },
+      "response_model": "glm-5.3-flash"
+    }
+  ]
+}

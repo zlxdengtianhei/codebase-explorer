@@ -1,0 +1,1423 @@
+{
+  "status": "complete",
+  "driver": "script",
+  "host": "api",
+  "source_files": 115,
+  "source_tokens": 74885,
+  "modules": 12,
+  "units": 310,
+  "semantic_nodes": 72,
+  "published_pages": 73,
+  "pending": [],
+  "normalized": [],
+  "id_corrected_count": 0,
+  "id_corrected": [],
+  "index_only_filled_count": 0,
+  "index_only_filled": [],
+  "known_empty": [],
+  "wall_seconds": 3040.391,
+  "run_dir": "$WORK/runs/e6/ruby_llm/run",
+  "index": "$WORK/runs/e6/ruby_llm/run/docs/INDEX.md",
+  "subagent_tasks": 29,
+  "deterministic_checks_ok": true,
+  "aggregation_principles": {
+    "advisory": true,
+    "input_digest": "1c9957bc9c5f56745fab6f109578a9dc17beced99f94baffab7c80798697506a",
+    "identity": [
+      [
+        "active-record-integration",
+        "ActiveRecord & Rails Integration"
+      ],
+      [
+        "conversation-core",
+        "Conversation Core"
+      ],
+      [
+        "developer-tooling",
+        "Developer Tooling"
+      ],
+      [
+        "model-registry",
+        "Model Registry"
+      ],
+      [
+        "provider-framework",
+        "Provider Adapters"
+      ],
+      [
+        "public-api-bootstrap",
+        "Public API, Bootstrap & Core Runtime"
+      ],
+      [
+        "r1-active-record-integration",
+        "ActiveRecord & Rails Integration"
+      ],
+      [
+        "r1-aliases",
+        "Model Aliases"
+      ],
+      [
+        "r1-anthropic-adapter",
+        "Anthropic Adapter"
+      ],
+      [
+        "r1-bedrock-adapter",
+        "Bedrock Adapter"
+      ],
+      [
+        "r1-bedrock-models-capabilities",
+        "Bedrock Models & Capabilities"
+      ],
+      [
+        "r1-bedrock-signing",
+        "SigV4 Signing"
+      ],
+      [
+        "r1-bedrock-streaming",
+        "Bedrock Event-Stream Streaming"
+      ],
+      [
+        "r1-chat-session",
+        "Chat Session & Completion Loop"
+      ],
+      [
+        "r1-content-media",
+        "Attachments & Images"
+      ],
+      [
+        "r1-conversation-core",
+        "Conversation Core"
+      ],
+      [
+        "r1-deepseek-adapter",
+        "DeepSeek Adapter"
+      ],
+      [
+        "r1-developer-tooling",
+        "Developer Tooling"
+      ],
+      [
+        "r1-gemini-adapter",
+        "Gemini Adapter"
+      ],
+      [
+        "r1-gemini-chat",
+        "Gemini Chat & Schema"
+      ],
+      [
+        "r1-gemini-embeddings-images",
+        "Gemini Embeddings & Images"
+      ],
+      [
+        "r1-gemini-media",
+        "Gemini Media"
+      ],
+      [
+        "r1-gemini-tools",
+        "Gemini Tools"
+      ],
+      [
+        "r1-generators",
+        "Rails Generators"
+      ],
+      [
+        "r1-legacy-acts-as",
+        "Legacy acts_as Support"
+      ],
+      [
+        "r1-message-methods",
+        "Message Conversion"
+      ],
+      [
+        "r1-messaging-primitives",
+        "Message & ToolCall Value Objects"
+      ],
+      [
+        "r1-mistral-adapter",
+        "Mistral Adapter"
+      ],
+      [
+        "r1-model-maintenance-tasks",
+        "Model Maintenance Rake Tasks"
+      ],
+      [
+        "r1-model-metadata",
+        "Model Metadata Objects"
+      ],
+      [
+        "r1-model-registry",
+        "Model Registry"
+      ],
+      [
+        "r1-model-registry-sync",
+        "Registry Record Sync"
+      ],
+      [
+        "r1-ollama-adapter",
+        "Ollama Adapter"
+      ],
+      [
+        "r1-openai-core",
+        "OpenAI Adapter"
+      ],
+      [
+        "r1-openai-family",
+        "OpenAI Family"
+      ],
+      [
+        "r1-openai-tools",
+        "OpenAI Tools"
+      ],
+      [
+        "r1-perplexity-adapter",
+        "Perplexity Adapter"
+      ],
+      [
+        "r1-provider-framework",
+        "Provider Framework"
+      ],
+      [
+        "r1-public-api-bootstrap",
+        "Public API & Bootstrap"
+      ],
+      [
+        "r1-registry-catalog",
+        "Registry Catalog"
+      ],
+      [
+        "r1-ruby-llm-gem",
+        "RubyLLM Gem"
+      ],
+      [
+        "r1-shared-utilities",
+        "Shared Utilities"
+      ],
+      [
+        "r1-streaming-accumulation",
+        "Stream Accumulation"
+      ],
+      [
+        "r1-tool-dsl",
+        "Tool Definition DSL"
+      ],
+      [
+        "r2-active-record-integration",
+        "ActiveRecord Integration"
+      ],
+      [
+        "r2-acts-as-declarations",
+        "acts_as Declarations"
+      ],
+      [
+        "r2-chat-persistence",
+        "ChatMethods Persistence"
+      ],
+      [
+        "r2-chat-ui-generator",
+        "Chat UI Generator"
+      ],
+      [
+        "r2-config-context",
+        "Configuration and Context"
+      ],
+      [
+        "r2-connection",
+        "Provider Connection"
+      ],
+      [
+        "r2-content-value-objects",
+        "Content and Result Value Objects"
+      ],
+      [
+        "r2-core-runtime",
+        "Core Runtime"
+      ],
+      [
+        "r2-error-handling",
+        "Error Hierarchy and Middleware"
+      ],
+      [
+        "r2-generator-helpers",
+        "GeneratorHelpers"
+      ],
+      [
+        "r2-generators",
+        "Rails Generators"
+      ],
+      [
+        "r2-openai-derived-providers",
+        "OpenAI-Derived Providers"
+      ],
+      [
+        "r2-provider-anthropic",
+        "Anthropic Adapter"
+      ],
+      [
+        "r2-provider-base",
+        "Provider Base and Registry"
+      ],
+      [
+        "r2-provider-bedrock",
+        "Bedrock Adapter"
+      ],
+      [
+        "r2-provider-gemini",
+        "Gemini Adapter"
+      ],
+      [
+        "r2-provider-mistral-capabilities",
+        "Mistral Capabilities"
+      ],
+      [
+        "r2-provider-openai",
+        "OpenAI Adapter"
+      ],
+      [
+        "r2-provider-vertexai",
+        "VertexAI Adapter"
+      ],
+      [
+        "r2-providers",
+        "Provider Adapters"
+      ],
+      [
+        "r2-rake-tasks",
+        "Rake Tasks"
+      ],
+      [
+        "r2-ruby-llm",
+        "RubyLLM"
+      ],
+      [
+        "r2-streaming-shared",
+        "Shared Streaming"
+      ],
+      [
+        "r2-transport",
+        "HTTP Transport and Provider Base"
+      ],
+      [
+        "r2-upgrade-generator",
+        "v1.7 Upgrade Generator"
+      ],
+      [
+        "ruby-llm",
+        "RubyLLM"
+      ],
+      [
+        "shared-utilities",
+        "Shared Utilities"
+      ],
+      [
+        "transport",
+        "HTTP Transport & Provider Base"
+      ]
+    ],
+    "edge_counts_by_kind": {
+      "call": 409,
+      "relation": 211
+    },
+    "checks": [
+      {
+        "principle": "P1",
+        "ok": false,
+        "empty_or_duplicate_capabilities": [
+          "r1-conversation-core",
+          "r1-model-registry",
+          "conversation-core",
+          "model-registry"
+        ]
+      },
+      {
+        "principle": "P2",
+        "ok": false,
+        "modules": {
+          "ruby-llm": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "r1-ruby-llm-gem": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "r1-public-api-bootstrap": {
+            "internal": 5,
+            "external": 9,
+            "internal_external_ratio": 0.5555555555555556
+          },
+          "r1-shared-utilities": {
+            "internal": 0,
+            "external": 30,
+            "internal_external_ratio": 0.0
+          },
+          "r1-conversation-core": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "r1-chat-session": {
+            "internal": 17,
+            "external": 7,
+            "internal_external_ratio": 2.4285714285714284
+          },
+          "r1-messaging-primitives": {
+            "internal": 0,
+            "external": 21,
+            "internal_external_ratio": 0.0
+          },
+          "r1-tool-dsl": {
+            "internal": 0,
+            "external": 9,
+            "internal_external_ratio": 0.0
+          },
+          "r1-streaming-accumulation": {
+            "internal": 3,
+            "external": 13,
+            "internal_external_ratio": 0.23076923076923078
+          },
+          "r1-content-media": {
+            "internal": 0,
+            "external": 12,
+            "internal_external_ratio": 0.0
+          },
+          "r1-model-registry": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "r1-registry-catalog": {
+            "internal": 5,
+            "external": 11,
+            "internal_external_ratio": 0.45454545454545453
+          },
+          "r1-model-metadata": {
+            "internal": 0,
+            "external": 10,
+            "internal_external_ratio": 0.0
+          },
+          "r1-aliases": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "r1-active-record-integration": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "r1-legacy-acts-as": {
+            "internal": 26,
+            "external": 6,
+            "internal_external_ratio": 4.333333333333333
+          },
+          "r1-message-methods": {
+            "internal": 4,
+            "external": 4,
+            "internal_external_ratio": 1.0
+          },
+          "r1-model-registry-sync": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "r1-provider-framework": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "r1-openai-family": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "r1-openai-core": {
+            "internal": 23,
+            "external": 8,
+            "internal_external_ratio": 2.875
+          },
+          "r1-openai-tools": {
+            "internal": 2,
+            "external": 10,
+            "internal_external_ratio": 0.2
+          },
+          "r1-deepseek-adapter": {
+            "internal": 8,
+            "external": 1,
+            "internal_external_ratio": 8.0
+          },
+          "r1-mistral-adapter": {
+            "internal": 0,
+            "external": 3,
+            "internal_external_ratio": 0.0
+          },
+          "r1-perplexity-adapter": {
+            "internal": 6,
+            "external": 1,
+            "internal_external_ratio": 6.0
+          },
+          "r1-anthropic-adapter": {
+            "internal": 15,
+            "external": 3,
+            "internal_external_ratio": 5.0
+          },
+          "r1-gemini-adapter": {
+            "internal": 0,
+            "external": 2,
+            "internal_external_ratio": 0.0
+          },
+          "r1-gemini-chat": {
+            "internal": 19,
+            "external": 14,
+            "internal_external_ratio": 1.3571428571428572
+          },
+          "r1-gemini-media": {
+            "internal": 9,
+            "external": 2,
+            "internal_external_ratio": 4.5
+          },
+          "r1-gemini-tools": {
+            "internal": 12,
+            "external": 11,
+            "internal_external_ratio": 1.0909090909090908
+          },
+          "r1-gemini-embeddings-images": {
+            "internal": 0,
+            "external": 4,
+            "internal_external_ratio": 0.0
+          },
+          "r1-bedrock-adapter": {
+            "internal": 0,
+            "external": 1,
+            "internal_external_ratio": 0.0
+          },
+          "r1-bedrock-signing": {
+            "internal": 25,
+            "external": 2,
+            "internal_external_ratio": 12.5
+          },
+          "r1-bedrock-models-capabilities": {
+            "internal": 9,
+            "external": 4,
+            "internal_external_ratio": 2.25
+          },
+          "r1-bedrock-streaming": {
+            "internal": 7,
+            "external": 12,
+            "internal_external_ratio": 0.5833333333333334
+          },
+          "r1-ollama-adapter": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "r1-developer-tooling": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "r1-generators": {
+            "internal": 0,
+            "external": 5,
+            "internal_external_ratio": 0.0
+          },
+          "r1-model-maintenance-tasks": {
+            "internal": 24,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "r2-ruby-llm": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "r2-core-runtime": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "r2-config-context": {
+            "internal": 0,
+            "external": 5,
+            "internal_external_ratio": 0.0
+          },
+          "r2-content-value-objects": {
+            "internal": 2,
+            "external": 26,
+            "internal_external_ratio": 0.07692307692307693
+          },
+          "r2-error-handling": {
+            "internal": 9,
+            "external": 9,
+            "internal_external_ratio": 1.0
+          },
+          "r2-transport": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "r2-connection": {
+            "internal": 0,
+            "external": 29,
+            "internal_external_ratio": 0.0
+          },
+          "r2-provider-base": {
+            "internal": 2,
+            "external": 20,
+            "internal_external_ratio": 0.1
+          },
+          "r2-streaming-shared": {
+            "internal": 5,
+            "external": 16,
+            "internal_external_ratio": 0.3125
+          },
+          "r2-providers": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "r2-provider-openai": {
+            "internal": 8,
+            "external": 17,
+            "internal_external_ratio": 0.47058823529411764
+          },
+          "r2-openai-derived-providers": {
+            "internal": 8,
+            "external": 3,
+            "internal_external_ratio": 2.6666666666666665
+          },
+          "r2-provider-anthropic": {
+            "internal": 29,
+            "external": 8,
+            "internal_external_ratio": 3.625
+          },
+          "r2-provider-bedrock": {
+            "internal": 20,
+            "external": 22,
+            "internal_external_ratio": 0.9090909090909091
+          },
+          "r2-provider-gemini": {
+            "internal": 40,
+            "external": 4,
+            "internal_external_ratio": 10.0
+          },
+          "r2-provider-vertexai": {
+            "internal": 9,
+            "external": 6,
+            "internal_external_ratio": 1.5
+          },
+          "r2-provider-mistral-capabilities": {
+            "internal": 5,
+            "external": 1,
+            "internal_external_ratio": 5.0
+          },
+          "r2-active-record-integration": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "r2-acts-as-declarations": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "r2-chat-persistence": {
+            "internal": 32,
+            "external": 4,
+            "internal_external_ratio": 8.0
+          },
+          "r2-generators": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "r2-generator-helpers": {
+            "internal": 16,
+            "external": 20,
+            "internal_external_ratio": 0.8
+          },
+          "r2-chat-ui-generator": {
+            "internal": 0,
+            "external": 4,
+            "internal_external_ratio": 0.0
+          },
+          "r2-upgrade-generator": {
+            "internal": 0,
+            "external": 11,
+            "internal_external_ratio": 0.0
+          },
+          "r2-rake-tasks": {
+            "internal": 6,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "public-api-bootstrap": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "shared-utilities": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "conversation-core": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "model-registry": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "transport": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "provider-framework": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "active-record-integration": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "developer-tooling": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          }
+        },
+        "scope": "direct primary ownership; incident cross-module edges counted at each endpoint"
+      },
+      {
+        "principle": "P3",
+        "ok": false,
+        "bounds": [
+          5,
+          30
+        ],
+        "out_of_bounds": {
+          "r1-shared-utilities": 1,
+          "r1-chat-session": 4,
+          "r1-messaging-primitives": 2,
+          "r1-tool-dsl": 1,
+          "r1-streaming-accumulation": 3,
+          "r1-content-media": 3,
+          "r1-registry-catalog": 3,
+          "r1-model-metadata": 2,
+          "r1-aliases": 1,
+          "r1-active-record-integration": 1,
+          "r1-message-methods": 2,
+          "r1-model-registry-sync": 2,
+          "r1-openai-tools": 4,
+          "r1-mistral-adapter": 4,
+          "r1-gemini-adapter": 1,
+          "r1-gemini-embeddings-images": 4,
+          "r1-bedrock-adapter": 1,
+          "r1-ollama-adapter": 3,
+          "r1-generators": 3,
+          "r2-config-context": 2,
+          "r2-error-handling": 4,
+          "r2-connection": 1,
+          "r2-provider-base": 2,
+          "r2-streaming-shared": 4,
+          "r2-upgrade-generator": 3
+        },
+        "scope": "nodes with directly owned units; structural ancestors excluded"
+      },
+      {
+        "principle": "P4",
+        "ok": true,
+        "ownership_violations": {}
+      },
+      {
+        "principle": "P5",
+        "ok": false,
+        "min_edges_per_dependent_module": 3,
+        "min_dependent_modules": 2,
+        "shared_units": {
+          "grp:connection.rb-connection": {
+            "r1-content-media": 3,
+            "r1-registry-catalog": 3,
+            "r2-provider-base": 8,
+            "r2-provider-bedrock": 3,
+            "r1-bedrock-models-capabilities": 2,
+            "r2-provider-gemini": 2,
+            "r2-provider-vertexai": 2,
+            "r2-streaming-shared": 1
+          },
+          "grp:generator_helpers-name-and-adapter-helpers": {
+            "r2-chat-ui-generator": 3,
+            "r2-upgrade-generator": 5,
+            "r1-generators": 1
+          },
+          "grp:utils-utils-helpers": {
+            "r1-legacy-acts-as": 2,
+            "r1-gemini-chat": 8,
+            "r2-chat-persistence": 2,
+            "r1-tool-dsl": 5,
+            "r1-gemini-tools": 4,
+            "r2-content-value-objects": 2,
+            "r1-model-metadata": 3,
+            "r2-provider-anthropic": 2,
+            "r1-openai-tools": 2
+          },
+          "lib/ruby_llm/content.rb::class::RubyLLM.Content::108::s0": {
+            "r1-legacy-acts-as": 3,
+            "r1-message-methods": 3,
+            "r1-messaging-primitives": 1
+          },
+          "lib/ruby_llm/tool_call.rb::class::RubyLLM.ToolCall::107::s0": {
+            "r1-streaming-accumulation": 3,
+            "r2-provider-anthropic": 4,
+            "r1-gemini-tools": 2,
+            "r1-openai-tools": 2
+          }
+        },
+        "note": "dependency signal only, including utilities already separated; no automatic reassignment"
+      },
+      {
+        "principle": "P6",
+        "ok": true,
+        "modules": {
+          "ruby-llm": {},
+          "r1-ruby-llm-gem": {},
+          "r1-public-api-bootstrap": {
+            "ruby": 5
+          },
+          "r1-shared-utilities": {
+            "ruby": 1
+          },
+          "r1-conversation-core": {},
+          "r1-chat-session": {
+            "ruby": 4
+          },
+          "r1-messaging-primitives": {
+            "ruby": 2
+          },
+          "r1-tool-dsl": {
+            "ruby": 1
+          },
+          "r1-streaming-accumulation": {
+            "ruby": 3
+          },
+          "r1-content-media": {
+            "ruby": 3
+          },
+          "r1-model-registry": {},
+          "r1-registry-catalog": {
+            "ruby": 3
+          },
+          "r1-model-metadata": {
+            "ruby": 2
+          },
+          "r1-aliases": {
+            "ruby": 1
+          },
+          "r1-active-record-integration": {
+            "ruby": 1
+          },
+          "r1-legacy-acts-as": {
+            "ruby": 8
+          },
+          "r1-message-methods": {
+            "ruby": 2
+          },
+          "r1-model-registry-sync": {
+            "ruby": 2
+          },
+          "r1-provider-framework": {},
+          "r1-openai-family": {},
+          "r1-openai-core": {
+            "ruby": 11
+          },
+          "r1-openai-tools": {
+            "ruby": 4
+          },
+          "r1-deepseek-adapter": {
+            "ruby": 6
+          },
+          "r1-mistral-adapter": {
+            "ruby": 4
+          },
+          "r1-perplexity-adapter": {
+            "ruby": 6
+          },
+          "r1-anthropic-adapter": {
+            "ruby": 18
+          },
+          "r1-gemini-adapter": {
+            "ruby": 1
+          },
+          "r1-gemini-chat": {
+            "ruby": 8
+          },
+          "r1-gemini-media": {
+            "ruby": 6
+          },
+          "r1-gemini-tools": {
+            "ruby": 9
+          },
+          "r1-gemini-embeddings-images": {
+            "ruby": 4
+          },
+          "r1-bedrock-adapter": {
+            "ruby": 1
+          },
+          "r1-bedrock-signing": {
+            "ruby": 7
+          },
+          "r1-bedrock-models-capabilities": {
+            "ruby": 8
+          },
+          "r1-bedrock-streaming": {
+            "ruby": 5
+          },
+          "r1-ollama-adapter": {
+            "ruby": 3
+          },
+          "r1-developer-tooling": {},
+          "r1-generators": {
+            "ruby": 3
+          },
+          "r1-model-maintenance-tasks": {
+            "ruby": 18
+          },
+          "r2-ruby-llm": {},
+          "r2-core-runtime": {},
+          "r2-config-context": {
+            "ruby": 2
+          },
+          "r2-content-value-objects": {
+            "ruby": 8
+          },
+          "r2-error-handling": {
+            "ruby": 4
+          },
+          "r2-transport": {},
+          "r2-connection": {
+            "ruby": 1
+          },
+          "r2-provider-base": {
+            "ruby": 2
+          },
+          "r2-streaming-shared": {
+            "ruby": 4
+          },
+          "r2-providers": {},
+          "r2-provider-openai": {
+            "ruby": 14
+          },
+          "r2-openai-derived-providers": {
+            "ruby": 13
+          },
+          "r2-provider-anthropic": {
+            "ruby": 13
+          },
+          "r2-provider-bedrock": {
+            "ruby": 15
+          },
+          "r2-provider-gemini": {
+            "ruby": 22
+          },
+          "r2-provider-vertexai": {
+            "ruby": 8
+          },
+          "r2-provider-mistral-capabilities": {
+            "ruby": 6
+          },
+          "r2-active-record-integration": {},
+          "r2-acts-as-declarations": {
+            "ruby": 5
+          },
+          "r2-chat-persistence": {
+            "ruby": 9
+          },
+          "r2-generators": {},
+          "r2-generator-helpers": {
+            "ruby": 6
+          },
+          "r2-chat-ui-generator": {
+            "ruby": 6
+          },
+          "r2-upgrade-generator": {
+            "ruby": 3
+          },
+          "r2-rake-tasks": {
+            "ruby": 9
+          },
+          "public-api-bootstrap": {},
+          "shared-utilities": {},
+          "conversation-core": {},
+          "model-registry": {},
+          "transport": {},
+          "provider-framework": {},
+          "active-record-integration": {},
+          "developer-tooling": {}
+        },
+        "scope": "unit counts by language; a multi-language unit contributes once per language"
+      },
+      {
+        "principle": "P7",
+        "ok": null,
+        "status": "not_checked",
+        "reason": "no prior tree for the same detail input"
+      }
+    ],
+    "hierarchy": {
+      "ok": true,
+      "requires_intermediate_above_units": 30
+    },
+    "introduction_length": {
+      "ok": false,
+      "overlong": {
+        "public-api-bootstrap": {
+          "introduction_chars": 521,
+          "detail_chars": 0
+        },
+        "shared-utilities": {
+          "introduction_chars": 339,
+          "detail_chars": 0
+        },
+        "conversation-core": {
+          "introduction_chars": 478,
+          "detail_chars": 0
+        },
+        "model-registry": {
+          "introduction_chars": 389,
+          "detail_chars": 0
+        },
+        "transport": {
+          "introduction_chars": 339,
+          "detail_chars": 0
+        },
+        "provider-framework": {
+          "introduction_chars": 572,
+          "detail_chars": 0
+        },
+        "active-record-integration": {
+          "introduction_chars": 578,
+          "detail_chars": 0
+        },
+        "developer-tooling": {
+          "introduction_chars": 512,
+          "detail_chars": 0
+        }
+      },
+      "scope": "capability+summary characters versus descendant explain characters"
+    }
+  },
+  "aggregation": {
+    "input_digest": "5ad680f021d739d667e0ba4d27186b6ceec4f03109bd98fea169a64464623c68",
+    "limits": {
+      "max_units": 300,
+      "max_tokens": 64000
+    },
+    "regions": [
+      {
+        "id": "region-0001",
+        "unit_ids": [
+          "grp:acts_as_legacy-acts-as-declarations",
+          "grp:acts_as_legacy-chat-legacy-cleanup",
+          "grp:acts_as_legacy-chat-legacy-persistence",
+          "grp:acts_as_legacy-chat-legacy-wrappers",
+          "grp:acts_as_legacy-message-legacy-extraction",
+          "grp:attachment.rb-attachment",
+          "grp:capabilities-rb-capabilities-helpers",
+          "grp:capabilities-rb-display-name-formatting",
+          "grp:capabilities-rb-family-and-pricing",
+          "grp:capabilities-rb-predicates",
+          "grp:capabilities-rb-price-lookups",
+          "grp:capabilities-rb-support-predicates",
+          "grp:chat-content-parsing",
+          "grp:chat-gemini-schema",
+          "grp:chat-gemini-schema-builders",
+          "grp:chat-message-formatting-helpers",
+          "grp:chat-messageformatter",
+          "grp:chat-request-building",
+          "grp:chat-structured-output",
+          "grp:chat.rb-configuration",
+          "grp:content.rb-payload-resolution",
+          "grp:deepseek-capabilities-rb-limits-prices",
+          "grp:deepseek-capabilities-rb-model-info",
+          "grp:deepseek-capabilities-rb-predicates",
+          "grp:embeddings-request",
+          "grp:images-payload",
+          "grp:media-format-parts",
+          "grp:message_methods-content-extraction",
+          "grp:mime_type-mime-type-helpers",
+          "grp:model_methods-registry-sync",
+          "grp:models.rb-anthropic-usage-extractors",
+          "grp:models.rb-registry-instance",
+          "grp:models.rb-registry-singleton",
+          "grp:payload-processing-rb-error-logging",
+          "grp:payload-processing-rb-json-steps",
+          "grp:perplexity-capabilities-rb-limits-prices",
+          "grp:perplexity-capabilities-rb-model-profile",
+          "grp:perplexity-capabilities-rb-predicates",
+          "grp:prelude-handling-rb-prelude-reading",
+          "grp:prelude-handling-rb-scanning",
+          "grp:ruby_llm.rb-module-facade",
+          "grp:ruby_llm.rb-zeitwerk-bootstrap",
+          "grp:signing-rb-canonical-request",
+          "grp:signing-rb-errors",
+          "grp:signing-rb-request-pipeline",
+          "grp:signing-rb-signature-core",
+          "grp:signing-rb-signature-credentials",
+          "grp:signing-rb-signer",
+          "grp:signing-rb-uri-crypto-utils",
+          "grp:stream_accumulator.rb-rest",
+          "grp:tool.rb-tool-and-parameter",
+          "grp:tools-rb-schema-helpers",
+          "grp:tools-schema-helpers",
+          "grp:utils-utils-helpers",
+          "lib/generators/ruby_llm/install/install_generator.rb::class::RubyLLM.Generators.InstallGenerator::235::s0",
+          "lib/generators/ruby_llm/install/install_generator.rb::method::RubyLLM.Generators.InstallGenerator.create_migration_files::1058",
+          "lib/generators/ruby_llm/upgrade_to_v1_9/upgrade_to_v1_9_generator.rb::class::RubyLLM.Generators.UpgradeToV19Generator::271::s0",
+          "lib/ruby_llm.rb::class::RubyLLM.Error::834",
+          "lib/ruby_llm.rb::method::RubyLLM.context::888",
+          "lib/ruby_llm.rb::module::RubyLLM::817::s0",
+          "lib/ruby_llm/active_record/acts_as_legacy.rb::function::RubyLLM.ActiveRecord.ChatLegacyMethods.complete::5566",
+          "lib/ruby_llm/active_record/acts_as_legacy.rb::function::RubyLLM.ActiveRecord.ChatLegacyMethods.to_llm::3107",
+          "lib/ruby_llm/active_record/acts_as_legacy.rb::function::RubyLLM.ActiveRecord.MessageLegacyMethods.to_llm::10218",
+          "lib/ruby_llm/active_record/message_methods.rb::function::RubyLLM.ActiveRecord.MessageMethods.to_llm::305",
+          "lib/ruby_llm/active_record/model_methods.rb::function::RubyLLM.ActiveRecord.ModelMethods.to_llm::1761",
+          "lib/ruby_llm/aliases.rb::class::RubyLLM.Aliases::105::s0",
+          "lib/ruby_llm/chat.rb::method::RubyLLM.Chat.complete::2964",
+          "lib/ruby_llm/chat.rb::method::RubyLLM.Chat.handle_tool_calls::4445",
+          "lib/ruby_llm/chat.rb::method::RubyLLM.Chat.initialize::205",
+          "lib/ruby_llm/image.rb::class::RubyLLM.Image::99::s0",
+          "lib/ruby_llm/message.rb::class::RubyLLM.Message::93::s0",
+          "lib/ruby_llm/model/info.rb::class::RubyLLM.Model.Info::140::s0",
+          "lib/ruby_llm/model/pricing_tier.rb::class::RubyLLM.Model.PricingTier::154::s0",
+          "lib/ruby_llm/models.rb::method::RubyLLM.Models.resolve::1528",
+          "lib/ruby_llm/providers/anthropic.rb::class::RubyLLM.Providers.Anthropic::109::s0",
+          "lib/ruby_llm/providers/anthropic/capabilities.rb::method::RubyLLM.Providers.Anthropic.Capabilities.capabilities_for::2453",
+          "lib/ruby_llm/providers/anthropic/capabilities.rb::method::RubyLLM.Providers.Anthropic.Capabilities.determine_context_window::209",
+          "lib/ruby_llm/providers/anthropic/capabilities.rb::method::RubyLLM.Providers.Anthropic.Capabilities.determine_max_tokens::288",
+          "lib/ruby_llm/providers/anthropic/capabilities.rb::method::RubyLLM.Providers.Anthropic.Capabilities.modalities_for::2141",
+          "lib/ruby_llm/providers/anthropic/capabilities.rb::method::RubyLLM.Providers.Anthropic.Capabilities.model_family::1110",
+          "lib/ruby_llm/providers/anthropic/capabilities.rb::method::RubyLLM.Providers.Anthropic.Capabilities.pricing_for::2864",
+          "lib/ruby_llm/providers/anthropic/content.rb::method::RubyLLM.Providers.Anthropic.Content.new::202",
+          "lib/ruby_llm/providers/anthropic/embeddings.rb::method::RubyLLM.Providers.Anthropic.Embeddings.embed::194",
+          "lib/ruby_llm/providers/anthropic/models.rb::method::RubyLLM.Providers.Anthropic.Models.parse_list_models_response::253",
+          "lib/ruby_llm/providers/anthropic/streaming.rb::method::RubyLLM.Providers.Anthropic.Streaming.build_chunk::253",
+          "lib/ruby_llm/providers/anthropic/streaming.rb::method::RubyLLM.Providers.Anthropic.Streaming.json_delta?::740",
+          "lib/ruby_llm/providers/anthropic/streaming.rb::method::RubyLLM.Providers.Anthropic.Streaming.parse_streaming_error::882",
+          "lib/ruby_llm/providers/anthropic/streaming.rb::method::RubyLLM.Providers.Anthropic.Streaming.stream_url::192",
+          "lib/ruby_llm/providers/bedrock/capabilities.rb::method::RubyLLM.Providers.Bedrock.Capabilities.capabilities_for::3385",
+          "lib/ruby_llm/providers/bedrock/capabilities.rb::method::RubyLLM.Providers.Bedrock.Capabilities.context_window_for::209",
+          "lib/ruby_llm/providers/bedrock/capabilities.rb::method::RubyLLM.Providers.Bedrock.Capabilities.modalities_for::3041",
+          "lib/ruby_llm/providers/bedrock/capabilities.rb::method::RubyLLM.Providers.Bedrock.Capabilities.model_family::2168",
+          "lib/ruby_llm/providers/bedrock/capabilities.rb::method::RubyLLM.Providers.Bedrock.Capabilities.pricing_for::3865",
+          "lib/ruby_llm/providers/bedrock/media.rb::method::RubyLLM.Providers.Bedrock.Media.format_content::286",
+          "lib/ruby_llm/providers/bedrock/models.rb::method::RubyLLM.Providers.Bedrock.Models.list_models::173",
+          "lib/ruby_llm/providers/bedrock/models.rb::method::RubyLLM.Providers.Bedrock.Models.parse_list_models_response::706",
+          "lib/ruby_llm/providers/bedrock/streaming/payload_processing.rb::method::RubyLLM.Providers.Bedrock.Streaming.PayloadProcessing.process_payload::246",
+          "lib/ruby_llm/providers/deepseek.rb::class::RubyLLM.Providers.DeepSeek::101::s0",
+          "lib/ruby_llm/providers/deepseek/capabilities.rb::method::RubyLLM.Providers.DeepSeek.Capabilities.format_display_name::1181",
+          "lib/ruby_llm/providers/deepseek/capabilities.rb::method::RubyLLM.Providers.DeepSeek.Capabilities.model_family::1559",
+          "lib/ruby_llm/providers/gemini.rb::class::RubyLLM.Providers.Gemini::108::s0",
+          "lib/ruby_llm/providers/gemini/chat.rb::method::RubyLLM.Providers.Gemini.Chat.parse_completion_response::1692",
+          "lib/ruby_llm/providers/gemini/embeddings.rb::method::RubyLLM.Providers.Gemini.Embeddings.parse_embedding_response::468",
+          "lib/ruby_llm/providers/gemini/images.rb::method::RubyLLM.Providers.Gemini.Images.parse_image_response::646",
+          "lib/ruby_llm/providers/gemini/media.rb::method::RubyLLM.Providers.Gemini.Media.format_content::234",
+          "lib/ruby_llm/providers/gemini/media.rb::method::RubyLLM.Providers.Gemini.attachment_filename::2964",
+          "lib/ruby_llm/providers/gemini/media.rb::method::RubyLLM.Providers.Gemini.build_file_attachment::2699",
+          "lib/ruby_llm/providers/gemini/media.rb::method::RubyLLM.Providers.Gemini.build_inline_attachment::2128",
+          "lib/ruby_llm/providers/gemini/media.rb::method::RubyLLM.Providers.Gemini.build_response_content::1391",
+          "lib/ruby_llm/providers/gemini/tools.rb::method::RubyLLM.Providers.Gemini.Tools.convert_property::3152",
+          "lib/ruby_llm/providers/gemini/tools.rb::method::RubyLLM.Providers.Gemini.Tools.convert_tool_schema_to_gemini::2655",
+          "lib/ruby_llm/providers/gemini/tools.rb::method::RubyLLM.Providers.Gemini.Tools.extract_tool_calls::1307",
+          "lib/ruby_llm/providers/gemini/tools.rb::method::RubyLLM.Providers.Gemini.Tools.format_tool_call::366",
+          "lib/ruby_llm/providers/gemini/tools.rb::method::RubyLLM.Providers.Gemini.Tools.format_tool_result::946",
+          "lib/ruby_llm/providers/gemini/tools.rb::method::RubyLLM.Providers.Gemini.Tools.format_tools::165",
+          "lib/ruby_llm/providers/gemini/tools.rb::method::RubyLLM.Providers.Gemini.Tools.function_declaration_for::2088",
+          "lib/ruby_llm/providers/gemini/tools.rb::method::RubyLLM.Providers.Gemini.Tools.normalize_any_of_schema::4858",
+          "lib/ruby_llm/providers/mistral.rb::class::RubyLLM.Providers.Mistral::100::s0",
+          "lib/ruby_llm/providers/mistral/chat.rb::method::RubyLLM.Providers.Mistral.Chat.render_payload::283",
+          "lib/ruby_llm/providers/mistral/embeddings.rb::method::RubyLLM.Providers.Mistral.Embeddings.parse_embedding_response::445",
+          "lib/ruby_llm/providers/mistral/models.rb::method::RubyLLM.Providers.Mistral.Models.parse_list_models_response::360",
+          "lib/ruby_llm/providers/ollama/chat.rb::method::RubyLLM.Providers.Ollama.Chat.format_messages::184",
+          "lib/ruby_llm/providers/ollama/media.rb::method::RubyLLM.Providers.Ollama.Media.format_content::240",
+          "lib/ruby_llm/providers/ollama/models.rb::method::RubyLLM.Providers.Ollama.Models.parse_list_models_response::219",
+          "lib/ruby_llm/providers/openai.rb::class::RubyLLM.Providers.OpenAI::99::s0",
+          "lib/ruby_llm/providers/openai/capabilities.rb::method::RubyLLM.Providers.OpenAI.Capabilities.capabilities_for::10360",
+          "lib/ruby_llm/providers/openai/capabilities.rb::method::RubyLLM.Providers.OpenAI.Capabilities.context_window_for::1736",
+          "lib/ruby_llm/providers/openai/capabilities.rb::method::RubyLLM.Providers.OpenAI.Capabilities.max_tokens_for::2550",
+          "lib/ruby_llm/providers/openai/capabilities.rb::method::RubyLLM.Providers.OpenAI.Capabilities.modalities_for::9630",
+          "lib/ruby_llm/providers/openai/capabilities.rb::method::RubyLLM.Providers.OpenAI.Capabilities.model_type::7562",
+          "lib/ruby_llm/providers/openai/capabilities.rb::method::RubyLLM.Providers.OpenAI.Capabilities.normalize_temperature::9178",
+          "lib/ruby_llm/providers/openai/capabilities.rb::method::RubyLLM.Providers.OpenAI.Capabilities.pricing_for::11191",
+          "lib/ruby_llm/providers/openai/tools.rb::method::RubyLLM.Providers.OpenAI.Tools.format_tool_calls::1358",
+          "lib/ruby_llm/providers/openai/tools.rb::method::RubyLLM.Providers.OpenAI.Tools.parse_tool_calls::1972",
+          "lib/ruby_llm/providers/openai/tools.rb::method::RubyLLM.Providers.OpenAI.Tools.tool_for::753",
+          "lib/ruby_llm/providers/perplexity.rb::class::RubyLLM.Providers.Perplexity::103::s0",
+          "lib/ruby_llm/providers/perplexity/capabilities.rb::method::RubyLLM.Providers.Perplexity.Capabilities.format_display_name::1097",
+          "lib/ruby_llm/providers/perplexity/capabilities.rb::method::RubyLLM.Providers.Perplexity.Capabilities.model_family::1635",
+          "lib/ruby_llm/railtie.rb::class::RubyLLM.Railtie::116",
+          "lib/ruby_llm/stream_accumulator.rb::method::RubyLLM.StreamAccumulator.accumulate_tool_calls::1688",
+          "lib/ruby_llm/stream_accumulator.rb::method::RubyLLM.StreamAccumulator.add::414",
+          "lib/ruby_llm/tool_call.rb::class::RubyLLM.ToolCall::107::s0",
+          "lib/tasks/models.rake::function::configure_bedrock::1655",
+          "lib/tasks/models.rake::function::configure_from_env::929",
+          "lib/tasks/models.rake::function::display_model_stats::3257",
+          "lib/tasks/models.rake::function::extract_base_name::13080",
+          "lib/tasks/models.rake::function::extract_date_from_model::13193",
+          "lib/tasks/models.rake::function::find_best_bedrock_model::13312",
+          "lib/tasks/models.rake::function::generate_aliases::8424",
+          "lib/tasks/models.rake::function::generate_capability_sections::5321",
+          "lib/tasks/models.rake::function::generate_modality_sections::5902",
+          "lib/tasks/models.rake::function::generate_models_markdown::3871",
+          "lib/tasks/models.rake::function::generate_provider_sections::5008",
+          "lib/tasks/models.rake::function::group_anthropic_models_by_base_name::12550",
+          "lib/tasks/models.rake::function::models_table::7193",
+          "lib/tasks/models.rake::function::refresh_models::1947",
+          "lib/tasks/models.rake::function::standard_pricing_display::7855",
+          "lib/tasks/models.rake::function::status::3631",
+          "lib/tasks/models.rake::function::validate_models!::2493",
+          "lib/tasks/models.rake::module_residual::::0"
+        ],
+        "input_tokens": 29461
+      },
+      {
+        "id": "region-0002",
+        "unit_ids": [
+          "grp:acts_as-rubyllm-models-monkey-patch",
+          "grp:capabilities-capability-predicates",
+          "grp:capabilities-defaults",
+          "grp:chat-rb-message-formatting",
+          "grp:chat-rb-payload-helpers",
+          "grp:chat-rb-response-parsing",
+          "grp:chat_methods-callback-config-wrappers",
+          "grp:chat_methods-persistence-helpers",
+          "grp:connection.rb-connection",
+          "grp:content-extraction-rb-getters",
+          "grp:embedding.rb-embedding",
+          "grp:embeddings-rb-embeddings",
+          "grp:generator_helpers-acts-as-declarations",
+          "grp:generator_helpers-derived-accessors",
+          "grp:generator_helpers-name-and-adapter-helpers",
+          "grp:gpustack-models-rb-classification",
+          "grp:images-rb-images",
+          "grp:media-rb-format-helpers",
+          "grp:media-rb-formatters",
+          "grp:message_processing.rb-payload-validation",
+          "grp:mistral-capabilities-rb-limits-pricing",
+          "grp:mistral-capabilities-rb-model-profile",
+          "grp:mistral-capabilities-rb-predicates",
+          "grp:models-url",
+          "grp:models.rb-perplexity-model-catalog",
+          "grp:moderation-rb-moderation",
+          "grp:provider.rb-provider-class",
+          "grp:provider.rb-provider-instance",
+          "grp:streaming-chunk",
+          "grp:streaming-extractors",
+          "grp:streaming-rb-streaming",
+          "grp:streaming.rb-processing",
+          "grp:tools-rb-block-helpers",
+          "grp:transcription-payload",
+          "grp:transcription-rb-payload",
+          "grp:transcription-response-extraction",
+          "grp:vertexai-chat.rb-endpoint-urls",
+          "grp:vertexai-models-rb-helpers",
+          "lib/generators/ruby_llm/chat_ui/chat_ui_generator.rb::class::RubyLLM.Generators.ChatUIGenerator::192::s0",
+          "lib/generators/ruby_llm/chat_ui/chat_ui_generator.rb::method::RubyLLM.Generators.ChatUIGenerator.add_broadcasting_to_message_model::5591",
+          "lib/generators/ruby_llm/chat_ui/chat_ui_generator.rb::method::RubyLLM.Generators.ChatUIGenerator.add_routes::4222",
+          "lib/generators/ruby_llm/chat_ui/chat_ui_generator.rb::method::RubyLLM.Generators.ChatUIGenerator.check_model_exists::654",
+          "lib/generators/ruby_llm/chat_ui/chat_ui_generator.rb::method::RubyLLM.Generators.ChatUIGenerator.create_views::1611",
+          "lib/generators/ruby_llm/chat_ui/chat_ui_generator.rb::method::RubyLLM.Generators.ChatUIGenerator.display_post_install_message::7588",
+          "lib/generators/ruby_llm/generator_helpers.rb::function::RubyLLM.Generators.GeneratorHelpers.add_association_params::4389",
+          "lib/generators/ruby_llm/generator_helpers.rb::function::RubyLLM.Generators.GeneratorHelpers.create_namespace_modules::3016",
+          "lib/generators/ruby_llm/generator_helpers.rb::function::RubyLLM.Generators.GeneratorHelpers.parse_model_mappings::144",
+          "lib/generators/ruby_llm/upgrade_to_v1_7/upgrade_to_v1_7_generator.rb::class::RubyLLM.Generators.UpgradeToV17Generator::260::s0",
+          "lib/generators/ruby_llm/upgrade_to_v1_7/upgrade_to_v1_7_generator.rb::method::RubyLLM.Generators.UpgradeToV17Generator.create_migration_file::1158",
+          "lib/generators/ruby_llm/upgrade_to_v1_7/upgrade_to_v1_7_generator.rb::method::RubyLLM.Generators.UpgradeToV17Generator.update_initializer::2768",
+          "lib/ruby_llm/active_record/acts_as.rb::function::RubyLLM.ActiveRecord.ActsAs.acts_as_chat::1097",
+          "lib/ruby_llm/active_record/acts_as.rb::function::RubyLLM.ActiveRecord.ActsAs.acts_as_message::3199",
+          "lib/ruby_llm/active_record/acts_as.rb::function::RubyLLM.ActiveRecord.ActsAs.acts_as_model::2512",
+          "lib/ruby_llm/active_record/acts_as.rb::function::RubyLLM.ActiveRecord.ActsAs.acts_as_tool_call::5416",
+          "lib/ruby_llm/active_record/chat_methods.rb::function::RubyLLM.ActiveRecord.ChatMethods.complete::4982",
+          "lib/ruby_llm/active_record/chat_methods.rb::function::RubyLLM.ActiveRecord.ChatMethods.model=::301",
+          "lib/ruby_llm/active_record/chat_methods.rb::function::RubyLLM.ActiveRecord.ChatMethods.persist_message_completion::6631",
+          "lib/ruby_llm/active_record/chat_methods.rb::function::RubyLLM.ActiveRecord.ChatMethods.prepare_content_for_storage::10306",
+          "lib/ruby_llm/active_record/chat_methods.rb::function::RubyLLM.ActiveRecord.ChatMethods.resolve_model_from_strings::851",
+          "lib/ruby_llm/active_record/chat_methods.rb::function::RubyLLM.ActiveRecord.ChatMethods.to_llm::2056",
+          "lib/ruby_llm/active_record/chat_methods.rb::function::RubyLLM.ActiveRecord.ChatMethods.with_model::2908",
+          "lib/ruby_llm/chunk.rb::class::RubyLLM.Chunk::48",
+          "lib/ruby_llm/configuration.rb::class::RubyLLM.Configuration::85::s0",
+          "lib/ruby_llm/content.rb::class::RubyLLM.Content.Raw::1308::s0",
+          "lib/ruby_llm/content.rb::class::RubyLLM.Content::108::s0",
+          "lib/ruby_llm/context.rb::class::RubyLLM.Context::75::s0",
+          "lib/ruby_llm/error.rb::class::RubyLLM.Error::176::s0",
+          "lib/ruby_llm/error.rb::method::RubyLLM.ErrorMiddleware.call::1187",
+          "lib/ruby_llm/error.rb::method::RubyLLM.ErrorMiddleware.parse_error::1363",
+          "lib/ruby_llm/error.rb::module_residual::::2723",
+          "lib/ruby_llm/model/modalities.rb::class::RubyLLM.Model.Modalities::138::s0",
+          "lib/ruby_llm/model/pricing.rb::class::RubyLLM.Model.Pricing::164::s0",
+          "lib/ruby_llm/model/pricing_category.rb::class::RubyLLM.Model.PricingCategory::148::s0",
+          "lib/ruby_llm/moderation.rb::class::RubyLLM.Moderation::153::s0",
+          "lib/ruby_llm/providers/anthropic/chat.rb::method::RubyLLM.Providers.Anthropic.Chat.build_system_content::846",
+          "lib/ruby_llm/providers/anthropic/chat.rb::method::RubyLLM.Providers.Anthropic.Chat.format_message::3423",
+          "lib/ruby_llm/providers/anthropic/chat.rb::method::RubyLLM.Providers.Anthropic.Chat.render_payload::252",
+          "lib/ruby_llm/providers/anthropic/media.rb::method::RubyLLM.Providers.Anthropic.Media.format_content::217",
+          "lib/ruby_llm/providers/anthropic/tools.rb::method::RubyLLM.Providers.Anthropic.Tools.extract_tool_calls::1917",
+          "lib/ruby_llm/providers/anthropic/tools.rb::method::RubyLLM.Providers.Anthropic.Tools.format_tool_call::296",
+          "lib/ruby_llm/providers/anthropic/tools.rb::method::RubyLLM.Providers.Anthropic.Tools.format_tool_result::776",
+          "lib/ruby_llm/providers/anthropic/tools.rb::method::RubyLLM.Providers.Anthropic.Tools.function_for::1416",
+          "lib/ruby_llm/providers/anthropic/tools.rb::method::RubyLLM.Providers.Anthropic.Tools.parse_tool_calls::2181",
+          "lib/ruby_llm/providers/bedrock.rb::class::RubyLLM.Providers.Bedrock::138::s0",
+          "lib/ruby_llm/providers/bedrock/chat.rb::method::RubyLLM.Providers.Bedrock.Chat.format_message::711",
+          "lib/ruby_llm/providers/bedrock/chat.rb::method::RubyLLM.Providers.Bedrock.Chat.render_payload::1271",
+          "lib/ruby_llm/providers/bedrock/chat.rb::method::RubyLLM.Providers.Bedrock.Chat.sync_response::194",
+          "lib/ruby_llm/providers/bedrock/streaming/base.rb::method::RubyLLM.Providers.Bedrock.Streaming.Base.handle_stream::1318",
+          "lib/ruby_llm/providers/bedrock/streaming/base.rb::method::RubyLLM.Providers.Bedrock.Streaming.Base.included::199",
+          "lib/ruby_llm/providers/bedrock/streaming/base.rb::method::RubyLLM.Providers.Bedrock.Streaming.Base.stream_response::519",
+          "lib/ruby_llm/providers/bedrock/streaming/base.rb::method::RubyLLM.Providers.Bedrock.Streaming.Base.stream_url::418",
+          "lib/ruby_llm/providers/bedrock/streaming/content_extraction.rb::method::RubyLLM.Providers.Bedrock.Streaming.ContentExtraction.json_delta?::236",
+          "lib/ruby_llm/providers/bedrock/streaming/message_processing.rb::method::RubyLLM.Providers.Bedrock.Streaming.MessageProcessing.extract_message_info::1268",
+          "lib/ruby_llm/providers/bedrock/streaming/message_processing.rb::method::RubyLLM.Providers.Bedrock.Streaming.MessageProcessing.process_chunk::218",
+          "lib/ruby_llm/providers/bedrock/streaming/message_processing.rb::method::RubyLLM.Providers.Bedrock.Streaming.MessageProcessing.process_message::552",
+          "lib/ruby_llm/providers/bedrock/streaming/message_processing.rb::method::RubyLLM.Providers.Bedrock.Streaming.MessageProcessing.process_valid_message::892",
+          "lib/ruby_llm/providers/gemini/capabilities.rb::method::RubyLLM.Providers.Gemini.Capabilities.capabilities_for::7342",
+          "lib/ruby_llm/providers/gemini/capabilities.rb::method::RubyLLM.Providers.Gemini.Capabilities.context_window_for::210",
+          "lib/ruby_llm/providers/gemini/capabilities.rb::method::RubyLLM.Providers.Gemini.Capabilities.format_display_name::2561",
+          "lib/ruby_llm/providers/gemini/capabilities.rb::method::RubyLLM.Providers.Gemini.Capabilities.input_price_for::1230",
+          "lib/ruby_llm/providers/gemini/capabilities.rb::method::RubyLLM.Providers.Gemini.Capabilities.long_context_model?::4994",
+          "lib/ruby_llm/providers/gemini/capabilities.rb::method::RubyLLM.Providers.Gemini.Capabilities.max_tokens_for::745",
+          "lib/ruby_llm/providers/gemini/capabilities.rb::method::RubyLLM.Providers.Gemini.Capabilities.modalities_for::6734",
+          "lib/ruby_llm/providers/gemini/capabilities.rb::method::RubyLLM.Providers.Gemini.Capabilities.model_family::3555",
+          "lib/ruby_llm/providers/gemini/capabilities.rb::method::RubyLLM.Providers.Gemini.Capabilities.model_type::3336",
+          "lib/ruby_llm/providers/gemini/capabilities.rb::method::RubyLLM.Providers.Gemini.Capabilities.output_price_for::1517",
+          "lib/ruby_llm/providers/gemini/capabilities.rb::method::RubyLLM.Providers.Gemini.Capabilities.pricing_family::4270",
+          "lib/ruby_llm/providers/gemini/capabilities.rb::method::RubyLLM.Providers.Gemini.Capabilities.pricing_for::7823",
+          "lib/ruby_llm/providers/gemini/models.rb::method::RubyLLM.Providers.Gemini.Models.parse_list_models_response::244",
+          "lib/ruby_llm/providers/gemini/transcription.rb::method::RubyLLM.Providers.Gemini.Transcription.parse_transcription_response::2427",
+          "lib/ruby_llm/providers/gemini/transcription.rb::method::RubyLLM.Providers.Gemini.Transcription.transcribe::288",
+          "lib/ruby_llm/providers/gpustack.rb::class::RubyLLM.Providers.GPUStack::117::s0",
+          "lib/ruby_llm/providers/gpustack/chat.rb::method::RubyLLM.Providers.GPUStack.Chat.format_messages::188",
+          "lib/ruby_llm/providers/gpustack/media.rb::method::RubyLLM.Providers.GPUStack.Media.format_content::244",
+          "lib/ruby_llm/providers/gpustack/models.rb::method::RubyLLM.Providers.GPUStack.Models.build_capabilities::1572",
+          "lib/ruby_llm/providers/gpustack/models.rb::method::RubyLLM.Providers.GPUStack.Models.build_modalities::2397",
+          "lib/ruby_llm/providers/gpustack/models.rb::method::RubyLLM.Providers.GPUStack.Models.parse_list_models_response::247",
+          "lib/ruby_llm/providers/mistral/capabilities.rb::method::RubyLLM.Providers.Mistral.Capabilities.format_display_name::760",
+          "lib/ruby_llm/providers/mistral/capabilities.rb::method::RubyLLM.Providers.Mistral.Capabilities.model_family::1432",
+          "lib/ruby_llm/providers/mistral/capabilities.rb::method::RubyLLM.Providers.Mistral.Capabilities.release_date_for::3709",
+          "lib/ruby_llm/providers/ollama.rb::class::RubyLLM.Providers.Ollama::99::s0",
+          "lib/ruby_llm/providers/openai/chat.rb::method::RubyLLM.Providers.OpenAI.Chat.parse_completion_response::1098",
+          "lib/ruby_llm/providers/openai/chat.rb::method::RubyLLM.Providers.OpenAI.Chat.render_payload::253",
+          "lib/ruby_llm/providers/openai/media.rb::method::RubyLLM.Providers.OpenAI.Media.format_content::210",
+          "lib/ruby_llm/providers/openai/models.rb::method::RubyLLM.Providers.OpenAI.Models.parse_list_models_response::243",
+          "lib/ruby_llm/providers/openai/streaming.rb::method::RubyLLM.Providers.OpenAI.Streaming.build_chunk::255",
+          "lib/ruby_llm/providers/openai/streaming.rb::method::RubyLLM.Providers.OpenAI.Streaming.parse_streaming_error::877",
+          "lib/ruby_llm/providers/openai/transcription.rb::method::RubyLLM.Providers.OpenAI.Transcription.parse_transcription_response::1598",
+          "lib/ruby_llm/providers/openrouter.rb::class::RubyLLM.Providers.OpenRouter::103::s0",
+          "lib/ruby_llm/providers/openrouter/models.rb::method::RubyLLM.Providers.OpenRouter.Models.parse_list_models_response::251",
+          "lib/ruby_llm/providers/openrouter/models.rb::method::RubyLLM.Providers.OpenRouter.Models.supported_parameters_to_capabilities::2220",
+          "lib/ruby_llm/providers/perplexity/models.rb::method::RubyLLM.Providers.Perplexity.Models.list_models::171",
+          "lib/ruby_llm/providers/vertexai.rb::class::RubyLLM.Providers.VertexAI::107::s0",
+          "lib/ruby_llm/providers/vertexai/embeddings.rb::method::RubyLLM.Providers.VertexAI.Embeddings.parse_embedding_response::749",
+          "lib/ruby_llm/providers/vertexai/embeddings.rb::method::RubyLLM.Providers.VertexAI.Embeddings.render_embedding_payload::417",
+          "lib/ruby_llm/providers/vertexai/models.rb::method::RubyLLM.Providers.VertexAI.Models.build_known_models::1949",
+          "lib/ruby_llm/providers/vertexai/models.rb::method::RubyLLM.Providers.VertexAI.Models.build_model_from_api_data::2546",
+          "lib/ruby_llm/providers/vertexai/models.rb::method::RubyLLM.Providers.VertexAI.Models.list_models::873",
+          "lib/ruby_llm/streaming.rb::function::RubyLLM.Streaming.handle_stream::883",
+          "lib/ruby_llm/streaming.rb::function::RubyLLM.Streaming.stream_response::141",
+          "lib/ruby_llm/transcription.rb::class::RubyLLM.Transcription::97::s0",
+          "lib/tasks/release.rake::module_residual::::0",
+          "lib/tasks/ruby_llm.rake::module_residual::::0",
+          "lib/tasks/vcr.rake::function::delete_cassettes::1724",
+          "lib/tasks/vcr.rake::function::find_matching_cassettes::1286",
+          "lib/tasks/vcr.rake::function::record_all_cassettes::54",
+          "lib/tasks/vcr.rake::function::record_for_providers::285",
+          "lib/tasks/vcr.rake::function::run_tests::1918",
+          "lib/tasks/vcr.rake::module_residual::::0",
+          "lib/tasks/vcr.rake::module_residual::::1990"
+        ],
+        "input_tokens": 27656
+      }
+    ],
+    "merge_input_tokens": 2199
+  },
+  "node_dependencies": {
+    "graph_confirmed": 29,
+    "model_inferred": 41,
+    "graph_only": 40
+  },
+  "within_containment": 0,
+  "key_flows": 6,
+  "candidate_flows": 24,
+  "layers": {
+    "tokenizer": "o200k_base",
+    "source_tokens": 74885,
+    "semantic_tokens": 105752,
+    "semantic_breakdown": {
+      "model_body": 40568,
+      "signature_location": 12419,
+      "heading_anchor": 8140,
+      "relations": 5983,
+      "footer": 6624,
+      "index": 15938,
+      "node_text": 16080
+    },
+    "model_body_tokens": 40568,
+    "model_body_source_ratio": 0.5417373305735461,
+    "published_markdown_source_ratio": 1.412192027775923,
+    "deterministic_tokens": 2342575,
+    "catalog_tokens": 2342575,
+    "frozen_graph_tokens": 0,
+    "frozen_graph_bytes": 52916711,
+    "semantic_source_ratio": 1.412192027775923,
+    "deterministic_source_ratio": 31.282299525939774,
+    "scope": "Breakdown partitions full Markdown BPE tokens by the first byte's line: model_body is published unit explain, summary, extras and uncertainties; signature_location includes shared source-file reference definitions (including ones used by relations); heading_anchor, relations, footer, INDEX and node_text (including labels/whitespace and program-written ID correction notices) partition the rest. model_body/source and published_markdown/source use complete frozen files. semantic: all published Markdown (node pages + INDEX, including navigation, signatures and commands); deterministic: catalog.json as serialized, including preserved prose copies and edge references, excluding the graph field; frozen graph is excluded from token ratios (frozen_graph_tokens=0), reported separately as frozen_graph_bytes using UTF-8 JSON with ensure_ascii=False and compact separators; complete graph evidence is expanded only with query --edges; source: complete frozen files counted once; context source chunks, host prompts, raw answers and summary.json excluded; layers are storage measures, not disjoint content classes"
+  },
+  "semantic_review": {
+    "mode": "sample",
+    "reviewed": [
+      {
+        "module": 2,
+        "decision": "accepted",
+        "issues": [],
+        "repair": null
+      }
+    ],
+    "outcomes": {
+      "accepted": 1
+    },
+    "pending": [],
+    "note": "an independent reviewer read the source for each reviewed batch; this is not a whole-map proof"
+  },
+  "truth": "deterministic structure/coverage checks and the separate semantic review are different states; neither one proves prose truth",
+  "counts": {
+    "done": 18
+  },
+  "leased": [],
+  "failed": [],
+  "ready": 0,
+  "next_action": "done; open $WORK/runs/e6/ruby_llm/run/docs/INDEX.md, then run `cbe host cost --run-dir $WORK/runs/e6/ruby_llm/run`",
+  "usage_unknown": [],
+  "render_error": null,
+  "stopped": null,
+  "progress_log": "$WORK/runs/e6/ruby_llm/run/progress.log",
+  "model": "zai/glm-5.3-flash",
+  "input_token_basis": "provider prompt_tokens minus cached_tokens; cache reported separately",
+  "calls": 29,
+  "input_tokens": 434746,
+  "output_tokens": 442004,
+  "cache_tokens": 223232,
+  "token_totals_basis": "observed calls; missing usage is excluded, never estimated",
+  "calls_with_unknown_input": 0,
+  "calls_with_unknown_output": 0,
+  "observed_cache_tokens": 223232,
+  "calls_with_unknown_cache": 0,
+  "priced_usd": null,
+  "price_basis": "unknown; configure API price_per_million: [input, output, cache]",
+  "usage_complete": true,
+  "seconds": 5231.86
+}

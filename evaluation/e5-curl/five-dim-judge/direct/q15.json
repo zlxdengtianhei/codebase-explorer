@@ -1,0 +1,16 @@
+{
+  "qid": 15,
+  "question": "For requests signed with CURLOPT_AWS_SIGV4, which characters does the helper `is_reserved_char()` in lib/http_aws_sigv4.c actually accept, and how do the canonical path and canonical query encoders use it?\n\nBuild assumptions: HTTP enabled; AWS SigV4 support built (CURL_DISABLE_AWS not defined); any platform.",
+  "arm": "direct",
+  "max_steps": null,
+  "repeat": 0,
+  "answer_valid": false,
+  "judge_model": "codex/gpt-6.1-sol",
+  "draws": [],
+  "score": null,
+  "total": null,
+  "main_total_na5": 5,
+  "failure_type": "no_answer",
+  "judge_total_range": null,
+  "wall_seconds": 1.554196933284402e-05
+}

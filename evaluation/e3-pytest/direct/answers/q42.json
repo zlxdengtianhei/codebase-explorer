@@ -1,0 +1,31 @@
+{
+  "qid": 42,
+  "question": "Where is the line-wrapping logic that determines when function arguments exceed terminal width implemented in the ReprFuncArgs class?",
+  "arm": "direct",
+  "answer": "In the `toterminal()` method of the `ReprFuncArgs` class in `src/_pytest/_code/code.py`. There, the condition `if len(ns) + len(linesofar) + 2 > tw.fullwidth:` checks whether adding the next argument (`name=value`) plus its separator would exceed the terminal width, and if so, writes the current line and starts a new one.",
+  "valid": true,
+  "wall_seconds": 22.351450917019974,
+  "attempts": [
+    {
+      "answer": "In the `toterminal()` method of the `ReprFuncArgs` class in `src/_pytest/_code/code.py`. There, the condition `if len(ns) + len(linesofar) + 2 > tw.fullwidth:` checks whether adding the next argument (`name=value`) plus its separator would exceed the terminal width, and if so, writes the current line and starts a new one.",
+      "valid": true,
+      "usage": {
+        "completion_tokens": 1374,
+        "prompt_tokens": 104,
+        "total_tokens": 1478,
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": null,
+          "audio_tokens": null,
+          "reasoning_tokens": 1289,
+          "rejected_prediction_tokens": null
+        },
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 64
+        }
+      },
+      "response_model": "glm-5.3-flash"
+    }
+  ]
+}

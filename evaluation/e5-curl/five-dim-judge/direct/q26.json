@@ -1,0 +1,16 @@
+{
+  "qid": 26,
+  "question": "Assume an FTP download with CURLOPT_RANGE set to \"100-199\" that completes without error. Why does libcurl close the FTP control connection at the end of this transfer instead of keeping it for reuse?\n\nBuild assumptions: FTP enabled; plain FTP download (not upload); passive or active data connection; the transfer is not premature.",
+  "arm": "direct",
+  "max_steps": null,
+  "repeat": 0,
+  "answer_valid": false,
+  "judge_model": "codex/gpt-6.1-sol",
+  "draws": [],
+  "score": null,
+  "total": null,
+  "main_total_na5": 5,
+  "failure_type": "no_answer",
+  "judge_total_range": null,
+  "wall_seconds": 1.4749995898455381e-05
+}

@@ -1,0 +1,125 @@
+{
+  "qid": 46,
+  "question": "Where does the route handler function that returns a list of dictionaries integrate with the framework's route decorator and static type checker configuration to validate return type annotations in the type checking test files?",
+  "arm": "S",
+  "max_steps": 25,
+  "repeat": 0,
+  "answer_valid": true,
+  "judge_model": "codex/gpt-6.1-sol",
+  "draws": [
+    {
+      "draw": 1,
+      "score": {
+        "correctness": 15,
+        "completeness": 12,
+        "relevance": 18,
+        "clarity": 17,
+        "reasoning": 15
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 86,
+            "prompt_tokens": 6493,
+            "total_tokens": 6579,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 37,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 15,\n  \"completeness\": 12,\n  \"relevance\": 18,\n  \"clarity\": 17,\n  \"reasoning\": 15\n}",
+          "wall_seconds": 29.96660599997267
+        }
+      ]
+    },
+    {
+      "draw": 2,
+      "score": {
+        "correctness": 15,
+        "completeness": 11,
+        "relevance": 18,
+        "clarity": 17,
+        "reasoning": 15
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 79,
+            "prompt_tokens": 6493,
+            "total_tokens": 6572,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 30,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6272
+            }
+          },
+          "response": "{\n  \"correctness\": 15,\n  \"completeness\": 11,\n  \"relevance\": 18,\n  \"clarity\": 17,\n  \"reasoning\": 15\n}",
+          "wall_seconds": 28.188780541007873
+        }
+      ]
+    },
+    {
+      "draw": 3,
+      "score": {
+        "correctness": 15,
+        "completeness": 11,
+        "relevance": 18,
+        "clarity": 17,
+        "reasoning": 14
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 81,
+            "prompt_tokens": 6493,
+            "total_tokens": 6574,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 32,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6272
+            }
+          },
+          "response": "{\n  \"correctness\": 15,\n  \"completeness\": 11,\n  \"relevance\": 18,\n  \"clarity\": 17,\n  \"reasoning\": 14\n}",
+          "wall_seconds": 24.74110920802923
+        }
+      ]
+    }
+  ],
+  "score": {
+    "correctness": 15,
+    "completeness": 11,
+    "relevance": 18,
+    "clarity": 17,
+    "reasoning": 15
+  },
+  "total": 76,
+  "main_total_na5": 76,
+  "failure_type": null,
+  "judge_total_range": 2,
+  "wall_seconds": 82.9007686249679
+}

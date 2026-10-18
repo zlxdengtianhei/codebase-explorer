@@ -1,0 +1,125 @@
+{
+  "qid": 46,
+  "question": "Where is the subprocess execution mechanism that `pytester.runpytest_subprocess` delegates to, and how does it handle system exception propagation during test collection?",
+  "arm": "C",
+  "max_steps": 10,
+  "repeat": 0,
+  "answer_valid": true,
+  "judge_model": "codex/gpt-6.1-sol",
+  "draws": [
+    {
+      "draw": 1,
+      "score": {
+        "correctness": 8,
+        "completeness": 11,
+        "relevance": 15,
+        "clarity": 15,
+        "reasoning": 11
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 107,
+            "prompt_tokens": 6784,
+            "total_tokens": 6891,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 58,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 8,\n  \"completeness\": 11,\n  \"relevance\": 15,\n  \"clarity\": 15,\n  \"reasoning\": 11\n}",
+          "wall_seconds": 7.212276334001217
+        }
+      ]
+    },
+    {
+      "draw": 2,
+      "score": {
+        "correctness": 8,
+        "completeness": 11,
+        "relevance": 15,
+        "clarity": 16,
+        "reasoning": 11
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 108,
+            "prompt_tokens": 6784,
+            "total_tokens": 6892,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 59,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6656
+            }
+          },
+          "response": "{\n  \"correctness\": 8,\n  \"completeness\": 11,\n  \"relevance\": 15,\n  \"clarity\": 16,\n  \"reasoning\": 11\n}",
+          "wall_seconds": 5.454472042038105
+        }
+      ]
+    },
+    {
+      "draw": 3,
+      "score": {
+        "correctness": 9,
+        "completeness": 11,
+        "relevance": 15,
+        "clarity": 15,
+        "reasoning": 11
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 100,
+            "prompt_tokens": 6784,
+            "total_tokens": 6884,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 51,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6656
+            }
+          },
+          "response": "{\n  \"correctness\": 9,\n  \"completeness\": 11,\n  \"relevance\": 15,\n  \"clarity\": 15,\n  \"reasoning\": 11\n}",
+          "wall_seconds": 6.465889041021001
+        }
+      ]
+    }
+  ],
+  "score": {
+    "correctness": 8,
+    "completeness": 11,
+    "relevance": 15,
+    "clarity": 15,
+    "reasoning": 11
+  },
+  "total": 60,
+  "main_total_na5": 60,
+  "failure_type": null,
+  "judge_total_range": 1,
+  "wall_seconds": 19.14316737500485
+}

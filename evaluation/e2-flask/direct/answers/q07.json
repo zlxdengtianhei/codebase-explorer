@@ -1,0 +1,31 @@
+{
+  "qid": 7,
+  "question": "What is the interaction between the parametrization of import and app name arguments in the exception-raising test and the exception handling semantics that ensures the application location function fails consistently?",
+  "arm": "direct",
+  "answer": "The test parametrizes pairs of `(import_name, app_name)` values \u2014 e.g. a nonexistent module name, a module name that raises while being imported, and an existing module with a nonexistent app name \u2014 so that every failure mode of `find_app_by_string`/`locate_app` is exercised through the same entry point.\n\nInside the function, each combination hits the same exception-handling path:\n\n- `__import__(module_name)` is wrapped in `try/except ImportError`. The handler inspects the traceback depth via `sys.exc_info()[-1].tb_next`:\n  - If the traceback has depth 1 (only the `find_app_by_string` frame), the module itself wasn't found, so it raises `NoAppException(\"Could not import ...\")`.\n  - If the traceback is deeper (the ImportError originated inside the target module), it raises `NoAppException('While importing \"...\", an ImportError was raised: ...')` with the full formatted traceback.\n- If the module imports but the given app name attribute doesn't exist, the lookup failure is also converted to a `NoAppException` (\"Failed to find application ...\").\n\nThe interaction is that the parametrization supplies all invalid-argument combinations, while the traceback-depth check and attribute-lookup guard guarantee that each of them is normalized into the same `NoAppException`. This lets the test assert that application location fails consistently \u2014 always raising `NoAppException` (with a message naming the import name) regardless of whether the import name or the app name is the bad argument \u2014 instead of leaking raw `ImportError`/`AttributeError` exceptions to the CLI.",
+  "valid": true,
+  "wall_seconds": 166.2352635419811,
+  "attempts": [
+    {
+      "answer": "The test parametrizes pairs of `(import_name, app_name)` values \u2014 e.g. a nonexistent module name, a module name that raises while being imported, and an existing module with a nonexistent app name \u2014 so that every failure mode of `find_app_by_string`/`locate_app` is exercised through the same entry point.\n\nInside the function, each combination hits the same exception-handling path:\n\n- `__import__(module_name)` is wrapped in `try/except ImportError`. The handler inspects the traceback depth via `sys.exc_info()[-1].tb_next`:\n  - If the traceback has depth 1 (only the `find_app_by_string` frame), the module itself wasn't found, so it raises `NoAppException(\"Could not import ...\")`.\n  - If the traceback is deeper (the ImportError originated inside the target module), it raises `NoAppException('While importing \"...\", an ImportError was raised: ...')` with the full formatted traceback.\n- If the module imports but the given app name attribute doesn't exist, the lookup failure is also converted to a `NoAppException` (\"Failed to find application ...\").\n\nThe interaction is that the parametrization supplies all invalid-argument combinations, while the traceback-depth check and attribute-lookup guard guarantee that each of them is normalized into the same `NoAppException`. This lets the test assert that application location fails consistently \u2014 always raising `NoAppException` (with a message naming the import name) regardless of whether the import name or the app name is the bad argument \u2014 instead of leaking raw `ImportError`/`AttributeError` exceptions to the CLI.",
+      "valid": true,
+      "usage": {
+        "completion_tokens": 9396,
+        "prompt_tokens": 114,
+        "total_tokens": 9510,
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": null,
+          "audio_tokens": null,
+          "reasoning_tokens": 9057,
+          "rejected_prediction_tokens": null
+        },
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 64
+        }
+      },
+      "response_model": "glm-5.3-flash"
+    }
+  ]
+}

@@ -1,0 +1,125 @@
+{
+  "qid": 33,
+  "question": "Why does the pass-through dictionary tag class's JSON conversion method apply recursive tagging only to dictionary values while avoiding tagging keys?",
+  "arm": "W",
+  "max_steps": 25,
+  "repeat": 0,
+  "answer_valid": true,
+  "judge_model": "codex/gpt-6.1-sol",
+  "draws": [
+    {
+      "draw": 1,
+      "score": {
+        "correctness": 14,
+        "completeness": 18,
+        "relevance": 16,
+        "clarity": 17,
+        "reasoning": 15
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 122,
+            "prompt_tokens": 6839,
+            "total_tokens": 6961,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 73,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 14,\n  \"completeness\": 18,\n  \"relevance\": 16,\n  \"clarity\": 17,\n  \"reasoning\": 15\n}",
+          "wall_seconds": 4.674117874994408
+        }
+      ]
+    },
+    {
+      "draw": 2,
+      "score": {
+        "correctness": 14,
+        "completeness": 18,
+        "relevance": 15,
+        "clarity": 17,
+        "reasoning": 15
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 95,
+            "prompt_tokens": 6839,
+            "total_tokens": 6934,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 46,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6656
+            }
+          },
+          "response": "{\n  \"correctness\": 14,\n  \"completeness\": 18,\n  \"relevance\": 15,\n  \"clarity\": 17,\n  \"reasoning\": 15\n}",
+          "wall_seconds": 3.5299907920416445
+        }
+      ]
+    },
+    {
+      "draw": 3,
+      "score": {
+        "correctness": 14,
+        "completeness": 18,
+        "relevance": 15,
+        "clarity": 17,
+        "reasoning": 15
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 104,
+            "prompt_tokens": 6839,
+            "total_tokens": 6943,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 55,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6656
+            }
+          },
+          "response": "{\n  \"correctness\": 14,\n  \"completeness\": 18,\n  \"relevance\": 15,\n  \"clarity\": 17,\n  \"reasoning\": 15\n}",
+          "wall_seconds": 4.166075040993746
+        }
+      ]
+    }
+  ],
+  "score": {
+    "correctness": 14,
+    "completeness": 18,
+    "relevance": 15,
+    "clarity": 17,
+    "reasoning": 15
+  },
+  "total": 79,
+  "main_total_na5": 79,
+  "failure_type": null,
+  "judge_total_range": 1,
+  "wall_seconds": 12.371200624969788
+}

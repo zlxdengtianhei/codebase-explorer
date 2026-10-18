@@ -1,0 +1,31 @@
+{
+  "qid": 36,
+  "question": "Where does the control flow in the CLI group class's command retrieval method determine whether to return a directly registered command, an entry point loaded command, or an application CLI group command?",
+  "arm": "direct",
+  "answer": "**In `FlaskGroup.get_command` in `src/flask/cli.py`:**\n\nThe branching works as follows:\n1. After `self._load_plugin_commands()` loads entry-point commands, `rv = super().get_command(ctx, name)` looks up the command in the group's own commands \u2014 `if rv is not None: return rv` returns any directly registered (default/`add_command`) or entry-point loaded command.\n2. If that returns nothing, control falls through to `info.load_app().cli.get_command(ctx, name)` (via `ctx.ensure_object(ScriptInfo)`), returning the command from the application's CLI group \u2014 or `None` if a `NoAppException` occurs.",
+  "valid": true,
+  "wall_seconds": 74.80737212498207,
+  "attempts": [
+    {
+      "answer": "**In `FlaskGroup.get_command` in `src/flask/cli.py`:**\n\nThe branching works as follows:\n1. After `self._load_plugin_commands()` loads entry-point commands, `rv = super().get_command(ctx, name)` looks up the command in the group's own commands \u2014 `if rv is not None: return rv` returns any directly registered (default/`add_command`) or entry-point loaded command.\n2. If that returns nothing, control falls through to `info.load_app().cli.get_command(ctx, name)` (via `ctx.ensure_object(ScriptInfo)`), returning the command from the application's CLI group \u2014 or `None` if a `NoAppException` occurs.",
+      "valid": true,
+      "usage": {
+        "completion_tokens": 5182,
+        "prompt_tokens": 115,
+        "total_tokens": 5297,
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": null,
+          "audio_tokens": null,
+          "reasoning_tokens": 5035,
+          "rejected_prediction_tokens": null
+        },
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 64
+        }
+      },
+      "response_model": "glm-5.3-flash"
+    }
+  ]
+}

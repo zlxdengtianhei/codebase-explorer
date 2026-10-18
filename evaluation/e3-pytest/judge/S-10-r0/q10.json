@@ -1,0 +1,125 @@
+{
+  "qid": 10,
+  "question": "What is the conditional logic in write_captured_output that determines which captured output streams are written to the XML report, and what is the semantic difference between the 'all' logging mode and the combination of 'system-out' and 'system-err' modes in terms of content aggregation?",
+  "arm": "S",
+  "max_steps": 10,
+  "repeat": 0,
+  "answer_valid": true,
+  "judge_model": "codex/gpt-6.1-sol",
+  "draws": [
+    {
+      "draw": 1,
+      "score": {
+        "correctness": 19,
+        "completeness": 18,
+        "relevance": 19,
+        "clarity": 18,
+        "reasoning": 19
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 87,
+            "prompt_tokens": 6991,
+            "total_tokens": 7078,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 38,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 19,\n  \"completeness\": 18,\n  \"relevance\": 19,\n  \"clarity\": 18,\n  \"reasoning\": 19\n}",
+          "wall_seconds": 4.3247095420374535
+        }
+      ]
+    },
+    {
+      "draw": 2,
+      "score": {
+        "correctness": 19,
+        "completeness": 18,
+        "relevance": 18,
+        "clarity": 18,
+        "reasoning": 19
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 74,
+            "prompt_tokens": 6991,
+            "total_tokens": 7065,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 25,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6784
+            }
+          },
+          "response": "{\n  \"correctness\": 19,\n  \"completeness\": 18,\n  \"relevance\": 18,\n  \"clarity\": 18,\n  \"reasoning\": 19\n}",
+          "wall_seconds": 3.996340041048825
+        }
+      ]
+    },
+    {
+      "draw": 3,
+      "score": {
+        "correctness": 19,
+        "completeness": 18,
+        "relevance": 18,
+        "clarity": 18,
+        "reasoning": 19
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 85,
+            "prompt_tokens": 6991,
+            "total_tokens": 7076,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 36,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6784
+            }
+          },
+          "response": "{\n  \"correctness\": 19,\n  \"completeness\": 18,\n  \"relevance\": 18,\n  \"clarity\": 18,\n  \"reasoning\": 19\n}",
+          "wall_seconds": 4.695007874979638
+        }
+      ]
+    }
+  ],
+  "score": {
+    "correctness": 19,
+    "completeness": 18,
+    "relevance": 18,
+    "clarity": 18,
+    "reasoning": 19
+  },
+  "total": 92,
+  "main_total_na5": 92,
+  "failure_type": null,
+  "judge_total_range": 1,
+  "wall_seconds": 13.016928415978327
+}

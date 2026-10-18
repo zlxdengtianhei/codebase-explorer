@@ -1,0 +1,107 @@
+{
+  "gateway": {
+    "requests": 961,
+    "input_tokens": 6236066,
+    "cache_read_tokens": 25488064,
+    "cache_write_tokens": 0,
+    "output_tokens": 1498452,
+    "reasoning_tokens": 718407,
+    "cost_usd": "2.449287",
+    "http_statuses": {
+      "200": 961
+    },
+    "agents": {
+      "codewiki": 961
+    },
+    "prompt_tokens_including_cache": 31724130
+  },
+  "metadata_normalized": {
+    "requests": 309,
+    "prompt_tokens_including_cache": 11981372,
+    "cache_read_tokens": 10128832,
+    "output_tokens": 420589
+  },
+  "gateway_minus_metadata": {
+    "requests": 652,
+    "prompt_tokens_including_cache": 19742758,
+    "cache_read_tokens": 15359232,
+    "output_tokens": 1077863
+  },
+  "attempts": [
+    {
+      "attempt": 1,
+      "start_utc": "2026-10-17T13:33:51.830448+00:00",
+      "end_utc": "2026-10-17T21:02:06.216076+00:00",
+      "wall_seconds": 26894.385628,
+      "gateway": {
+        "requests": 921,
+        "input_tokens": 6039285,
+        "cache_read_tokens": 24304960,
+        "cache_write_tokens": 0,
+        "output_tokens": 1452390,
+        "reasoning_tokens": 695776,
+        "cost_usd": "2.361244",
+        "http_statuses": {
+          "200": 921
+        },
+        "agents": {
+          "codewiki": 921
+        },
+        "prompt_tokens_including_cache": 30344245
+      },
+      "metadata_normalized": {
+        "requests": 293,
+        "prompt_tokens_including_cache": 11496647,
+        "cache_read_tokens": 9719488,
+        "output_tokens": 401782
+      },
+      "gateway_minus_metadata": {
+        "requests": 628,
+        "prompt_tokens_including_cache": 18847598,
+        "cache_read_tokens": 14585472,
+        "output_tokens": 1050608
+      }
+    },
+    {
+      "attempt": 2,
+      "start_utc": "2026-10-17T21:02:06.238733+00:00",
+      "end_utc": "2026-10-17T21:18:42.410344+00:00",
+      "wall_seconds": 996.171611,
+      "gateway": {
+        "requests": 40,
+        "input_tokens": 196781,
+        "cache_read_tokens": 1183104,
+        "cache_write_tokens": 0,
+        "output_tokens": 46062,
+        "reasoning_tokens": 22631,
+        "cost_usd": "0.088043",
+        "http_statuses": {
+          "200": 40
+        },
+        "agents": {
+          "codewiki": 40
+        },
+        "prompt_tokens_including_cache": 1379885
+      },
+      "metadata_normalized": {
+        "requests": 16,
+        "prompt_tokens_including_cache": 484725,
+        "cache_read_tokens": 409344,
+        "output_tokens": 18807
+      },
+      "gateway_minus_metadata": {
+        "requests": 24,
+        "prompt_tokens_including_cache": 895160,
+        "cache_read_tokens": 773760,
+        "output_tokens": 27255
+      }
+    }
+  ],
+  "cancelled_unpriced_zero_token_rows": [],
+  "model_mismatches": [],
+  "untagged_codewiki_window_rows": [],
+  "untagged_generic_openai_pydantic_window_rows_not_attributed": [],
+  "http_audit_requests": 961,
+  "http_audit_bad_headers": [],
+  "note": "Gateway input excludes cache; metadata input/prompt includes cache. Reasoning is a subset of output. Missing costs are unknown, never zero. served_model is provider-local name; zai + glm-5.3-flash is normalized to zai/glm-5.3-flash. Generic untagged rows are shared concurrent traffic, not attributed without evidence."
+}

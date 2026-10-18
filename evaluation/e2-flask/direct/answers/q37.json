@@ -1,0 +1,31 @@
+{
+  "qid": 37,
+  "question": "Where in the serialization pipeline for the JSON tag class that handles Markup API objects are the lower-level helper functions that the conversion method delegates to?",
+  "arm": "direct",
+  "answer": "They live in the same module as the tag classes themselves \u2014 `flask/json/tag.py` (`src/flask/json/tag.py` in current Flask), where the tag implementations (e.g. `TagMarkup.to_json` for Markup objects) and the `TaggableJSONEncoder`/`TaggableJSONDecoder` that call them are defined.",
+  "valid": true,
+  "wall_seconds": 72.96305500000017,
+  "attempts": [
+    {
+      "answer": "They live in the same module as the tag classes themselves \u2014 `flask/json/tag.py` (`src/flask/json/tag.py` in current Flask), where the tag implementations (e.g. `TagMarkup.to_json` for Markup objects) and the `TaggableJSONEncoder`/`TaggableJSONDecoder` that call them are defined.",
+      "valid": true,
+      "usage": {
+        "completion_tokens": 3684,
+        "prompt_tokens": 107,
+        "total_tokens": 3791,
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": null,
+          "audio_tokens": null,
+          "reasoning_tokens": 3612,
+          "rejected_prediction_tokens": null
+        },
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 64
+        }
+      },
+      "response_model": "glm-5.3-flash"
+    }
+  ]
+}

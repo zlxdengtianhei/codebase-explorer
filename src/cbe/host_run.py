@@ -1,10 +1,12 @@
-"""Durable run state shared by both generation drivers.
+"""Durable run state shared by both generation drivers: plan, schedule, check, render, resume.
 
 ``cbe host`` lets a host agent (Claude Code, Codex, ...) dispatch one subagent
-per task; ``cbe generate`` runs the same tasks as tool-free OpenCode or Devin
-completions. Either way the CLI keeps every deterministic step: scanning,
-directory-first module planning, task scheduling, result checks, rendering the
-two-level INDEX, coverage checks, and the catalogue used by ``cbe find``.
+per task; ``cbe generate`` runs the same tasks as tool-free API, OpenCode or
+Devin completions. Either way this state machine keeps every deterministic
+step: freezing the source context, reading batches (``batching``), the unit
+inventory (``symbols``), task order and leases, result checks (``checks``),
+rendering and structural verification (``docs``). Task bodies come from
+``prompts``; usage and cost reports from ``usage``.
 
 The runtime records are the resume point. ``<run>/host/state.json`` holds the
 frozen plan and every task's state, attempts, timings, and output path;
@@ -12,19 +14,19 @@ frozen plan and every task's state, attempts, timings, and output path;
 ``<run>/STATUS.md`` is a snapshot table rewritten on every change. Every command
 re-reads the state under a lock, so any host continues with ``resume``.
 
-No single task failure voids a run. A strict check that fails is re-asked once
-with the exact error; a second miss is normalized (truncated or reshaped) and
-flagged when the answer is usable, and only an unusable answer marks the task
-failed. Finished modules always render; failed parts get placeholder pages and
-stay pending until retried, and the overview task can be retried on its own.
+No single task failure voids a run. Detail tasks have three answer attempts;
+other tasks have two. Each strict-check failure is re-asked with the exact error
+until the final attempt, when a usable answer may be normalized and flagged.
+Only an unusable final answer marks the task failed. Finished batches always render; failed parts stay pending until
+retried, and the overview task can be retried on its own.
 """
 
 from __future__ import annotations
 
 import contextlib
+import gzip
 import hashlib
 import json
-import math
 import os
 import re
 import secrets
@@ -33,39 +35,17 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterator
 
-from cbe import generate as gen
-from cbe import semantic
+from cbe import aggregation, batching, checks, docs, projection, prompts, symbols
+from cbe import __version__
 from cbe import source_context
-from cbe.headless_completion import _json_object
-from cbe.token_budget import count_text_tokens
 
 
 SCHEMA = "cbe-host-run/2"
 MAX_ATTEMPTS = 2
+DETAIL_MAX_ATTEMPTS = 3
 REVIEW_MODES = ("none", "sample", "all")
 # One switch for both drivers: change to "all" to review every module by default.
 DEFAULT_REVIEW = "sample"
-FILE_TASK_RULES = (
-    "Read every listed source file completely with your file-reading tool; page through long files. "
-    "Use only those source files, the supplied signatures, and the provided frozen graph evidence. "
-    "Do not open other source files, execute repository code, search the web, or modify the repository. "
-    "The supplied graph-query command is allowed to read a slice of the frozen graph. "
-    "Separate observed syntax from inferred behavior; state uncertainty instead "
-    "of inventing runtime facts. Be concise. Test functions and trivial accessors need no individual prose. "
-    "Paths identify files; do not repeat large source passages.")
-NO_FILE_RULES = (
-    "Everything you need is in this file. Do not read source files, run code, search the web, or modify "
-    "the repository. Do not invent details that the supplied material does not show.")
-# USD per million tokens: input, output, cache write (5 minute), cache read.
-# Anthropic first-party list prices as of 2026-09-25; pass --price to override.
-PRICES = {
-    "claude-fable-5-1": (10.0, 50.0, 12.5, 0.25),
-    "claude-opus-5-5": (4.0, 20.0, 5.0, 0.20),
-    "claude-sonnet-5-5": (2.0, 10.0, 2.5, 0.20),
-    "claude-haiku-4-5": (1.0, 5.0, 1.25, 0.10),
-}
-# Rough per-subagent harness overhead (system prompt and tool definitions) for estimates.
-DEFAULT_OVERHEAD_TOKENS = 20_000
 ORDER = {"names": 0, "module": 1, "repair": 2, "tree": 3, "review": 4, "system": 5}
 
 
@@ -73,38 +53,33 @@ class HostRunError(ValueError):
     pass
 
 
+class MergeBudgetError(HostRunError):
+    pass
+
+
 def _now() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def _epoch(stamp: str) -> float:
+def epoch(stamp: str) -> float:
     return datetime.strptime(stamp, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc).timestamp()
 
 
-def _version() -> str:
-    try:
-        from importlib.metadata import version
-        return version("codebase-explorer")
-    except Exception:  # noqa: BLE001 - a source checkout has no metadata
-        return "source"
-
-
-def _host_dir(run_dir: Path) -> Path:
+def state_dir(run_dir: Path) -> Path:
     return run_dir / "host"
 
 
-def _write_json(path: Path, value: Any) -> None:
+def write_json(path: Path, value: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_name(f".{path.name}.{os.getpid()}.tmp")
     temporary.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     os.replace(temporary, path)
 
 
-def _read_context(run_dir: Path) -> dict[str, Any]:
-    path = run_dir / "context.json"
-    if not path.is_file():
-        raise HostRunError(f"no frozen source context at {path}")
-    return json.loads(path.read_text(encoding="utf-8"))
+class _RunState(dict[str, Any]):
+    # Cache only within one locked operation; attributes are never serialized.
+    context: dict[str, Any] | None = None
+    aggregation_cache: tuple | None = None
 
 
 def context_digest(context: dict[str, Any]) -> str:
@@ -119,50 +94,15 @@ def context_digest(context: dict[str, Any]) -> str:
 
 
 def _verify_graph_manifest(repo: Path, state: dict[str, Any], context: dict[str, Any]) -> None:
-    """Re-check that the frozen graph still matches the frozen source.
-
-    Scanned files are checked against the plan digests without touching disk;
-    a boundary file the graph references but the scan did not cover is read and
-    checked against its manifest hash. A node that anchors existing repo source
-    must be covered by the manifest, so a graph cannot mix snapshots.
-    """
+    """Re-check that the frozen graph still matches the planned source (see ``check_graph_source``)."""
     graph = context.get("graph")
     if not graph:
         return
-    from cbe.graph import GraphError, validate_graph_provenance
-
     try:
-        validate_graph_provenance(repo, graph)
-    except (GraphError, OSError) as exc:
-        raise HostRunError(str(exc)) from exc
-    manifest = graph.get("source_manifest")
-    if not isinstance(manifest, list):
-        raise HostRunError("frozen graph has no source_manifest; cannot prove it matches the source")
-    planned = {row["path"]: row["digest"] for row in state["files"]}
-    manifested: set[str] = set()
-    for entry in manifest:
-        if not isinstance(entry, dict) or not isinstance(entry.get("path"), str) \
-                or not isinstance(entry.get("sha256"), str):
-            raise HostRunError("frozen graph has a malformed source_manifest entry")
-        rel, expected = entry["path"], entry["sha256"]
-        manifested.add(rel)
-        if rel in planned:
-            if planned[rel] != expected:
-                raise HostRunError(f"frozen graph/source drift on {rel}: manifest {expected} != plan "
-                                   f"{planned[rel]}; start a new plan")
-            continue
-        try:
-            raw = (repo / rel).read_bytes()
-        except OSError as exc:
-            raise HostRunError(f"frozen graph boundary source is unreadable: {rel} ({exc.strerror or exc})") from exc
-        if hashlib.sha256(raw).hexdigest() != expected:
-            raise HostRunError(f"frozen graph boundary source drifted: {rel}; start a new plan")
-    for node in graph.get("nodes") or []:
-        if not isinstance(node, dict):
-            continue
-        rel = node.get("path")
-        if isinstance(rel, str) and rel and rel not in manifested and (repo / rel).exists():
-            raise HostRunError(f"frozen graph anchors source not in its manifest: {rel}")
+        source_context.check_graph_source(repo, graph, {row["path"]: row["digest"] for row in state["files"]})
+    except source_context.ContextError as exc:
+        raise HostRunError(f"frozen graph does not match the planned source: {exc.message}; "
+                           "start a new plan") from exc
 
 
 def _verified_context(run_dir: Path, state: dict[str, Any]) -> dict[str, Any]:
@@ -171,11 +111,22 @@ def _verified_context(run_dir: Path, state: dict[str, Any]) -> dict[str, Any]:
     Runs before every prompt, dispatch, submission, resume and verification, so
     a rewritten ``context.json`` cannot smuggle a forged graph, chunk or
     manifest into a model prompt or into evidence."""
-    context = _read_context(run_dir)
+    path = run_dir / "context.json"
+    if not path.is_file():
+        raise HostRunError(f"no frozen source context at {path}")
+    raw = path.read_bytes()
+    raw_digest = hashlib.sha256(raw).hexdigest()
     frozen = state.get("context") or {}
+    if frozen.get("raw_digest") and raw_digest != frozen["raw_digest"]:
+        raise HostRunError("frozen source context was modified after planning; start a new plan")
+    context = state.context if isinstance(state, _RunState) else None
+    if context is None:
+        context = json.loads(raw)
     if context.get("schema") != frozen.get("schema"):
         raise HostRunError("frozen context schema changed after planning; start a new plan")
-    if context_digest(context) != frozen.get("digest"):
+    # Canonical-only runs predate byte freezing. Verify their original contract
+    # once before recording the byte digest in the next successful state save.
+    if not frozen.get("raw_digest") and context_digest(context) != frozen.get("digest"):
         raise HostRunError("frozen source context was modified after planning; start a new plan")
     if bool(context.get("graph")) != bool(frozen.get("graph_present")):
         raise HostRunError("frozen context graph presence changed after planning; start a new plan")
@@ -185,12 +136,10 @@ def _verified_context(run_dir: Path, state: dict[str, Any]) -> dict[str, Any]:
         if context_files.get(path) != digest:
             raise HostRunError(f"frozen context and plan disagree on {path}; start a new plan")
     _verify_graph_manifest(Path(state["repo"]), state, context)
+    frozen["raw_digest"] = raw_digest
+    if isinstance(state, _RunState):
+        state.context = context
     return context
-
-
-def _local_context(context: dict[str, Any], paths: list[str]) -> dict[str, Any]:
-    """One local reading package from the frozen context (source_context owns it)."""
-    return source_context.context_for_paths(context, paths)
 
 
 def _build_context(repo: Path, paths: list[str],
@@ -232,8 +181,116 @@ def _semantic_tree(run_dir: Path, state: dict[str, Any], units: dict[str, dict])
     """Accepted tree, or an honest mechanical batch grouping while it is missing."""
     tree = _accepted(run_dir, "tree") if "tree" in state["tasks"] else None
     if tree:
+        if state.get("aggregation", {}).get("regions"):
+            from cbe.aggregation import compose
+            return compose(tree, _subtrees(run_dir, state, units))
         return tree
-    return semantic.mechanical_tree(state["modules"], units)
+    if state.get("aggregation", {}).get("regions"):
+        regions = state["aggregation"]["regions"]
+        upper = checks.mechanical_tree([{"number": 0, "title": "Accepted region subtrees",
+                                        "files": []}], {r["id"]: {} for r in regions})
+        return aggregation.compose(upper, _subtrees(run_dir, state, units))
+    return checks.mechanical_tree(state["modules"], units)
+
+
+def _detail_fingerprint(run_dir: Path, state: dict[str, Any]) -> str:
+    digest = hashlib.sha256()
+    for row in state["modules"]:
+        tid = f"repair_{row['number'] + 1}"
+        if state["tasks"].get(tid, {}).get("status") != "done":
+            tid = f"module_{row['number'] + 1}"
+        digest.update(f"{tid}:{state['tasks'][tid]['status']}".encode())
+        path = state_dir(run_dir) / "accepted" / f"{tid}.json"
+        if state["tasks"][tid]["status"] == "done" and path.is_file():
+            digest.update(path.read_bytes())
+    return digest.hexdigest()
+
+
+def _aggregation_inputs(run_dir: Path, state: dict[str, Any]) -> tuple[dict, list[dict]]:
+    fingerprint = _detail_fingerprint(run_dir, state)
+    cached = getattr(state, "aggregation_cache", None)
+    if cached and cached[0] == fingerprint:
+        return cached[1]
+    cache_path = state_dir(run_dir) / "aggregation-inputs.json"
+    compressed_path = cache_path.with_suffix(".json.gz")
+    payload = None
+    if compressed_path.is_file() or cache_path.is_file():
+        stored_path = compressed_path if compressed_path.is_file() else cache_path
+        raw = stored_path.read_bytes()
+        metadata = state.get("aggregation_cache") or {}
+        if (metadata.get("fingerprint") == fingerprint and
+                metadata.get("content_digest") == hashlib.sha256(raw).hexdigest()):
+            cached = json.loads(gzip.decompress(raw) if stored_path == compressed_path else raw)
+            if cached["fingerprint"] == fingerprint:
+                payload = cached["records"], cached["edges"]
+    if payload is None:
+        units, dispositions = _semantic_units(run_dir, state)
+        payload = aggregation.inputs(units, dispositions, state["inventory"], _verified_context(run_dir, state))
+        serialized = json.dumps({"fingerprint": fingerprint, "records": payload[0], "edges": payload[1]},
+                                ensure_ascii=False).encode("utf-8")
+        if len(serialized) > 10_000_000:
+            stored_path = compressed_path
+            temporary = compressed_path.with_suffix(".tmp")
+            temporary.write_bytes(gzip.compress(serialized, mtime=0))
+            os.replace(temporary, compressed_path)
+            cache_path.unlink(missing_ok=True)
+        else:
+            stored_path = cache_path
+            temporary = cache_path.with_suffix(".tmp")
+            temporary.write_bytes(serialized)
+            os.replace(temporary, cache_path)
+            compressed_path.unlink(missing_ok=True)
+        state["aggregation_cache"] = {"fingerprint": fingerprint,
+                                      "content_digest": hashlib.sha256(stored_path.read_bytes()).hexdigest()}
+    if isinstance(state, _RunState):
+        state.aggregation_cache = fingerprint, payload
+    return payload
+
+
+def _invalidate_regions(run_dir: Path, state: dict[str, Any]) -> None:
+    for tid in list(state["tasks"]):
+        if state["tasks"][tid].get("region"):
+            del state["tasks"][tid]
+            (state_dir(run_dir) / "accepted" / f"{tid}.json").unlink(missing_ok=True)
+
+
+def _subtrees(run_dir: Path, state: dict[str, Any], units: dict) -> dict:
+    result = {}
+    for region in state["aggregation"]["regions"]:
+        rid = region["id"]
+        task_id = "tree_" + rid
+        result[rid] = _accepted(run_dir, task_id) or checks.mechanical_tree(
+            [{"number": 0, "title": rid, "files": [r["path"] for uid in region["unit_ids"]
+              for r in units[uid].get("ranges", [])]}],
+            {uid: units[uid] for uid in region["unit_ids"]})
+    return result
+
+
+def _prepare_aggregation(run_dir: Path, state: dict[str, Any]) -> None:
+    """Plan only once detail is available; repairs invalidate the region snapshot."""
+    from cbe.aggregation import Limits, partition
+    modules = [t for t in state["tasks"].values() if t["kind"] == "module"]
+    if not modules or not all(t["status"] in {"done", "failed"} for t in modules):
+        return
+    fingerprint = _detail_fingerprint(run_dir, state)
+    if state.get("aggregation", {}).get("input_digest") == fingerprint:
+        return
+    units, edges = _aggregation_inputs(run_dir, state)
+    # A newly completed detail/repair invalidates all regions, including leases.
+    _invalidate_regions(run_dir, state)
+    limits = Limits.configured()
+    render_prompt = lambda rows, graph: prompts.TOOL_FREE_RULES + "\n\n" + prompts.tree_prompt(
+        rows, sorted({r["path"] for row in rows.values() for r in row.get("ranges", [])}), graph)
+    regions = partition(units, edges, limits, render_prompt,
+                        context=_verified_context(run_dir, state)) if units else []
+    state["aggregation"] = {"input_digest": fingerprint, "limits": {"max_units": limits.max_units,
+                              "max_tokens": limits.max_tokens}, "regions": regions}
+    for region in regions:
+        tid = "tree_" + region["id"]
+        state["tasks"][tid] = {**_task(tid, "tree"), "region": region["id"]}
+    if regions:
+        log_event(run_dir, "queue", f"{len(regions)} candidate region trees followed by tree merge",
+                  regions=regions)
 
 
 def _known_unit_ids(run_dir: Path, state: dict[str, Any], *, exclude: int | None = None) -> set[str]:
@@ -265,8 +322,6 @@ def _auto_complete_empty_modules(run_dir: Path, state: dict[str, Any]) -> list[s
     both a ``units must be a nonempty list`` rejection and the invented prose
     that a forced retry produces. Comments and docstrings still produce chunks
     and inventory ids, so they are never auto-completed."""
-    if not state.get("semantic"):
-        return []
     completed: list[str] = []
     for row in state["modules"]:
         number = row["number"]
@@ -277,18 +332,18 @@ def _auto_complete_empty_modules(run_dir: Path, state: dict[str, Any]) -> list[s
                   "batch_notes": "No explainable detail: every file in this batch is empty and has "
                                  "no inventory id, so no model call was made.",
                   "known_empty": True}
-        _write_json(_host_dir(run_dir) / "accepted" / f"module_{number + 1}.json", output)
+        write_json(state_dir(run_dir) / "accepted" / f"module_{number + 1}.json", output)
         task["status"], task["flags"] = "done", ["known_empty"]
         task["output"] = f"host/accepted/module_{number + 1}.json"
-        _event(run_dir, "accept", f"module_{number + 1} auto-completed: known-empty batch, no model call",
+        log_event(run_dir, "accept", f"module_{number + 1} auto-completed: known-empty batch, no model call",
                task=task["id"], flags=["known_empty"])
         completed.append(task["id"])
         review = state["tasks"].get(f"review_{number + 1}")
         if review is not None and review["status"] == "pending":
-            _write_json(_host_dir(run_dir) / "accepted" / f"review_{number + 1}.json",
+            write_json(state_dir(run_dir) / "accepted" / f"review_{number + 1}.json",
                         {"decision": "accepted", "issues": []})
             review["status"], review["output"] = "done", f"host/accepted/review_{number + 1}.json"
-            _event(run_dir, "accept", f"review_{number + 1} auto-accepted: known-empty module has no "
+            log_event(run_dir, "accept", f"review_{number + 1} auto-accepted: known-empty module has no "
                    "prose to review", task=review["id"])
     modules = [task for task in state["tasks"].values() if task["kind"] == "module"]
     if modules and all(task["status"] in {"done", "failed"} for task in modules):
@@ -298,17 +353,17 @@ def _auto_complete_empty_modules(run_dir: Path, state: dict[str, Any]) -> list[s
         if not units:
             tree = state["tasks"].get("tree")
             if tree is not None and tree["status"] == "pending":
-                _write_json(_host_dir(run_dir) / "accepted" / "tree.json",
-                            semantic.mechanical_tree(state["modules"], units))
+                write_json(state_dir(run_dir) / "accepted" / "tree.json",
+                            checks.mechanical_tree(state["modules"], units))
                 tree["status"], tree["output"] = "done", "host/accepted/tree.json"
-                _event(run_dir, "accept", "tree auto-completed mechanically: no units in this run",
+                log_event(run_dir, "accept", "tree auto-completed mechanically: no units in this run",
                        task="tree")
             system = state["tasks"].get("system")
             if system is not None and system["status"] == "pending":
-                _write_json(_host_dir(run_dir) / "accepted" / "system.json",
+                write_json(state_dir(run_dir) / "accepted" / "system.json",
                             _mechanical_semantic_overview(state, {"nodes": []}))
                 system["status"], system["output"] = "done", "host/accepted/system.json"
-                _event(run_dir, "accept", "system auto-completed mechanically: no units in this "
+                log_event(run_dir, "accept", "system auto-completed mechanically: no units in this "
                        "run", task="system")
     return completed
 
@@ -316,23 +371,15 @@ def _auto_complete_empty_modules(run_dir: Path, state: dict[str, Any]) -> list[s
 def _assert_paths_unchanged(state: dict[str, Any], paths: list[str]) -> None:
     """The script driver builds a prompt outside ``next_tasks``; a drifted source
     must stop it exactly as the host dispatch refuses a drifted path."""
-    repo = Path(state["repo"])
-    planned = {row["path"]: row["digest"] for row in state["files"]}
-    for path in paths:
-        try:
-            raw = (repo / path).read_bytes()
-        except OSError as exc:
-            raise HostRunError(f"source changed since plan: {path} ({exc.strerror or exc}); "
-                               "start a new plan") from exc
-        if hashlib.sha256(raw).hexdigest() != planned.get(path):
-            raise HostRunError(f"source changed since plan: {path}; start a new plan")
-
+    changed = _drift(state, paths)
+    if changed:
+        raise HostRunError(f"source changed since plan: {changed[0]}; start a new plan")
 
 
 @contextlib.contextmanager
-def _locked(run_dir: Path) -> Iterator[dict[str, Any]]:
+def locked_state(run_dir: Path) -> Iterator[dict[str, Any]]:
     """Yield the state under an exclusive lock; save it and STATUS.md on normal exit."""
-    host = _host_dir(run_dir)
+    host = state_dir(run_dir)
     state_path = host / "state.json"
     if not state_path.is_file():
         raise HostRunError(f"no run state at {state_path}; run `cbe host plan` first")
@@ -342,26 +389,33 @@ def _locked(run_dir: Path) -> Iterator[dict[str, Any]]:
             fcntl.flock(handle, fcntl.LOCK_EX)
         except ImportError:  # pragma: no cover - non-POSIX hosts run one command at a time
             pass
-        state = json.loads(state_path.read_text(encoding="utf-8"))
+        state = _RunState(json.loads(state_path.read_text(encoding="utf-8")))
         if state.get("schema") != SCHEMA:
             found = state.get("schema")
             hint = ("; this run uses the older free-text module layout, which is not "
                     "readable by this build. Start a new run instead of resuming it."
                     if found == "cbe-host-run/1" else ".")
             raise HostRunError(f"unsupported run schema {found!r}{hint}")
+        if not state.get("semantic"):
+            raise HostRunError("this run uses the module-page layout of CBE before 2.2, which this build "
+                               "no longer renders; start a new run instead of resuming it")
         yield state
         state["updated_at"] = _now()
-        _write_json(state_path, state)
+        write_json(state_path, state)
         (run_dir / "STATUS.md").write_text(_status_markdown(state), encoding="utf-8")
 
 
-def _event(run_dir: Path, kind: str, text: str, **fields: Any) -> None:
+def log_event(run_dir: Path, kind: str, text: str, **fields: Any) -> None:
     """Append one machine record and one human-readable progress line."""
     stamp = _now()
-    with (_host_dir(run_dir) / "events.jsonl").open("a", encoding="utf-8") as stream:
+    with (state_dir(run_dir) / "events.jsonl").open("a", encoding="utf-8") as stream:
         stream.write(json.dumps({"at": stamp, "event": kind, **fields}, ensure_ascii=False) + "\n")
     with (run_dir / "progress.log").open("a", encoding="utf-8") as stream:
         stream.write(f"{stamp} {kind:<9} {text}\n")
+
+
+def _attempt_limit(task: dict[str, Any]) -> int:
+    return DETAIL_MAX_ATTEMPTS if task["kind"] in {"module", "repair"} else MAX_ATTEMPTS
 
 
 def _task(task_id: str, kind: str, module: int | None = None, **extra: Any) -> dict[str, Any]:
@@ -370,27 +424,16 @@ def _task(task_id: str, kind: str, module: int | None = None, **extra: Any) -> d
             "seconds": None, "output": None, "usage": [], **extra}
 
 
-def _read_source(state: dict[str, Any], row: dict[str, Any]) -> str:
-    raw = (Path(state["repo"]) / row["path"]).read_bytes()
-    if hashlib.sha256(raw).hexdigest() != row["digest"]:
-        raise HostRunError(f"source changed since plan: {row['path']}; start a new plan")
-    return raw.decode("utf-8")
-
-
-def _modules(state: dict[str, Any], *, source_of: int | None = None) -> list[gen.Module]:
-    """Rebuild the modules from the run state. State keeps digests, not text, so the source
-    of module ``source_of`` is read back from the repository (checked against its digest)."""
-    wanted = set(state["modules"][source_of]["files"]) if source_of is not None else set()
-    files = {row["path"]: gen.SourceFile(row["path"], _read_source(state, row) if row["path"] in wanted else "",
-                                         row["tokens"], row["digest"], list(row["signatures"]))
+def _modules(state: dict[str, Any]) -> list[batching.Module]:
+    """Rebuild the reading batches (paths, tokens and signatures; no source text) from the run state."""
+    files = {row["path"]: batching.SourceFile(row["path"], "", row["tokens"], row["digest"], list(row["signatures"]))
              for row in state["files"]}
-    return [gen.Module(row["number"], [files[path] for path in row["files"]], row["bucket"],
-                       row["title"], set(row["depends_on"]))
+    return [batching.Module(row["number"], [files[path] for path in row["files"]], row["bucket"], row["title"])
             for row in state["modules"]]
 
 
 def _accepted(run_dir: Path, task_id: str) -> dict[str, Any] | None:
-    path = _host_dir(run_dir) / "accepted" / f"{task_id}.json"
+    path = state_dir(run_dir) / "accepted" / f"{task_id}.json"
     return json.loads(path.read_text(encoding="utf-8")) if path.is_file() else None
 
 
@@ -440,8 +483,9 @@ def _title(state: dict[str, Any], task: dict[str, Any]) -> str:
 
 
 def plan(repo: Path, run_dir: Path | None = None, *, review: str = DEFAULT_REVIEW, jobs: int = 4,
-         host: str = "other", driver: str = "host", semantic_mode: bool = True,
-         graph_path: Path | None = None) -> dict[str, Any]:
+         host: str = "other", driver: str = "host",
+         graph_path: Path | None = None, batch_target_tokens: int = batching.TARGET_TOKENS,
+         batch_max_tokens: int = batching.MAX_TOKENS) -> dict[str, Any]:
     repo = repo.resolve()
     if not repo.is_dir():
         raise HostRunError("repository root is not a directory")
@@ -453,25 +497,21 @@ def plan(repo: Path, run_dir: Path | None = None, *, review: str = DEFAULT_REVIE
         run_dir = repo / ".codebase-analysis" / "runs" / (
             datetime.now(timezone.utc).strftime(f"{driver}-%Y%m%dT%H%M%SZ-") + secrets.token_hex(4))
     run_dir = run_dir.resolve()
-    if (_host_dir(run_dir) / "state.json").exists():
+    if (state_dir(run_dir) / "state.json").exists():
         raise HostRunError("run directory already has a run; resume it or choose a fresh directory")
-    files = gen.scan(repo)
-    modules = gen.plan(files)
-    inventory: dict[str, Any] = {}
-    context: dict[str, Any] | None = None
-    if semantic_mode:
-        ast_inventory = semantic.build_inventory(
-            {item.path: {"source": item.source, "digest": item.digest, "tokens": item.tokens}
-             for item in files})
-        selected = [item.path for item in files]
-        context = _build_context(repo, selected, graph_path=graph_path)
-        semantic.ensure_chunk_coverage(context, repo, ast_inventory, selected)
-        inventory = semantic.inventory_from_context(context, selected)
+    files = batching.scan(repo)
+    modules = batching.plan(files, target_tokens=batch_target_tokens, max_tokens=batch_max_tokens)
+    ast_inventory = symbols.build_inventory(
+        {item.path: {"source": item.source, "digest": item.digest, "tokens": item.tokens}
+         for item in files})
+    selected = [item.path for item in files]
+    context = _build_context(repo, selected, graph_path=graph_path)
+    symbols.ensure_chunk_coverage(context, repo, ast_inventory, selected)
+    inventory = symbols.inventory_from_context(context, selected)
     tasks: dict[str, dict[str, Any]] = {"names": _task("names", "names")}
     for module in modules:
         tasks[f"module_{module.number + 1}"] = _task(f"module_{module.number + 1}", "module", module.number)
-    if semantic_mode:
-        tasks["tree"] = _task("tree", "tree")
+    tasks["tree"] = _task("tree", "tree")
     if review == "sample":
         reviewed = [max(modules, key=lambda module: (module.tokens, -module.number))]
     else:
@@ -480,31 +520,33 @@ def plan(repo: Path, run_dir: Path | None = None, *, review: str = DEFAULT_REVIE
         tasks[f"review_{module.number + 1}"] = _task(f"review_{module.number + 1}", "review", module.number)
     tasks["system"] = _task("system", "system")
     state = {
-        "schema": SCHEMA, "cbe_version": _version(), "run_tag": secrets.token_hex(3),
+        "schema": SCHEMA, "cbe_version": __version__, "run_tag": secrets.token_hex(3),
         "repo": str(repo), "run_dir": str(run_dir), "host": host, "driver": driver,
         "review": review, "jobs": jobs, "created_at": _now(), "updated_at": _now(), "status": "running",
-        "semantic": semantic_mode,
-        "context": ({"schema": context.get("schema"),
-                      "digest": context_digest(context),
-                      "graph_present": bool(context.get("graph")),
-                      "graph_digest": (context_digest(context["graph"])
-                                       if context.get("graph") else None)} if context else None),
+        "semantic": True,
+        "context": {"schema": context.get("schema"),
+                    "digest": context_digest(context),
+                    "graph_present": bool(context.get("graph")),
+                    "graph_digest": context_digest(context["graph"]) if context.get("graph") else None},
         "inventory": inventory,
         "files": [{"path": item.path, "tokens": item.tokens, "digest": item.digest,
                    "signatures": item.signatures} for item in files],
-        "modules": [{"number": module.number, "bucket": module.bucket, "title": gen.fallback_title(module),
-                     "files": [item.path for item in module.files], "depends_on": sorted(module.depends_on),
-                     "page": None} for module in modules],
+        "modules": [{"number": module.number, "bucket": module.bucket, "title": batching.fallback_title(module),
+                     "files": [item.path for item in module.files], "page": None} for module in modules],
         "tasks": tasks, "rendered": False, "verify": None,
     }
-    host_dir = _host_dir(run_dir)
+    for code in ("source_reassembly_fallback", "context_fallback"):
+        fallbacks = [row for row in context.get("diagnostics", []) if row.get("code") == code]
+        if fallbacks:
+            state[code] = fallbacks
+    host_dir = state_dir(run_dir)
     for name in ("tasks", "outbox", "accepted", "raw"):
         (host_dir / name).mkdir(parents=True, exist_ok=True)
-    if context is not None:
-        _write_json(run_dir / "context.json", context)
-    _write_json(host_dir / "state.json", state)
+    write_json(run_dir / "context.json", context)
+    state["context"]["raw_digest"] = hashlib.sha256((run_dir / "context.json").read_bytes()).hexdigest()
+    write_json(host_dir / "state.json", state)
     (run_dir / "STATUS.md").write_text(_status_markdown(state), encoding="utf-8")
-    _event(run_dir, "plan", f"{len(files)} files, {len(modules)} modules, {len(tasks)} tasks "
+    log_event(run_dir, "plan", f"{len(files)} files, {len(modules)} modules, {len(tasks)} tasks "
            f"(review {review}, jobs {jobs}, host {host})",
            modules=len(modules), files=len(files), review=review, jobs=jobs, host=host)
     runs_root = repo / ".codebase-analysis" / "runs"
@@ -545,22 +587,25 @@ def _settled(state: dict[str, Any], task: dict[str, Any]) -> bool:
 def _ready(state: dict[str, Any]) -> list[str]:
     tasks = state["tasks"]
     titled = tasks["names"]["status"] in {"done", "failed"}
-    semantic_mode = bool(state.get("semantic"))
     ready = []
     for task_id, task in tasks.items():
         if task["status"] != "pending":
             continue
         kind = task["kind"]
-        if kind == "names" or kind == "repair":
+        if kind in {"names", "module", "repair"}:
+            # Detail prompts use only the frozen context and inventory.
             ok = True
-        elif kind == "module":
-            # Module prompts use only the frozen context and signatures, both
-            # known after naming, so modules do not wait for each other.
-            ok = titled
         elif kind == "tree":
             modules = [other for other in tasks.values() if other["kind"] == "module"]
-            ok = bool(modules) and all(other["status"] in {"done", "failed"} for other in modules) \
+            ok = titled and bool(modules) and all(other["status"] in {"done", "failed"} for other in modules) \
                 and any(other["status"] == "done" for other in modules)
+            if ok:
+                # Freeze reviewed detail before handing out any tree lease.
+                ok = all(_settled(state, t) for t in tasks.values()
+                         if t["kind"] in {"review", "repair"})
+            if ok and task_id == "tree" and state.get("aggregation", {}).get("regions"):
+                ok = all(tasks["tree_" + r["id"]]["status"] in {"done", "failed"}
+                         for r in state["aggregation"]["regions"])
         elif kind == "review":
             ok = _module_task(state, task["module"])["status"] == "done"
         else:
@@ -578,104 +623,90 @@ def _labels(state: dict[str, Any], task_id: str) -> dict[str, str]:
             "codex_task_name": f"cbe_{state['run_tag']}_{task_id}"}
 
 
+def _detail_task(run_dir: Path, state: dict[str, Any], task: dict[str, Any], *, embed: bool,
+                 with_diagnostics: bool, issues: list[str] | None = None) -> str:
+    """The detail task for one reading batch, built from the verified frozen context."""
+    paths = list(state["modules"][task["module"]]["files"])
+    _assert_paths_unchanged(state, paths)
+    context = _verified_context(run_dir, state)
+    wanted = set(paths)
+    chunks = context.get("chunks") or []
+    diagnostics = [row for row in context.get("diagnostics") or [] if row.get("path") in wanted]
+    graph_file = None
+    graph = context.get("graph")
+    has_evidence = (projection.graph_state(graph)[0] == "provided"
+                    and any(n.get("path") in wanted for n in graph.get("nodes", [])))
+    if not embed and state.get("driver") != "script" and has_evidence:
+        # The canonical detail file is shared with review and repair for this
+        # module: identical frozen evidence, independent of task id or issues.
+        target = state_dir(run_dir) / "tasks" / f"module_{task['module'] + 1}.graph.txt"
+        lines = projection.graph_prompt_lines(
+            context.get("graph"), paths, embed=False, inventory=state["inventory"],
+            chunks=chunks, source_tokens=None, max_tokens=None)
+        target.write_text("\n".join(lines), encoding="utf-8")
+        graph_file = str(target)
+    return prompts.detail_prompt(
+        paths, state["inventory"], chunks=chunks, source_root=Path(state["repo"]),
+        graph=context.get("graph"), graph_file=graph_file,
+        context_diagnostics=diagnostics if with_diagnostics else None, issues=issues, embed=embed)
+
+
+def _system_inputs(run_dir: Path, state: dict[str, Any]) -> tuple[list[dict], int, dict, dict]:
+    """Use the same tree, evidence and character limit for prompt and acceptance."""
+    units, edges = _aggregation_inputs(run_dir, state)
+    tree = _semantic_tree(run_dir, state, units)
+    nodes = tree.get("nodes") or []
+    view = aggregation.relationship_view(tree, edges, _verified_context(run_dir, state).get("graph"))
+    return nodes, checks.system_limit(len(nodes)), view, units
+
+
 def _body(run_dir: Path, state: dict[str, Any], task: dict[str, Any], *, embed: bool) -> tuple[str, str]:
-    """Return (rules, task body). ``embed`` puts source in the prompt for tool-free completions."""
-    if state.get("semantic"):
-        return _semantic_body(run_dir, state, task, embed=embed)
-    kind = task["kind"]
-    modules = _modules(state, source_of=task["module"] if embed and kind in {"module", "repair", "review"} else None)
-    source_root = None if embed else Path(state["repo"])
-    if kind == "names":
-        return NO_FILE_RULES, gen._name_prompt(modules)
-    if kind in {"module", "repair"}:
-        return FILE_TASK_RULES, gen._module_prompt(modules[task["module"]], modules,
-                                                   task.get("issues") if kind == "repair" else None,
-                                                   source_root=source_root)
-    if kind == "review":
-        module = modules[task["module"]]
-        return FILE_TASK_RULES, (
-            "TASK: Check this module documentation against the source. Return JSON "
-            "{\"decision\":\"accepted\" or \"needs_repair\",\"issues\":[...]} . "
-            "Only report material unsupported or missing behavior.\n"
-            "DOCUMENTATION: " + json.dumps(_module_output(run_dir, state, module.number), ensure_ascii=False)
-            + "\n" + gen._module_prompt(module, modules, source_root=source_root))
-    limit = gen.system_limit(len(modules))
-    summaries, pending = [], []
-    for module in modules:
-        output = _module_output(run_dir, state, module.number)
-        if output is None:
-            pending.append(module.title)
-            continue
-        summaries.append({"title": module.title, "summary": output["summary"], "flow": output["flow"],
-                          "files": [file.path for file in module.files]})
-    note = (f"These modules are still pending and have no summary; mention them only as pending: "
-            f"{json.dumps(pending, ensure_ascii=False)}\n" if pending else "")
-    return NO_FILE_RULES, (
-        "TASK: Synthesize only these module summaries. "
-        f"Return JSON with nonempty strings overview and maintenance_navigation, each at most {limit} characters. "
-        "Explain which module to open for a maintenance question; do not invent unseen details.\n"
-        + note + json.dumps(summaries, ensure_ascii=False))
+    """Return (rules, task body); ``embed`` puts source in the prompt for tool-free completions.
 
-
-def _semantic_body(run_dir: Path, state: dict[str, Any], task: dict[str, Any],
-                   *, embed: bool) -> tuple[str, str]:
-    """Task bodies for the structured detail -> ownership tree mainline.
-
-    The frozen context is sliced once per task. Script completions embed each
-    chunk once (``embed=True``); host subagents get the absolute paths and the
-    authoritative chunk line ranges instead, so the source is never sent
-    twice. A missing graph is stated as not provided.
+    Script completions embed each file once (``embed=True``); host subagents get
+    the absolute paths and the authoritative chunk line ranges instead, so the
+    source is never sent twice. A missing graph is stated as not provided.
     """
     kind = task["kind"]
-    source_root = Path(state["repo"])
+    reading = prompts.NO_FILE_RULES if embed or state.get("driver") == "script" else prompts.FILE_TASK_RULES
+    no_source = prompts.NO_FILE_RULES
+    if not embed and state.get("driver") != "script":
+        no_source += (" Use your file-writing tool to write the result JSON. "
+                      "Do not run shell commands, scripts, or interpreters, not even to assemble or check the JSON: "
+                      "in the user's harness each one asks for permission, and this task does not need them.")
     if kind == "names":
-        return NO_FILE_RULES, gen._name_prompt(_modules(state))
+        return no_source, prompts.names_prompt(_modules(state))
     if kind in {"module", "repair"}:
-        module = state["modules"][task["module"]]
-        paths = list(module["files"])
-        _assert_paths_unchanged(state, paths)
-        context = _verified_context(run_dir, state)
-        local = _local_context(context, paths)
-        prompt = semantic.detail_prompt(
-            paths, state["inventory"], chunks=local.get("chunks") or [],
-            source_root=source_root, graph=context.get("graph"),
-            expand_context_path=str(run_dir / "context.json"),
-            context_diagnostics=local.get("diagnostics"),
-            issues=task.get("issues") if kind == "repair" else None, embed=embed)
-        return (NO_FILE_RULES if embed else FILE_TASK_RULES), prompt
+        return reading, _detail_task(run_dir, state, task, embed=embed, with_diagnostics=True,
+                                     issues=task.get("issues") if kind == "repair" else None)
     if kind == "tree":
-        units, _ = _semantic_units(run_dir, state)
-        all_paths = [path for module in state["modules"] for path in module["files"]]
-        return NO_FILE_RULES, semantic.tree_prompt(units, all_paths)
+        from cbe.aggregation import merge_inputs
+        units, edges = _aggregation_inputs(run_dir, state)
+        regions = state.get("aggregation", {}).get("regions") or []
+        if task.get("region"):
+            wanted = aggregation.region_unit_ids(regions, task["region"])
+            units = {uid: row for uid, row in units.items() if uid in wanted}
+            edges = [e for e in edges if e["from"] in wanted and e["to"] in wanted]
+        elif regions:
+            units, edges = merge_inputs(regions, _subtrees(run_dir, state, units), edges)
+        all_paths = sorted({r["path"] for row in units.values() for r in row.get("ranges", [])})
+        body = prompts.tree_prompt(units, all_paths, edges,
+                                   merge=bool(regions and not task.get("region")))
+        if regions and not task.get("region"):
+            from cbe.token_budget import count_text_tokens
+            size = count_text_tokens(prompts.TOOL_FREE_RULES + "\n\n" + body)
+            budget = state["aggregation"]["limits"]["max_tokens"]
+            state["aggregation"]["merge_input_tokens"] = size
+            if size > budget:
+                raise MergeBudgetError(f"tree merge input {size} exceeds token budget {budget}; "
+                                   "increase CBE_TREE_MAX_TOKENS and replan; accepted region subtrees are retained")
+        return no_source, body
     if kind == "review":
-        module = state["modules"][task["module"]]
-        paths = list(module["files"])
-        _assert_paths_unchanged(state, paths)
-        context = _verified_context(run_dir, state)
-        local = _local_context(context, paths)
-        doc = json.dumps(_module_output(run_dir, state, module["number"]), ensure_ascii=False)
-        source_task = semantic.detail_prompt(
-            paths, state["inventory"], chunks=local.get("chunks") or [],
-            source_root=source_root, graph=context.get("graph"),
-            expand_context_path=str(run_dir / "context.json"), embed=embed)
-        return (NO_FILE_RULES if embed else FILE_TASK_RULES), (
-            "TASK: Check these structured detail units against the source. Return JSON "
-            "{\"decision\":\"accepted\" or \"needs_repair\",\"issues\":[...]} . Only report "
-            "material unsupported or missing behavior, a wrong condition or failure surface, or a "
-            "unit attributed to the wrong symbol. Do not judge writing style.\n"
-            "DOCUMENTATION (structured units): " + doc + "\n\n" + source_task)
-    units, _ = _semantic_units(run_dir, state)
-    nodes = (_semantic_tree(run_dir, state, units).get("nodes") or [])
-    limit = gen.system_limit(max(len(nodes), 1))
-    summaries = [{"id": node.get("id"), "title": node.get("title"),
-                  "capability": node.get("capability"), "summary": node.get("summary"),
-                  "parent": node.get("parent"), "units": len(node.get("unit_ids") or [])}
-                 for node in nodes]
-    return NO_FILE_RULES, (
-        "TASK: Synthesize only these semantic node summaries into an overview and maintenance "
-        f"navigation for the repository. Return JSON with nonempty strings overview and "
-        f"maintenance_navigation, each at most {limit} characters. Explain which node to open for "
-        "a maintenance question; do not invent unseen details.\n" + json.dumps(summaries, ensure_ascii=False))
+        units = _module_output(run_dir, state, task["module"])
+        return reading, prompts.review_prompt(
+            units, _detail_task(run_dir, state, task, embed=embed, with_diagnostics=False))
+    nodes, limit, view, _ = _system_inputs(run_dir, state)
+    return no_source, prompts.system_prompt(nodes, limit, view)
 
 
 def _previous_error(task: dict[str, Any]) -> str:
@@ -687,7 +718,7 @@ def _previous_error(task: dict[str, Any]) -> str:
 
 def _prompt(run_dir: Path, state: dict[str, Any], task: dict[str, Any]) -> str:
     rules, body = _body(run_dir, state, task, embed=False)
-    outbox = _host_dir(run_dir) / "outbox" / f"{task['id']}.json"
+    outbox = state_dir(run_dir) / "outbox" / f"{task['id']}.json"
     return (f"# Codebase Explorer task `{task['id']}` (run {state['run_tag']})\n\n{rules}\n\n"
             f"When you are done, write exactly one JSON object (no Markdown fences, no commentary) to this "
             f"file, creating or replacing it:\n{outbox}\n\nThen reply with the single line: DONE {task['id']}\n"
@@ -696,13 +727,13 @@ def _prompt(run_dir: Path, state: dict[str, Any], task: dict[str, Any]) -> str:
 
 def completion_prompt(run_dir: Path, task_id: str) -> str:
     """The same task as one tool-free completion (OpenCode or Devin): source is embedded."""
-    with _locked(run_dir) as state:
+    with locked_state(run_dir) as state:
         task = state["tasks"][task_id]
         _, body = _body(run_dir, state, task, embed=True)
-        prompt = gen.FIXED + "\n\n" + body
+        prompt = prompts.TOOL_FREE_RULES + "\n\n" + body
         if task["errors"]:
             prompt += "\n\nPrevious completion failed. Correct it now. Original error: " + task["errors"][-1][:2000]
-            previous = _host_dir(run_dir) / "raw" / f"{task_id}.attempt-{task['attempts']}.txt"
+            previous = state_dir(run_dir) / "raw" / f"{task_id}.attempt-{task['attempts']}.txt"
             if previous.is_file():
                 prompt += "; original_output:" + previous.read_text(encoding="utf-8")[:8000]
         return prompt
@@ -710,32 +741,42 @@ def completion_prompt(run_dir: Path, task_id: str) -> str:
 
 def next_tasks(run_dir: Path, *, limit: int | None = None, owner: str | None = None,
                reclaim_after: int | None = None) -> dict[str, Any]:
-    with _locked(run_dir) as state:
-        if state.get("semantic"):
-            _verified_context(run_dir, state)
-            _auto_complete_empty_modules(run_dir, state)
+    with locked_state(run_dir) as state:
+        _verified_context(run_dir, state)
+        _auto_complete_empty_modules(run_dir, state)
+        _prepare_aggregation(run_dir, state)
         now = time.time()
         if reclaim_after is not None:
             for task in state["tasks"].values():
-                if task["status"] == "leased" and now - _epoch(task["lease"]["at"]) > reclaim_after:
+                if task["status"] == "leased" and now - epoch(task["lease"]["at"]) > reclaim_after:
                     task["status"], task["lease"] = "pending", None
-                    _event(run_dir, "reclaim", f"{task['id']} lease older than {reclaim_after}s returned to queue",
+                    log_event(run_dir, "reclaim", f"{task['id']} lease older than {reclaim_after}s returned to queue",
                            task=task["id"])
         active = sum(task["status"] == "leased" for task in state["tasks"].values())
         slots = max(0, state["jobs"] - active)
         if limit is not None:
             slots = min(slots, limit)
         handed = []
-        for task_id in _ready(state)[:slots]:
+        queue = _ready(state)[:slots]
+        for task_id in queue:
             task = state["tasks"][task_id]
             if task["kind"] in {"module", "repair", "review"}:
                 changed = _drift(state, state["modules"][task["module"]]["files"])
                 if changed:
                     raise HostRunError("source missing or changed since plan: " + ", ".join(changed[:10])
                                        + "; start a new plan")
-            prompt_path = _host_dir(run_dir) / "tasks" / f"{task_id}.md"
-            prompt_path.write_text(_prompt(run_dir, state, task), encoding="utf-8")
-            (_host_dir(run_dir) / "outbox" / f"{task_id}.json").unlink(missing_ok=True)
+            prompt_path = state_dir(run_dir) / "tasks" / f"{task_id}.md"
+            try:
+                prompt_text = _prompt(run_dir, state, task)
+            except MergeBudgetError as exc:
+                task["status"], task["lease"] = "failed", None
+                task["errors"].append(str(exc))
+                log_event(run_dir, "fail", str(exc), task=task_id)
+                _maybe_render(run_dir, state, force=True)
+                queue.extend(tid for tid in _ready(state)[:max(0, slots - len(handed))] if tid not in queue)
+                continue
+            prompt_path.write_text(prompt_text, encoding="utf-8")
+            (state_dir(run_dir) / "outbox" / f"{task_id}.json").unlink(missing_ok=True)
             stamp = _now()
             task["status"], task["leased_at"] = "leased", stamp
             task["lease"] = {"id": secrets.token_hex(4), "at": stamp, "owner": owner or state["host"]}
@@ -747,14 +788,14 @@ def next_tasks(run_dir: Path, *, limit: int | None = None, owner: str | None = N
             handed.append({
                 "task": task_id, "kind": task["kind"], "attempt": task["attempts"] + 1,
                 "title": _title(state, task), "prompt_file": str(prompt_path),
-                "output_file": str(_host_dir(run_dir) / "outbox" / f"{task_id}.json"),
+                "output_file": str(state_dir(run_dir) / "outbox" / f"{task_id}.json"),
                 **labels,
                 "dispatch_message": (f"Codebase Explorer task {task_id}. Read the instruction file {prompt_path} "
                                      f"and follow it exactly: it lists the files to read and the JSON file to "
                                      f"write. Reply only with: DONE {task_id}"),
             })
             title = f" \"{_title(state, task)}\"" if task["module"] is not None else ""
-            _event(run_dir, "claim", f"{task_id}{title} attempt {task['attempts'] + 1} -> {task['lease']['owner']}",
+            log_event(run_dir, "claim", f"{task_id}{title} attempt {task['attempts'] + 1} -> {task['lease']['owner']}",
                    task=task_id, owner=task["lease"]["owner"])
         summary = _summary(state)
     return {"tasks": handed, **summary}
@@ -773,27 +814,67 @@ def _raise_problems(problems: list[str]) -> None:
 def _checks(run_dir: Path, state: dict[str, Any], task: dict[str, Any]) -> tuple[Any, Any]:
     """(strict check, normalizer) for a task; both mutate the value they accept."""
     modules = _modules(state)
-    if state.get("semantic") and task["kind"] in {"module", "repair"}:
-        paths = list(state["modules"][task["module"]]["files"])
-        subset = semantic.inventory_for_paths(state["inventory"], paths)
-        known = _known_unit_ids(run_dir, state, exclude=task["module"])
-        return (lambda value: _raise_problems(semantic.validate_details(value, paths, subset, known)),
-                lambda value: semantic.normalize_details(value, paths, subset, known))
-    if state.get("semantic") and task["kind"] == "tree":
-        universe = set(_semantic_units(run_dir, state)[0])
-        return (lambda value: _raise_problems(semantic.validate_tree(value, universe)),
-                lambda value: semantic.normalize_tree(value, universe))
-    if task["kind"] == "names":
-        return (lambda value: gen._check_naming(value, modules),
-                lambda value: gen.normalize_naming(value, modules))
     if task["kind"] in {"module", "repair"}:
-        module = modules[task["module"]]
-        return (lambda value: gen._check_module(value, module),
-                lambda value: gen.normalize_module(value, module))
+        paths = list(state["modules"][task["module"]]["files"])
+        subset = symbols.inventory_for_paths(state["inventory"], paths)
+        known = _known_unit_ids(run_dir, state, exclude=task["module"])
+        def validate_detail(value):
+            problems = checks.validate_details(value, paths, subset, known)
+            # The retry prompt has a bounded error excerpt. Put actionable
+            # identity diagnostics before secondary shape/coverage errors.
+            problems.sort(key=lambda problem: ("not in this batch's inventory" not in problem,
+                                               "dispositions missing inventory ids" not in problem))
+            _raise_problems(problems)
+        return (validate_detail,
+                lambda value: checks.normalize_details(value, paths, subset, known))
+    if task["kind"] == "tree":
+        universe = set(_semantic_units(run_dir, state)[0])
+        regions = state.get("aggregation", {}).get("regions") or []
+        if task.get("region"):
+            universe = aggregation.region_unit_ids(regions, task["region"])
+        elif regions:
+            universe = {r["id"] for r in regions}
+        if regions and not task.get("region"):
+            from cbe.aggregation import compose
+            units = _semantic_units(run_dir, state)[0]
+            subtrees = _subtrees(run_dir, state, units)
+            def validate_merge(value):
+                _raise_problems(checks.validate_tree(value, universe))
+                _raise_problems(checks.validate_tree(compose(value, subtrees), set(units)))
+            def normalize_merge(value):
+                flags = checks.normalize_tree(value, universe)
+                validate_merge(value)
+                return flags
+            return validate_merge, normalize_merge
+        if task.get("region"):
+            def validate_region(value):
+                _raise_problems(checks.validate_tree(value, universe))
+                aggregation.validate_region_ids(value, task["region"])
+            def normalize_region(value):
+                flags = checks.normalize_tree(value, universe)
+                validate_region(value)
+                return flags
+            return validate_region, normalize_region
+        return (lambda value: _raise_problems(checks.validate_tree(value, universe)),
+                lambda value: checks.normalize_tree(value, universe))
+    if task["kind"] == "names":
+        return (lambda value: checks.check_naming(value, modules),
+                lambda value: checks.normalize_naming(value, modules))
     if task["kind"] == "review":
-        return gen._check_review, gen.normalize_review
-    limit = gen.system_limit(len(modules))
-    return (lambda value: gen._check_system(value, limit), lambda value: gen.normalize_system(value, limit))
+        return checks.check_review, checks.normalize_review
+    _, limit, view, units = _system_inputs(run_dir, state)
+    shown = prompts.system_relationship_context(view)
+    options = dict(unit_ids=set(units), dependencies=shown["dependencies"],
+                   has_candidates=bool(shown["candidate_flows"]))
+    repaired = False
+    def strict(value):
+        checks.check_system(value, limit, normalized=repaired, **options)
+    def normalize(value):
+        nonlocal repaired
+        flags = checks.normalize_system(value, limit, **options)
+        repaired = True
+        return flags
+    return strict, normalize
 
 
 def _usage_entry(usage: dict[str, Any] | None, attempt: int) -> dict[str, Any] | None:
@@ -807,17 +888,19 @@ def _apply_submit(run_dir: Path, state: dict[str, Any], task: dict[str, Any], re
                   raw_text: str | None = None) -> dict[str, Any]:
     task["attempts"] += 1
     attempt = task["attempts"]
-    final = attempt - task.get("attempt_base", 0) >= MAX_ATTEMPTS
+    limit = _attempt_limit(task)
+    round_attempt = attempt - task.get("attempt_base", 0)
+    final = round_attempt >= limit
     entry = _usage_entry(usage, attempt)
     if entry:
         task["usage"].append(entry)
     stamp = _now()
     task["submitted_at"] = stamp
-    task["seconds"] = round(_epoch(stamp) - _epoch(task["leased_at"]), 1) if task.get("leased_at") else None
+    task["seconds"] = round(epoch(stamp) - epoch(task["leased_at"]), 1) if task.get("leased_at") else None
     raw = raw_text if error is not None else (result.read_text(encoding="utf-8") if result.is_file() else None)
     if error is None and raw is None:
         error = f"no result file at {result}"
-    archive = _host_dir(run_dir) / "raw"
+    archive = state_dir(run_dir) / "raw"
     if raw is not None:
         (archive / f"{task['id']}.attempt-{attempt}.txt").write_text(raw, encoding="utf-8")
     strict, normalize = _checks(run_dir, state, task)
@@ -825,18 +908,16 @@ def _apply_submit(run_dir: Path, state: dict[str, Any], task: dict[str, Any], re
     flags: list[str] = []
     if error is None:
         try:
-            value = _json_object(raw or "")
+            value = checks.json_object(raw or "")
             strict(value)
         except (ValueError, TypeError) as exc:
             error, value = f"schema_error:{exc}", None
     if error is not None and final:
-        # The re-ask already happened. Accept the newest usable answer, made
-        # compliant, rather than failing a task whose content is there. A
-        # source_not_delivered attempt is the exception: its answer was written
-        # without the source reaching the model, so it is never publishable.
-        undelivered = set(task.get("undelivered_attempts") or [])
-        if error.startswith("source_not_delivered"):
-            undelivered.add(attempt)  # recorded durably in the error branch below
+        # Answers without delivered source or with provider truncation must
+        # never be resurrected by the final-attempt normalizer.
+        undelivered = set(task.get("undelivered_attempts") or []) | set(task.get("unsafe_attempts") or [])
+        if error.startswith(("source_not_delivered", "output_limit")):
+            undelivered.add(attempt)
         for number in range(attempt, task.get("attempt_base", 0), -1):
             if number in undelivered:
                 continue
@@ -844,11 +925,20 @@ def _apply_submit(run_dir: Path, state: dict[str, Any], task: dict[str, Any], re
             if not candidate.is_file():
                 continue
             try:
-                parsed = _json_object(candidate.read_text(encoding="utf-8"))
+                parsed = checks.json_object(candidate.read_text(encoding="utf-8"))
                 flags = normalize(parsed)
+                strict(parsed)
+            except checks.MissingDispositionsError as exc:
+                if number == attempt:
+                    error = f"schema_error:{exc}"
+                if task["kind"] not in {"module", "repair"}:
+                    break
+                continue
             except (ValueError, TypeError):
                 continue
             value = parsed
+            if number < attempt and task["kind"] in {"module", "repair"}:
+                flags.append(f"answer_fallback: attempt {number} (final attempt {attempt})")
             task["normalized_from"] = error
             error = None
             break
@@ -859,25 +949,31 @@ def _apply_submit(run_dir: Path, state: dict[str, Any], task: dict[str, Any], re
         task["errors"].append(error)
         if error.startswith("source_not_delivered"):
             task.setdefault("undelivered_attempts", []).append(attempt)
+        if error.startswith("output_limit"):
+            task.setdefault("unsafe_attempts", []).append(attempt)
         result.unlink(missing_ok=True)
         task["status"] = "failed" if final else "pending"
         if task["status"] == "failed":
-            _event(run_dir, "fail", f"{label} after {attempt} attempts{timing}: {error[:300]}; "
-                   "pending until the run is resumed", task=task["id"], error=error[:300])
+            log_event(run_dir, "fail", f"{label} after {attempt} total attempts "
+                   f"({round_attempt}/{limit} this round){timing}: {error[:300]}; "
+                   "pending until the run is resumed", task=task["id"], error=error[:300],
+                   attempt=attempt, round_attempt=round_attempt, attempt_limit=limit)
         else:
-            _event(run_dir, "reject", f"{label} attempt {attempt}{timing}: {error[:300]}; re-asking with this error",
-                   task=task["id"], attempt=attempt, error=error[:300])
+            log_event(run_dir, "reject", f"{label} attempt {attempt} ({round_attempt}/{limit} this round)"
+                   f"{timing}: {error[:300]}; re-asking with this error",
+                   task=task["id"], attempt=attempt, error=error[:300],
+                   round_attempt=round_attempt, attempt_limit=limit)
         _maybe_render(run_dir, state, refresh=False)
         return {"accepted": False, "task": task["id"], "error": error[:1000],
                 "attempts": attempt, "task_status": task["status"]}
     assert value is not None
-    _write_json(_host_dir(run_dir) / "accepted" / f"{task['id']}.json", value)
+    write_json(state_dir(run_dir) / "accepted" / f"{task['id']}.json", value)
     task["status"], task["flags"] = "done", flags
     task["output"] = f"host/accepted/{task['id']}.json"
     if flags:
-        _event(run_dir, "normalize", f"{label} attempt {attempt}: accepted after normalization: "
+        log_event(run_dir, "normalize", f"{label} attempt {attempt}: accepted after normalization: "
                + "; ".join(flags)[:600], task=task["id"], flags=flags)
-    _event(run_dir, "accept", f"{label} attempt {attempt}{timing} -> {task['output']}", task=task["id"],
+    log_event(run_dir, "accept", f"{label} attempt {attempt}{timing} -> {task['output']}", task=task["id"],
            attempt=attempt)
     if task["kind"] == "names":
         for row in value["names"]:
@@ -886,27 +982,34 @@ def _apply_submit(run_dir: Path, state: dict[str, Any], task: dict[str, Any], re
         repair_id = f"repair_{task['module'] + 1}"
         if repair_id not in state["tasks"]:
             state["tasks"][repair_id] = _task(repair_id, "repair", task["module"], issues=value["issues"])
-            _event(run_dir, "queue", f"{repair_id} for {len(value['issues'])} review finding(s)", task=repair_id)
+            log_event(run_dir, "queue", f"{repair_id} for {len(value['issues'])} review finding(s)", task=repair_id)
     elif task["kind"] in {"module", "repair"}:
-        if state.get("semantic"):
-            tree = state["tasks"].get("tree")
-            if tree is not None and tree["status"] == "done" \
-                    and (task["kind"] == "repair"
-                         or task["module"] not in tree.get("covered", [])):
-                # Both a newly finished module and a repair can change the unit
-                # set (a repair often adds grp: units), so the ownership tree
-                # must be rebuilt or some unit ends up with no primary owner.
-                tree["status"], tree["attempt_base"] = "pending", tree["attempts"]
-                tree.pop("covered", None)
-                _event(run_dir, "queue", "tree again so the ownership tree covers the current units",
-                       task="tree")
+        # Region outputs describe a fixed detail snapshot. A repair or a late
+        # module must not leave old leases/accepted upper nodes composable.
+        if state.get("aggregation", {}).get("regions"):
+            _invalidate_regions(run_dir, state)
+            state.pop("aggregation", None)
+            upper = state["tasks"]["tree"]
+            upper["status"], upper["lease"], upper["attempt_base"] = "pending", None, upper["attempts"]
+            (state_dir(run_dir) / "accepted" / "tree.json").unlink(missing_ok=True)
+        tree = state["tasks"].get("tree")
+        if tree is not None and tree["status"] == "done" \
+                and (task["kind"] == "repair"
+                     or task["module"] not in tree.get("covered", [])):
+            # Both a newly finished module and a repair can change the unit
+            # set (a repair often adds grp: units), so the ownership tree
+            # must be rebuilt or some unit ends up with no primary owner.
+            tree["status"], tree["attempt_base"] = "pending", tree["attempts"]
+            tree.pop("covered", None)
+            log_event(run_dir, "queue", "tree again so the ownership tree covers the current units",
+                   task="tree")
         system = state["tasks"]["system"]
         if system["status"] == "done" and (task["kind"] == "repair"
                                             or task["module"] not in system.get("covered", [])):
             # The overview was written without this module's current output; ask
             # for a fresh one.
             system["status"], system["attempt_base"] = "pending", system["attempts"]
-            _event(run_dir, "queue", "system again so the overview covers the newly finished module", task="system")
+            log_event(run_dir, "queue", "system again so the overview covers the newly finished module", task="system")
     _maybe_render(run_dir, state, force=task["kind"] == "system")
     return {"accepted": True, "task": task["id"], "attempts": attempt, "task_status": "done",
             "normalized": bool(flags), "flags": flags}
@@ -914,10 +1017,9 @@ def _apply_submit(run_dir: Path, state: dict[str, Any], task: dict[str, Any], re
 
 def submit(run_dir: Path, task_id: str, *, result: Path | None = None, usage: dict[str, Any] | None = None,
            error: str | None = None, raw_text: str | None = None) -> dict[str, Any]:
-    with _locked(run_dir) as state:
-        if state.get("semantic"):
-            # Evidence is only consumed against the frozen snapshot.
-            _verified_context(run_dir, state)
+    with locked_state(run_dir) as state:
+        # Evidence is only consumed against the frozen snapshot.
+        _verified_context(run_dir, state)
         task = state["tasks"].get(task_id)
         if task is None:
             raise HostRunError(f"unknown task {task_id}")
@@ -925,7 +1027,7 @@ def submit(run_dir: Path, task_id: str, *, result: Path | None = None, usage: di
             return {"accepted": True, "task": task_id, "already": True, **_summary(state)}
         if task["status"] == "failed":
             raise HostRunError(f"{task_id} failed after {task['attempts']} attempts; use `cbe host retry`")
-        outcome = _apply_submit(run_dir, state, task, result or _host_dir(run_dir) / "outbox" / f"{task_id}.json",
+        outcome = _apply_submit(run_dir, state, task, result or state_dir(run_dir) / "outbox" / f"{task_id}.json",
                                 usage, error=error, raw_text=raw_text)
         return {**outcome, **_summary(state)}
 
@@ -935,9 +1037,9 @@ def note_usage_unknown(run_dir: Path, task_id: str, attempt: int) -> None:
 
     Per-call source delivery could not be verified for it. The call is not
     failed on this, but the gap must be visible in STATUS.md."""
-    with _locked(run_dir) as state:
+    with locked_state(run_dir) as state:
         state.setdefault("usage_unknown", []).append({"task": task_id, "attempt": attempt})
-        _event(run_dir, "usage", f"{task_id} attempt {attempt} reported no usage; "
+        log_event(run_dir, "usage", f"{task_id} attempt {attempt} reported no usage; "
                "per-call source delivery not verified", task=task_id, attempt=attempt)
 
 
@@ -956,10 +1058,20 @@ def _summary(state: dict[str, Any]) -> dict[str, Any]:
     run = state["run_dir"]
     if state["status"] == "complete":
         action = f"done; open {run}/docs/INDEX.md, then run `cbe host cost --run-dir {run}`"
+    elif state["status"] == "partial" and state.get("partial_reason") == "source_not_embedded":
+        action = (f"partial: source_not_embedded ({state.get('partial_detail', '')}); "
+                  "source changed or could not be embedded from the frozen plan. "
+                  "Create a new plan for the current source before generating documentation.")
     elif state["status"] == "partial" and state.get("partial_reason"):
+        affected = ", ".join(row["task"] for row in failed) or state.get("partial_detail", "")
+        again = (f"`cbe generate {state['repo']} --resume --run-dir {run}`" if state.get("driver") == "script"
+                 else f"`cbe host resume --run-dir {run}` and continue with `cbe host next`")
         action = (f"partial: {state['partial_reason']} ({state.get('partial_detail', '')}); "
-                  "the pages were not written from the source, so do not trust them. Fix the cause, then "
-                  "start a new run")
+                  f"affected tasks: {affected}. Rejected answers were not published. Fix the cause, then {again}")
+    elif state["status"] == "partial" and state.get("verify") and not state["verify"]["ok"] and not failed:
+        names = ", ".join(row["check"] for row in state["verify"]["checks"] if not row["ok"])
+        action = (f"partial: deterministic verification failed ({names}); inspect `cbe host verify --run-dir {run}`, "
+                  "fix the cause and verify again")
     elif state["status"] == "partial":
         again = (f"`cbe generate {state['repo']} --resume --run-dir {run}`" if state.get("driver") == "script"
                  else f"`cbe host resume --run-dir {run}` and continue with `cbe host next`")
@@ -969,12 +1081,17 @@ def _summary(state: dict[str, Any]) -> dict[str, Any]:
     else:
         action = f"cbe host next --run-dir {run}"
     unknown = [f"{row['task']}#attempt-{row['attempt']}" for row in state.get("usage_unknown") or []]
+    source_fallbacks = {key: value
+                        for code in ("source_reassembly_fallback", "context_fallback")
+                        if (rows := state.get(code, []))
+                        for key, value in ((code + "_count", len(rows)), (code, rows))}
     return {"status": state["status"], "counts": counts, "leased": leased, "failed": failed,
-            "ready": len(ready), "next_action": action, "usage_unknown": unknown}
+            "ready": len(ready), "next_action": action, "usage_unknown": unknown,
+            **source_fallbacks}
 
 
 def status(run_dir: Path) -> dict[str, Any]:
-    with _locked(run_dir) as state:
+    with locked_state(run_dir) as state:
         rows = [{"task": task["id"], "title": _title(state, task), "status": task["status"],
                  "attempts": task["attempts"], "seconds": task["seconds"], "output": task["output"],
                  "flags": len(task["flags"])} for task in state["tasks"].values()]
@@ -990,10 +1107,9 @@ def resume(run_dir: Path, *, owner: str | None = None, retry_failed: bool = True
 
     A ``graph_path`` passed on resume must be the same graph the plan froze; a
     different graph is rejected instead of silently ignored."""
-    with _locked(run_dir) as state:
-        if state.get("semantic"):
-            _verified_context(run_dir, state)
-            _auto_complete_empty_modules(run_dir, state)
+    with locked_state(run_dir) as state:
+        _verified_context(run_dir, state)
+        _auto_complete_empty_modules(run_dir, state)
         if graph_path is not None:
             frozen = state.get("context") or {}
             if not frozen.get("graph_present"):
@@ -1012,7 +1128,7 @@ def resume(run_dir: Path, *, owner: str | None = None, retry_failed: bool = True
         for task in list(state["tasks"].values()):
             if task["status"] != "leased":
                 continue
-            outbox = _host_dir(run_dir) / "outbox" / f"{task['id']}.json"
+            outbox = state_dir(run_dir) / "outbox" / f"{task['id']}.json"
             if outbox.is_file():
                 submitted.append(_apply_submit(run_dir, state, task, outbox, None))
             else:
@@ -1025,10 +1141,13 @@ def resume(run_dir: Path, *, owner: str | None = None, retry_failed: bool = True
                     retried.append(task["id"])
         if (released or retried) and state["status"] == "partial":
             state["status"] = "running"
-        _event(run_dir, "resume", f"by {owner or state['host']}: adopted {[row['task'] for row in submitted]}, "
+        limits = {tid: _attempt_limit(state["tasks"][tid]) for tid in retried}
+        log_event(run_dir, "resume", f"by {owner or state['host']}: adopted {[row['task'] for row in submitted]}, "
                f"released {released}, retrying {retried}"
+               + (f"; fresh attempts {limits}" if limits else "")
                + (f"; {len(changed)} source file(s) changed" if changed else ""),
-               submitted=[row["task"] for row in submitted], released=released, retried=retried)
+               submitted=[row["task"] for row in submitted], released=released, retried=retried,
+               **({"attempt_limits": limits} if limits else {}))
         _maybe_render(run_dir, state, refresh=False)
         return {"submitted": submitted, "released": released, "retried": retried, "changed_sources": changed[:50],
                 **({"warning": "sources changed since plan; start a new plan"} if changed else {}),
@@ -1036,7 +1155,7 @@ def resume(run_dir: Path, *, owner: str | None = None, retry_failed: bool = True
 
 
 def retry(run_dir: Path, task_id: str) -> dict[str, Any]:
-    with _locked(run_dir) as state:
+    with locked_state(run_dir) as state:
         chosen = [task for task in state["tasks"].values()
                   if task["status"] == "failed" and task_id in ("all", task["id"])]
         if not chosen:
@@ -1044,21 +1163,22 @@ def retry(run_dir: Path, task_id: str) -> dict[str, Any]:
         for task in chosen:
             # Keep the cumulative count: raw archives and cost rows stay per attempt.
             task["status"], task["attempt_base"] = "pending", task["attempts"]
-            _event(run_dir, "retry", f"{task['id']} gets {MAX_ATTEMPTS} fresh attempts", task=task["id"])
+            log_event(run_dir, "retry", f"{task['id']} gets {_attempt_limit(task)} fresh attempts",
+                      task=task["id"], attempt_limit=_attempt_limit(task))
         if state["status"] == "partial":
             state["status"] = "running"
         return _summary(state)
 
 
 def release(run_dir: Path, task_id: str | None = None) -> dict[str, Any]:
-    with _locked(run_dir) as state:
+    with locked_state(run_dir) as state:
         released = []
         for task in state["tasks"].values():
             if task["status"] == "leased" and task_id in (None, task["id"]):
                 task["status"], task["lease"] = "pending", None
                 released.append(task["id"])
         if released:
-            _event(run_dir, "release", f"returned {released} to the queue", tasks=released)
+            log_event(run_dir, "release", f"returned {released} to the queue", tasks=released)
         return {"released": released, **_summary(state)}
 
 
@@ -1072,18 +1192,6 @@ def _maybe_render(run_dir: Path, state: dict[str, Any], *, force: bool = False, 
         _render(run_dir, state)
 
 
-def _mechanical_overview(state: dict[str, Any], modules: list[gen.Module]) -> dict[str, str]:
-    subsystems = sorted({module.bucket for module in modules})
-    lines = []
-    for module in modules:
-        directory, _ = gen._primary_directory(module)
-        lines.append(f"- {module.title}: `{directory}` ({len(module.files)} files)")
-    return {"overview": (f"This map covers {len(state['files'])} source files in {len(modules)} modules across "
-                         f"{len(subsystems)} subsystems. The model-written overview is not available yet, so this "
-                         "summary is generated mechanically from the module list."),
-            "maintenance_navigation": gen._truncate("\n".join(lines), gen.system_limit(len(modules)))}
-
-
 def _mechanical_semantic_overview(state: dict[str, Any], tree: dict[str, Any]) -> dict[str, str]:
     nodes = tree.get("nodes") or []
     lines = [f"- {node.get('title') or node['id']}: {node.get('summary') or node.get('capability') or ''}"
@@ -1091,7 +1199,7 @@ def _mechanical_semantic_overview(state: dict[str, Any], tree: dict[str, Any]) -
     return {"overview": (f"This map covers {len(state['files'])} source files in {len(nodes)} semantic "
                          "nodes. The model-written overview is not available yet, so this summary is "
                          "generated mechanically from the responsibility tree."),
-            "maintenance_navigation": gen._truncate("\n".join(lines), gen.system_limit(max(len(nodes), 1)))}
+            "maintenance_navigation": checks.truncate("\n".join(lines), checks.system_limit(max(len(nodes), 1)))}
 
 
 def _semantic_review_summary(run_dir: Path, state: dict[str, Any]) -> dict[str, Any]:
@@ -1124,15 +1232,50 @@ def _semantic_review_summary(run_dir: Path, state: dict[str, Any]) -> dict[str, 
                     "this is not a whole-map proof"}
 
 
-def _render_semantic(run_dir: Path, state: dict[str, Any]) -> None:
-    if state.get("semantic"):
-        try:
-            _verified_context(run_dir, state)
-            _auto_complete_empty_modules(run_dir, state)
-        except HostRunError as exc:
-            state["render_error"] = str(exc)
-            _event(run_dir, "render", f"failed: {exc}", error=str(exc))
-            return
+def _identity_corrections(state: dict[str, Any]) -> list[dict[str, str]]:
+    """Read durable S5d flags too, so old runs gain the same visibility on render."""
+    rows = []
+    for task in sorted(state["tasks"].values(), key=lambda row: row["id"]):
+        for flag in task.get("flags") or []:
+            match = re.fullmatch(r"id_corrected: (.*?) -> (.*?) \((.*)\)", flag)
+            if match:
+                original, corrected, location = match.groups()
+                rows.append({"task": task["id"], "original": original,
+                             "corrected": corrected, "location": location})
+    return rows
+
+
+def _answer_fallbacks(state: dict[str, Any]) -> list[dict[str, Any]]:
+    rows = []
+    for task in sorted(state["tasks"].values(), key=lambda row: row["id"]):
+        for flag in task.get("flags") or []:
+            match = re.fullmatch(r"answer_fallback: attempt (\d+) \(final attempt (\d+)\)", flag)
+            if match:
+                rows.append({"task": task["id"], "attempt": int(match[1]), "final_attempt": int(match[2])})
+    return rows
+
+
+def _index_only_fills(state: dict[str, Any]) -> list[dict[str, str]]:
+    """Count program-created entries, including flags preserved in older runs."""
+    rows = []
+    for task in sorted(state["tasks"].values(), key=lambda row: row["id"]):
+        for flag in task.get("flags") or []:
+            for suffix, reason in ((": disposition missing; treated as index_only", "missing"),
+                                   (": invalid disposition; treated as index_only", "invalid")):
+                if flag.endswith(suffix):
+                    rows.append({"task": task["id"], "symbol": flag.removesuffix(suffix),
+                                 "reason": reason})
+    return rows
+
+
+def _render(run_dir: Path, state: dict[str, Any]) -> None:
+    try:
+        context = _verified_context(run_dir, state)
+        _auto_complete_empty_modules(run_dir, state)
+    except HostRunError as exc:
+        state["render_error"] = str(exc)
+        log_event(run_dir, "render", f"failed: {exc}", error=str(exc))
+        return
     units, dispositions = _semantic_units(run_dir, state)
     tree = _semantic_tree(run_dir, state, units)
     pending = [f"module_{row['number'] + 1}" for row in state["modules"]
@@ -1140,9 +1283,17 @@ def _render_semantic(run_dir: Path, state: dict[str, Any]) -> None:
     index_notes: list[str] = []
     tree_task = state["tasks"].get("tree")
     if tree_task is not None and tree_task["status"] != "done":
-        index_notes.append("The responsibility tree is a mechanical batch grouping because the `tree` "
-                           "task is " + ("failed; resume the run to retry it."
-                                         if tree_task["status"] == "failed" else "not finished yet."))
+        if state.get("aggregation", {}).get("regions"):
+            index_notes.append("The region merge is " + tree_task["status"] +
+                               "; accepted region subtrees are retained under a mechanical root. "
+                               "Check the merge error and budget before starting a new plan.")
+        else:
+            index_notes.append("The responsibility tree is a mechanical batch grouping because the `tree` "
+                               "task is " + ("failed; resume the run to retry it."
+                                             if tree_task["status"] == "failed" else "not finished yet."))
+    for tid, task in state["tasks"].items():
+        if task.get("region") and task["status"] == "failed":
+            index_notes.append(f"Region `{tid}` failed; its subtree uses the mechanical fallback.")
     system_task = state["tasks"]["system"]
     system = _accepted(run_dir, "system") if system_task["status"] == "done" else None
     if system is None:
@@ -1162,15 +1313,40 @@ def _render_semantic(run_dir: Path, state: dict[str, Any]) -> None:
     normalized = sorted(task["id"] for task in state["tasks"].values()
                         if task["flags"] and "known_empty" not in task["flags"])
     if normalized:
-        index_notes.append("Normalized after a second invalid answer (facts kept, shape fixed): "
+        index_notes.append("Normalized after the final invalid answer (facts kept, shape fixed): "
                            + ", ".join(normalized) + ".")
+    for row in _answer_fallbacks(state):
+        index_notes.append(f"answer_fallback: {row['task']}: accepted attempt {row['attempt']} "
+                           f"after final attempt {row['final_attempt']} failed validation.")
+    fill_counts: dict[str, int] = {}
+    for row in _index_only_fills(state):
+        task = state["tasks"][row["task"]]
+        repair = (state["tasks"].get(f"repair_{task['module'] + 1}")
+                  if task["kind"] == "module" else None)
+        if task["status"] == "done" and not (repair and repair["status"] == "done"):
+            fill_counts[row["task"]] = fill_counts.get(row["task"], 0) + 1
+    for tid, count in sorted(fill_counts.items()):
+        index_notes.append(f"{tid}: CBE assigned {count} inventory symbol(s) to index_only "
+                           "because the model answer omitted or supplied invalid dispositions.")
+    page_corrections = []
+    for row in _identity_corrections(state):
+        task = state["tasks"][row["task"]]
+        if task["kind"] == "module":
+            repair = state["tasks"].get(f"repair_{task['module'] + 1}")
+            if repair and repair["status"] == "done":
+                continue  # The repair's prose supersedes this corrected module answer.
+        page_corrections.append(row)
     try:
-        meta = semantic.render(run_dir=run_dir, source_root=Path(state["repo"]),
+        meta = docs.render(run_dir=run_dir, source_root=Path(state["repo"]),
                                inventory=state.get("inventory") or {}, units=units,
-                               dispositions=dispositions, tree=tree, index_notes=index_notes)
-    except semantic.SemanticError as exc:
+                               dispositions=dispositions, tree=tree, index_notes=index_notes,
+                               system=system or _mechanical_semantic_overview(state, tree),
+                               graph=context.get("graph"), context=context,
+                               id_corrections=page_corrections,
+                               languages={row["path"]: row.get("language") or "unknown" for row in context["files"]})
+    except symbols.SemanticError as exc:
         state["render_error"] = str(exc)
-        _event(run_dir, "render", f"failed: {exc}", error=str(exc))
+        log_event(run_dir, "render", f"failed: {exc}", error=str(exc))
         return
     state.pop("render_error", None)
     for row in state["modules"]:
@@ -1191,99 +1367,56 @@ def _render_semantic(run_dir: Path, state: dict[str, Any]) -> None:
                           + (["system"] if system_task["status"] != "done" else []),
                "normalized": sorted(task["id"] for task in state["tasks"].values()
                                    if task["flags"] and "known_empty" not in task["flags"]),
+               "id_corrected_count": len(_identity_corrections(state)),
+               "id_corrected": _identity_corrections(state),
+               "index_only_filled_count": len(_index_only_fills(state)),
+               "index_only_filled": _index_only_fills(state),
                "known_empty": sorted(task["id"] for task in state["tasks"].values()
                                     if "known_empty" in task["flags"]),
-               "wall_seconds": round(time.time() - _epoch(state["created_at"]), 3),
+               "wall_seconds": round(time.time() - epoch(state["created_at"]), 3),
                "run_dir": str(run_dir), "index": str(run_dir / "docs" / "INDEX.md"),
                "subagent_tasks": sum(task["attempts"] for task in state["tasks"].values())}
+    for code in ("source_reassembly_fallback", "context_fallback"):
+        if rows := state.get(code, []):
+            summary.update({code + "_count": len(rows), code: rows})
+    fallbacks = _answer_fallbacks(state)
+    if fallbacks:
+        summary.update(answer_fallback_count=len(fallbacks), answer_fallback=fallbacks)
     if reason:
         summary["partial_reason"], summary["partial_detail"] = reason, state.get("partial_detail", "")
     state["verify"] = verify_state(run_dir, state)
+    if not state["verify"]["ok"] and state["status"] == "complete":
+        state["status"] = "partial"
+    summary["status"] = state["status"]
     summary["deterministic_checks_ok"] = state["verify"]["ok"]
+    from cbe import principles
+    records, rolled_edges = _aggregation_inputs(run_dir, state)
+    previous_path = state_dir(run_dir) / "principles.json"
+    previous = json.loads(previous_path.read_text(encoding="utf-8")) if previous_path.is_file() else None
+    principle_report = principles.report(tree, records, rolled_edges,
+        {f["path"]: f.get("language", "unknown") for f in context["files"]}, previous,
+        comparison_scope="same_run_rerender")
+    summary["aggregation_principles"] = principle_report
+    summary["aggregation"] = state.get("aggregation", {})
+    summary["node_dependencies"] = meta["relationship_counts"]
+    summary["within_containment"] = meta["within_containment_count"]
+    summary["key_flows"] = meta["key_flows"]
+    summary["candidate_flows"] = meta["candidate_flows"]
+    write_json(previous_path, principle_report)
+    with (run_dir / "docs" / "INDEX.md").open("a", encoding="utf-8") as index:
+        index.write(principles.markdown(principle_report))
+    summary["layers"] = docs.layer_metrics(run_dir)
     summary["semantic_review"] = _semantic_review_summary(run_dir, state)
     summary["truth"] = ("deterministic structure/coverage checks and the separate semantic review are "
                         "different states; neither one proves prose truth")
-    _write_json(run_dir / "summary.json", summary)
-    _event(run_dir, "render", f"{published_pages} pages, status {state['status']}"
+    write_json(run_dir / "summary.json", summary)
+    log_event(run_dir, "render", f"{published_pages} pages, status {state['status']}"
            + (f", pending {summary['pending']}" if summary["pending"] else "")
            + f", verify {'ok' if state['verify']['ok'] else 'has failures'} -> docs/INDEX.md",
            pages=published_pages, status=state["status"], verify_ok=state["verify"]["ok"])
 
 
-def _render(run_dir: Path, state: dict[str, Any]) -> None:
-    if state.get("semantic"):
-        return _render_semantic(run_dir, state)
-    modules = _modules(state)
-    notes: dict[int, list[str]] = {}
-    pending: list[str] = []
-    for module in modules:
-        module.output = _module_output(run_dir, state, module.number)
-        if module.output is None:
-            task = _module_task(state, module.number)
-            reason = task["errors"][-1][:300] if task["errors"] else "not generated yet"
-            pending.append(task["id"])
-            module.output = {"summary": "Documentation for this module is pending.", "flow": "Pending.",
-                             "test_coverage": "", "key_behaviors": [], "uncertainties": []}
-            notes[module.number] = [f"Pending: {task['id']} has no accepted result ({reason}). "
-                                    "Resume the run to generate it."]
-        else:
-            source = state["tasks"].get(f"repair_{module.number + 1}") or _module_task(state, module.number)
-            if source["status"] != "done":
-                source = _module_task(state, module.number)
-            if source["flags"]:
-                notes[module.number] = [f"CBE normalized this page after a second invalid answer: {flag}"
-                                        for flag in source["flags"]]
-    index_notes: list[str] = []
-    system_task = state["tasks"]["system"]
-    system = _accepted(run_dir, "system") if system_task["status"] == "done" else None
-    if system is None:
-        system = _mechanical_overview(state, modules)
-        index_notes.append("The overview and navigation are mechanical because the `system` task is "
-                           + ("failed; resume the run to retry it." if system_task["status"] == "failed"
-                              else "not finished yet."))
-    else:
-        index_notes += [f"CBE normalized the overview after a second invalid answer: {flag}"
-                        for flag in system_task["flags"]]
-        missing = [state["tasks"][f"module_{number + 1}"]["id"] for number in _done_modules(state)
-                   if number not in system_task.get("covered", [])]
-        if missing:
-            index_notes.append(f"The overview predates {', '.join(missing)}; the `system` task is queued again.")
-    if pending:
-        index_notes.append(f"{len(pending)} module page(s) are pending: {', '.join(pending)}.")
-    files = [file for module in modules for file in module.files]
-    try:
-        catalog = gen._render(Path(state["repo"]), run_dir, files, modules, system, notes, index_notes)
-    except gen.GenerateError as exc:
-        state["render_error"] = str(exc)
-        _event(run_dir, "render", f"failed: {exc}", error=str(exc))
-        return
-    state.pop("render_error", None)
-    for row, entry in zip(state["modules"], catalog["modules"]):
-        row["page"] = f"docs/{entry['page']}"
-    reason = state.get("partial_reason")
-    complete = all(task["status"] == "done" for task in state["tasks"].values()) and not reason
-    state["status"], state["rendered"] = ("complete" if complete else "partial"), True
-    if not complete and not all(_settled(state, task) for task in state["tasks"].values()):
-        state["status"] = "running"
-    summary = {"status": state["status"], "driver": state.get("driver", "host"), "host": state["host"],
-               "source_files": len(files), "source_tokens": sum(file.tokens for file in files),
-               "modules": len(modules), "published_pages": len(catalog["modules"]) + 1,
-               "pending": pending + (["system"] if system_task["status"] != "done" else []),
-               "normalized": sorted(task["id"] for task in state["tasks"].values() if task["flags"]),
-               "wall_seconds": round(time.time() - _epoch(state["created_at"]), 3),
-               "run_dir": str(run_dir), "index": str(run_dir / "docs" / "INDEX.md"),
-               "subagent_tasks": sum(task["attempts"] for task in state["tasks"].values())}
-    if reason:
-        summary["partial_reason"], summary["partial_detail"] = reason, state.get("partial_detail", "")
-    _write_json(run_dir / "summary.json", summary)
-    state["verify"] = verify_state(run_dir, state)
-    _event(run_dir, "render", f"{summary['published_pages']} pages, status {state['status']}"
-           + (f", pending {summary['pending']}" if summary["pending"] else "")
-           + f", verify {'ok' if state['verify']['ok'] else 'has failures'} -> docs/INDEX.md",
-           pages=summary["published_pages"], status=state["status"], verify_ok=state["verify"]["ok"])
-
-
-def _semantic_verify_state(run_dir: Path, state: dict[str, Any]) -> dict[str, Any]:
+def verify_state(run_dir: Path, state: dict[str, Any]) -> dict[str, Any]:
     checks: list[dict[str, Any]] = []
 
     def check(name: str, ok: bool, detail: Any = None) -> None:
@@ -1304,8 +1437,8 @@ def _semantic_verify_state(run_dir: Path, state: dict[str, Any]) -> dict[str, An
     check("each_file_in_exactly_one_module", sorted(assigned) == sorted(planned) and not duplicates,
           {"planned": len(planned), "assigned": len(assigned), "duplicates": duplicates[:20]})
     try:
-        current = {item.path for item in gen.scan(Path(state["repo"]))}
-    except gen.GenerateError as exc:
+        current = {item.path for item in batching.scan(Path(state["repo"]))}
+    except batching.BatchingError as exc:
         current = set()
         check("rescan", False, str(exc))
     unplanned = sorted(current - set(planned))
@@ -1316,96 +1449,45 @@ def _semantic_verify_state(run_dir: Path, state: dict[str, Any]) -> dict[str, An
     try:
         units, dispositions = _semantic_units(run_dir, state)
         tree = _semantic_tree(run_dir, state, units)
-        checks += semantic.verify(run_dir, state.get("inventory") or {}, units, dispositions, tree)
-    except (semantic.SemanticError, OSError, ValueError) as exc:
+        checks += docs.verify(run_dir, state.get("inventory") or {}, units, dispositions, tree)
+    except (symbols.SemanticError, OSError, ValueError) as exc:
         check("semantic_checks", False, str(exc)[:300])
     return {"ok": all(row["ok"] for row in checks), "checks": checks}
 
 
-def verify_state(run_dir: Path, state: dict[str, Any]) -> dict[str, Any]:
-    if state.get("semantic"):
-        return _semantic_verify_state(run_dir, state)
-    checks: list[dict[str, Any]] = []
-
-    def check(name: str, ok: bool, detail: Any = None) -> None:
-        checks.append({"check": name, "ok": bool(ok), **({"detail": detail} if detail else {})})
-
-    unfinished = [task["id"] for task in state["tasks"].values() if task["status"] != "done"]
-    check("all_tasks_done", not unfinished, unfinished[:20])
-    changed = _drift(state)
-    check("sources_unchanged", not changed, changed[:20])
-    planned = [row["path"] for row in state["files"]]
-    assigned = [path for module in state["modules"] for path in module["files"]]
-    duplicates = sorted({path for path in assigned if assigned.count(path) > 1})
-    check("each_file_in_exactly_one_module", sorted(assigned) == sorted(planned) and not duplicates,
-          {"planned": len(planned), "assigned": len(assigned), "duplicates": duplicates[:20]})
-    try:
-        current = {item.path for item in gen.scan(Path(state["repo"]))}
-    except gen.GenerateError as exc:
-        current = set()
-        check("rescan", False, str(exc))
-    unplanned = sorted(current - set(planned))
-    check("no_unplanned_source_files", not unplanned, unplanned[:20])
-    index = run_dir / "docs" / "INDEX.md"
-    catalog_path = run_dir / "catalog.json"
-    if not index.is_file() or not catalog_path.is_file():
-        check("rendered", False, "docs/INDEX.md or catalog.json is missing")
-        return {"ok": False, "checks": checks}
-    text = index.read_text(encoding="utf-8")
-    links = re.findall(r"\]\((modules/[^)]+\.md)\)", text)
-    missing = [link for link in links if not (run_dir / "docs" / link).is_file()]
-    check("index_links_resolve", links and not missing and len(links) == len(state["modules"]),
-          {"links": len(links), "modules": len(state["modules"]), "missing": missing[:20]})
-    subsystems = re.findall(r"^### ", text, flags=re.MULTILINE)
-    check("two_level_index", bool(subsystems) and "## Subsystems" in text, {"subsystem_headings": len(subsystems)})
-    catalog = json.loads(catalog_path.read_text(encoding="utf-8"))
-    check("catalog_covers_every_file", sorted(catalog["files"]) == sorted(planned),
-          {"catalog_files": len(catalog["files"])})
-    unlisted = []
-    for entry in catalog["modules"]:
-        page = (run_dir / "docs" / entry["page"]).read_text(encoding="utf-8")
-        unlisted += [path for path in entry["files"] if f"### `{path}`" not in page]
-    check("pages_list_their_files", not unlisted, unlisted[:20])
-    # Overloaded definitions repeat a name; the catalogue keys unique IDs.
-    expected_symbols = len({f"{row['path']}::{name}" for row in state["files"] for name in row["signatures"]})
-    check("symbol_catalogue_complete", len(catalog["symbols"]) == expected_symbols,
-          {"symbols": len(catalog["symbols"]), "expected": expected_symbols})
-    return {"ok": all(row["ok"] for row in checks), "checks": checks}
-
-
 def verify(run_dir: Path) -> dict[str, Any]:
-    with _locked(run_dir) as state:
+    with locked_state(run_dir) as state:
         state["verify"] = verify_state(run_dir, state)
-        _write_json(_host_dir(run_dir) / "verify.json", state["verify"])
+        write_json(state_dir(run_dir) / "verify.json", state["verify"])
+        if state.get("rendered") and all(task["status"] == "done" for task in state["tasks"].values()):
+            state["status"] = "complete" if state["verify"]["ok"] and not state.get("partial_reason") else "partial"
+        summary_path = run_dir / "summary.json"
+        if summary_path.is_file():
+            summary = json.loads(summary_path.read_text(encoding="utf-8"))
+            summary.update(status=state["status"], deterministic_checks_ok=state["verify"]["ok"])
+            write_json(summary_path, summary)
         return state["verify"]
 
 
 def render(run_dir: Path) -> dict[str, Any]:
     """Render now, including placeholders for anything still pending."""
-    with _locked(run_dir) as state:
+    with locked_state(run_dir) as state:
         _render(run_dir, state)
         if state.get("render_error"):
             raise HostRunError(f"render failed: {state['render_error']}")
         return {"index": str(run_dir / "docs" / "INDEX.md"), "status": state["status"], "verify": state["verify"]}
 
 
-def source_sent_tokens(state: dict[str, Any]) -> int:
-    """Source tokens sent to the model at least once: the modules with a module task attempt."""
-    tokens = {row["path"]: row["tokens"] for row in state["files"]}
-    return sum(tokens[path] for row in state["modules"]
-               if _module_task(state, row["number"])["attempts"] > 0 for path in row["files"])
-
-
 def mark_partial(run_dir: Path, reason: str | None, detail: str = "") -> None:
     """Keep a finished run from reading "complete" when something outside the tasks says it is not.
 
     Set or clear ``reason``; the summary, STATUS.md and the render status follow it."""
-    with _locked(run_dir) as state:
+    with locked_state(run_dir) as state:
         if state.get("partial_reason") == reason and state.get("partial_detail", "") == detail:
             return
         if reason:
             state["partial_reason"], state["partial_detail"] = reason, detail
-            _event(run_dir, "partial", f"{reason}: {detail}", reason=reason)
+            log_event(run_dir, "partial", f"{reason}: {detail}", reason=reason)
         else:
             state.pop("partial_reason", None)
             state.pop("partial_detail", None)
@@ -1415,7 +1497,7 @@ def mark_partial(run_dir: Path, reason: str | None, detail: str = "") -> None:
 
 def finish(run_dir: Path) -> dict[str, Any]:
     """Make sure the docs reflect the current state; return the run summary."""
-    with _locked(run_dir) as state:
+    with locked_state(run_dir) as state:
         if not state.get("rendered") or state["status"] == "running":
             _render(run_dir, state)
         summary_path = run_dir / "summary.json"
@@ -1433,23 +1515,59 @@ def _status_markdown(state: dict[str, Any]) -> str:
                     f"{sum(task['status'] == 'done' for task in review_tasks)}/{len(review_tasks)} "
                     "reviewed by a separate reader of the source. This is independent of the "
                     "deterministic structure/coverage checks and does not prove whole-map truth.", ""]
-                   if state.get("semantic") and review_tasks else [])
+                   if review_tasks else [])
+    corrections = _identity_corrections(state)
+    correction_lines = [f"id_corrected {len(corrections)}", ""]
+    correction_lines += [f"- {row['task']}: {docs.code_text(row['original'])} → "
+                         f"{docs.code_text(row['corrected'])} ({row['location']})"
+                         for row in corrections]
+    fills = _index_only_fills(state)
+    correction_lines += ["", f"index_only_filled {len(fills)}", ""]
+    correction_lines += [f"- {row['task']}: {docs.code_text(row['symbol'])} ({row['reason']})"
+                         for row in fills]
+    fallbacks = _answer_fallbacks(state)
+    if fallbacks:
+        correction_lines += ["", f"answer_fallback {len(fallbacks)}", ""]
+        correction_lines += [f"- {row['task']}: accepted attempt {row['attempt']} "
+                             f"(final attempt {row['final_attempt']})" for row in fallbacks]
+    for code in ("source_reassembly_fallback", "context_fallback"):
+        if rows := state.get(code, []):
+            correction_lines += ["", f"{code} {len(rows)}", ""]
+            correction_lines += [f"- {docs.code_text(row['path'])}: {row['message']}" for row in rows]
     lines = ["# CBE run status", "",
              f"Run `{state['run_tag']}` · status **{state['status']}** · updated {state['updated_at']} · "
              f"review {state['review']} · jobs {state['jobs']} · host {state['host']}", "",
              *review_line,
              *([f"**Partial: {state['partial_reason']}** · {state.get('partial_detail', '')}", ""]
                if state.get("partial_reason") else []),
+             *(["**Deterministic verification failed** · " + ", ".join(
+                 row["check"] for row in state["verify"]["checks"] if not row["ok"])
+                + ". Inspect `cbe host verify`; fix the cause and rerun verification.", ""]
+               if state.get("verify") and not state["verify"]["ok"] else []),
              *([f"**Usage unknown** · the host reported no usage, so per-call source delivery could not "
                 f"be verified for: {', '.join(unknown)}", ""] if unknown else []),
              "Counts: " + ", ".join(f"{key} {value}" for key, value in sorted(counts.items())), "",
+             *correction_lines, "",
              "| Task | Module | State | Attempts | Seconds | Output | Note |", "|---|---|---|---:|---:|---|---|"]
     for task in sorted(state["tasks"].values(), key=lambda row: (ORDER[row["kind"]], row["module"] or 0)):
         output = task["output"] or ""
         if task["module"] is not None and state["modules"][task["module"]].get("page") and task["kind"] == "module":
             output = state["modules"][task["module"]]["page"]
+        task_fills = sum(row["task"] == task["id"] for row in fills)
+        shape_flags = [flag for flag in task["flags"] if not flag.startswith("id_corrected:")
+                       and not flag.startswith("answer_fallback:")
+                       and not flag.endswith((": disposition missing; treated as index_only",
+                                              ": invalid disposition; treated as index_only"))]
+        identity_count = sum(flag.startswith("id_corrected:") for flag in task["flags"])
         note = (task["errors"][-1][:120] if task["status"] in {"failed", "pending"} and task["errors"]
-                else f"normalized ({len(task['flags'])})" if task["flags"] else "")
+                else f"normalized ({len(shape_flags)})" if shape_flags else "")
+        if identity_count:
+            note += ("; " if note else "") + f"id_corrected {identity_count}"
+        for row in fallbacks:
+            if row["task"] == task["id"]:
+                note += ("; " if note else "") + f"answer_fallback attempt {row['attempt']}"
+        if task_fills:
+            note += ("; " if note else "") + f"index_only_filled {task_fills}"
         lines.append(f"| {task['id']} | {_title(state, task) if task['module'] is not None else ''} | "
                      f"{task['status']} | {task['attempts']} | {task['seconds'] if task['seconds'] is not None else ''} | "
                      f"{output} | {note.replace('|', '/')} |")
@@ -1459,249 +1577,3 @@ def _status_markdown(state: dict[str, Any]) -> str:
 # ---------------------------------------------------------------- usage and cost
 
 
-def _claude_transcript_usage(path: Path) -> dict[str, Any]:
-    """Sum per-message usage; streamed messages repeat, so keep the max per id."""
-    per_message: dict[str, dict[str, int]] = {}
-    models: set[str] = set()
-    for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
-        try:
-            record = json.loads(line)
-        except ValueError:
-            continue
-        message = record.get("message") if isinstance(record, dict) else None
-        if not isinstance(message, dict) or not isinstance(message.get("usage"), dict):
-            continue
-        key = message.get("id") or record.get("uuid") or str(len(per_message))
-        if message.get("model"):
-            models.add(message["model"])
-        usage = message["usage"]
-        seen = per_message.setdefault(key, {})
-        for field in ("input_tokens", "cache_creation_input_tokens", "cache_read_input_tokens", "output_tokens"):
-            if isinstance(usage.get(field), int):
-                seen[field] = max(seen.get(field, 0), usage[field])
-    total = {field: sum(row.get(field, 0) for row in per_message.values())
-             for field in ("input_tokens", "cache_creation_input_tokens", "cache_read_input_tokens", "output_tokens")}
-    return {"input_tokens": total["input_tokens"], "cache_write_tokens": total["cache_creation_input_tokens"],
-            "cache_read_tokens": total["cache_read_input_tokens"], "output_tokens": total["output_tokens"],
-            "turns": len(per_message), "model": ",".join(sorted(models))}
-
-
-def _codex_rollout_usage(path: Path) -> tuple[str | None, dict[str, Any] | None]:
-    agent_path, model, usage = None, None, None
-    with path.open(encoding="utf-8", errors="replace") as stream:
-        for number, line in enumerate(stream):
-            try:
-                record = json.loads(line)
-            except ValueError:
-                continue
-            payload = record.get("payload") or {}
-            if record.get("type") == "session_meta":
-                spawn = ((payload.get("source") or {}).get("subagent") or {}) if isinstance(
-                    payload.get("source"), dict) else {}
-                agent_path = (spawn.get("thread_spawn") or {}).get("agent_path")
-                if not agent_path:
-                    return None, None
-            elif number == 0:
-                return None, None
-            if record.get("type") == "turn_context" and payload.get("model"):
-                model = payload["model"]
-            if payload.get("type") == "token_count" and isinstance(payload.get("info"), dict):
-                usage = payload["info"].get("total_token_usage") or usage
-    if not agent_path or not usage:
-        return agent_path, None
-    cached = int(usage.get("cached_input_tokens") or 0)
-    return agent_path, {"input_tokens": int(usage.get("input_tokens") or 0) - cached,
-                        "cache_write_tokens": int(usage.get("cache_write_input_tokens") or 0),
-                        "cache_read_tokens": cached, "output_tokens": int(usage.get("output_tokens") or 0),
-                        "reasoning_output_tokens": int(usage.get("reasoning_output_tokens") or 0),
-                        "model": model or ""}
-
-
-def import_usage(run_dir: Path, harness: str, root: Path | None = None) -> dict[str, Any]:
-    """Read exact per-subagent usage that Claude Code or Codex already recorded."""
-    with _locked(run_dir) as state:
-        since = _epoch(state["created_at"]) - 60
-        tag = state["run_tag"]
-        found: dict[str, list[dict[str, Any]]] = {}
-        if harness == "claude-code":
-            base = root or Path.home() / ".claude" / "projects"
-            pattern = re.compile(rf"\bcbe {tag} (\S+)")
-            metas = base.rglob("agent-*.meta.json") if root else base.glob("*/*/subagents/agent-*.meta.json")
-            for meta in metas:
-                # Other sessions may delete their transcripts while we scan.
-                try:
-                    if meta.stat().st_mtime < since:
-                        continue
-                    description = json.loads(meta.read_text(encoding="utf-8")).get("description") or ""
-                    match = pattern.search(description)
-                    transcript = meta.with_name(meta.name.replace(".meta.json", ".jsonl"))
-                    if match and match.group(1) in state["tasks"] and transcript.is_file():
-                        row = _claude_transcript_usage(transcript)
-                    else:
-                        continue
-                except (OSError, ValueError):
-                    continue
-                row.update(agent=transcript.stem, source="claude-code subagent transcript")
-                found.setdefault(match.group(1), []).append(row)
-        elif harness == "codex":
-            base = root or Path(os.environ.get("CODEX_HOME", Path.home() / ".codex")) / "sessions"
-            pattern = re.compile(rf"cbe_{tag}_(\S+)$")
-            for rollout in base.rglob("rollout-*.jsonl"):
-                try:
-                    if rollout.stat().st_mtime < since:
-                        continue
-                    agent_path, row = _codex_rollout_usage(rollout)
-                except OSError:
-                    continue
-                match = pattern.search((agent_path or "").rsplit("/", 1)[-1])
-                if match and row and match.group(1) in state["tasks"]:
-                    row.update(agent=rollout.stem, source="codex subagent rollout")
-                    found.setdefault(match.group(1), []).append(row)
-        else:
-            raise HostRunError("harness must be claude-code or codex")
-        for task_id, rows in found.items():
-            state["tasks"][task_id]["exact_usage"] = rows
-        _event(run_dir, "usage", f"imported exact {harness} usage for {sorted(found)}",
-               harness=harness, tasks=sorted(found))
-        missing = [task_id for task_id, task in state["tasks"].items()
-                   if task["attempts"] and not task.get("exact_usage")]
-        return {"harness": harness, "tasks_with_exact_usage": len(found),
-                "subagent_transcripts": sum(len(rows) for rows in found.values()),
-                "tasks_without_exact_usage": missing}
-
-
-def _price_for(model: str, override: tuple[float, float, float, float] | None) -> tuple[tuple[float, ...] | None, str]:
-    if override is not None:
-        return override, "price given on the command line"
-    for name, price in PRICES.items():
-        if model == name or model.startswith(name + "-"):
-            return price, f"{name} list price (2026-09-25)"
-    return None, f"price unknown: {model or 'model not recorded'}"
-
-
-def _dollars(row: dict[str, Any], price: tuple[float, ...] | None) -> float | None:
-    if price is None:
-        return None
-    return round((row.get("input_tokens", 0) * price[0] + row.get("output_tokens", 0) * price[1]
-                  + row.get("cache_write_tokens", 0) * price[2] + row.get("cache_read_tokens", 0) * price[3])
-                 / 1_000_000, 4)
-
-
-def _sum_dollars(values: list[float | None]) -> float | None:
-    if any(value is None for value in values):
-        return None
-    return round(sum(value for value in values if value is not None), 4)
-
-
-def _estimate(run_dir: Path, state: dict[str, Any], task: dict[str, Any], overhead: int) -> dict[str, Any]:
-    """A deliberately simple agent-loop model; label every number as an estimate.
-
-    A subagent reads its task, reads the listed files (usually in parallel),
-    writes the result, and replies. Each turn re-reads the cached context. When
-    the harness reported the subagent's final context size, that anchors the
-    model; otherwise the context is overhead + task + source + result.
-    """
-    prompt_path = _host_dir(run_dir) / "tasks" / f"{task['id']}.md"
-    prompt = count_text_tokens(prompt_path.read_text(encoding="utf-8")) if prompt_path.is_file() else 0
-    source, files = 0, 0
-    if task["kind"] in {"module", "repair", "review"}:
-        paths = set(state["modules"][task["module"]]["files"])
-        source = sum(row["tokens"] for row in state["files"] if row["path"] in paths)
-        files = len(paths)
-    accepted = _host_dir(run_dir) / "accepted" / f"{task['id']}.json"
-    output = count_text_tokens(accepted.read_text(encoding="utf-8")) if accepted.is_file() else 1_000
-    turns = 3 if not files else 4 + (files > 4)
-    reported = [entry["total_tokens"] for entry in task["usage"] if entry.get("total_tokens")]
-    final_context = (sum(reported) // len(reported)) if reported else overhead + prompt + source + output
-    start_context = max(final_context - source - output, prompt)
-    attempts = max(1, task["attempts"])
-    return {"input_tokens": 0, "cache_write_tokens": final_context * attempts,
-            "cache_read_tokens": (turns - 1) * (start_context + final_context) // 2 * attempts,
-            "output_tokens": output * 2 * attempts, "turns": turns * attempts,
-            "anchored": bool(reported)}
-
-
-def cost(run_dir: Path, *, model: str | None = None, price: tuple[float, float, float, float] | None = None,
-         overhead: int = DEFAULT_OVERHEAD_TOKENS) -> dict[str, Any]:
-    if price is not None and (len(price) != 4 or any(not math.isfinite(value) or value < 0 for value in price)):
-        raise HostRunError("--price needs four finite, nonnegative rates: input,output,cache_write,cache_read")
-    with _locked(run_dir) as state:
-        rows, totals = [], {"input_tokens": 0, "cache_write_tokens": 0, "cache_read_tokens": 0,
-                            "output_tokens": 0}
-        bases: set[str] = set()
-        price_notes: set[str] = set()
-        for task in state["tasks"].values():
-            if not task["attempts"]:
-                continue
-            estimate = _estimate(run_dir, state, task, overhead)
-            if task.get("exact_usage"):
-                parts = task["exact_usage"]
-                basis = "exact"
-            else:
-                parts = [{**estimate, "model": model or ""}]
-                basis = "estimate"
-            effective_models = {part.get("model") or model or "" for part in parts}
-            estimate_model = next(iter(effective_models)) if len(effective_models) == 1 else ""
-            estimate_usd = _dollars(estimate, _price_for(estimate_model, price)[0])
-            bases.add(basis)
-            amounts = []
-            for part in parts:
-                chosen, note = _price_for(part.get("model") or model or "", price)
-                price_notes.add(note)
-                amounts.append(_dollars(part, chosen))
-            row = {"task": task["id"], "basis": basis, "subagents": len(parts) if basis == "exact" else task["attempts"],
-                   **{field: sum(part.get(field, 0) for part in parts) for field in totals},
-                   "usd_api_equivalent": _sum_dollars(amounts), "estimate_usd": estimate_usd,
-                   "estimate_anchored_on_reported_context": estimate["anchored"],
-                   "models": sorted({part.get("model") or "" for part in parts} - {""})}
-            reported = [entry for entry in task["usage"] if entry.get("total_tokens")]
-            if reported:
-                row["harness_reported_total_tokens"] = sum(entry["total_tokens"] for entry in reported)
-            rows.append(row)
-            for field in totals:
-                totals[field] += row[field]
-        totals["usd"] = _sum_dollars([row["usd_api_equivalent"] for row in rows])
-        basis = "exact" if bases == {"exact"} else "estimate" if bases == {"estimate"} else "mixed"
-        report = {
-            "basis": basis, "tasks": rows, "totals": totals,
-            "subagent_runs": sum(row["subagents"] for row in rows),
-            "estimate_usd": _sum_dollars([row["estimate_usd"] for row in rows]),
-            "price_basis": sorted(price_notes),
-            "statement": _statement(basis, totals["usd"] is not None),
-        }
-        _write_json(_host_dir(run_dir) / "cost.json", report)
-        (_host_dir(run_dir) / "COST.md").write_text(_cost_markdown(report), encoding="utf-8")
-        return report
-
-
-def _statement(basis: str, priced: bool) -> str:
-    tokens = {"exact": "Token counts are exact, read from the harness's own per-subagent usage records.",
-              "estimate": "Token counts are ESTIMATES from prompt and source sizes; the harness did not "
-                          "provide exact per-subagent usage.",
-              "mixed": "Some token counts are exact (harness records) and the rest are ESTIMATES."}[basis]
-    pricing = ("Dollar figures apply the rates identified below." if priced else
-               "One or more model prices are unknown, so dollar totals are unknown. "
-               "Pass --price with current rates to calculate a price equivalent.")
-    return (tokens + " " + pricing + " This is not a bill: a subscription uses plan quota. "
-            "The host agent's own orchestration turns are not included; quote the harness session total for those.")
-
-
-def _money(value: float | None, decimals: int = 2) -> str:
-    return "unknown" if value is None else f"${value:.{decimals}f}"
-
-
-def _cost_markdown(report: dict[str, Any]) -> str:
-    totals = report["totals"]
-    lines = ["# CBE run cost", "", report["statement"], "",
-             f"- Basis: **{report['basis']}**; subagent runs: {report['subagent_runs']}",
-             f"- Tokens: input {totals['input_tokens']:,}, cache write {totals['cache_write_tokens']:,}, "
-             f"cache read {totals['cache_read_tokens']:,}, output {totals['output_tokens']:,}",
-             f"- Price equivalent: {_money(totals['usd'])} ({'; '.join(report['price_basis'])})",
-             f"- Price of the token-use estimate: {_money(report['estimate_usd'])}", "",
-             "| Task | Basis | Subagents | Input | Cache write | Cache read | Output | USD equiv. |",
-             "|---|---|---:|---:|---:|---:|---:|---:|"]
-    for row in report["tasks"]:
-        lines.append(f"| {row['task']} | {row['basis']} | {row['subagents']} | {row['input_tokens']:,} | "
-                     f"{row['cache_write_tokens']:,} | {row['cache_read_tokens']:,} | {row['output_tokens']:,} | "
-                     f"{_money(row['usd_api_equivalent'], 4)} |")
-    return "\n".join(lines) + "\n"

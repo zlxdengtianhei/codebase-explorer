@@ -12,7 +12,6 @@ import ast
 import re
 from typing import Any, Iterator
 
-PROJECTION_VERSION = "concrete-facts/1"
 
 MAX_TEXT_CHARS = 160
 MAX_CONSTANT_ITEMS = 12
@@ -310,7 +309,7 @@ def file_facts(path: str, source: str) -> dict[str, Any]:
     """Extract the concrete facts of one Python file.
 
     Returns ``{"file": [...], "symbols": {...}, "rows": [...]}``.  Symbol
-    keys mirror ``generate._signatures`` (top-level ``name`` and
+    keys mirror ``batching._signatures`` (top-level ``name`` and
     ``Class.method``); ``rows`` is every fact in kind priority order.
     """
     try:

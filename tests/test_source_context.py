@@ -28,7 +28,6 @@ from cbe.source_context import (
     context_for_paths,
     language_for_path,
     register_language,
-    supported_languages,
 )
 
 FIXTURES = Path(__file__).parent / "fixtures" / "source_context"
@@ -286,9 +285,14 @@ def test_unknown_language_is_distinguishable_from_empty_success(tmp_path):
     assert ("mystery.xyz", "unsupported_language") in codes
     assert ("empty.py", "unsupported_language") not in codes
     assert any(f["path"] == "empty.py" for f in context["files"])
-    # A failed file has no chunks; a successful empty file has no chunks either.
-    # The diagnostic is the only thing that distinguishes them.
-    assert not [c for c in context["chunks"] if c["path"] == "mystery.xyz"]
+    # The unsupported grammar stays visible even though the lossless fallback
+    # lets downstream readers reconstruct the frozen file.
+    chunks = [c for c in context["chunks"] if c["path"] == "mystery.xyz"]
+    assert "".join(c["text"] for c in chunks) == "hello\n"
+    assert ("mystery.xyz", "source_reassembly_fallback") not in codes
+    assert ("mystery.xyz", "context_fallback") in codes
+    note = next(d for d in context["diagnostics"] if d["code"] == "context_fallback")
+    assert note["reason"] == "unsupported_language"
 
 
 def test_missing_grammar_package_is_a_diagnostic(tmp_path, monkeypatch):
@@ -301,7 +305,10 @@ def test_missing_grammar_package_is_a_diagnostic(tmp_path, monkeypatch):
     monkeypatch.setattr(sc, "_make_parser", boom)
     context = build_context(tmp_path, paths=["a.py"])
     assert any(d["code"] == "grammar_unavailable" for d in context["diagnostics"])
-    assert not [c for c in context["chunks"] if c["path"] == "a.py"]
+    assert "".join(c["text"] for c in context["chunks"] if c["path"] == "a.py") == (tmp_path / "a.py").read_text()
+    assert not any(d["code"] == "source_reassembly_fallback" for d in context["diagnostics"])
+    assert any(d["code"] == "context_fallback" and d["reason"] == "grammar_unavailable"
+               for d in context["diagnostics"])
 
 
 def test_syntax_error_keeps_coverage_and_reports():
@@ -402,6 +409,39 @@ def test_graph_manifest_without_source_manifest_is_rejected(tmp_path):
     with pytest.raises(ContextError) as excinfo:
         build_context(FIXTURES, paths=["sample.py"], graph_path=graph_path)
     assert excinfo.value.code == "graph_manifest_missing"
+
+
+@pytest.mark.parametrize("problem, code", [("no_manifest", "graph_manifest_missing"),
+                                           ("unstable", "graph_provenance_mismatch")])
+def test_context_build_graph_errors_name_the_graph_file(tmp_path, capsys, problem, code):
+    from cbe import cli
+
+    graph = _graph_for(build_context(FIXTURES, paths=["sample.py"]), EDGES)
+    if problem == "no_manifest":
+        del graph["source_manifest"]
+    else:
+        graph["provenance"] = {"source_stable": False}
+    graph_path = tmp_path / f"{problem}.json"
+    graph_path.write_text(json.dumps(graph))
+    status = cli.main(["context", "build", str(FIXTURES), "--graph", str(graph_path),
+                       "--output", str(tmp_path / "context.json")])
+    error = json.loads(capsys.readouterr().err)
+    assert status == 2
+    assert set(error) == {"code", "message", "path"}
+    assert (error["code"], error["path"]) == (code, str(graph_path))
+
+
+@pytest.mark.parametrize("where, value", [("nodes", ["sample.py"]), ("edges", {"file": "sample.py"})])
+def test_context_build_ignores_graph_anchors_whose_path_is_not_a_string(tmp_path, capsys, where, value):
+    from cbe import cli
+
+    graph = _graph_for(build_context(FIXTURES, paths=["sample.py", "sample.c"]), EDGES)
+    graph[where].append({"id": "odd", "path": value})
+    graph_path = tmp_path / "graph.json"
+    graph_path.write_text(json.dumps(graph))
+    status = cli.main(["context", "build", str(FIXTURES), "--path", "sample.py", "--graph", str(graph_path),
+                       "--output", str(tmp_path / "context.json")])
+    assert (status, capsys.readouterr().err) == (0, "")
 
 
 def test_context_for_paths_prunes_graph_but_keeps_boundary_nodes(tmp_path):
@@ -526,6 +566,62 @@ def test_register_language_adds_a_suffix_through_one_path(tmp_path):
         sc._EXTRA_SPECS.pop("c-custom", None)
 
 
+def test_a_registered_override_gives_context_and_graph_the_same_language(tmp_path):
+    import dataclasses
+
+    import cbe.source_context as sc
+    from cbe.graph import discover_sources
+
+    # Replacing a built-in by name keeps its early place in the registry order,
+    # so the suffix map must use the lookup's precedence, not dict order.
+    c_spec = next(spec for spec in GRAMMARS if spec.name == "c")
+    register_language(dataclasses.replace(c_spec, suffixes=(*c_spec.suffixes, ".py")))
+    try:
+        (tmp_path / "mapped.py").write_text("int f(void) { return 1; }\n")
+        assert language_for_path("mapped.py") == "c"
+        assert sc.suffix_languages()[".py"] == "c"
+        assert build_context(tmp_path, paths=["mapped.py"])["files"][0]["language"] == "c"
+        assert [row["language"] for row in discover_sources(tmp_path)] == ["c"]
+    finally:
+        sc._EXTRA_SPECS.pop("c", None)
+
+
+def test_a_narrower_override_keeps_the_built_in_suffixes_in_every_view(tmp_path):
+    import dataclasses
+
+    import cbe.source_context as sc
+    from cbe import batching
+    from cbe.graph import discover_sources
+
+    # The lookup still reaches the built-in C spec for .c; the suffix map, graph
+    # discovery and planning must recognise the same suffixes.
+    c_spec = next(spec for spec in GRAMMARS if spec.name == "c")
+    register_language(dataclasses.replace(c_spec, suffixes=(".py",)))
+    try:
+        for name in ("mapped.py", "native.c"):
+            (tmp_path / name).write_text("int entry(void) { return 0; }\n")
+        assert [language_for_path(name) for name in ("mapped.py", "native.c")] == ["c", "c"]
+        assert (sc.suffix_languages()[".py"], sc.suffix_languages()[".c"]) == ("c", "c")
+        assert [row["path"] for row in discover_sources(tmp_path)] == ["mapped.py", "native.c"]
+        assert [row.path for row in batching.scan(tmp_path)] == ["mapped.py", "native.c"]
+    finally:
+        sc._EXTRA_SPECS.pop("c", None)
+
+
+def test_a_suffix_declared_in_upper_case_is_matched_like_any_other(tmp_path):
+    import dataclasses
+
+    import cbe.source_context as sc
+
+    c_spec = next(spec for spec in GRAMMARS if spec.name == "c")
+    register_language(dataclasses.replace(c_spec, name="c-upper", suffixes=(".UPX",)))
+    try:
+        assert sc.suffix_languages()[".upx"] == "c-upper"
+        assert language_for_path("a.upx") == language_for_path("a.UPX") == "c-upper"
+    finally:
+        sc._EXTRA_SPECS.pop("c-upper", None)
+
+
 def test_c_header_reports_its_language_ambiguity(tmp_path):
     (tmp_path / "api.h").write_text("int add(int a, int b);\n")
     context = build_context(tmp_path, paths=["api.h"])
@@ -567,7 +663,6 @@ def test_language_discovery_covers_priority_and_extra_languages():
         assert languages[name]["available"] is True, f"{name} grammar unavailable: {languages[name]['error']}"
     assert language_for_path("x.tsx") == "tsx"
     assert language_for_path("x.unknown") is None
-    assert supported_languages() == available_languages()
     # The registry is the single discovery path: an extra language is visible
     # without touching the priority list.
     assert "go" in languages

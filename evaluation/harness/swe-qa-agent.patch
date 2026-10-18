@@ -1,0 +1,361 @@
+This patch modifies SWE-QA-Bench (https://github.com/peng-weihan/SWE-QA-Bench),
+commit c13deac, licensed under the Apache License, Version 2.0 (see LICENSE-SWE-QA-Bench).
+Changed by the Codebase Explorer authors in October 2026:
+  Experiment/Script/SWE-agent_QA/qa_agent.py, local_env.py, agent_models.py, agent_tools.py;
+  Benchmark construction/score/llm-as-a-judge.py.
+Changes: arm prompt in _build_instance_prompt; observation limit 20,000 characters; step limit;
+tool subprocess PATH and absolute cbe path; a sandboxed tool subprocess; bash allowed only for
+clean cbe commands in arm C; OpenAI-compatible judge client.
+
+diff --git a/Experiment/Script/SWE-agent_QA/qa_agent.py b/Experiment/Script/SWE-agent_QA/qa_agent.py
+index ba278d3..a859ac2 100644
+--- a/Experiment/Script/SWE-agent_QA/qa_agent.py
++++ b/Experiment/Script/SWE-agent_QA/qa_agent.py
+@@ -18,7 +18,8 @@ class QAAgentConfig(BaseModel):
+     tools: ToolConfig = Field(default_factory=ToolConfig, description="Tool configuration")
+     max_steps: int = 10
+     """Maximum execution steps (iteration limit)"""
+-    max_observation_length: int = 100_000
++    max_observation_length: int = 20_000
++    arm_hint: str = ''
+     """Maximum observation length"""
+ 
+ 
+@@ -42,6 +43,9 @@ class QAAgent:
+             "total_latency": 0.0,
+             "total_input_tokens": 0,
+             "total_output_tokens": 0,
++            "observation_chars": 0,
++            "observations_clipped": 0,
++            "tool_calls": 0,
+         }
+         
+     def run(self) -> dict[str, Any]:
+@@ -99,9 +103,12 @@ class QAAgent:
+             # Execute tool
+             observation = self.tool_handler.execute_action(action, self.env)
+             
+-            # Truncate observation
++            # Count exactly what is presented, independently of repeated input history.
++            self.stats['tool_calls'] += 1
+             if len(observation) > self.config.max_observation_length:
++                self.stats['observations_clipped'] += 1
+                 observation = observation[:self.config.max_observation_length] + "\n<response clipped>"
++            self.stats['observation_chars'] += len(observation)
+             
+             # Add to history
+             self.history.append({"role": "assistant", "content": response})
+@@ -135,6 +142,11 @@ class QAAgent:
+             "latency": self.stats["total_latency"],
+             "input_tokens": self.stats["total_input_tokens"],
+             "output_tokens": self.stats["total_output_tokens"],
++            "observation_chars": self.stats['observation_chars'],
++            "observations_clipped": self.stats['observations_clipped'],
++            "tool_calls": self.stats['tool_calls'],
++            "limit_hit": self.step_count >= self.config.max_steps,
++            "commands": self.env.commands,
+         }
+     
+     def _build_system_prompt(self) -> str:
+@@ -166,6 +178,9 @@ You have access to the repository's files and can use various tools to explore a
+         
+         return f"""I've uploaded a code repository in the directory {repo_path}. Please answer the following question about this repository:
+ 
++{self.config.arm_hint}
++Cite only source-code paths in your final answer.
++
+ <question>
+ {question}
+ </question>
+diff --git a/Experiment/Script/SWE-agent_QA/local_env.py b/Experiment/Script/SWE-agent_QA/local_env.py
+index 5f705db..a26a876 100644
+--- a/Experiment/Script/SWE-agent_QA/local_env.py
++++ b/Experiment/Script/SWE-agent_QA/local_env.py
+@@ -1,124 +1,31 @@
+-"""Lightweight local execution environment, replaces Docker environment"""
++"""Tool subprocess boundary: no network, read allowlist, no repository writes."""
+ from __future__ import annotations
+-
+-import subprocess
+-import logging
++import json,logging,os,shlex,subprocess,time
+ from pathlib import Path
+-from typing import Optional, Union, Dict
+-from pydantic import BaseModel
+-
+-logger = logging.getLogger(__name__)
+-
++from typing import Optional,Union,Dict
++logger=logging.getLogger(__name__)
+ 
+ class LocalEnv:
+-    """Local execution environment, directly executes commands without Docker"""
+-    
+-    def __init__(self, repo_path: Path, working_dir: Optional[Path] = None):
+-        self.repo_path = Path(repo_path).resolve()
+-        self.working_dir = working_dir or self.repo_path
+-        self.env_variables = {}
+-        
+-    def communicate(
+-        self,
+-        command: str,
+-        timeout: int = 25,
+-        check: str = "ignore",
+-        error_msg: str = "Command failed",
+-    ) -> str:
+-        """Execute command locally
+-        
+-        Args:
+-            command: Command to execute
+-            timeout: Timeout in seconds
+-            check: "ignore", "warn", "raise"
+-            error_msg: Error message
+-            
+-        Returns:
+-            Command output
+-        """
+-        logger.debug(f"Executing: {command}")
++    def __init__(self, repo_path:Path, working_dir:Optional[Path]=None):
++        self.repo_path=Path(repo_path).resolve(); self.working_dir=working_dir or self.repo_path
++        self.arm_root=self.repo_path.parent
++        self.profile=self.arm_root/'sandbox.sb'
++        if not self.profile.is_file(): raise RuntimeError(f'Missing required sandbox: {self.profile}')
++        self.env_variables={'PATH':'$WORK/runs/e1/venv/bin','PYTHONDONTWRITEBYTECODE':'1','LC_ALL':'C'}
++        self.commands=[]
++    def communicate(self,command:str,timeout:int=25,check:str='ignore',error_msg:str='Command failed')->str:
++        t=time.monotonic()
+         try:
+-            env = {**self.env_variables}
+-            result = subprocess.run(
+-                command,
+-                shell=True,
+-                cwd=str(self.working_dir),
+-                capture_output=True,
+-                text=True,
+-                timeout=timeout,
+-                env=env,
+-            )
+-            output = result.stdout + result.stderr
+-            
+-            if check != "ignore" and result.returncode != 0:
+-                logger.error(f"{error_msg}:\n{output}")
+-                if check == "raise":
+-                    raise RuntimeError(f"Command {command!r} failed ({result.returncode=}): {error_msg}")
+-            
+-            return output
++            r=subprocess.run(['/usr/bin/sandbox-exec','-f',str(self.profile),'/bin/sh','-c',command],cwd=str(self.working_dir),capture_output=True,text=True,timeout=timeout,env=dict(self.env_variables))
++            output=r.stdout+r.stderr; code=r.returncode
+         except subprocess.TimeoutExpired:
+-            msg = f"Command {command!r} timed out after {timeout}s"
+-            logger.error(msg)
+-            if check == "raise":
+-                raise RuntimeError(msg)
+-            return f"Command timed out after {timeout}s"
+-    
+-    def read_file(self, path: Union[str, Path], encoding: Optional[str] = None, errors: Optional[str] = None) -> str:
+-        """Read file content
+-        
+-        Args:
+-            path: File path (relative to repo_path or absolute path)
+-            encoding: Encoding
+-            errors: Error handling
+-            
+-        Returns:
+-            File content
+-        """
+-        file_path = Path(path)
+-        if not file_path.is_absolute():
+-            file_path = self.repo_path / file_path
+-        
+-        if encoding:
+-            return file_path.read_text(encoding=encoding, errors=errors or "strict")
+-        return file_path.read_text(errors=errors or "strict")
+-    
+-    def write_file(self, path: Union[str, Path], content: str) -> None:
+-        """Write file
+-        
+-        Args:
+-            path: File path (relative to repo_path or absolute path)
+-            content: File content
+-        """
+-        file_path = Path(path)
+-        if not file_path.is_absolute():
+-            file_path = self.repo_path / file_path
+-        
+-        file_path.parent.mkdir(parents=True, exist_ok=True)
+-        file_path.write_text(content)
+-    
+-    def set_env_variables(self, env_variables: Dict[str, str]) -> None:
+-        """Set environment variables"""
+-        self.env_variables.update(env_variables)
+-        logger.debug(f"Set environment variables: {list(env_variables.keys())}")
+-    
+-    def execute_command(
+-        self,
+-        command: str,
+-        shell: bool = True,
+-        check: bool = False,
+-        env: Optional[Dict[str, str]] = None,
+-        cwd: Optional[str] = None,
+-    ) -> None:
+-        """Execute command (independent process)"""
+-        env_vars = {**self.env_variables}
+-        if env:
+-            env_vars.update(env)
+-        
+-        subprocess.run(
+-            command,
+-            shell=shell,
+-            cwd=cwd or str(self.working_dir),
+-            env=env_vars,
+-            check=check,
+-        )
+-
++            output=f'Command timed out after {timeout}s';code=124
++        self.commands.append({'command':command,'returncode':code,'wall_seconds':time.monotonic()-t,'raw_observation_chars':len(output),'output_excerpt':output[:600]})
++        if code and check=='raise':raise RuntimeError(f'{error_msg}: {output}')
++        return output
++    def read_file(self,path:Union[str,Path],encoding:Optional[str]=None,errors:Optional[str]=None)->str:
++        return self.communicate('/bin/cat -- '+shlex.quote(str(path)))
++    def write_file(self,path,content):raise PermissionError('Read-only evaluation tools')
++    def set_env_variables(self,env_variables:Dict[str,str]):self.env_variables.update(env_variables)
++    def execute_command(self,command,shell=True,check=False,env=None,cwd=None):
++        return self.communicate(command,check='raise' if check else 'ignore')
+diff --git a/Experiment/Script/SWE-agent_QA/agent_models.py b/Experiment/Script/SWE-agent_QA/agent_models.py
+index 47b75c0..f871a95 100644
+--- a/Experiment/Script/SWE-agent_QA/agent_models.py
++++ b/Experiment/Script/SWE-agent_QA/agent_models.py
+@@ -70,6 +70,8 @@ class LiteLLMModel(AbstractModel):
+             "model": self.model_name,
+             "messages": messages,
+             "temperature": self.config.temperature,
++            "timeout": 240,
++            "num_retries": 0,
+         }
+         
+         if self.config.api_base:
+diff --git a/Experiment/Script/SWE-agent_QA/agent_tools.py b/Experiment/Script/SWE-agent_QA/agent_tools.py
+index ac07adb..1f877f2 100644
+--- a/Experiment/Script/SWE-agent_QA/agent_tools.py
++++ b/Experiment/Script/SWE-agent_QA/agent_tools.py
+@@ -13,6 +13,8 @@ logger = logging.getLogger(__name__)
+ 
+ class ToolFilterConfig(BaseModel):
+     """Tool filter configuration"""
++    cbe_executable: str | None = None
++    """C-only absolute executable exception; default preserves upstream filtering."""
+     blocklist: list[str] = Field(default_factory=lambda: [
+         "vim", "vi", "emacs", "nano", "python", "python3", "bash", "sh"
+     ])
+@@ -136,6 +138,15 @@ class ToolHandler:
+     def _is_blocked(self, action_name: str, arguments: Dict[str, Any]) -> bool:
+         """Check if action is blocked"""
+         blocklist = self.config.filter.blocklist
++
++        # E1b2 fifth change: C alone opts in to a simple absolute cbe command.
++        executable = self.config.filter.cbe_executable
++        if action_name == "bash" and executable:
++            command = arguments.get("command", "")
++            if (isinstance(command, str)
++                    and (command == executable or command.startswith(executable + " ") or command.startswith(executable + "\t"))
++                    and not any(char in command for char in ";&|`$><\n\r")):
++                return False
+         
+         # Check complete command
+         if action_name in blocklist:
+diff --git a/Benchmark construction/score/llm-as-a-judge.py b/Benchmark construction/score/llm-as-a-judge.py
+index d9c50f2..f9a2e0b 100644
+--- a/Benchmark construction/score/llm-as-a-judge.py	
++++ b/Benchmark construction/score/llm-as-a-judge.py	
+@@ -17,26 +17,15 @@ import threading
+ from typing import Dict, Any, Optional, List
+ from pathlib import Path
+ 
+-from openai import AzureOpenAI
++from openai import OpenAI
+ from dotenv import load_dotenv
+ 
+ load_dotenv()
+ 
+-def get_eval_client() -> AzureOpenAI:
+-    """Get evaluation client from environment variables"""
+-    base_url = os.getenv("EVAL_LLM_BASE_URL")
+-    api_version = os.getenv("EVAL_LLM_API_VERSION")
+-    api_key = os.getenv("EVAL_LLM_API_KEY")
+-    
+-    if not all([base_url, api_version, api_key]):
+-        raise ValueError("Missing required environment variables: EVAL_LLM_BASE_URL, EVAL_LLM_API_VERSION, EVAL_LLM_API_KEY")
+-    
+-    return AzureOpenAI(
+-        azure_endpoint=base_url,
+-        api_version=api_version,
+-        api_key=api_key,
+-        default_headers={"X-TT-LOGID": "${your_logid}"},
+-    )
++def get_eval_client() -> OpenAI:
++    """OpenAI-compatible Magpie endpoint; key remains in the parent process."""
++    return OpenAI(base_url=os.environ['EVAL_LLM_BASE_URL'],
++                  api_key=os.environ['EVAL_LLM_API_KEY'], timeout=240, max_retries=0)
+ 
+ 
+ def get_config_from_env() -> Dict[str, Any]:
+@@ -68,11 +57,10 @@ def score_answer(
+     question: str,
+     reference: str,
+     candidate: str,
+-    eval_client: AzureOpenAI,
++    eval_client: OpenAI,
+     model: str
+ ) -> Optional[Dict[str, int]]:
+-    """
+-    Score candidate answer
++    """Score candidate answer.
+     
+     Args:
+         question: Question
+@@ -176,12 +164,7 @@ REQUIREMENT:
+                     ]
+                 }
+             ],
+-            extra_body={
+-                "thinking": {
+-                    "include_thoughts": False,
+-                    "budget_tokens": 1024
+-                }
+-            },
++            max_tokens=4096,
+         )
+         
+         # Extract response text from Responses API format
+@@ -200,8 +183,12 @@ REQUIREMENT:
+             scores = json.loads(score_str)
+             # Validate all dimensions are in range 1-20
+             required_keys = ["correctness", "completeness", "clarity", "relevance", "reasoning"]
++            if set(scores) != set(required_keys):
++                print('Score validation failed: expected exactly five dimensions')
++                return None
+             for key in required_keys:
+-                if key not in scores or not (1 <= scores[key] <= 20):
++                if (not isinstance(scores[key], int) or isinstance(scores[key], bool)
++                        or not 1 <= scores[key] <= 20):
+                     print(f"Score validation failed: {key} = {scores.get(key)}")
+                     return None
+             return scores
+@@ -218,7 +205,7 @@ REQUIREMENT:
+ def process_single_record(
+     candidate_record: Dict[str, Any],
+     reference_dict: Dict[str, str],
+-    eval_client: AzureOpenAI,
++    eval_client: OpenAI,
+     model: str
+ ) -> Optional[Dict[str, Any]]:
+     """
+@@ -308,7 +295,7 @@ def evaluate_jsonl_parallel(
+     candidate_jsonl_path: str,
+     reference_jsonl_path: str,
+     output_jsonl_path: str,
+-    eval_client: AzureOpenAI,
++    eval_client: OpenAI,
+     model: str,
+     max_workers: int = 16
+ ) -> None:

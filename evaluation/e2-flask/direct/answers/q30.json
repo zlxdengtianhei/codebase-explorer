@@ -1,0 +1,31 @@
+{
+  "qid": 30,
+  "question": "Why would performance degradation occur if the custom template filter registration mechanism used in blueprint test cases were repeated across multiple distinct blueprint objects during application startup?",
+  "arm": "direct",
+  "answer": "Based on Flask's architecture, repeating this mechanism across multiple distinct blueprints during application startup would lead to performance degradation primarily due to **redundant execution of deferred registration callbacks and unnecessary dictionary updates** on the Jinja environment. Specifically:\n\n1. **Redundant Function Execution**: Each blueprint stores the filter registration in a list of deferred functions. When the blueprints are registered to the application, Flask iterates through and executes these functions, resulting in repeated function calls and processing for what may be the same or similar logic.\n2. **Excessive Dictionary Mutations**: The registration process directly modifies the `app.jinja_env.filters` dictionary. Performing this action repeatedly for multiple blueprints incurs unnecessary CPU overhead for dictionary hashing and key assignments during the startup phase.\n3. **Increased Memory Overhead**: Storing multiple instances of the filter function objects and their associated deferred function closures across distinct blueprint objects consumes unnecessary heap space before the application begins serving requests.",
+  "valid": true,
+  "wall_seconds": 124.58036362496205,
+  "attempts": [
+    {
+      "answer": "Based on Flask's architecture, repeating this mechanism across multiple distinct blueprints during application startup would lead to performance degradation primarily due to **redundant execution of deferred registration callbacks and unnecessary dictionary updates** on the Jinja environment. Specifically:\n\n1. **Redundant Function Execution**: Each blueprint stores the filter registration in a list of deferred functions. When the blueprints are registered to the application, Flask iterates through and executes these functions, resulting in repeated function calls and processing for what may be the same or similar logic.\n2. **Excessive Dictionary Mutations**: The registration process directly modifies the `app.jinja_env.filters` dictionary. Performing this action repeatedly for multiple blueprints incurs unnecessary CPU overhead for dictionary hashing and key assignments during the startup phase.\n3. **Increased Memory Overhead**: Storing multiple instances of the filter function objects and their associated deferred function closures across distinct blueprint objects consumes unnecessary heap space before the application begins serving requests.",
+      "valid": true,
+      "usage": {
+        "completion_tokens": 5875,
+        "prompt_tokens": 107,
+        "total_tokens": 5982,
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": null,
+          "audio_tokens": null,
+          "reasoning_tokens": 5681,
+          "rejected_prediction_tokens": null
+        },
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 64
+        }
+      },
+      "response_model": "glm-5.3-flash"
+    }
+  ]
+}

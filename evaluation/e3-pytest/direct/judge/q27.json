@@ -1,0 +1,125 @@
+{
+  "qid": 27,
+  "question": "Why does test_rewrite_ast employ pytest.register_assert_rewrite() in the package's __init__.py rather than relying solely on the automatic conftest-based rewriting mechanism, and what does this reveal about the design architecture?",
+  "arm": "direct",
+  "max_steps": null,
+  "repeat": 0,
+  "answer_valid": true,
+  "judge_model": "codex/gpt-6.1-sol",
+  "draws": [
+    {
+      "draw": 1,
+      "score": {
+        "correctness": 12,
+        "completeness": 12,
+        "relevance": 16,
+        "clarity": 16,
+        "reasoning": 13
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 89,
+            "prompt_tokens": 6204,
+            "total_tokens": 6293,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 40,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 12,\n  \"completeness\": 12,\n  \"relevance\": 16,\n  \"clarity\": 16,\n  \"reasoning\": 13\n}",
+          "wall_seconds": 2.9778320000041276
+        }
+      ]
+    },
+    {
+      "draw": 2,
+      "score": {
+        "correctness": 12,
+        "completeness": 13,
+        "relevance": 16,
+        "clarity": 15,
+        "reasoning": 13
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 104,
+            "prompt_tokens": 6204,
+            "total_tokens": 6308,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 55,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6016
+            }
+          },
+          "response": "{\n  \"correctness\": 12,\n  \"completeness\": 13,\n  \"relevance\": 16,\n  \"clarity\": 15,\n  \"reasoning\": 13\n}",
+          "wall_seconds": 3.323005667014513
+        }
+      ]
+    },
+    {
+      "draw": 3,
+      "score": {
+        "correctness": 12,
+        "completeness": 12,
+        "relevance": 16,
+        "clarity": 16,
+        "reasoning": 13
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 94,
+            "prompt_tokens": 6204,
+            "total_tokens": 6298,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 45,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6016
+            }
+          },
+          "response": "{\n  \"correctness\": 12,\n  \"completeness\": 12,\n  \"relevance\": 16,\n  \"clarity\": 16,\n  \"reasoning\": 13\n}",
+          "wall_seconds": 2.9711288329563104
+        }
+      ]
+    }
+  ],
+  "score": {
+    "correctness": 12,
+    "completeness": 12,
+    "relevance": 16,
+    "clarity": 16,
+    "reasoning": 13
+  },
+  "total": 69,
+  "main_total_na5": 69,
+  "failure_type": null,
+  "judge_total_range": 0,
+  "wall_seconds": 9.272390665952116
+}

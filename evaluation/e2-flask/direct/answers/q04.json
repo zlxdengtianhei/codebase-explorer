@@ -1,0 +1,31 @@
+{
+  "qid": 4,
+  "question": "What is the dependency chain in the test function that verifies subdomain routing through configuration, route registration, and request context creation?",
+  "arm": "direct",
+  "answer": "Flask app created with `subdomain_matching=True` \u2192 `app.config[\"SERVER_NAME\"] = \"localhost.localdomain\"` \u2192 routes registered via `@app.route(\"/\", subdomain=\"foo\")` \u2192 request made via `client.get(\"/\", headers={\"Host\": \"foo.localhost.localdomain\"})` (or `app.test_request_context`), which builds the request context and matches the host against the subdomain route.",
+  "valid": true,
+  "wall_seconds": 45.264563208969776,
+  "attempts": [
+    {
+      "answer": "Flask app created with `subdomain_matching=True` \u2192 `app.config[\"SERVER_NAME\"] = \"localhost.localdomain\"` \u2192 routes registered via `@app.route(\"/\", subdomain=\"foo\")` \u2192 request made via `client.get(\"/\", headers={\"Host\": \"foo.localhost.localdomain\"})` (or `app.test_request_context`), which builds the request context and matches the host against the subdomain route.",
+      "valid": true,
+      "usage": {
+        "completion_tokens": 662,
+        "prompt_tokens": 104,
+        "total_tokens": 766,
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": null,
+          "audio_tokens": null,
+          "reasoning_tokens": 576,
+          "rejected_prediction_tokens": null
+        },
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 0
+        }
+      },
+      "response_model": "glm-5.3-flash"
+    }
+  ]
+}

@@ -1,0 +1,363 @@
+{
+  "anchors": [
+    {
+      "card": "cards/a8a008b8a0bb3.md",
+      "file": "lib/sendf.c",
+      "id": "a8a008b8a0bb3",
+      "is_dispatch": true,
+      "name": "Curl_cwriter_free",
+      "region": "transport",
+      "suggested_layer": 3
+    },
+    {
+      "card": "cards/aae3f4049d80f.md",
+      "file": "lib/sendf.c",
+      "id": "aae3f4049d80f",
+      "is_dispatch": true,
+      "name": "Curl_cwriter_create",
+      "region": "transport",
+      "suggested_layer": 4
+    },
+    {
+      "card": "cards/a4d472d0f4534.md",
+      "file": "lib/sendf.c",
+      "id": "a4d472d0f4534",
+      "is_dispatch": true,
+      "name": "cl_reset_writer",
+      "region": "transport",
+      "suggested_layer": 3
+    },
+    {
+      "card": "cards/a856a1b6f2a3c.md",
+      "file": "lib/mime.c",
+      "id": "a856a1b6f2a3c",
+      "is_dispatch": false,
+      "name": "curl_mime_subparts",
+      "region": "transport",
+      "suggested_layer": 1
+    },
+    {
+      "card": "cards/ae7448cc64a60.md",
+      "file": "lib/uint-spbset.c",
+      "id": "ae7448cc64a60",
+      "is_dispatch": false,
+      "name": "Curl_uint32_spbset_init",
+      "region": "transport",
+      "suggested_layer": 2
+    },
+    {
+      "card": "cards/a912aa47b10e5.md",
+      "file": "lib/url.c",
+      "id": "a912aa47b10e5",
+      "is_dispatch": false,
+      "name": "url_conn_reuse_adjust",
+      "region": "transport",
+      "suggested_layer": 3
+    },
+    {
+      "card": "cards/af290ccad7bde.md",
+      "file": "lib/urlapi.c",
+      "id": "af290ccad7bde",
+      "is_dispatch": false,
+      "name": "set_url",
+      "region": "transport",
+      "suggested_layer": 4
+    },
+    {
+      "card": "cards/a9e2cacbf1a9a.md",
+      "file": "lib/version.c",
+      "id": "a9e2cacbf1a9a",
+      "is_dispatch": false,
+      "name": "curl_version",
+      "region": "transport",
+      "suggested_layer": 3
+    },
+    {
+      "card": "cards/aee882487fdab.md",
+      "file": "lib/socks.c",
+      "id": "aee882487fdab",
+      "is_dispatch": true,
+      "name": "socks_proxy_cf_connect",
+      "region": "filters",
+      "suggested_layer": 3
+    },
+    {
+      "card": "cards/a1545ba147f25.md",
+      "file": "lib/cfilters.c",
+      "id": "a1545ba147f25",
+      "is_dispatch": true,
+      "name": "cf_get_remote_addr",
+      "region": "filters",
+      "suggested_layer": 4
+    },
+    {
+      "card": "cards/aa9e9655a5edb.md",
+      "file": "lib/cfilters.c",
+      "id": "aa9e9655a5edb",
+      "is_dispatch": true,
+      "name": "Curl_conn_cf_needs_flush",
+      "region": "filters",
+      "suggested_layer": 3
+    },
+    {
+      "card": "cards/ada500ed6cb86.md",
+      "file": "lib/cfilters.c",
+      "id": "ada500ed6cb86",
+      "is_dispatch": true,
+      "name": "Curl_conn_cf_connect",
+      "region": "filters",
+      "suggested_layer": 4
+    },
+    {
+      "card": "cards/ae2d567bffc75.md",
+      "file": "lib/connect.c",
+      "id": "ae2d567bffc75",
+      "is_dispatch": true,
+      "name": "Curl_conn_connect",
+      "region": "filters",
+      "suggested_layer": 3
+    },
+    {
+      "card": "cards/a8cfc5e68536c.md",
+      "file": "lib/cf-socket.c",
+      "id": "a8cfc5e68536c",
+      "is_dispatch": true,
+      "name": "cf_socket_query",
+      "region": "filters",
+      "suggested_layer": 4
+    },
+    {
+      "card": "cards/ad3ad678b547f.md",
+      "file": "lib/cfilters.c",
+      "id": "ad3ad678b547f",
+      "is_dispatch": true,
+      "name": "Curl_conn_keep_alive",
+      "region": "filters",
+      "suggested_layer": 3
+    },
+    {
+      "card": "cards/aaa336314ea7a.md",
+      "file": "lib/http2.c",
+      "id": "aaa336314ea7a",
+      "is_dispatch": true,
+      "name": "http2_connisalive",
+      "region": "http",
+      "suggested_layer": 3
+    },
+    {
+      "card": "cards/af5b18b82e5db.md",
+      "file": "lib/vquic/cf-ngtcp2-cmn.c",
+      "id": "af5b18b82e5db",
+      "is_dispatch": true,
+      "name": "Curl_cf_ngtcp2_cmn_conn_is_alive",
+      "region": "http",
+      "suggested_layer": 4
+    },
+    {
+      "card": "cards/a6f8f5f99d7fb.md",
+      "file": "lib/http_proxy.c",
+      "id": "a6f8f5f99d7fb",
+      "is_dispatch": true,
+      "name": "http_proxy_cf_connect",
+      "region": "http",
+      "suggested_layer": 3
+    },
+    {
+      "card": "cards/a453136bf5d3b.md",
+      "file": "lib/vquic/cf-ngtcp2-cmn.c",
+      "id": "a453136bf5d3b",
+      "is_dispatch": true,
+      "name": "Curl_cf_ngtcp2_cmn_query",
+      "region": "http",
+      "suggested_layer": 4
+    },
+    {
+      "card": "cards/a98fc9ed1e415.md",
+      "file": "lib/http2.c",
+      "id": "a98fc9ed1e415",
+      "is_dispatch": true,
+      "name": "Curl_http2_upgrade",
+      "region": "http",
+      "suggested_layer": 3
+    },
+    {
+      "card": "cards/ab1530edb0722.md",
+      "file": "lib/vquic/cf-quiche.c",
+      "id": "ab1530edb0722",
+      "is_dispatch": true,
+      "name": "cf_quiche_conn_is_alive",
+      "region": "http",
+      "suggested_layer": 4
+    },
+    {
+      "card": "cards/a5c35b2a36f1b.md",
+      "file": "lib/http2.c",
+      "id": "a5c35b2a36f1b",
+      "is_dispatch": true,
+      "name": "cf_h2_query",
+      "region": "http",
+      "suggested_layer": 3
+    },
+    {
+      "card": "cards/a924f34e95c80.md",
+      "file": "lib/vquic/cf-quiche.c",
+      "id": "a924f34e95c80",
+      "is_dispatch": true,
+      "name": "cf_quiche_query",
+      "region": "http",
+      "suggested_layer": 4
+    },
+    {
+      "card": "cards/a5265b67568fa.md",
+      "file": "lib/curl_ntlm_core.c",
+      "id": "a5265b67568fa",
+      "is_dispatch": false,
+      "name": "setup_des_key",
+      "region": "auth",
+      "suggested_layer": 1
+    },
+    {
+      "card": "cards/af18e035d107c.md",
+      "file": "lib/vauth/krb5_sspi.c",
+      "id": "af18e035d107c",
+      "is_dispatch": false,
+      "name": "Curl_auth_is_gssapi_supported",
+      "region": "auth",
+      "suggested_layer": 2
+    },
+    {
+      "card": "cards/a0fe6acd1f12d.md",
+      "file": "lib/vauth/vauth.c",
+      "id": "a0fe6acd1f12d",
+      "is_dispatch": false,
+      "name": "krb5_conn_dtor",
+      "region": "auth",
+      "suggested_layer": 3
+    },
+    {
+      "card": "cards/aff1ba26d8a4b.md",
+      "file": "lib/vauth/digest_sspi.c",
+      "id": "aff1ba26d8a4b",
+      "is_dispatch": false,
+      "name": "Curl_auth_digest_cleanup",
+      "region": "auth",
+      "suggested_layer": 4
+    },
+    {
+      "card": "cards/afb76843b5359.md",
+      "file": "lib/curl_sspi.c",
+      "id": "afb76843b5359",
+      "is_dispatch": false,
+      "name": "Curl_sspi_global_cleanup",
+      "region": "auth",
+      "suggested_layer": 3
+    },
+    {
+      "card": "cards/ac6ebd554b6aa.md",
+      "file": "lib/http_aws_sigv4.c",
+      "id": "ac6ebd554b6aa",
+      "is_dispatch": false,
+      "name": "is_reserved_char",
+      "region": "auth",
+      "suggested_layer": 4
+    },
+    {
+      "card": "cards/a0f51941c0168.md",
+      "file": "lib/netrc.c",
+      "id": "a0f51941c0168",
+      "is_dispatch": false,
+      "name": "netrc_scan_reset",
+      "region": "auth",
+      "suggested_layer": 3
+    },
+    {
+      "card": "cards/a8d30f22cd5d0.md",
+      "file": "src/tool_doswin.c",
+      "id": "a8d30f22cd5d0",
+      "is_dispatch": false,
+      "name": "cleanup_tdata_sync",
+      "region": "cli",
+      "suggested_layer": 1
+    },
+    {
+      "card": "cards/a2b3e8a0852c8.md",
+      "file": "src/tool_doswin.c",
+      "id": "a2b3e8a0852c8",
+      "is_dispatch": false,
+      "name": "truncate_dryrun",
+      "region": "cli",
+      "suggested_layer": 2
+    },
+    {
+      "card": "cards/a1534b65aeb70.md",
+      "file": "src/tool_easysrc.c",
+      "id": "a1534b65aeb70",
+      "is_dispatch": false,
+      "name": "easysrc_add",
+      "region": "cli",
+      "suggested_layer": 3
+    },
+    {
+      "card": "cards/a0535db299e41.md",
+      "file": "src/tool_getparam.c",
+      "id": "a0535db299e41",
+      "is_dispatch": false,
+      "name": "getunit",
+      "region": "cli",
+      "suggested_layer": 4
+    },
+    {
+      "card": "cards/a459deefc076c.md",
+      "file": "src/tool_getparam.c",
+      "id": "a459deefc076c",
+      "is_dispatch": false,
+      "name": "parse_continue_at",
+      "region": "cli",
+      "suggested_layer": 3
+    },
+    {
+      "card": "cards/ace64bd7936ab.md",
+      "file": "src/tool_cb_hdr.c",
+      "id": "ace64bd7936ab",
+      "is_dispatch": false,
+      "name": "save_etag",
+      "region": "cli",
+      "suggested_layer": 4
+    },
+    {
+      "card": "cards/a52a0a815ca95.md",
+      "file": "src/tool_progress.c",
+      "id": "a52a0a815ca95",
+      "is_dispatch": false,
+      "name": "add_offt",
+      "region": "cli",
+      "suggested_layer": 3
+    },
+    {
+      "card": "cards/adc8e42041c02.md",
+      "file": "src/config2setopts.c",
+      "id": "adc8e42041c02",
+      "is_dispatch": false,
+      "name": "ftp_setopts",
+      "region": "cli",
+      "suggested_layer": 4
+    }
+  ],
+  "candidate_question_count": 28,
+  "candidate_region_quota": {
+    "auth": 6,
+    "cli": 4,
+    "filters": 6,
+    "http": 6,
+    "transport": 6
+  },
+  "instructions": "按清单固定顺序使用锚点，不自行换锚点；多余锚点作为顺序补位；最终每区域至多6题且src至少4题。层与题型配额由主会话跨两路统一分配，建议层不是最终题面标签。",
+  "regions": [
+    "transport",
+    "filters",
+    "http",
+    "auth",
+    "cli"
+  ],
+  "split": "A"
+}

@@ -1,0 +1,125 @@
+{
+  "qid": 32,
+  "question": "Why does repeated invocation of the method that instantiates cryptographic serializers within the session persistence handler create a performance bottleneck under high-concurrency conditions?",
+  "arm": "C0",
+  "max_steps": 25,
+  "repeat": 0,
+  "answer_valid": true,
+  "judge_model": "codex/gpt-6.1-sol",
+  "draws": [
+    {
+      "draw": 1,
+      "score": {
+        "correctness": 12,
+        "completeness": 18,
+        "relevance": 16,
+        "clarity": 15,
+        "reasoning": 13
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 109,
+            "prompt_tokens": 7059,
+            "total_tokens": 7168,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 60,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 12,\n  \"completeness\": 18,\n  \"relevance\": 16,\n  \"clarity\": 15,\n  \"reasoning\": 13\n}",
+          "wall_seconds": 136.264605415985
+        }
+      ]
+    },
+    {
+      "draw": 2,
+      "score": {
+        "correctness": 12,
+        "completeness": 18,
+        "relevance": 16,
+        "clarity": 16,
+        "reasoning": 13
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 101,
+            "prompt_tokens": 7059,
+            "total_tokens": 7160,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 52,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6912
+            }
+          },
+          "response": "{\n  \"correctness\": 12,\n  \"completeness\": 18,\n  \"relevance\": 16,\n  \"clarity\": 16,\n  \"reasoning\": 13\n}",
+          "wall_seconds": 143.18003562500235
+        }
+      ]
+    },
+    {
+      "draw": 3,
+      "score": {
+        "correctness": 12,
+        "completeness": 17,
+        "relevance": 16,
+        "clarity": 15,
+        "reasoning": 12
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 93,
+            "prompt_tokens": 7059,
+            "total_tokens": 7152,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 44,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6912
+            }
+          },
+          "response": "{\n  \"correctness\": 12,\n  \"completeness\": 17,\n  \"relevance\": 16,\n  \"clarity\": 15,\n  \"reasoning\": 12\n}",
+          "wall_seconds": 139.10219695803244
+        }
+      ]
+    }
+  ],
+  "score": {
+    "correctness": 12,
+    "completeness": 18,
+    "relevance": 16,
+    "clarity": 15,
+    "reasoning": 13
+  },
+  "total": 74,
+  "main_total_na5": 74,
+  "failure_type": null,
+  "judge_total_range": 3,
+  "wall_seconds": 418.54937970801257
+}

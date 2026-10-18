@@ -1,0 +1,397 @@
+{
+  "status": "complete",
+  "driver": "script",
+  "host": "api",
+  "source_files": 4,
+  "source_tokens": 34364,
+  "modules": 4,
+  "units": 95,
+  "semantic_nodes": 14,
+  "published_pages": 15,
+  "pending": [],
+  "normalized": [
+    "repair_4"
+  ],
+  "id_corrected_count": 0,
+  "id_corrected": [],
+  "index_only_filled_count": 1,
+  "index_only_filled": [
+    {
+      "task": "repair_4",
+      "symbol": "cJSON.c::module_residual::::54857",
+      "reason": "missing"
+    }
+  ],
+  "known_empty": [],
+  "wall_seconds": 1357.717,
+  "run_dir": "$WORK/runs/e6/cjson/run",
+  "index": "$WORK/runs/e6/cjson/run/docs/INDEX.md",
+  "subagent_tasks": 13,
+  "deterministic_checks_ok": true,
+  "aggregation_principles": {
+    "advisory": true,
+    "input_digest": "98841c392f4a01041a10d6a21081c8cb9c85b4b328ca2bb4a05c988b4d22a05f",
+    "identity": [
+      [
+        "cjson",
+        "cJSON Library"
+      ],
+      [
+        "core-accessors",
+        "Lookup, Predicates & Accessors"
+      ],
+      [
+        "core-constructors",
+        "Convenience Constructors & Setters"
+      ],
+      [
+        "core-json",
+        "Core cJSON Engine"
+      ],
+      [
+        "core-memory-support",
+        "Memory & Shared Support"
+      ],
+      [
+        "core-parsing",
+        "JSON Text Parsing"
+      ],
+      [
+        "core-printing",
+        "JSON Serialization"
+      ],
+      [
+        "core-public-interface",
+        "Public API & Data Model"
+      ],
+      [
+        "core-tree-mutation",
+        "Tree Construction & Mutation"
+      ],
+      [
+        "json-utils",
+        "cJSON Utilities (RFC Layer)"
+      ],
+      [
+        "utils-diff-merge",
+        "Diff & Merge Patches"
+      ],
+      [
+        "utils-json-pointer",
+        "JSON Pointer (RFC 6901)"
+      ],
+      [
+        "utils-patching",
+        "JSON Patch Application (RFC 6902)"
+      ],
+      [
+        "utils-sorting",
+        "Object Sorting"
+      ]
+    ],
+    "edge_counts_by_kind": {
+      "call": 325,
+      "relation": 122
+    },
+    "checks": [
+      {
+        "principle": "P1",
+        "ok": true,
+        "empty_or_duplicate_capabilities": []
+      },
+      {
+        "principle": "P2",
+        "ok": false,
+        "modules": {
+          "cjson": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "core-json": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "core-public-interface": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "core-memory-support": {
+            "internal": 1,
+            "external": 66,
+            "internal_external_ratio": 0.015151515151515152
+          },
+          "core-parsing": {
+            "internal": 41,
+            "external": 10,
+            "internal_external_ratio": 4.1
+          },
+          "core-printing": {
+            "internal": 35,
+            "external": 7,
+            "internal_external_ratio": 5.0
+          },
+          "core-tree-mutation": {
+            "internal": 27,
+            "external": 105,
+            "internal_external_ratio": 0.2571428571428571
+          },
+          "core-accessors": {
+            "internal": 8,
+            "external": 37,
+            "internal_external_ratio": 0.21621621621621623
+          },
+          "core-constructors": {
+            "internal": 19,
+            "external": 63,
+            "internal_external_ratio": 0.30158730158730157
+          },
+          "json-utils": {
+            "internal": 0,
+            "external": 8,
+            "internal_external_ratio": 0.0
+          },
+          "utils-json-pointer": {
+            "internal": 14,
+            "external": 38,
+            "internal_external_ratio": 0.3684210526315789
+          },
+          "utils-patching": {
+            "internal": 23,
+            "external": 56,
+            "internal_external_ratio": 0.4107142857142857
+          },
+          "utils-diff-merge": {
+            "internal": 34,
+            "external": 76,
+            "internal_external_ratio": 0.4473684210526316
+          },
+          "utils-sorting": {
+            "internal": 6,
+            "external": 12,
+            "internal_external_ratio": 0.5
+          }
+        },
+        "scope": "direct primary ownership; incident cross-module edges counted at each endpoint"
+      },
+      {
+        "principle": "P3",
+        "ok": false,
+        "bounds": [
+          5,
+          30
+        ],
+        "out_of_bounds": {
+          "core-public-interface": 4,
+          "json-utils": 3,
+          "utils-sorting": 4
+        },
+        "scope": "nodes with directly owned units; structural ancestors excluded"
+      },
+      {
+        "principle": "P4",
+        "ok": true,
+        "ownership_violations": {}
+      },
+      {
+        "principle": "P5",
+        "ok": false,
+        "min_edges_per_dependent_module": 3,
+        "min_dependent_modules": 2,
+        "shared_units": {
+          "cJSON.c::function::add_item_to_object::55010": {
+            "utils-patching": 4,
+            "utils-diff-merge": 2,
+            "core-constructors": 13
+          },
+          "cJSON.c::function::cJSON_Delete::6306": {
+            "core-parsing": 5,
+            "utils-patching": 4,
+            "utils-diff-merge": 5,
+            "core-constructors": 15
+          },
+          "cJSON.c::function::cJSON_Duplicate_rec::71234": {
+            "utils-patching": 4,
+            "utils-diff-merge": 7
+          },
+          "cJSON.c::function::cJSON_New_Item::6059": {
+            "core-tree-mutation": 4,
+            "core-parsing": 4,
+            "core-constructors": 13
+          },
+          "cJSON.c::function::cJSON_strdup::4842": {
+            "core-tree-mutation": 6,
+            "core-constructors": 4
+          },
+          "grp:cJSON.c-detach-delete-wrappers": {
+            "utils-patching": 4,
+            "utils-diff-merge": 4
+          },
+          "grp:cJSON.c-public-allocators": {
+            "core-constructors": 1,
+            "core-tree-mutation": 1,
+            "utils-patching": 6,
+            "utils-json-pointer": 7,
+            "json-utils": 2,
+            "utils-diff-merge": 8
+          },
+          "grp:cJSON.c-type-predicates": {
+            "utils-patching": 11,
+            "utils-json-pointer": 8,
+            "utils-diff-merge": 6
+          }
+        },
+        "note": "dependency signal only, including utilities already separated; no automatic reassignment"
+      },
+      {
+        "principle": "P6",
+        "ok": true,
+        "modules": {
+          "cjson": {},
+          "core-json": {},
+          "core-public-interface": {
+            "c": 4
+          },
+          "core-memory-support": {
+            "c": 6
+          },
+          "core-parsing": {
+            "c": 13
+          },
+          "core-printing": {
+            "c": 8
+          },
+          "core-tree-mutation": {
+            "c": 12
+          },
+          "core-accessors": {
+            "c": 6
+          },
+          "core-constructors": {
+            "c": 5
+          },
+          "json-utils": {
+            "c": 3
+          },
+          "utils-json-pointer": {
+            "c": 10
+          },
+          "utils-patching": {
+            "c": 10
+          },
+          "utils-diff-merge": {
+            "c": 14
+          },
+          "utils-sorting": {
+            "c": 4
+          }
+        },
+        "scope": "unit counts by language; a multi-language unit contributes once per language"
+      },
+      {
+        "principle": "P7",
+        "ok": null,
+        "status": "not_checked",
+        "reason": "no prior tree for the same detail input"
+      }
+    ],
+    "hierarchy": {
+      "ok": true,
+      "requires_intermediate_above_units": 30
+    },
+    "introduction_length": {
+      "ok": true,
+      "overlong": {},
+      "scope": "capability+summary characters versus descendant explain characters"
+    }
+  },
+  "aggregation": {
+    "input_digest": "83a2c6241363ef41fad37dbd7b9e5fbc3b9234593471c67a96d61b0c3f142ad8",
+    "limits": {
+      "max_units": 300,
+      "max_tokens": 64000
+    },
+    "regions": []
+  },
+  "node_dependencies": {
+    "graph_confirmed": 14,
+    "model_inferred": 2,
+    "graph_only": 8
+  },
+  "within_containment": 2,
+  "key_flows": 6,
+  "candidate_flows": 24,
+  "layers": {
+    "tokenizer": "o200k_base",
+    "source_tokens": 34364,
+    "semantic_tokens": 29691,
+    "semantic_breakdown": {
+      "model_body": 10028,
+      "signature_location": 3525,
+      "heading_anchor": 2196,
+      "relations": 2695,
+      "footer": 1288,
+      "index": 5939,
+      "node_text": 4020
+    },
+    "model_body_tokens": 10028,
+    "model_body_source_ratio": 0.29181701780933533,
+    "published_markdown_source_ratio": 0.8640146665114655,
+    "deterministic_tokens": 330257,
+    "catalog_tokens": 330257,
+    "frozen_graph_tokens": 0,
+    "frozen_graph_bytes": 11929633,
+    "semantic_source_ratio": 0.8640146665114655,
+    "deterministic_source_ratio": 9.610551740193225,
+    "scope": "Breakdown partitions full Markdown BPE tokens by the first byte's line: model_body is published unit explain, summary, extras and uncertainties; signature_location includes shared source-file reference definitions (including ones used by relations); heading_anchor, relations, footer, INDEX and node_text (including labels/whitespace and program-written ID correction notices) partition the rest. model_body/source and published_markdown/source use complete frozen files. semantic: all published Markdown (node pages + INDEX, including navigation, signatures and commands); deterministic: catalog.json as serialized, including preserved prose copies and edge references, excluding the graph field; frozen graph is excluded from token ratios (frozen_graph_tokens=0), reported separately as frozen_graph_bytes using UTF-8 JSON with ensure_ascii=False and compact separators; complete graph evidence is expanded only with query --edges; source: complete frozen files counted once; context source chunks, host prompts, raw answers and summary.json excluded; layers are storage measures, not disjoint content classes"
+  },
+  "semantic_review": {
+    "mode": "sample",
+    "reviewed": [
+      {
+        "module": 3,
+        "decision": "needs_repair",
+        "issues": [
+          "cJSON.c::function::parse_value::36908: claims a 'false' at the exact end of the buffer fails because can_read demands 5 accessible bytes, but can_read(buffer,5) succeeds with exactly 5 bytes remaining (offset+5 <= length), so a document ending in 'false' within buffer_length matches; the stated failure condition is unsupported by the code.",
+          "cJSON.c::function::cJSON_Minify::74548: says a '/' that does not start a comment is copied as an ordinary character, but the code's else branch only advances the read cursor (json++) without writing anything to the output, so a lone '/' is silently dropped.",
+          "cJSON.c::function::add_item_to_object::55010: the uncertainty states that in constant-key mode new_type still clears the StringIsConst bit, but the code sets it (new_type = item->type | cJSON_StringIsConst); only the duplicating mode clears the bit."
+        ],
+        "repair": "done"
+      }
+    ],
+    "outcomes": {
+      "needs_repair": 1
+    },
+    "pending": [],
+    "note": "an independent reviewer read the source for each reviewed batch; this is not a whole-map proof"
+  },
+  "truth": "deterministic structure/coverage checks and the separate semantic review are different states; neither one proves prose truth",
+  "counts": {
+    "done": 9
+  },
+  "leased": [],
+  "failed": [],
+  "ready": 0,
+  "next_action": "done; open $WORK/runs/e6/cjson/run/docs/INDEX.md, then run `cbe host cost --run-dir $WORK/runs/e6/cjson/run`",
+  "usage_unknown": [],
+  "render_error": null,
+  "stopped": null,
+  "progress_log": "$WORK/runs/e6/cjson/run/progress.log",
+  "model": "zai/glm-5.3-flash",
+  "input_token_basis": "provider prompt_tokens minus cached_tokens; cache reported separately",
+  "calls": 13,
+  "input_tokens": 172258,
+  "output_tokens": 112809,
+  "cache_tokens": 91136,
+  "token_totals_basis": "observed calls; missing usage is excluded, never estimated",
+  "calls_with_unknown_input": 0,
+  "calls_with_unknown_output": 0,
+  "observed_cache_tokens": 91136,
+  "calls_with_unknown_cache": 0,
+  "priced_usd": null,
+  "price_basis": "unknown; configure API price_per_million: [input, output, cache]",
+  "usage_complete": true,
+  "seconds": 1612.226
+}

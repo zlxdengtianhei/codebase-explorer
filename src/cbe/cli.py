@@ -15,22 +15,17 @@ def _abs(value: str) -> Path:
     return path
 
 
-def _package_version() -> str:
-    try:
-        from importlib.metadata import version
-        return version("codebase-explorer")
-    except Exception:  # noqa: BLE001 - a source checkout has no metadata
-        return "source"
-
-
 def build_parser() -> argparse.ArgumentParser:
-    from cbe.host_run import DEFAULT_REVIEW, REVIEW_MODES
+    from cbe.host_run import DEFAULT_REVIEW, DETAIL_MAX_ATTEMPTS, MAX_ATTEMPTS, REVIEW_MODES
+    from cbe.model_settings import MODEL_DEFAULTS
 
     parser = argparse.ArgumentParser(
         prog="python -m cbe",
         description="Codebase Explorer: a navigable, source-grounded documentation map of a repository",
     )
-    parser.add_argument("--version", action="version", version=f"%(prog)s {_package_version()}")
+    from cbe import __version__
+
+    parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     sub = parser.add_subparsers(dest="command", required=True)
 
     generate_p = sub.add_parser("generate", help="Generate documentation through an API, OpenCode, or Devin")
@@ -47,7 +42,11 @@ def build_parser() -> argparse.ArgumentParser:
     generate_p.add_argument("--review", choices=REVIEW_MODES, default=DEFAULT_REVIEW)
     generate_p.add_argument("--resume", action="store_true",
                             help="continue the run in --run-dir (default: the repository's latest run)")
-    generate_p.add_argument("--timeout", type=int, default=420)
+    generate_p.add_argument("--timeout", type=int, default=None,
+                            help="seconds per call; overrides API config/model default (otherwise 420). "
+                                 "API model defaults: " + json.dumps(MODEL_DEFAULTS, sort_keys=True) +
+                                 "; override via --config JSON keys timeout,output_max_tokens,reasoning_effort,"
+                                 "response_format,batch_target_tokens,batch_max_tokens,price_per_million")
 
     host_p = sub.add_parser("host", help="Host-agent driven generation: the CLI plans and checks, "
                             "the host agent (Claude Code, Codex) dispatches one subagent per task")
@@ -60,11 +59,14 @@ def build_parser() -> argparse.ArgumentParser:
     host_plan.add_argument("--jobs", type=int, default=4, help="maximum concurrently dispatched subagents")
     host_plan.add_argument("--host", default="other", help="label only, e.g. claude-code or codex")
     for name, text in (("next", "Lease ready tasks up to the concurrency limit and write their instruction files"),
-                       ("submit", "Check one subagent result: accept, re-ask once, then normalize or fail"),
+                       ("submit", f"Check one subagent result: detail (module/repair) allows {DETAIL_MAX_ATTEMPTS} answers, "
+                                  f"others {MAX_ATTEMPTS}; on the final invalid answer normalize newest to oldest "
+                                  "detail answers, accept the first passing answer with its attempt flagged, or fail"),
                        ("status", "Show every task's state, attempts, timing, output, and the next action"),
                        ("resume", "Continue from the run records: adopt finished results, release lost "
                         "leases, retry failed tasks"),
-                       ("retry", "Give a failed task (or `all`) two fresh attempts"),
+                       ("retry", "Give a failed task (or `all`) fresh answers: detail (module/repair) allows "
+                                 f"{DETAIL_MAX_ATTEMPTS}, others {MAX_ATTEMPTS}"),
                        ("release", "Return leased tasks to the queue"),
                        ("render", "Render docs now; pending parts get placeholder pages"),
                        ("verify", "Coverage, link, catalogue, and source-drift checks"),
@@ -113,10 +115,12 @@ def build_parser() -> argparse.ArgumentParser:
     graph_build.add_argument("--backend", default="auto", help="analyzer selection; default: auto")
     graph_build.add_argument("--language", action="append", dest="languages", default=None)
     graph_build.add_argument("--joern-home", type=_abs, default=None)
+    graph_build.add_argument("--joern-heap", default=None, metavar="SIZE",
+                             help="Joern JVM maximum heap via JAVA_TOOL_OPTIONS (for example 8g); default: inherit JVM settings")
     graph_build.add_argument("--depcruise-bin", type=_abs, default=None)
     graph_build.add_argument("--timeout", type=int, default=300)
-    graph_build.add_argument("--max-methods", type=int, default=200,
-                             help="maximum methods for CFG export; omitted methods are reported")
+    graph_build.add_argument("--max-methods", type=int, default=None,
+                             help="maximum methods for CFG export per frontend; default: unlimited; omitted methods are reported")
     graph_build.add_argument("--max-reaching-defs", type=int, default=50000)
     graph_build.add_argument("--dataflow-path-method", action="append", dest="dataflow_path_methods",
                              help="opt in to sampled value-flow paths for a named method")
@@ -130,6 +134,7 @@ def build_parser() -> argparse.ArgumentParser:
     graph_query.add_argument("--node", dest="node_id", default=None)
     graph_caps = graph_sub.add_parser("capabilities", help="Read the analyzed language/type coverage")
     graph_caps.add_argument("--graph", type=_abs, required=True)
+    graph_caps.add_argument("--repo", type=_abs, help="Recompute quality with a live repository-file snapshot")
 
     context_p = sub.add_parser("context", help="Build or select frozen code chunks with graph evidence")
     context_sub = context_p.add_subparsers(dest="context_command", required=True)
@@ -146,10 +151,18 @@ def build_parser() -> argparse.ArgumentParser:
     find_p.add_argument("--run-dir", type=_abs, required=True)
     find_p.add_argument("--term", required=True)
     find_p.add_argument("--limit", type=int, default=25)
+    find_p.add_argument("--json", action="store_true", help="machine-readable locator fields")
 
-    query_p = sub.add_parser("query", help="Return one catalogue entry by symbol ID or file path")
+    query_p = sub.add_parser("query", help="Return explanation and evidence by unit ID, symbol ID or file path")
     query_p.add_argument("--run-dir", type=_abs, required=True)
     query_p.add_argument("--id", required=True)
+    query_p.add_argument("--json", action="store_true", help="machine-readable object (no duplicate detail)")
+    query_p.add_argument("--edges", default=None, help="expand frozen raw edges: all or comma-separated kinds")
+    source_p = sub.add_parser("source", help="Print frozen source by unit ID, symbol ID or file path; verify SHA-256 first")
+    source_p.add_argument("--run-dir", type=_abs, required=True)
+    source_p.add_argument("--id", required=True)
+    source_p.add_argument("--context", type=int, default=0, metavar="N",
+                          help="include N surrounding lines (nonnegative; default: 0)")
     for source_parser in (generate_p, host_plan, context_build, graph_build):
         source_parser.add_argument("--header-language", choices=("c", "cpp"), default=None,
                                    help="interpret .h files as C or C++ when planning source context")
@@ -158,7 +171,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def _host(args: argparse.Namespace):
-    from cbe import host_run
+    from cbe import host_run, usage
 
     command = args.host_command
     if command == "plan":
@@ -170,9 +183,9 @@ def _host(args: argparse.Namespace):
     if command == "next":
         return host_run.next_tasks(run_dir, limit=args.max, owner=args.owner, reclaim_after=args.reclaim_after)
     if command == "submit":
-        usage = {"total_tokens": args.usage_tokens, "tool_uses": args.tool_uses,
-                 "duration_ms": args.duration_ms, "source": args.usage_source}
-        return host_run.submit(run_dir, args.task, result=args.result, usage=usage)
+        reported = {"total_tokens": args.usage_tokens, "tool_uses": args.tool_uses,
+                    "duration_ms": args.duration_ms, "source": args.usage_source}
+        return host_run.submit(run_dir, args.task, result=args.result, usage=reported)
     if command == "status":
         return host_run.status(run_dir)
     if command == "resume":
@@ -186,15 +199,15 @@ def _host(args: argparse.Namespace):
     if command == "verify":
         return host_run.verify(run_dir)
     if command == "import-usage":
-        return host_run.import_usage(run_dir, args.harness, args.root)
+        return usage.import_usage(run_dir, args.harness, args.root)
     price = None
     if args.price:
         parts = [float(value) for value in args.price.split(",")]
         if len(parts) != 4:
             raise host_run.HostRunError("--price needs input,output,cache_write,cache_read")
         price = tuple(parts)
-    return host_run.cost(run_dir, model=args.model, price=price,
-                         overhead=args.overhead or host_run.DEFAULT_OVERHEAD_TOKENS)
+    return usage.cost(run_dir, model=args.model, price=price,
+                         overhead=args.overhead or usage.DEFAULT_OVERHEAD_TOKENS)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -216,18 +229,38 @@ def main(argv: list[str] | None = None) -> int:
             print(json.dumps(available_languages(), ensure_ascii=False, indent=2))
             return 0
         if args.command == "graph":
-            from cbe.graph import analyze_graph, query_graph
+            from cbe.graph import analyze_graph, query_graph, read_graph_quality, GraphError, BACKEND_FAILURE_CODES
 
+            build_error = None
             if args.graph_command == "build":
-                graph = analyze_graph(args.repo, args.output, backend=args.backend,
-                                      languages=args.languages, joern_home=args.joern_home,
-                                      depcruise_bin=args.depcruise_bin, timeout=args.timeout,
-                                      max_methods=args.max_methods, max_reaching_defs=args.max_reaching_defs,
-                                      dataflow_path_methods=args.dataflow_path_methods,
-                                      max_paths_per_method=args.max_paths_per_method)
+                try:
+                    graph = analyze_graph(args.repo, args.output, backend=args.backend,
+                                          languages=args.languages, joern_home=args.joern_home,
+                                          joern_heap=args.joern_heap,
+                                          depcruise_bin=args.depcruise_bin, timeout=args.timeout,
+                                          max_methods=args.max_methods, max_reaching_defs=args.max_reaching_defs,
+                                          dataflow_path_methods=args.dataflow_path_methods,
+                                          max_paths_per_method=args.max_paths_per_method)
+                except GraphError as exc:
+                    if exc.graph is None:
+                        raise
+                    graph, build_error = exc.graph, str(exc)
+                quality = read_graph_quality(graph)
+                failures = [d["message"] for d in graph["diagnostics"]
+                            if d.get("code") in BACKEND_FAILURE_CODES]
+                failures += [f"{c.get('language')}/{c.get('graph')}: {c.get('status')}"
+                             for c in quality["incomplete_capabilities"] if c.get("status") == "failed"]
+                if quality["dangling_edges"]["count"]:
+                    failures.append(f"dangling edges: {quality['dangling_edges']['count']} "
+                                    f"{quality['dangling_edges']['examples']}")
+                if build_error:
+                    failures.append(build_error)
+                if failures:
+                    print("cbe graph build: " + "; ".join(failures), file=sys.stderr)
                 value = {"output": str(args.output), "schema": graph["schema"],
                          "backend": graph["backend"], "files": len(graph["source_manifest"]),
                          "nodes": len(graph["nodes"]), "edges": len(graph["edges"]),
+                         "quality": quality,
                          "capabilities": graph["capabilities"], "diagnostics": graph["diagnostics"]}
             else:
                 graph = json.loads(args.graph.read_text(encoding="utf-8"))
@@ -238,14 +271,19 @@ def main(argv: list[str] | None = None) -> int:
                 if args.graph_command == "capabilities":
                     if graph.get("schema") != "cbe-graph/1":
                         raise ValueError("expected a cbe-graph/1 file")
-                    value = {"backend": graph.get("backend"),
+                    if args.repo is not None:
+                        from cbe.graph_backends.identity import repository_files
+                        quality = read_graph_quality(graph, existing_paths=repository_files(args.repo))
+                    else:
+                        quality = read_graph_quality(graph)
+                    value = {"backend": graph.get("backend"), "quality": quality,
                              "capabilities": graph.get("capabilities", []),
                              "diagnostics": graph.get("diagnostics", [])}
                 else:
                     value = query_graph(graph, paths=args.paths, kind=args.kind,
                                         direction=args.direction, node_id=args.node_id)
             print(json.dumps(value, ensure_ascii=False, indent=2))
-            return 0
+            return 2 if build_error else 0
         if args.command == "context":
             from cbe.source_context import build_context, context_for_paths
 
@@ -283,21 +321,30 @@ def main(argv: list[str] | None = None) -> int:
                     raise ValueError("header language differs from the frozen context; start a new plan")
             model = args.model or ("swe-2-medium" if args.host == "devin" else "zai-coding-plan/glm-5.3-flash")
             value = generate(repo, run_dir, model=model, config=args.config,
-                             jobs=args.jobs, review=args.review, timeout=args.timeout,
+                             jobs=args.jobs, review=args.review, timeout=args.timeout, default_timeout=420,
                              host=args.host, resume=args.resume, graph_path=args.graph,
                              api_base_url=args.base_url, api_key_env=args.api_key_env)
             print(json.dumps(value, ensure_ascii=False, indent=2))
             # 3 means docs were rendered but some tasks are still pending.
             return 0 if value.get("status") == "complete" else 3
         if args.command == "host":
-            print(json.dumps(_host(args), ensure_ascii=False, indent=2))
+            value = _host(args)
+            print(json.dumps(value, ensure_ascii=False, indent=2))
+            return 3 if args.host_command == "verify" and not value["ok"] else 0
+        from cbe.docs import find, find_text, query, query_text, source
+
+        if args.command == "source":
+            print(source(args.run_dir, args.id, context=args.context), end="")
             return 0
-        from cbe.generate import find, query
 
         if args.command == "find":
-            print(json.dumps(find(args.run_dir, args.term, limit=args.limit), ensure_ascii=False, indent=2))
+            results = find(args.run_dir, args.term, limit=args.limit)
+            print(json.dumps(results, ensure_ascii=False, indent=2) if args.json else find_text(results),
+                  end="\n" if args.json else "")
             return 0
-        print(json.dumps(query(args.run_dir, args.id), ensure_ascii=False, indent=2))
+        record = query(args.run_dir, args.id, edges=args.edges)
+        print(json.dumps(record, ensure_ascii=False, indent=2) if args.json else query_text(record),
+              end="\n" if args.json else "")
         return 0
     except ContextError as exc:
         print(json.dumps(exc.to_dict(), ensure_ascii=False), file=sys.stderr)

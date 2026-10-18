@@ -17,9 +17,10 @@ Design rules that the implementation follows:
 * Oversized exclusive regions are split at grammar child boundaries only.
   A segment boundary is always a real syntax-tree boundary, never a character
   prefix cut.
-* Unknown languages, a missing grammar package, a UTF-8 decode failure and a
-  parse error are all distinguishable from "success with empty source".  A
-  parse error still yields a full-coverage partition plus a diagnostic.
+* Unknown languages, a missing grammar package and parse failures retain their
+  per-file diagnostics and use whole-file chunks for non-blank UTF-8 source.
+  A UTF-8 decode failure yields ``decode_error`` and no chunks for that file;
+  other files still build. Syntax errors retain grammar coverage plus a diagnostic.
 * Only tree-sitter grammars do the parsing.  The glue here maps grammar node
   kinds to chunk kinds and maps byte/char/line coordinates; it does not
   re-implement any language analysis.
@@ -30,13 +31,12 @@ Design rules that the implementation follows:
 from __future__ import annotations
 
 import bisect
+import hashlib
 import json
 import os
 from dataclasses import dataclass, field
 from pathlib import Path, PurePosixPath
 from typing import Any
-
-from cbe.ir import OffsetMap, canonical_symbol_id, line_starts, sha256_bytes, sha256_text
 
 SCHEMA_CONTEXT = "cbe-context/1"
 SCHEMA_GRAPH = "cbe-graph/1"
@@ -49,9 +49,13 @@ DEFAULT_MAX_SEGMENT_BYTES = 32 * 1024
 #: ``paths`` request) and reported with ``file_too_large``.
 MAX_FILE_BYTES = 8 * 1024 * 1024
 
-#: Reused from ``cbe.inventory`` so discovery keeps the project's own proof of
-#: which directories are caches or environments.
-from cbe.inventory import DEFAULT_EXCLUDE_DIR_NAMES  # noqa: E402  (after constants)
+#: Version-control metadata, dependency caches and tool output: never own source.
+#: Folder names such as build/dist/vendor and other dot-directories are *not*
+#: proof of third-party or generated code, so they stay enrolled.
+DEFAULT_EXCLUDE_DIR_NAMES = frozenset({
+    ".git", ".hg", ".svn", ".venv", "venv", "node_modules", "__pycache__",
+    ".mypy_cache", ".pytest_cache", ".tox", ".codebase-analysis",
+})
 
 _IDENTIFIER_TYPES = frozenset(
     {
@@ -76,6 +80,70 @@ _SIGNATURE_LIMIT = 400
 #: candidate is the default; a real diagnostic states the chosen parse so a C
 #: header is never silently documented as the wrong language.
 AMBIGUOUS_SUFFIXES: dict[str, tuple[str, ...]] = {".h": ("c", "cpp")}
+
+
+# ---------------------------------------------------------------------------
+# Byte, character and line coordinates
+# ---------------------------------------------------------------------------
+
+
+def sha256_bytes(payload: bytes) -> str:
+    return hashlib.sha256(payload).hexdigest()
+
+
+def sha256_text(payload: str) -> str:
+    return sha256_bytes(payload.encode("utf-8"))
+
+
+@dataclass(frozen=True)
+class OffsetMap:
+    """Byte offset (parser) to character offset for one UTF-8 file; CRLF stays two characters."""
+
+    raw: bytes
+    text: str
+    byte_to_char: tuple[int, ...]
+
+    @classmethod
+    def from_bytes(cls, raw: bytes) -> "OffsetMap":
+        text = raw.decode("utf-8")
+        byte_to_char: list[int] = [0] * (len(raw) + 1)
+        byte_index = 0
+        for char_index, char in enumerate(text):
+            for _ in char.encode("utf-8"):
+                byte_to_char[byte_index] = char_index
+                byte_index += 1
+        byte_to_char[len(raw)] = len(text)
+        return cls(raw=raw, text=text, byte_to_char=tuple(byte_to_char))
+
+    def char_of_byte(self, byte_index: int) -> int:
+        if byte_index < 0 or byte_index > len(self.raw):
+            raise ValueError(f"byte offset {byte_index} out of range")
+        return self.byte_to_char[byte_index]
+
+
+def line_starts(text: str) -> tuple[int, ...]:
+    """Character offsets of each 1-indexed line, keeping CRLF as two characters."""
+
+    starts = [0]
+    index = 0
+    length = len(text)
+    while index < length:
+        char = text[index]
+        if char == "\r" and index + 1 < length and text[index + 1] == "\n":
+            index += 2
+            starts.append(index)
+        elif char in "\n\r":
+            index += 1
+            starts.append(index)
+        else:
+            index += 1
+    return tuple(starts)
+
+
+def canonical_symbol_id(path: str, kind: str, scope: str, anchor: int) -> str:
+    """Stable id: path + kind + lexical scope + declaration byte anchor (lines are not identities)."""
+
+    return f"{path}::{kind}::{scope}::{anchor}"
 
 
 # ---------------------------------------------------------------------------
@@ -427,15 +495,29 @@ def _all_specs() -> tuple[GrammarSpec, ...]:
     return tuple(ordered.values())
 
 
+def _lookup_specs() -> tuple[GrammarSpec, ...]:
+    """Specs in suffix-lookup order: registered/plugin specs win over built-ins,
+    so a project can remap an ambiguous suffix (for example ``.h`` to C++)
+    without editing this module. A built-in replaced by name still answers for
+    the suffixes the replacement does not claim."""
+
+    _ensure_plugins()
+    return (*_EXTRA_SPECS.values(), *GRAMMARS, _TSX_SPEC)
+
+
 def _grammar_for_suffix(suffix: str) -> GrammarSpec | None:
     suffix = suffix.lower()
-    _ensure_plugins()
-    # Registered/plugin specs win over built-ins so a project can remap an
-    # ambiguous suffix (for example ``.h`` to C++) without editing this module.
-    for spec in (*_EXTRA_SPECS.values(), *GRAMMARS, _TSX_SPEC):
-        if suffix in spec.suffixes:
+    for spec in _lookup_specs():
+        if any(suffix == declared.lower() for declared in spec.suffixes):
             return spec
     return None
+
+
+def language_name(path: str) -> str:
+    """The language CBE records for a path: the grammar's name, else the bare suffix."""
+
+    spec = _grammar_for_suffix(PurePosixPath(path).suffix)
+    return spec.name if spec is not None else _language_from_suffix(path)
 
 
 def language_for_path(path: str | os.PathLike[str]) -> str | None:
@@ -533,15 +615,24 @@ def available_languages() -> dict[str, Any]:
     return {"schema": SCHEMA_CONTEXT, "languages": languages, "plugin_errors": [dict(item) for item in _PLUGIN_ERRORS]}
 
 
-def supported_languages() -> dict[str, Any]:
-    """Discovery alias for consumers that ask for supported languages.
+#: Suffixes documented without a grammar: each file becomes one whole-file region.
+FALLBACK_SUFFIXES = frozenset({".sql"})
 
-    Returns the same registry as :func:`available_languages`; it is the single
-    authoritative discovery path for the generation driver so no Python-only
-    file scan can hide the extra languages.
-    """
 
-    return available_languages()
+def suffix_languages() -> dict[str, str]:
+    """Suffix -> language for every suffix ``_grammar_for_suffix`` recognises.
+
+    Enumerating the lookup's own specs and asking the lookup keeps one rule for
+    which suffixes count and which spec wins, for one path and for a whole tree."""
+
+    suffixes = {suffix.lower() for spec in _lookup_specs() for suffix in spec.suffixes}
+    return {suffix: _grammar_for_suffix(suffix).name for suffix in sorted(suffixes)}
+
+
+def registered_suffixes() -> frozenset[str]:
+    """Every suffix a registered grammar (built-in or plugin) claims."""
+
+    return frozenset(suffix_languages())
 
 
 # ---------------------------------------------------------------------------
@@ -677,7 +768,6 @@ class _Declaration:
     symbol_id: str
     start_byte: int
     end_byte: int
-    body_start_byte: int
     children: list["_Declaration"] = field(default_factory=list)
     ancestors: tuple[str, ...] = ()
     signature: str = ""
@@ -748,6 +838,11 @@ def _extract_declarations(spec: GrammarSpec, offsets: OffsetMap, root: Any, path
             holder: list[int | None] = [start]
             for child in node.named_children:
                 visit(child, parent, scope, holder)
+            # Nested wrappers share ownership of the prefix. Once any inner
+            # declaration consumes it, later siblings of every outer wrapper
+            # must start at their own node, not at that outer wrapper's start.
+            if holder[0] is None:
+                prefix[0] = None
             return
 
         if ntype in spec.class_kinds:
@@ -846,7 +941,6 @@ def _make_declaration(
         symbol_id=symbol_id,
         start_byte=start_byte,
         end_byte=end_byte,
-        body_start_byte=body_start,
         ancestors=ancestors,
         signature=signature,
     )
@@ -1110,6 +1204,41 @@ def _plan_chunks(
     return plans, diagnostics
 
 
+def source_signatures(path: str, source: str, language: str) -> tuple[dict[str, str], dict[tuple[str, int], str]]:
+    """Full signatures by canonical ID and (qualified name, decorated start line).
+
+    Prompt chunks intentionally cap their signatures. Published records reparse
+    verified source with the same grammar and declaration boundaries, and retain
+    the complete signature. No code executes. Unsupported grammars return empty
+    maps, letting legacy inventory records retain their available metadata.
+    """
+    spec = next((s for s in _all_specs() if s.name == language), None)
+    if spec is None:
+        return {}, {}
+    try:
+        parser = _make_parser(spec)
+    except (ImportError, AttributeError):
+        return {}, {}
+    raw = source.encode("utf-8")
+    offsets = OffsetMap.from_bytes(raw)
+    declarations = _extract_declarations(spec, offsets, parser.parse(raw).root_node, path)
+    by_id, by_location = {}, {}
+    starts = line_starts(offsets.text)
+    for declaration in declarations:
+        end = _body_start(offsets, declaration.node)
+        if end < 0:
+            value = declaration.node.child_by_field_name("value")
+            if value is not None:
+                end = _body_start(offsets, value)
+        if end < 0:
+            end = declaration.end_byte
+        signature = raw[declaration.start_byte:end].decode("utf-8").strip()
+        by_id[declaration.symbol_id] = signature
+        start_line = _line_of(starts, offsets.char_of_byte(declaration.start_byte))
+        by_location[declaration.qualified_name, start_line] = signature
+    return by_id, by_location
+
+
 def _chunk_from_plan(plan: _ChunkPlan, offsets: OffsetMap, starts: tuple[int, ...]) -> dict[str, Any]:
     text = offsets.raw[plan.start_byte:plan.end_byte].decode("utf-8")
     char_start = offsets.char_of_byte(plan.start_byte)
@@ -1147,6 +1276,81 @@ def _chunk_from_plan(plan: _ChunkPlan, offsets: OffsetMap, starts: tuple[int, ..
 # ---------------------------------------------------------------------------
 
 
+def _checked_chunks(
+    path: str, language: str, raw: bytes, chunks: list[dict[str, Any]],
+    diagnostics: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Check the frozen partition before consumers can schedule model work.
+
+    Valid partitions pass through unchanged, including symbol identities.
+    A broken partition becomes one lossless file region; never repair spans
+    while retaining misleading declaration identities.
+    """
+    ordered = sorted(chunks, key=lambda chunk: chunk["start_byte"])
+    # No grammar output is a different condition from a broken partition.
+    # Keep the original diagnostic code as the reason shown to readers.
+    if not chunks:
+        try:
+            offsets = OffsetMap.from_bytes(raw)
+        except UnicodeDecodeError as exc:
+            if not any(row.get("path") == path and row.get("code") == "decode_error"
+                       for row in diagnostics):
+                diagnostics.append({"path": path, "code": "decode_error",
+                                    "message": f"UTF-8 decode failed: {exc}"})
+            return []
+        if not offsets.text.strip():
+            # The host's ensure_chunk_coverage records known_empty without a unit.
+            return []
+        cause = next((row for row in diagnostics if row.get("path") == path
+                      and row.get("code") in {"unsupported_language", "grammar_unavailable",
+                                              "parse_error", "file_too_large"}), None)
+        reason = cause["code"] if cause else "no_chunk_output"
+        diagnostic_code = "context_fallback"
+        message = (f"{reason}: {cause['message']}; " if cause else f"{reason}; ") + (
+            "froze one whole-file source chunk; declaration-level detail is unavailable")
+    else:
+        reason = ""
+        diagnostic_code = "source_reassembly_fallback"
+        message = ""
+    cursor = 0
+    for chunk in ordered:
+        start, end = chunk["start_byte"], chunk["end_byte"]
+        if start != cursor or not start <= end <= len(raw):
+            reason = f"non-contiguous chunk range [{start},{end}) at byte {cursor}"
+            break
+        cursor = end
+    if not reason and cursor != len(raw):
+        reason = f"chunk coverage ends at byte {cursor}, expected {len(raw)}"
+    assembled = b"".join(chunk["text"].encode("utf-8") for chunk in ordered)
+    if not reason and sha256_bytes(assembled) != sha256_bytes(raw):
+        reason = "reassembled source SHA-256 differs from the input file"
+    if not reason:
+        return chunks
+
+    try:
+        offsets = OffsetMap.from_bytes(raw)
+    except UnicodeDecodeError as exc:
+        raise ContextError("source_not_reassemblable",
+                           f"{path}: cannot freeze byte-exact UTF-8 source: {exc}", path=path) from exc
+    diagnostics.append({
+        "path": path, "code": diagnostic_code, "reason": reason,
+        "message": message or (f"{reason}; CBE could not reassemble its declaration chunks; "
+                               "froze one whole-file source chunk with coarser detail"),
+    })
+    if not raw:
+        return []
+    plan = _ChunkPlan(
+        path=path, language=language, kind="module_residual", name=PurePosixPath(path).name,
+        qualified_name="", symbol_id=canonical_symbol_id(path, "module_residual", "", 0),
+        parent_id=None, signature="", ancestors=(), start_byte=0, end_byte=len(raw),
+        full_start_byte=0, full_end_byte=len(raw), segment_index=0, segment_count=1,
+    )
+    fallback = _chunk_from_plan(plan, offsets, line_starts(offsets.text))
+    if sha256_text(fallback["text"]) != sha256_bytes(raw):  # fail before any model calls
+        raise ContextError("source_not_reassemblable", f"{path}: whole-file fallback SHA-256 mismatch", path=path)
+    return [fallback]
+
+
 def build_context(
     repo: Path | str,
     paths: list[str] | None = None,
@@ -1171,6 +1375,7 @@ def build_context(
     files: list[dict[str, Any]] = []
     chunks: list[dict[str, Any]] = []
     source_hashes: dict[str, str] = {}
+    raw_sources: dict[str, bytes] = {}
 
     for relative in selected:
         full = repo_path / PurePosixPath(relative)
@@ -1181,9 +1386,10 @@ def build_context(
             continue
 
         digest = sha256_bytes(raw)
+        raw_sources[relative] = raw
         source_hashes[relative] = digest
         spec = _grammar_for_suffix(PurePosixPath(relative).suffix)
-        language = spec.name if spec is not None else _language_from_suffix(relative)
+        language = language_name(relative)
 
         if spec is None:
             diagnostics.append(
@@ -1276,6 +1482,14 @@ def build_context(
         starts = line_starts(offsets.text)
         chunks.extend(_chunk_from_plan(plan, offsets, starts) for plan in plans)
 
+    by_path: dict[str, list[dict[str, Any]]] = {}
+    for chunk in chunks:
+        by_path.setdefault(chunk["path"], []).append(chunk)
+    chunks = [chunk for file in files for chunk in _checked_chunks(
+        file["path"], file["language"], raw_sources[file["path"]],
+        by_path.get(file["path"], []), diagnostics,
+    )]
+
     graph: dict[str, Any] | None = None
     graph_status = "not_provided"
     if graph_path is not None:
@@ -1326,28 +1540,44 @@ def _load_graph(graph_path: Path, repo: Path, frozen_hashes: dict[str, str]) -> 
             f"expected schema {SCHEMA_GRAPH!r}, got {payload.get('schema')!r}",
             path=str(graph_path),
         )
+    try:
+        check_graph_source(repo, payload, frozen_hashes)
+    except ContextError as exc:
+        # The shared check knows no file name; errors about the graph as a
+        # whole name the graph file, errors about one source file keep theirs.
+        if "path" not in exc.details and "paths" not in exc.details:
+            exc.details["path"] = str(graph_path)
+        raise
+    return payload
+
+
+def check_graph_source(repo: Path, graph: dict[str, Any], frozen_hashes: dict[str, str]) -> None:
+    """Raise :class:`ContextError` unless ``graph`` can be evidence for the frozen source.
+
+    Provenance must be stable and current. Every manifest entry must name a
+    repository file whose bytes match: ``frozen_hashes`` (path to sha256) is the
+    authority for frozen files, so a file changed between two reads cannot make
+    a stale chunk set look consistent; other (boundary) files are read from
+    disk. Every node or edge that anchors existing repository source must be in
+    the manifest, so a graph cannot mix snapshots. Nodes without a repository
+    path stay external and a valid empty graph stays valid.
+    """
+
     from cbe.graph import GraphError, validate_graph_provenance
 
     try:
-        validate_graph_provenance(repo, payload)
+        validate_graph_provenance(repo, graph)
     except (GraphError, OSError) as exc:
-        raise ContextError("graph_provenance_mismatch", str(exc), path=str(graph_path)) from exc
-    manifest = payload.get("source_manifest")
+        raise ContextError("graph_provenance_mismatch", str(exc)) from exc
+    manifest = graph.get("source_manifest")
     if not isinstance(manifest, list):
-        raise ContextError(
-            "graph_manifest_missing",
-            "graph has no source_manifest; cannot prove it matches the source",
-            path=str(graph_path),
-        )
+        raise ContextError("graph_manifest_missing",
+                           "graph has no source_manifest; cannot prove it matches the source")
     manifested: set[str] = set()
     for entry in manifest:
         if not isinstance(entry, dict) or "path" not in entry or "sha256" not in entry:
-            raise ContextError(
-                "graph_manifest_missing",
-                f"malformed source_manifest entry: {entry!r}",
-                path=str(graph_path),
-            )
-        raw_rel = str(entry["path"])
+            raise ContextError("graph_manifest_missing", f"malformed source_manifest entry: {entry!r}")
+        raw_rel, expected = str(entry["path"]), str(entry["sha256"])
         try:
             rel = _validate_relative(repo, raw_rel)
         except ContextError as exc:
@@ -1358,40 +1588,30 @@ def _load_graph(graph_path: Path, repo: Path, frozen_hashes: dict[str, str]) -> 
                 reason="invalid_path",
             ) from exc
         manifested.add(rel)
-        expected = str(entry["sha256"])
         if rel in frozen_hashes:
-            # Authority is the hash of the bytes the chunks were built from, so
-            # a file changed between the two reads cannot make a stale chunk
-            # set look consistent with a matching second read.
-            actual = frozen_hashes[rel]
-        else:
-            target = repo / PurePosixPath(rel)
-            try:
-                raw = target.read_bytes()
-            except OSError:
-                raise GraphSourceMismatch(
-                    rel, expected, None, "file present in graph manifest is missing on disk"
-                ) from None
-            actual = sha256_bytes(raw)
-        if actual != expected:
-            raise GraphSourceMismatch(rel, expected, actual, "content hash differs from current source")
-
-    # A node or edge that anchors real repo source must be covered by the
-    # manifest, or the graph mixes snapshots.  Nodes without a repo path (or
-    # with a path that is not an existing repo file) stay explicitly
-    # external/unknown and are not rejected; a valid empty graph stays valid.
-    unmanifested: set[str] = set()
-    for anchor in _graph_source_anchors(payload):
-        raw_path = anchor.get("path")
-        if not isinstance(raw_path, str) or not raw_path:
+            if frozen_hashes[rel] != expected:
+                raise GraphSourceMismatch(rel, expected, frozen_hashes[rel],
+                                          "content hash differs from current source")
             continue
+        try:
+            actual = sha256_bytes((repo / PurePosixPath(rel)).read_bytes())
+        except OSError:
+            raise GraphSourceMismatch(rel, expected, None,
+                                      "file present in graph manifest is missing on disk") from None
+        if actual != expected:
+            raise GraphSourceMismatch(rel, expected, actual,
+                                      "boundary source drifted: content hash differs from current source")
+    unmanifested: set[str] = set()
+    # A path that is not a non-empty string cannot name repository source; such
+    # anchors stay external, as an unknown path does.
+    anchored = {path for anchor in _graph_source_anchors(graph)
+                if isinstance(path := anchor.get("path"), str) and path}
+    for raw_path in anchored:
         try:
             rel = _validate_relative(repo, raw_path)
         except ContextError:
             continue
-        if rel in manifested:
-            continue
-        if (repo / rel).exists():
+        if rel not in manifested and (repo / rel).exists():
             unmanifested.add(rel)
     if unmanifested:
         listed = ", ".join(sorted(unmanifested)[:10])
@@ -1400,7 +1620,6 @@ def _load_graph(graph_path: Path, repo: Path, frozen_hashes: dict[str, str]) -> 
             f"graph anchors repo source not covered by source_manifest: {listed}",
             paths=sorted(unmanifested),
         )
-    return payload
 
 
 def _prune_graph(graph: dict[str, Any] | None, selected: set[str]) -> dict[str, Any] | None:
@@ -1430,7 +1649,7 @@ def _prune_graph(graph: dict[str, Any] | None, selected: set[str]) -> dict[str, 
 
     kept_nodes = [node for node in nodes if node.get("id") in kept_ids]
     pruned: dict[str, Any] = {
-        key: value for key, value in graph.items() if key not in {"nodes", "edges", "source_manifest"}
+        key: value for key, value in graph.items() if key not in {"nodes", "edges", "source_manifest", "quality"}
     }
     pruned["nodes"] = kept_nodes
     pruned["edges"] = kept_edges

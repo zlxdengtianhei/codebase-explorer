@@ -1,0 +1,85 @@
+{
+  "answer_tokens": {
+    "input": 15883133,
+    "output": 593341
+  },
+  "judge_tokens": {
+    "input": 1374033,
+    "output": 19652
+  },
+  "answer_unknown_usage_attempts": 4,
+  "judge_unknown_usage_calls": 0,
+  "answer_attempts": 70,
+  "judge_draws": 198,
+  "judge_calls": 198,
+  "by_arm": {
+    "S": {
+      "new_answers": 14,
+      "tokens": {
+        "input": 3257401,
+        "output": 122251
+      },
+      "per_new_answer": {
+        "input": 232671.5,
+        "output": 8732.214285714286
+      },
+      "E1_answers": 10,
+      "E1_per_answer": {
+        "input": 239792.4,
+        "output": 10103.7
+      }
+    },
+    "C0": {
+      "new_answers": 14,
+      "tokens": {
+        "input": 3200592,
+        "output": 163207
+      },
+      "per_new_answer": {
+        "input": 228613.7142857143,
+        "output": 11657.642857142857
+      },
+      "E1_answers": 10,
+      "E1_per_answer": {
+        "input": 216668.1,
+        "output": 7413.0
+      }
+    },
+    "C": {
+      "new_answers": 19,
+      "tokens": {
+        "input": 5007075,
+        "output": 142196
+      },
+      "per_new_answer": {
+        "input": 263530.2631578947,
+        "output": 7484.0
+      },
+      "E1_answers": 5,
+      "E1_per_answer": {
+        "input": 225268.6,
+        "output": 6739.4
+      }
+    },
+    "W": {
+      "new_answers": 19,
+      "tokens": {
+        "input": 4418065,
+        "output": 165687
+      },
+      "per_new_answer": {
+        "input": 232529.73684210525,
+        "output": 8720.368421052632
+      },
+      "E1_answers": 5,
+      "E1_per_answer": {
+        "input": 198618.6,
+        "output": 7557.2
+      }
+    }
+  },
+  "started_utc": "2026-10-17T11:50:56.865928+00:00",
+  "last_judge_utc": "2026-10-17T13:25:34.343271+00:00",
+  "wall_seconds": 5677.477345943451,
+  "new_answers": 66
+}

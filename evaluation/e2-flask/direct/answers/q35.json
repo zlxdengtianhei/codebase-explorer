@@ -1,0 +1,31 @@
+{
+  "qid": 35,
+  "question": "Where does the application root path get transformed during initialization when instance-relative configuration mode is enabled before reaching the configuration storage object?",
+  "arm": "direct",
+  "answer": "In `Flask.make_config()` in `flask/app.py` \u2014 called from `__init__` as `self.config = self.make_config(instance_relative_config)` \u2014 where, when `instance_relative` is True, the `root_path` is replaced with `self.instance_path` before being passed to construct the `Config` object.",
+  "valid": true,
+  "wall_seconds": 46.46208308299538,
+  "attempts": [
+    {
+      "answer": "In `Flask.make_config()` in `flask/app.py` \u2014 called from `__init__` as `self.config = self.make_config(instance_relative_config)` \u2014 where, when `instance_relative` is True, the `root_path` is replaced with `self.instance_path` before being passed to construct the `Config` object.",
+      "valid": true,
+      "usage": {
+        "completion_tokens": 2938,
+        "prompt_tokens": 103,
+        "total_tokens": 3041,
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": null,
+          "audio_tokens": null,
+          "reasoning_tokens": 2867,
+          "rejected_prediction_tokens": null
+        },
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 64
+        }
+      },
+      "response_model": "glm-5.3-flash"
+    }
+  ]
+}

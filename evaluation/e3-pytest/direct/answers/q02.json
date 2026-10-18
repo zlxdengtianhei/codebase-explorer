@@ -1,0 +1,31 @@
+{
+  "qid": 2,
+  "question": "What is the architectural separation in the pytest fixture resolution system that decouples fixture discovery and validation to enable the error reporting mechanism that distinguishes between missing fixtures and internal failures?",
+  "arm": "direct",
+  "answer": "The separation is between **`FixtureManager`** and **`FixtureRequest`/`FixtureDef`** in `_pytest/fixtures.py`:\n\n- **`FixtureManager`** handles *discovery*: it scans plugins, conftest files, and test modules for `@pytest.fixture` definitions (`parsefactories`), builds the name-to-definition index (`_arg2fixturedefs`), and computes the fixture closure (`getfixtureclosure`). It has no knowledge of whether a fixture can actually be instantiated.\n\n- **`FixtureRequest`** (with `SubRequest`/`TopRequest`) handles *resolution and validation*: at setup time, `_get_active_fixturedef` \u2192 `_compute_fixture_value` \u2192 `FixtureDef.execute` resolves the found definitions, handles parameterization and scoping, and invokes the fixture.\n\nBecause discovery is decoupled from execution, the two failure modes are reported through distinct channels: a fixture that was never discovered raises **`FixtureLookupError`** at closure/request time, rendered by **`FixtureLookupErrorRepr`** as a user-facing \"fixture 'X' not found\" error listing available fixtures; whereas exceptions raised during actual fixture execution surface as ordinary test/setup failures (a `Failed` outcome with traceback) rather than lookup errors.",
+  "valid": true,
+  "wall_seconds": 30.72265716700349,
+  "attempts": [
+    {
+      "answer": "The separation is between **`FixtureManager`** and **`FixtureRequest`/`FixtureDef`** in `_pytest/fixtures.py`:\n\n- **`FixtureManager`** handles *discovery*: it scans plugins, conftest files, and test modules for `@pytest.fixture` definitions (`parsefactories`), builds the name-to-definition index (`_arg2fixturedefs`), and computes the fixture closure (`getfixtureclosure`). It has no knowledge of whether a fixture can actually be instantiated.\n\n- **`FixtureRequest`** (with `SubRequest`/`TopRequest`) handles *resolution and validation*: at setup time, `_get_active_fixturedef` \u2192 `_compute_fixture_value` \u2192 `FixtureDef.execute` resolves the found definitions, handles parameterization and scoping, and invokes the fixture.\n\nBecause discovery is decoupled from execution, the two failure modes are reported through distinct channels: a fixture that was never discovered raises **`FixtureLookupError`** at closure/request time, rendered by **`FixtureLookupErrorRepr`** as a user-facing \"fixture 'X' not found\" error listing available fixtures; whereas exceptions raised during actual fixture execution surface as ordinary test/setup failures (a `Failed` outcome with traceback) rather than lookup errors.",
+      "valid": true,
+      "usage": {
+        "completion_tokens": 1247,
+        "prompt_tokens": 113,
+        "total_tokens": 1360,
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": null,
+          "audio_tokens": null,
+          "reasoning_tokens": 986,
+          "rejected_prediction_tokens": null
+        },
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 0
+        }
+      },
+      "response_model": "glm-5.3-flash"
+    }
+  ]
+}

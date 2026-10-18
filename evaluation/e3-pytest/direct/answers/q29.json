@@ -1,0 +1,31 @@
+{
+  "qid": 29,
+  "question": "Why does the repeated instantiation of FNMatcher objects in the Visitor.__init__ method impact memory consumption and traversal performance when processing large directory trees with complex filtering patterns?",
+  "arm": "direct",
+  "answer": "Each time `Visitor.__init__` runs, it builds new `FNMatcher` instances, and every `FNMatcher` re-translates its glob patterns via `fnmatch.translate` and compiles them into fresh `re` regex objects. This hurts in two ways:\n\n1. **Memory**: Every instantiation stores its own private list of compiled pattern regexes. With many `Visitor` instances (or repeated visits) and many/complex patterns, identical compiled regex objects are duplicated, so memory grows linearly with (number of Visitors \u00d7 number of patterns) instead of staying constant.\n\n2. **Performance**: Pattern translation/compilation is CPU-expensive, and doing it repeatedly wastes cycles that could be avoided by compiling once and sharing (e.g., module-level compiled patterns or memoization). Since traversal tests every file/directory against these matchers, the duplicated, non-cached matchers also add per-node matching overhead, so filtering cost multiplies across large directory trees \u2014 slowing the walk and bloating memory compared to reusing a single shared matcher.",
+  "valid": true,
+  "wall_seconds": 28.580469249980524,
+  "attempts": [
+    {
+      "answer": "Each time `Visitor.__init__` runs, it builds new `FNMatcher` instances, and every `FNMatcher` re-translates its glob patterns via `fnmatch.translate` and compiles them into fresh `re` regex objects. This hurts in two ways:\n\n1. **Memory**: Every instantiation stores its own private list of compiled pattern regexes. With many `Visitor` instances (or repeated visits) and many/complex patterns, identical compiled regex objects are duplicated, so memory grows linearly with (number of Visitors \u00d7 number of patterns) instead of staying constant.\n\n2. **Performance**: Pattern translation/compilation is CPU-expensive, and doing it repeatedly wastes cycles that could be avoided by compiling once and sharing (e.g., module-level compiled patterns or memoization). Since traversal tests every file/directory against these matchers, the duplicated, non-cached matchers also add per-node matching overhead, so filtering cost multiplies across large directory trees \u2014 slowing the walk and bloating memory compared to reusing a single shared matcher.",
+      "valid": true,
+      "usage": {
+        "completion_tokens": 1361,
+        "prompt_tokens": 111,
+        "total_tokens": 1472,
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": null,
+          "audio_tokens": null,
+          "reasoning_tokens": 1147,
+          "rejected_prediction_tokens": null
+        },
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 64
+        }
+      },
+      "response_model": "glm-5.3-flash"
+    }
+  ]
+}

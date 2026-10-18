@@ -1,0 +1,125 @@
+{
+  "qid": 2,
+  "question": "libcurl keeps sets of uint32_t numbers in a sparse bitset (`struct uint32_spbset`, initialized by `Curl_uint32_spbset_init()`). When a number is added to such a set, how does the code locate or create the storage chunk that will hold it?\n\nBuild assumptions: Any platform; non-debug build (the DEBUGBUILD init magic is irrelevant).",
+  "arm": "C",
+  "max_steps": 10,
+  "repeat": 0,
+  "answer_valid": true,
+  "judge_model": "codex/gpt-6.1-sol",
+  "draws": [
+    {
+      "draw": 1,
+      "score": {
+        "correctness": 17,
+        "completeness": 16,
+        "relevance": 17,
+        "clarity": 17,
+        "reasoning": 18
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 112,
+            "prompt_tokens": 6950,
+            "total_tokens": 7062,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 63,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 17,\n  \"completeness\": 16,\n  \"relevance\": 17,\n  \"clarity\": 17,\n  \"reasoning\": 18\n}",
+          "wall_seconds": 6.151254999975208
+        }
+      ]
+    },
+    {
+      "draw": 2,
+      "score": {
+        "correctness": 17,
+        "completeness": 16,
+        "relevance": 17,
+        "clarity": 17,
+        "reasoning": 18
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 118,
+            "prompt_tokens": 6950,
+            "total_tokens": 7068,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 69,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6784
+            }
+          },
+          "response": "{\n  \"correctness\": 17,\n  \"completeness\": 16,\n  \"relevance\": 17,\n  \"clarity\": 17,\n  \"reasoning\": 18\n}",
+          "wall_seconds": 4.2017114579794
+        }
+      ]
+    },
+    {
+      "draw": 3,
+      "score": {
+        "correctness": 18,
+        "completeness": 17,
+        "relevance": 17,
+        "clarity": 17,
+        "reasoning": 18
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 103,
+            "prompt_tokens": 6950,
+            "total_tokens": 7053,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 54,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6784
+            }
+          },
+          "response": "{\n  \"correctness\": 18,\n  \"completeness\": 17,\n  \"relevance\": 17,\n  \"clarity\": 17,\n  \"reasoning\": 18\n}",
+          "wall_seconds": 4.437775624974165
+        }
+      ]
+    }
+  ],
+  "score": {
+    "correctness": 17,
+    "completeness": 16,
+    "relevance": 17,
+    "clarity": 17,
+    "reasoning": 18
+  },
+  "total": 85,
+  "main_total_na5": 85,
+  "failure_type": null,
+  "judge_total_range": 2,
+  "wall_seconds": 14.792197500006296
+}

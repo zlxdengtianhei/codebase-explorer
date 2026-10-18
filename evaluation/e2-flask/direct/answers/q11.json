@@ -1,0 +1,31 @@
+{
+  "qid": 11,
+  "question": "What hidden coupling exists between the decorator's state management and response lifecycle that causes issues with nested or conditional registration?",
+  "arm": "direct",
+  "answer": "The decorator mutates shared registry state (the URL map / `view_functions` dict, or the `before_request`/`after_request` handler lists) at import time, keyed by the function object and its `__name__`, while the response is only produced later by whatever object that registry ends up pointing to. This creates a hidden dependency between registration order/wrapping order and runtime dispatch: if another decorator wraps the view before `@app.route`, the raw inner function gets registered under its original name, so the wrapper's logic never runs during request handling, and re-registering the same function conditionally causes endpoint-name collisions (\"View function mapping is overwriting an existing endpoint\"). Similarly, hook decorators append to flat, globally ordered lists per app/blueprint, so conditional or nested registration mutates state that persists across all subsequent requests \u2014 handlers can be skipped (if registered too late), run out of order (reverse-registration iteration for after-request), or fire multiple times, since response lifecycle execution directly mirrors the mutation order of that shared state rather than being scoped to the view that registered it.",
+  "valid": true,
+  "wall_seconds": 81.11012208397733,
+  "attempts": [
+    {
+      "answer": "The decorator mutates shared registry state (the URL map / `view_functions` dict, or the `before_request`/`after_request` handler lists) at import time, keyed by the function object and its `__name__`, while the response is only produced later by whatever object that registry ends up pointing to. This creates a hidden dependency between registration order/wrapping order and runtime dispatch: if another decorator wraps the view before `@app.route`, the raw inner function gets registered under its original name, so the wrapper's logic never runs during request handling, and re-registering the same function conditionally causes endpoint-name collisions (\"View function mapping is overwriting an existing endpoint\"). Similarly, hook decorators append to flat, globally ordered lists per app/blueprint, so conditional or nested registration mutates state that persists across all subsequent requests \u2014 handlers can be skipped (if registered too late), run out of order (reverse-registration iteration for after-request), or fire multiple times, since response lifecycle execution directly mirrors the mutation order of that shared state rather than being scoped to the view that registered it.",
+      "valid": true,
+      "usage": {
+        "completion_tokens": 2009,
+        "prompt_tokens": 101,
+        "total_tokens": 2110,
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": null,
+          "audio_tokens": null,
+          "reasoning_tokens": 1786,
+          "rejected_prediction_tokens": null
+        },
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 64
+        }
+      },
+      "response_model": "glm-5.3-flash"
+    }
+  ]
+}

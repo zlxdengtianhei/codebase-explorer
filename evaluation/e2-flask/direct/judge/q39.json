@@ -1,0 +1,125 @@
+{
+  "qid": 39,
+  "question": "Where is the control flow determining whether a routing rule receives OPTIONS, including branches evaluating the automatic options flag and the application configuration setting?",
+  "arm": "direct",
+  "max_steps": null,
+  "repeat": 0,
+  "answer_valid": true,
+  "judge_model": "codex/gpt-6.1-sol",
+  "draws": [
+    {
+      "draw": 1,
+      "score": {
+        "correctness": 7,
+        "completeness": 2,
+        "relevance": 18,
+        "clarity": 15,
+        "reasoning": 2
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 31,
+            "prompt_tokens": 5961,
+            "total_tokens": 5992,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 0,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\"correctness\":7,\"completeness\":2,\"relevance\":18,\"clarity\":15,\"reasoning\":2}",
+          "wall_seconds": 2.3731353749753907
+        }
+      ]
+    },
+    {
+      "draw": 2,
+      "score": {
+        "correctness": 7,
+        "completeness": 2,
+        "relevance": 18,
+        "clarity": 15,
+        "reasoning": 2
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 31,
+            "prompt_tokens": 5961,
+            "total_tokens": 5992,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 0,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 5760
+            }
+          },
+          "response": "{\"correctness\":7,\"completeness\":2,\"relevance\":18,\"clarity\":15,\"reasoning\":2}",
+          "wall_seconds": 2.102117292000912
+        }
+      ]
+    },
+    {
+      "draw": 3,
+      "score": {
+        "correctness": 7,
+        "completeness": 2,
+        "relevance": 18,
+        "clarity": 15,
+        "reasoning": 2
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 31,
+            "prompt_tokens": 5961,
+            "total_tokens": 5992,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 0,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 5760
+            }
+          },
+          "response": "{\"correctness\":7,\"completeness\":2,\"relevance\":18,\"clarity\":15,\"reasoning\":2}",
+          "wall_seconds": 2.1246949999476783
+        }
+      ]
+    }
+  ],
+  "score": {
+    "correctness": 7,
+    "completeness": 2,
+    "relevance": 18,
+    "clarity": 15,
+    "reasoning": 2
+  },
+  "total": 44,
+  "main_total_na5": 44,
+  "failure_type": null,
+  "judge_total_range": 0,
+  "wall_seconds": 6.600534457946196
+}

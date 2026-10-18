@@ -1,0 +1,125 @@
+{
+  "qid": 37,
+  "question": "Where in the serialization pipeline for the JSON tag class that handles Markup API objects are the lower-level helper functions that the conversion method delegates to?",
+  "arm": "C",
+  "max_steps": 10,
+  "repeat": 0,
+  "answer_valid": true,
+  "judge_model": "codex/gpt-6.1-sol",
+  "draws": [
+    {
+      "draw": 1,
+      "score": {
+        "correctness": 18,
+        "completeness": 16,
+        "relevance": 16,
+        "clarity": 17,
+        "reasoning": 17
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 95,
+            "prompt_tokens": 6633,
+            "total_tokens": 6728,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 46,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 18,\n  \"completeness\": 16,\n  \"relevance\": 16,\n  \"clarity\": 17,\n  \"reasoning\": 17\n}",
+          "wall_seconds": 3.8111773330019787
+        }
+      ]
+    },
+    {
+      "draw": 2,
+      "score": {
+        "correctness": 18,
+        "completeness": 16,
+        "relevance": 16,
+        "clarity": 17,
+        "reasoning": 17
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 73,
+            "prompt_tokens": 6633,
+            "total_tokens": 6706,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 40,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6400
+            }
+          },
+          "response": "{\"correctness\":18,\"completeness\":16,\"relevance\":16,\"clarity\":17,\"reasoning\":17}",
+          "wall_seconds": 3.2861537499702536
+        }
+      ]
+    },
+    {
+      "draw": 3,
+      "score": {
+        "correctness": 18,
+        "completeness": 16,
+        "relevance": 15,
+        "clarity": 17,
+        "reasoning": 17
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 97,
+            "prompt_tokens": 6633,
+            "total_tokens": 6730,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 48,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6400
+            }
+          },
+          "response": "{\n  \"correctness\": 18,\n  \"completeness\": 16,\n  \"relevance\": 15,\n  \"clarity\": 17,\n  \"reasoning\": 17\n}",
+          "wall_seconds": 3.4162980829714797
+        }
+      ]
+    }
+  ],
+  "score": {
+    "correctness": 18,
+    "completeness": 16,
+    "relevance": 16,
+    "clarity": 17,
+    "reasoning": 17
+  },
+  "total": 84,
+  "main_total_na5": 84,
+  "failure_type": null,
+  "judge_total_range": 1,
+  "wall_seconds": 10.514863167016301
+}

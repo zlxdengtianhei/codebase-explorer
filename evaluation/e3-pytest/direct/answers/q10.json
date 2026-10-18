@@ -1,0 +1,37 @@
+{
+  "qid": 10,
+  "question": "What is the conditional logic in write_captured_output that determines which captured output streams are written to the XML report, and what is the semantic difference between the 'all' logging mode and the combination of 'system-out' and 'system-err' modes in terms of content aggregation?",
+  "arm": "direct",
+  "answer": "The conditional logic in `write_captured_output` uses two independent checks on `self.logging`:\n\n```python\nif self.logging == \"all\" or self.logging == \"system-out\":\n    # write to <system-out> element\nif self.logging == \"all\" or self.logging == \"system-err\":\n    # write to <system-err> element\n```\n\nBoth branches call `_get_full_content(report)`, which aggregates stdout, stderr, and log output into a single merged string.\n\n**Semantic difference in content aggregation:**\n\n- **'all' mode:** Triggers *both* conditions, causing the identical fully aggregated content (all captured streams merged together) to be duplicated into *both* `<system-out>` and `<system-err>` XML elements.\n\n- **'system-out' or 'system-err':** Triggers only *one* condition, writing the same aggregated content into a *single* XML element.\n\nThe content aggregation strategy (merging all streams into one string via `_get_full_content()`) is identical regardless of mode \u2014 the difference lies solely in which XML elements receive that aggregated content, not in how streams are separated or allocated between elements.",
+  "valid": true,
+  "wall_seconds": 414.329140249989,
+  "attempts": [
+    {
+      "answer": "Error: Request timed out.",
+      "valid": false,
+      "usage": null,
+      "response_model": null
+    },
+    {
+      "answer": "The conditional logic in `write_captured_output` uses two independent checks on `self.logging`:\n\n```python\nif self.logging == \"all\" or self.logging == \"system-out\":\n    # write to <system-out> element\nif self.logging == \"all\" or self.logging == \"system-err\":\n    # write to <system-err> element\n```\n\nBoth branches call `_get_full_content(report)`, which aggregates stdout, stderr, and log output into a single merged string.\n\n**Semantic difference in content aggregation:**\n\n- **'all' mode:** Triggers *both* conditions, causing the identical fully aggregated content (all captured streams merged together) to be duplicated into *both* `<system-out>` and `<system-err>` XML elements.\n\n- **'system-out' or 'system-err':** Triggers only *one* condition, writing the same aggregated content into a *single* XML element.\n\nThe content aggregation strategy (merging all streams into one string via `_get_full_content()`) is identical regardless of mode \u2014 the difference lies solely in which XML elements receive that aggregated content, not in how streams are separated or allocated between elements.",
+      "valid": true,
+      "usage": {
+        "completion_tokens": 12250,
+        "prompt_tokens": 136,
+        "total_tokens": 12386,
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": null,
+          "audio_tokens": null,
+          "reasoning_tokens": 12008,
+          "rejected_prediction_tokens": null
+        },
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 128
+        }
+      },
+      "response_model": "glm-5.3-flash"
+    }
+  ]
+}

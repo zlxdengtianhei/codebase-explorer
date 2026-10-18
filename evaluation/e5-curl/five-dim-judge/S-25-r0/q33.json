@@ -1,0 +1,125 @@
+{
+  "qid": 33,
+  "question": "For a Set-Cookie header that carries the Secure attribute and arrives over plain http://, where in lib/ is the decision made whether the cookie is stored?\n\nBuild assumptions: HTTP and cookies enabled; the cookie engine is active for the easy handle (data->cookies set); no proxy.",
+  "arm": "S",
+  "max_steps": 25,
+  "repeat": 0,
+  "answer_valid": true,
+  "judge_model": "codex/gpt-6.1-sol",
+  "draws": [
+    {
+      "draw": 1,
+      "score": {
+        "correctness": 12,
+        "completeness": 10,
+        "relevance": 19,
+        "clarity": 17,
+        "reasoning": 13
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 90,
+            "prompt_tokens": 6485,
+            "total_tokens": 6575,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 41,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 12,\n  \"completeness\": 10,\n  \"relevance\": 19,\n  \"clarity\": 17,\n  \"reasoning\": 13\n}",
+          "wall_seconds": 6.819213457987644
+        }
+      ]
+    },
+    {
+      "draw": 2,
+      "score": {
+        "correctness": 11,
+        "completeness": 10,
+        "relevance": 19,
+        "clarity": 16,
+        "reasoning": 12
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 94,
+            "prompt_tokens": 6485,
+            "total_tokens": 6579,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 45,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6272
+            }
+          },
+          "response": "{\n  \"correctness\": 11,\n  \"completeness\": 10,\n  \"relevance\": 19,\n  \"clarity\": 16,\n  \"reasoning\": 12\n}",
+          "wall_seconds": 6.409733916982077
+        }
+      ]
+    },
+    {
+      "draw": 3,
+      "score": {
+        "correctness": 11,
+        "completeness": 10,
+        "relevance": 19,
+        "clarity": 16,
+        "reasoning": 12
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 47,
+            "prompt_tokens": 6485,
+            "total_tokens": 6532,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 0,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 11,\n  \"completeness\": 10,\n  \"relevance\": 19,\n  \"clarity\": 16,\n  \"reasoning\": 12\n}",
+          "wall_seconds": 4.155556458979845
+        }
+      ]
+    }
+  ],
+  "score": {
+    "correctness": 11,
+    "completeness": 10,
+    "relevance": 19,
+    "clarity": 16,
+    "reasoning": 12
+  },
+  "total": 68,
+  "main_total_na5": 68,
+  "failure_type": null,
+  "judge_total_range": 3,
+  "wall_seconds": 17.402896625048015
+}

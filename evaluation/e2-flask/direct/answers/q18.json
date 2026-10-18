@@ -1,0 +1,31 @@
+{
+  "qid": 18,
+  "question": "How does the method that registers URL rules on blueprint objects defer registration by storing an anonymous function in the deferred setup functions list instead of immediately calling the setup state's registration method?",
+  "arm": "direct",
+  "answer": "`Blueprint.add_url_rule` calls `self.record(lambda state: state.add_url_rule(rule, endpoint, view_func, **options))`, and `record` appends that lambda to `self.deferred_functions`. The actual call to the setup state's `add_url_rule` therefore only happens later, when the blueprint is registered and `register()` iterates `deferred_functions`, invoking each stored function with the blueprint's `BlueprintSetupState`.",
+  "valid": true,
+  "wall_seconds": 16.69170074997237,
+  "attempts": [
+    {
+      "answer": "`Blueprint.add_url_rule` calls `self.record(lambda state: state.add_url_rule(rule, endpoint, view_func, **options))`, and `record` appends that lambda to `self.deferred_functions`. The actual call to the setup state's `add_url_rule` therefore only happens later, when the blueprint is registered and `register()` iterates `deferred_functions`, invoking each stored function with the blueprint's `BlueprintSetupState`.",
+      "valid": true,
+      "usage": {
+        "completion_tokens": 923,
+        "prompt_tokens": 114,
+        "total_tokens": 1037,
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": null,
+          "audio_tokens": null,
+          "reasoning_tokens": 831,
+          "rejected_prediction_tokens": null
+        },
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 64
+        }
+      },
+      "response_model": "glm-5.3-flash"
+    }
+  ]
+}

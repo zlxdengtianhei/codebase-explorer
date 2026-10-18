@@ -1,0 +1,2062 @@
+{
+  "api_regex": "\\b(curl_[A-Za-z_]\\w*)\\s*\\([^;{}]*\\)\\s*;",
+  "dispatch_regex": "\\b(?:(?:[A-Za-z_]\\w*)\\s*->\\s*)*(?:cft|handler|Curl_ssl|cw|writer|reader|cwt)\\s*->\\s*(?:type\\s*->\\s*)?([A-Za-z_]\\w*)\\s*\\(",
+  "dispatch_sites": [
+    {
+      "expression": "cf->next->cft->do_send(",
+      "file": "lib/cf-h1-proxy.c",
+      "function": "send_CONNECT",
+      "graph_id": "cpg:c/method/107374182499",
+      "line": 288,
+      "member": "do_send",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "cf->next->cft->do_connect(",
+      "file": "lib/cf-h1-proxy.c",
+      "function": "cf_h1_proxy_connect",
+      "graph_id": "cpg:c/method/107374182505",
+      "line": 787,
+      "member": "do_connect",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "cf->next->cft->adjust_pollset(",
+      "file": "lib/cf-h1-proxy.c",
+      "function": "cf_h1_proxy_adjust_pollset",
+      "graph_id": "cpg:c/method/107374182506",
+      "line": 846,
+      "member": "adjust_pollset",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "cf->next->cft->has_data_pending(",
+      "file": "lib/cf-h1-proxy.c",
+      "function": "cf_h1_proxy_data_pending",
+      "graph_id": "cpg:c/method/107374182507",
+      "line": 854,
+      "member": "has_data_pending",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "cf->next->cft->query(",
+      "file": "lib/cf-h1-proxy.c",
+      "function": "cf_h1_proxy_query",
+      "graph_id": "cpg:c/method/107374182509",
+      "line": 893,
+      "member": "query",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "cf->next->cft->has_data_pending(",
+      "file": "lib/cf-h2-proxy.c",
+      "function": "cf_h2_proxy_data_pending",
+      "graph_id": "cpg:c/method/107374182541",
+      "line": 1105,
+      "member": "has_data_pending",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "cf->next->cft->is_alive(",
+      "file": "lib/cf-h2-proxy.c",
+      "function": "proxy_h2_connisalive",
+      "graph_id": "cpg:c/method/107374182548",
+      "line": 1369,
+      "member": "is_alive",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "cf->next->cft->query(",
+      "file": "lib/cf-h2-proxy.c",
+      "function": "cf_h2_proxy_query",
+      "graph_id": "cpg:c/method/107374182550",
+      "line": 1445,
+      "member": "query",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "cf->next->cft->do_connect(",
+      "file": "lib/cf-haproxy.c",
+      "function": "cf_haproxy_connect",
+      "graph_id": "cpg:c/method/107374182556",
+      "line": 119,
+      "member": "do_connect",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "b->cf->cft->query(",
+      "file": "lib/cf-https-connect.c",
+      "function": "cf_hc_baller_reply_ms",
+      "graph_id": "cpg:c/method/107374182565",
+      "line": 84,
+      "member": "query",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "b->cf->cft->has_data_pending(",
+      "file": "lib/cf-https-connect.c",
+      "function": "cf_hc_baller_data_pending",
+      "graph_id": "cpg:c/method/107374182566",
+      "line": 92,
+      "member": "has_data_pending",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "b->cf->cft->do_shutdown(",
+      "file": "lib/cf-https-connect.c",
+      "function": "cf_hc_shutdown",
+      "graph_id": "cpg:c/method/107374182583",
+      "line": 605,
+      "member": "do_shutdown",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "cf->next->cft->has_data_pending(",
+      "file": "lib/cf-https-connect.c",
+      "function": "cf_hc_data_pending",
+      "graph_id": "cpg:c/method/107374182585",
+      "line": 653,
+      "member": "has_data_pending",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "cf->next->cft->query(",
+      "file": "lib/cf-https-connect.c",
+      "function": "cf_hc_query",
+      "graph_id": "cpg:c/method/107374182586",
+      "line": 683,
+      "member": "query",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "a->cf->cft->do_shutdown(",
+      "file": "lib/cf-ip-happy.c",
+      "function": "cf_ip_ballers_shutdown",
+      "graph_id": "cpg:c/method/107374182606",
+      "line": 631,
+      "member": "do_shutdown",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "a->cf->cft->has_data_pending(",
+      "file": "lib/cf-ip-happy.c",
+      "function": "cf_ip_ballers_pending",
+      "graph_id": "cpg:c/method/107374182608",
+      "line": 662,
+      "member": "has_data_pending",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "a->cf->cft->query(",
+      "file": "lib/cf-ip-happy.c",
+      "function": "cf_ip_ballers_min_reply_ms",
+      "graph_id": "cpg:c/method/107374182609",
+      "line": 675,
+      "member": "query",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "cf->next->cft->has_data_pending(",
+      "file": "lib/cf-ip-happy.c",
+      "function": "cf_ip_happy_data_pending",
+      "graph_id": "cpg:c/method/107374182617",
+      "line": 926,
+      "member": "has_data_pending",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "cf->next->cft->query(",
+      "file": "lib/cf-ip-happy.c",
+      "function": "cf_ip_happy_query",
+      "graph_id": "cpg:c/method/107374182618",
+      "line": 948,
+      "member": "query",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "cf->next->cft->do_recv(",
+      "file": "lib/cf-recvbuf.c",
+      "function": "cf_recvbuf_recv",
+      "graph_id": "cpg:c/method/107374182624",
+      "line": 64,
+      "member": "do_recv",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "cf->next->cft->has_data_pending(",
+      "file": "lib/cf-recvbuf.c",
+      "function": "cf_recvbuf_data_pending",
+      "graph_id": "cpg:c/method/107374182625",
+      "line": 78,
+      "member": "has_data_pending",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "cf->next->cft->query(",
+      "file": "lib/cf-socket.c",
+      "function": "cf_socket_query",
+      "graph_id": "cpg:c/method/107374182677",
+      "line": 1895,
+      "member": "query",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "cf->next->cft->do_connect(",
+      "file": "lib/cfilters.c",
+      "function": "Curl_cf_def_connect",
+      "graph_id": "cpg:c/method/107374182694",
+      "line": 47,
+      "member": "do_connect",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "cf->next->cft->has_data_pending(",
+      "file": "lib/cfilters.c",
+      "function": "Curl_cf_def_data_pending",
+      "graph_id": "cpg:c/method/107374182698",
+      "line": 81,
+      "member": "has_data_pending",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "cf->next->cft->do_send(",
+      "file": "lib/cfilters.c",
+      "function": "Curl_cf_def_send",
+      "graph_id": "cpg:c/method/107374182699",
+      "line": 89,
+      "member": "do_send",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "cf->next->cft->do_recv(",
+      "file": "lib/cfilters.c",
+      "function": "Curl_cf_def_recv",
+      "graph_id": "cpg:c/method/107374182700",
+      "line": 98,
+      "member": "do_recv",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "cf->next->cft->is_alive(",
+      "file": "lib/cfilters.c",
+      "function": "Curl_cf_def_conn_is_alive",
+      "graph_id": "cpg:c/method/107374182701",
+      "line": 108,
+      "member": "is_alive",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "cf->next->cft->keep_alive(",
+      "file": "lib/cfilters.c",
+      "function": "Curl_cf_def_conn_keep_alive",
+      "graph_id": "cpg:c/method/107374182702",
+      "line": 116,
+      "member": "keep_alive",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "cf->next->cft->query(",
+      "file": "lib/cfilters.c",
+      "function": "Curl_cf_def_query",
+      "graph_id": "cpg:c/method/107374182703",
+      "line": 125,
+      "member": "query",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "cf->cft->destroy(",
+      "file": "lib/cfilters.c",
+      "function": "Curl_conn_cf_discard_chain",
+      "graph_id": "cpg:c/method/107374182705",
+      "line": 172,
+      "member": "destroy",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "cf->cft->do_recv(",
+      "file": "lib/cfilters.c",
+      "function": "Curl_cf_recv",
+      "graph_id": "cpg:c/method/107374182707",
+      "line": 197,
+      "member": "do_recv",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "cf->cft->do_send(",
+      "file": "lib/cfilters.c",
+      "function": "Curl_cf_send",
+      "graph_id": "cpg:c/method/107374182708",
+      "line": 216,
+      "member": "do_send",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "cf->cft->do_connect(",
+      "file": "lib/cfilters.c",
+      "function": "Curl_conn_cf_connect",
+      "graph_id": "cpg:c/method/107374182717",
+      "line": 368,
+      "member": "do_connect",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "cf->cft->do_send(",
+      "file": "lib/cfilters.c",
+      "function": "Curl_conn_cf_send",
+      "graph_id": "cpg:c/method/107374182718",
+      "line": 377,
+      "member": "do_send",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "cf->cft->do_recv(",
+      "file": "lib/cfilters.c",
+      "function": "Curl_conn_cf_recv",
+      "graph_id": "cpg:c/method/107374182719",
+      "line": 386,
+      "member": "do_recv",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "cf->cft->query(",
+      "file": "lib/cfilters.c",
+      "function": "Curl_conn_cf_is_ip_connected",
+      "graph_id": "cpg:c/method/107374182721",
+      "line": 413,
+      "member": "query",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "cf->cft->destroy(",
+      "file": "lib/cfilters.c",
+      "function": "Curl_conn_remove_setup_filters",
+      "graph_id": "cpg:c/method/107374182724",
+      "line": 444,
+      "member": "destroy",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "cf->cft->query(",
+      "file": "lib/cfilters.c",
+      "function": "Curl_conn_get_ssl_info",
+      "graph_id": "cpg:c/method/107374182733",
+      "line": 545,
+      "member": "query",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "cf->cft->query(",
+      "file": "lib/cfilters.c",
+      "function": "Curl_conn_http_version",
+      "graph_id": "cpg:c/method/107374182740",
+      "line": 627,
+      "member": "query",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "cf->cft->has_data_pending(",
+      "file": "lib/cfilters.c",
+      "function": "Curl_conn_data_pending",
+      "graph_id": "cpg:c/method/107374182741",
+      "line": 655,
+      "member": "has_data_pending",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "cf->cft->query(",
+      "file": "lib/cfilters.c",
+      "function": "Curl_conn_cf_needs_flush",
+      "graph_id": "cpg:c/method/107374182742",
+      "line": 665,
+      "member": "query",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "cf->cft->adjust_pollset(",
+      "file": "lib/cfilters.c",
+      "function": "Curl_conn_cf_adjust_pollset",
+      "graph_id": "cpg:c/method/107374182744",
+      "line": 692,
+      "member": "adjust_pollset",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "cf_proxy->cft->query(",
+      "file": "lib/cfilters.c",
+      "function": "Curl_conn_get_current_host",
+      "graph_id": "cpg:c/method/107374182747",
+      "line": 782,
+      "member": "query",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "cf->cft->cntrl(",
+      "file": "lib/cfilters.c",
+      "function": "Curl_conn_cf_cntrl",
+      "graph_id": "cpg:c/method/107374182749",
+      "line": 815,
+      "member": "cntrl",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "cf->cft->query(",
+      "file": "lib/cfilters.c",
+      "function": "Curl_conn_cf_get_socket",
+      "graph_id": "cpg:c/method/107374182750",
+      "line": 826,
+      "member": "query",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "cf->cft->query(",
+      "file": "lib/cfilters.c",
+      "function": "Curl_conn_cf_get_transport",
+      "graph_id": "cpg:c/method/107374182751",
+      "line": 835,
+      "member": "query",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "cf->cft->query(",
+      "file": "lib/cfilters.c",
+      "function": "Curl_conn_cf_get_alpn_negotiated",
+      "graph_id": "cpg:c/method/107374182752",
+      "line": 845,
+      "member": "query",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "cf->cft->query(",
+      "file": "lib/cfilters.c",
+      "function": "cf_get_remote_addr",
+      "graph_id": "cpg:c/method/107374182753",
+      "line": 856,
+      "member": "query",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "cf->cft->query(",
+      "file": "lib/cfilters.c",
+      "function": "Curl_conn_cf_get_ip_info",
+      "graph_id": "cpg:c/method/107374182754",
+      "line": 869,
+      "member": "query",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "cf->cft->is_alive(",
+      "file": "lib/cfilters.c",
+      "function": "Curl_conn_is_alive",
+      "graph_id": "cpg:c/method/107374182762",
+      "line": 941,
+      "member": "is_alive",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "cf->cft->keep_alive(",
+      "file": "lib/cfilters.c",
+      "function": "Curl_conn_keep_alive",
+      "graph_id": "cpg:c/method/107374182763",
+      "line": 953,
+      "member": "keep_alive",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "cf->cft->query(",
+      "file": "lib/cfilters.c",
+      "function": "Curl_conn_get_max_concurrent",
+      "graph_id": "cpg:c/method/107374182764",
+      "line": 970,
+      "member": "query",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "cf->cft->query(",
+      "file": "lib/cfilters.c",
+      "function": "Curl_conn_get_stream_error",
+      "graph_id": "cpg:c/method/107374182765",
+      "line": 990,
+      "member": "query",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "cf->cft->do_connect(",
+      "file": "lib/connect.c",
+      "function": "Curl_conn_connect",
+      "graph_id": "cpg:c/method/107374182819",
+      "line": 297,
+      "member": "do_connect",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "cf->cft->do_shutdown(",
+      "file": "lib/cshutdn.c",
+      "function": "Curl_cshutdn_try_once_idx",
+      "graph_id": "cpg:c/method/107374182910",
+      "line": 165,
+      "member": "do_shutdown",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "cf->next->cft->is_alive(",
+      "file": "lib/http2.c",
+      "function": "http2_connisalive",
+      "graph_id": "cpg:c/method/107374183760",
+      "line": 564,
+      "member": "is_alive",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "cf->next->cft->has_data_pending(",
+      "file": "lib/http2.c",
+      "function": "h2_progress_ingress",
+      "graph_id": "cpg:c/method/107374183790",
+      "line": 1920,
+      "member": "has_data_pending",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "cf->next->cft->has_data_pending(",
+      "file": "lib/http2.c",
+      "function": "cf_h2_data_pending",
+      "graph_id": "cpg:c/method/107374183803",
+      "line": 2701,
+      "member": "has_data_pending",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "cf->next->cft->query(",
+      "file": "lib/http2.c",
+      "function": "cf_h2_query",
+      "graph_id": "cpg:c/method/107374183806",
+      "line": 2777,
+      "member": "query",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "cf->cft->cntrl(",
+      "file": "lib/http2.c",
+      "function": "Curl_http2_upgrade",
+      "graph_id": "cpg:c/method/107374183812",
+      "line": 2958,
+      "member": "cntrl",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "cf->next->cft->do_connect(",
+      "file": "lib/http_proxy.c",
+      "function": "http_proxy_cf_connect",
+      "graph_id": "cpg:c/method/107374183898",
+      "line": 562,
+      "member": "do_connect",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "cf->next->cft->query(",
+      "file": "lib/http_proxy.c",
+      "function": "cf_http_proxy_query",
+      "graph_id": "cpg:c/method/107374183899",
+      "line": 683,
+      "member": "query",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "writer->cwt->do_close(",
+      "file": "lib/sendf.c",
+      "function": "cl_reset_writer",
+      "graph_id": "cpg:c/method/107374184707",
+      "line": 52,
+      "member": "do_close",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "cwt->do_init(",
+      "file": "lib/sendf.c",
+      "function": "Curl_cwriter_create",
+      "graph_id": "cpg:c/method/107374184726",
+      "line": 436,
+      "member": "do_init",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "writer->cwt->do_close(",
+      "file": "lib/sendf.c",
+      "function": "Curl_cwriter_free",
+      "graph_id": "cpg:c/method/107374184727",
+      "line": 449,
+      "member": "do_close",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "cwt->do_write(",
+      "file": "lib/sendf.h",
+      "function": null,
+      "graph_id": null,
+      "line": 188,
+      "member": "do_write",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "cwt->do_flush(",
+      "file": "lib/sendf.h",
+      "function": null,
+      "graph_id": null,
+      "line": 191,
+      "member": "do_flush",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "cf->next->cft->do_connect(",
+      "file": "lib/socks.c",
+      "function": "socks_proxy_cf_connect",
+      "graph_id": "cpg:c/method/107374184935",
+      "line": 1195,
+      "member": "do_connect",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "cf->next->cft->query(",
+      "file": "lib/socks.c",
+      "function": "socks_cf_query",
+      "graph_id": "cpg:c/method/107374184938",
+      "line": 1309,
+      "member": "query",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "cf->next->cft->do_connect(",
+      "file": "lib/vquic/cf-capsule.c",
+      "function": "cf_capsule_connect",
+      "graph_id": "cpg:c/method/107374185579",
+      "line": 67,
+      "member": "do_connect",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "cf->next->cft->has_data_pending(",
+      "file": "lib/vquic/cf-capsule.c",
+      "function": "cf_capsule_data_pending",
+      "graph_id": "cpg:c/method/107374185583",
+      "line": 168,
+      "member": "has_data_pending",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "cf->next->cft->query(",
+      "file": "lib/vquic/cf-capsule.c",
+      "function": "cf_capsule_query",
+      "graph_id": "cpg:c/method/107374185585",
+      "line": 208,
+      "member": "query",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "cf->next->cft->query(",
+      "file": "lib/vquic/cf-ngtcp2-cmn.c",
+      "function": "cf_connect_start",
+      "graph_id": "cpg:c/method/107374185622",
+      "line": 1042,
+      "member": "query",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "cf->next->cft->is_alive(",
+      "file": "lib/vquic/cf-ngtcp2-cmn.c",
+      "function": "Curl_cf_ngtcp2_cmn_conn_is_alive",
+      "graph_id": "cpg:c/method/107374185642",
+      "line": 2009,
+      "member": "is_alive",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "cf->next->cft->query(",
+      "file": "lib/vquic/cf-ngtcp2-cmn.c",
+      "function": "Curl_cf_ngtcp2_cmn_query",
+      "graph_id": "cpg:c/method/107374185644",
+      "line": 2093,
+      "member": "query",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "cf->next->cft->has_data_pending(",
+      "file": "lib/vquic/cf-ngtcp2-proxy.c",
+      "function": "cf_h3_proxy_data_pending",
+      "graph_id": "cpg:c/method/107374185670",
+      "line": 1022,
+      "member": "has_data_pending",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "cf->next->cft->query(",
+      "file": "lib/vquic/cf-quiche.c",
+      "function": "cf_quiche_query",
+      "graph_id": "cpg:c/method/107374185749",
+      "line": 1583,
+      "member": "query",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "cf->next->cft->is_alive(",
+      "file": "lib/vquic/cf-quiche.c",
+      "function": "cf_quiche_conn_is_alive",
+      "graph_id": "cpg:c/method/107374185750",
+      "line": 1606,
+      "member": "is_alive",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "cf->next->cft->is_alive(",
+      "file": "lib/vtls/openssl.c",
+      "function": "ossl_shutdown",
+      "graph_id": "cpg:c/method/107374186133",
+      "line": 1873,
+      "member": "is_alive",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "Curl_ssl->init(",
+      "file": "lib/vtls/vtls.c",
+      "function": null,
+      "graph_id": null,
+      "line": 159,
+      "member": "init",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "Curl_ssl->get_channel_binding(",
+      "file": "lib/vtls/vtls.c",
+      "function": "Curl_ssl_get_channel_binding",
+      "graph_id": "cpg:c/method/107374186251",
+      "line": 223,
+      "member": "get_channel_binding",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "Curl_ssl->close_all(",
+      "file": "lib/vtls/vtls.c",
+      "function": null,
+      "graph_id": null,
+      "line": 230,
+      "member": "close_all",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "Curl_ssl->set_engine(",
+      "file": "lib/vtls/vtls.c",
+      "function": null,
+      "graph_id": null,
+      "line": 264,
+      "member": "set_engine",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "Curl_ssl->set_engine_default(",
+      "file": "lib/vtls/vtls.c",
+      "function": null,
+      "graph_id": null,
+      "line": 273,
+      "member": "set_engine_default",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "Curl_ssl->engines_list(",
+      "file": "lib/vtls/vtls.c",
+      "function": null,
+      "graph_id": null,
+      "line": 281,
+      "member": "engines_list",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "Curl_ssl->version(",
+      "file": "lib/vtls/vtls.c",
+      "function": "Curl_ssl_version",
+      "graph_id": "cpg:c/method/107374186253",
+      "line": 292,
+      "member": "version",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "Curl_ssl->random(",
+      "file": "lib/vtls/vtls.c",
+      "function": null,
+      "graph_id": null,
+      "line": 372,
+      "member": "random",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "Curl_ssl->sha256sum(",
+      "file": "lib/vtls/vtls.c",
+      "function": "Curl_pin_peer_pubkey",
+      "graph_id": "cpg:c/method/107374186257",
+      "line": 471,
+      "member": "sha256sum",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "Curl_ssl->cert_status_request(",
+      "file": "lib/vtls/vtls.c",
+      "function": null,
+      "graph_id": null,
+      "line": 589,
+      "member": "cert_status_request",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "Curl_ssl->init(",
+      "file": "lib/vtls/vtls.c",
+      "function": "multissl_init",
+      "graph_id": "cpg:c/method/107374186258",
+      "line": 598,
+      "member": "init",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "Curl_ssl->random(",
+      "file": "lib/vtls/vtls.c",
+      "function": "multissl_random",
+      "graph_id": "cpg:c/method/107374186259",
+      "line": 607,
+      "member": "random",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "Curl_ssl->do_connect(",
+      "file": "lib/vtls/vtls.c",
+      "function": "multissl_connect",
+      "graph_id": "cpg:c/method/107374186260",
+      "line": 615,
+      "member": "do_connect",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "Curl_ssl->adjust_pollset(",
+      "file": "lib/vtls/vtls.c",
+      "function": "multissl_adjust_pollset",
+      "graph_id": "cpg:c/method/107374186261",
+      "line": 624,
+      "member": "adjust_pollset",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "Curl_ssl->get_internals(",
+      "file": "lib/vtls/vtls.c",
+      "function": "multissl_get_internals",
+      "graph_id": "cpg:c/method/107374186262",
+      "line": 632,
+      "member": "get_internals",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "Curl_ssl->close(",
+      "file": "lib/vtls/vtls.c",
+      "function": "multissl_close",
+      "graph_id": "cpg:c/method/107374186263",
+      "line": 639,
+      "member": "close",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "Curl_ssl->recv_plain(",
+      "file": "lib/vtls/vtls.c",
+      "function": "multissl_recv_plain",
+      "graph_id": "cpg:c/method/107374186264",
+      "line": 648,
+      "member": "recv_plain",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "Curl_ssl->send_plain(",
+      "file": "lib/vtls/vtls.c",
+      "function": "multissl_send_plain",
+      "graph_id": "cpg:c/method/107374186265",
+      "line": 658,
+      "member": "send_plain",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "Curl_ssl->cleanup(",
+      "file": "lib/vtls/vtls.c",
+      "function": null,
+      "graph_id": null,
+      "line": 734,
+      "member": "cleanup",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "cf->next->cft->do_connect(",
+      "file": "lib/vtls/vtls.c",
+      "function": "ssl_cf_connect",
+      "graph_id": "cpg:c/method/107374186274",
+      "line": 978,
+      "member": "do_connect",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "cf->next->cft->has_data_pending(",
+      "file": "lib/vtls/vtls.c",
+      "function": "ssl_cf_data_pending",
+      "graph_id": "cpg:c/method/107374186277",
+      "line": 1109,
+      "member": "has_data_pending",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "cf->next->cft->query(",
+      "file": "lib/vtls/vtls.c",
+      "function": "ssl_cf_query",
+      "graph_id": "cpg:c/method/107374186282",
+      "line": 1264,
+      "member": "query",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "cf->next->cft->is_alive(",
+      "file": "lib/vtls/vtls.c",
+      "function": "cf_ssl_is_alive",
+      "graph_id": "cpg:c/method/107374186284",
+      "line": 1307,
+      "member": "is_alive",
+      "relation": "lexical indirect call; runtime target unproven"
+    },
+    {
+      "expression": "cf->next->cft->is_alive(",
+      "file": "lib/vtls/wolfssl.c",
+      "function": "wssl_shutdown",
+      "graph_id": "cpg:c/method/107374186412",
+      "line": 1918,
+      "member": "is_alive",
+      "relation": "lexical indirect call; runtime target unproven"
+    }
+  ],
+  "limitations": [
+    "Lexical references are not resolved indirect edges.",
+    "Inactive conditional branches are retained.",
+    "No inference of dynamic callback identity.",
+    "Region assignment is an ordered path heuristic; transport is the residual lib bucket."
+  ],
+  "table_regex": "\\bstruct\\s+(Curl_protocol|Curl_cftype|Curl_ssl|Curl_cwtype)\\s+([A-Za-z_]\\w*)\\s*=\\s*\\{",
+  "tables": [
+    {
+      "end_line": 912,
+      "file": "lib/cf-h1-proxy.c",
+      "functions": [
+        "Curl_cf_def_cntrl",
+        "Curl_cf_def_conn_is_alive",
+        "Curl_cf_def_conn_keep_alive",
+        "Curl_cf_def_recv",
+        "Curl_cf_def_send",
+        "Curl_cf_def_shutdown",
+        "cf_h1_proxy_adjust_pollset",
+        "cf_h1_proxy_connect",
+        "cf_h1_proxy_data_pending",
+        "cf_h1_proxy_destroy",
+        "cf_h1_proxy_query"
+      ],
+      "line": 897,
+      "name": "Curl_cft_h1_proxy",
+      "relation": "lexical initializer references; conditional branches retained",
+      "type": "Curl_cftype"
+    },
+    {
+      "end_line": 1486,
+      "file": "lib/cf-h2-proxy.c",
+      "functions": [
+        "Curl_cf_def_conn_keep_alive",
+        "cf_h2_proxy_adjust_pollset",
+        "cf_h2_proxy_cntrl",
+        "cf_h2_proxy_connect",
+        "cf_h2_proxy_data_pending",
+        "cf_h2_proxy_destroy",
+        "cf_h2_proxy_is_alive",
+        "cf_h2_proxy_query",
+        "cf_h2_proxy_recv",
+        "cf_h2_proxy_send",
+        "cf_h2_proxy_shutdown"
+      ],
+      "line": 1471,
+      "name": "Curl_cft_h2_proxy",
+      "relation": "lexical initializer references; conditional branches retained",
+      "type": "Curl_cftype"
+    },
+    {
+      "end_line": 197,
+      "file": "lib/cf-haproxy.c",
+      "functions": [
+        "Curl_cf_def_cntrl",
+        "Curl_cf_def_conn_is_alive",
+        "Curl_cf_def_conn_keep_alive",
+        "Curl_cf_def_data_pending",
+        "Curl_cf_def_query",
+        "Curl_cf_def_recv",
+        "Curl_cf_def_send",
+        "Curl_cf_def_shutdown",
+        "cf_haproxy_adjust_pollset",
+        "cf_haproxy_connect",
+        "cf_haproxy_destroy"
+      ],
+      "line": 182,
+      "name": "Curl_cft_haproxy",
+      "relation": "lexical initializer references; conditional branches retained",
+      "type": "Curl_cftype"
+    },
+    {
+      "end_line": 745,
+      "file": "lib/cf-https-connect.c",
+      "functions": [
+        "Curl_cf_def_conn_is_alive",
+        "Curl_cf_def_conn_keep_alive",
+        "Curl_cf_def_recv",
+        "Curl_cf_def_send",
+        "cf_hc_adjust_pollset",
+        "cf_hc_cntrl",
+        "cf_hc_connect",
+        "cf_hc_data_pending",
+        "cf_hc_destroy",
+        "cf_hc_query",
+        "cf_hc_shutdown"
+      ],
+      "line": 730,
+      "name": "Curl_cft_http_connect",
+      "relation": "lexical initializer references; conditional branches retained",
+      "type": "Curl_cftype"
+    },
+    {
+      "end_line": 979,
+      "file": "lib/cf-ip-happy.c",
+      "functions": [
+        "Curl_cf_def_cntrl",
+        "Curl_cf_def_conn_is_alive",
+        "Curl_cf_def_conn_keep_alive",
+        "Curl_cf_def_recv",
+        "Curl_cf_def_send",
+        "cf_ip_happy_adjust_pollset",
+        "cf_ip_happy_connect",
+        "cf_ip_happy_data_pending",
+        "cf_ip_happy_destroy",
+        "cf_ip_happy_query",
+        "cf_ip_happy_shutdown"
+      ],
+      "line": 964,
+      "name": "Curl_cft_ip_happy",
+      "relation": "lexical initializer references; conditional branches retained",
+      "type": "Curl_cftype"
+    },
+    {
+      "end_line": 96,
+      "file": "lib/cf-recvbuf.c",
+      "functions": [
+        "Curl_cf_def_adjust_pollset",
+        "Curl_cf_def_cntrl",
+        "Curl_cf_def_conn_is_alive",
+        "Curl_cf_def_conn_keep_alive",
+        "Curl_cf_def_connect",
+        "Curl_cf_def_query",
+        "Curl_cf_def_send",
+        "Curl_cf_def_shutdown",
+        "cf_recvbuf_data_pending",
+        "cf_recvbuf_destroy",
+        "cf_recvbuf_recv"
+      ],
+      "line": 81,
+      "name": "Curl_cft_recvbuf",
+      "relation": "lexical initializer references; conditional branches retained",
+      "type": "Curl_cftype"
+    },
+    {
+      "end_line": 412,
+      "file": "lib/cf-setup.c",
+      "functions": [
+        "Curl_cf_def_adjust_pollset",
+        "Curl_cf_def_cntrl",
+        "Curl_cf_def_conn_is_alive",
+        "Curl_cf_def_conn_keep_alive",
+        "Curl_cf_def_data_pending",
+        "Curl_cf_def_query",
+        "Curl_cf_def_recv",
+        "Curl_cf_def_send",
+        "Curl_cf_def_shutdown",
+        "cf_setup_connect",
+        "cf_setup_destroy"
+      ],
+      "line": 397,
+      "name": "Curl_cft_setup",
+      "relation": "lexical initializer references; conditional branches retained",
+      "type": "Curl_cftype"
+    },
+    {
+      "end_line": 1914,
+      "file": "lib/cf-socket.c",
+      "functions": [
+        "Curl_cf_def_conn_keep_alive",
+        "Curl_cf_def_data_pending",
+        "cf_socket_adjust_pollset",
+        "cf_socket_cntrl",
+        "cf_socket_conn_is_alive",
+        "cf_socket_destroy",
+        "cf_socket_query",
+        "cf_socket_recv",
+        "cf_socket_send",
+        "cf_socket_shutdown",
+        "cf_tcp_connect"
+      ],
+      "line": 1899,
+      "name": "Curl_cft_tcp",
+      "relation": "lexical initializer references; conditional branches retained",
+      "type": "Curl_cftype"
+    },
+    {
+      "end_line": 2130,
+      "file": "lib/cf-socket.c",
+      "functions": [
+        "Curl_cf_def_conn_keep_alive",
+        "Curl_cf_def_data_pending",
+        "cf_socket_adjust_pollset",
+        "cf_socket_cntrl",
+        "cf_socket_conn_is_alive",
+        "cf_socket_destroy",
+        "cf_socket_query",
+        "cf_socket_recv",
+        "cf_socket_send",
+        "cf_socket_shutdown",
+        "cf_udp_connect"
+      ],
+      "line": 2115,
+      "name": "Curl_cft_udp",
+      "relation": "lexical initializer references; conditional branches retained",
+      "type": "Curl_cftype"
+    },
+    {
+      "end_line": 2190,
+      "file": "lib/cf-socket.c",
+      "functions": [
+        "Curl_cf_def_conn_keep_alive",
+        "Curl_cf_def_data_pending",
+        "cf_socket_adjust_pollset",
+        "cf_socket_cntrl",
+        "cf_socket_conn_is_alive",
+        "cf_socket_destroy",
+        "cf_socket_query",
+        "cf_socket_recv",
+        "cf_socket_send",
+        "cf_socket_shutdown",
+        "cf_tcp_connect"
+      ],
+      "line": 2175,
+      "name": "Curl_cft_unix",
+      "relation": "lexical initializer references; conditional branches retained",
+      "type": "Curl_cftype"
+    },
+    {
+      "end_line": 2428,
+      "file": "lib/cf-socket.c",
+      "functions": [
+        "Curl_cf_def_conn_keep_alive",
+        "Curl_cf_def_data_pending",
+        "cf_socket_adjust_pollset",
+        "cf_socket_cntrl",
+        "cf_socket_conn_is_alive",
+        "cf_socket_destroy",
+        "cf_socket_query",
+        "cf_socket_recv",
+        "cf_socket_send",
+        "cf_socket_shutdown",
+        "cf_tcp_accept_connect"
+      ],
+      "line": 2413,
+      "name": "Curl_cft_tcp_accept",
+      "relation": "lexical initializer references; conditional branches retained",
+      "type": "Curl_cftype"
+    },
+    {
+      "end_line": 306,
+      "file": "lib/content_encoding.c",
+      "functions": [
+        "Curl_cwriter_def_flush",
+        "deflate_do_close",
+        "deflate_do_init",
+        "deflate_do_write"
+      ],
+      "line": 297,
+      "name": "deflate_encoding",
+      "relation": "lexical initializer references; conditional branches retained",
+      "type": "Curl_cwtype"
+    },
+    {
+      "end_line": 369,
+      "file": "lib/content_encoding.c",
+      "functions": [
+        "Curl_cwriter_def_flush",
+        "gzip_do_close",
+        "gzip_do_init",
+        "gzip_do_write"
+      ],
+      "line": 360,
+      "name": "gzip_encoding",
+      "relation": "lexical initializer references; conditional branches retained",
+      "type": "Curl_cwtype"
+    },
+    {
+      "end_line": 504,
+      "file": "lib/content_encoding.c",
+      "functions": [
+        "Curl_cwriter_def_flush",
+        "brotli_do_close",
+        "brotli_do_init",
+        "brotli_do_write"
+      ],
+      "line": 495,
+      "name": "brotli_encoding",
+      "relation": "lexical initializer references; conditional branches retained",
+      "type": "Curl_cwtype"
+    },
+    {
+      "end_line": 619,
+      "file": "lib/content_encoding.c",
+      "functions": [
+        "Curl_cwriter_def_flush",
+        "zstd_do_close",
+        "zstd_do_init",
+        "zstd_do_write"
+      ],
+      "line": 610,
+      "name": "zstd_encoding",
+      "relation": "lexical initializer references; conditional branches retained",
+      "type": "Curl_cwtype"
+    },
+    {
+      "end_line": 632,
+      "file": "lib/content_encoding.c",
+      "functions": [
+        "Curl_cwriter_def_close",
+        "Curl_cwriter_def_flush",
+        "Curl_cwriter_def_init",
+        "Curl_cwriter_def_write"
+      ],
+      "line": 623,
+      "name": "identity_encoding",
+      "relation": "lexical initializer references; conditional branches retained",
+      "type": "Curl_cwtype"
+    },
+    {
+      "end_line": 721,
+      "file": "lib/content_encoding.c",
+      "functions": [
+        "Curl_cwriter_def_flush",
+        "error_do_close",
+        "error_do_init",
+        "error_do_write"
+      ],
+      "line": 712,
+      "name": "error_writer",
+      "relation": "lexical initializer references; conditional branches retained",
+      "type": "Curl_cwtype"
+    },
+    {
+      "end_line": 499,
+      "file": "lib/cw-out.c",
+      "functions": [
+        "cw_out_close",
+        "cw_out_flush",
+        "cw_out_init",
+        "cw_out_write"
+      ],
+      "line": 490,
+      "name": "Curl_cwt_out",
+      "relation": "lexical initializer references; conditional branches retained",
+      "type": "Curl_cwtype"
+    },
+    {
+      "end_line": 222,
+      "file": "lib/cw-pause.c",
+      "functions": [
+        "cw_pause_close",
+        "cw_pause_flush",
+        "cw_pause_init",
+        "cw_pause_write"
+      ],
+      "line": 213,
+      "name": "Curl_cwt_pause",
+      "relation": "lexical initializer references; conditional branches retained",
+      "type": "Curl_cwtype"
+    },
+    {
+      "end_line": 323,
+      "file": "lib/dict.c",
+      "functions": [
+        "dict_do"
+      ],
+      "line": 305,
+      "name": "Curl_protocol_dict",
+      "relation": "lexical initializer references; conditional branches retained",
+      "type": "Curl_protocol"
+    },
+    {
+      "end_line": 714,
+      "file": "lib/file.c",
+      "functions": [
+        "file_connect",
+        "file_disconnect",
+        "file_do",
+        "file_done",
+        "file_setup_connection"
+      ],
+      "line": 696,
+      "name": "Curl_protocol_file",
+      "relation": "lexical initializer references; conditional branches retained",
+      "type": "Curl_protocol"
+    },
+    {
+      "end_line": 450,
+      "file": "lib/ftp.c",
+      "functions": [
+        "Curl_cwriter_def_close",
+        "Curl_cwriter_def_flush",
+        "Curl_cwriter_def_init",
+        "ftp_cw_lc_write"
+      ],
+      "line": 441,
+      "name": "ftp_cw_lc",
+      "relation": "lexical initializer references; conditional branches retained",
+      "type": "Curl_cwtype"
+    },
+    {
+      "end_line": 4516,
+      "file": "lib/ftp.c",
+      "functions": [
+        "ftp_connect",
+        "ftp_disconnect",
+        "ftp_do",
+        "ftp_do_more",
+        "ftp_doing",
+        "ftp_domore_pollset",
+        "ftp_done",
+        "ftp_multi_statemach",
+        "ftp_pollset",
+        "ftp_setup_connection"
+      ],
+      "line": 4498,
+      "name": "Curl_protocol_ftp",
+      "relation": "lexical initializer references; conditional branches retained",
+      "type": "Curl_protocol"
+    },
+    {
+      "end_line": 218,
+      "file": "lib/gopher.c",
+      "functions": [
+        "gopher_do"
+      ],
+      "line": 200,
+      "name": "Curl_protocol_gopher",
+      "relation": "lexical initializer references; conditional branches retained",
+      "type": "Curl_protocol"
+    },
+    {
+      "end_line": 239,
+      "file": "lib/gopher.c",
+      "functions": [
+        "gopher_connect",
+        "gopher_connecting",
+        "gopher_do"
+      ],
+      "line": 221,
+      "name": "Curl_protocol_gophers",
+      "relation": "lexical initializer references; conditional branches retained",
+      "type": "Curl_protocol"
+    },
+    {
+      "end_line": 440,
+      "file": "lib/headers.c",
+      "functions": [
+        "Curl_cwriter_def_close",
+        "Curl_cwriter_def_flush",
+        "Curl_cwriter_def_init",
+        "hds_cw_collect_write"
+      ],
+      "line": 431,
+      "name": "hds_cw_collect",
+      "relation": "lexical initializer references; conditional branches retained",
+      "type": "Curl_cwtype"
+    },
+    {
+      "end_line": 5132,
+      "file": "lib/http.c",
+      "functions": [
+        "Curl_http",
+        "Curl_http_doing_pollset",
+        "Curl_http_done",
+        "Curl_http_follow",
+        "Curl_http_perform_pollset",
+        "Curl_http_setup_conn",
+        "Curl_http_write_resp",
+        "Curl_http_write_resp_hd"
+      ],
+      "line": 5114,
+      "name": "Curl_protocol_http",
+      "relation": "lexical initializer references; conditional branches retained",
+      "type": "Curl_protocol"
+    },
+    {
+      "end_line": 2796,
+      "file": "lib/http2.c",
+      "functions": [
+        "cf_h2_adjust_pollset",
+        "cf_h2_cntrl",
+        "cf_h2_connect",
+        "cf_h2_data_pending",
+        "cf_h2_destroy",
+        "cf_h2_is_alive",
+        "cf_h2_keep_alive",
+        "cf_h2_query",
+        "cf_h2_recv",
+        "cf_h2_send",
+        "cf_h2_shutdown"
+      ],
+      "line": 2781,
+      "name": "Curl_cft_nghttp2",
+      "relation": "lexical initializer references; conditional branches retained",
+      "type": "Curl_cftype"
+    },
+    {
+      "end_line": 481,
+      "file": "lib/http_chunks.c",
+      "functions": [
+        "Curl_cwriter_def_flush",
+        "cw_chunked_close",
+        "cw_chunked_init",
+        "cw_chunked_write"
+      ],
+      "line": 472,
+      "name": "Curl_httpchunk_unencoder",
+      "relation": "lexical initializer references; conditional branches retained",
+      "type": "Curl_cwtype"
+    },
+    {
+      "end_line": 721,
+      "file": "lib/http_proxy.c",
+      "functions": [
+        "Curl_cf_def_adjust_pollset",
+        "Curl_cf_def_cntrl",
+        "Curl_cf_def_conn_is_alive",
+        "Curl_cf_def_conn_keep_alive",
+        "Curl_cf_def_data_pending",
+        "Curl_cf_def_recv",
+        "Curl_cf_def_send",
+        "Curl_cf_def_shutdown",
+        "cf_http_proxy_query",
+        "http_proxy_cf_connect",
+        "http_proxy_cf_destroy"
+      ],
+      "line": 706,
+      "name": "Curl_cft_http_proxy",
+      "relation": "lexical initializer references; conditional branches retained",
+      "type": "Curl_cftype"
+    },
+    {
+      "end_line": 2308,
+      "file": "lib/imap.c",
+      "functions": [
+        "imap_connect",
+        "imap_disconnect",
+        "imap_do",
+        "imap_doing",
+        "imap_done",
+        "imap_multi_statemach",
+        "imap_pollset",
+        "imap_setup_connection"
+      ],
+      "line": 2290,
+      "name": "Curl_protocol_imap",
+      "relation": "lexical initializer references; conditional branches retained",
+      "type": "Curl_protocol"
+    },
+    {
+      "end_line": 1004,
+      "file": "lib/ldap.c",
+      "functions": [
+        "ldap_do"
+      ],
+      "line": 986,
+      "name": "Curl_protocol_ldap",
+      "relation": "lexical initializer references; conditional branches retained",
+      "type": "Curl_protocol"
+    },
+    {
+      "end_line": 1046,
+      "file": "lib/mqtt.c",
+      "functions": [
+        "mqtt_do",
+        "mqtt_doing",
+        "mqtt_done",
+        "mqtt_pollset",
+        "mqtt_setup_conn",
+        "mqtts_connecting"
+      ],
+      "line": 1028,
+      "name": "Curl_protocol_mqtts",
+      "relation": "lexical initializer references; conditional branches retained",
+      "type": "Curl_protocol"
+    },
+    {
+      "end_line": 1071,
+      "file": "lib/mqtt.c",
+      "functions": [
+        "mqtt_do",
+        "mqtt_doing",
+        "mqtt_done",
+        "mqtt_pollset",
+        "mqtt_setup_conn"
+      ],
+      "line": 1053,
+      "name": "Curl_protocol_mqtt",
+      "relation": "lexical initializer references; conditional branches retained",
+      "type": "Curl_protocol"
+    },
+    {
+      "end_line": 1383,
+      "file": "lib/openldap.c",
+      "functions": [
+        "oldap_connect",
+        "oldap_connecting",
+        "oldap_disconnect",
+        "oldap_do",
+        "oldap_done",
+        "oldap_setup_connection"
+      ],
+      "line": 1365,
+      "name": "Curl_protocol_ldap",
+      "relation": "lexical initializer references; conditional branches retained",
+      "type": "Curl_protocol"
+    },
+    {
+      "end_line": 1714,
+      "file": "lib/pop3.c",
+      "functions": [
+        "pop3_connect",
+        "pop3_disconnect",
+        "pop3_do",
+        "pop3_doing",
+        "pop3_done",
+        "pop3_multi_statemach",
+        "pop3_pollset",
+        "pop3_setup_connection",
+        "pop3_write"
+      ],
+      "line": 1696,
+      "name": "Curl_protocol_pop3",
+      "relation": "lexical initializer references; conditional branches retained",
+      "type": "Curl_protocol"
+    },
+    {
+      "end_line": 1057,
+      "file": "lib/rtsp.c",
+      "functions": [
+        "Curl_http_follow",
+        "Curl_http_perform_pollset",
+        "rtsp_conn_is_dead",
+        "rtsp_connect",
+        "rtsp_do",
+        "rtsp_do_pollset",
+        "rtsp_done",
+        "rtsp_rtp_write_resp",
+        "rtsp_rtp_write_resp_hd",
+        "rtsp_setup_connection"
+      ],
+      "line": 1039,
+      "name": "Curl_protocol_rtsp",
+      "relation": "lexical initializer references; conditional branches retained",
+      "type": "Curl_protocol"
+    },
+    {
+      "end_line": 306,
+      "file": "lib/sendf.c",
+      "functions": [
+        "Curl_cwriter_def_close",
+        "Curl_cwriter_def_flush",
+        "Curl_cwriter_def_init",
+        "cw_download_write"
+      ],
+      "line": 297,
+      "name": "cw_download",
+      "relation": "lexical initializer references; conditional branches retained",
+      "type": "Curl_cwtype"
+    },
+    {
+      "end_line": 329,
+      "file": "lib/sendf.c",
+      "functions": [
+        "Curl_cwriter_def_close",
+        "Curl_cwriter_def_flush",
+        "Curl_cwriter_def_init",
+        "cw_raw_write"
+      ],
+      "line": 320,
+      "name": "cw_raw",
+      "relation": "lexical initializer references; conditional branches retained",
+      "type": "Curl_cwtype"
+    },
+    {
+      "end_line": 2013,
+      "file": "lib/smtp.c",
+      "functions": [
+        "smtp_connect",
+        "smtp_disconnect",
+        "smtp_do",
+        "smtp_doing",
+        "smtp_done",
+        "smtp_multi_statemach",
+        "smtp_pollset",
+        "smtp_setup_connection"
+      ],
+      "line": 1995,
+      "name": "Curl_protocol_smtp",
+      "relation": "lexical initializer references; conditional branches retained",
+      "type": "Curl_protocol"
+    },
+    {
+      "end_line": 1328,
+      "file": "lib/socks.c",
+      "functions": [
+        "Curl_cf_def_cntrl",
+        "Curl_cf_def_conn_is_alive",
+        "Curl_cf_def_conn_keep_alive",
+        "Curl_cf_def_data_pending",
+        "Curl_cf_def_recv",
+        "Curl_cf_def_send",
+        "Curl_cf_def_shutdown",
+        "socks_cf_adjust_pollset",
+        "socks_cf_query",
+        "socks_proxy_cf_connect",
+        "socks_proxy_cf_destroy"
+      ],
+      "line": 1313,
+      "name": "Curl_cft_socks_proxy",
+      "relation": "lexical initializer references; conditional branches retained",
+      "type": "Curl_cftype"
+    },
+    {
+      "end_line": 1574,
+      "file": "lib/telnet.c",
+      "functions": [
+        "telnet_do",
+        "telnet_done"
+      ],
+      "line": 1556,
+      "name": "Curl_protocol_telnet",
+      "relation": "lexical initializer references; conditional branches retained",
+      "type": "Curl_protocol"
+    },
+    {
+      "end_line": 1365,
+      "file": "lib/tftp.c",
+      "functions": [
+        "tftp_connect",
+        "tftp_do",
+        "tftp_doing",
+        "tftp_done",
+        "tftp_multi_statemach",
+        "tftp_pollset",
+        "tftp_setup_connection"
+      ],
+      "line": 1347,
+      "name": "Curl_protocol_tftp",
+      "relation": "lexical initializer references; conditional branches retained",
+      "type": "Curl_protocol"
+    },
+    {
+      "end_line": 427,
+      "file": "lib/vdns/cf-dns.c",
+      "functions": [
+        "Curl_cf_def_conn_is_alive",
+        "Curl_cf_def_conn_keep_alive",
+        "Curl_cf_def_data_pending",
+        "Curl_cf_def_query",
+        "Curl_cf_def_recv",
+        "Curl_cf_def_send",
+        "Curl_cf_def_shutdown",
+        "cf_dns_adjust_pollset",
+        "cf_dns_cntrl",
+        "cf_dns_connect",
+        "cf_dns_destroy"
+      ],
+      "line": 412,
+      "name": "Curl_cft_dns",
+      "relation": "lexical initializer references; conditional branches retained",
+      "type": "Curl_cftype"
+    },
+    {
+      "end_line": 258,
+      "file": "lib/vquic/cf-capsule.c",
+      "functions": [
+        "Curl_cf_def_conn_is_alive",
+        "Curl_cf_def_conn_keep_alive",
+        "cf_capsule_adjust_pollset",
+        "cf_capsule_cntrl",
+        "cf_capsule_connect",
+        "cf_capsule_data_pending",
+        "cf_capsule_destroy",
+        "cf_capsule_query",
+        "cf_capsule_recv",
+        "cf_capsule_send",
+        "cf_capsule_shutdown"
+      ],
+      "line": 243,
+      "name": "Curl_cft_capsule",
+      "relation": "lexical initializer references; conditional branches retained",
+      "type": "Curl_cftype"
+    },
+    {
+      "end_line": 1221,
+      "file": "lib/vquic/cf-ngtcp2-proxy.c",
+      "functions": [
+        "Curl_cf_def_cntrl",
+        "Curl_cf_def_conn_keep_alive",
+        "Curl_cf_ngtcp2_cmn_conn_is_alive",
+        "Curl_cf_ngtcp2_cmn_query",
+        "cf_h3_proxy_adjust_pollset",
+        "cf_h3_proxy_connect",
+        "cf_h3_proxy_data_pending",
+        "cf_h3_proxy_destroy",
+        "cf_h3_proxy_recv",
+        "cf_h3_proxy_send",
+        "cf_h3_proxy_shutdown"
+      ],
+      "line": 1206,
+      "name": "Curl_cft_h3_proxy",
+      "relation": "lexical initializer references; conditional branches retained",
+      "type": "Curl_cftype"
+    },
+    {
+      "end_line": 1068,
+      "file": "lib/vquic/cf-ngtcp2.c",
+      "functions": [
+        "Curl_cf_def_conn_keep_alive",
+        "Curl_cf_def_data_pending",
+        "Curl_cf_ngtcp2_cmn_conn_is_alive",
+        "Curl_cf_ngtcp2_cmn_shutdown",
+        "cf_ngtcp2_adjust_pollset",
+        "cf_ngtcp2_cntrl",
+        "cf_ngtcp2_connect",
+        "cf_ngtcp2_destroy",
+        "cf_ngtcp2_query",
+        "cf_ngtcp2_recv",
+        "cf_ngtcp2_send"
+      ],
+      "line": 1053,
+      "name": "Curl_cft_http3",
+      "relation": "lexical initializer references; conditional branches retained",
+      "type": "Curl_cftype"
+    },
+    {
+      "end_line": 1639,
+      "file": "lib/vquic/cf-quiche.c",
+      "functions": [
+        "Curl_cf_def_conn_keep_alive",
+        "Curl_cf_def_data_pending",
+        "cf_quiche_adjust_pollset",
+        "cf_quiche_cntrl",
+        "cf_quiche_conn_is_alive",
+        "cf_quiche_connect",
+        "cf_quiche_destroy",
+        "cf_quiche_query",
+        "cf_quiche_recv",
+        "cf_quiche_send",
+        "cf_quiche_shutdown"
+      ],
+      "line": 1624,
+      "name": "Curl_cft_http3",
+      "relation": "lexical initializer references; conditional branches retained",
+      "type": "Curl_cftype"
+    },
+    {
+      "end_line": 3156,
+      "file": "lib/vssh/libssh.c",
+      "functions": [
+        "Curl_ssh_pollset",
+        "myssh_connect",
+        "myssh_do_it",
+        "myssh_multi_statemach",
+        "myssh_setup_connection",
+        "scp_disconnect",
+        "scp_doing",
+        "scp_done"
+      ],
+      "line": 3138,
+      "name": "Curl_protocol_scp",
+      "relation": "lexical initializer references; conditional branches retained",
+      "type": "Curl_protocol"
+    },
+    {
+      "end_line": 3179,
+      "file": "lib/vssh/libssh.c",
+      "functions": [
+        "Curl_ssh_pollset",
+        "myssh_connect",
+        "myssh_do_it",
+        "myssh_multi_statemach",
+        "myssh_setup_connection",
+        "sftp_disconnect",
+        "sftp_doing",
+        "sftp_done"
+      ],
+      "line": 3161,
+      "name": "Curl_protocol_sftp",
+      "relation": "lexical initializer references; conditional branches retained",
+      "type": "Curl_protocol"
+    },
+    {
+      "end_line": 3944,
+      "file": "lib/vssh/libssh2.c",
+      "functions": [
+        "Curl_ssh_pollset",
+        "scp_disconnect",
+        "scp_doing",
+        "scp_done",
+        "ssh_attach",
+        "ssh_connect",
+        "ssh_do",
+        "ssh_multi_statemach",
+        "ssh_setup_connection"
+      ],
+      "line": 3926,
+      "name": "Curl_protocol_scp",
+      "relation": "lexical initializer references; conditional branches retained",
+      "type": "Curl_protocol"
+    },
+    {
+      "end_line": 3967,
+      "file": "lib/vssh/libssh2.c",
+      "functions": [
+        "Curl_ssh_pollset",
+        "sftp_disconnect",
+        "sftp_doing",
+        "sftp_done",
+        "ssh_attach",
+        "ssh_connect",
+        "ssh_do",
+        "ssh_multi_statemach",
+        "ssh_setup_connection"
+      ],
+      "line": 3949,
+      "name": "Curl_protocol_sftp",
+      "relation": "lexical initializer references; conditional branches retained",
+      "type": "Curl_protocol"
+    },
+    {
+      "end_line": 2251,
+      "file": "lib/vtls/gtls.c",
+      "functions": [
+        "Curl_gtls_version",
+        "Curl_ssl_adjust_pollset",
+        "gtls_cert_status_request",
+        "gtls_cleanup",
+        "gtls_close",
+        "gtls_connect",
+        "gtls_data_pending",
+        "gtls_get_internals",
+        "gtls_init",
+        "gtls_random",
+        "gtls_recv",
+        "gtls_send",
+        "gtls_sha256sum",
+        "gtls_shutdown"
+      ],
+      "line": 2217,
+      "name": "Curl_ssl_gnutls",
+      "relation": "lexical initializer references; conditional branches retained",
+      "type": "Curl_ssl"
+    },
+    {
+      "end_line": 1721,
+      "file": "lib/vtls/mbedtls.c",
+      "functions": [
+        "Curl_ssl_adjust_pollset"
+      ],
+      "line": 1680,
+      "name": "Curl_ssl_mbedtls",
+      "relation": "lexical initializer references; conditional branches retained",
+      "type": "Curl_ssl"
+    },
+    {
+      "end_line": 5585,
+      "file": "lib/vtls/openssl.c",
+      "functions": [
+        "Curl_ossl_version",
+        "Curl_ssl_adjust_pollset",
+        "ossl_cleanup",
+        "ossl_close",
+        "ossl_close_all",
+        "ossl_engines_list",
+        "ossl_init",
+        "ossl_set_engine",
+        "ossl_set_engine_default",
+        "ossl_shutdown"
+      ],
+      "line": 5539,
+      "name": "Curl_ssl_openssl",
+      "relation": "lexical initializer references; conditional branches retained",
+      "type": "Curl_ssl"
+    },
+    {
+      "end_line": 1488,
+      "file": "lib/vtls/rustls.c",
+      "functions": [
+        "Curl_ssl_adjust_pollset",
+        "cr_cleanup",
+        "cr_close",
+        "cr_connect",
+        "cr_data_pending",
+        "cr_get_internals",
+        "cr_random",
+        "cr_recv",
+        "cr_send",
+        "cr_shutdown",
+        "cr_version"
+      ],
+      "line": 1458,
+      "name": "Curl_ssl_rustls",
+      "relation": "lexical initializer references; conditional branches retained",
+      "type": "Curl_ssl"
+    },
+    {
+      "end_line": 2926,
+      "file": "lib/vtls/schannel.c",
+      "functions": [
+        "Curl_ssl_adjust_pollset",
+        "schannel_cleanup",
+        "schannel_close",
+        "schannel_connect",
+        "schannel_data_pending",
+        "schannel_get_internals",
+        "schannel_init",
+        "schannel_random",
+        "schannel_recv",
+        "schannel_send",
+        "schannel_sha256sum",
+        "schannel_shutdown",
+        "schannel_version"
+      ],
+      "line": 2895,
+      "name": "Curl_ssl_schannel",
+      "relation": "lexical initializer references; conditional branches retained",
+      "type": "Curl_ssl"
+    },
+    {
+      "end_line": 685,
+      "file": "lib/vtls/vtls.c",
+      "functions": [
+        "multissl_adjust_pollset",
+        "multissl_close",
+        "multissl_connect",
+        "multissl_get_internals",
+        "multissl_init",
+        "multissl_random",
+        "multissl_recv_plain",
+        "multissl_send_plain",
+        "multissl_version"
+      ],
+      "line": 661,
+      "name": "Curl_ssl_multi",
+      "relation": "lexical initializer references; conditional branches retained",
+      "type": "Curl_ssl"
+    },
+    {
+      "end_line": 1326,
+      "file": "lib/vtls/vtls.c",
+      "functions": [
+        "Curl_cf_def_conn_keep_alive",
+        "cf_ssl_is_alive",
+        "ssl_cf_adjust_pollset",
+        "ssl_cf_cntrl",
+        "ssl_cf_connect",
+        "ssl_cf_data_pending",
+        "ssl_cf_destroy",
+        "ssl_cf_query",
+        "ssl_cf_recv",
+        "ssl_cf_send",
+        "ssl_cf_shutdown"
+      ],
+      "line": 1311,
+      "name": "Curl_cft_ssl",
+      "relation": "lexical initializer references; conditional branches retained",
+      "type": "Curl_cftype"
+    },
+    {
+      "end_line": 1345,
+      "file": "lib/vtls/vtls.c",
+      "functions": [
+        "Curl_cf_def_cntrl",
+        "Curl_cf_def_conn_keep_alive",
+        "cf_ssl_is_alive",
+        "ssl_cf_adjust_pollset",
+        "ssl_cf_connect",
+        "ssl_cf_data_pending",
+        "ssl_cf_destroy",
+        "ssl_cf_query",
+        "ssl_cf_recv",
+        "ssl_cf_send",
+        "ssl_cf_shutdown"
+      ],
+      "line": 1330,
+      "name": "Curl_cft_ssl_proxy",
+      "relation": "lexical initializer references; conditional branches retained",
+      "type": "Curl_cftype"
+    },
+    {
+      "end_line": 2322,
+      "file": "lib/vtls/wolfssl.c",
+      "functions": [
+        "Curl_ssl_adjust_pollset",
+        "Curl_wssl_version",
+        "wssl_cleanup",
+        "wssl_close",
+        "wssl_connect",
+        "wssl_data_pending",
+        "wssl_get_internals",
+        "wssl_init",
+        "wssl_random",
+        "wssl_recv",
+        "wssl_send",
+        "wssl_sha256sum",
+        "wssl_shutdown"
+      ],
+      "line": 2279,
+      "name": "Curl_ssl_wolfssl",
+      "relation": "lexical initializer references; conditional branches retained",
+      "type": "Curl_ssl"
+    },
+    {
+      "end_line": 832,
+      "file": "lib/ws.c",
+      "functions": [
+        "ws_cw_close",
+        "ws_cw_flush",
+        "ws_cw_init",
+        "ws_cw_write"
+      ],
+      "line": 823,
+      "name": "ws_cw_decode",
+      "relation": "lexical initializer references; conditional branches retained",
+      "type": "Curl_cwtype"
+    },
+    {
+      "end_line": 2030,
+      "file": "lib/ws.c",
+      "functions": [
+        "Curl_http",
+        "Curl_http_doing_pollset",
+        "Curl_http_done",
+        "Curl_http_follow",
+        "Curl_http_perform_pollset",
+        "Curl_http_write_resp",
+        "Curl_http_write_resp_hd",
+        "ws_setup_conn"
+      ],
+      "line": 2012,
+      "name": "Curl_protocol_ws",
+      "relation": "lexical initializer references; conditional branches retained",
+      "type": "Curl_protocol"
+    }
+  ]
+}

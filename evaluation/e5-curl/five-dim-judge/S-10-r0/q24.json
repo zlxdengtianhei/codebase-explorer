@@ -1,0 +1,125 @@
+{
+  "qid": 24,
+  "question": "During the protocol-connect and DOING phases of an FTP transfer, which lib/ function tells the multi handle whether to wait for the control socket to become readable or writable?\n\nBuild assumptions: FTP enabled; plain FTP (no proxy); multi interface.",
+  "arm": "S",
+  "max_steps": 10,
+  "repeat": 0,
+  "answer_valid": true,
+  "judge_model": "codex/gpt-6.1-sol",
+  "draws": [
+    {
+      "draw": 1,
+      "score": {
+        "correctness": 4,
+        "completeness": 5,
+        "relevance": 17,
+        "clarity": 15,
+        "reasoning": 7
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 101,
+            "prompt_tokens": 6684,
+            "total_tokens": 6785,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 52,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 4,\n  \"completeness\": 5,\n  \"relevance\": 17,\n  \"clarity\": 15,\n  \"reasoning\": 7\n}",
+          "wall_seconds": 4.811699707992375
+        }
+      ]
+    },
+    {
+      "draw": 2,
+      "score": {
+        "correctness": 4,
+        "completeness": 5,
+        "relevance": 17,
+        "clarity": 15,
+        "reasoning": 7
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 47,
+            "prompt_tokens": 6684,
+            "total_tokens": 6731,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 0,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 4,\n  \"completeness\": 5,\n  \"relevance\": 17,\n  \"clarity\": 15,\n  \"reasoning\": 7\n}",
+          "wall_seconds": 3.4402609590324573
+        }
+      ]
+    },
+    {
+      "draw": 3,
+      "score": {
+        "correctness": 4,
+        "completeness": 5,
+        "relevance": 18,
+        "clarity": 16,
+        "reasoning": 8
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 88,
+            "prompt_tokens": 6684,
+            "total_tokens": 6772,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 55,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6528
+            }
+          },
+          "response": "{\"correctness\":4,\"completeness\":5,\"relevance\":18,\"clarity\":16,\"reasoning\":8}",
+          "wall_seconds": 4.2818409579922445
+        }
+      ]
+    }
+  ],
+  "score": {
+    "correctness": 4,
+    "completeness": 5,
+    "relevance": 17,
+    "clarity": 15,
+    "reasoning": 7
+  },
+  "total": 48,
+  "main_total_na5": 48,
+  "failure_type": null,
+  "judge_total_range": 3,
+  "wall_seconds": 12.534515583014581
+}

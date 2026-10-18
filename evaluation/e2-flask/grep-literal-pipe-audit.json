@@ -1,0 +1,5915 @@
+{
+  "definition": "grep tool actually executed, pattern contains an unescaped | (even number of immediately preceding backslashes); denominator all executed grep tool calls, includes failed answer attempts and E1 reuse; empty means recorded command output excerpt empty. Also report fraction among all observed tool actions.",
+  "groups": {
+    "S": {
+      "grep_calls": 154,
+      "literal_pipe_calls": 58,
+      "pipe_fraction_of_grep": 0.37662337662337664,
+      "pipe_empty_output_calls": 57,
+      "observed_tool_calls": 471,
+      "pipe_fraction_of_all_tools": 0.12314225053078556,
+      "events": [
+        {
+          "qid": 0,
+          "attempt": 1,
+          "pattern": "ensure_ascii",
+          "path": "$WORK/runs/e1/arms/S/repo",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 0,
+          "attempt": 1,
+          "pattern": "ensure_ascii",
+          "path": "$WORK/runs/e1/arms/S/repo/tests",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 0,
+          "attempt": 1,
+          "pattern": "ensure_ascii = test_value",
+          "path": "$WORK/runs/e1/arms/S/repo/tests",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 0,
+          "attempt": 1,
+          "pattern": "def test_.*ascii|ensure_ascii",
+          "path": "$WORK/runs/e1/arms/S/repo/tests/test_json.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 1,
+          "attempt": 1,
+          "pattern": "_got_registered_once|_check_setup_finished",
+          "path": "$WORK/runs/e1/arms/S/repo/src",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 1,
+          "attempt": 1,
+          "pattern": "_check_setup_finished|_got_registered_once|setupmethod",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask/app.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 2,
+          "attempt": 1,
+          "pattern": "send_static_file|get_send_file_max_age|static_url_path|SEND_FILE_MAX_AGE_DEFAULT",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask/app.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 2,
+          "attempt": 1,
+          "pattern": "static",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 3,
+          "attempt": 1,
+          "pattern": "UnexpectedUnicodeError",
+          "path": "$WORK/runs/e1/arms/S/repo/src",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 3,
+          "attempt": 1,
+          "pattern": "UnexpectedUnicodeError",
+          "path": "$WORK/runs/e1/arms/S/repo",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 3,
+          "attempt": 1,
+          "pattern": "unicode",
+          "path": "$WORK/runs/e1/arms/S/repo/src",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 3,
+          "attempt": 1,
+          "pattern": "debughelpers",
+          "path": "$WORK/runs/e1/arms/S/repo/src",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 4,
+          "attempt": 1,
+          "pattern": "subdomain",
+          "path": "$WORK/runs/e1/arms/S/repo",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": true
+        },
+        {
+          "qid": 4,
+          "attempt": 1,
+          "pattern": "test_subdomain_basic_support|test_server_name_subdomain|test_subdomain_matching|def test_",
+          "path": "$WORK/runs/e1/arms/S/repo/tests/test_basic.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 4,
+          "attempt": 1,
+          "pattern": "def test_subdomain|def test_server_name_subdomain|def test_subdomain_basic",
+          "path": "$WORK/runs/e1/arms/S/repo/tests",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 4,
+          "attempt": 1,
+          "pattern": "subdomain",
+          "path": "$WORK/runs/e1/arms/S/repo/tests/test_basic.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": true
+        },
+        {
+          "qid": 5,
+          "attempt": 1,
+          "pattern": "template_(filter|test|global|context_processor)|app_template_|context_processor|_update_template_context",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask/sansio/scaffold.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 5,
+          "attempt": 1,
+          "pattern": "template",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask/sansio/scaffold.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 6,
+          "attempt": 2,
+          "pattern": "__fspath__",
+          "path": "$WORK/runs/e1/arms/S/repo",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": true
+        },
+        {
+          "qid": 6,
+          "attempt": 2,
+          "pattern": "FakePath|fspath|pathlib",
+          "path": "$WORK/runs/e1/arms/S/repo",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 6,
+          "attempt": 2,
+          "pattern": "os.fspath",
+          "path": "$WORK/runs/e1/arms/S/repo/src",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": true
+        },
+        {
+          "qid": 6,
+          "attempt": 2,
+          "pattern": "fspath|PathLike|pathlib",
+          "path": "$WORK/runs/e1/arms/S/repo/src",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 7,
+          "attempt": 1,
+          "pattern": "parametrize",
+          "path": "$WORK/runs/e1/arms/S/repo/tests",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 7,
+          "attempt": 1,
+          "pattern": "import|app_name|locate|raises",
+          "path": "$WORK/runs/e1/arms/S/repo/tests/test_cli.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 7,
+          "attempt": 1,
+          "pattern": "def locate_app|def find_best_app|def prepare_import|NoAppException|raise_if_not_found|ImportError|getattr",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask/cli.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 8,
+          "attempt": 1,
+          "pattern": "CliRunner|locate_app|ScriptInfo|load_app|prepare_import",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask/cli.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 8,
+          "attempt": 1,
+          "pattern": "ScriptInfo",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 9,
+          "attempt": 1,
+          "pattern": "TaggedJSONSerializer",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 9,
+          "attempt": 1,
+          "pattern": "session_json_serializer|dumps|loads",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask/sessions.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 10,
+          "attempt": 1,
+          "pattern": "class .*:",
+          "path": "$WORK/runs/e1/arms/S/repo/tests/test_reqctx.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 10,
+          "attempt": 1,
+          "pattern": "stream",
+          "path": "$WORK/runs/e1/arms/S/repo/tests",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 10,
+          "attempt": 1,
+          "pattern": "def stream_with_context|class |yield|_generator|request_ctx",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask/helpers.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 11,
+          "attempt": 1,
+          "pattern": "_after_request_functions|after_request",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask/app.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 11,
+          "attempt": 1,
+          "pattern": "after_request",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": true
+        },
+        {
+          "qid": 11,
+          "attempt": 1,
+          "pattern": "_after_request_functions|process_response|finalize_request|full_dispatch_request",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask/app.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 11,
+          "attempt": 1,
+          "pattern": "after_request_functions|def process_response|def finalize_request|def full_dispatch_request|def wsgi_app|def handle_user_exception",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask/app.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 12,
+          "attempt": 1,
+          "pattern": "hashlib",
+          "path": "$WORK/runs/e1/arms/S/repo/src",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": true
+        },
+        {
+          "qid": 12,
+          "attempt": 1,
+          "pattern": "sha1|_sha1|hash",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask/sessions.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 13,
+          "attempt": 1,
+          "pattern": "copy_current_request_context",
+          "path": "$WORK/runs/e1/arms/S/repo",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 13,
+          "attempt": 1,
+          "pattern": "copy_current_request_context",
+          "path": "$WORK/runs/e1/arms/S/repo/tests/test_reqctx.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 13,
+          "attempt": 1,
+          "pattern": "greenlet|gevent|thread|Thread|session",
+          "path": "$WORK/runs/e1/arms/S/repo/tests/test_reqctx.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 14,
+          "attempt": 1,
+          "pattern": "cert",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask/cli.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": true
+        },
+        {
+          "qid": 14,
+          "attempt": 1,
+          "pattern": "class Cert",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask/cli.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": true
+        },
+        {
+          "qid": 14,
+          "attempt": 1,
+          "pattern": "CertParamType|def convert|name = |class ",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask/cli.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 14,
+          "attempt": 1,
+          "pattern": "class |def ",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask/cli.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 14,
+          "attempt": 1,
+          "pattern": "def ",
+          "path": "$WORK/runs/owner/clones/cbe_lab1_20261016/runs/e1/arms/S/repo/src/flask/cli.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 2,
+          "empty_output": true
+        },
+        {
+          "qid": 14,
+          "attempt": 1,
+          "pattern": "def ",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask/cli.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": true
+        },
+        {
+          "qid": 15,
+          "attempt": 1,
+          "pattern": "record_once|deferred_functions|jinja_env.filters",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 15,
+          "attempt": 1,
+          "pattern": "deferred_functions",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 15,
+          "attempt": 1,
+          "pattern": "register_blueprint|jinja_env|create_jinja_environment|template_filter",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask/app.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 16,
+          "attempt": 1,
+          "pattern": "TaggedJSONSerializer|tag",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask/sessions.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 16,
+          "attempt": 1,
+          "pattern": "TaggedJSONSerializer",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask/sessions.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 17,
+          "attempt": 1,
+          "pattern": "propagate_exceptions|PROPAGATE_EXCEPTIONS|handle_exception",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 17,
+          "attempt": 1,
+          "pattern": "handle_exception",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 17,
+          "attempt": 1,
+          "pattern": "def handle_exception|def log_exception|propagate|Internal Server Error|got_request_exception",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask/app.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 17,
+          "attempt": 1,
+          "pattern": "propagate",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 17,
+          "attempt": 1,
+          "pattern": "handle_exception",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 17,
+          "attempt": 1,
+          "pattern": "def ",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 18,
+          "attempt": 1,
+          "pattern": "deferred_functions|deferred",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask/sansio",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 18,
+          "attempt": 1,
+          "pattern": "deferred",
+          "path": "$WORK/runs/e1/arms/S/repo/src",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 18,
+          "attempt": 1,
+          "pattern": "def setupmethod|def route|add_url_rule",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask/sansio/scaffold.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 19,
+          "attempt": 1,
+          "pattern": "save_session|session_interface|is_null_session|Vary|accessed|modified",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask/app.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 19,
+          "attempt": 1,
+          "pattern": "save_session",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 19,
+          "attempt": 1,
+          "pattern": "session_interface",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 19,
+          "attempt": 1,
+          "pattern": "def wsgi_app|def finalize_request|def process_response|def full_dispatch_request|def handle_user_exception",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask/app.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 20,
+          "attempt": 1,
+          "pattern": "app_ctx_globals_class|app_context",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask/app.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 20,
+          "attempt": 1,
+          "pattern": "app_ctx_globals_class",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 20,
+          "attempt": 1,
+          "pattern": "app_ctx_globals_class",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": true
+        },
+        {
+          "qid": 20,
+          "attempt": 1,
+          "pattern": "app_ctx_globals_class",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask/sansio/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": true
+        },
+        {
+          "qid": 21,
+          "attempt": 1,
+          "pattern": "_AppCtxGlobals|app_ctx_globals_class",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 21,
+          "attempt": 1,
+          "pattern": "app_ctx_globals_class",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 22,
+          "attempt": 1,
+          "pattern": "rv, dict",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 23,
+          "attempt": 1,
+          "pattern": "MethodView",
+          "path": "$WORK/runs/e1/arms/S/repo/tests",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 23,
+          "attempt": 1,
+          "pattern": "class BaseView|class GetView|class DeleteView|class OtherView|methods",
+          "path": "$WORK/runs/e1/arms/S/repo/tests/test_views.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 23,
+          "attempt": 1,
+          "pattern": "def __init_subclass__|cls.__bases__|methods.update|cls.methods = methods|http_method_funcs = ",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask/views.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 24,
+          "attempt": 1,
+          "pattern": "TagUUID|TaggedJSONSerializer|UUID",
+          "path": "$WORK/runs/e1/arms/S/repo/tests",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 25,
+          "attempt": 1,
+          "pattern": "async",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 25,
+          "attempt": 1,
+          "pattern": "AsyncMethodView|MethodViewType|methodview",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 25,
+          "attempt": 1,
+          "pattern": "async def (get|post|put|delete)|MethodView",
+          "path": "$WORK/runs/e1/arms/S/repo/tests",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 26,
+          "attempt": 1,
+          "pattern": "class ScriptInfo",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask/cli.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 26,
+          "attempt": 1,
+          "pattern": "ScriptInfo|create_app|app_import_path|load_app",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask/cli.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 26,
+          "attempt": 1,
+          "pattern": "app_import_path",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask/cli.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 26,
+          "attempt": 1,
+          "pattern": "create_app",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask/cli.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 27,
+          "attempt": 1,
+          "pattern": "open_resource",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 27,
+          "attempt": 1,
+          "pattern": "def open_resource",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 27,
+          "attempt": 1,
+          "pattern": "open_instance_resource|root_path|read_only|mode",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask/app.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 27,
+          "attempt": 1,
+          "pattern": "open_instance_resource",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 27,
+          "attempt": 1,
+          "pattern": "importlib.resources|as_file|files",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask/app.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 28,
+          "attempt": 1,
+          "pattern": "load_app|_loaded_app",
+          "path": "$WORK/runs/e1/arms/S/repo",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 28,
+          "attempt": 1,
+          "pattern": "load_app",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 28,
+          "attempt": 1,
+          "pattern": "ScriptInfo|load_app|_loaded_app|make_shell_context|list_commands|_set_app|ensure_object",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask/cli.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 28,
+          "attempt": 1,
+          "pattern": "ScriptInfo",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 29,
+          "attempt": 1,
+          "pattern": "accessed",
+          "path": "$WORK/runs/e1/arms/S/repo",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 29,
+          "attempt": 1,
+          "pattern": "Vary: Cookie",
+          "path": "$WORK/runs/e1/arms/S/repo",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 29,
+          "attempt": 1,
+          "pattern": "session",
+          "path": "$WORK/runs/e1/arms/S/repo/tests/test_basic.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 30,
+          "attempt": 1,
+          "pattern": "template_filter",
+          "path": "$WORK/runs/e1/arms/S/repo/src",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 30,
+          "attempt": 1,
+          "pattern": "template_filter",
+          "path": "$WORK/runs/e1/arms/S/repo/tests",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 30,
+          "attempt": 1,
+          "pattern": "def test_template_filter|def test_add_template_filter|app_template_filter|add_app_template_filter",
+          "path": "$WORK/runs/e1/arms/S/repo/tests/test_blueprints.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 31,
+          "attempt": 1,
+          "pattern": "dot",
+          "path": "$WORK/runs/e1/arms/S/repo/tests",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 31,
+          "attempt": 1,
+          "pattern": "test_dotted_name_not_allowed",
+          "path": "$WORK/runs/e1/arms/S/repo/tests/test_blueprints.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 31,
+          "attempt": 1,
+          "pattern": "def test_dotted_name_not_allowed",
+          "path": "$WORK/runs/e1/arms/S/repo/tests/test_blueprints.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 32,
+          "attempt": 1,
+          "pattern": "get_signing_serializer",
+          "path": "$WORK/runs/e1/arms/S/repo",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": true
+        },
+        {
+          "qid": 32,
+          "attempt": 1,
+          "pattern": "URLSafeTimedSerializer",
+          "path": "$WORK/runs/e1/arms/S/repo",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": true
+        },
+        {
+          "qid": 33,
+          "attempt": 1,
+          "pattern": "PassDict",
+          "path": "$WORK/runs/e1/arms/S/repo",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 34,
+          "attempt": 1,
+          "pattern": "create_logger",
+          "path": "$WORK/runs/e1/arms/S/repo/src",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 35,
+          "attempt": 1,
+          "pattern": "instance_relative_config",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 35,
+          "attempt": 1,
+          "pattern": "def make_config",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask/sansio/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 35,
+          "attempt": 1,
+          "pattern": "root_path|instance_path|make_config|Config",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask/sansio/app.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 35,
+          "attempt": 1,
+          "pattern": "root_path",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask/sansio",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 36,
+          "attempt": 1,
+          "pattern": "def get_command",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 36,
+          "attempt": 1,
+          "pattern": "class AppGroup|class FlaskGroup|get_command|list_commands|load_plugin|entry_point|_nav_|Info",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask/cli.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 36,
+          "attempt": 1,
+          "pattern": "class FlaskGroup",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask/cli.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 36,
+          "attempt": 1,
+          "pattern": "def get_command",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask/cli.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 36,
+          "attempt": 1,
+          "pattern": "def _load_plugin_commands|_load_plugin_commands|entry_point",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask/cli.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 36,
+          "attempt": 1,
+          "pattern": "entry_point",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask/cli.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 36,
+          "attempt": 2,
+          "pattern": "def get_command",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask/cli.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 36,
+          "attempt": 2,
+          "pattern": "class FlaskGroup",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask/cli.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 36,
+          "attempt": 2,
+          "pattern": "def get_command|def list_commands|def _load_plugin_commands|class FlaskGroup|class AppGroup|_app_cli_group|entry_point",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask/cli.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 36,
+          "attempt": 2,
+          "pattern": "get_command",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask/cli.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 36,
+          "attempt": 2,
+          "pattern": "class FlaskGroup|def get_command|def list_commands|def main|def _shell|def make_context",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask/cli.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 37,
+          "attempt": 1,
+          "pattern": "__html__",
+          "path": "$WORK/runs/e1/arms/S/repo",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 37,
+          "attempt": 1,
+          "pattern": "TaggedJSONSerializer|tag",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask/sessions.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 39,
+          "attempt": 1,
+          "pattern": "OPTIONS",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 39,
+          "attempt": 1,
+          "pattern": "provide_automatic_options",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 39,
+          "attempt": 1,
+          "pattern": "add_url_rule",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask/sansio/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 40,
+          "attempt": 1,
+          "pattern": "find_error_handler|_find_error_handler",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 40,
+          "attempt": 1,
+          "pattern": "error_handler",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 40,
+          "attempt": 1,
+          "pattern": "_find_error_handler",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask/sansio/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 40,
+          "attempt": 1,
+          "pattern": "def _find_error_handler",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask/sansio/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 40,
+          "attempt": 1,
+          "pattern": "exc_class|handler_map|code_or_exception|for c in|for name in",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask/sansio/app.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 41,
+          "attempt": 1,
+          "pattern": "anchor",
+          "path": "$WORK/runs/e1/arms/S/repo/tests",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": true
+        },
+        {
+          "qid": 41,
+          "attempt": 1,
+          "pattern": "_anchor",
+          "path": "$WORK/runs/e1/arms/S/repo/tests/test_basic.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": true
+        },
+        {
+          "qid": 41,
+          "attempt": 1,
+          "pattern": "class Test|url_for|_scheme|_method",
+          "path": "$WORK/runs/e1/arms/S/repo/tests/test_basic.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 41,
+          "attempt": 1,
+          "pattern": "class TestUrlFor",
+          "path": "$WORK/runs/e1/arms/S/repo/tests",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": true
+        },
+        {
+          "qid": 42,
+          "attempt": 1,
+          "pattern": "open_resource",
+          "path": "$WORK/runs/e1/arms/S/repo",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 42,
+          "attempt": 1,
+          "pattern": "test_open_resource_with_encoding",
+          "path": "$WORK/runs/e1/arms/S/repo/tests/test_helpers.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 42,
+          "attempt": 1,
+          "pattern": "def open_resource",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 42,
+          "attempt": 1,
+          "pattern": "open_resource",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 43,
+          "attempt": 1,
+          "pattern": "b64decode",
+          "path": "$WORK/runs/e1/arms/S/repo/src",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 43,
+          "attempt": 1,
+          "pattern": "_untag_scan|\\.untag\\(|def loads",
+          "path": "$WORK/runs/e1/arms/S/repo/src",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 2,
+          "empty_output": false
+        },
+        {
+          "qid": 43,
+          "attempt": 1,
+          "pattern": "_untag_scan|untag|def loads",
+          "path": "$WORK/runs/e1/arms/S/repo/src",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 43,
+          "attempt": 1,
+          "pattern": "_untag_scan",
+          "path": "$WORK/runs/e1/arms/S/repo/src",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 44,
+          "attempt": 1,
+          "pattern": "from_object",
+          "path": "$WORK/runs/e1/arms/S/repo/src",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 44,
+          "attempt": 1,
+          "pattern": "isupper",
+          "path": "$WORK/runs/e1/arms/S/repo/src",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 44,
+          "attempt": 1,
+          "pattern": "config_class|self\\.config",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask/app.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 45,
+          "attempt": 1,
+          "pattern": "open_session|save_session|session_interface|process_response|full_dispatch_request|finalize_request|wsgi_app",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask/app.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 45,
+          "attempt": 1,
+          "pattern": "open_session",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 45,
+          "attempt": 1,
+          "pattern": "session_interface",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 45,
+          "attempt": 1,
+          "pattern": "def wsgi_app|def full_dispatch_request|def finalize_request|def process_response|def open_session|def save_session|def handle_exception|def handle_user_exception",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask/app.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 46,
+          "attempt": 1,
+          "pattern": "mypy",
+          "path": "$WORK/runs/e1/arms/S/repo",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": true
+        },
+        {
+          "qid": 47,
+          "attempt": 1,
+          "pattern": "_find_error_handler",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": true
+        },
+        {
+          "qid": 47,
+          "attempt": 1,
+          "pattern": "def _find_error_handler",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask/sansio/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": true
+        },
+        {
+          "qid": 47,
+          "attempt": 1,
+          "pattern": "error_handler_spec",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask/sansio/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": true
+        },
+        {
+          "qid": 47,
+          "attempt": 1,
+          "pattern": "exc_class|handler_map|blueprint|code =|def _find_error_handler|for .* in|lookup|__mro__|get\\(",
+          "path": "$WORK/runs/e1/arms/S/repo/src/flask/sansio/app.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 2,
+          "empty_output": true
+        }
+      ]
+    },
+    "C0": {
+      "grep_calls": 150,
+      "literal_pipe_calls": 59,
+      "pipe_fraction_of_grep": 0.3933333333333333,
+      "pipe_empty_output_calls": 57,
+      "observed_tool_calls": 487,
+      "pipe_fraction_of_all_tools": 0.12114989733059549,
+      "events": [
+        {
+          "qid": 0,
+          "attempt": 1,
+          "pattern": "ascii|ASCII",
+          "path": "$WORK/runs/e1/arms/C0/docs/INDEX.md",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 0,
+          "attempt": 1,
+          "pattern": "json",
+          "path": "$WORK/runs/e1/arms/C0/docs/INDEX.md",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 0,
+          "attempt": 1,
+          "pattern": "ensure_ascii",
+          "path": "$WORK/runs/e1/arms/C0/repo",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 0,
+          "attempt": 1,
+          "pattern": "ensure_ascii|unicode|\\u",
+          "path": "$WORK/runs/e1/arms/C0/repo/tests/test_json.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 1,
+          "attempt": 1,
+          "pattern": "_got_registered_once",
+          "path": "$WORK/runs/e1/arms/C0/repo/src",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 1,
+          "attempt": 1,
+          "pattern": "_check_setup_finished|_got_first_request|setupmethod",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask/app.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 2,
+          "attempt": 1,
+          "pattern": "static_folder|static_url_path|get_send_file_max_age|send_static_file",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask/sansio/blueprints.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 2,
+          "attempt": 1,
+          "pattern": "static_folder|static_url_path|has_static_folder|_static_folder",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask/sansio/scaffold.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 3,
+          "attempt": 1,
+          "pattern": "UnexpectedUnicodeError",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 3,
+          "attempt": 1,
+          "pattern": "UnexpectedUnicodeError|UnicodeError|AssertionError",
+          "path": "$WORK/runs/e1/arms/C0/repo/tests",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 3,
+          "attempt": 1,
+          "pattern": "UnexpectedUnicodeError",
+          "path": "$WORK/runs/e1/arms/C0/docs/nodes",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 3,
+          "attempt": 1,
+          "pattern": "debughelpers|UnicodeError|AssertionError|UnexpectedUnicodeError",
+          "path": "$WORK/runs/e1/arms/C0/docs",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 4,
+          "attempt": 1,
+          "pattern": "subdomain",
+          "path": "$WORK/runs/e1/arms/C0/repo/tests",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 4,
+          "attempt": 1,
+          "pattern": "def test_subdomain_basic_support",
+          "path": "$WORK/runs/e1/arms/C0/repo/tests/test_basic.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 4,
+          "attempt": 1,
+          "pattern": "test_subdomain_basic_support|test_server_name_subdomain|test_subdomain_matching",
+          "path": "$WORK/runs/e1/arms/C0/repo/tests/test_basic.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 4,
+          "attempt": 1,
+          "pattern": "subdomain",
+          "path": "$WORK/runs/e1/arms/C0/docs/INDEX.md",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 4,
+          "attempt": 1,
+          "pattern": "def |subdomain_matching|SERVER_NAME|server_name",
+          "path": "$WORK/runs/e1/arms/C0/repo/tests/test_basic.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 5,
+          "attempt": 1,
+          "pattern": "template_filter|template_global|template_test|context_processor|jinja_env|create_jinja_environment|init_jinja_globals",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 5,
+          "attempt": 1,
+          "pattern": "jinja_env",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 5,
+          "attempt": 1,
+          "pattern": "jinja|template",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask/app.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 5,
+          "attempt": 1,
+          "pattern": "jinja",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 6,
+          "attempt": 1,
+          "pattern": "TestPath",
+          "path": "$WORK/runs/e1/arms/C0/repo/tests",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 7,
+          "attempt": 1,
+          "pattern": "parametrize",
+          "path": "$WORK/runs/e1/arms/C0/repo/tests/test_cli.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 7,
+          "attempt": 1,
+          "pattern": "locate_app|prepare_import|ImportError|ModuleNotFound",
+          "path": "$WORK/runs/e1/arms/C0/repo/tests/test_cli.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 7,
+          "attempt": 1,
+          "pattern": "def locate_app|def prepare_import|def find_best_app|class NoAppException|def _find_app_by_module_name|raise_if_not_found",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask/cli.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 7,
+          "attempt": 1,
+          "pattern": "locate_app",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask/cli.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 8,
+          "attempt": 1,
+          "pattern": "class ScriptInfo|def load_app|def with_appcontext|def get_version|_find_app|def prepare_exec",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask/cli.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 8,
+          "attempt": 1,
+          "pattern": "ScriptInfo",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask/cli.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 8,
+          "attempt": 1,
+          "pattern": "test_cli_runner",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 9,
+          "attempt": 1,
+          "pattern": "def ",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask/json/tag.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 9,
+          "attempt": 1,
+          "pattern": "^",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask/json/tag.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 10,
+          "attempt": 1,
+          "pattern": "class Test",
+          "path": "$WORK/runs/e1/arms/C0/repo/tests",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 12,
+          "attempt": 1,
+          "pattern": "hashlib",
+          "path": "$WORK/runs/e1/arms/C0/repo/src",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 12,
+          "attempt": 1,
+          "pattern": "_lazy_sha1|digest_method",
+          "path": "$WORK/runs/e1/arms/C0/repo/tests",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 12,
+          "attempt": 1,
+          "pattern": "digest_method",
+          "path": "$WORK/runs/e1/arms/C0/repo/tests",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 13,
+          "attempt": 1,
+          "pattern": "copy_current_request_context",
+          "path": "$WORK/runs/e1/arms/C0/repo/src",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 13,
+          "attempt": 1,
+          "pattern": "copy_current_request_context",
+          "path": "$WORK/runs/e1/arms/C0/repo",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 13,
+          "attempt": 1,
+          "pattern": "ensure_sync",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 13,
+          "attempt": 1,
+          "pattern": "def ensure_sync",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 14,
+          "attempt": 1,
+          "pattern": "cert",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask/cli.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 14,
+          "attempt": 1,
+          "pattern": "class CertType|convert|ParamType",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask/cli.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 14,
+          "attempt": 1,
+          "pattern": "class ",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask/cli.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 14,
+          "attempt": 1,
+          "pattern": "CertParamType",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask/cli.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 14,
+          "attempt": 1,
+          "pattern": "name =|def convert|self.name",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask/cli.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 14,
+          "attempt": 2,
+          "pattern": "cert",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 14,
+          "attempt": 2,
+          "pattern": "class Cert",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask/cli.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 14,
+          "attempt": 2,
+          "pattern": "^class |^def |CERT|KEY",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask/cli.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 14,
+          "attempt": 2,
+          "pattern": "class ",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask/cli.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 14,
+          "attempt": 2,
+          "pattern": "CertParamType|name = \"cert\"|def convert|def _validate_key|class SeparatedPathType",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask/cli.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 15,
+          "attempt": 1,
+          "pattern": "def register_blueprint|def create_jinja_environment|jinja_environment|def template_filter|def add_template_filter",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask/app.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 15,
+          "attempt": 1,
+          "pattern": "register_blueprint",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 16,
+          "attempt": 1,
+          "pattern": "TagBytes|b64encode|b64decode",
+          "path": "$WORK/runs/e1/arms/C0/repo",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 16,
+          "attempt": 1,
+          "pattern": "TagBytes",
+          "path": "$WORK/runs/e1/arms/C0/repo/src",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 17,
+          "attempt": 1,
+          "pattern": "handle_exception|propagate_exceptions|PROPAGATE",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask/app.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 17,
+          "attempt": 1,
+          "pattern": "propagate_exceptions",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 17,
+          "attempt": 1,
+          "pattern": "def handle_exception",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 17,
+          "attempt": 2,
+          "pattern": "def handle_exception",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 17,
+          "attempt": 2,
+          "pattern": "handle_exception|propagate|TRAP_HTTP|trap",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask/app.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 17,
+          "attempt": 2,
+          "pattern": "handle_exception",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 17,
+          "attempt": 2,
+          "pattern": "def handle_exception|def full_dispatch_request|def finalize_request|def handle_user_exception|def log_exception|def trap_http_exception|def raise_routing_exception",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask/app.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 17,
+          "attempt": 2,
+          "pattern": "def ",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 17,
+          "attempt": 2,
+          "pattern": "def handle_exception|def wsgi_app|def full_dispatch_request|def handle_user_exception|def handle_http_exception|PROPAGATE|propagate_exceptions|trap_http_exception|TRAP_HTTP_EXCEPTIONS",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask/app.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 18,
+          "attempt": 1,
+          "pattern": "def setupmethod|def add_url_rule|_got_registered_once",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask/sansio/scaffold.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 19,
+          "attempt": 1,
+          "pattern": "save_session|open_session|session_interface",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 19,
+          "attempt": 1,
+          "pattern": "session",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask/sansio",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 19,
+          "attempt": 1,
+          "pattern": "session",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask/ctx.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 19,
+          "attempt": 1,
+          "pattern": "session|save_session|process_response|full_dispatch_request",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask/app.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 20,
+          "attempt": 1,
+          "pattern": "app_ctx_globals_class|app_context|_cv_app",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask/app.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 20,
+          "attempt": 1,
+          "pattern": "app_ctx_globals_class",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 20,
+          "attempt": 1,
+          "pattern": "contextvar|ContextVar|_AppCtxGlobals|thread",
+          "path": "$WORK/runs/e1/arms/C0/docs/INDEX.md",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 21,
+          "attempt": 1,
+          "pattern": "_AppCtxGlobals|app_ctx_globals_class|\\bg\\.pop|g\\.get",
+          "path": "$WORK/runs/e1/arms/C0/repo/tests",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 21,
+          "attempt": 1,
+          "pattern": "appcontext",
+          "path": "$WORK/runs/e1/arms/C0/repo/tests",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 21,
+          "attempt": 1,
+          "pattern": "g\\.|_AppCtxGlobals|AttributeError",
+          "path": "$WORK/runs/e1/arms/C0/repo/tests/test_appctx.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 21,
+          "attempt": 1,
+          "pattern": "def test_(appctx|g_|globals|niceness|unbound)",
+          "path": "$WORK/runs/e1/arms/C0/repo/tests",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 22,
+          "attempt": 1,
+          "pattern": "TypedDict|type-safe|type safe",
+          "path": "$WORK/runs/e1/arms/C0/docs",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 22,
+          "attempt": 1,
+          "pattern": "typing|ResponseReturnValue|dict",
+          "path": "$WORK/runs/e1/arms/C0/docs",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 22,
+          "attempt": 1,
+          "pattern": "dict|Mapping|jsonify|make_response",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask/app.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 23,
+          "attempt": 1,
+          "pattern": "__init_subclass__",
+          "path": "$WORK/runs/e1/arms/C0/docs",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 24,
+          "attempt": 1,
+          "pattern": "TagUUID",
+          "path": "$WORK/runs/e1/arms/C0/docs",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 24,
+          "attempt": 1,
+          "pattern": "TaggedJSONSerializer|serializer|tag",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask/sessions.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 25,
+          "attempt": 1,
+          "pattern": "async",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask/views.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 25,
+          "attempt": 1,
+          "pattern": "MethodView",
+          "path": "$WORK/runs/e1/arms/C0/docs",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 25,
+          "attempt": 1,
+          "pattern": "AsyncMethodView",
+          "path": "$WORK/runs/e1/arms/C0/repo/tests",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 26,
+          "attempt": 1,
+          "pattern": "ScriptInfo",
+          "path": "$WORK/runs/e1/arms/C0/docs",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 26,
+          "attempt": 1,
+          "pattern": "create_app",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask/cli.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 27,
+          "attempt": 1,
+          "pattern": "open_resource",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 27,
+          "attempt": 1,
+          "pattern": "def open_resource",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 27,
+          "attempt": 1,
+          "pattern": "instance folder",
+          "path": "$WORK/runs/e1/arms/C0/docs",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 27,
+          "attempt": 1,
+          "pattern": "open_resource|read-only|reading",
+          "path": "$WORK/runs/e1/arms/C0/docs",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 28,
+          "attempt": 2,
+          "pattern": "_loaded_app|load_app",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask/cli.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 28,
+          "attempt": 2,
+          "pattern": "ScriptInfo|load_app|_loaded_app",
+          "path": "$WORK/runs/e1/arms/C0/docs",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 28,
+          "attempt": 2,
+          "pattern": "ScriptInfo",
+          "path": "$WORK/runs/e1/arms/C0/docs/INDEX.md",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 29,
+          "attempt": 1,
+          "pattern": "accessed",
+          "path": "$WORK/runs/e1/arms/C0/docs",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 29,
+          "attempt": 1,
+          "pattern": "accessed",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 30,
+          "attempt": 1,
+          "pattern": "template_filter",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask/sansio",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 30,
+          "attempt": 1,
+          "pattern": "deferred_functions|add_app_template_filter|record|_from_server",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask/sansio/blueprints.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 31,
+          "attempt": 1,
+          "pattern": "dot",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 31,
+          "attempt": 1,
+          "pattern": "def __init__|name'|dot|name = |self.name",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask/sansio/blueprints.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 2,
+          "empty_output": false
+        },
+        {
+          "qid": 31,
+          "attempt": 1,
+          "pattern": "def __init__|may not contain|self.name|dots",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask/sansio/blueprints.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 31,
+          "attempt": 1,
+          "pattern": "name",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask/sansio/blueprints.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 32,
+          "attempt": 3,
+          "pattern": "get_signing_serializer",
+          "path": "$WORK/runs/e1/arms/C0/docs",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 32,
+          "attempt": 3,
+          "pattern": "URLSafeTimedSerializer|serializer|cache|per-request",
+          "path": "$WORK/runs/e1/arms/C0/docs/nodes/r1-sessions.md",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 33,
+          "attempt": 1,
+          "pattern": "PassDict",
+          "path": "$WORK/runs/e1/arms/C0/docs",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 33,
+          "attempt": 1,
+          "pattern": "TaggedJSONSerializer|session_interface.serializer",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 34,
+          "attempt": 1,
+          "pattern": "create_logger|logger",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask/app.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 34,
+          "attempt": 1,
+          "pattern": "create_logger",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 34,
+          "attempt": 1,
+          "pattern": "create_logger",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 35,
+          "attempt": 1,
+          "pattern": "instance_relative_config",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 35,
+          "attempt": 1,
+          "pattern": "make_config",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask/sansio/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 35,
+          "attempt": 1,
+          "pattern": "def make_config|root_path|instance_relative|config_class",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask/sansio/app.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 35,
+          "attempt": 1,
+          "pattern": "make_config|root_path|instance_relative|config_class",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask/sansio/app.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 35,
+          "attempt": 1,
+          "pattern": "root_path",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask/sansio/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 35,
+          "attempt": 1,
+          "pattern": "root_path|make_config|instance_path",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask/app.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 36,
+          "attempt": 1,
+          "pattern": "def get_command",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 36,
+          "attempt": 1,
+          "pattern": "get_command|load_plugin|_plugin|list_commands|entry_point",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask/cli.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 36,
+          "attempt": 1,
+          "pattern": "get_command",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask/cli.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 37,
+          "attempt": 1,
+          "pattern": "TagMarkup",
+          "path": "$WORK/runs/e1/arms/C0/docs",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 37,
+          "attempt": 1,
+          "pattern": "delegat",
+          "path": "$WORK/runs/e1/arms/C0/docs",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 38,
+          "attempt": 1,
+          "pattern": "tag|dumps|loads",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask/json/provider.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 39,
+          "attempt": 1,
+          "pattern": "OPTIONS",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 39,
+          "attempt": 1,
+          "pattern": "provide_automatic_options",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 39,
+          "attempt": 1,
+          "pattern": "OPTIONS|full_dispatch_request|dispatch_request|raise_routing_exception|RequestRedirect|MethodNotAllowed",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask/app.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 39,
+          "attempt": 1,
+          "pattern": "OPTIONS",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 39,
+          "attempt": 1,
+          "pattern": "def full_dispatch_request|def dispatch_request|def make_default_options_response|def url_map|def try_trigger_before_first",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask/app.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 39,
+          "attempt": 1,
+          "pattern": "dispatch_request|options_response|url_rule|rule",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask/app.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 41,
+          "attempt": 1,
+          "pattern": "anchor",
+          "path": "$WORK/runs/e1/arms/C0/repo/tests",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 41,
+          "attempt": 1,
+          "pattern": "^class ",
+          "path": "$WORK/runs/e1/arms/C0/repo/tests",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 41,
+          "attempt": 1,
+          "pattern": "class TestUrlFor",
+          "path": "$WORK/runs/e1/arms/C0/repo/tests/test_helpers.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 41,
+          "attempt": 1,
+          "pattern": "TestUrlFor|def test_",
+          "path": "$WORK/runs/e1/arms/C0/repo/tests/test_helpers.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 41,
+          "attempt": 1,
+          "pattern": "scheme",
+          "path": "$WORK/runs/e1/arms/C0/repo/tests/test_helpers.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 41,
+          "attempt": 1,
+          "pattern": "method",
+          "path": "$WORK/runs/e1/arms/C0/repo/tests/test_helpers.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 42,
+          "attempt": 1,
+          "pattern": "open_resource",
+          "path": "$WORK/runs/e1/arms/C0/repo/tests",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 42,
+          "attempt": 1,
+          "pattern": "test_open_resource_with_encoding",
+          "path": "$WORK/runs/e1/arms/C0/repo/tests",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 42,
+          "attempt": 1,
+          "pattern": "encoding",
+          "path": "$WORK/runs/e1/arms/C0/repo/tests/test_helpers.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 42,
+          "attempt": 1,
+          "pattern": "open_resource",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 42,
+          "attempt": 1,
+          "pattern": "def open_resource",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 43,
+          "attempt": 1,
+          "pattern": "base64",
+          "path": "$WORK/runs/e1/arms/C0/repo/src",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 43,
+          "attempt": 1,
+          "pattern": "loads|tagged|serializer",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask/sessions.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 43,
+          "attempt": 1,
+          "pattern": "TaggedJSONSerializer|serializer|loads",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask/sessions.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 44,
+          "attempt": 1,
+          "pattern": "from_object",
+          "path": "$WORK/runs/e1/arms/C0/repo/tests",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 44,
+          "attempt": 1,
+          "pattern": "config",
+          "path": "$WORK/runs/e1/arms/C0/docs/INDEX.md",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 44,
+          "attempt": 1,
+          "pattern": "inherit|dir\\(|from_object|upper",
+          "path": "$WORK/runs/e1/arms/C0/docs/nodes/r2-configuration.md",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 2,
+          "empty_output": false
+        },
+        {
+          "qid": 45,
+          "attempt": 1,
+          "pattern": "open_session|save_session",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 45,
+          "attempt": 1,
+          "pattern": "save_session",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask/sessions.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 46,
+          "attempt": 1,
+          "pattern": "def route",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 46,
+          "attempt": 1,
+          "pattern": "route",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 47,
+          "attempt": 1,
+          "pattern": "_find_error_handler",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 47,
+          "attempt": 1,
+          "pattern": "_find_error_handler",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask/sansio/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 47,
+          "attempt": 1,
+          "pattern": "def _find_error_handler",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask/sansio/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 47,
+          "attempt": 1,
+          "pattern": "error_handler_spec",
+          "path": "$WORK/runs/e1/arms/C0/repo/src/flask/sansio/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        }
+      ]
+    },
+    "C": {
+      "grep_calls": 131,
+      "literal_pipe_calls": 53,
+      "pipe_fraction_of_grep": 0.40458015267175573,
+      "pipe_empty_output_calls": 48,
+      "observed_tool_calls": 479,
+      "pipe_fraction_of_all_tools": 0.11064718162839249,
+      "events": [
+        {
+          "qid": 0,
+          "attempt": 1,
+          "pattern": "ensure_ascii",
+          "path": "$WORK/runs/e1/arms/C/repo",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 0,
+          "attempt": 1,
+          "pattern": "ensure_ascii",
+          "path": "$WORK/runs/e1/arms/C/repo/tests",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 0,
+          "attempt": 1,
+          "pattern": "ensure_ascii",
+          "path": "$WORK/runs/e1/arms/C/repo/tests/test_json.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 0,
+          "attempt": 1,
+          "pattern": "test_value",
+          "path": "$WORK/runs/e1/arms/C/repo/tests/test_json.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 1,
+          "attempt": 1,
+          "pattern": "_got_registered_once|_check_setup_finished",
+          "path": "$WORK/runs/e1/arms/C/repo/src",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 1,
+          "attempt": 1,
+          "pattern": "setupmethod",
+          "path": "$WORK/runs/e1/arms/C/repo/src/flask/sansio",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 1,
+          "attempt": 1,
+          "pattern": "_check_setup_finished|setupmethod|AssertionError",
+          "path": "$WORK/runs/e1/arms/C/repo/src/flask/sansio/scaffold.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 2,
+          "attempt": 1,
+          "pattern": "static_folder|send_static_file|get_send_file_max_age",
+          "path": "$WORK/runs/e1/arms/C/repo/src/flask/app.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 2,
+          "attempt": 1,
+          "pattern": "static",
+          "path": "$WORK/runs/e1/arms/C/repo/src/flask/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 2,
+          "attempt": 1,
+          "pattern": "def get_send_file_max_age|def send_static_file|SEND_FILE_MAX_AGE",
+          "path": "$WORK/runs/e1/arms/C/repo/src/flask/app.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 3,
+          "attempt": 1,
+          "pattern": "UnicodeError",
+          "path": "$WORK/runs/e1/arms/C/repo/src/flask",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 3,
+          "attempt": 1,
+          "pattern": "UnexpectedUnicodeError",
+          "path": "$WORK/runs/e1/arms/C/repo/src/flask",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 3,
+          "attempt": 1,
+          "pattern": "UnexpectedUnicode|unexpected unicode|Unicode",
+          "path": "$WORK/runs/e1/arms/C/repo/src/flask",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 3,
+          "attempt": 1,
+          "pattern": "debughelpers",
+          "path": "$WORK/runs/e1/arms/C/repo/src/flask",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 3,
+          "attempt": 1,
+          "pattern": "UnexpectedUnicodeError",
+          "path": "$WORK/runs/e1/arms/C/repo",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 4,
+          "attempt": 1,
+          "pattern": "subdomain",
+          "path": "$WORK/runs/e1/arms/C/repo/tests",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 4,
+          "attempt": 1,
+          "pattern": "subdomain",
+          "path": "$WORK/runs/e1/arms/C/docs/nodes",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 5,
+          "attempt": 1,
+          "pattern": "jinja_env|add_template_global|add_template_filter|add_template_test|template_filter|template_global|template_test",
+          "path": "$WORK/runs/e1/arms/C/repo/src/flask/sansio",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 5,
+          "attempt": 1,
+          "pattern": "template",
+          "path": "$WORK/runs/e1/arms/C/repo/src/flask/sansio/scaffold.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 6,
+          "attempt": 1,
+          "pattern": "__fspath__",
+          "path": "$WORK/runs/e1/arms/C/repo/tests",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 6,
+          "attempt": 1,
+          "pattern": "fspath|class |import",
+          "path": "$WORK/runs/e1/arms/C/repo/tests/test_helpers.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 6,
+          "attempt": 1,
+          "pattern": "class ",
+          "path": "$WORK/runs/e1/arms/C/repo/tests/test_helpers.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 7,
+          "attempt": 1,
+          "pattern": "",
+          "path": ".",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 7,
+          "attempt": 1,
+          "pattern": "",
+          "path": ".",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 9,
+          "attempt": 1,
+          "pattern": "TagTuple|tag\\(|infinite recursion|circular",
+          "path": "$WORK/runs/e1/arms/C/docs",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 2,
+          "empty_output": false
+        },
+        {
+          "qid": 9,
+          "attempt": 1,
+          "pattern": "TagTuple",
+          "path": "$WORK/runs/e1/arms/C/docs",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 10,
+          "attempt": 1,
+          "pattern": "stream",
+          "path": "$WORK/runs/e1/arms/C/docs",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 10,
+          "attempt": 1,
+          "pattern": "class Test|stream_with_context",
+          "path": "$WORK/runs/e1/arms/C/repo/tests",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 10,
+          "attempt": 1,
+          "pattern": "stream_with_context",
+          "path": "$WORK/runs/e1/arms/C/repo/tests",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 10,
+          "attempt": 1,
+          "pattern": "def test_streaming|stream_with_context|class ",
+          "path": "$WORK/runs/e1/arms/C/repo/tests/test_helpers.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 11,
+          "attempt": 1,
+          "pattern": "after_this_request",
+          "path": "$WORK/runs/e1/arms/C/repo/src/flask",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 11,
+          "attempt": 1,
+          "pattern": "_after_request_functions",
+          "path": "$WORK/runs/e1/arms/C/repo/src/flask",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 12,
+          "attempt": 1,
+          "pattern": "hashlib",
+          "path": "$WORK/runs/e1/arms/C/repo/src",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 12,
+          "attempt": 1,
+          "pattern": "lazy_sha1|sha1|FIPS",
+          "path": "$WORK/runs/e1/arms/C/docs",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 12,
+          "attempt": 1,
+          "pattern": "lazy_sha1|digest_method|sha1",
+          "path": "$WORK/runs/e1/arms/C/repo/tests",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 13,
+          "attempt": 1,
+          "pattern": "copy_current_request_context",
+          "path": "$WORK/runs/e1/arms/C/repo/src",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 13,
+          "attempt": 1,
+          "pattern": "copy_current_request_context|copy\\(\\)",
+          "path": "$WORK/runs/e1/arms/C/repo/tests",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 13,
+          "attempt": 1,
+          "pattern": "copy|greenlet|session",
+          "path": "$WORK/runs/e1/arms/C/repo/tests/test_reqctx.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 14,
+          "attempt": 1,
+          "pattern": "cert",
+          "path": "$WORK/runs/e1/arms/C/repo/src/flask/cli.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 14,
+          "attempt": 1,
+          "pattern": "class |def convert",
+          "path": "$WORK/runs/e1/arms/C/repo/src/flask/cli.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 14,
+          "attempt": 1,
+          "pattern": "class",
+          "path": "$WORK/runs/e1/arms/C/repo/src/flask/cli.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 14,
+          "attempt": 1,
+          "pattern": "CertParamType",
+          "path": "$WORK/runs/e1/arms/C/repo/src/flask/cli.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 14,
+          "attempt": 2,
+          "pattern": "cert",
+          "path": "$WORK/runs/e1/arms/C/repo/src/flask/cli.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 14,
+          "attempt": 2,
+          "pattern": "class CertType|ParamType|convert",
+          "path": "$WORK/runs/e1/arms/C/repo/src/flask/cli.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 14,
+          "attempt": 2,
+          "pattern": "CertType",
+          "path": "$WORK/runs/e1/arms/C/repo/src/flask/cli.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 14,
+          "attempt": 2,
+          "pattern": "Click option type|ParamType|class .*Type|_validate_cert",
+          "path": "$WORK/runs/e1/arms/C/repo/src/flask/cli.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 14,
+          "attempt": 2,
+          "pattern": "cert",
+          "path": "$WORK/runs/e1/arms/C/repo/src/flask/cli.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 15,
+          "attempt": 1,
+          "pattern": "add_app_template_test|app_template_test|record_once",
+          "path": "$WORK/runs/e1/arms/C/repo/src/flask/sansio/blueprints.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 15,
+          "attempt": 1,
+          "pattern": "template_filter|add_app_template_filter|deferred",
+          "path": "$WORK/runs/e1/arms/C/docs",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 16,
+          "attempt": 1,
+          "pattern": "TagBytes|b64|base64",
+          "path": "$WORK/runs/e1/arms/C/docs",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 16,
+          "attempt": 1,
+          "pattern": "tag|Tag",
+          "path": "$WORK/runs/e1/arms/C/docs",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 17,
+          "attempt": 1,
+          "pattern": "propagate_exceptions",
+          "path": "$WORK/runs/e1/arms/C/repo/src/flask",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 17,
+          "attempt": 1,
+          "pattern": "handle_exception",
+          "path": "$WORK/runs/e1/arms/C/repo/src/flask",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 17,
+          "attempt": 1,
+          "pattern": "def handle_exception|propagate_exceptions|def full_dispatch_request|def raise_routing_exception",
+          "path": "$WORK/runs/e1/arms/C/repo/src/flask/app.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 17,
+          "attempt": 1,
+          "pattern": "propagate_exceptions",
+          "path": "$WORK/runs/e1/arms/C/repo/src/flask/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 19,
+          "attempt": 1,
+          "pattern": "CallbackDict|SecureCookieSession|modified",
+          "path": "$WORK/runs/e1/arms/C/docs",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 19,
+          "attempt": 1,
+          "pattern": "session",
+          "path": "$WORK/runs/e1/arms/C/docs",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 20,
+          "attempt": 1,
+          "pattern": "app_ctx_globals|_AppCtxGlobals|contextvar|ContextVar",
+          "path": "$WORK/runs/e1/arms/C/docs",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 20,
+          "attempt": 1,
+          "pattern": "g\\b|application context|app context",
+          "path": "$WORK/runs/e1/arms/C/docs",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 21,
+          "attempt": 1,
+          "pattern": "app_ctx_globals|_AppCtxGlobals|g\\.(get|pop|setdefault)",
+          "path": "$WORK/runs/e1/arms/C/repo/tests",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 21,
+          "attempt": 1,
+          "pattern": "app_ctx_globals",
+          "path": "$WORK/runs/e1/arms/C/repo/tests",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 22,
+          "attempt": 1,
+          "pattern": "TypedDict",
+          "path": "$WORK/runs/e1/arms/C/repo/src/flask",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 23,
+          "attempt": 2,
+          "pattern": "__init_subclass__|MethodView",
+          "path": "$WORK/runs/e1/arms/C/docs",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 23,
+          "attempt": 2,
+          "pattern": "MethodView",
+          "path": "$WORK/runs/e1/arms/C/docs/INDEX.md",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 24,
+          "attempt": 1,
+          "pattern": "UUID",
+          "path": "$WORK/runs/e1/arms/C/docs",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 24,
+          "attempt": 1,
+          "pattern": "TaggedJSONSerializer|tag\\(",
+          "path": "$WORK/runs/e1/arms/C/repo/src/flask/sessions.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 2,
+          "empty_output": false
+        },
+        {
+          "qid": 25,
+          "attempt": 1,
+          "pattern": "Async.*View|class .*MethodView",
+          "path": "$WORK/runs/e1/arms/C/repo/src",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 25,
+          "attempt": 1,
+          "pattern": "AsyncMethodView|async.*MethodView|MethodView.*async",
+          "path": "$WORK/runs/e1/arms/C/docs",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 26,
+          "attempt": 1,
+          "pattern": "class ScriptInfo",
+          "path": "$WORK/runs/e1/arms/C/repo/src/flask/cli.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 26,
+          "attempt": 1,
+          "pattern": "def __init__|def load_app|def prepare_import_path|def locate_app|create_app|import_name",
+          "path": "$WORK/runs/e1/arms/C/repo/src/flask/cli.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 26,
+          "attempt": 1,
+          "pattern": "def __init__",
+          "path": "$WORK/runs/e1/arms/C/repo/src/flask/cli.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 26,
+          "attempt": 1,
+          "pattern": "create_app|ScriptInfo\\(",
+          "path": "$WORK/runs/e1/arms/C/repo/src/flask/cli.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 2,
+          "empty_output": false
+        },
+        {
+          "qid": 26,
+          "attempt": 1,
+          "pattern": "ScriptInfo",
+          "path": "$WORK/runs/e1/arms/C/repo/src/flask/cli.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 27,
+          "attempt": 1,
+          "pattern": "open_resource",
+          "path": "$WORK/runs/e1/arms/C/repo/src/flask",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 27,
+          "attempt": 1,
+          "pattern": "def open_resource",
+          "path": "$WORK/runs/e1/arms/C/repo/src/flask/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 27,
+          "attempt": 1,
+          "pattern": "def open_resource|def open_instance_resource",
+          "path": "$WORK/runs/e1/arms/C/repo/src/flask/app.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 27,
+          "attempt": 1,
+          "pattern": "open_resource",
+          "path": "$WORK/runs/e1/arms/C/repo/src/flask/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 28,
+          "attempt": 1,
+          "pattern": "load_app|_loaded_app|ScriptInfo",
+          "path": "$WORK/runs/e1/arms/C/repo/src/flask",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 28,
+          "attempt": 1,
+          "pattern": "load_app",
+          "path": "$WORK/runs/e1/arms/C/repo/src/flask",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 29,
+          "attempt": 1,
+          "pattern": "access tracking|accessed|SESSION_ACCESS",
+          "path": "$WORK/runs/e1/arms/C/docs",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 30,
+          "attempt": 1,
+          "pattern": "add_app_template_filter|app_template_filter",
+          "path": "$WORK/runs/e1/arms/C/repo/src/flask",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 30,
+          "attempt": 1,
+          "pattern": "template_filter",
+          "path": "$WORK/runs/e1/arms/C/repo/src/flask",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 30,
+          "attempt": 1,
+          "pattern": "template_filter|jinja_env|create_jinja_environment|update_template_context",
+          "path": "$WORK/runs/e1/arms/C/repo/src/flask/app.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 30,
+          "attempt": 1,
+          "pattern": "jinja_env",
+          "path": "$WORK/runs/e1/arms/C/repo/src/flask/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 30,
+          "attempt": 1,
+          "pattern": "create_jinja_environment",
+          "path": "$WORK/runs/e1/arms/C/repo/src/flask/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 31,
+          "attempt": 1,
+          "pattern": "dot",
+          "path": "$WORK/runs/e1/arms/C/repo/src/flask/blueprints.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 31,
+          "attempt": 1,
+          "pattern": "dot",
+          "path": "$WORK/runs/e1/arms/C/repo/tests/test_blueprints.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 31,
+          "attempt": 1,
+          "pattern": "test_dotted_name_not_allowed",
+          "path": "$WORK/runs/e1/arms/C/repo/tests/test_blueprints.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 31,
+          "attempt": 1,
+          "pattern": "split|\\.\"|'\\.'",
+          "path": "$WORK/runs/e1/arms/C/repo/src/flask/app.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 31,
+          "attempt": 1,
+          "pattern": "rsplit\\(\"\\.\"|split\\(\"\\.\"|\"\\.\" in|'\\.' in",
+          "path": "$WORK/runs/e1/arms/C/repo/src/flask",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 2,
+          "empty_output": false
+        },
+        {
+          "qid": 31,
+          "attempt": 1,
+          "pattern": "rsplit",
+          "path": "$WORK/runs/e1/arms/C/repo/src/flask",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 33,
+          "attempt": 1,
+          "pattern": "PassDict|tag\\(",
+          "path": "$WORK/runs/e1/arms/C/repo/tests",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 2,
+          "empty_output": false
+        },
+        {
+          "qid": 34,
+          "attempt": 1,
+          "pattern": "create_logger|logging",
+          "path": "$WORK/runs/e1/arms/C/repo/src/flask/app.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 34,
+          "attempt": 1,
+          "pattern": "logger",
+          "path": "$WORK/runs/e1/arms/C/repo/src/flask/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 34,
+          "attempt": 1,
+          "pattern": "create_logger",
+          "path": "$WORK/runs/e1/arms/C/repo/src/flask",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 35,
+          "attempt": 1,
+          "pattern": "instance_relative",
+          "path": "$WORK/runs/e1/arms/C/repo/src/flask/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 35,
+          "attempt": 1,
+          "pattern": "def __init__|get_root_path|auto_find_instance_path|instance_path|self.config",
+          "path": "$WORK/runs/e1/arms/C/repo/src/flask/app.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 35,
+          "attempt": 1,
+          "pattern": "get_root_path",
+          "path": "$WORK/runs/e1/arms/C/repo/src/flask/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 35,
+          "attempt": 1,
+          "pattern": "get_root_path",
+          "path": "$WORK/runs/e1/arms/C/repo/src/flask/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 35,
+          "attempt": 1,
+          "pattern": "instance_relative_config",
+          "path": "$WORK/runs/e1/arms/C/repo/src/flask/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 35,
+          "attempt": 1,
+          "pattern": "def __init__",
+          "path": "$WORK/runs/e1/arms/C/repo/src/flask/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 36,
+          "attempt": 1,
+          "pattern": "get_command|AppGroup|FlaskGroup",
+          "path": "$WORK/runs/e1/arms/C/repo/src/flask/cli.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 36,
+          "attempt": 1,
+          "pattern": "get_command",
+          "path": "$WORK/runs/e1/arms/C/repo/src/flask/cli.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 36,
+          "attempt": 1,
+          "pattern": "def list_commands|def get_command|def _load_plugin_commands|class FlaskGroup|_loaded_plugin_commands",
+          "path": "$WORK/runs/e1/arms/C/repo/src/flask/cli.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 36,
+          "attempt": 1,
+          "pattern": "list_commands",
+          "path": "$WORK/runs/e1/arms/C/repo/src/flask/cli.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 37,
+          "attempt": 1,
+          "pattern": "TagMarkup|Markup",
+          "path": "$WORK/runs/e1/arms/C/docs",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 37,
+          "attempt": 1,
+          "pattern": "tag",
+          "path": "$WORK/runs/e1/arms/C/docs",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 38,
+          "attempt": 1,
+          "pattern": "class PassList|def to_json|def tag|serializer.tag|def check",
+          "path": "$WORK/runs/e1/arms/C/repo/src/flask/json/tag.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 39,
+          "attempt": 1,
+          "pattern": "automatic_options",
+          "path": "$WORK/runs/e1/arms/C/repo/src/flask",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 39,
+          "attempt": 1,
+          "pattern": "OPTIONS",
+          "path": "$WORK/runs/e1/arms/C/repo/src/flask/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 39,
+          "attempt": 1,
+          "pattern": "provide_automatic_options|OPTIONS|raise_routing_exception|methods",
+          "path": "$WORK/runs/e1/arms/C/repo/src/flask/app.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 39,
+          "attempt": 1,
+          "pattern": "OPTIONS",
+          "path": "$WORK/runs/e1/arms/C/repo/src/flask/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 40,
+          "attempt": 1,
+          "pattern": "_find_error_handler",
+          "path": "$WORK/runs/e1/arms/C/repo/src/flask",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 40,
+          "attempt": 1,
+          "pattern": "_find_error_handler",
+          "path": "$WORK/runs/e1/arms/C/repo/src/flask/sansio/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 40,
+          "attempt": 1,
+          "pattern": "def _find_error_handler|def handle_user_exception|def handle_http_exception|def finalize_request",
+          "path": "$WORK/runs/e1/arms/C/repo/src/flask/sansio/app.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 40,
+          "attempt": 1,
+          "pattern": "def ",
+          "path": "$WORK/runs/e1/arms/C/repo/src/flask/sansio/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 41,
+          "attempt": 1,
+          "pattern": "anchor",
+          "path": "$WORK/runs/e1/arms/C/repo/tests",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 41,
+          "attempt": 1,
+          "pattern": "class Test.*Url|class Test.*URL|url_for|_scheme|_method",
+          "path": "$WORK/runs/e1/arms/C/repo/tests",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 41,
+          "attempt": 1,
+          "pattern": "class ",
+          "path": "$WORK/runs/e1/arms/C/repo/tests/test_basic.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 42,
+          "attempt": 1,
+          "pattern": "encoding",
+          "path": "$WORK/runs/e1/arms/C/repo/tests",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 42,
+          "attempt": 1,
+          "pattern": "open_resource",
+          "path": "$WORK/runs/e1/arms/C/repo/src/flask",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 42,
+          "attempt": 1,
+          "pattern": "def open_resource",
+          "path": "$WORK/runs/e1/arms/C/repo/src/flask/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 42,
+          "attempt": 1,
+          "pattern": "open_resource|root_path",
+          "path": "$WORK/runs/e1/arms/C/repo/src/flask/app.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 43,
+          "attempt": 1,
+          "pattern": "untag|_untag_scan|b64decode",
+          "path": "$WORK/runs/e1/arms/C/repo/src",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 43,
+          "attempt": 1,
+          "pattern": "loads",
+          "path": "$WORK/runs/e1/arms/C/repo/src/flask/sessions.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 44,
+          "attempt": 1,
+          "pattern": "from_object",
+          "path": "$WORK/runs/e1/arms/C/docs",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 44,
+          "attempt": 1,
+          "pattern": "dir\\(obj\\)|getattr\\(obj, key\\)|from_object",
+          "path": "$WORK/runs/e1/arms/C/repo/src/flask",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 45,
+          "attempt": 1,
+          "pattern": "open_session|save_session",
+          "path": "$WORK/runs/e1/arms/C/repo/src/flask",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 45,
+          "attempt": 1,
+          "pattern": "session_interface",
+          "path": "$WORK/runs/e1/arms/C/repo/src/flask",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 47,
+          "attempt": 1,
+          "pattern": "_find_error_handler",
+          "path": "$WORK/runs/e1/arms/C/repo/src",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 47,
+          "attempt": 1,
+          "pattern": "def _find_error_handler",
+          "path": "$WORK/runs/e1/arms/C/repo/src/flask/sansio/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        }
+      ]
+    },
+    "W": {
+      "grep_calls": 152,
+      "literal_pipe_calls": 62,
+      "pipe_fraction_of_grep": 0.40789473684210525,
+      "pipe_empty_output_calls": 59,
+      "observed_tool_calls": 482,
+      "pipe_fraction_of_all_tools": 0.12863070539419086,
+      "events": [
+        {
+          "qid": 0,
+          "attempt": 1,
+          "pattern": "ensure_ascii",
+          "path": "$WORK/runs/e1/arms/W/repo",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 0,
+          "attempt": 1,
+          "pattern": "ensure_ascii",
+          "path": "$WORK/runs/e1/arms/W/repo/tests",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 0,
+          "attempt": 1,
+          "pattern": "ensure_ascii",
+          "path": "$WORK/runs/e1/arms/W/repo/tests/test_json.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 1,
+          "attempt": 2,
+          "pattern": "setupmethod|_check_setup_finished",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask/sansio/scaffold.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 1,
+          "attempt": 2,
+          "pattern": "_check_setup_finished",
+          "path": "$WORK/runs/e1/arms/W/repo",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 1,
+          "attempt": 2,
+          "pattern": "setupmethod",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask/sansio/scaffold.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 2,
+          "attempt": 1,
+          "pattern": "send_static_file|get_send_file_max_age|SEND_FILE_MAX_AGE_DEFAULT",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask/app.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 2,
+          "attempt": 1,
+          "pattern": "static",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 2,
+          "attempt": 1,
+          "pattern": "def get_send_file_max_age|def send_static_file|def open_resource|SEND_FILE_MAX_AGE",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask/app.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 2,
+          "attempt": 1,
+          "pattern": "max_age",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 3,
+          "attempt": 1,
+          "pattern": "UnexpectedUnicodeError",
+          "path": "$WORK/runs/e1/arms/W/repo",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 3,
+          "attempt": 1,
+          "pattern": "UnicodeError|AssertionError",
+          "path": "$WORK/runs/e1/arms/W/repo",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 3,
+          "attempt": 1,
+          "pattern": "UnexpectedUnicode",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 3,
+          "attempt": 1,
+          "pattern": "UnexpectedUnicodeError",
+          "path": "$WORK/runs/e1/arms/W/docs",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 4,
+          "attempt": 3,
+          "pattern": "subdomain_matching|def create_url_adapter|def request_context|def test_request_context",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 5,
+          "attempt": 1,
+          "pattern": "template_filter|add_template_filter|add_template_global|add_template_test|template_test|template_global|context_processor|jinja_env|create_global_jinja_loader|update_template_context|jinja_options",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 5,
+          "attempt": 1,
+          "pattern": "add_template_filter",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 6,
+          "attempt": 1,
+          "pattern": "fspath|__fspath__|pathlib",
+          "path": "$WORK/runs/e1/arms/W/repo/tests",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 6,
+          "attempt": 1,
+          "pattern": "fspath|pathlib",
+          "path": "$WORK/runs/e1/arms/W/repo/src",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 6,
+          "attempt": 1,
+          "pattern": "Path",
+          "path": "$WORK/runs/e1/arms/W/repo/tests",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 7,
+          "attempt": 1,
+          "pattern": "parametrize",
+          "path": "$WORK/runs/e1/arms/W/repo/tests",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 7,
+          "attempt": 1,
+          "pattern": "raises|parametrize|import|app_name",
+          "path": "$WORK/runs/e1/arms/W/repo/tests/test_cli.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 7,
+          "attempt": 1,
+          "pattern": "parametrize",
+          "path": "$WORK/runs/e1/arms/W/repo/tests/test_cli.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 7,
+          "attempt": 1,
+          "pattern": "def locate_app|def prepare_import|def find_best_app|NoAppException|raise_if_not_found|ImportError",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask/cli.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 8,
+          "attempt": 1,
+          "pattern": "def load_app|class ScriptInfo|class FlaskGroup",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 8,
+          "attempt": 1,
+          "pattern": "def load_app|class ScriptInfo|class FlaskGroup",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask/cli.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 8,
+          "attempt": 1,
+          "pattern": "load_app",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask/cli.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 8,
+          "attempt": 1,
+          "pattern": "^class |^def |^    def ",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask/cli.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 8,
+          "attempt": 1,
+          "pattern": "class ScriptInfo",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask/cli.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 9,
+          "attempt": 1,
+          "pattern": "TaggedJSONSerializer|session_interface|serializer",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 9,
+          "attempt": 1,
+          "pattern": "TaggedJSONSerializer",
+          "path": "$WORK/runs/e1/arms/W/repo/src",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 10,
+          "attempt": 1,
+          "pattern": "^class Test",
+          "path": "$WORK/runs/e1/arms/W/repo/tests",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 10,
+          "attempt": 1,
+          "pattern": "stream",
+          "path": "$WORK/runs/e1/arms/W/repo/tests",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 10,
+          "attempt": 1,
+          "pattern": "stream_with_context",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 11,
+          "attempt": 1,
+          "pattern": "def .*\\(f\\)|\\.decorator|_decorator",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 11,
+          "attempt": 1,
+          "pattern": "decorator",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 11,
+          "attempt": 1,
+          "pattern": "nested|conditional",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 11,
+          "attempt": 1,
+          "pattern": "nested",
+          "path": "$WORK/runs/e1/arms/W/docs",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 12,
+          "attempt": 1,
+          "pattern": "hash",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 12,
+          "attempt": 1,
+          "pattern": "lazy_sha1|FIPS|sha1|digest_method",
+          "path": "$WORK/runs/e1/arms/W/docs",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 12,
+          "attempt": 1,
+          "pattern": "digest_method|_lazy_sha1",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 12,
+          "attempt": 1,
+          "pattern": "lazy_sha1|digest_method|signing_serializer|get_signing_serializer",
+          "path": "$WORK/runs/e1/arms/W/repo/tests",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 13,
+          "attempt": 1,
+          "pattern": "copy_current_request_context",
+          "path": "$WORK/runs/e1/arms/W/repo/src",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 14,
+          "attempt": 1,
+          "pattern": "cert",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask/cli.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 14,
+          "attempt": 1,
+          "pattern": "class Cert|PARAM_TYPES|convert|ParamType|name = ",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask/cli.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 14,
+          "attempt": 1,
+          "pattern": "Click option type",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask/cli.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 14,
+          "attempt": 1,
+          "pattern": "^class |^def |^    def ",
+          "path": "$HOME/placeholder",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 2,
+          "empty_output": false
+        },
+        {
+          "qid": 15,
+          "attempt": 1,
+          "pattern": "def register_blueprint|def jinja_env|def create_jinja_environment|def template_filter|def add_template_filter|def _setup_url_rules",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 15,
+          "attempt": 1,
+          "pattern": "register_blueprint",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 15,
+          "attempt": 1,
+          "pattern": "register_blueprint",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 17,
+          "attempt": 1,
+          "pattern": "def handle_exception",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 17,
+          "attempt": 1,
+          "pattern": "def handle_exception",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 17,
+          "attempt": 1,
+          "pattern": "handle_exception|PROPAGATE_EXCEPTIONS|propagate_exceptions|trap_http_exceptions|trap_exceptions",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask/app.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 17,
+          "attempt": 1,
+          "pattern": "propagate_exceptions",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 17,
+          "attempt": 1,
+          "pattern": "exception",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 18,
+          "attempt": 1,
+          "pattern": "def setupmethod|def record|deferred_functions",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask/sansio/scaffold.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 18,
+          "attempt": 1,
+          "pattern": "setupmethod",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask/sansio/scaffold.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 19,
+          "attempt": 1,
+          "pattern": "session",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 19,
+          "attempt": 1,
+          "pattern": "def wsgi_app|def process_response|save_session|open_session",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask/app.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 20,
+          "attempt": 1,
+          "pattern": "app_ctx_globals_class",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 20,
+          "attempt": 1,
+          "pattern": "app_ctx_globals_class|AppCtxGlobals",
+          "path": "$WORK/runs/e1/arms/W/repo/src",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 20,
+          "attempt": 1,
+          "pattern": "app_ctx_globals_class",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 21,
+          "attempt": 1,
+          "pattern": "_AppCtxGlobals|pop|setdefault",
+          "path": "$WORK/runs/e1/arms/W/docs/contexts_app_context.md",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 22,
+          "attempt": 1,
+          "pattern": "TypedDict|ResponseReturnValue|type-safe|Mapping",
+          "path": "$WORK/runs/e1/arms/W/docs",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 22,
+          "attempt": 1,
+          "pattern": "TypedDict",
+          "path": "$WORK/runs/e1/arms/W/repo/src",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 22,
+          "attempt": 1,
+          "pattern": "make_response|jsonify|ResponseReturnValue",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask/app.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 22,
+          "attempt": 1,
+          "pattern": "make_response",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 23,
+          "attempt": 1,
+          "pattern": "MethodView",
+          "path": "$WORK/runs/e1/arms/W/docs",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 23,
+          "attempt": 1,
+          "pattern": "inherit",
+          "path": "$WORK/runs/e1/arms/W/docs/application-core.md",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 23,
+          "attempt": 1,
+          "pattern": "__init_subclass__|MethodView|methods",
+          "path": "$WORK/runs/e1/arms/W/repo/tests/test_views.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 24,
+          "attempt": 1,
+          "pattern": "session_json_serializer|TaggedJSONSerializer",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 25,
+          "attempt": 1,
+          "pattern": "AsyncMethodView|async def (get|post|put|delete|patch|dispatch)",
+          "path": "$WORK/runs/e1/arms/W/repo/src",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 25,
+          "attempt": 1,
+          "pattern": "MethodView",
+          "path": "$WORK/runs/e1/arms/W/repo/tests",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 25,
+          "attempt": 1,
+          "pattern": "ensure_sync|async_to_sync",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 26,
+          "attempt": 1,
+          "pattern": "create_app|ScriptInfo\\(",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask/cli.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 2,
+          "empty_output": false
+        },
+        {
+          "qid": 26,
+          "attempt": 1,
+          "pattern": "create_app|ScriptInfo",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask/cli.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 26,
+          "attempt": 1,
+          "pattern": "create_app",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask/cli.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 26,
+          "attempt": 1,
+          "pattern": "_make_script_info",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask/cli.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 27,
+          "attempt": 1,
+          "pattern": "open_resource",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 27,
+          "attempt": 1,
+          "pattern": "def open_resource",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 27,
+          "attempt": 1,
+          "pattern": "open_resource",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 28,
+          "attempt": 1,
+          "pattern": "load_app|_loaded_app",
+          "path": "$WORK/runs/e1/arms/W/repo",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 28,
+          "attempt": 1,
+          "pattern": "load_app",
+          "path": "$WORK/runs/e1/arms/W/repo",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 28,
+          "attempt": 1,
+          "pattern": "NoAppException|def make_context|def parse_args|def get_command|def list_commands|def _load_plugin|current_app",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask/cli.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 29,
+          "attempt": 1,
+          "pattern": "accessed",
+          "path": "$WORK/runs/e1/arms/W/docs",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 29,
+          "attempt": 1,
+          "pattern": "accessed",
+          "path": "$WORK/runs/e1/arms/W/repo/src",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 29,
+          "attempt": 1,
+          "pattern": "accessed|Vary|performance",
+          "path": "$WORK/runs/e1/arms/W/repo/tests",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 30,
+          "attempt": 1,
+          "pattern": "template_filter",
+          "path": "$WORK/runs/e1/arms/W/repo/tests",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 30,
+          "attempt": 1,
+          "pattern": "template_filter|template_global|template_test|jinja_env|_got_first_request|update_template_context",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask/app.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 30,
+          "attempt": 1,
+          "pattern": "template_filter",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 31,
+          "attempt": 1,
+          "pattern": "dot",
+          "path": "$WORK/runs/e1/arms/W/docs/tests/flask",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 2,
+          "empty_output": false
+        },
+        {
+          "qid": 31,
+          "attempt": 1,
+          "pattern": "dots",
+          "path": "$WORK/runs/e1/arms/W/docs/tests",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 2,
+          "empty_output": false
+        },
+        {
+          "qid": 31,
+          "attempt": 1,
+          "pattern": "dots",
+          "path": "$WORK/runs/e1/arms/W/repo/tests",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 31,
+          "attempt": 1,
+          "pattern": "dots",
+          "path": "$WORK/runs/e1/arms/W/repo/tests/test_blueprints.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 32,
+          "attempt": 1,
+          "pattern": "open_session|save_session|get_signing_serializer|session_interface",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 32,
+          "attempt": 1,
+          "pattern": "get_signing_serializer",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 32,
+          "attempt": 1,
+          "pattern": "open_session",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 32,
+          "attempt": 1,
+          "pattern": "save_session",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 33,
+          "attempt": 2,
+          "pattern": "PassDict",
+          "path": "$WORK/runs/e1/arms/W/docs",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 33,
+          "attempt": 2,
+          "pattern": "keys|key",
+          "path": "$WORK/runs/e1/arms/W/docs/json-serialization_tag.md",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 34,
+          "attempt": 1,
+          "pattern": "create_logger|has_level_handler",
+          "path": "$WORK/runs/e1/arms/W/repo/src",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 34,
+          "attempt": 1,
+          "pattern": "logging",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 34,
+          "attempt": 1,
+          "pattern": "logger",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask/sansio/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 35,
+          "attempt": 1,
+          "pattern": "instance_relative_config",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 35,
+          "attempt": 1,
+          "pattern": "make_config|root_path|instance_path|open_instance_resource",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask/sansio/app.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 35,
+          "attempt": 1,
+          "pattern": "def make_config|def auto_find_instance_path|def open_instance_resource",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask/sansio/app.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 35,
+          "attempt": 1,
+          "pattern": "def make_config",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 36,
+          "attempt": 1,
+          "pattern": "def get_command",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 36,
+          "attempt": 1,
+          "pattern": "class |def get_command|def list_commands|def _load_plugin|entry_point|load_app",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask/cli.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 36,
+          "attempt": 1,
+          "pattern": "class ",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask/cli.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 36,
+          "attempt": 1,
+          "pattern": "class FlaskGroup",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask/cli.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 36,
+          "attempt": 1,
+          "pattern": "def |class ",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask/cli.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 36,
+          "attempt": 1,
+          "pattern": "def ",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask/cli.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 36,
+          "attempt": 2,
+          "pattern": "def get_command",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 36,
+          "attempt": 2,
+          "pattern": "class FlaskGroup",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask/cli.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 36,
+          "attempt": 2,
+          "pattern": "get_command|list_commands|load_plugin|entry_point|self\\.commands",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask/cli.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 36,
+          "attempt": 2,
+          "pattern": "def |class ",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask/cli.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 38,
+          "attempt": 1,
+          "pattern": "TaggedJSONSerializer|serializer.tag|self.tag",
+          "path": "$WORK/runs/e1/arms/W/repo/src",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 39,
+          "attempt": 2,
+          "pattern": "automatic_options",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 39,
+          "attempt": 2,
+          "pattern": "OPTIONS",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 39,
+          "attempt": 2,
+          "pattern": "provide_automatic_options|OPTIONS|automatic",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask/app.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 39,
+          "attempt": 2,
+          "pattern": "OPTIONS",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 39,
+          "attempt": 2,
+          "pattern": "def dispatch_request|def full_dispatch_request|def process_response|def make_default_options_response|def raise_routing_exception|def handle_url_build_error|def create_url_adapter",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask/app.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 39,
+          "attempt": 2,
+          "pattern": "def ",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 40,
+          "attempt": 1,
+          "pattern": "_find_error_handler|def finalize_request|def handle_user_exception|blueprint",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask/app.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 40,
+          "attempt": 1,
+          "pattern": "find_error_handler",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 40,
+          "attempt": 1,
+          "pattern": "def _find_error_handler",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 40,
+          "attempt": 1,
+          "pattern": "def _find_error_handler",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 40,
+          "attempt": 1,
+          "pattern": "_find_error_handler",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask/sansio/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 41,
+          "attempt": 1,
+          "pattern": "anchor",
+          "path": "$WORK/runs/e1/arms/W/repo/tests/test_basic.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 41,
+          "attempt": 1,
+          "pattern": "^class ",
+          "path": "$WORK/runs/e1/arms/W/repo/tests/test_basic.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 41,
+          "attempt": 1,
+          "pattern": "test_urls",
+          "path": "$WORK/runs/e1/arms/W/repo/tests",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 41,
+          "attempt": 1,
+          "pattern": "_scheme",
+          "path": "$WORK/runs/e1/arms/W/repo/tests",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 42,
+          "attempt": 1,
+          "pattern": "open_resource",
+          "path": "$WORK/runs/e1/arms/W/repo/tests",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 42,
+          "attempt": 1,
+          "pattern": "def open_resource",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 42,
+          "attempt": 1,
+          "pattern": "test_open_resource_with_encoding",
+          "path": "$WORK/runs/e1/arms/W/repo/tests/test_helpers.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 42,
+          "attempt": 1,
+          "pattern": "encoding|test_open_resource|@pytest.mark.parametrize",
+          "path": "$WORK/runs/e1/arms/W/repo/tests/test_helpers.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 42,
+          "attempt": 1,
+          "pattern": "encoding",
+          "path": "$WORK/runs/e1/arms/W/repo/tests/test_helpers.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 42,
+          "attempt": 1,
+          "pattern": "class Test|def test_",
+          "path": "$WORK/runs/e1/arms/W/repo/tests/test_helpers.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 43,
+          "attempt": 1,
+          "pattern": "TaggedJSONSerializer|serializer",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask/sessions.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 43,
+          "attempt": 1,
+          "pattern": "untag|TaggedJSONSerializer",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 44,
+          "attempt": 2,
+          "pattern": "from_object",
+          "path": "$WORK/runs/e1/arms/W/repo/tests",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 44,
+          "attempt": 2,
+          "pattern": "inherit|Base|dir\\(",
+          "path": "$WORK/runs/e1/arms/W/docs",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 2,
+          "empty_output": false
+        },
+        {
+          "qid": 44,
+          "attempt": 2,
+          "pattern": "inherit",
+          "path": "$WORK/runs/e1/arms/W/docs",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 45,
+          "attempt": 1,
+          "pattern": "open_session|save_session",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 45,
+          "attempt": 1,
+          "pattern": "open_session|save_session|session_interface",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask/ctx.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 45,
+          "attempt": 1,
+          "pattern": "save_session|process_response|wsgi_app|full_dispatch_request",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask/app.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 46,
+          "attempt": 1,
+          "pattern": "def route",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask/app.py",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 47,
+          "attempt": 1,
+          "pattern": "_find_error_handler",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        },
+        {
+          "qid": 47,
+          "attempt": 1,
+          "pattern": "_find_error_handler|def |error_handler_spec|lookup",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask/sansio/app.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 47,
+          "attempt": 1,
+          "pattern": "_find_error_handler|error_handler_spec|handle_user_exception|handle_http_exception|finalize_request",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask/sansio/app.py",
+          "unescaped_pipe": true,
+          "executed": true,
+          "returncode": 1,
+          "empty_output": true
+        },
+        {
+          "qid": 47,
+          "attempt": 1,
+          "pattern": "def _find_error_handler",
+          "path": "$WORK/runs/e1/arms/W/repo/src/flask",
+          "unescaped_pipe": false,
+          "executed": true,
+          "returncode": 0,
+          "empty_output": false
+        }
+      ]
+    }
+  }
+}

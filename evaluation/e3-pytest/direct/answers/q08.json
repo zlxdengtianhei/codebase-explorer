@@ -1,0 +1,31 @@
+{
+  "qid": 8,
+  "question": "What external dependencies and context must be available for TestEvaluation test methods to correctly evaluate skipif conditions that reference module attributes like os.sep?",
+  "arm": "direct",
+  "answer": "The string condition is evaluated by `MarkEvaluator.istrue()` via `cached_eval(config, expr, self._getglobals())`, where the eval environment is the collected test module's namespace (the item function's `__globals__`). Therefore the TestEvaluation tests require:\n\n1. An item created through `testdir.getitem()` so a real parent `Module` and a `Config` exist (Config is needed for the `_evalcache` used by `cached_eval`).\n2. The module source passed to `getitem` must import the names the condition references \u2014 i.e. `import os` must be present in the module for `os.sep` to resolve, and `import pytest` to attach `@pytest.mark.skipif`/`pytestmark`. Otherwise evaluation raises a NameError and the skipif is reported as an error.\n3. The standard `os` module must be available, with `os.sep` resolving per platform ('/' on POSIX, '\\\\' on Windows), which determines whether the condition evaluates true or false.",
+  "valid": true,
+  "wall_seconds": 146.509619959048,
+  "attempts": [
+    {
+      "answer": "The string condition is evaluated by `MarkEvaluator.istrue()` via `cached_eval(config, expr, self._getglobals())`, where the eval environment is the collected test module's namespace (the item function's `__globals__`). Therefore the TestEvaluation tests require:\n\n1. An item created through `testdir.getitem()` so a real parent `Module` and a `Config` exist (Config is needed for the `_evalcache` used by `cached_eval`).\n2. The module source passed to `getitem` must import the names the condition references \u2014 i.e. `import os` must be present in the module for `os.sep` to resolve, and `import pytest` to attach `@pytest.mark.skipif`/`pytestmark`. Otherwise evaluation raises a NameError and the skipif is reported as an error.\n3. The standard `os` module must be available, with `os.sep` resolving per platform ('/' on POSIX, '\\\\' on Windows), which determines whether the condition evaluates true or false.",
+      "valid": true,
+      "usage": {
+        "completion_tokens": 9299,
+        "prompt_tokens": 106,
+        "total_tokens": 9405,
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": null,
+          "audio_tokens": null,
+          "reasoning_tokens": 9087,
+          "rejected_prediction_tokens": null
+        },
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 64
+        }
+      },
+      "response_model": "glm-5.3-flash"
+    }
+  ]
+}

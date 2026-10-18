@@ -1,0 +1,31 @@
+{
+  "qid": 46,
+  "question": "Where is the subprocess execution mechanism that `pytester.runpytest_subprocess` delegates to, and how does it handle system exception propagation during test collection?",
+  "arm": "direct",
+  "answer": "`pytester.runpytest_subprocess` delegates to `Pytester.run()` (in `_pytest/pytester.py`), which spawns a fresh interpreter via `subprocess.Popen` in `Pytester._run()`, invoking `sys.executable -m pytest` (from `_getpytestargs`) in the test's tmp directory and capturing stdout/return code into a `RunResult`.\n\nSystem exception propagation during collection is handled in the child process by `wrap_session` in `_pytest/main.py`: collection runs inside the session wrapper, which catches `KeyboardInterrupt` (and `SystemExit`/`Exit`) rather than letting them traceback, converting them into an exit status (e.g., `ExitCode.INTERRUPTED`). That status is returned as the subprocess's exit code, which `Pytester.run` reports as `RunResult.ret` back to the caller.",
+  "valid": true,
+  "wall_seconds": 29.78139616700355,
+  "attempts": [
+    {
+      "answer": "`pytester.runpytest_subprocess` delegates to `Pytester.run()` (in `_pytest/pytester.py`), which spawns a fresh interpreter via `subprocess.Popen` in `Pytester._run()`, invoking `sys.executable -m pytest` (from `_getpytestargs`) in the test's tmp directory and capturing stdout/return code into a `RunResult`.\n\nSystem exception propagation during collection is handled in the child process by `wrap_session` in `_pytest/main.py`: collection runs inside the session wrapper, which catches `KeyboardInterrupt` (and `SystemExit`/`Exit`) rather than letting them traceback, converting them into an exit status (e.g., `ExitCode.INTERRUPTED`). That status is returned as the subprocess's exit code, which `Pytester.run` reports as `RunResult.ret` back to the caller.",
+      "valid": true,
+      "usage": {
+        "completion_tokens": 1530,
+        "prompt_tokens": 109,
+        "total_tokens": 1639,
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": null,
+          "audio_tokens": null,
+          "reasoning_tokens": 1353,
+          "rejected_prediction_tokens": null
+        },
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 64
+        }
+      },
+      "response_model": "glm-5.3-flash"
+    }
+  ]
+}

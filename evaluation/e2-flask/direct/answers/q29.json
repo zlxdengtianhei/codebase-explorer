@@ -1,0 +1,31 @@
+{
+  "qid": 29,
+  "question": "Why does unconditionally setting the session access tracking attribute in dictionary access methods impact signed cookie string conversion performance during frequent read operations?",
+  "arm": "direct",
+  "answer": "Because every read (e.g., `session[\"key\"]`, `session.get()`) sets `accessed = True`, Flask treats the session as \"touched,\" and with the default `SESSION_REFRESH_EACH_REQUEST=True`, `save_session` then runs `serializer.dumps(dict(session))` \u2014 the expensive dict\u2192JSON\u2192compress\u2192base64\u2192HMAC signed-cookie-string conversion \u2014 on every response, even though no data actually changed. So pure read operations repeatedly pay the full serialization/signing cost instead of skipping it when the session is unmodified.",
+  "valid": true,
+  "wall_seconds": 105.31585266703041,
+  "attempts": [
+    {
+      "answer": "Because every read (e.g., `session[\"key\"]`, `session.get()`) sets `accessed = True`, Flask treats the session as \"touched,\" and with the default `SESSION_REFRESH_EACH_REQUEST=True`, `save_session` then runs `serializer.dumps(dict(session))` \u2014 the expensive dict\u2192JSON\u2192compress\u2192base64\u2192HMAC signed-cookie-string conversion \u2014 on every response, even though no data actually changed. So pure read operations repeatedly pay the full serialization/signing cost instead of skipping it when the session is unmodified.",
+      "valid": true,
+      "usage": {
+        "completion_tokens": 5206,
+        "prompt_tokens": 104,
+        "total_tokens": 5310,
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": null,
+          "audio_tokens": null,
+          "reasoning_tokens": 5092,
+          "rejected_prediction_tokens": null
+        },
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 64
+        }
+      },
+      "response_model": "glm-5.3-flash"
+    }
+  ]
+}

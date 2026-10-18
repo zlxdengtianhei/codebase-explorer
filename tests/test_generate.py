@@ -5,9 +5,11 @@ from __future__ import annotations
 import csv
 import importlib
 import json
+import os
 
 import pytest
 
+from cbe import batching, checks, docs, usage
 from cbe.headless_completion import Completion, _events
 
 
@@ -40,8 +42,9 @@ def _semantic_answer(prompt: str) -> dict:
         return {"nodes": [{"id": "root", "parent": None, "title": "Root",
                            "capability": "All units of the repository under one semantic root.",
                            "summary": "Start here.", "unit_ids": ids}], "depends_on": []}
+    from test_host_run import _system_answer
     return {"overview": "A small work reservation package.",
-            "maintenance_navigation": "Open the root node."}
+            "maintenance_navigation": "Open the root node.", **_system_answer(prompt)}
 
 
 def test_completion_events_keep_reasoning_and_reject_tools() -> None:
@@ -100,46 +103,33 @@ def test_generate_renders_and_accounts_for_each_physical_call(tmp_path, monkeypa
                      for path in (run_dir / "docs" / "nodes").glob("*.md"))
     assert "src/pkg/jobs.py" in pages
     assert str(tmp_path) not in index
-    matches = generator.find(run_dir, "reserve_run")
-    assert matches and generator.query(run_dir, matches[0]["id"])["file"] == "src/pkg/jobs.py"
+    matches = docs.find(run_dir, "reserve_run")
+    assert matches and docs.query(run_dir, matches[0]["id"])["file"] == "src/pkg/jobs.py"
     with (run_dir / "calls.csv").open(newline="", encoding="utf-8") as stream:
         assert len(list(csv.DictReader(stream))) == 6
 
 
-def test_large_test_module_keeps_valid_coverage_in_text_or_json_shape() -> None:
-    source = generator.SourceFile("tests/test_work.py", "", 24_000, "unused", [])
-    module = generator.Module(0, [source], "tests")
-    base = {"summary": "Tests work.", "flow": "Exercises behavior.",
-            "key_behaviors": [], "uncertainties": []}
-    long_coverage = "verified behavior; " * 380
-    text_result = {**base, "test_coverage": long_coverage}
-    generator._check_module(text_result, module)
-    assert text_result["test_coverage"] == long_coverage
-    structured_result = {**base, "test_coverage": ["success path", "failure path"]}
-    generator._check_module(structured_result, module)
-    assert "failure path" in structured_result["test_coverage"]
-    medium = generator.Module(2, [generator.SourceFile("tests/medium.py", "", 4_000, "unused", [])], "tests")
-    generator._check_module({**base, "test_coverage": "x" * 1_800}, medium)
-    small = generator.Module(1, [generator.SourceFile("tests/small.py", "", 100, "unused", [])], "tests")
-    with pytest.raises(ValueError, match="module-sized limit"):
-        generator._check_module({**base, "test_coverage": "x" * 1501}, small)
-
-
-def test_late_conditional_status_is_in_published_guard_rows(tmp_path) -> None:
+def test_crlf_source_is_embedded_verbatim_and_the_run_completes(tmp_path, monkeypatch) -> None:
     repo = tmp_path / "repo"
-    repo.mkdir()
-    checks = "".join(f"    if value == {index}:\n        raise ValueError({index})\n"
-                     for index in range(9))
-    (repo / "work.py").write_text(
-        "def apply(value, active, pending):\n" + checks
-        + "    if not active:\n"
-        + "        return {'status': 'needs_revision' if pending else 'applied'}\n"
-        + "    return {'status': 'partial' if pending else 'applied'}\n",
-        encoding="utf-8",
-    )
-    rows = generator._guard_rows(repo, generator.scan(repo))["work.py"]
-    assert any(row["symbol"] == "apply" and "not active" in row["guards"]
-               and "needs_revision" in row["syntax"] for row in rows)
+    (repo / "pkg").mkdir(parents=True)
+    (repo / "pkg" / "jobs.py").write_bytes(
+        b"def reserve_run(value):\r\n    if value < 0:\r\n        raise ValueError('negative')\r\n"
+        b"    return value\r\n")
+    (repo / "pkg" / "schema.sql").write_bytes(b"create table jobs (id integer);\r\n")
+    run_dir = tmp_path / "run"
+    prompts: list[str] = []
+
+    def fake_invoke(**kwargs):
+        prompts.append(kwargs["prompt"])
+        value = _semantic_answer(kwargs["prompt"])
+        return Completion(value, None, json.dumps(value), {"input": 200, "output": 2, "cache": 1}, 0.01)
+
+    monkeypatch.setattr(generator, "invoke", fake_invoke)
+    result = generator.generate(repo, run_dir, model="example/model", jobs=1)
+    assert result["status"] == "complete"
+    for name in ("jobs.py", "schema.sql"):
+        raw = (repo / "pkg" / name).read_bytes().decode("utf-8")
+        assert any(raw in prompt for prompt in prompts), name
 
 
 def test_missing_devin_cache_keeps_observed_input_and_output(tmp_path) -> None:
@@ -149,7 +139,7 @@ def test_missing_devin_cache_keeps_observed_input_and_output(tmp_path) -> None:
         "module_2,1,80,15,,ok,2\n",
         encoding="utf-8",
     )
-    result = generator._cost(tmp_path, host="devin")
+    result = usage.script_cost(tmp_path, host="devin")
     assert result["input_tokens"] == 180
     assert result["output_tokens"] == 35
     assert result["cache_tokens"] is None
@@ -160,7 +150,7 @@ def test_missing_devin_cache_keeps_observed_input_and_output(tmp_path) -> None:
 
 def test_directory_plan_keeps_subsystems_and_their_tests_apart() -> None:
     def source(path, tokens, imports=()):
-        return generator.SourceFile(path, "", tokens, "unused", [], set(imports))
+        return batching.SourceFile(path, "", tokens, "unused", [], set(imports))
 
     files = [
         source("pkg/app/base.py", 13_000),
@@ -173,9 +163,9 @@ def test_directory_plan_keeps_subsystems_and_their_tests_apart() -> None:
         source("t/unit/backends/test_redis.py", 5_000),
         source("t/unit/worker/test_pool.py", 5_000),
     ]
-    modules = generator.plan(files)
+    modules = batching.plan(files)
     assert {item.path for module in modules for item in module.files} == {item.path for item in files}
-    assert all(module.tokens <= generator.MAX_TOKENS for module in modules)
+    assert all(module.tokens <= batching.MAX_TOKENS for module in modules)
     assert all(module.is_test == all(item.is_test for item in module.files) for module in modules)
     assert {module.bucket for module in modules if module.is_test} == {"app", "backends", "worker"}
     assert all(len({item.path.split("/")[1] for item in module.files}) == 1
@@ -183,74 +173,49 @@ def test_directory_plan_keeps_subsystems_and_their_tests_apart() -> None:
 
 
 def test_plan_preserves_whole_large_file_and_rejects_oversized_one() -> None:
-    large = generator.SourceFile("pkg/huge.py", "", 31_000, "unused", [])
-    assert generator.plan([large])[0].files == [large]
-    too_large = generator.SourceFile("pkg/impossible.py", "", 60_001, "unused", [])
-    with pytest.raises(generator.GenerateError, match="one whole source file"):
-        generator.plan([too_large])
+    large = batching.SourceFile("pkg/huge.py", "", 31_000, "unused", [])
+    assert batching.plan([large])[0].files == [large]
+    too_large = batching.SourceFile("pkg/impossible.py", "", 60_001, "unused", [])
+    with pytest.raises(batching.BatchingError, match="one whole source file"):
+        batching.plan([too_large])
 
 
 def test_naming_trims_long_but_complete_titles() -> None:
-    modules = [generator.Module(0, [generator.SourceFile("pkg/a.py", "", 1, "unused", [])], "pkg")]
+    modules = [batching.Module(0, [batching.SourceFile("pkg/a.py", "", 1, "unused", [])], "pkg")]
     value = {"names": [{"module": 0, "title": "A descriptive module title " * 5}]}
-    generator._check_naming(value, modules)
+    checks.check_naming(value, modules)
     assert len(value["names"][0]["title"]) <= 80
 
 
-def test_module_allows_source_grounded_flow_under_two_thousand_chars() -> None:
-    module = generator.Module(0, [generator.SourceFile("pkg/a.py", "", 100, "unused", [])], "pkg")
-    value = {"summary": "Brief summary", "flow": "step, " * 300,
-             "test_coverage": "", "key_behaviors": [], "uncertainties": []}
-    generator._check_module(value, module)
-    assert len(value["flow"]) > 1500
-
-
 def test_primary_directory_share_uses_direct_parent_not_a_common_ancestor() -> None:
-    module = generator.Module(0, [
-        generator.SourceFile("pkg/a/x.py", "", 1, "unused", []),
-        generator.SourceFile("pkg/a/y.py", "", 1, "unused", []),
-        generator.SourceFile("pkg/b/z.py", "", 1, "unused", []),
+    module = batching.Module(0, [
+        batching.SourceFile("pkg/a/x.py", "", 1, "unused", []),
+        batching.SourceFile("pkg/a/y.py", "", 1, "unused", []),
+        batching.SourceFile("pkg/b/z.py", "", 1, "unused", []),
     ], "pkg")
-    assert generator._primary_directory(module) == ("pkg/a", 2 / 3)
+    assert batching.primary_directory(module) == ("pkg/a", 2 / 3)
 
 
 def test_test_name_prefers_root_implementation_over_same_named_cli_adapter() -> None:
     files = [
-        generator.SourceFile("pkg/result.py", "", 3_000, "unused", []),
-        generator.SourceFile("pkg/bin/result.py", "", 3_000, "unused", []),
-        generator.SourceFile("t/unit/tasks/test_result.py", "", 2_000, "unused", []),
+        batching.SourceFile("pkg/result.py", "", 3_000, "unused", []),
+        batching.SourceFile("pkg/bin/result.py", "", 3_000, "unused", []),
+        batching.SourceFile("t/unit/tasks/test_result.py", "", 2_000, "unused", []),
     ]
-    modules = generator.plan(files)
+    modules = batching.plan(files)
     test_module = next(module for module in modules if module.is_test)
     assert test_module.bucket == "core"
 
 
 def test_exact_test_directory_beats_singularized_neighbor() -> None:
     files = [
-        generator.SourceFile("pkg/app/base.py", "", 100, "unused", []),
-        generator.SourceFile("pkg/apps/beat.py", "", 100, "unused", []),
-        generator.SourceFile("t/unit/apps/test_beat.py", "", 100, "unused", []),
+        batching.SourceFile("pkg/app/base.py", "", 100, "unused", []),
+        batching.SourceFile("pkg/apps/beat.py", "", 100, "unused", []),
+        batching.SourceFile("t/unit/apps/test_beat.py", "", 100, "unused", []),
     ]
-    modules = generator.plan(files)
+    modules = batching.plan(files)
     test_module = next(module for module in modules if module.is_test)
     assert test_module.bucket == "apps"
-
-
-def test_ambiguous_behavior_alias_is_not_published() -> None:
-    module = generator.Module(0, [
-        generator.SourceFile("examples/one/myapp.py", "", 100, "unused", ["add"]),
-        generator.SourceFile("examples/two/myapp.py", "", 100, "unused", ["add"]),
-    ], "examples")
-    detail = {"behavior": "Adds a value", "conditions": "", "failures": ""}
-    value = {"summary": "Examples", "flow": "Run an example", "test_coverage": "",
-             "key_behaviors": [{"symbol": "myapp.add", **detail},
-                               {"symbol": "examples/one/myapp.py::add", **detail}],
-             "uncertainties": []}
-    generator._check_module(value, module)
-    assert [item["symbol"] for item in value["key_behaviors"]] == ["examples/one/myapp.py::add"]
-    prompt = generator._module_prompt(module, [module])
-    available = json.loads(prompt.split("Available symbols: ", 1)[1].split("\n", 1)[0])
-    assert available == ["examples/one/myapp.py::add", "examples/two/myapp.py::add"]
 
 
 def test_generate_renders_partial_run_and_resume_finishes_pending_parts(tmp_path, monkeypatch, capsys) -> None:
@@ -263,7 +228,7 @@ def test_generate_renders_partial_run_and_resume_finishes_pending_parts(tmp_path
     (repo / "src" / "pkg" / "jobs.py").write_text("def reserve_run(value):\n    return value\n", encoding="utf-8")
     (repo / "tests" / "test_jobs.py").write_text("def test_reserve():\n    assert True\n", encoding="utf-8")
     run_dir = tmp_path / "run"
-    broken = {"module_2": 2}
+    broken = {"module_2": 3}
     seen: list[str] = []
 
     def fake_invoke(**kwargs):
@@ -405,7 +370,9 @@ def test_preflight_refuses_a_source_changed_since_the_plan(tmp_path, monkeypatch
     (repo / "tests" / "test_jobs.py").write_text("def test_reserve():\n    assert True\n", encoding="utf-8")
     with pytest.raises(generator.SourceNotEmbedded, match="test_jobs.py"):
         generator.generate(repo, run_dir, model="example/model", jobs=2, resume=True)
-    assert not _module_calls(called)
+    # Parallel details can finish before the later drifted batch is reached;
+    # the changed source itself must never reach a model call.
+    assert all("tests/test_jobs.py" not in called[task] for task in _module_calls(called))
     state = json.loads((run_dir / "host" / "state.json").read_text(encoding="utf-8"))
     assert state["partial_reason"] == "source_not_embedded"
 
@@ -483,3 +450,42 @@ def test_generate_resume_rejects_a_different_graph(tmp_path) -> None:
     gb.write_text(json.dumps({**graph_a, "backend": {"name": "test", "version": "2"}}), encoding="utf-8")
     with pytest.raises(host_run.HostRunError, match="differs from the frozen graph"):
         generator.generate(repo, run_dir, model="example/model", resume=True, graph_path=gb)
+
+
+def test_system_limit_grows_with_the_module_count() -> None:
+    # A recorded GLM overview of 3147 characters once voided a whole 13-module run.
+    system = {"overview": "Overview.", "maintenance_navigation": "n" * 3147,
+              "dependency_descriptions": [], "key_flows": []}
+    checks.check_system(system, checks.system_limit(13))
+    with pytest.raises(ValueError, match="at most 2000"):
+        checks.check_system({"overview": "x", "maintenance_navigation": "n" * 3147})
+
+
+def test_scan_keeps_own_source_in_build_dist_vendor_hidden_and_minified(tmp_path) -> None:
+    repo = tmp_path / "repo"
+    for directory in ("src", "build", "dist", "vendor", ".hidden", ".git/hooks", ".venv/lib",
+                      "node_modules/pkg"):
+        (repo / directory).mkdir(parents=True)
+    own = {"src/ok.py": "def ok():\n    return 1\n", "build/gen.py": "def gen():\n    return 1\n",
+           "dist/shipped.py": "def shipped():\n    return 1\n",
+           "vendor/mine.js": "export function mine() { return 1; }\n",
+           ".hidden/tool.py": "def tool():\n    return 1\n", "native.c": "int main(void) { return 0; }\n",
+           "broken.py": "def oops(\n", "owned.min.js": "export function m(v) { return v + 1; }\n"}
+    cached = {".git/hooks/secret.py": "def secret():\n    return 0\n",
+              ".venv/lib/cached.py": "def cached():\n    return 0\n",
+              "node_modules/pkg/index.js": "export function dep() { return 0; }\n"}
+    for path, text in {**own, **cached}.items():
+        (repo / path).write_text(text, encoding="utf-8")
+    (repo / "notes.md").write_text("# not source\n", encoding="utf-8")
+    assert {item.path for item in batching.scan(repo)} == set(own)
+
+
+def test_scan_skips_symlinked_sources(tmp_path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "real.py").write_text("def real():\n    return 1\n", encoding="utf-8")
+    outside = tmp_path / "outside.py"
+    outside.write_text("def secret():\n    return 0\n", encoding="utf-8")
+    os.symlink(outside, repo / "external.py")
+    os.symlink(repo / "real.py", repo / "internal_link.py")
+    assert [item.path for item in batching.scan(repo)] == ["real.py"]

@@ -1,0 +1,31 @@
+{
+  "qid": 21,
+  "question": "How does the error handling strategy in the application context globals namespace class's attribute access, deletion, and removal methods balance between raising AttributeError for missing attributes and providing default values?",
+  "arm": "direct",
+  "answer": "In `_AppCtxGlobals` (the class behind `flask.g`), the balance is achieved by delegating to `self.__dict__` and letting callers choose:\n\n- **Direct attribute access (`g.name`) and deletion (`del g.name`)** rely on Python's default semantics \u2014 missing attributes raise `AttributeError` (no `__getattr__` override exists to mask errors).\n- **`get(name, default=None)`** never raises; it returns `self.__dict__.get(name, default)`, so missing attributes yield a default value instead of an error.\n- **`pop(name, default=_sentinel)`** uses a `_sentinel` marker to distinguish whether a default was supplied: with no default, `self.__dict__.pop(name)` raises `KeyError` for a missing name (fail-fast); with a default, it returns that default instead of raising.\n- **`setdefault(name, default=None)`** also avoids raising, returning the existing value or inserting/returning the default.\n\nThus the class keeps strict, error-raising behavior for normal attribute syntax, while its dict-like convenience methods (`get`, `pop`, `setdefault`) offer optional default values for missing attributes, with the sentinel pattern making an explicit no-default raising path possible in `pop`.",
+  "valid": true,
+  "wall_seconds": 31.836287583981175,
+  "attempts": [
+    {
+      "answer": "In `_AppCtxGlobals` (the class behind `flask.g`), the balance is achieved by delegating to `self.__dict__` and letting callers choose:\n\n- **Direct attribute access (`g.name`) and deletion (`del g.name`)** rely on Python's default semantics \u2014 missing attributes raise `AttributeError` (no `__getattr__` override exists to mask errors).\n- **`get(name, default=None)`** never raises; it returns `self.__dict__.get(name, default)`, so missing attributes yield a default value instead of an error.\n- **`pop(name, default=_sentinel)`** uses a `_sentinel` marker to distinguish whether a default was supplied: with no default, `self.__dict__.pop(name)` raises `KeyError` for a missing name (fail-fast); with a default, it returns that default instead of raising.\n- **`setdefault(name, default=None)`** also avoids raising, returning the existing value or inserting/returning the default.\n\nThus the class keeps strict, error-raising behavior for normal attribute syntax, while its dict-like convenience methods (`get`, `pop`, `setdefault`) offer optional default values for missing attributes, with the sentinel pattern making an explicit no-default raising path possible in `pop`.",
+      "valid": true,
+      "usage": {
+        "completion_tokens": 1583,
+        "prompt_tokens": 113,
+        "total_tokens": 1696,
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": null,
+          "audio_tokens": null,
+          "reasoning_tokens": 1318,
+          "rejected_prediction_tokens": null
+        },
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 64
+        }
+      },
+      "response_model": "glm-5.3-flash"
+    }
+  ]
+}

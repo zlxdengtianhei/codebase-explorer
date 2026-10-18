@@ -1,0 +1,31 @@
+{
+  "qid": 14,
+  "question": "How does the certificate parameter conversion method for the CLI certificate option implement a fallback chain to handle file paths, adhoc certificate strings, and SSLContext object imports?",
+  "arm": "direct",
+  "answer": "In `flask/cli.py`, the `--cert` option uses a custom click type, `CertParamType`, whose `convert()` method implements the fallback chain as a series of sequential attempts, each guarded so failure falls through to the next attempt:\n\n1. **SSL instance check first:** if the value is already an `ssl.SSLContext` object, it is returned as-is (no string processing needed).\n2. **File path attempt:** the value is treated as a path to a certificate file (a `cert:key` string is split on `:` into cert/key files); an `ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)` is created and `load_cert_chain()` is called on the file(s). If this raises an SSL/OSError (i.e., it's not a valid cert file), the method falls through.\n3. **Adhoc attempt:** the value is compared to the literal string `\"adhoc\"`; if it matches, the `cryptography` library is imported and an ad-hoc (self-signed, temporary) SSL context is returned. If `cryptography` isn't installed, `click.BadParameter` is raised.\n4. **Import path attempt:** the value is treated as a dotted Python import path; the module/object is imported, and if the resulting object is an `ssl.SSLContext`, it is returned.\n5. If every interpretation fails, `convert()` raises `click.BadParameter` reporting that the value could not be converted and describing the accepted formats.\n\nThis try/except \"ladder\" lets `flask run --cert` accept PEM file paths, `adhoc`, or an import path to an `SSLContext` from a single CLI string.",
+  "valid": true,
+  "wall_seconds": 197.52116008399753,
+  "attempts": [
+    {
+      "answer": "In `flask/cli.py`, the `--cert` option uses a custom click type, `CertParamType`, whose `convert()` method implements the fallback chain as a series of sequential attempts, each guarded so failure falls through to the next attempt:\n\n1. **SSL instance check first:** if the value is already an `ssl.SSLContext` object, it is returned as-is (no string processing needed).\n2. **File path attempt:** the value is treated as a path to a certificate file (a `cert:key` string is split on `:` into cert/key files); an `ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)` is created and `load_cert_chain()` is called on the file(s). If this raises an SSL/OSError (i.e., it's not a valid cert file), the method falls through.\n3. **Adhoc attempt:** the value is compared to the literal string `\"adhoc\"`; if it matches, the `cryptography` library is imported and an ad-hoc (self-signed, temporary) SSL context is returned. If `cryptography` isn't installed, `click.BadParameter` is raised.\n4. **Import path attempt:** the value is treated as a dotted Python import path; the module/object is imported, and if the resulting object is an `ssl.SSLContext`, it is returned.\n5. If every interpretation fails, `convert()` raises `click.BadParameter` reporting that the value could not be converted and describing the accepted formats.\n\nThis try/except \"ladder\" lets `flask run --cert` accept PEM file paths, `adhoc`, or an import path to an `SSLContext` from a single CLI string.",
+      "valid": true,
+      "usage": {
+        "completion_tokens": 11195,
+        "prompt_tokens": 111,
+        "total_tokens": 11306,
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": null,
+          "audio_tokens": null,
+          "reasoning_tokens": 10845,
+          "rejected_prediction_tokens": null
+        },
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 64
+        }
+      },
+      "response_model": "glm-5.3-flash"
+    }
+  ]
+}

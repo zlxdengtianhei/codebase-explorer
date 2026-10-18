@@ -1,0 +1,31 @@
+{
+  "qid": 18,
+  "question": "How does the import_path API framework resolve module identity and ensure module caching consistency when the same file path is imported multiple times through different sys.path configurations?",
+  "arm": "direct",
+  "answer": "pytest's `import_path` (in `_pytest/pathlib.py`) resolves module identity by first deriving a canonical, fully-qualified dotted module name from the file's location relative to its package root \u2014 it walks up the directory tree through directories containing `__init__.py` (via `resolve_pkg_root_and_module_name` / `module_name_from_path`), rather than trusting whichever `sys.path` entry happens to match. Caching consistency is then guaranteed by consulting `sys.modules` under that resolved name before importing: if a module already exists there and its `__file__` points to the same file (verified via robust same-file/path comparison), the existing module object is returned instead of re-importing, so the same file always yields a single module object regardless of how many times or through which `sys.path` configurations it is imported. If no cached entry exists, it imports the module \u2014 in `prepend`/`append` modes by inserting the package root into `sys.path[0]` (or appending) and using the normal import machinery, which itself returns the `sys.modules` cache hit; in `importlib` mode by creating a spec with `importlib.util.spec_from_file_location` under the derived name \u2014 and registers the result in `sys.modules`. `insert_missing_modules` similarly reuses/validates existing `sys.modules` entries for parent packages instead of overwriting them. If the resolved name collides with a module from a *different* file, pytest raises an error (the classic \"import file mismatch\") rather than creating a duplicate module, preserving consistent identity, `isinstance` behavior, and shared module-level state across test collection.",
+  "valid": true,
+  "wall_seconds": 57.62460104096681,
+  "attempts": [
+    {
+      "answer": "pytest's `import_path` (in `_pytest/pathlib.py`) resolves module identity by first deriving a canonical, fully-qualified dotted module name from the file's location relative to its package root \u2014 it walks up the directory tree through directories containing `__init__.py` (via `resolve_pkg_root_and_module_name` / `module_name_from_path`), rather than trusting whichever `sys.path` entry happens to match. Caching consistency is then guaranteed by consulting `sys.modules` under that resolved name before importing: if a module already exists there and its `__file__` points to the same file (verified via robust same-file/path comparison), the existing module object is returned instead of re-importing, so the same file always yields a single module object regardless of how many times or through which `sys.path` configurations it is imported. If no cached entry exists, it imports the module \u2014 in `prepend`/`append` modes by inserting the package root into `sys.path[0]` (or appending) and using the normal import machinery, which itself returns the `sys.modules` cache hit; in `importlib` mode by creating a spec with `importlib.util.spec_from_file_location` under the derived name \u2014 and registers the result in `sys.modules`. `insert_missing_modules` similarly reuses/validates existing `sys.modules` entries for parent packages instead of overwriting them. If the resolved name collides with a module from a *different* file, pytest raises an error (the classic \"import file mismatch\") rather than creating a duplicate module, preserving consistent identity, `isinstance` behavior, and shared module-level state across test collection.",
+      "valid": true,
+      "usage": {
+        "completion_tokens": 3027,
+        "prompt_tokens": 109,
+        "total_tokens": 3136,
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": null,
+          "audio_tokens": null,
+          "reasoning_tokens": 2685,
+          "rejected_prediction_tokens": null
+        },
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 64
+        }
+      },
+      "response_model": "glm-5.3-flash"
+    }
+  ]
+}

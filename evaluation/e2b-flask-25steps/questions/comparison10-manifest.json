@@ -1,0 +1,1346 @@
+[
+  {
+    "kind": "answers",
+    "arm": "S",
+    "qid": 1,
+    "source": "$WORK/runs/e2/answers/S-10-r0/q01.json",
+    "sha256": "3305b71998eb8221db8721a2b9410206275a30ee65499d25bcfc95975d839e7e"
+  },
+  {
+    "kind": "answers",
+    "arm": "S",
+    "qid": 3,
+    "source": "$WORK/runs/e2/answers/S-10-r0/q03.json",
+    "sha256": "6bd25af68cb8b402a24d72fd07bc0486c8b0740f39a7622bf4ae407fdeaf2ede"
+  },
+  {
+    "kind": "answers",
+    "arm": "S",
+    "qid": 4,
+    "source": "$WORK/runs/e2/answers/S-10-r0/q04.json",
+    "sha256": "505c46e5fe6b6c2f22c9a29cb7e102aa99472725fd264a2ac3419bf0d512106b"
+  },
+  {
+    "kind": "answers",
+    "arm": "S",
+    "qid": 5,
+    "source": "$WORK/runs/e2/answers/S-10-r0/q05.json",
+    "sha256": "c470cdeeb78ac8b8097cd24e3c2a412f87b1637c8a9c3929d9e21c5862f68c6e"
+  },
+  {
+    "kind": "answers",
+    "arm": "S",
+    "qid": 6,
+    "source": "$WORK/runs/e2/answers/S-10-r0/q06.json",
+    "sha256": "b05d06c35614fea2335ea335f72c2ed07e61c3cde718af04490879aceb16b162"
+  },
+  {
+    "kind": "answers",
+    "arm": "S",
+    "qid": 11,
+    "source": "$WORK/runs/e2/answers/S-10-r0/q11.json",
+    "sha256": "a6beffeece077695a1d23691d5657331659335cd2eaa0d75cc1cfae3fb791f2e"
+  },
+  {
+    "kind": "answers",
+    "arm": "S",
+    "qid": 12,
+    "source": "$WORK/runs/e2/answers/S-10-r0/q12.json",
+    "sha256": "938166224df2e3e188c6b59cc2d1ca187305d7ef7a8d8bdb530357ad946a9e20"
+  },
+  {
+    "kind": "answers",
+    "arm": "S",
+    "qid": 14,
+    "source": "$WORK/runs/e2/answers/S-10-r0/q14.json",
+    "sha256": "e60d5822572c7e4baf3c034f4f7b1697ef5ce7194620846104db9b4c1ae9a96c"
+  },
+  {
+    "kind": "answers",
+    "arm": "S",
+    "qid": 17,
+    "source": "$WORK/runs/e2/answers/S-10-r0/q17.json",
+    "sha256": "d9bedc64071a5cbf38136435e93ec6937e725f1408d1068e8db24d3dea53b34e"
+  },
+  {
+    "kind": "answers",
+    "arm": "S",
+    "qid": 18,
+    "source": "$WORK/runs/e2/answers/S-10-r0/q18.json",
+    "sha256": "deb20b93054b0d88da1b73f6fe35635e7af6dc06881100946cd4df44a70d759d"
+  },
+  {
+    "kind": "answers",
+    "arm": "S",
+    "qid": 19,
+    "source": "$WORK/runs/e2/answers/S-10-r0/q19.json",
+    "sha256": "3acd17e1334063c6e7df6e949b4f840ce58de04f51b4f398fc71c61a985b8c58"
+  },
+  {
+    "kind": "answers",
+    "arm": "S",
+    "qid": 20,
+    "source": "$WORK/runs/e2/answers/S-10-r0/q20.json",
+    "sha256": "3f713d87835e783f004951808f9f52b24f9a0f6dd65b280613eca579744b1e0c"
+  },
+  {
+    "kind": "answers",
+    "arm": "S",
+    "qid": 28,
+    "source": "$WORK/runs/e2/answers/S-10-r0/q28.json",
+    "sha256": "fe0bdaeaeeeba312362d10f03aebe50b841c1a1f31a14fbacf496cba09d9dd7c"
+  },
+  {
+    "kind": "answers",
+    "arm": "S",
+    "qid": 29,
+    "source": "$WORK/runs/e2/answers/S-10-r0/q29.json",
+    "sha256": "37e81a0353035555d2c09f281c7b74b589a49ce7c0118b571345903e2d0071a6"
+  },
+  {
+    "kind": "answers",
+    "arm": "S",
+    "qid": 32,
+    "source": "$WORK/runs/e2/answers/S-10-r0/q32.json",
+    "sha256": "2e89a48de90a4507a44cd42360c3b3bdb8b8e507ca7f66702dcc576dad02c963"
+  },
+  {
+    "kind": "answers",
+    "arm": "S",
+    "qid": 33,
+    "source": "$WORK/runs/e2/answers/S-10-r0/q33.json",
+    "sha256": "94eeb6665b549b39fd4cec79adae4986c5a2df22c56fddfca743a62e20fcbf5a"
+  },
+  {
+    "kind": "answers",
+    "arm": "S",
+    "qid": 34,
+    "source": "$WORK/runs/e2/answers/S-10-r0/q34.json",
+    "sha256": "62d83c055ee6f47e53dff15810d871cf56cc8cb1a5e6091689a7e0477f56850b"
+  },
+  {
+    "kind": "answers",
+    "arm": "S",
+    "qid": 38,
+    "source": "$WORK/runs/e2/answers/S-10-r0/q38.json",
+    "sha256": "50d4de8a66e09470205e87afbf20aca333e0afff607b6eb4ede2baf8df5c2ef6"
+  },
+  {
+    "kind": "answers",
+    "arm": "S",
+    "qid": 40,
+    "source": "$WORK/runs/e2/answers/S-10-r0/q40.json",
+    "sha256": "18a358312bbfc3586c812de5175ab1a5acea476ac1a16065768ec6236849477e"
+  },
+  {
+    "kind": "answers",
+    "arm": "S",
+    "qid": 41,
+    "source": "$WORK/runs/e2/answers/S-10-r0/q41.json",
+    "sha256": "1d58e23828c49765d4a8998ba4e732b2eaba2c00dd032d1f50aa6094ee9c1958"
+  },
+  {
+    "kind": "answers",
+    "arm": "S",
+    "qid": 42,
+    "source": "$WORK/runs/e2/answers/S-10-r0/q42.json",
+    "sha256": "2c7c8578d60f8a1859e0722359ee0ce57623f8fa7110b9d7e4dc50519d6e36ec"
+  },
+  {
+    "kind": "answers",
+    "arm": "S",
+    "qid": 45,
+    "source": "$WORK/runs/e2/answers/S-10-r0/q45.json",
+    "sha256": "a8f7849e34d99c94ed2320b0e0eeffdaac7351f776111639dc639cf0d90a426d"
+  },
+  {
+    "kind": "answers",
+    "arm": "S",
+    "qid": 46,
+    "source": "$WORK/runs/e2/answers/S-10-r0/q46.json",
+    "sha256": "0f7f5204e8d1f374d8b5d4236730932b303d582cab152fd14e2bafd6f277c67a"
+  },
+  {
+    "kind": "answers",
+    "arm": "S",
+    "qid": 47,
+    "source": "$WORK/runs/e2/answers/S-10-r0/q47.json",
+    "sha256": "33cf4b8e7056f0c835167b0d7cd6d06654a8d90b41cdf345e039298f75b3276b"
+  },
+  {
+    "kind": "judge",
+    "arm": "S",
+    "qid": 1,
+    "source": "$WORK/runs/e2/judge/S-10-r0/q01.json",
+    "sha256": "45e07024ae22193dda866a3adcd156aa36da74dfe3304d1ff0914f6f136f9054"
+  },
+  {
+    "kind": "judge",
+    "arm": "S",
+    "qid": 3,
+    "source": "$WORK/runs/e2/judge/S-10-r0/q03.json",
+    "sha256": "2b8c59a4db917bd5ed6f5fd619294df8849d879f48ddd9061cf69615e2fa3e7d"
+  },
+  {
+    "kind": "judge",
+    "arm": "S",
+    "qid": 4,
+    "source": "$WORK/runs/e2/judge/S-10-r0/q04.json",
+    "sha256": "d13c1469c3f2ddfab2a220114eae91e9fa514e6181c440ce9f4f2ec584294993"
+  },
+  {
+    "kind": "judge",
+    "arm": "S",
+    "qid": 5,
+    "source": "$WORK/runs/e2/judge/S-10-r0/q05.json",
+    "sha256": "d07929e0220c74de393044af8b608cd37831d33530f6470163b7f87bde464de4"
+  },
+  {
+    "kind": "judge",
+    "arm": "S",
+    "qid": 6,
+    "source": "$WORK/runs/e2/judge/S-10-r0/q06.json",
+    "sha256": "c6bccc52c8b08e520f9c8b02638338ec6f61a5f1ab0161303bf914e72e81c3f5"
+  },
+  {
+    "kind": "judge",
+    "arm": "S",
+    "qid": 11,
+    "source": "$WORK/runs/e2/judge/S-10-r0/q11.json",
+    "sha256": "f0681411bf59a7c548889595fe7e33ba40abf8de696ca334fd154c8920dbb62d"
+  },
+  {
+    "kind": "judge",
+    "arm": "S",
+    "qid": 12,
+    "source": "$WORK/runs/e2/judge/S-10-r0/q12.json",
+    "sha256": "907c0f2c619c086e5eeee980c3612ee69fc5f1a3ab0c8c0a515d3e495a9791f9"
+  },
+  {
+    "kind": "judge",
+    "arm": "S",
+    "qid": 14,
+    "source": "$WORK/runs/e2/judge/S-10-r0/q14.json",
+    "sha256": "70da58ede9e2bfaa44cb603cdba4615180371a11bb88ac009434b082380ee0c1"
+  },
+  {
+    "kind": "judge",
+    "arm": "S",
+    "qid": 17,
+    "source": "$WORK/runs/e2/judge/S-10-r0/q17.json",
+    "sha256": "c95e5989896ba80dc10ab5e1dbbf2fe0bb3c0ab6fa4f04abe40eaee3b07c4c13"
+  },
+  {
+    "kind": "judge",
+    "arm": "S",
+    "qid": 18,
+    "source": "$WORK/runs/e2/judge/S-10-r0/q18.json",
+    "sha256": "7f4bb4a4ed509c6ccf7a6c6b4427c0f7b7a88dcf839c5b3656202ab70da3c285"
+  },
+  {
+    "kind": "judge",
+    "arm": "S",
+    "qid": 19,
+    "source": "$WORK/runs/e2/judge/S-10-r0/q19.json",
+    "sha256": "a7d1e874795f111a1629b423a7e0737aab2b333312036046a4c9eb00458b04fa"
+  },
+  {
+    "kind": "judge",
+    "arm": "S",
+    "qid": 20,
+    "source": "$WORK/runs/e2/judge/S-10-r0/q20.json",
+    "sha256": "7baacc8a54bb865619a8ef5e5d1d0133a2245327d43528a8b57e06a5db86220f"
+  },
+  {
+    "kind": "judge",
+    "arm": "S",
+    "qid": 28,
+    "source": "$WORK/runs/e2/judge/S-10-r0/q28.json",
+    "sha256": "55b531dfb6f2b2dd58b5cdf2c55968d3b2ba4a7bf5ed1dac55008595bade7d51"
+  },
+  {
+    "kind": "judge",
+    "arm": "S",
+    "qid": 29,
+    "source": "$WORK/runs/e2/judge/S-10-r0/q29.json",
+    "sha256": "5d7f25639d0b6a5a16fd3b90d4e39b3b704abe468677fe061ba6aac13c1b2d82"
+  },
+  {
+    "kind": "judge",
+    "arm": "S",
+    "qid": 32,
+    "source": "$WORK/runs/e2/judge/S-10-r0/q32.json",
+    "sha256": "49f8abfe5b242621beb98bc9da8c29e1cd79f97742db9497955a9b5f79e1bbaf"
+  },
+  {
+    "kind": "judge",
+    "arm": "S",
+    "qid": 33,
+    "source": "$WORK/runs/e2/judge/S-10-r0/q33.json",
+    "sha256": "c97550c7ba55be0f5c8ab50c4006a23df1fc64db3eda40f60a3782ea7c6da97d"
+  },
+  {
+    "kind": "judge",
+    "arm": "S",
+    "qid": 34,
+    "source": "$WORK/runs/e2/judge/S-10-r0/q34.json",
+    "sha256": "69be3d5a04688b48e7f6b2473d9a780293d9bab25eeb7d4e324637ab1dc096d7"
+  },
+  {
+    "kind": "judge",
+    "arm": "S",
+    "qid": 38,
+    "source": "$WORK/runs/e2/judge/S-10-r0/q38.json",
+    "sha256": "c2a33f33125236dd6f21329e65ce7a535d742d2c3dc1e1ded78d5884d459ab00"
+  },
+  {
+    "kind": "judge",
+    "arm": "S",
+    "qid": 40,
+    "source": "$WORK/runs/e2/judge/S-10-r0/q40.json",
+    "sha256": "77338b2a9ecd19996717fbfc41c51af41d7137fc460adff4422e3694f394cd36"
+  },
+  {
+    "kind": "judge",
+    "arm": "S",
+    "qid": 41,
+    "source": "$WORK/runs/e2/judge/S-10-r0/q41.json",
+    "sha256": "c923cb222d0244e255e45e24c2b9b35647b9226b41af33a41d0de88fc6980681"
+  },
+  {
+    "kind": "judge",
+    "arm": "S",
+    "qid": 42,
+    "source": "$WORK/runs/e2/judge/S-10-r0/q42.json",
+    "sha256": "bb9a58161fa59c3d79ab00427639c9cb7016bd25d38e02eaa89dc3cbbefaf864"
+  },
+  {
+    "kind": "judge",
+    "arm": "S",
+    "qid": 45,
+    "source": "$WORK/runs/e2/judge/S-10-r0/q45.json",
+    "sha256": "be2f5ce5b51dcbbac8f402211b4cabf318edd78857edaf19e98c47157628c07b"
+  },
+  {
+    "kind": "judge",
+    "arm": "S",
+    "qid": 46,
+    "source": "$WORK/runs/e2/judge/S-10-r0/q46.json",
+    "sha256": "750cc3f8016be355fb1f2fe32c0c222e531962f205be82802acaf96cdd958ecb"
+  },
+  {
+    "kind": "judge",
+    "arm": "S",
+    "qid": 47,
+    "source": "$WORK/runs/e2/judge/S-10-r0/q47.json",
+    "sha256": "8660b636f7f99a81975379e722eda1bf4019ee959f8ef62103b5bad804a0452d"
+  },
+  {
+    "kind": "answers",
+    "arm": "C0",
+    "qid": 1,
+    "source": "$WORK/runs/e2/answers/C0-10-r0/q01.json",
+    "sha256": "45ed89c49ec67e2951cfc33fb19341cd383a1ba1d9020c0c88b18693510cb595"
+  },
+  {
+    "kind": "answers",
+    "arm": "C0",
+    "qid": 3,
+    "source": "$WORK/runs/e2/answers/C0-10-r0/q03.json",
+    "sha256": "86a61996871f4d3f93c95b54860557d25ac07ff57c43c164297e0e10245480df"
+  },
+  {
+    "kind": "answers",
+    "arm": "C0",
+    "qid": 4,
+    "source": "$WORK/runs/e2/answers/C0-10-r0/q04.json",
+    "sha256": "cda09336cb07c25f00b3e9686a4c5e1e304539cbae4779c69212a0dfcf86dea9"
+  },
+  {
+    "kind": "answers",
+    "arm": "C0",
+    "qid": 5,
+    "source": "$WORK/runs/e2/answers/C0-10-r0/q05.json",
+    "sha256": "3660f9b82258e44b190831ebca28cb87454d66dee433aa532d97b8e577f75944"
+  },
+  {
+    "kind": "answers",
+    "arm": "C0",
+    "qid": 6,
+    "source": "$WORK/runs/e2/answers/C0-10-r0/q06.json",
+    "sha256": "81d17d6f44963fbab5b2c79c035c46a767201a35dbec53aaaf83c1cada42ff27"
+  },
+  {
+    "kind": "answers",
+    "arm": "C0",
+    "qid": 11,
+    "source": "$WORK/runs/e2/answers/C0-10-r0/q11.json",
+    "sha256": "d8efa694e4e79c0198c5e3d800597158e368c45e8468cb74ad1dfb91d990521a"
+  },
+  {
+    "kind": "answers",
+    "arm": "C0",
+    "qid": 12,
+    "source": "$WORK/runs/e2/answers/C0-10-r0/q12.json",
+    "sha256": "5594a9d4174a035e6545e8640d09ab329fc65515d46c665bdd01bc53c467e02c"
+  },
+  {
+    "kind": "answers",
+    "arm": "C0",
+    "qid": 14,
+    "source": "$WORK/runs/e2/answers/C0-10-r0/q14.json",
+    "sha256": "b3d4b70f62c592d7ecbf2ae2ac1d0f85049f01efc5b50c8f8803c824e0cbc385"
+  },
+  {
+    "kind": "answers",
+    "arm": "C0",
+    "qid": 17,
+    "source": "$WORK/runs/e2/answers/C0-10-r0/q17.json",
+    "sha256": "040b9055e9ff63d83221d71876890c6969ebd37b54a22a6fbb9dd69b0df1ba4b"
+  },
+  {
+    "kind": "answers",
+    "arm": "C0",
+    "qid": 18,
+    "source": "$WORK/runs/e2/answers/C0-10-r0/q18.json",
+    "sha256": "c1944d9899b5d971874e3b2fce8d6e267ff0fe594d8c36f7a347ad6cac3060c3"
+  },
+  {
+    "kind": "answers",
+    "arm": "C0",
+    "qid": 19,
+    "source": "$WORK/runs/e2/answers/C0-10-r0/q19.json",
+    "sha256": "5d2c08c1fe11cb5c221ee8925c4cd92d9ec28a34a57a59de6ee0ceda2043f703"
+  },
+  {
+    "kind": "answers",
+    "arm": "C0",
+    "qid": 20,
+    "source": "$WORK/runs/e2/answers/C0-10-r0/q20.json",
+    "sha256": "859895a01463d877f8b97fe4d89d6e27cbfcf529a5313064f6ef7a6a0c191e10"
+  },
+  {
+    "kind": "answers",
+    "arm": "C0",
+    "qid": 28,
+    "source": "$WORK/runs/e2/answers/C0-10-r0/q28.json",
+    "sha256": "df6a4b8fe2b85992fc8e4377afa6c15f0c26b6ff78c0b58994ce1e73c6bd2664"
+  },
+  {
+    "kind": "answers",
+    "arm": "C0",
+    "qid": 29,
+    "source": "$WORK/runs/e2/answers/C0-10-r0/q29.json",
+    "sha256": "8929ff9dc458ff377b8bf25311cbdb4211be415d117d47eb89d3f092dfca987a"
+  },
+  {
+    "kind": "answers",
+    "arm": "C0",
+    "qid": 32,
+    "source": "$WORK/runs/e2/answers/C0-10-r0/q32.json",
+    "sha256": "c2f8d93994ecb2f7b5b8756372d3fc6b447d09d308fb4a02bce76415df1bbecf"
+  },
+  {
+    "kind": "answers",
+    "arm": "C0",
+    "qid": 33,
+    "source": "$WORK/runs/e2/answers/C0-10-r0/q33.json",
+    "sha256": "4c29d6bc4d80b1189388c97d04a1528963d1df8881f30a7c38e91f9443bb69fd"
+  },
+  {
+    "kind": "answers",
+    "arm": "C0",
+    "qid": 34,
+    "source": "$WORK/runs/e2/answers/C0-10-r0/q34.json",
+    "sha256": "8c2b7fc4b6012f609779c17d686d5fc3759e0e24e8a7050a96d6bff4f0517bfa"
+  },
+  {
+    "kind": "answers",
+    "arm": "C0",
+    "qid": 38,
+    "source": "$WORK/runs/e2/answers/C0-10-r0/q38.json",
+    "sha256": "fa3a4040410ca17bb8f2a97a5570b51bba21c1ccb99f9997496b84ffc455717b"
+  },
+  {
+    "kind": "answers",
+    "arm": "C0",
+    "qid": 40,
+    "source": "$WORK/runs/e2/answers/C0-10-r0/q40.json",
+    "sha256": "cb7cb5792bb6c73e342ab41e4adea01dc2f3d548caba1208f8fb48d099e5ed1b"
+  },
+  {
+    "kind": "answers",
+    "arm": "C0",
+    "qid": 41,
+    "source": "$WORK/runs/e2/answers/C0-10-r0/q41.json",
+    "sha256": "9cc4f6e3ed39efba5642ade8b82ed93a8f64f50d66e3322b8a9175761e35f17c"
+  },
+  {
+    "kind": "answers",
+    "arm": "C0",
+    "qid": 42,
+    "source": "$WORK/runs/e2/answers/C0-10-r0/q42.json",
+    "sha256": "9f34c1f332a606f085e7f87d8f6d4c61a6efbf812a21f69afa924eec9c150b56"
+  },
+  {
+    "kind": "answers",
+    "arm": "C0",
+    "qid": 45,
+    "source": "$WORK/runs/e2/answers/C0-10-r0/q45.json",
+    "sha256": "14d93a78202dd80302b8a4a6f403b5be54bb5923c2f00ecb80f10e4b24c40656"
+  },
+  {
+    "kind": "answers",
+    "arm": "C0",
+    "qid": 46,
+    "source": "$WORK/runs/e2/answers/C0-10-r0/q46.json",
+    "sha256": "4cc3c7cfaf871a71534dbd06455b778f0baff2f19868fb6b4dac1db7f37bf513"
+  },
+  {
+    "kind": "answers",
+    "arm": "C0",
+    "qid": 47,
+    "source": "$WORK/runs/e2/answers/C0-10-r0/q47.json",
+    "sha256": "fbbdf774f8fd8d94070cf3110e3129b9e36e7be58d0895b95d5a38e1a6dbbbe4"
+  },
+  {
+    "kind": "judge",
+    "arm": "C0",
+    "qid": 1,
+    "source": "$WORK/runs/e2/judge/C0-10-r0/q01.json",
+    "sha256": "f912588efedfa1c804e82a92168a529810c7df24a503289f1d0ea18667d3d186"
+  },
+  {
+    "kind": "judge",
+    "arm": "C0",
+    "qid": 3,
+    "source": "$WORK/runs/e2/judge/C0-10-r0/q03.json",
+    "sha256": "5db1f72159a92d0f1cbb30035218c3ad9fdc47fb8c799f50124c02a0e198a2ed"
+  },
+  {
+    "kind": "judge",
+    "arm": "C0",
+    "qid": 4,
+    "source": "$WORK/runs/e2/judge/C0-10-r0/q04.json",
+    "sha256": "b7ba185995988b80d590133634dd6c4174bb966bf4d8383865d9bc77b1601d72"
+  },
+  {
+    "kind": "judge",
+    "arm": "C0",
+    "qid": 5,
+    "source": "$WORK/runs/e2/judge/C0-10-r0/q05.json",
+    "sha256": "14416e67f812426fc27f49302399bd367a63d6ec5caefa26270c75a26761ef24"
+  },
+  {
+    "kind": "judge",
+    "arm": "C0",
+    "qid": 6,
+    "source": "$WORK/runs/e2/judge/C0-10-r0/q06.json",
+    "sha256": "6c898a05d009bf84e1f8f28751ae4ec1ea0f359329c79f426b2d5aded96ce684"
+  },
+  {
+    "kind": "judge",
+    "arm": "C0",
+    "qid": 11,
+    "source": "$WORK/runs/e2/judge/C0-10-r0/q11.json",
+    "sha256": "2463a08cd6f73a0950c697ffafa55db42b051a400081cb56307d2cf07a862306"
+  },
+  {
+    "kind": "judge",
+    "arm": "C0",
+    "qid": 12,
+    "source": "$WORK/runs/e2/judge/C0-10-r0/q12.json",
+    "sha256": "d03bbe8ada8a8322a4b78f7ce9124aa0f7683575fb18f23e3cd60ff4331e5e21"
+  },
+  {
+    "kind": "judge",
+    "arm": "C0",
+    "qid": 14,
+    "source": "$WORK/runs/e2/judge/C0-10-r0/q14.json",
+    "sha256": "0a5d46007f97e81eafa972157f35883db6d80c4a121e6064c9befb0a257ffcf6"
+  },
+  {
+    "kind": "judge",
+    "arm": "C0",
+    "qid": 17,
+    "source": "$WORK/runs/e2/judge/C0-10-r0/q17.json",
+    "sha256": "edad797232b4b1d053815368dcd541234fbe724b59bbf5002244dd0c9db1f93d"
+  },
+  {
+    "kind": "judge",
+    "arm": "C0",
+    "qid": 18,
+    "source": "$WORK/runs/e2/judge/C0-10-r0/q18.json",
+    "sha256": "7bd514b4a3a79d985350ce1ba860251a1074e7286d2a5cdabcb538277a286941"
+  },
+  {
+    "kind": "judge",
+    "arm": "C0",
+    "qid": 19,
+    "source": "$WORK/runs/e2/judge/C0-10-r0/q19.json",
+    "sha256": "368b1612bf30161e70714d753733573d5ff3d7888c65e67886c7cee09f310b2d"
+  },
+  {
+    "kind": "judge",
+    "arm": "C0",
+    "qid": 20,
+    "source": "$WORK/runs/e2/judge/C0-10-r0/q20.json",
+    "sha256": "3a790f255461999bc0fd6a9ab509ef4f5e7e537d83467f292dc3acb7f99060d7"
+  },
+  {
+    "kind": "judge",
+    "arm": "C0",
+    "qid": 28,
+    "source": "$WORK/runs/e2/judge/C0-10-r0/q28.json",
+    "sha256": "f8768953edfafae6a362bcdecb0536cf7a423ddebb7a7c45f05bf055017a0088"
+  },
+  {
+    "kind": "judge",
+    "arm": "C0",
+    "qid": 29,
+    "source": "$WORK/runs/e2/judge/C0-10-r0/q29.json",
+    "sha256": "b7060749d0437e6412aa6902c8ad7e0437dfeff251f1297432ac33c7083e0380"
+  },
+  {
+    "kind": "judge",
+    "arm": "C0",
+    "qid": 32,
+    "source": "$WORK/runs/e2/judge/C0-10-r0/q32.json",
+    "sha256": "739e7fe702e7bcf70b984568f7b20aff119c6de3cd07923c2373b2276daac5f5"
+  },
+  {
+    "kind": "judge",
+    "arm": "C0",
+    "qid": 33,
+    "source": "$WORK/runs/e2/judge/C0-10-r0/q33.json",
+    "sha256": "7b5e46d32fbac374944a8eafdb0e09a11eeb3e5975c10471cbd79522b1328da0"
+  },
+  {
+    "kind": "judge",
+    "arm": "C0",
+    "qid": 34,
+    "source": "$WORK/runs/e2/judge/C0-10-r0/q34.json",
+    "sha256": "21ae7b7093197581dd79646e436a25c1d96d957853d305172f219453e67db628"
+  },
+  {
+    "kind": "judge",
+    "arm": "C0",
+    "qid": 38,
+    "source": "$WORK/runs/e2/judge/C0-10-r0/q38.json",
+    "sha256": "c792a3ac85aedc62c37bc179ebcbd0ac94211fb78f1f3c5dc8aff5fd62b79365"
+  },
+  {
+    "kind": "judge",
+    "arm": "C0",
+    "qid": 40,
+    "source": "$WORK/runs/e2/judge/C0-10-r0/q40.json",
+    "sha256": "f889f9ea3070c780afc332a12de9ce604b3af9cbc7d91b01c893de4df01ce37e"
+  },
+  {
+    "kind": "judge",
+    "arm": "C0",
+    "qid": 41,
+    "source": "$WORK/runs/e2/judge/C0-10-r0/q41.json",
+    "sha256": "01f27ba5854b8ea2822c4db7e3c73218f15aa694aefd5beb45e55ce796563ffa"
+  },
+  {
+    "kind": "judge",
+    "arm": "C0",
+    "qid": 42,
+    "source": "$WORK/runs/e2/judge/C0-10-r0/q42.json",
+    "sha256": "f321c83a5126c447c32ed22175152a622a54e52ad4183ff4f0625a5fe12b400c"
+  },
+  {
+    "kind": "judge",
+    "arm": "C0",
+    "qid": 45,
+    "source": "$WORK/runs/e2/judge/C0-10-r0/q45.json",
+    "sha256": "29697c7dc96ec53f02b9e726949677fbf01aa2e170775c070d1a9d19b18924eb"
+  },
+  {
+    "kind": "judge",
+    "arm": "C0",
+    "qid": 46,
+    "source": "$WORK/runs/e2/judge/C0-10-r0/q46.json",
+    "sha256": "6e88f7ef9893447b9f05ff9d5fd3ee98f9c87e077336329e6480436940d9b4bb"
+  },
+  {
+    "kind": "judge",
+    "arm": "C0",
+    "qid": 47,
+    "source": "$WORK/runs/e2/judge/C0-10-r0/q47.json",
+    "sha256": "a0b2e224232b7fffb250097ad46dec09de9dc9f5264ae11a1e3eca6936ccc813"
+  },
+  {
+    "kind": "answers",
+    "arm": "C",
+    "qid": 1,
+    "source": "$WORK/runs/e2/answers/C-10-r0/q01.json",
+    "sha256": "ef44d2968e65a7e6c4931b74ace93b11f89a12a291fe49614076c1a1910e6a0f"
+  },
+  {
+    "kind": "answers",
+    "arm": "C",
+    "qid": 3,
+    "source": "$WORK/runs/e2/answers/C-10-r0/q03.json",
+    "sha256": "5aa82018964a3f4361b68b9f085e8e8cd523031a9dae205810f8397d7c6b9114"
+  },
+  {
+    "kind": "answers",
+    "arm": "C",
+    "qid": 4,
+    "source": "$WORK/runs/e2/answers/C-10-r0/q04.json",
+    "sha256": "5890f13c5e175e14d3ba1dfceca67e52c4d5ac51087740ab34bbc01639af2472"
+  },
+  {
+    "kind": "answers",
+    "arm": "C",
+    "qid": 5,
+    "source": "$WORK/runs/e2/answers/C-10-r0/q05.json",
+    "sha256": "c4a216dbb9005926b69676c834cabb7dedca04ef3eee140c39f4dc622c950f67"
+  },
+  {
+    "kind": "answers",
+    "arm": "C",
+    "qid": 6,
+    "source": "$WORK/runs/e2/answers/C-10-r0/q06.json",
+    "sha256": "b03ef306a7a1bf70bfde391cd7b63c2af7f39c3738309c913cd349309d03f7dc"
+  },
+  {
+    "kind": "answers",
+    "arm": "C",
+    "qid": 11,
+    "source": "$WORK/runs/e2/answers/C-10-r0/q11.json",
+    "sha256": "5f2a1c266a5a2ec6bc650d21ad2ccb90bea4f18e68e8c1f370cecc013e59ae3c"
+  },
+  {
+    "kind": "answers",
+    "arm": "C",
+    "qid": 12,
+    "source": "$WORK/runs/e2/answers/C-10-r0/q12.json",
+    "sha256": "41f663be5e5bd88594839192e3168c75467112bdc09007ee04c1eff0a55cb0bc"
+  },
+  {
+    "kind": "answers",
+    "arm": "C",
+    "qid": 14,
+    "source": "$WORK/runs/e2/answers/C-10-r0/q14.json",
+    "sha256": "6c968b1a593b2a7686ec8eae4ed76a283beedefc5a1b7ea7cc81691dcc15e041"
+  },
+  {
+    "kind": "answers",
+    "arm": "C",
+    "qid": 17,
+    "source": "$WORK/runs/e2/answers/C-10-r0/q17.json",
+    "sha256": "954db22eb18346d98c01423bfd0e57687f78dbaa512c2a4960ab66c8c9dc69de"
+  },
+  {
+    "kind": "answers",
+    "arm": "C",
+    "qid": 18,
+    "source": "$WORK/runs/e2/answers/C-10-r0/q18.json",
+    "sha256": "df6c5c477f88ac52a8e382a84dde13544bca3195e8b966dbd6c38346eb3b8145"
+  },
+  {
+    "kind": "answers",
+    "arm": "C",
+    "qid": 19,
+    "source": "$WORK/runs/e2/answers/C-10-r0/q19.json",
+    "sha256": "9fc5d0027c2ad7ab0b814a1f1cf46a01762a92d08013b1a230615d6314caa0ca"
+  },
+  {
+    "kind": "answers",
+    "arm": "C",
+    "qid": 20,
+    "source": "$WORK/runs/e2/answers/C-10-r0/q20.json",
+    "sha256": "468d4259c5e3f3aaa106d39cae84166b2a091c16b7d246d17ff662f96261fb05"
+  },
+  {
+    "kind": "answers",
+    "arm": "C",
+    "qid": 28,
+    "source": "$WORK/runs/e2/answers/C-10-r0/q28.json",
+    "sha256": "718208c7c52398e018344b46afe319146f3e3912113bdde1d8c964ee551c85c0"
+  },
+  {
+    "kind": "answers",
+    "arm": "C",
+    "qid": 29,
+    "source": "$WORK/runs/e2/answers/C-10-r0/q29.json",
+    "sha256": "37acad7c82fa4a501b486355c862bf985e2f8dbb6d8f1a80bb9be26a147fac73"
+  },
+  {
+    "kind": "answers",
+    "arm": "C",
+    "qid": 32,
+    "source": "$WORK/runs/e2/answers/C-10-r0/q32.json",
+    "sha256": "7d4679ea1ea08e91e5ca2a0b89d469b444642edf755937c6f5188927be3146d3"
+  },
+  {
+    "kind": "answers",
+    "arm": "C",
+    "qid": 33,
+    "source": "$WORK/runs/e2/answers/C-10-r0/q33.json",
+    "sha256": "238570184f1d7ae5eccbd604b2e4236ff1cb02d4a2b10a42b20e818aae998046"
+  },
+  {
+    "kind": "answers",
+    "arm": "C",
+    "qid": 34,
+    "source": "$WORK/runs/e2/answers/C-10-r0/q34.json",
+    "sha256": "66306ec57a68e24e4f0d00692dba97689c277fbd5865c60a81a35808e347fccd"
+  },
+  {
+    "kind": "answers",
+    "arm": "C",
+    "qid": 38,
+    "source": "$WORK/runs/e2/answers/C-10-r0/q38.json",
+    "sha256": "458d10486bdf2398d509e0dea6ea60dcb6023b12462a5d822180534609adf0e1"
+  },
+  {
+    "kind": "answers",
+    "arm": "C",
+    "qid": 40,
+    "source": "$WORK/runs/e2/answers/C-10-r0/q40.json",
+    "sha256": "7508f47c5e7568adb884c6ff8a8155876e1a2809c60b6f61973879930d6433c0"
+  },
+  {
+    "kind": "answers",
+    "arm": "C",
+    "qid": 41,
+    "source": "$WORK/runs/e2/answers/C-10-r0/q41.json",
+    "sha256": "2f5896039fe90d6ce8a0ed9c9298481f3dcb9bb5c5d1a1418c2300ecbff8d210"
+  },
+  {
+    "kind": "answers",
+    "arm": "C",
+    "qid": 42,
+    "source": "$WORK/runs/e2/answers/C-10-r0/q42.json",
+    "sha256": "0f8c8ec217946c9d388987ffbd66fc28b4913f3c0470588740a128d0cce26b62"
+  },
+  {
+    "kind": "answers",
+    "arm": "C",
+    "qid": 45,
+    "source": "$WORK/runs/e2/answers/C-10-r0/q45.json",
+    "sha256": "5ec7973c0a06be53420d8eb742ea983fe82b1478daec82b98e8d1db4bebb12f2"
+  },
+  {
+    "kind": "answers",
+    "arm": "C",
+    "qid": 46,
+    "source": "$WORK/runs/e2/answers/C-10-r0/q46.json",
+    "sha256": "9c4d3070bae653622ef26f116b93a5c734fa1157abeb74b67d793f131fe1e64f"
+  },
+  {
+    "kind": "answers",
+    "arm": "C",
+    "qid": 47,
+    "source": "$WORK/runs/e2/answers/C-10-r0/q47.json",
+    "sha256": "452104976dd2c7ee552fb1eccf8a50efb747c5b7fc02ce96c8f1c10532e97106"
+  },
+  {
+    "kind": "judge",
+    "arm": "C",
+    "qid": 1,
+    "source": "$WORK/runs/e2/judge/C-10-r0/q01.json",
+    "sha256": "9596d15e33dd7536547f88af192cf75617c269fb687418b2b56ddfd23f9ab9fc"
+  },
+  {
+    "kind": "judge",
+    "arm": "C",
+    "qid": 3,
+    "source": "$WORK/runs/e2/judge/C-10-r0/q03.json",
+    "sha256": "5835e36dd5e74366434a8c68b7c8efc7d52978b0e2b6910cb04177850dfd077d"
+  },
+  {
+    "kind": "judge",
+    "arm": "C",
+    "qid": 4,
+    "source": "$WORK/runs/e2/judge/C-10-r0/q04.json",
+    "sha256": "a5650c64b800aa8566014dcd0ab7394a4f374151920d57f7ea94f04b8a49d906"
+  },
+  {
+    "kind": "judge",
+    "arm": "C",
+    "qid": 5,
+    "source": "$WORK/runs/e2/judge/C-10-r0/q05.json",
+    "sha256": "e541a72facfb4b074063708a8fd57f5e3835c4879dc6c493a10f4f015add4f29"
+  },
+  {
+    "kind": "judge",
+    "arm": "C",
+    "qid": 6,
+    "source": "$WORK/runs/e2/judge/C-10-r0/q06.json",
+    "sha256": "019c0c1e301f604e245947e1f3a7ae72e784aa899ec75effd1148f11f2f59c83"
+  },
+  {
+    "kind": "judge",
+    "arm": "C",
+    "qid": 11,
+    "source": "$WORK/runs/e2/judge/C-10-r0/q11.json",
+    "sha256": "97ebc3e1ec6050c480bdde1160640dfa3f404d5d57a12edd70822ad1a243ebb0"
+  },
+  {
+    "kind": "judge",
+    "arm": "C",
+    "qid": 12,
+    "source": "$WORK/runs/e2/judge/C-10-r0/q12.json",
+    "sha256": "d3eea290746edb315d5bac5b387aecc636e2864a52b7605d90fa3bda6688eb16"
+  },
+  {
+    "kind": "judge",
+    "arm": "C",
+    "qid": 14,
+    "source": "$WORK/runs/e2/judge/C-10-r0/q14.json",
+    "sha256": "4fbd7d1685b965f03e97cacbe3d598a202b6670550443f75da7ab8e6b0b9888f"
+  },
+  {
+    "kind": "judge",
+    "arm": "C",
+    "qid": 17,
+    "source": "$WORK/runs/e2/judge/C-10-r0/q17.json",
+    "sha256": "844e3475ce7fe517a757a6db9e68e50bbdaf48efe397802b3449a6829c12ec3e"
+  },
+  {
+    "kind": "judge",
+    "arm": "C",
+    "qid": 18,
+    "source": "$WORK/runs/e2/judge/C-10-r0/q18.json",
+    "sha256": "5c285c379f65cf1f3ec56193dca681b4245b3446999c672456fcb391d32be833"
+  },
+  {
+    "kind": "judge",
+    "arm": "C",
+    "qid": 19,
+    "source": "$WORK/runs/e2/judge/C-10-r0/q19.json",
+    "sha256": "70f3b011ea7aae6bd1caaba2acc95e56c154b4ae8d5edf41f576eccf5ef55f0a"
+  },
+  {
+    "kind": "judge",
+    "arm": "C",
+    "qid": 20,
+    "source": "$WORK/runs/e2/judge/C-10-r0/q20.json",
+    "sha256": "6afc791e3ceb7ba76fc6a06a57c07d37d94770fcc274ae6236d03bdb70df7013"
+  },
+  {
+    "kind": "judge",
+    "arm": "C",
+    "qid": 28,
+    "source": "$WORK/runs/e2/judge/C-10-r0/q28.json",
+    "sha256": "c9b37057014e4237a86cf3a64083be4d9ce2675a1b7caed55a5a6b7e262ed3a6"
+  },
+  {
+    "kind": "judge",
+    "arm": "C",
+    "qid": 29,
+    "source": "$WORK/runs/e2/judge/C-10-r0/q29.json",
+    "sha256": "626e3d6cc9c4080d53552d690cfac9a5b34aa8d47105b46fd7e0704c3e2489fe"
+  },
+  {
+    "kind": "judge",
+    "arm": "C",
+    "qid": 32,
+    "source": "$WORK/runs/e2/judge/C-10-r0/q32.json",
+    "sha256": "815942bd7763eda78356d9b6ba96ba57d75a2d098f952a07212f85a145866ceb"
+  },
+  {
+    "kind": "judge",
+    "arm": "C",
+    "qid": 33,
+    "source": "$WORK/runs/e2/judge/C-10-r0/q33.json",
+    "sha256": "5eb03684fa433642e272d54fa759edd4695bb8d7a4374046d98805201e02401d"
+  },
+  {
+    "kind": "judge",
+    "arm": "C",
+    "qid": 34,
+    "source": "$WORK/runs/e2/judge/C-10-r0/q34.json",
+    "sha256": "8725edc10e4ee07ceaf320ae96364da39788631790d5a35cffc262189940d92b"
+  },
+  {
+    "kind": "judge",
+    "arm": "C",
+    "qid": 38,
+    "source": "$WORK/runs/e2/judge/C-10-r0/q38.json",
+    "sha256": "8c70f2f5adf2c1ed4e057e6d4a723bfc226440cf892c86fe8247f12f75d89623"
+  },
+  {
+    "kind": "judge",
+    "arm": "C",
+    "qid": 40,
+    "source": "$WORK/runs/e2/judge/C-10-r0/q40.json",
+    "sha256": "22ab7c55bab53d2f0f2939bf7627f7a648c9265445c4fab5548a29cf1149e1cc"
+  },
+  {
+    "kind": "judge",
+    "arm": "C",
+    "qid": 41,
+    "source": "$WORK/runs/e2/judge/C-10-r0/q41.json",
+    "sha256": "b6cdad1f826e29e772eb70e24175485c1c1ed2922e8f7ba45095f923b83acb7e"
+  },
+  {
+    "kind": "judge",
+    "arm": "C",
+    "qid": 42,
+    "source": "$WORK/runs/e2/judge/C-10-r0/q42.json",
+    "sha256": "869cddbc338c815f4139a39de7acc8a54d8ebdc6f547e50d44475a0c5f44c6fe"
+  },
+  {
+    "kind": "judge",
+    "arm": "C",
+    "qid": 45,
+    "source": "$WORK/runs/e2/judge/C-10-r0/q45.json",
+    "sha256": "44f7ef92b5737485598203885f35f9fbab138560f38cfdd840f5fa39dbe3d919"
+  },
+  {
+    "kind": "judge",
+    "arm": "C",
+    "qid": 46,
+    "source": "$WORK/runs/e2/judge/C-10-r0/q46.json",
+    "sha256": "550a5a64b0cf22afbe35728b4ae39ac13ac020971c4ae20eeec9ee548cffc63c"
+  },
+  {
+    "kind": "judge",
+    "arm": "C",
+    "qid": 47,
+    "source": "$WORK/runs/e2/judge/C-10-r0/q47.json",
+    "sha256": "02452de0fac6b5da3e7ba86118e65ec0c75c4a19a8f0074c70873fe645f1c5ee"
+  },
+  {
+    "kind": "answers",
+    "arm": "W",
+    "qid": 1,
+    "source": "$WORK/runs/e2/answers/W-10-r0/q01.json",
+    "sha256": "fa2186f34abac4f3cd98949e7d75c795dc3f302c13935e67ce712f41ed4bffca"
+  },
+  {
+    "kind": "answers",
+    "arm": "W",
+    "qid": 3,
+    "source": "$WORK/runs/e2/answers/W-10-r0/q03.json",
+    "sha256": "e5139156c2fa7fab1e815abe38a79c554c2390260fdb5b63aba0252694918da4"
+  },
+  {
+    "kind": "answers",
+    "arm": "W",
+    "qid": 4,
+    "source": "$WORK/runs/e2/answers/W-10-r0/q04.json",
+    "sha256": "987e347b5aaa2b92e158289acf054719ca595518dc52870aa64cc0b015096b05"
+  },
+  {
+    "kind": "answers",
+    "arm": "W",
+    "qid": 5,
+    "source": "$WORK/runs/e2/answers/W-10-r0/q05.json",
+    "sha256": "7888c933514aa128c9d1b0c7e70c0761365343460648f16da0f3d3ea81f79364"
+  },
+  {
+    "kind": "answers",
+    "arm": "W",
+    "qid": 6,
+    "source": "$WORK/runs/e2/answers/W-10-r0/q06.json",
+    "sha256": "1ded2e536747874fa42220db27ee476fb9d9c1379ea728b1c57225965b438ec5"
+  },
+  {
+    "kind": "answers",
+    "arm": "W",
+    "qid": 11,
+    "source": "$WORK/runs/e2/answers/W-10-r0/q11.json",
+    "sha256": "7d23ecdb1d1682334df3d0045f7eb7bb0e60aecdab6997044be44542be84288d"
+  },
+  {
+    "kind": "answers",
+    "arm": "W",
+    "qid": 12,
+    "source": "$WORK/runs/e2/answers/W-10-r0/q12.json",
+    "sha256": "cc22d98fa14653933a1ce19b7998e96966f95fd1de34f3994acff8e906d8dd84"
+  },
+  {
+    "kind": "answers",
+    "arm": "W",
+    "qid": 14,
+    "source": "$WORK/runs/e2/answers/W-10-r0/q14.json",
+    "sha256": "756b0b1906400b5a46b92fdd6f209122c61bc58ae61bc5dac9e65f49d81e08df"
+  },
+  {
+    "kind": "answers",
+    "arm": "W",
+    "qid": 17,
+    "source": "$WORK/runs/e2/answers/W-10-r0/q17.json",
+    "sha256": "f71d883e8872924550dcde981f47a88060c1af5a0ec0da30bba4f1856cfea4fd"
+  },
+  {
+    "kind": "answers",
+    "arm": "W",
+    "qid": 18,
+    "source": "$WORK/runs/e2/answers/W-10-r0/q18.json",
+    "sha256": "03fdabd1ba2a2bb3bb392453a6a34a730528a8f7c3c5be181d38b2bf5fc746c5"
+  },
+  {
+    "kind": "answers",
+    "arm": "W",
+    "qid": 19,
+    "source": "$WORK/runs/e2/answers/W-10-r0/q19.json",
+    "sha256": "86fe2a7af128d93bd94799f2b215349a69975eb7ed494b2cf1f66cd12180a96c"
+  },
+  {
+    "kind": "answers",
+    "arm": "W",
+    "qid": 20,
+    "source": "$WORK/runs/e2/answers/W-10-r0/q20.json",
+    "sha256": "b635708872ac27c04fde47935a04e9088ebe80a88d1a4d01b5368e15cdf4a66f"
+  },
+  {
+    "kind": "answers",
+    "arm": "W",
+    "qid": 28,
+    "source": "$WORK/runs/e2/answers/W-10-r0/q28.json",
+    "sha256": "f0a1cc53ea3b21e324dcecdddd92467c9743468e5c6c629a6feb8abc6bfeb4cc"
+  },
+  {
+    "kind": "answers",
+    "arm": "W",
+    "qid": 29,
+    "source": "$WORK/runs/e2/answers/W-10-r0/q29.json",
+    "sha256": "e9120aa46681c2f42950b29122c7d0162722ea0a83f25b31b89e50df02708667"
+  },
+  {
+    "kind": "answers",
+    "arm": "W",
+    "qid": 32,
+    "source": "$WORK/runs/e2/answers/W-10-r0/q32.json",
+    "sha256": "f642a496ca02aefc125f8bd04f2be3175a20e5bb87ca5ac82d92c13dea44ed85"
+  },
+  {
+    "kind": "answers",
+    "arm": "W",
+    "qid": 33,
+    "source": "$WORK/runs/e2/answers/W-10-r0/q33.json",
+    "sha256": "654cdb69cf4366f8392f71487dc6502e1ed757a7b7fe502824759a8469313d8d"
+  },
+  {
+    "kind": "answers",
+    "arm": "W",
+    "qid": 34,
+    "source": "$WORK/runs/e2/answers/W-10-r0/q34.json",
+    "sha256": "629ce9bed6aaecaa558618848c33b2624257a434afaee6c635dfa3b5a32ba3c6"
+  },
+  {
+    "kind": "answers",
+    "arm": "W",
+    "qid": 38,
+    "source": "$WORK/runs/e2/answers/W-10-r0/q38.json",
+    "sha256": "ac7307545575bb42af5181f98181f063ed2280ca30aba7e15ba5ba06fb443f70"
+  },
+  {
+    "kind": "answers",
+    "arm": "W",
+    "qid": 40,
+    "source": "$WORK/runs/e2/answers/W-10-r0/q40.json",
+    "sha256": "0bcef109e59bf65795b6f7ef13d2309916cf08cbe332cc70308f44990e539960"
+  },
+  {
+    "kind": "answers",
+    "arm": "W",
+    "qid": 41,
+    "source": "$WORK/runs/e2/answers/W-10-r0/q41.json",
+    "sha256": "e3a2b9c2a9f7361a50174804fab64b2fdbac149cecbcf7924a9cb8d3046b2051"
+  },
+  {
+    "kind": "answers",
+    "arm": "W",
+    "qid": 42,
+    "source": "$WORK/runs/e2/answers/W-10-r0/q42.json",
+    "sha256": "e63eb5acbf1453b25862e343d8c18b7dc543556b39cf56eccfffef92615da7f9"
+  },
+  {
+    "kind": "answers",
+    "arm": "W",
+    "qid": 45,
+    "source": "$WORK/runs/e2/answers/W-10-r0/q45.json",
+    "sha256": "29004fc716ae6d9461e2ae38fd895b7eea16deae29ce2071da6745e6980d76e7"
+  },
+  {
+    "kind": "answers",
+    "arm": "W",
+    "qid": 46,
+    "source": "$WORK/runs/e2/answers/W-10-r0/q46.json",
+    "sha256": "c6eec7536d5f7ad6fa854839b20241c20581a3593255e7973905615913158734"
+  },
+  {
+    "kind": "answers",
+    "arm": "W",
+    "qid": 47,
+    "source": "$WORK/runs/e2/answers/W-10-r0/q47.json",
+    "sha256": "6e31e797e2bf066042e895651bb439425623e91fa5c265f417d4251517da2319"
+  },
+  {
+    "kind": "judge",
+    "arm": "W",
+    "qid": 1,
+    "source": "$WORK/runs/e2/judge/W-10-r0/q01.json",
+    "sha256": "f34fa9b94f44a1c73e4da7bf4806765458dfa35d10ae3b53df5c91722fdcd6e6"
+  },
+  {
+    "kind": "judge",
+    "arm": "W",
+    "qid": 3,
+    "source": "$WORK/runs/e2/judge/W-10-r0/q03.json",
+    "sha256": "1a6aed01713b3e60f7297b111c07875f5b213b89af6a10e616c069d8e5b9910f"
+  },
+  {
+    "kind": "judge",
+    "arm": "W",
+    "qid": 4,
+    "source": "$WORK/runs/e2/judge/W-10-r0/q04.json",
+    "sha256": "cca0b38bd3aaecd563aa3644e6821d07e8d01c477201ceb981022085f1ac8646"
+  },
+  {
+    "kind": "judge",
+    "arm": "W",
+    "qid": 5,
+    "source": "$WORK/runs/e2/judge/W-10-r0/q05.json",
+    "sha256": "8adbfd7004994209174a6cb6329ef931508d9a3cdf5591e081d9f49c4572fffb"
+  },
+  {
+    "kind": "judge",
+    "arm": "W",
+    "qid": 6,
+    "source": "$WORK/runs/e2/judge/W-10-r0/q06.json",
+    "sha256": "973b675a827a3579c0070e81ebefef6e623d1fa869d1336b80728eeeab53e4f0"
+  },
+  {
+    "kind": "judge",
+    "arm": "W",
+    "qid": 11,
+    "source": "$WORK/runs/e2/judge/W-10-r0/q11.json",
+    "sha256": "bbb3b7db45076cda74ed9fc48a6950d3e7d66d178773e5cf6c18e7a3b0c47662"
+  },
+  {
+    "kind": "judge",
+    "arm": "W",
+    "qid": 12,
+    "source": "$WORK/runs/e2/judge/W-10-r0/q12.json",
+    "sha256": "90922739f370447a394297ac3761341ccfe372e491348e80a1ddaa8fe9ef895d"
+  },
+  {
+    "kind": "judge",
+    "arm": "W",
+    "qid": 14,
+    "source": "$WORK/runs/e2/judge/W-10-r0/q14.json",
+    "sha256": "e26d559a53e7a78338e3cee6d2417cdcb3cc272b4fcccaeca0aa1404c6d10808"
+  },
+  {
+    "kind": "judge",
+    "arm": "W",
+    "qid": 17,
+    "source": "$WORK/runs/e2/judge/W-10-r0/q17.json",
+    "sha256": "e6d8b1b826a2cf1fea28cdf4431ebf173d3462c114893bc79a992eb52de4d2d1"
+  },
+  {
+    "kind": "judge",
+    "arm": "W",
+    "qid": 18,
+    "source": "$WORK/runs/e2/judge/W-10-r0/q18.json",
+    "sha256": "500b65b7cb37783ab15ff43e03ee5d6a025ff23a0d79ae4c088ed4f815457cef"
+  },
+  {
+    "kind": "judge",
+    "arm": "W",
+    "qid": 19,
+    "source": "$WORK/runs/e2/judge/W-10-r0/q19.json",
+    "sha256": "b7fc20a4382166ed342c6429c505c74aa7b48fe8beb057bba32855a3e0324117"
+  },
+  {
+    "kind": "judge",
+    "arm": "W",
+    "qid": 20,
+    "source": "$WORK/runs/e2/judge/W-10-r0/q20.json",
+    "sha256": "d0b9ec221a53ac92cedd3a4a32be78ed0180d898838f163b5e5f1692fc028da6"
+  },
+  {
+    "kind": "judge",
+    "arm": "W",
+    "qid": 28,
+    "source": "$WORK/runs/e2/judge/W-10-r0/q28.json",
+    "sha256": "2081da13ab7e5a50b72e5d0e4f121832f98e3842bdc158046fa4756efc234263"
+  },
+  {
+    "kind": "judge",
+    "arm": "W",
+    "qid": 29,
+    "source": "$WORK/runs/e2/judge/W-10-r0/q29.json",
+    "sha256": "e3f6dd74422d85638b809614ea20be09ff42da24381b292c3bcbfb77c07714ff"
+  },
+  {
+    "kind": "judge",
+    "arm": "W",
+    "qid": 32,
+    "source": "$WORK/runs/e2/judge/W-10-r0/q32.json",
+    "sha256": "79cc7bb2d7265ba5462374babe6fb94273a98a76e59ce4a5e7635460f17ce765"
+  },
+  {
+    "kind": "judge",
+    "arm": "W",
+    "qid": 33,
+    "source": "$WORK/runs/e2/judge/W-10-r0/q33.json",
+    "sha256": "b33b9c7aaf572e741530e2a6296ca7d052d33f49c936b8359521b40cb1f4066c"
+  },
+  {
+    "kind": "judge",
+    "arm": "W",
+    "qid": 34,
+    "source": "$WORK/runs/e2/judge/W-10-r0/q34.json",
+    "sha256": "666f5179039bb563114796df45fc1d1de21b25d93bb80afa51a35e832c9708d5"
+  },
+  {
+    "kind": "judge",
+    "arm": "W",
+    "qid": 38,
+    "source": "$WORK/runs/e2/judge/W-10-r0/q38.json",
+    "sha256": "3b004470a674b551d44323f44b7878e32e1c697b4096b8581590ac2c5dcd45fb"
+  },
+  {
+    "kind": "judge",
+    "arm": "W",
+    "qid": 40,
+    "source": "$WORK/runs/e2/judge/W-10-r0/q40.json",
+    "sha256": "b5164bfe596b077d9ec69cdc5adfb044e8da839acaa27189ad4935bf9b00f5a6"
+  },
+  {
+    "kind": "judge",
+    "arm": "W",
+    "qid": 41,
+    "source": "$WORK/runs/e2/judge/W-10-r0/q41.json",
+    "sha256": "e1aee592e59343b763291d8efd4cec38665ec784112680aa7aa0608335d6ef84"
+  },
+  {
+    "kind": "judge",
+    "arm": "W",
+    "qid": 42,
+    "source": "$WORK/runs/e2/judge/W-10-r0/q42.json",
+    "sha256": "61a6636fdabf05b1362f47bc6d36e8c26bb87b182d05aa425bddc0ab957ee6ae"
+  },
+  {
+    "kind": "judge",
+    "arm": "W",
+    "qid": 45,
+    "source": "$WORK/runs/e2/judge/W-10-r0/q45.json",
+    "sha256": "da59da9be2d6ca8b331cb18230fa3db056b10430e7a5ad7d41927278e32490c0"
+  },
+  {
+    "kind": "judge",
+    "arm": "W",
+    "qid": 46,
+    "source": "$WORK/runs/e2/judge/W-10-r0/q46.json",
+    "sha256": "4fe0a6485bcd09b761b901fecffc79778350bf9afcdac2c9ee36f7d1661d2b23"
+  },
+  {
+    "kind": "judge",
+    "arm": "W",
+    "qid": 47,
+    "source": "$WORK/runs/e2/judge/W-10-r0/q47.json",
+    "sha256": "e13724c46b27e8adf324c8c26f416b745d9eb83f072104cb3f2525c234026911"
+  }
+]

@@ -1,0 +1,386 @@
+{
+ "n_unique": 20,
+ "identical": 20,
+ "rows": [
+  {
+   "i": 0,
+   "cid": "A15",
+   "command": "find --run-dir $WORK/runs/e5/qa/arms/C/run --term CONNECT --limit 30",
+   "audit_rc": 0,
+   "private": [
+    0,
+    "71b02a4417ac",
+    6187,
+    ""
+   ],
+   "shared": [
+    0,
+    "71b02a4417ac",
+    6187,
+    ""
+   ],
+   "identical": true
+  },
+  {
+   "i": 1,
+   "cid": "A17",
+   "command": "find --run-dir $WORK/runs/e5/qa/arms/C/run --term Switching Protocols --limit 20",
+   "audit_rc": 0,
+   "private": [
+    0,
+    "af28dffaf693",
+    179,
+    ""
+   ],
+   "shared": [
+    0,
+    "af28dffaf693",
+    179,
+    ""
+   ],
+   "identical": true
+  },
+  {
+   "i": 2,
+   "cid": "A17",
+   "command": "query --run-dir $WORK/runs/e5/qa/arms/C/run --id http_on_101_upgrade",
+   "audit_rc": 2,
+   "private": [
+    2,
+    "e3b0c44298fc",
+    0,
+    "unknown unit, symbol or file: http_on_101_upgrade"
+   ],
+   "shared": [
+    2,
+    "e3b0c44298fc",
+    0,
+    "unknown unit, symbol or file: http_on_101_upgrade"
+   ],
+   "identical": true
+  },
+  {
+   "i": 3,
+   "cid": "A17",
+   "command": "query --run-dir $WORK/runs/e5/qa/arms/C/run --id lib/http.c::function::http_on_101_upgrade::121660",
+   "audit_rc": 0,
+   "private": [
+    0,
+    "3064872a308b",
+    2192,
+    ""
+   ],
+   "shared": [
+    0,
+    "3064872a308b",
+    2192,
+    ""
+   ],
+   "identical": true
+  },
+  {
+   "i": 4,
+   "cid": "A18",
+   "command": "find --run-dir $WORK/runs/e5/qa/arms/C/run --term multiplex --limit 40",
+   "audit_rc": 0,
+   "private": [
+    0,
+    "b5ce051002e3",
+    9663,
+    ""
+   ],
+   "shared": [
+    0,
+    "b5ce051002e3",
+    9663,
+    ""
+   ],
+   "identical": true
+  },
+  {
+   "i": 5,
+   "cid": "A18",
+   "command": "query --run-dir $WORK/runs/e5/qa/arms/C/run lib/url.c::function::xfer_may_multiplex::15685",
+   "audit_rc": 2,
+   "private": [
+    2,
+    "e3b0c44298fc",
+    0,
+    "usage: python -m cbe query [-h] --run-dir RUN_DIR --id ID [--json]\n                           [--edges EDGES]\npython -m cbe query: error: the following arguments are required: --id"
+   ],
+   "shared": [
+    2,
+    "e3b0c44298fc",
+    0,
+    "usage: python -m cbe query [-h] --run-dir RUN_DIR --id ID [--json]\n                           [--edges EDGES]\npython -m cbe query: error: the following arguments are required: --id"
+   ],
+   "identical": true
+  },
+  {
+   "i": 6,
+   "cid": "A18",
+   "command": "query --run-dir $WORK/runs/e5/qa/arms/C/run --id lib/url.c::function::xfer_may_multiplex::15685",
+   "audit_rc": 0,
+   "private": [
+    0,
+    "524ba3f95de4",
+    12116,
+    ""
+   ],
+   "shared": [
+    0,
+    "524ba3f95de4",
+    12116,
+    ""
+   ],
+   "identical": true
+  },
+  {
+   "i": 7,
+   "cid": "A18",
+   "command": "query --run-dir $WORK/runs/e5/qa/arms/C/run --id lib/url.c::function::url_match_multiplex_limits::21118",
+   "audit_rc": 0,
+   "private": [
+    0,
+    "a9b9dd19d4ec",
+    13119,
+    ""
+   ],
+   "shared": [
+    0,
+    "a9b9dd19d4ec",
+    13119,
+    ""
+   ],
+   "identical": true
+  },
+  {
+   "i": 8,
+   "cid": "A23",
+   "command": "find --run-dir $WORK/runs/e5/qa/arms/C/run --term Curl_pSecFn",
+   "audit_rc": 0,
+   "private": [
+    0,
+    "4748d1bb4266",
+    1939,
+    ""
+   ],
+   "shared": [
+    0,
+    "4748d1bb4266",
+    1939,
+    ""
+   ],
+   "identical": true
+  },
+  {
+   "i": 9,
+   "cid": "A27",
+   "command": "find --run-dir $WORK/runs/e5/qa/arms/C/run --term libcurl --limit 20",
+   "audit_rc": 0,
+   "private": [
+    0,
+    "85cd2d898627",
+    4296,
+    ""
+   ],
+   "shared": [
+    0,
+    "85cd2d898627",
+    4296,
+    ""
+   ],
+   "identical": true
+  },
+  {
+   "i": 10,
+   "cid": "B03",
+   "command": "find --run-dir $WORK/runs/e5/qa/arms/C/run Curl_cpool_init",
+   "audit_rc": 2,
+   "private": [
+    2,
+    "e3b0c44298fc",
+    0,
+    "usage: python -m cbe find [-h] --run-dir RUN_DIR --term TERM [--limit LIMIT]\n                          [--json]\npython -m cbe find: error: the following arguments are required: --term"
+   ],
+   "shared": [
+    2,
+    "e3b0c44298fc",
+    0,
+    "usage: python -m cbe find [-h] --run-dir RUN_DIR --term TERM [--limit LIMIT]\n                          [--json]\npython -m cbe find: error: the following arguments are required: --term"
+   ],
+   "identical": true
+  },
+  {
+   "i": 11,
+   "cid": "B03",
+   "command": "find --run-dir $WORK/runs/e5/qa/arms/C/run --term Curl_cpool_init",
+   "audit_rc": 0,
+   "private": [
+    0,
+    "99f14277add0",
+    1642,
+    ""
+   ],
+   "shared": [
+    0,
+    "99f14277add0",
+    1642,
+    ""
+   ],
+   "identical": true
+  },
+  {
+   "i": 12,
+   "cid": "B06",
+   "command": "find --run-dir $WORK/runs/e5/qa/arms/C/run connection reuse",
+   "audit_rc": 2,
+   "private": [
+    2,
+    "e3b0c44298fc",
+    0,
+    "usage: python -m cbe find [-h] --run-dir RUN_DIR --term TERM [--limit LIMIT]\n                          [--json]\npython -m cbe find: error: the following arguments are required: --term"
+   ],
+   "shared": [
+    2,
+    "e3b0c44298fc",
+    0,
+    "usage: python -m cbe find [-h] --run-dir RUN_DIR --term TERM [--limit LIMIT]\n                          [--json]\npython -m cbe find: error: the following arguments are required: --term"
+   ],
+   "identical": true
+  },
+  {
+   "i": 13,
+   "cid": "B06",
+   "command": "find --run-dir $WORK/runs/e5/qa/arms/C/run --term connection reuse --limit 20",
+   "audit_rc": 0,
+   "private": [
+    0,
+    "dad14a1cc116",
+    1313,
+    ""
+   ],
+   "shared": [
+    0,
+    "dad14a1cc116",
+    1313,
+    ""
+   ],
+   "identical": true
+  },
+  {
+   "i": 14,
+   "cid": "B06",
+   "command": "query --run-dir $WORK/runs/e5/qa/arms/C/run lib/conncache.c",
+   "audit_rc": 2,
+   "private": [
+    2,
+    "e3b0c44298fc",
+    0,
+    "usage: python -m cbe query [-h] --run-dir RUN_DIR --id ID [--json]\n                           [--edges EDGES]\npython -m cbe query: error: the following arguments are required: --id"
+   ],
+   "shared": [
+    2,
+    "e3b0c44298fc",
+    0,
+    "usage: python -m cbe query [-h] --run-dir RUN_DIR --id ID [--json]\n                           [--edges EDGES]\npython -m cbe query: error: the following arguments are required: --id"
+   ],
+   "identical": true
+  },
+  {
+   "i": 15,
+   "cid": "B06",
+   "command": "query --run-dir $WORK/runs/e5/qa/arms/C/run --id lib/conncache.c::function::Curl_cpool_find::25051",
+   "audit_rc": 0,
+   "private": [
+    0,
+    "a1a5b4775816",
+    6360,
+    ""
+   ],
+   "shared": [
+    0,
+    "a1a5b4775816",
+    6360,
+    ""
+   ],
+   "identical": true
+  },
+  {
+   "i": 16,
+   "cid": "B06",
+   "command": "find --run-dir $WORK/runs/e5/qa/arms/C/run --term destination --limit 30",
+   "audit_rc": 0,
+   "private": [
+    0,
+    "f702128627d9",
+    8195,
+    ""
+   ],
+   "shared": [
+    0,
+    "f702128627d9",
+    8195,
+    ""
+   ],
+   "identical": true
+  },
+  {
+   "i": 17,
+   "cid": "B14",
+   "command": "find --run-dir $WORK/runs/e5/qa/arms/C/run --term appconnect --limit 20",
+   "audit_rc": 0,
+   "private": [
+    0,
+    "54473c85a6a6",
+    4840,
+    ""
+   ],
+   "shared": [
+    0,
+    "54473c85a6a6",
+    4840,
+    ""
+   ],
+   "identical": true
+  },
+  {
+   "i": 18,
+   "cid": "B22",
+   "command": "find --run-dir $WORK/runs/e5/qa/arms/C/run --term cookie_run --limit 20",
+   "audit_rc": 0,
+   "private": [
+    0,
+    "e7217825b5ff",
+    1598,
+    ""
+   ],
+   "shared": [
+    0,
+    "e7217825b5ff",
+    1598,
+    ""
+   ],
+   "identical": true
+  },
+  {
+   "i": 19,
+   "cid": "B22",
+   "command": "query --run-dir $WORK/runs/e5/qa/arms/C/run --id lib/cookie.c::function::Curl_cookie_run::49136 --edges all",
+   "audit_rc": 0,
+   "private": [
+    0,
+    "9981008189a6",
+    3780,
+    ""
+   ],
+   "shared": [
+    0,
+    "9981008189a6",
+    3780,
+    ""
+   ],
+   "identical": true
+  }
+ ]
+}

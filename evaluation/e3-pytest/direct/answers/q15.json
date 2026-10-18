@@ -1,0 +1,31 @@
+{
+  "qid": 15,
+  "question": "How would you refactor a minimal test function like test_1 to implement a parameterized testing strategy that maintains backward compatibility while enabling data-driven test execution across multiple input scenarios?",
+  "arm": "direct",
+  "answer": "Apply `@pytest.mark.parametrize` to `test_1`: replace its hard-coded inputs with named parameters, supply a list of value tuples covering each scenario, and include the original hard-coded case as the first entry in the list so existing behavior and test identity are preserved (backward compatibility). Optionally pass `ids` for readable test names, use `pytest.param` with `marks` for special cases (e.g., `xfail`), and stack multiple `parametrize` decorators to combine input dimensions. This converts the single fixed test into one data-driven test that pytest expands into an independent test per parameter set.",
+  "valid": true,
+  "wall_seconds": 11.840681625006255,
+  "attempts": [
+    {
+      "answer": "Apply `@pytest.mark.parametrize` to `test_1`: replace its hard-coded inputs with named parameters, supply a list of value tuples covering each scenario, and include the original hard-coded case as the first entry in the list so existing behavior and test identity are preserved (backward compatibility). Optionally pass `ids` for readable test names, use `pytest.param` with `marks` for special cases (e.g., `xfail`), and stack multiple `parametrize` decorators to combine input dimensions. This converts the single fixed test into one data-driven test that pytest expands into an independent test per parameter set.",
+      "valid": true,
+      "usage": {
+        "completion_tokens": 506,
+        "prompt_tokens": 113,
+        "total_tokens": 619,
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": null,
+          "audio_tokens": null,
+          "reasoning_tokens": 380,
+          "rejected_prediction_tokens": null
+        },
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 64
+        }
+      },
+      "response_model": "glm-5.3-flash"
+    }
+  ]
+}

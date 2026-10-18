@@ -1,0 +1,31 @@
+{
+  "qid": 27,
+  "question": "Why does test_rewrite_ast employ pytest.register_assert_rewrite() in the package's __init__.py rather than relying solely on the automatic conftest-based rewriting mechanism, and what does this reveal about the design architecture?",
+  "arm": "direct",
+  "answer": "Because pytest's automatic rewriting only covers `conftest.py` files, test modules matching the `python_files` patterns, and registered plugins \u2014 not arbitrary helper modules. Any module imported before pytest's `AssertionRewritingHook` (a `sys.meta_path` import hook) can rewrite it is already cached in `sys.modules` and can never be rewritten, triggering the \"Module already imported so cannot be rewritten\" warning. `pytest.register_assert_rewrite()` adds the module to the hook's mandatory-rewrite registry before its first import, and putting that call in the package's `__init__.py` is the only guaranteed ordering point, since Python always imports a package's `__init__.py` before any submodule; conftest.py loading happens later (during collection) and its \"automatic rewriting\" applies only to the conftest file itself, so it cannot reliably cover helpers imported at package-import time.\n\nThis reveals that pytest's assertion rewriting is deliberately an opt-in, import-time, name-registry mechanism layered on Python's import system \u2014 not a global static transform of all source files \u2014 keeping rewriting scope controlled for performance and to avoid touching third-party code. It also shows pytest dogfoods its own public extension API: its test suite exercises the same plugin-style mechanisms offered to users, validating the public contract from the outside.",
+  "valid": true,
+  "wall_seconds": 113.67605579202063,
+  "attempts": [
+    {
+      "answer": "Because pytest's automatic rewriting only covers `conftest.py` files, test modules matching the `python_files` patterns, and registered plugins \u2014 not arbitrary helper modules. Any module imported before pytest's `AssertionRewritingHook` (a `sys.meta_path` import hook) can rewrite it is already cached in `sys.modules` and can never be rewritten, triggering the \"Module already imported so cannot be rewritten\" warning. `pytest.register_assert_rewrite()` adds the module to the hook's mandatory-rewrite registry before its first import, and putting that call in the package's `__init__.py` is the only guaranteed ordering point, since Python always imports a package's `__init__.py` before any submodule; conftest.py loading happens later (during collection) and its \"automatic rewriting\" applies only to the conftest file itself, so it cannot reliably cover helpers imported at package-import time.\n\nThis reveals that pytest's assertion rewriting is deliberately an opt-in, import-time, name-registry mechanism layered on Python's import system \u2014 not a global static transform of all source files \u2014 keeping rewriting scope controlled for performance and to avoid touching third-party code. It also shows pytest dogfoods its own public extension API: its test suite exercises the same plugin-style mechanisms offered to users, validating the public contract from the outside.",
+      "valid": true,
+      "usage": {
+        "completion_tokens": 5761,
+        "prompt_tokens": 122,
+        "total_tokens": 5883,
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": null,
+          "audio_tokens": null,
+          "reasoning_tokens": 5490,
+          "rejected_prediction_tokens": null
+        },
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 64
+        }
+      },
+      "response_model": "glm-5.3-flash"
+    }
+  ]
+}

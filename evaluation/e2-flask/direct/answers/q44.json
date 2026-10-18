@@ -1,0 +1,31 @@
+{
+  "qid": 44,
+  "question": "Where does the inheritance chain between parent and child configuration classes affect configuration resolution when loading from a class object?",
+  "arm": "direct",
+  "answer": "In `flask/config.py`, inside `Config.from_object()` \u2014 specifically the loop `for key in dir(obj): if key.isupper(): self[key] = getattr(obj, key)`. `dir(obj)` lists attribute names inherited from parent classes, and `getattr(obj, key)` resolves those uppercase keys through the class's inheritance chain (MRO), so parent-class configuration attributes are copied into the config along with the child class's own attributes.",
+  "valid": true,
+  "wall_seconds": 8.733437917020638,
+  "attempts": [
+    {
+      "answer": "In `flask/config.py`, inside `Config.from_object()` \u2014 specifically the loop `for key in dir(obj): if key.isupper(): self[key] = getattr(obj, key)`. `dir(obj)` lists attribute names inherited from parent classes, and `getattr(obj, key)` resolves those uppercase keys through the class's inheritance chain (MRO), so parent-class configuration attributes are copied into the config along with the child class's own attributes.",
+      "valid": true,
+      "usage": {
+        "completion_tokens": 476,
+        "prompt_tokens": 100,
+        "total_tokens": 576,
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": null,
+          "audio_tokens": null,
+          "reasoning_tokens": 383,
+          "rejected_prediction_tokens": null
+        },
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 64
+        }
+      },
+      "response_model": "glm-5.3-flash"
+    }
+  ]
+}

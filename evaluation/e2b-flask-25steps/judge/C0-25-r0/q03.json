@@ -1,0 +1,125 @@
+{
+  "qid": 3,
+  "question": "What architectural decisions are reflected by the dual inheritance from both AssertionError and UnicodeError in the debug-mode exception class for unexpected unicode or binary data regarding separation between validation failures and encoding issues in Flask's layered architecture?",
+  "arm": "C0",
+  "max_steps": 25,
+  "repeat": 0,
+  "answer_valid": true,
+  "judge_model": "codex/gpt-6.1-sol",
+  "draws": [
+    {
+      "draw": 1,
+      "score": {
+        "correctness": 9,
+        "completeness": 16,
+        "relevance": 14,
+        "clarity": 15,
+        "reasoning": 10
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 116,
+            "prompt_tokens": 6967,
+            "total_tokens": 7083,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 67,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 9,\n  \"completeness\": 16,\n  \"relevance\": 14,\n  \"clarity\": 15,\n  \"reasoning\": 10\n}",
+          "wall_seconds": 3.67819733399665
+        }
+      ]
+    },
+    {
+      "draw": 2,
+      "score": {
+        "correctness": 8,
+        "completeness": 15,
+        "relevance": 14,
+        "clarity": 15,
+        "reasoning": 9
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 109,
+            "prompt_tokens": 6967,
+            "total_tokens": 7076,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 60,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 8,\n  \"completeness\": 15,\n  \"relevance\": 14,\n  \"clarity\": 15,\n  \"reasoning\": 9\n}",
+          "wall_seconds": 4.023819707974326
+        }
+      ]
+    },
+    {
+      "draw": 3,
+      "score": {
+        "correctness": 9,
+        "completeness": 15,
+        "relevance": 14,
+        "clarity": 15,
+        "reasoning": 10
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 97,
+            "prompt_tokens": 6967,
+            "total_tokens": 7064,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 48,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6784
+            }
+          },
+          "response": "{\n  \"correctness\": 9,\n  \"completeness\": 15,\n  \"relevance\": 14,\n  \"clarity\": 15,\n  \"reasoning\": 10\n}",
+          "wall_seconds": 4.781013917003293
+        }
+      ]
+    }
+  ],
+  "score": {
+    "correctness": 9,
+    "completeness": 15,
+    "relevance": 14,
+    "clarity": 15,
+    "reasoning": 10
+  },
+  "total": 63,
+  "main_total_na5": 63,
+  "failure_type": null,
+  "judge_total_range": 3,
+  "wall_seconds": 12.48359962500399
+}

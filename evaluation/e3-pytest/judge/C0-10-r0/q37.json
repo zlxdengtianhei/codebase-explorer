@@ -1,0 +1,125 @@
+{
+  "qid": 37,
+  "question": "Where does the data flow of marker information propagate from the autouse fixture in test_accessmarker_dynamic through the request object to multiple test functions, and what control flow mechanism ensures that dynamically applied markers via applymarker are visible to all dependent tests in the same scope?",
+  "arm": "C0",
+  "max_steps": 10,
+  "repeat": 0,
+  "answer_valid": true,
+  "judge_model": "codex/gpt-6.1-sol",
+  "draws": [
+    {
+      "draw": 1,
+      "score": {
+        "correctness": 5,
+        "completeness": 4,
+        "relevance": 12,
+        "clarity": 15,
+        "reasoning": 7
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 97,
+            "prompt_tokens": 7040,
+            "total_tokens": 7137,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 48,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 5,\n  \"completeness\": 4,\n  \"relevance\": 12,\n  \"clarity\": 15,\n  \"reasoning\": 7\n}",
+          "wall_seconds": 6.967220541962888
+        }
+      ]
+    },
+    {
+      "draw": 2,
+      "score": {
+        "correctness": 4,
+        "completeness": 4,
+        "relevance": 12,
+        "clarity": 15,
+        "reasoning": 8
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 111,
+            "prompt_tokens": 7040,
+            "total_tokens": 7151,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 62,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6912
+            }
+          },
+          "response": "{\n  \"correctness\": 4,\n  \"completeness\": 4,\n  \"relevance\": 12,\n  \"clarity\": 15,\n  \"reasoning\": 8\n}",
+          "wall_seconds": 11.052838790987153
+        }
+      ]
+    },
+    {
+      "draw": 3,
+      "score": {
+        "correctness": 4,
+        "completeness": 4,
+        "relevance": 12,
+        "clarity": 15,
+        "reasoning": 7
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 93,
+            "prompt_tokens": 7040,
+            "total_tokens": 7133,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 44,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6912
+            }
+          },
+          "response": "{\n  \"correctness\": 4,\n  \"completeness\": 4,\n  \"relevance\": 12,\n  \"clarity\": 15,\n  \"reasoning\": 7\n}",
+          "wall_seconds": 9.99359208298847
+        }
+      ]
+    }
+  ],
+  "score": {
+    "correctness": 4,
+    "completeness": 4,
+    "relevance": 12,
+    "clarity": 15,
+    "reasoning": 7
+  },
+  "total": 42,
+  "main_total_na5": 42,
+  "failure_type": null,
+  "judge_total_range": 1,
+  "wall_seconds": 28.031303040974308
+}

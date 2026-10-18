@@ -1,0 +1,94 @@
+{
+  "answer_main": {
+    "client_observed_input_including_cache": 11760198,
+    "client_observed_output": 792951,
+    "client_unknown_usage": 16,
+    "gateway_requests": 1494,
+    "gateway_input_including_cache": 11760198.0,
+    "gateway_output": 792951.0,
+    "gateway_minus_client_input": 0.0,
+    "gateway_minus_client_output": 0.0,
+    "session": "e5-answer-main"
+  },
+  "answer_sec": {
+    "client_observed_input_including_cache": 15409608,
+    "client_observed_output": 341033,
+    "client_unknown_usage": 3,
+    "gateway_requests": 907,
+    "gateway_input_including_cache": 15409608.0,
+    "gateway_output": 341033.0,
+    "gateway_minus_client_input": 0.0,
+    "gateway_minus_client_output": 0.0,
+    "session": "e5-answer-main-sec",
+    "client_unknown_usage_semantics": "Legacy pipeline error_type count:3 includes one local processing AttributeError with known usage",
+    "client_confirmed_unknown_usage_requests": 2,
+    "known_usage_processing_errors": 1,
+    "known_usage_response_not_in_history": 1
+  },
+  "five_main": {
+    "client_observed_input_including_cache": 2504616,
+    "client_observed_output": 35525,
+    "client_unknown_usage": 0,
+    "gateway_requests": 357,
+    "gateway_input_including_cache": 2504616.0,
+    "gateway_output": 35525.0,
+    "gateway_minus_client_input": 0.0,
+    "gateway_minus_client_output": 0.0,
+    "session": "e5-fivedim-main"
+  },
+  "five_sec": {
+    "client_observed_input_including_cache": 722334,
+    "client_observed_output": 10141,
+    "client_unknown_usage": 0,
+    "gateway_requests": 102,
+    "gateway_input_including_cache": 722334.0,
+    "gateway_output": 10141.0,
+    "gateway_minus_client_input": 0.0,
+    "gateway_minus_client_output": 0.0,
+    "session": "e5-fivedim-main-sec"
+  },
+  "rubric_main": {
+    "client_observed_input_including_cache": 2303048,
+    "client_observed_output": 190983,
+    "client_unknown_usage": 1,
+    "gateway_requests": 359,
+    "gateway_input_including_cache": 2303048.0,
+    "gateway_output": 190983.0,
+    "gateway_minus_client_input": 0.0,
+    "gateway_minus_client_output": 0.0,
+    "session": "e5-rubric-main"
+  },
+  "rubric_sec": {
+    "client_observed_input_including_cache": 664641,
+    "client_observed_output": 66612,
+    "client_unknown_usage": 0,
+    "gateway_requests": 102,
+    "gateway_input_including_cache": 664641.0,
+    "gateway_output": 66612.0,
+    "gateway_minus_client_input": 0.0,
+    "gateway_minus_client_output": 0.0,
+    "session": "e5-rubric-main-sec"
+  },
+  "direct": {
+    "client_observed_input_including_cache": 4346,
+    "client_observed_output": 194924,
+    "client_unknown_usage": 45,
+    "gateway_requests": 74,
+    "gateway_input_including_cache": 4346.0,
+    "gateway_output": 194924.0,
+    "gateway_minus_client_input": 0.0,
+    "gateway_minus_client_output": 0.0,
+    "session": "e5-direct"
+  },
+  "five_direct": {
+    "client_observed_input_including_cache": 533655,
+    "client_observed_output": 7669,
+    "client_unknown_usage": 0,
+    "gateway_requests": 87,
+    "gateway_input_including_cache": 533655.0,
+    "gateway_output": 7669.0,
+    "gateway_minus_client_input": 0.0,
+    "gateway_minus_client_output": 0.0,
+    "session": "e5-fivedim-direct"
+  }
+}

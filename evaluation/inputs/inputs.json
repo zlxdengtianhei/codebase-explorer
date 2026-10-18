@@ -1,0 +1,139 @@
+[
+  {
+    "name": "tsdown",
+    "sha": "2b1be7e0accdb1d6e903cd42642666431fc5e93d",
+    "source": "$HOME/clones/eval_research_20261017/rp/tsdown",
+    "paths": [
+      "src",
+      ":(exclude,glob)src/**/*.test.ts"
+    ],
+    "archive_command": [
+      "git",
+      "-C",
+      "$HOME/clones/eval_research_20261017/rp/tsdown",
+      "archive",
+      "2b1be7e0accdb1d6e903cd42642666431fc5e93d",
+      "src",
+      ":(exclude,glob)src/**/*.test.ts"
+    ],
+    "copy": "$WORK/eval/tsdown-2b1be7e",
+    "expected_files": 43,
+    "expected_tokens": 38670,
+    "cap": 0.39,
+    "files": 43,
+    "tokens": 38670,
+    "all_files": 43
+  },
+  {
+    "name": "ruby_llm",
+    "sha": "1e315ab4b3f3a150c443dc9a17f504756c2aad6f",
+    "source": "$HOME/clones/eval_research_20261017/rp/ruby_llm",
+    "paths": [
+      "lib"
+    ],
+    "archive_command": [
+      "git",
+      "-C",
+      "$HOME/clones/eval_research_20261017/rp/ruby_llm",
+      "archive",
+      "1e315ab4b3f3a150c443dc9a17f504756c2aad6f",
+      "lib"
+    ],
+    "copy": "$WORK/eval/ruby_llm-1e315ab",
+    "expected_files": 115,
+    "expected_tokens": 74885,
+    "cap": 0.54,
+    "files": 115,
+    "tokens": 74885,
+    "all_files": 147
+  },
+  {
+    "name": "cjson",
+    "sha": "6d9f2443ab071f86e5d9b43025a40929ec41c46c",
+    "source": "$WORK/repos/cjson",
+    "paths": [
+      "cJSON.c",
+      "cJSON.h",
+      "cJSON_Utils.c",
+      "cJSON_Utils.h"
+    ],
+    "archive_command": [
+      "git",
+      "-C",
+      "$WORK/repos/cjson",
+      "archive",
+      "6d9f2443ab071f86e5d9b43025a40929ec41c46c",
+      "cJSON.c",
+      "cJSON.h",
+      "cJSON_Utils.c",
+      "cJSON_Utils.h"
+    ],
+    "copy": "$WORK/eval/cjson-6d9f244",
+    "expected_files": 4,
+    "expected_tokens": 34364,
+    "cap": 0.36,
+    "files": 4,
+    "tokens": 34364,
+    "all_files": 4
+  },
+  {
+    "name": "fmt",
+    "sha": "b4ffa39b9994c961418406f47358791d89a5aa48",
+    "source": "$WORK/repos/fmt",
+    "paths": [
+      "include",
+      "src"
+    ],
+    "archive_command": [
+      "git",
+      "-C",
+      "$WORK/repos/fmt",
+      "archive",
+      "b4ffa39b9994c961418406f47358791d89a5aa48",
+      "include",
+      "src"
+    ],
+    "copy": "$WORK/eval/fmt-b4ffa39",
+    "expected_files": 20,
+    "expected_tokens": 185053,
+    "cap": 1.11,
+    "files": 20,
+    "tokens": 185053,
+    "all_files": 20
+  },
+  {
+    "name": "gson",
+    "sha": "e2292f9c9f2e07a4791827e8eea34aa7d80545d6",
+    "source": "$WORK/repos/gson",
+    "paths": [
+      "gson/src/main/java"
+    ],
+    "archive_command": [
+      "git",
+      "-C",
+      "$WORK/repos/gson",
+      "archive",
+      "e2292f9c9f2e07a4791827e8eea34aa7d80545d6",
+      "gson/src/main/java"
+    ],
+    "copy": "$WORK/eval/gson-e2292f9",
+    "expected_files": 87,
+    "expected_tokens": 159939,
+    "cap": 0.96,
+    "files": 86,
+    "tokens": 159691,
+    "all_files": 86
+  },
+  {
+    "name": "polyglot",
+    "sha": "6b19d76603fb65d1961c8c2eb449b0ff9d101eedfdd0e0a1f09676b2b6b4965c",
+    "source": "$WORK/repos/polyglot",
+    "copy": "$WORK/eval/polyglot-6b19d76",
+    "expected_files": 22,
+    "expected_tokens": 1708,
+    "cap": 0.3,
+    "files": 22,
+    "tokens": 1708,
+    "all_files": 23
+  }
+]

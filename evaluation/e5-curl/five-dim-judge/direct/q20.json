@@ -1,0 +1,125 @@
+{
+  "qid": 20,
+  "question": "When an application sets CURLOPT_SHARE on an easy handle, in which lib/ function and file is the share object's reference count incremented?\n\nBuild assumptions: Default build with thread support (USE_MUTEX defined); non-Windows.",
+  "arm": "direct",
+  "max_steps": null,
+  "repeat": 0,
+  "answer_valid": true,
+  "judge_model": "codex/gpt-6.1-sol",
+  "draws": [
+    {
+      "draw": 1,
+      "score": {
+        "correctness": 2,
+        "completeness": 2,
+        "relevance": 19,
+        "clarity": 17,
+        "reasoning": 3
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 47,
+            "prompt_tokens": 5882,
+            "total_tokens": 5929,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 0,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 2,\n  \"completeness\": 2,\n  \"relevance\": 19,\n  \"clarity\": 17,\n  \"reasoning\": 3\n}",
+          "wall_seconds": 3.317082624998875
+        }
+      ]
+    },
+    {
+      "draw": 2,
+      "score": {
+        "correctness": 2,
+        "completeness": 2,
+        "relevance": 19,
+        "clarity": 17,
+        "reasoning": 3
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 47,
+            "prompt_tokens": 5882,
+            "total_tokens": 5929,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 0,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 5760
+            }
+          },
+          "response": "{\n  \"correctness\": 2,\n  \"completeness\": 2,\n  \"relevance\": 19,\n  \"clarity\": 17,\n  \"reasoning\": 3\n}",
+          "wall_seconds": 3.9312898330390453
+        }
+      ]
+    },
+    {
+      "draw": 3,
+      "score": {
+        "correctness": 2,
+        "completeness": 2,
+        "relevance": 19,
+        "clarity": 18,
+        "reasoning": 3
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 31,
+            "prompt_tokens": 5882,
+            "total_tokens": 5913,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 0,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\"correctness\":2,\"completeness\":2,\"relevance\":19,\"clarity\":18,\"reasoning\":3}",
+          "wall_seconds": 3.6286029999610037
+        }
+      ]
+    }
+  ],
+  "score": {
+    "correctness": 2,
+    "completeness": 2,
+    "relevance": 19,
+    "clarity": 17,
+    "reasoning": 3
+  },
+  "total": 43,
+  "main_total_na5": 43,
+  "failure_type": null,
+  "judge_total_range": 1,
+  "wall_seconds": 10.878215624950826
+}

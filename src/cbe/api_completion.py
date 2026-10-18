@@ -27,36 +27,17 @@ import urllib.request
 from pathlib import Path
 from typing import Any
 
-from cbe.headless_completion import Completion, _csv_row, _json_object
+from cbe.checks import json_object
+from cbe.headless_completion import Completion, _csv_row
 
 
-DEFAULT_API_CONFIG: dict[str, Any] = {
-    "base_url": "https://api.openai.com/v1",
-    "api_key_env": "OPENAI_API_KEY",
-    "api_key_file": None,
-    "extra_headers": {},
-}
+from cbe.model_settings import ApiConfigError, DEFAULT_API_CONFIG, OPTIONAL_REQUEST_KEYS, load_config
+
+
 MAX_RESPONSE_BYTES = 8 * 1024 * 1024
 #: Bounded copy of the provider response kept in the durable ``.api.json`` record.
 #: Larger bodies are explicitly truncated, never silently dropped.
 MAX_PRESERVED_RESPONSE_CHARS = 20000
-
-
-class ApiConfigError(ValueError):
-    pass
-
-
-def _load_config(path: Path) -> dict[str, Any]:
-    value = dict(DEFAULT_API_CONFIG)
-    if path.is_file():
-        try:
-            loaded = json.loads(path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError) as exc:
-            raise ApiConfigError(f"API config is not valid JSON: {exc}") from exc
-        if not isinstance(loaded, dict):
-            raise ApiConfigError("API config must be a JSON object")
-        value.update(loaded)
-    return value
 
 
 def _api_key(config: dict[str, Any]) -> str | None:
@@ -109,7 +90,9 @@ def _request_body(model: str, prompt: str, config: dict[str, Any]) -> dict[str, 
         "messages": [{"role": "user", "content": prompt}],
         "temperature": config.get("temperature", 0),
     }
-    for key in ("max_tokens", "response_format", "top_p"):
+    if config.get("output_max_tokens") is not None:
+        body["max_tokens"] = config["output_max_tokens"]
+    for key in OPTIONAL_REQUEST_KEYS:
         if key in config and config[key] is not None:
             body[key] = config[key]
     return body
@@ -230,11 +213,13 @@ def invoke(*, task: str, attempt: int, prompt: str, repo: Path, run_dir: Path,
     choice: dict[str, Any] | None = None
     finish_reason: Any = None
     provider_evidence: dict[str, Any] | None = None
+    actual_model: str | None = None
     status: int | None = None
     log_endpoint = ""
     secrets: list[str] = []
+    settings: dict[str, Any] = {}
     try:
-        settings = _load_config(config)
+        settings = load_config(config, model)
         if overrides:
             settings.update(overrides)
         base_url = settings.get("base_url")
@@ -274,6 +259,7 @@ def invoke(*, task: str, attempt: int, prompt: str, repo: Path, run_dir: Path,
         # extraction, so an empty/malformed reply is still diagnosable.
         provider_evidence = _provider_evidence(payload, raw_body, secrets, body_truncated)
         if isinstance(payload, dict):
+            actual_model = payload.get("model")
             raw_usage = payload.get("usage")
             provider_usage = raw_usage if isinstance(raw_usage, dict) else None
             usage = _usage(payload)
@@ -283,6 +269,8 @@ def invoke(*, task: str, attempt: int, prompt: str, repo: Path, run_dir: Path,
                 text = _extract_text(payload)
             except ValueError:
                 error = _classify_no_text(choice)
+            if finish_reason in {"length", "max_tokens", "max_output_tokens"} or body_truncated:
+                error = "output_limit:provider response was truncated; retry with a larger limit or smaller batches"
         else:
             error = f"invalid_json:provider body is not a JSON object ({len(raw_body)} chars)"
     except ApiConfigError as exc:
@@ -313,11 +301,15 @@ def invoke(*, task: str, attempt: int, prompt: str, repo: Path, run_dir: Path,
 
     if error is None:
         try:
-            value = _json_object(text)
+            value = json_object(text)
         except (ValueError, json.JSONDecodeError) as exc:
             error = f"invalid_json:{_redact(str(exc), secrets)[:160]}"
     (raw_dir / f"{safe_task}-{attempt}.api.json").write_text(
         json.dumps({"endpoint": log_endpoint, "model": model, "status": status,
+                    "actual_model": actual_model,
+                    "request_settings": {key: settings[key] for key in
+                                         ("output_max_tokens", "reasoning_effort", "response_format") if key in settings},
+                    "timeout": timeout,
                     "finish_reason": finish_reason, "choice": choice,
                     "usage": usage, "provider_usage": provider_usage,
                     "provider_response": provider_evidence,

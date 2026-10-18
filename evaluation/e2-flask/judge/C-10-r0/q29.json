@@ -1,0 +1,125 @@
+{
+  "qid": 29,
+  "question": "Why does unconditionally setting the session access tracking attribute in dictionary access methods impact signed cookie string conversion performance during frequent read operations?",
+  "arm": "C",
+  "max_steps": 10,
+  "repeat": 0,
+  "answer_valid": true,
+  "judge_model": "codex/gpt-6.1-sol",
+  "draws": [
+    {
+      "draw": 1,
+      "score": {
+        "correctness": 10,
+        "completeness": 12,
+        "relevance": 17,
+        "clarity": 14,
+        "reasoning": 11
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 96,
+            "prompt_tokens": 7033,
+            "total_tokens": 7129,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 47,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 10,\n  \"completeness\": 12,\n  \"relevance\": 17,\n  \"clarity\": 14,\n  \"reasoning\": 11\n}",
+          "wall_seconds": 3.0485721249715425
+        }
+      ]
+    },
+    {
+      "draw": 2,
+      "score": {
+        "correctness": 10,
+        "completeness": 12,
+        "relevance": 16,
+        "clarity": 14,
+        "reasoning": 11
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 98,
+            "prompt_tokens": 7033,
+            "total_tokens": 7131,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 49,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6912
+            }
+          },
+          "response": "{\n  \"correctness\": 10,\n  \"completeness\": 12,\n  \"relevance\": 16,\n  \"clarity\": 14,\n  \"reasoning\": 11\n}",
+          "wall_seconds": 3.884938375034835
+        }
+      ]
+    },
+    {
+      "draw": 3,
+      "score": {
+        "correctness": 11,
+        "completeness": 12,
+        "relevance": 17,
+        "clarity": 15,
+        "reasoning": 12
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 99,
+            "prompt_tokens": 7033,
+            "total_tokens": 7132,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 50,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6912
+            }
+          },
+          "response": "{\n  \"correctness\": 11,\n  \"completeness\": 12,\n  \"relevance\": 17,\n  \"clarity\": 15,\n  \"reasoning\": 12\n}",
+          "wall_seconds": 3.309271792008076
+        }
+      ]
+    }
+  ],
+  "score": {
+    "correctness": 10,
+    "completeness": 12,
+    "relevance": 17,
+    "clarity": 14,
+    "reasoning": 11
+  },
+  "total": 64,
+  "main_total_na5": 64,
+  "failure_type": null,
+  "judge_total_range": 4,
+  "wall_seconds": 10.243590958009008
+}

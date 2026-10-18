@@ -1,0 +1,31 @@
+{
+  "qid": 19,
+  "question": "How does the callback-based modification tracking in the session class that inherits from CallbackDict ensure consistency between in-memory session state and persisted cookie data across concurrent requests?",
+  "arm": "direct",
+  "answer": "`CallbackDict` (via `UpdateDictMixin`) overrides every mutating operation \u2014 `__setitem__`, `__delitem__`, `update`, `pop`, `popitem`, `setdefault`, `clear` \u2014 to fire an `on_update` callback after each change. `SecureCookieSession` binds that callback to set `self.modified = True` (with `__getitem__`/`__contains__` similarly setting `self.accessed = True`). When the request finishes, `SecureCookieSessionInterface.save_session` inspects `session.modified` (or `accessed` for refresh-on-each-request permanent sessions) and, only if flagged, serializes the *entire* dict with the signed serializer into the response's `Set-Cookie` header. Because the whole session state is atomically re-serialized, signed, and written at response time, the cookie can never lag the in-memory state of that request. Across concurrent requests there is no shared server-side session store: each request deserializes its own independent copy from the incoming signed cookie, and consistency is maintained by treating the signed cookie itself as the source of truth \u2014 the latest properly signed, non-expired cookie write wins (last-write-wins), while the embedded timestamp and `PERMANENT_SESSION_LIFETIME`/refresh logic prevent stale concurrent writes from resurrecting expired state.",
+  "valid": true,
+  "wall_seconds": 31.347433958027977,
+  "attempts": [
+    {
+      "answer": "`CallbackDict` (via `UpdateDictMixin`) overrides every mutating operation \u2014 `__setitem__`, `__delitem__`, `update`, `pop`, `popitem`, `setdefault`, `clear` \u2014 to fire an `on_update` callback after each change. `SecureCookieSession` binds that callback to set `self.modified = True` (with `__getitem__`/`__contains__` similarly setting `self.accessed = True`). When the request finishes, `SecureCookieSessionInterface.save_session` inspects `session.modified` (or `accessed` for refresh-on-each-request permanent sessions) and, only if flagged, serializes the *entire* dict with the signed serializer into the response's `Set-Cookie` header. Because the whole session state is atomically re-serialized, signed, and written at response time, the cookie can never lag the in-memory state of that request. Across concurrent requests there is no shared server-side session store: each request deserializes its own independent copy from the incoming signed cookie, and consistency is maintained by treating the signed cookie itself as the source of truth \u2014 the latest properly signed, non-expired cookie write wins (last-write-wins), while the embedded timestamp and `PERMANENT_SESSION_LIFETIME`/refresh logic prevent stale concurrent writes from resurrecting expired state.",
+      "valid": true,
+      "usage": {
+        "completion_tokens": 1521,
+        "prompt_tokens": 110,
+        "total_tokens": 1631,
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": null,
+          "audio_tokens": null,
+          "reasoning_tokens": 1240,
+          "rejected_prediction_tokens": null
+        },
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 64
+        }
+      },
+      "response_model": "glm-5.3-flash"
+    }
+  ]
+}

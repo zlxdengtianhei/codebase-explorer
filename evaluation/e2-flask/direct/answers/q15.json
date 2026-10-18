@@ -1,0 +1,31 @@
+{
+  "qid": 15,
+  "question": "How does the deferred registration mechanism ensure that custom template filters registered through the blueprint's application-level filter registration method are accessible in the template rendering environment when the blueprint is mounted with a URL path prefix?",
+  "arm": "direct",
+  "answer": "When `add_app_template_filter(f, name)` is called on a Blueprint, it does not touch the app immediately (the blueprint may not be registered yet). Instead, it records a callback via `record_once`, storing it in the blueprint's deferred-functions list. The callback is written to receive the blueprint's setup state and to execute `state.app.add_template_filter(f, name)`.\n\nWhen `app.register_blueprint(bp, url_prefix=...)` runs, Flask builds a `BlueprintSetupState` holding the real application object, the blueprint, and the registration options (including the URL prefix), then pops and executes all deferred callbacks with that state. The recorded callback therefore registers the filter on the application's shared Jinja environment (`app.jinja_env`).\n\nBecause the filter ends up in the application-wide Jinja environment rather than any blueprint-scoped context, and because the URL prefix only scopes routing (URL rules), not the template environment, the filter is available to every template the app renders. `record_once` additionally guards with the `first_registration` flag, so re-registering the same blueprint under other prefixes does not duplicate the filter registration.",
+  "valid": true,
+  "wall_seconds": 25.533028749981895,
+  "attempts": [
+    {
+      "answer": "When `add_app_template_filter(f, name)` is called on a Blueprint, it does not touch the app immediately (the blueprint may not be registered yet). Instead, it records a callback via `record_once`, storing it in the blueprint's deferred-functions list. The callback is written to receive the blueprint's setup state and to execute `state.app.add_template_filter(f, name)`.\n\nWhen `app.register_blueprint(bp, url_prefix=...)` runs, Flask builds a `BlueprintSetupState` holding the real application object, the blueprint, and the registration options (including the URL prefix), then pops and executes all deferred callbacks with that state. The recorded callback therefore registers the filter on the application's shared Jinja environment (`app.jinja_env`).\n\nBecause the filter ends up in the application-wide Jinja environment rather than any blueprint-scoped context, and because the URL prefix only scopes routing (URL rules), not the template environment, the filter is available to every template the app renders. `record_once` additionally guards with the `first_registration` flag, so re-registering the same blueprint under other prefixes does not duplicate the filter registration.",
+      "valid": true,
+      "usage": {
+        "completion_tokens": 1217,
+        "prompt_tokens": 118,
+        "total_tokens": 1335,
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": null,
+          "audio_tokens": null,
+          "reasoning_tokens": 984,
+          "rejected_prediction_tokens": null
+        },
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 64
+        }
+      },
+      "response_model": "glm-5.3-flash"
+    }
+  ]
+}

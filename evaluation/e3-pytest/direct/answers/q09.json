@@ -1,0 +1,31 @@
+{
+  "qid": 9,
+  "question": "What is the sentinel value abstraction pattern that NotSetType implements within the pytest compatibility layer to decouple internal state representation from external API contracts?",
+  "arm": "direct",
+  "answer": "It is a single-member `enum.Enum` \u2014 `class NotSetType(enum.Enum): token = 0` \u2014 whose sole member is exported as the module-level singleton `NOTSET`, used as a default parameter value to uniquely represent \"argument not supplied\" so internal code can distinguish absence from any valid caller value (including `None`).",
+  "valid": true,
+  "wall_seconds": 16.40329212497454,
+  "attempts": [
+    {
+      "answer": "It is a single-member `enum.Enum` \u2014 `class NotSetType(enum.Enum): token = 0` \u2014 whose sole member is exported as the module-level singleton `NOTSET`, used as a default parameter value to uniquely represent \"argument not supplied\" so internal code can distinguish absence from any valid caller value (including `None`).",
+      "valid": true,
+      "usage": {
+        "completion_tokens": 662,
+        "prompt_tokens": 107,
+        "total_tokens": 769,
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": null,
+          "audio_tokens": null,
+          "reasoning_tokens": 592,
+          "rejected_prediction_tokens": null
+        },
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 64
+        }
+      },
+      "response_model": "glm-5.3-flash"
+    }
+  ]
+}

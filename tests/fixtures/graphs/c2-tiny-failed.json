@@ -1,0 +1,169 @@
+{
+  "schema": "cbe-graph/1",
+  "source_manifest": [
+    {
+      "path": "main.py",
+      "language": "python",
+      "sha256": "93dd6ac11e131e09d1ff41f13283dac9e5065992d5babcc2e45f5738007b5114"
+    }
+  ],
+  "backend": {
+    "name": "none",
+    "version": null,
+    "components": []
+  },
+  "provenance": {
+    "source_stable": true,
+    "config_stable": true,
+    "config_manifest": [],
+    "source_manifest_scope": "registered_sources",
+    "analyzed_languages": [
+      "python"
+    ],
+    "backend_components": [],
+    "analyzed_at": "2026-10-16T05:29:37.199591+00:00",
+    "fingerprint": "gp_8a01ef06e95417bf0f28ae6f74fa23fe"
+  },
+  "nodes": [],
+  "edges": [],
+  "capabilities": [
+    {
+      "language": "python",
+      "graph": "call",
+      "status": "unsupported",
+      "backend": null,
+      "limitations": "no backend reported this language/kind"
+    },
+    {
+      "language": "python",
+      "graph": "cfg",
+      "status": "unsupported",
+      "backend": null,
+      "limitations": "no backend reported this language/kind"
+    },
+    {
+      "language": "python",
+      "graph": "dataflow",
+      "status": "unsupported",
+      "backend": null,
+      "limitations": "no backend reported this language/kind"
+    },
+    {
+      "language": "python",
+      "graph": "import",
+      "backend": "grimp",
+      "status": "unsupported",
+      "limitations": "module-level imports only"
+    }
+  ],
+  "diagnostics": [
+    {
+      "path": null,
+      "code": "not_a_package",
+      "message": "grimp treats 'main' as a top-level module, not a package"
+    },
+    {
+      "path": null,
+      "code": "no_backend_completed",
+      "message": "no backend completed; graph is empty and not authoritative"
+    }
+  ],
+  "quality": {
+    "edge_counts": [
+      {
+        "language": "python",
+        "kind": "call",
+        "statuses": {
+          "resolved": 0,
+          "ambiguous": 0,
+          "unresolved": 0,
+          "external": 0,
+          "unsupported": 0
+        },
+        "total": 0
+      },
+      {
+        "language": "python",
+        "kind": "cfg",
+        "statuses": {
+          "resolved": 0,
+          "ambiguous": 0,
+          "unresolved": 0,
+          "external": 0,
+          "unsupported": 0
+        },
+        "total": 0
+      },
+      {
+        "language": "python",
+        "kind": "dataflow",
+        "statuses": {
+          "resolved": 0,
+          "ambiguous": 0,
+          "unresolved": 0,
+          "external": 0,
+          "unsupported": 0
+        },
+        "total": 0
+      },
+      {
+        "language": "python",
+        "kind": "import",
+        "statuses": {
+          "resolved": 0,
+          "ambiguous": 0,
+          "unresolved": 0,
+          "external": 0,
+          "unsupported": 0
+        },
+        "total": 0
+      }
+    ],
+    "dangling_edges": {
+      "count": 0,
+      "examples": []
+    },
+    "nodes_outside_manifest": {
+      "count": 0,
+      "examples": []
+    },
+    "nodes_missing_files": {
+      "count": 0,
+      "examples": []
+    },
+    "file_existence_checked": true,
+    "empty_graph": true,
+    "backend_completed": false,
+    "incomplete_capabilities": [
+      {
+        "language": "python",
+        "graph": "call",
+        "status": "unsupported",
+        "backend": null,
+        "limitations": "no backend reported this language/kind"
+      },
+      {
+        "language": "python",
+        "graph": "cfg",
+        "status": "unsupported",
+        "backend": null,
+        "limitations": "no backend reported this language/kind"
+      },
+      {
+        "language": "python",
+        "graph": "dataflow",
+        "status": "unsupported",
+        "backend": null,
+        "limitations": "no backend reported this language/kind"
+      },
+      {
+        "language": "python",
+        "graph": "import",
+        "backend": "grimp",
+        "status": "unsupported",
+        "limitations": "module-level imports only"
+      }
+    ],
+    "frontend_failures": []
+  }
+}

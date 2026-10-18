@@ -1,0 +1,125 @@
+{
+  "qid": 21,
+  "question": "What data structures make up a libcurl connection pool (struct cpool) as initialized by Curl_cpool_init(), and what is each one used for?\n\nBuild assumptions: Default build; applies to both a multi-owned pool and a share-owned pool.",
+  "arm": "S",
+  "max_steps": 10,
+  "repeat": 0,
+  "answer_valid": true,
+  "judge_model": "codex/gpt-6.1-sol",
+  "draws": [
+    {
+      "draw": 1,
+      "score": {
+        "correctness": 15,
+        "completeness": 15,
+        "relevance": 18,
+        "clarity": 18,
+        "reasoning": 16
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 107,
+            "prompt_tokens": 6842,
+            "total_tokens": 6949,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 58,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 15,\n  \"completeness\": 15,\n  \"relevance\": 18,\n  \"clarity\": 18,\n  \"reasoning\": 16\n}",
+          "wall_seconds": 4.347597541986033
+        }
+      ]
+    },
+    {
+      "draw": 2,
+      "score": {
+        "correctness": 14,
+        "completeness": 15,
+        "relevance": 18,
+        "clarity": 17,
+        "reasoning": 16
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 97,
+            "prompt_tokens": 6842,
+            "total_tokens": 6939,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 48,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6656
+            }
+          },
+          "response": "{\n  \"correctness\": 14,\n  \"completeness\": 15,\n  \"relevance\": 18,\n  \"clarity\": 17,\n  \"reasoning\": 16\n}",
+          "wall_seconds": 4.58669479197124
+        }
+      ]
+    },
+    {
+      "draw": 3,
+      "score": {
+        "correctness": 14,
+        "completeness": 15,
+        "relevance": 18,
+        "clarity": 17,
+        "reasoning": 15
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 83,
+            "prompt_tokens": 6842,
+            "total_tokens": 6925,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 34,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 14,\n  \"completeness\": 15,\n  \"relevance\": 18,\n  \"clarity\": 17,\n  \"reasoning\": 15\n}",
+          "wall_seconds": 3.881755458016414
+        }
+      ]
+    }
+  ],
+  "score": {
+    "correctness": 14,
+    "completeness": 15,
+    "relevance": 18,
+    "clarity": 17,
+    "reasoning": 16
+  },
+  "total": 80,
+  "main_total_na5": 80,
+  "failure_type": null,
+  "judge_total_range": 3,
+  "wall_seconds": 12.816774874983821
+}

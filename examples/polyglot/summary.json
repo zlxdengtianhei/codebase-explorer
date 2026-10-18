@@ -1,0 +1,361 @@
+{
+  "status": "complete",
+  "driver": "script",
+  "host": "api",
+  "source_files": 22,
+  "source_tokens": 1708,
+  "modules": 5,
+  "units": 56,
+  "semantic_nodes": 10,
+  "published_pages": 11,
+  "pending": [],
+  "normalized": [
+    "module_1"
+  ],
+  "id_corrected_count": 2,
+  "id_corrected": [
+    {
+      "task": "module_1",
+      "original": "src/sample.ts::type_alias::Alias",
+      "corrected": "src/sample.ts::type_alias::Alias::39",
+      "location": "dispositions[src/sample.ts::type_alias::Alias] key"
+    },
+    {
+      "task": "module_1",
+      "original": "src/sample.ts::enum::Color",
+      "corrected": "src/sample.ts::enum::Color::70",
+      "location": "dispositions[src/sample.ts::enum::Color] key"
+    }
+  ],
+  "index_only_filled_count": 1,
+  "index_only_filled": [
+    {
+      "task": "module_1",
+      "symbol": "src/q.sql::module_residual::::0",
+      "reason": "missing"
+    }
+  ],
+  "known_empty": [],
+  "wall_seconds": 503.564,
+  "run_dir": "$WORK/runs/e6/polyglot-r2/run",
+  "index": "$WORK/runs/e6/polyglot-r2/run/docs/INDEX.md",
+  "subagent_tasks": 13,
+  "context_fallback_count": 1,
+  "context_fallback": [
+    {
+      "path": "src/q.sql",
+      "code": "context_fallback",
+      "reason": "unsupported_language",
+      "message": "unsupported_language: no grammar registered for suffix '.sql'; froze one whole-file source chunk; declaration-level detail is unavailable"
+    }
+  ],
+  "deterministic_checks_ok": true,
+  "aggregation_principles": {
+    "advisory": true,
+    "input_digest": "db4adf8df94e804e8e761ca4dcdbfe973acdcd7cfd096d8aefd903adc302bc25",
+    "identity": [
+      [
+        "closure-functional-patterns",
+        "Closures and Functional Patterns"
+      ],
+      [
+        "entrypoint-demos",
+        "Entry-Point Demos"
+      ],
+      [
+        "fixtures-and-edgecases",
+        "Encoding and Parser Fixtures"
+      ],
+      [
+        "greeting-shape-contracts",
+        "Greeters and Shape Contracts"
+      ],
+      [
+        "java-main-and-nested",
+        "Java Main and Nested Class"
+      ],
+      [
+        "job-queue",
+        "Job Queue and Job Mapping"
+      ],
+      [
+        "python-worker",
+        "Python Worker and Helper"
+      ],
+      [
+        "sample-corpus",
+        "Polyglot Sample Corpus"
+      ],
+      [
+        "shared-helpers",
+        "Shared Helper Utilities"
+      ],
+      [
+        "value-type-methods",
+        "Value Types with Sum Methods"
+      ]
+    ],
+    "edge_counts_by_kind": {
+      "call": 5,
+      "relation": 9
+    },
+    "checks": [
+      {
+        "principle": "P1",
+        "ok": true,
+        "empty_or_duplicate_capabilities": []
+      },
+      {
+        "principle": "P2",
+        "ok": false,
+        "modules": {
+          "sample-corpus": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "entrypoint-demos": {
+            "internal": 2,
+            "external": 3,
+            "internal_external_ratio": 0.6666666666666666
+          },
+          "java-main-and-nested": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "greeting-shape-contracts": {
+            "internal": 0,
+            "external": 2,
+            "internal_external_ratio": 0.0
+          },
+          "closure-functional-patterns": {
+            "internal": 4,
+            "external": 1,
+            "internal_external_ratio": 4.0
+          },
+          "shared-helpers": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "value-type-methods": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "job-queue": {
+            "internal": 2,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "python-worker": {
+            "internal": 3,
+            "external": 0,
+            "internal_external_ratio": null
+          },
+          "fixtures-and-edgecases": {
+            "internal": 0,
+            "external": 0,
+            "internal_external_ratio": null
+          }
+        },
+        "scope": "direct primary ownership; incident cross-module edges counted at each endpoint"
+      },
+      {
+        "principle": "P3",
+        "ok": false,
+        "bounds": [
+          5,
+          30
+        ],
+        "out_of_bounds": {
+          "java-main-and-nested": 2,
+          "value-type-methods": 2,
+          "job-queue": 4,
+          "python-worker": 3
+        },
+        "scope": "nodes with directly owned units; structural ancestors excluded"
+      },
+      {
+        "principle": "P4",
+        "ok": true,
+        "ownership_violations": {}
+      },
+      {
+        "principle": "P5",
+        "ok": true,
+        "min_edges_per_dependent_module": 3,
+        "min_dependent_modules": 2,
+        "shared_units": {},
+        "note": "dependency signal only, including utilities already separated; no automatic reassignment"
+      },
+      {
+        "principle": "P6",
+        "ok": true,
+        "modules": {
+          "sample-corpus": {},
+          "entrypoint-demos": {
+            "c": 3,
+            "c_sharp": 1,
+            "rust": 1
+          },
+          "java-main-and-nested": {
+            "java": 2
+          },
+          "greeting-shape-contracts": {
+            "c_sharp": 2,
+            "java": 1,
+            "javascript": 1,
+            "kotlin": 1,
+            "php": 2,
+            "python": 1,
+            "ruby": 1,
+            "swift": 2,
+            "typescript": 2
+          },
+          "closure-functional-patterns": {
+            "go": 1,
+            "javascript": 3,
+            "kotlin": 1,
+            "php": 1,
+            "python": 3,
+            "ruby": 1,
+            "rust": 1,
+            "swift": 1
+          },
+          "shared-helpers": {
+            "cpp": 2,
+            "javascript": 3,
+            "kotlin": 1,
+            "ruby": 1,
+            "rust": 1,
+            "typescript": 1
+          },
+          "value-type-methods": {
+            "go": 1,
+            "rust": 1
+          },
+          "job-queue": {
+            "typescript": 4
+          },
+          "python-worker": {
+            "python": 3
+          },
+          "fixtures-and-edgecases": {
+            "c": 1,
+            "python": 5
+          }
+        },
+        "scope": "unit counts by language; a multi-language unit contributes once per language"
+      },
+      {
+        "principle": "P7",
+        "ok": null,
+        "status": "not_checked",
+        "reason": "no prior tree for the same detail input"
+      }
+    ],
+    "hierarchy": {
+      "ok": true,
+      "requires_intermediate_above_units": 30
+    },
+    "introduction_length": {
+      "ok": false,
+      "overlong": {
+        "java-main-and-nested": {
+          "introduction_chars": 539,
+          "detail_chars": 451
+        },
+        "value-type-methods": {
+          "introduction_chars": 494,
+          "detail_chars": 383
+        }
+      },
+      "scope": "capability+summary characters versus descendant explain characters"
+    }
+  },
+  "aggregation": {
+    "input_digest": "0f970a11ad6a57837999fac8d4835dd407e891c1476f222bb8f676bc725d86db",
+    "limits": {
+      "max_units": 300,
+      "max_tokens": 64000
+    },
+    "regions": []
+  },
+  "node_dependencies": {
+    "graph_confirmed": 0,
+    "model_inferred": 3,
+    "graph_only": 0
+  },
+  "within_containment": 0,
+  "key_flows": 5,
+  "candidate_flows": 5,
+  "layers": {
+    "tokenizer": "o200k_base",
+    "source_tokens": 1708,
+    "semantic_tokens": 13678,
+    "semantic_breakdown": {
+      "model_body": 3182,
+      "signature_location": 1928,
+      "heading_anchor": 1207,
+      "relations": 286,
+      "footer": 920,
+      "index": 3984,
+      "node_text": 2171
+    },
+    "model_body_tokens": 3182,
+    "model_body_source_ratio": 1.8629976580796253,
+    "published_markdown_source_ratio": 8.008196721311476,
+    "deterministic_tokens": 118329,
+    "catalog_tokens": 118329,
+    "frozen_graph_tokens": 0,
+    "frozen_graph_bytes": 1037247,
+    "semantic_source_ratio": 8.008196721311476,
+    "deterministic_source_ratio": 69.27927400468384,
+    "scope": "Breakdown partitions full Markdown BPE tokens by the first byte's line: model_body is published unit explain, summary, extras and uncertainties; signature_location includes shared source-file reference definitions (including ones used by relations); heading_anchor, relations, footer, INDEX and node_text (including labels/whitespace and program-written ID correction notices) partition the rest. model_body/source and published_markdown/source use complete frozen files. semantic: all published Markdown (node pages + INDEX, including navigation, signatures and commands); deterministic: catalog.json as serialized, including preserved prose copies and edge references, excluding the graph field; frozen graph is excluded from token ratios (frozen_graph_tokens=0), reported separately as frozen_graph_bytes using UTF-8 JSON with ensure_ascii=False and compact separators; complete graph evidence is expanded only with query --edges; source: complete frozen files counted once; context source chunks, host prompts, raw answers and summary.json excluded; layers are storage measures, not disjoint content classes"
+  },
+  "semantic_review": {
+    "mode": "sample",
+    "reviewed": [
+      {
+        "module": 0,
+        "decision": "accepted",
+        "issues": [],
+        "repair": null
+      }
+    ],
+    "outcomes": {
+      "accepted": 1
+    },
+    "pending": [],
+    "note": "an independent reviewer read the source for each reviewed batch; this is not a whole-map proof"
+  },
+  "truth": "deterministic structure/coverage checks and the separate semantic review are different states; neither one proves prose truth",
+  "counts": {
+    "done": 9
+  },
+  "leased": [],
+  "failed": [],
+  "ready": 0,
+  "next_action": "done; open $WORK/runs/e6/polyglot-r2/run/docs/INDEX.md, then run `cbe host cost --run-dir $WORK/runs/e6/polyglot-r2/run`",
+  "usage_unknown": [],
+  "render_error": null,
+  "stopped": null,
+  "progress_log": "$WORK/runs/e6/polyglot-r2/run/progress.log",
+  "model": "zai/glm-5.3-flash",
+  "input_token_basis": "provider prompt_tokens minus cached_tokens; cache reported separately",
+  "calls": 13,
+  "input_tokens": 51547,
+  "output_tokens": 38823,
+  "cache_tokens": 29120,
+  "token_totals_basis": "observed calls; missing usage is excluded, never estimated",
+  "calls_with_unknown_input": 0,
+  "calls_with_unknown_output": 0,
+  "observed_cache_tokens": 29120,
+  "calls_with_unknown_cache": 0,
+  "priced_usd": null,
+  "price_basis": "unknown; configure API price_per_million: [input, output, cache]",
+  "usage_complete": true,
+  "seconds": 564.644
+}

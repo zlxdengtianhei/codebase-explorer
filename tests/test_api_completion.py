@@ -261,3 +261,131 @@ def test_tool_call_only_response_is_classified(tmp_path, server, monkeypatch) ->
                                               "tool_calls": [{"id": "t1", "type": "function"}]}}]}
     result = _call(tmp_path, server, monkeypatch)
     assert result.error and result.error.startswith("tool_call_only"), result.error
+
+
+@pytest.mark.parametrize("content", ['{"units": []}', '{"units": ['])
+def test_length_finish_rejects_text_even_when_json_is_valid(tmp_path, server, monkeypatch, content):
+    _Handler.body = {"model": "served-flash", "choices": [{"finish_reason": "length",
+                     "message": {"content": content}}],
+                     "usage": {"prompt_tokens": 10, "completion_tokens": 20}}
+    result = _call(tmp_path, server, monkeypatch)
+    assert result.value is None and result.error.startswith("output_limit:")
+    assert result.raw_text == content and result.usage["output"] == 20
+    record = json.loads((tmp_path / "run/raw/module_1-1.api.json").read_text())
+    assert record["actual_model"] == "served-flash"
+
+
+def test_flash_request_defaults_and_explicit_config_override(tmp_path, server, monkeypatch):
+    _Handler.body = {"choices": [{"finish_reason": "stop", "message": {"content": "{}"}}]}
+    result = _call(tmp_path, server, monkeypatch, model="zai/glm-5.3-flash")
+    assert result.error is None
+    assert _Handler.captured["body"]["max_tokens"] == 49152
+    assert _Handler.captured["body"]["response_format"] == {"type": "json_object"}
+    assert _Handler.captured["body"]["reasoning_effort"] == "low"
+    config = tmp_path / "run/api.json"
+    config.write_text(json.dumps({"base_url": server, "output_max_tokens": 60000, "reasoning_effort": "high"}))
+    result = api_completion.invoke(task="x", attempt=1, prompt="x", repo=tmp_path,
+        run_dir=tmp_path / "run", model="zai/glm-5.3-flash", config=config,
+        timeout=10, csv_path=tmp_path / "run/calls.csv")
+    assert result.error is None
+    assert _Handler.captured["body"]["max_tokens"] == 60000
+    assert _Handler.captured["body"]["reasoning_effort"] == "high"
+
+
+def test_unknown_model_does_not_receive_reasoning_or_output_defaults(tmp_path, server, monkeypatch):
+    _Handler.body = {"choices": [{"message": {"content": "{}"}}]}
+    assert _call(tmp_path, server, monkeypatch).error is None
+    assert "max_tokens" not in _Handler.captured["body"]
+    assert "reasoning_effort" not in _Handler.captured["body"]
+
+
+def test_output_budget_config_is_separate_from_source_batch_budget(tmp_path, server, monkeypatch):
+    _Handler.body = {"choices": [{"message": {"content": "{}"}}]}
+    config = tmp_path / "api.json"
+    config.write_text(json.dumps({"base_url": server,
+                                  "output_max_tokens": 62000, "batch_max_tokens": 15000}))
+    result = api_completion.invoke(task="x", attempt=1, prompt="x", repo=tmp_path,
+        run_dir=tmp_path / "run", model="other/model", config=config,
+        timeout=10, csv_path=tmp_path / "run/calls.csv")
+    assert result.error is None
+    assert _Handler.captured["body"]["max_tokens"] == 62000
+    assert "output_max_tokens" not in _Handler.captured["body"]
+    assert "batch_max_tokens" not in _Handler.captured["body"]
+    recorded = json.loads((tmp_path / "run/raw/x-1.api.json").read_text())
+    assert recorded["request_settings"]["output_max_tokens"] == 62000
+
+
+
+
+def test_top_p_in_config_loads_and_reaches_the_request_body(tmp_path, server):
+    _Handler.body = {"choices": [{"message": {"content": "{}"}}]}
+    config = tmp_path / "api.json"
+    config.write_text(json.dumps({"base_url": server, "top_p": 0.5}))
+    result = api_completion.invoke(task="x", attempt=1, prompt="x", repo=tmp_path,
+        run_dir=tmp_path / "run", model="other/model", config=config,
+        timeout=10, csv_path=tmp_path / "run/calls.csv")
+    assert result.error is None
+    assert _Handler.captured["body"]["top_p"] == 0.5
+
+
+class _ReadLog(dict):
+    """A loaded config that records every key the code asks about into a shared set."""
+
+    def __init__(self, values, read: set) -> None:
+        super().__init__(values)
+        self.read = read
+
+    def get(self, key, default=None):
+        self.read.add(key)
+        return super().get(key, default)
+
+    def __getitem__(self, key):
+        self.read.add(key)
+        return super().__getitem__(key)
+
+    def __contains__(self, key) -> bool:
+        self.read.add(key)
+        return super().__contains__(key)
+
+
+def test_allowed_api_config_keys_are_exactly_the_keys_the_code_reads(tmp_path, server, monkeypatch):
+    """A key the code reads but load_config rejects breaks a user's config; an allowed key nobody
+    reads is silently ignored. Drive the real code with a recording config to see both."""
+    import importlib
+
+    from cbe import model_settings
+    from test_generate import _tiny_repo
+
+    reads: set = set()
+    real_load_config = model_settings.load_config
+
+    def recording_load_config(path, model=""):
+        return _ReadLog(real_load_config(path, model), reads)
+
+    monkeypatch.setattr(api_completion, "load_config", recording_load_config)
+    monkeypatch.setattr(importlib.import_module("cbe.generate"), "load_config", recording_load_config)
+    monkeypatch.delenv("CBE_NO_SUCH_KEY", raising=False)
+    _Handler.body = {"choices": [{"message": {"content": "{}"}}]}
+
+    # Every key set: generate reads its own keys and runs api_completion.invoke on each call.
+    full = {"base_url": server, "api_key_env": "CBE_NO_SUCH_KEY", "api_key_file": None,
+            "extra_headers": {"X-Test": "1"}, "timeout": 5, "output_max_tokens": 10,
+            "batch_target_tokens": 8000, "batch_max_tokens": 10000, "temperature": 0.1,
+            "price_per_million": [1, 1, 1], "response_format": {"type": "json_object"},
+            "top_p": 0.9, "reasoning_effort": "low"}
+    config = tmp_path / "api.json"
+    config.write_text(json.dumps(full))
+    importlib.import_module("cbe.generate").generate(
+        _tiny_repo(tmp_path), tmp_path / "run", model="m", host="api", config=config, jobs=1)
+    sent = _Handler.captured["body"]
+    assert {"temperature", "max_tokens", "response_format", "top_p", "reasoning_effort"} <= sent.keys()
+
+    # A branch the run above does not take: no usable base_url.
+    config.write_text(json.dumps({"base_url": ""}))
+    refused = api_completion.invoke(task="x", attempt=1, prompt="x", repo=tmp_path, run_dir=tmp_path / "run2",
+                                    model="m", config=config, timeout=10, csv_path=tmp_path / "run2/calls.csv")
+    assert refused.error.startswith("api_config:")
+
+    allowed = model_settings.ALLOWED_API_CONFIG_KEYS
+    assert reads == allowed, {"read_but_rejected": sorted(reads - allowed),
+                              "allowed_but_never_read": sorted(allowed - reads)}

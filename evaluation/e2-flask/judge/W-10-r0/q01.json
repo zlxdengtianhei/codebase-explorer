@@ -1,0 +1,125 @@
+{
+  "qid": 1,
+  "question": "What is the purpose of the registration tracking flag in the blueprint collection class that prevents setup methods from being called after the blueprint has been registered once?",
+  "arm": "W",
+  "max_steps": 10,
+  "repeat": 0,
+  "answer_valid": true,
+  "judge_model": "codex/gpt-6.1-sol",
+  "draws": [
+    {
+      "draw": 1,
+      "score": {
+        "correctness": 15,
+        "completeness": 19,
+        "relevance": 17,
+        "clarity": 18,
+        "reasoning": 17
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 120,
+            "prompt_tokens": 6764,
+            "total_tokens": 6884,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 71,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 15,\n  \"completeness\": 19,\n  \"relevance\": 17,\n  \"clarity\": 18,\n  \"reasoning\": 17\n}",
+          "wall_seconds": 4.3568723750067875
+        }
+      ]
+    },
+    {
+      "draw": 2,
+      "score": {
+        "correctness": 17,
+        "completeness": 19,
+        "relevance": 17,
+        "clarity": 18,
+        "reasoning": 18
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 113,
+            "prompt_tokens": 6764,
+            "total_tokens": 6877,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 64,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6528
+            }
+          },
+          "response": "{\n  \"correctness\": 17,\n  \"completeness\": 19,\n  \"relevance\": 17,\n  \"clarity\": 18,\n  \"reasoning\": 18\n}",
+          "wall_seconds": 3.8760132499737665
+        }
+      ]
+    },
+    {
+      "draw": 3,
+      "score": {
+        "correctness": 15,
+        "completeness": 19,
+        "relevance": 17,
+        "clarity": 18,
+        "reasoning": 17
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 110,
+            "prompt_tokens": 6764,
+            "total_tokens": 6874,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 61,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6528
+            }
+          },
+          "response": "{\n  \"correctness\": 15,\n  \"completeness\": 19,\n  \"relevance\": 17,\n  \"clarity\": 18,\n  \"reasoning\": 17\n}",
+          "wall_seconds": 3.939415290951729
+        }
+      ]
+    }
+  ],
+  "score": {
+    "correctness": 15,
+    "completeness": 19,
+    "relevance": 17,
+    "clarity": 18,
+    "reasoning": 17
+  },
+  "total": 86,
+  "main_total_na5": 86,
+  "failure_type": null,
+  "judge_total_range": 3,
+  "wall_seconds": 12.173237667011563
+}

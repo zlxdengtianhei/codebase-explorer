@@ -1,0 +1,16 @@
+{
+  "qid": 6,
+  "question": "For an HTTP/2 transfer over TLS, `Curl_req_want_send()` has to know whether the connection still holds data waiting to be sent. Where is that decided: along which call path, and which connection filter answers, based on which buffers?\n\nBuild assumptions: nghttp2 enabled; https:// URL with HTTP/2 negotiated via ALPN; OpenSSL; no proxy; connection already established; non-Windows.",
+  "arm": "direct",
+  "max_steps": null,
+  "repeat": 0,
+  "answer_valid": false,
+  "judge_model": "codex/gpt-6.1-sol",
+  "draws": [],
+  "score": null,
+  "total": null,
+  "main_total_na5": 5,
+  "failure_type": "no_answer",
+  "judge_total_range": null,
+  "wall_seconds": 4.229199839755893e-05
+}

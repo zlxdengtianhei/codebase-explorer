@@ -1,0 +1,125 @@
+{
+  "qid": 44,
+  "question": "Where in the test_attr_hasmarkup function is the hasmarkup attribute of the TerminalWriter instance being bound to control the ANSI escape code injection behavior?",
+  "arm": "C0",
+  "max_steps": 10,
+  "repeat": 0,
+  "answer_valid": true,
+  "judge_model": "codex/gpt-6.1-sol",
+  "draws": [
+    {
+      "draw": 1,
+      "score": {
+        "correctness": 18,
+        "completeness": 17,
+        "relevance": 16,
+        "clarity": 18,
+        "reasoning": 18
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 100,
+            "prompt_tokens": 6560,
+            "total_tokens": 6660,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 51,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 18,\n  \"completeness\": 17,\n  \"relevance\": 16,\n  \"clarity\": 18,\n  \"reasoning\": 18\n}",
+          "wall_seconds": 5.5704921670258045
+        }
+      ]
+    },
+    {
+      "draw": 2,
+      "score": {
+        "correctness": 18,
+        "completeness": 16,
+        "relevance": 16,
+        "clarity": 18,
+        "reasoning": 18
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 108,
+            "prompt_tokens": 6560,
+            "total_tokens": 6668,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 59,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6400
+            }
+          },
+          "response": "{\n  \"correctness\": 18,\n  \"completeness\": 16,\n  \"relevance\": 16,\n  \"clarity\": 18,\n  \"reasoning\": 18\n}",
+          "wall_seconds": 6.722418458026368
+        }
+      ]
+    },
+    {
+      "draw": 3,
+      "score": {
+        "correctness": 18,
+        "completeness": 17,
+        "relevance": 16,
+        "clarity": 18,
+        "reasoning": 18
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 87,
+            "prompt_tokens": 6560,
+            "total_tokens": 6647,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 38,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6400
+            }
+          },
+          "response": "{\n  \"correctness\": 18,\n  \"completeness\": 17,\n  \"relevance\": 16,\n  \"clarity\": 18,\n  \"reasoning\": 18\n}",
+          "wall_seconds": 5.698977332969662
+        }
+      ]
+    }
+  ],
+  "score": {
+    "correctness": 18,
+    "completeness": 17,
+    "relevance": 16,
+    "clarity": 18,
+    "reasoning": 18
+  },
+  "total": 87,
+  "main_total_na5": 87,
+  "failure_type": null,
+  "judge_total_range": 1,
+  "wall_seconds": 17.99372766603483
+}

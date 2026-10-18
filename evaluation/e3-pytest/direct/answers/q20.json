@@ -1,0 +1,31 @@
+{
+  "qid": 20,
+  "question": "How does pytest's indirect parametrization mechanism resolve non-hashable dictionary items through fixture request parameters, and what internal transformations occur when parametrize decorators process mutable objects that cannot be used as cache keys?",
+  "arm": "direct",
+  "answer": "To handle non-hashable objects like dictionaries in indirect parametrization, pytest does **not** convert, hash, or copy the parameter values. Instead, the process works as follows:\n\n1. **Pass-by-Reference Resolution**: Non-hashable objects (like dictionaries) are stored directly in the `CallSpec2.params` dictionary (keyed by the argument name, which is a string). When the test setup runs, the exact object is assigned by reference to `request.param` on the fixture's `SubRequest`. No internal cloning or copying occurs.\n\n2. **Cache Key Handling**: Because mutable objects cannot be used as hash keys, pytest does not use them in hash-based lookups. Instead, the `FixtureDef` class stores the parameter (as the `cache_key`) inside a tuple (`cached_result`). When checking if a fixture result can be reused, pytest compares the current `request.param` with the cached parameter using the equality operator (`==`) rather than a hash-based dictionary lookup.\n\n3. **Test ID Transformation**: The only \"transformation\" that occurs is for cosmetic test ID generation, where the object is converted to a string (via `repr` or `str` through the `ascii_escaped` utility) to be displayed in the test node name. This string is hashable, but it is used purely for naming and is never used to look up or resolve the underlying parameter object.",
+  "valid": true,
+  "wall_seconds": 108.0594237500336,
+  "attempts": [
+    {
+      "answer": "To handle non-hashable objects like dictionaries in indirect parametrization, pytest does **not** convert, hash, or copy the parameter values. Instead, the process works as follows:\n\n1. **Pass-by-Reference Resolution**: Non-hashable objects (like dictionaries) are stored directly in the `CallSpec2.params` dictionary (keyed by the argument name, which is a string). When the test setup runs, the exact object is assigned by reference to `request.param` on the fixture's `SubRequest`. No internal cloning or copying occurs.\n\n2. **Cache Key Handling**: Because mutable objects cannot be used as hash keys, pytest does not use them in hash-based lookups. Instead, the `FixtureDef` class stores the parameter (as the `cache_key`) inside a tuple (`cached_result`). When checking if a fixture result can be reused, pytest compares the current `request.param` with the cached parameter using the equality operator (`==`) rather than a hash-based dictionary lookup.\n\n3. **Test ID Transformation**: The only \"transformation\" that occurs is for cosmetic test ID generation, where the object is converted to a string (via `repr` or `str` through the `ascii_escaped` utility) to be displayed in the test node name. This string is hashable, but it is used purely for naming and is never used to look up or resolve the underlying parameter object.",
+      "valid": true,
+      "usage": {
+        "completion_tokens": 5564,
+        "prompt_tokens": 119,
+        "total_tokens": 5683,
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": null,
+          "audio_tokens": null,
+          "reasoning_tokens": 5276,
+          "rejected_prediction_tokens": null
+        },
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 64
+        }
+      },
+      "response_model": "glm-5.3-flash"
+    }
+  ]
+}

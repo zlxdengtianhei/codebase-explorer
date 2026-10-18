@@ -1,0 +1,16 @@
+{
+  "qid": 19,
+  "question": "Assume a multi handle with no CURLMOPT_MAX_TOTAL_CONNECTIONS limit. When libcurl closes a pooled connection gracefully (not aborted, not CONNECT_ONLY) and the shutdown of its connection filters cannot finish at once, how is that shutdown driven from the first attempt until the connection is finally freed?\n\nBuild assumptions: Multi interface (curl_multi_perform or the socket API); any TLS backend; non-Windows; release build (no DEBUGBUILD).",
+  "arm": "direct",
+  "max_steps": null,
+  "repeat": 0,
+  "answer_valid": false,
+  "judge_model": "codex/gpt-6.1-sol",
+  "draws": [],
+  "score": null,
+  "total": null,
+  "main_total_na5": 5,
+  "failure_type": "no_answer",
+  "judge_total_range": null,
+  "wall_seconds": 1.4291959814727306e-05
+}

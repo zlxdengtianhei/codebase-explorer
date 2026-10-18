@@ -1,0 +1,125 @@
+{
+  "qid": 31,
+  "question": "How does curl's DNS connection filter decide whether, when and in what form to print the verbose lines that list a host's resolved addresses?\n\nBuild assumptions: Verbose tracing compiled in (CURLVERBOSE); IPv6 resolver (CURLRES_IPV6); an A/AAAA lookup (not HTTPS-RR); UNIX sockets supported.",
+  "arm": "direct",
+  "max_steps": null,
+  "repeat": 0,
+  "answer_valid": true,
+  "judge_model": "codex/gpt-6.1-sol",
+  "draws": [
+    {
+      "draw": 1,
+      "score": {
+        "correctness": 6,
+        "completeness": 7,
+        "relevance": 18,
+        "clarity": 16,
+        "reasoning": 9
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 100,
+            "prompt_tokens": 6210,
+            "total_tokens": 6310,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 51,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 6,\n  \"completeness\": 7,\n  \"relevance\": 18,\n  \"clarity\": 16,\n  \"reasoning\": 9\n}",
+          "wall_seconds": 5.481426875048783
+        }
+      ]
+    },
+    {
+      "draw": 2,
+      "score": {
+        "correctness": 7,
+        "completeness": 7,
+        "relevance": 18,
+        "clarity": 16,
+        "reasoning": 9
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 95,
+            "prompt_tokens": 6210,
+            "total_tokens": 6305,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 46,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6016
+            }
+          },
+          "response": "{\n  \"correctness\": 7,\n  \"completeness\": 7,\n  \"relevance\": 18,\n  \"clarity\": 16,\n  \"reasoning\": 9\n}",
+          "wall_seconds": 4.326376124983653
+        }
+      ]
+    },
+    {
+      "draw": 3,
+      "score": {
+        "correctness": 6,
+        "completeness": 7,
+        "relevance": 18,
+        "clarity": 16,
+        "reasoning": 9
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 102,
+            "prompt_tokens": 6210,
+            "total_tokens": 6312,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 53,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6016
+            }
+          },
+          "response": "{\n  \"correctness\": 6,\n  \"completeness\": 7,\n  \"relevance\": 18,\n  \"clarity\": 16,\n  \"reasoning\": 9\n}",
+          "wall_seconds": 4.342770707968157
+        }
+      ]
+    }
+  ],
+  "score": {
+    "correctness": 6,
+    "completeness": 7,
+    "relevance": 18,
+    "clarity": 16,
+    "reasoning": 9
+  },
+  "total": 56,
+  "main_total_na5": 56,
+  "failure_type": null,
+  "judge_total_range": 1,
+  "wall_seconds": 14.151445791998412
+}

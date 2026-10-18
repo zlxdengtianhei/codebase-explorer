@@ -1,0 +1,11 @@
+question_id,conclusion,reason_en
+3,Partly correct,"The branch structure and line numbers are correct, but the claim that call-phase failures do not respect tbstyle is incorrect."
+4,Partly correct,"The main chain is correct, but _check_scope is incorrectly treated as the execution point for property-availability checks."
+7,Partly correct,"The function location, parameters, and comparison are correct, but independent evolution and the Strategy pattern overstate and contradict the purpose of the test."
+10,Correct,"Each branch matches junitxml.py:159-180, including the final condition for writing to system-out."
+13,Correct,"Line numbers and flow are correct, with only the positional reason argument to the skip marker omitted."
+22,Incorrect,An in-repository test contradicts the central claim that blocked plugins can still be registered and blocking is checked only by import_plugin.
+26,Correct,"The class, methods, line numbers, and functions are correct, while the design rationale is inference rather than a stated source-code intention."
+34,Partly correct,"The three handling layers have correct line numbers, but the claims that unlink failure still returns True and the test mocks both failures simultaneously are incorrect."
+44,Correct,"The location, line numbers, markup implementation, and call chain are all correct."
+46,Correct,"The line numbers and behavior of run, popen, and wrap_session are correct, but collection-specific reraise rules are omitted."

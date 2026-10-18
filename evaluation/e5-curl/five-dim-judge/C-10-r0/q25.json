@@ -1,0 +1,125 @@
+{
+  "qid": 25,
+  "question": "In the libssh (libssh.org) backend, the SFTP per-state handlers return libssh status codes instead of CURLcode. What contract carries a failure during the DO phase, such as a rejected CURLOPT_QUOTE command, back to the multi handle through the protocol's doing callback?\n\nBuild assumptions: SFTP over libssh (USE_LIBSSH, lib/vssh/libssh.c), not libssh2; multi interface.",
+  "arm": "C",
+  "max_steps": 10,
+  "repeat": 0,
+  "answer_valid": true,
+  "judge_model": "codex/gpt-6.1-sol",
+  "draws": [
+    {
+      "draw": 1,
+      "score": {
+        "correctness": 11,
+        "completeness": 11,
+        "relevance": 19,
+        "clarity": 15,
+        "reasoning": 12
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 110,
+            "prompt_tokens": 7002,
+            "total_tokens": 7112,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 61,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 11,\n  \"completeness\": 11,\n  \"relevance\": 19,\n  \"clarity\": 15,\n  \"reasoning\": 12\n}",
+          "wall_seconds": 4.467541749996599
+        }
+      ]
+    },
+    {
+      "draw": 2,
+      "score": {
+        "correctness": 11,
+        "completeness": 11,
+        "relevance": 19,
+        "clarity": 16,
+        "reasoning": 12
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 106,
+            "prompt_tokens": 7002,
+            "total_tokens": 7108,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 57,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6784
+            }
+          },
+          "response": "{\n  \"correctness\": 11,\n  \"completeness\": 11,\n  \"relevance\": 19,\n  \"clarity\": 16,\n  \"reasoning\": 12\n}",
+          "wall_seconds": 4.204379459028132
+        }
+      ]
+    },
+    {
+      "draw": 3,
+      "score": {
+        "correctness": 11,
+        "completeness": 11,
+        "relevance": 19,
+        "clarity": 16,
+        "reasoning": 12
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 104,
+            "prompt_tokens": 7002,
+            "total_tokens": 7106,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 55,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6784
+            }
+          },
+          "response": "{\n  \"correctness\": 11,\n  \"completeness\": 11,\n  \"relevance\": 19,\n  \"clarity\": 16,\n  \"reasoning\": 12\n}",
+          "wall_seconds": 5.054310124949552
+        }
+      ]
+    }
+  ],
+  "score": {
+    "correctness": 11,
+    "completeness": 11,
+    "relevance": 19,
+    "clarity": 16,
+    "reasoning": 12
+  },
+  "total": 69,
+  "main_total_na5": 69,
+  "failure_type": null,
+  "judge_total_range": 1,
+  "wall_seconds": 13.727528667019214
+}

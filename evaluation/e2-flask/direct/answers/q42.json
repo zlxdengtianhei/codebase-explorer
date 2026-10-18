@@ -1,0 +1,31 @@
+{
+  "qid": 42,
+  "question": "Where does the encoding parameter flow from the test function that verifies resource opening with encoding into the Flask application's method that opens files relative to the root path?",
+  "arm": "direct",
+  "answer": "The test (e.g., `test_open_resource_with_encoding` in tests) calls `app.open_resource(..., encoding=\"utf-8\")`. In `Flask.open_resource` (src/flask/app.py), the `encoding` argument is received as a keyword parameter and forwarded directly to the built-in `open()` function, together with the file path built via `os.path.join(self.root_path, resource)`.",
+  "valid": true,
+  "wall_seconds": 13.139230917033274,
+  "attempts": [
+    {
+      "answer": "The test (e.g., `test_open_resource_with_encoding` in tests) calls `app.open_resource(..., encoding=\"utf-8\")`. In `Flask.open_resource` (src/flask/app.py), the `encoding` argument is received as a keyword parameter and forwarded directly to the built-in `open()` function, together with the file path built via `os.path.join(self.root_path, resource)`.",
+      "valid": true,
+      "usage": {
+        "completion_tokens": 740,
+        "prompt_tokens": 110,
+        "total_tokens": 850,
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": null,
+          "audio_tokens": null,
+          "reasoning_tokens": 653,
+          "rejected_prediction_tokens": null
+        },
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 64
+        }
+      },
+      "response_model": "glm-5.3-flash"
+    }
+  ]
+}

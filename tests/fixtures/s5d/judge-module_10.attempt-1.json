@@ -1,0 +1,1480 @@
+{
+  "payload": {
+    "units": [
+      {
+        "id": "flask/json/__init__.py::function::dumps::221",
+        "kind": "function",
+        "explain": "Module-level convenience wrapper that serializes an object to a JSON string. If a Flask application context is active (truthy current_app), it delegates to current_app.json.dumps with all keyword arguments forwarded; otherwise it falls back to the stdlib json.dumps, injecting _default (from provider.py) as the 'default' kwarg only if the caller did not supply one. Exceptions from the underlying serializer propagate unchanged. Callers outside an app context get stdlib behavior plus Flask's extended default serializer.",
+        "summary": "Serialize obj as JSON via the active app's provider, or stdlib json.dumps with Flask's default fallback.",
+        "relations": [
+          {
+            "target": "flask/json/provider.py::function::_default::3535",
+            "kind": "use",
+            "basis": "kwargs.setdefault('default', _default) in fallback branch"
+          }
+        ],
+        "uncertainties": [
+          "Truthiness semantics of current_app outside an app context are defined in flask.globals, not visible here."
+        ]
+      },
+      {
+        "id": "flask/json/__init__.py::function::dump::1274",
+        "kind": "function",
+        "explain": "Serializes obj as JSON and writes it to a text-mode file object fp. If an app context is active it delegates to current_app.json.dump(obj, fp, **kwargs); otherwise it uses stdlib json.dump with the Flask 'default' fallback injected unless the caller supplied one. Returns None; IO and serialization errors propagate. The docstring notes fp should be UTF-8 text for valid JSON output.",
+        "summary": "Write obj as JSON to a file via the app provider or stdlib json.dump with Flask defaults.",
+        "relations": [
+          {
+            "target": "flask/json/provider.py::function::_default::3535",
+            "kind": "use",
+            "basis": "kwargs.setdefault('default', _default) in fallback branch"
+          }
+        ],
+        "uncertainties": []
+      },
+      {
+        "id": "flask/json/__init__.py::function::loads::2282",
+        "kind": "function",
+        "explain": "Deserializes a JSON string or UTF-8 bytes back to Python objects. With an active app context it delegates to current_app.json.loads(s, **kwargs); otherwise it calls stdlib json.loads directly (no default injection is needed for deserialization). Malformed input raises whatever the underlying library raises; nothing is caught here.",
+        "summary": "Parse JSON from a string or bytes via the app provider or stdlib json.loads.",
+        "uncertainties": []
+      },
+      {
+        "id": "flask/json/__init__.py::function::load::3238",
+        "kind": "function",
+        "explain": "Deserializes JSON read from a file object fp (text or UTF-8 binary). With an active app context it delegates to current_app.json.load(fp, **kwargs); otherwise stdlib json.load. Returns the parsed object; read/parse errors propagate. No default injection, mirroring loads.",
+        "summary": "Read and parse JSON from a file via the app provider or stdlib json.load.",
+        "uncertainties": []
+      },
+      {
+        "id": "flask/json/__init__.py::function::jsonify::4209",
+        "kind": "function",
+        "explain": "Serializes its arguments to JSON and returns a Response with application/json mimetype by calling current_app.json.response(*args, **kwargs); it therefore requires an active app context. Semantics of arguments (single value, multiple values as a list, or keywords as a dict, never both) are enforced downstream in JSONProvider._prepare_response_obj. Debug-mode indentation is controlled by the provider. All exceptions, including operating outside an app context, propagate from the delegate call.",
+        "summary": "Return a JSON Response built by the current app's JSON provider; requires an app context.",
+        "relations": [
+          {
+            "target": "flask/json/provider.py::method::JSONProvider.response::2762",
+            "kind": "use",
+            "basis": "returns current_app.json.response(*args, **kwargs)"
+          }
+        ],
+        "uncertainties": [
+          "Return type is typed as Response via TYPE_CHECKING import; actual class comes from the app's response_class."
+        ]
+      },
+      {
+        "id": "flask/json/provider.py::class::JSONProvider::318",
+        "kind": "class",
+        "explain": "Abstract base defining the JSON operations an app exposes via app.json. __init__ stores the app as a weakref.proxy on self._app, so the provider does not keep the app alive and attribute access on a dead app will fail. dumps and loads raise NotImplementedError \u2014 subclasses must implement at least these two. dump and load have working default implementations built on dumps/loads (fp.write(self.dumps(...)) and self.loads(fp.read())). _prepare_response_obj validates jsonify-style arguments: raises TypeError if both args and kwargs are given, returns None if neither, returns args[0] for a single positional, otherwise returns args tuple or kwargs dict. response builds that object and returns self._app.response_class(self.dumps(obj), mimetype='application/json'). Subclassing methods that call self.dumps may dispatch to an overridden dumps.",
+        "summary": "Base JSON provider storing the app as a weakref; subclasses must implement dumps and loads.",
+        "extras": [
+          {
+            "topic": "side_effect",
+            "note": "The app is held only as a weakref.proxy, so the provider does not extend the app's lifetime."
+          },
+          {
+            "topic": "failure",
+            "note": "_prepare_response_obj raises TypeError when both positional and keyword arguments are supplied."
+          }
+        ],
+        "members": [
+          "flask/json/provider.py::method::JSONProvider.__init__::1067",
+          "flask/json/provider.py::method::JSONProvider.dumps::1154",
+          "flask/json/provider.py::method::JSONProvider.dump::1406",
+          "flask/json/provider.py::method::JSONProvider.loads::1814",
+          "flask/json/provider.py::method::JSONProvider.load::2070",
+          "flask/json/provider.py::method::JSONProvider._prepare_response_obj::2386",
+          "flask/json/provider.py::method::JSONProvider.response::2762"
+        ],
+        "relations": [
+          {
+            "target": "flask/json/provider.py::method::JSONProvider.dumps::1154",
+            "kind": "call",
+            "basis": "dump and response invoke self.dumps"
+          },
+          {
+            "target": "flask/json/provider.py::method::JSONProvider.loads::1814",
+            "kind": "call",
+            "basis": "load invokes self.loads(fp.read(), **kwargs)"
+          }
+        ],
+        "uncertainties": [
+          "self.dumps/self.loads resolve dynamically; the graph shows two candidate targets (base and DefaultJSONProvider) for these call sites.",
+          "Behavior when the weakref'd app has been garbage collected is not shown in this source."
+        ]
+      },
+      {
+        "id": "flask/json/provider.py::function::_default::3535",
+        "kind": "function",
+        "explain": "Default JSON 'default' hook for unserializable objects, in priority order: date instances (including datetime, since datetime is a date subclass) become HTTP-date strings via werkzeug's http_date; decimal.Decimal and uuid.UUID become str(o); dataclass instances become dicts via dataclasses.asdict; any object with a __html__ method becomes str(o.__html__()); anything else raises TypeError naming the type. Used as the default kwarg by flask.json.dumps and DefaultJSONProvider.dumps.",
+        "summary": "Convert dates, Decimal, UUID, dataclasses, and __html__ objects to JSON types, else raise TypeError.",
+        "relations": [
+          {
+            "target": "flask/json/provider.py::class::DefaultJSONProvider::3966",
+            "kind": "use",
+            "basis": "assigned as DefaultJSONProvider.default staticmethod"
+          }
+        ],
+        "uncertainties": []
+      },
+      {
+        "id": "flask/json/provider.py::class::DefaultJSONProvider::3966",
+        "kind": "class",
+        "explain": "Concrete provider built on stdlib json, default for Flask apps. Class attributes tune serialization: default is the _default hook (staticmethod), ensure_ascii=True, sort_keys=True, compact=None, mimetype='application/json'. dumps injects default/ensure_ascii/sort_keys as kwarg defaults (caller-supplied values win) and calls json.dumps. loads is a thin pass-through to json.loads. response reuses _prepare_response_obj, then chooses formatting: if compact is False, or compact is None while app.debug is on, it sets indent=2; otherwise it uses compact separators (',', ':'). It returns response_class(f'{self.dumps(obj, **dump_args)}\\n', mimetype=self.mimetype) \u2014 note the appended trailing newline. self.dumps resolves to this class's dumps unless further overridden.",
+        "summary": "Stdlib-json provider with Flask defaults; debug or non-compact mode indents jsonify output.",
+        "members": [
+          "flask/json/provider.py::method::DefaultJSONProvider.dumps::5627",
+          "flask/json/provider.py::method::DefaultJSONProvider.loads::6237",
+          "flask/json/provider.py::method::DefaultJSONProvider.response::6505"
+        ],
+        "relations": [
+          {
+            "target": "flask/json/provider.py::class::JSONProvider::318",
+            "kind": "inherit",
+            "basis": "class DefaultJSONProvider(JSONProvider)"
+          },
+          {
+            "target": "flask/json/provider.py::function::_default::3535",
+            "kind": "use",
+            "basis": "default = staticmethod(_default)"
+          }
+        ],
+        "uncertainties": [
+          "self.dumps in response could dispatch to an override in a further subclass; graph lists both candidates."
+        ]
+      },
+      {
+        "id": "flask/json/tag.py::class::JSONTag::1625",
+        "kind": "class",
+        "explain": "Base class for tagged-JSON type handlers. Uses __slots__ ('serializer',) and a class-level key string: empty key means the tag is only an intermediate step and is never registered in the tag lookup dict. __init__ binds the owning TaggedJSONSerializer. check/to_json/to_python raise NotImplementedError \u2014 subclasses implement the type test, JSON-safe conversion, and inverse conversion. tag(value) wraps to_json's result as {self.key: converted}.",
+        "summary": "Base tag class binding a serializer; subclasses implement check/to_json/to_python around a key.",
+        "members": [
+          "flask/json/tag.py::method::JSONTag.__init__::1906",
+          "flask/json/tag.py::method::JSONTag.check::2066",
+          "flask/json/tag.py::method::JSONTag.to_json::2213",
+          "flask/json/tag.py::method::JSONTag.to_python::2411",
+          "flask/json/tag.py::method::JSONTag.tag::2607"
+        ],
+        "uncertainties": []
+      },
+      {
+        "id": "grp:tag.py-typed-tags",
+        "kind": "group",
+        "explain": "Concrete JSONTag subclasses each handling one non-standard type, keyed by space-prefixed tags so they cannot collide with real JSON dict keys. TagDict (key ' di'): matches a 1-item dict whose sole key is already a registered tag key; to_json suffixes the key with '__' and recursively tags the value; to_python strips the '__' suffix and returns the untagged single-entry dict. TagTuple (key ' t'): tuples become lists of tagged items, restored via tuple(). TagBytes (key ' b'): bytes become base64 ASCII (b64encode(...).decode('ascii')) and are restored with b64decode. TagMarkup (key ' m'): any object with a callable __html__ is stored as str(value.__html__()) and always restored as a markupsafe.Markup \u2014 the original concrete type is not preserved. TagUUID (key ' u'): UUID <-> hex string via UUID.hex and UUID(value). TagDateTime (key ' d'): datetime <-> RFC-822 string via werkzeug http_date/parse_date; parse_date returns None for unparseable strings, a boundary worth noting.",
+        "summary": "Typed tags encoding dict/tag collisions, tuples, bytes, Markup, UUID, and datetime losslessly.",
+        "members": [
+          "flask/json/tag.py::class::TagDict::2803",
+          "flask/json/tag.py::method::TagDict.check::3048",
+          "flask/json/tag.py::method::TagDict.to_json::3245",
+          "flask/json/tag.py::method::TagDict.to_python::3385",
+          "flask/json/tag.py::class::TagTuple::3863",
+          "flask/json/tag.py::method::TagTuple.check::3927",
+          "flask/json/tag.py::method::TagTuple.to_json::4011",
+          "flask/json/tag.py::method::TagTuple.to_python::4119",
+          "flask/json/tag.py::class::TagBytes::4449",
+          "flask/json/tag.py::method::TagBytes.check::4513",
+          "flask/json/tag.py::method::TagBytes.to_json::4597",
+          "flask/json/tag.py::method::TagBytes.to_python::4692",
+          "flask/json/tag.py::class::TagMarkup::4770",
+          "flask/json/tag.py::method::TagMarkup.check::5047",
+          "flask/json/tag.py::method::TagMarkup.to_json::5149",
+          "flask/json/tag.py::method::TagMarkup.to_python::5233",
+          "flask/json/tag.py::class::TagUUID::5308",
+          "flask/json/tag.py::method::TagUUID.check::5371",
+          "flask/json/tag.py::method::TagUUID.to_json::5454",
+          "flask/json/tag.py::method::TagUUID.to_python::5526",
+          "flask/json/tag.py::class::TagDateTime::5599",
+          "flask/json/tag.py::method::TagDateTime.check::5666",
+          "flask/json/tag.py::method::TagDateTime.to_json::5753",
+          "flask/json/tag.py::method::TagDateTime.to_python::5832"
+        ],
+        "relations": [
+          {
+            "target": "flask/json/tag.py::class::JSONTag::1625",
+            "kind": "inherit",
+            "basis": "each class subclasses JSONTag"
+          },
+          {
+            "target": "flask/json/tag.py::class::TaggedJSONSerializer::5911",
+            "kind": "use",
+            "basis": "to_json methods call self.serializer.tag(...) recursively"
+          }
+        ],
+        "extras": [
+          {
+            "topic": "failure",
+            "note": "TagDateTime.to_python uses werkzeug parse_date, which returns None for unparseable input."
+          },
+          {
+            "topic": "contract",
+            "note": "TagDict only fires for single-key dicts whose key matches a registered tag key, avoiding ambiguity with ordinary dicts."
+          }
+        ],
+        "uncertainties": [
+          "TagDict.to_python assumes the stored key actually ends with '__'; a hand-crafted tag dict could yield odd keys."
+        ]
+      },
+      {
+        "id": "grp:tag.py-pass-through-tags",
+        "kind": "group",
+        "explain": "PassDict and PassList are keyless tags (key stays '' from the base class) that act as structural passes rather than tagged encodings. PassDict.check matches any dict; its to_json rebuilds the dict with each value passed through serializer.tag (keys are left alone since JSON keys must be strings) and aliases tag = to_json, so JSONTag.tag's {key: ...} wrapping is bypassed \u2014 output stays a plain dict. PassList likewise matches any list, maps each item through serializer.tag, and aliases tag = to_json. These run during serialization of containers so nested special types get tagged recursively without wrapping the container itself.",
+        "summary": "Keyless tags that recursively tag dict values and list items, aliasing tag to to_json.",
+        "members": [
+          "flask/json/tag.py::class::PassDict::3501",
+          "flask/json/tag.py::method::PassDict.check::3550",
+          "flask/json/tag.py::method::PassDict.to_json::3633",
+          "flask/json/tag.py::class::PassDict::3501::s2",
+          "flask/json/tag.py::class::PassList::4193",
+          "flask/json/tag.py::method::PassList.check::4242",
+          "flask/json/tag.py::method::PassList.to_json::4325",
+          "flask/json/tag.py::class::PassList::4193::s2"
+        ],
+        "relations": [
+          {
+            "target": "flask/json/tag.py::class::JSONTag::1625",
+            "kind": "inherit",
+            "basis": "class PassDict(JSONTag) / class PassList(JSONTag)"
+          },
+          {
+            "target": "flask/json/tag.py::class::TaggedJSONSerializer::5911",
+            "kind": "use",
+            "basis": "self.serializer.tag(...) recursive tagging"
+          }
+        ],
+        "uncertainties": [
+          "The class-range inventory lists PassDict/PassList twice (s0 and s2); the second spans likely the tag = to_json alias line and adds no behavior."
+        ]
+      },
+      {
+        "id": "flask/json/tag.py::class::TaggedJSONSerializer::5911",
+        "kind": "class",
+        "explain": "Tag-based lossless serializer for non-JSON types, used as the intermediate serializer by the session interface and passed to itsdangerous.Serializer. __init__ builds tags (key -> bound tag instance) and order (check order) and registers default_tags: TagDict, PassDict, TagTuple, PassList, TagBytes, TagMarkup, TagUUID, TagDateTime. register(tag_class, force=False, index=None) instantiates the tag with this serializer; for a non-empty key it raises KeyError('Tag ... is already registered.') unless force=True, then stores it in tags; the instance is appended to order, or inserted at index for special-case ordering. tag(value) returns value unchanged if no tag's check matches, else tag.tag(value) \u2014 first matching tag wins, so order matters. untag(value) leaves any non-1-key dict or unknown key untouched, else applies the tag's to_python. _untag_scan recursively rebuilds dicts and lists, untagging each dict after its items are scanned. dumps tags the value then uses flask.json.dumps with compact separators (',', ':'); loads parses via flask.json.loads and runs _untag_scan. Because the pass-through dict/list tags recurse, nested tagged objects anywhere in the structure are restored.",
+        "summary": "Serializer registering ordered type tags to losslessly encode extra Python types in JSON.",
+        "members": [
+          "flask/json/tag.py::method::TaggedJSONSerializer.__init__::6663",
+          "flask/json/tag.py::method::TaggedJSONSerializer.register::6848",
+          "flask/json/tag.py::method::TaggedJSONSerializer.tag::7943",
+          "flask/json/tag.py::method::TaggedJSONSerializer.untag::8181",
+          "flask/json/tag.py::method::TaggedJSONSerializer._untag_scan::8508",
+          "flask/json/tag.py::method::TaggedJSONSerializer.dumps::8947",
+          "flask/json/tag.py::method::TaggedJSONSerializer.loads::9117"
+        ],
+        "relations": [
+          {
+            "target": "flask/json/tag.py::class::JSONTag::1625",
+            "kind": "use",
+            "basis": "registers and dispatches JSONTag instances via tag.check/tag.tag/to_python"
+          },
+          {
+            "target": "flask/json/__init__.py::function::dumps::221",
+            "kind": "call",
+            "basis": "dumps calls dumps(self.tag(value), separators=(',', ':'))"
+          },
+          {
+            "target": "flask/json/__init__.py::function::loads::2282",
+            "kind": "call",
+            "basis": "loads calls loads(value) then _untag_scan"
+          },
+          {
+            "target": "flask/json/tag.py::grp:tag.py-typed-tags",
+            "kind": "group",
+            "basis": "typed tags appear in default_tags"
+          },
+          {
+            "target": "flask/json/tag.py::grp:tag.py-pass-through-tags",
+            "kind": "group",
+            "basis": "PassDict/PassList appear in default_tags"
+          }
+        ],
+        "extras": [
+          {
+            "topic": "failure",
+            "note": "register raises KeyError on a duplicate key unless force=True."
+          },
+          {
+            "topic": "condition",
+            "note": "Order of tags determines which check wins; use index to insert special cases before general ones."
+          }
+        ],
+        "uncertainties": [
+          "untag only inspects top-level 1-key dicts; deep restoration depends on _untag_scan's recursion order, which untags inner dicts before the outer one.",
+          "The module docstring's OrderedDict example is documentation, not executed code."
+        ]
+      }
+    ],
+    "dispositions": {
+      "flask/json/__init__.py::module_residual::::0": {
+        "how": "index_only",
+        "unit": null,
+        "reason": "Imports and TYPE_CHECKING block only; no behavior."
+      },
+      "flask/json/__init__.py::function::dumps::221": {
+        "how": "unit",
+        "unit": "flask/json/__init__.py::function::dumps::221",
+        "reason": "App-context delegation with default-injection fallback logic."
+      },
+      "flask/json/__init__.py::function::dump::1274": {
+        "how": "unit",
+        "unit": "flask/json/__init__.py::function::dump::1274",
+        "reason": "File-writing variant with same delegation/fallback branching."
+      },
+      "flask/json/__init__.py::function::loads::2282": {
+        "how": "unit",
+        "unit": "flask/json/__init__.py::function::loads::2282",
+        "reason": "Deserialization wrapper with app-context delegation."
+      },
+      "flask/json/__init__.py::function::load::3238": {
+        "how": "unit",
+        "unit": "flask/json/__init__.py::function::load::3238",
+        "reason": "File-reading deserialization wrapper with delegation."
+      },
+      "flask/json/__init__.py::function::jsonify::4209": {
+        "how": "unit",
+        "unit": "flask/json/__init__.py::function::jsonify::4209",
+        "reason": "Public response-building entry point delegating to provider.response."
+      },
+      "flask/json/provider.py::module_residual::::0": {
+        "how": "index_only",
+        "unit": null,
+        "reason": "Imports and TYPE_CHECKING imports only."
+      },
+      "flask/json/provider.py::class::JSONProvider::318": {
+        "how": "unit",
+        "unit": "flask/json/provider.py::class::JSONProvider::318",
+        "reason": "Base provider class explained with all its methods."
+      },
+      "flask/json/provider.py::method::JSONProvider.__init__::1067": {
+        "how": "grouped",
+        "unit": "flask/json/provider.py::class::JSONProvider::318",
+        "reason": "Trivial weakref assignment, covered in class unit."
+      },
+      "flask/json/provider.py::method::JSONProvider.dumps::1154": {
+        "how": "grouped",
+        "unit": "flask/json/provider.py::class::JSONProvider::318",
+        "reason": "Raises NotImplementedError; documented in class unit."
+      },
+      "flask/json/provider.py::method::JSONProvider.dump::1406": {
+        "how": "grouped",
+        "unit": "flask/json/provider.py::class::JSONProvider::318",
+        "reason": "Three-line default built on dumps; covered in class unit."
+      },
+      "flask/json/provider.py::method::JSONProvider.loads::1814": {
+        "how": "grouped",
+        "unit": "flask/json/provider.py::class::JSONProvider::318",
+        "reason": "Raises NotImplementedError; documented in class unit."
+      },
+      "flask/json/provider.py::method::JSONProvider.load::2070": {
+        "how": "grouped",
+        "unit": "flask/json/provider.py::class::JSONProvider::318",
+        "reason": "Three-line default built on loads; covered in class unit."
+      },
+      "flask/json/provider.py::method::JSONProvider._prepare_response_obj::2386": {
+        "how": "grouped",
+        "unit": "flask/json/provider.py::class::JSONProvider::318",
+        "reason": "Argument-validation logic explained in class unit."
+      },
+      "flask/json/provider.py::method::JSONProvider.response::2762": {
+        "how": "grouped",
+        "unit": "flask/json/provider.py::class::JSONProvider::318",
+        "reason": "Simple composition of _prepare_response_obj and dumps; covered in class unit."
+      },
+      "flask/json/provider.py::function::_default::3535": {
+        "how": "unit",
+        "unit": "flask/json/provider.py::function::_default::3535",
+        "reason": "Multi-type conversion hook with TypeError fallback; real logic."
+      },
+      "flask/json/provider.py::class::DefaultJSONProvider::3966": {
+        "how": "unit",
+        "unit": "flask/json/provider.py::class::DefaultJSONProvider::3966",
+        "reason": "Concrete provider with attribute-driven dumps and debug-aware response."
+      },
+      "flask/json/provider.py::method::DefaultJSONProvider.dumps::5627": {
+        "how": "grouped",
+        "unit": "flask/json/provider.py::class::DefaultJSONProvider::3966",
+        "reason": "Kwarg-default injection explained in class unit."
+      },
+      "flask/json/provider.py::method::DefaultJSONProvider.loads::6237": {
+        "how": "grouped",
+        "unit": "flask/json/provider.py::class::DefaultJSONProvider::3966",
+        "reason": "One-line pass-through to json.loads."
+      },
+      "flask/json/provider.py::method::DefaultJSONProvider.response::6505": {
+        "how": "grouped",
+        "unit": "flask/json/provider.py::class::DefaultJSONProvider::3966",
+        "reason": "Compact/indent formatting logic explained in class unit."
+      },
+      "flask/json/tag.py::module_residual::::0": {
+        "how": "index_only",
+        "unit": null,
+        "reason": "Module docstring (extension example), imports only."
+      },
+      "flask/json/tag.py::class::JSONTag::1625": {
+        "how": "unit",
+        "unit": "flask/json/tag.py::class::JSONTag::1625",
+        "reason": "Base tag class defining the tag protocol."
+      },
+      "flask/json/tag.py::method::JSONTag.__init__::1906": {
+        "how": "grouped",
+        "unit": "flask/json/tag.py::class::JSONTag::1625",
+        "reason": "Trivial serializer binding."
+      },
+      "flask/json/tag.py::method::JSONTag.check::2066": {
+        "how": "grouped",
+        "unit": "flask/json/tag.py::class::JSONTag::1625",
+        "reason": "Abstract raise, covered in class unit."
+      },
+      "flask/json/tag.py::method::JSONTag.to_json::2213": {
+        "how": "grouped",
+        "unit": "flask/json/tag.py::class::JSONTag::1625",
+        "reason": "Abstract raise, covered in class unit."
+      },
+      "flask/json/tag.py::method::JSONTag.to_python::2411": {
+        "how": "grouped",
+        "unit": "flask/json/tag.py::class::JSONTag::1625",
+        "reason": "Abstract raise, covered in class unit."
+      },
+      "flask/json/tag.py::method::JSONTag.tag::2607": {
+        "how": "grouped",
+        "unit": "flask/json/tag.py::class::JSONTag::1625",
+        "reason": "One-line key wrapping, covered in class unit."
+      },
+      "flask/json/tag.py::class::TagDict::2803": {
+        "how": "grouped",
+        "unit": "grp:tag.py-typed-tags",
+        "reason": "Tag semantics explained in the typed-tags group."
+      },
+      "flask/json/tag.py::method::TagDict.check::3048": {
+        "how": "grouped",
+        "unit": "grp:tag.py-typed-tags",
+        "reason": "Covered in typed-tags group."
+      },
+      "flask/json/tag.py::method::TagDict.to_json::3245": {
+        "how": "grouped",
+        "unit": "grp:tag.py-typed-tags",
+        "reason": "Covered in typed-tags group."
+      },
+      "flask/json/tag.py::method::TagDict.to_python::3385": {
+        "how": "grouped",
+        "unit": "grp:tag.py-typed-tags",
+        "reason": "Covered in typed-tags group."
+      },
+      "flask/json/tag.py::class::PassDict::3501": {
+        "how": "grouped",
+        "unit": "grp:tag.py-pass-through-tags",
+        "reason": "Pass-through semantics in pass-through group."
+      },
+      "flask/json/tag.py::method::PassDict.check::3550": {
+        "how": "grouped",
+        "unit": "grp:tag.py-pass-through-tags",
+        "reason": "One-line isinstance check."
+      },
+      "flask/json/tag.py::method::PassDict.to_json::3633": {
+        "how": "grouped",
+        "unit": "grp:tag.py-pass-through-tags",
+        "reason": "Covered in pass-through group."
+      },
+      "flask/json/tag.py::class::PassDict::3501::s2": {
+        "how": "grouped",
+        "unit": "grp:tag.py-pass-through-tags",
+        "reason": "Second range is the tag = to_json alias; no separate behavior."
+      },
+      "flask/json/tag.py::class::TagTuple::3863": {
+        "how": "grouped",
+        "unit": "grp:tag.py-typed-tags",
+        "reason": "Tuple tag covered in typed-tags group."
+      },
+      "flask/json/tag.py::method::TagTuple.check::3927": {
+        "how": "grouped",
+        "unit": "grp:tag.py-typed-tags",
+        "reason": "One-line isinstance check."
+      },
+      "flask/json/tag.py::method::TagTuple.to_json::4011": {
+        "how": "grouped",
+        "unit": "grp:tag.py-typed-tags",
+        "reason": "Covered in typed-tags group."
+      },
+      "flask/json/tag.py::method::TagTuple.to_python::4119": {
+        "how": "grouped",
+        "unit": "grp:tag.py-typed-tags",
+        "reason": "Covered in typed-tags group."
+      },
+      "flask/json/tag.py::class::PassList::4193": {
+        "how": "grouped",
+        "unit": "grp:tag.py-pass-through-tags",
+        "reason": "Pass-through semantics in pass-through group."
+      },
+      "flask/json/tag.py::method::PassList.check::4242": {
+        "how": "grouped",
+        "unit": "grp:tag.py-pass-through-tags",
+        "reason": "One-line isinstance check."
+      },
+      "flask/json/tag.py::method::PassList.to_json::4325": {
+        "how": "grouped",
+        "unit": "grp:tag.py-pass-through-tags",
+        "reason": "Covered in pass-through group."
+      },
+      "flask/json/tag.py::class::PassList::4193::s2": {
+        "how": "grouped",
+        "unit": "grp:tag.py-pass-through-tags",
+        "reason": "Second range is the tag = to_json alias; no separate behavior."
+      },
+      "flask/json/tag.py::class::TagBytes::4449": {
+        "how": "grouped",
+        "unit": "grp:tag.py-typed-tags",
+        "reason": "Bytes/base64 tag in typed-tags group."
+      },
+      "flask/json/tag.py::method::TagBytes.check::4513": {
+        "how": "grouped",
+        "unit": "grp:tag.py-typed-tags",
+        "reason": "One-line isinstance check."
+      },
+      "flask/json/tag.py::method::TagBytes.to_json::4597": {
+        "how": "grouped",
+        "unit": "grp:tag.py-typed-tags",
+        "reason": "Covered in typed-tags group."
+      },
+      "flask/json/tag.py::method::TagBytes.to_python::4692": {
+        "how": "grouped",
+        "unit": "grp:tag.py-typed-tags",
+        "reason": "Covered in typed-tags group."
+      },
+      "flask/json/tag.py::class::TagMarkup::4770": {
+        "how": "grouped",
+        "unit": "grp:tag.py-typed-tags",
+        "reason": "Markup tag in typed-tags group."
+      },
+      "flask/json/tag.py::method::TagMarkup.check::5047": {
+        "how": "grouped",
+        "unit": "grp:tag.py-typed-tags",
+        "reason": "Covered in typed-tags group."
+      },
+      "flask/json/tag.py::method::TagMarkup.to_json::5149": {
+        "how": "grouped",
+        "unit": "grp:tag.py-typed-tags",
+        "reason": "Covered in typed-tags group."
+      },
+      "flask/json/tag.py::method::TagMarkup.to_python::5233": {
+        "how": "grouped",
+        "unit": "grp:tag.py-typed-tags",
+        "reason": "Covered in typed-tags group."
+      },
+      "flask/json/tag.py::class::TagUUID::5308": {
+        "how": "grouped",
+        "unit": "grp:tag.py-typed-tags",
+        "reason": "UUID tag in typed-tags group."
+      },
+      "flask/json/tag.py::method::TagUUID.check::5371": {
+        "how": "grouped",
+        "unit": "grp:tag.py-typed-tags",
+        "reason": "One-line isinstance check."
+      },
+      "flask/json/tag.py::method::TagUUID.to_json::5454": {
+        "how": "grouped",
+        "unit": "grp:tag.py-typed-tags",
+        "reason": "Covered in typed-tags group."
+      },
+      "flask/json/tag.py::method::TagUUID.to_python::5526": {
+        "how": "grouped",
+        "unit": "grp:tag.py-typed-tags",
+        "reason": "Covered in typed-tags group."
+      },
+      "flask/json/tag.py::class::TagDateTime::5599": {
+        "how": "grouped",
+        "unit": "grp:tag.py-typed-tags",
+        "reason": "Datetime tag in typed-tags group."
+      },
+      "flask/json/tag.py::method::TagDateTime.check::5666": {
+        "how": "grouped",
+        "unit": "grp:tag.py-typed-tags",
+        "reason": "One-line isinstance check."
+      },
+      "flask/json/tag.py::method::TagDateTime.to_json::5753": {
+        "how": "grouped",
+        "unit": "grp:tag.py-typed-tags",
+        "reason": "Covered in typed-tags group."
+      },
+      "flask/json/tag.py::method::TagDateTime.to_python::5832": {
+        "how": "grouped",
+        "unit": "grp:tag.py-typed-tags",
+        "reason": "Covered in typed-tags group."
+      },
+      "flask/json/tag.py::class::TaggedJSONSerializer::5911": {
+        "how": "unit",
+        "unit": "flask/json/tag.py::class::TaggedJSONSerializer::5911",
+        "reason": "Core serializer with register/tag/untag/scan logic; methods folded in."
+      },
+      "flask/json/tag.py::method::TaggedJSONSerializer.__init__::6663": {
+        "how": "grouped",
+        "unit": "flask/json/tag.py::class::TaggedJSONSerializer::5911",
+        "reason": "Default tag registration, covered in class unit."
+      },
+      "flask/json/tag.py::method::TaggedJSONSerializer.register::6848": {
+        "how": "grouped",
+        "unit": "flask/json/tag.py::class::TaggedJSONSerializer::5911",
+        "reason": "Duplicate-key/index logic explained in class unit."
+      },
+      "flask/json/tag.py::method::TaggedJSONSerializer.tag::7943": {
+        "how": "grouped",
+        "unit": "flask/json/tag.py::class::TaggedJSONSerializer::5911",
+        "reason": "Ordered check loop explained in class unit."
+      },
+      "flask/json/tag.py::method::TaggedJSONSerializer.untag::8181": {
+        "how": "grouped",
+        "unit": "flask/json/tag.py::class::TaggedJSONSerializer::5911",
+        "reason": "Guarded one-tag decode explained in class unit."
+      },
+      "flask/json/tag.py::method::TaggedJSONSerializer._untag_scan::8508": {
+        "how": "grouped",
+        "unit": "flask/json/tag.py::class::TaggedJSONSerializer::5911",
+        "reason": "Recursive untag logic explained in class unit."
+      },
+      "flask/json/tag.py::method::TaggedJSONSerializer.dumps::8947": {
+        "how": "grouped",
+        "unit": "flask/json/tag.py::class::TaggedJSONSerializer::5911",
+        "reason": "Two-line compact dump, covered in class unit."
+      },
+      "flask/json/tag.py::method::TaggedJSONSerializer.loads::9117": {
+        "how": "grouped",
+        "unit": "flask/json/tag.py::class::TaggedJSONSerializer::5911",
+        "reason": "Two-line parse+scan, covered in class unit."
+      }
+    },
+    "batch_notes": "All inventory ids disposed. provider.py and tag.py symbols are grouped into class/group units because their methods are thin, interdependent protocol implementations; tag.py's eight typed tags and two pass-through tags are folded into two groups by shared behavior. Duplicate class-range entries (PassDict/PassList s2) noted as alias lines. Graph ambiguity between JSONProvider.dumps and DefaultJSONProvider.dumps at self.dumps call sites is recorded as dynamic dispatch uncertainty rather than resolved."
+  },
+  "paths": [
+    "flask/json/__init__.py",
+    "flask/json/provider.py",
+    "flask/json/tag.py"
+  ],
+  "inventory": {
+    "flask/json/__init__.py": {
+      "tokens": 1405,
+      "sha256": "b402bd0b89b87250f932bf4b8e2bec7af7130a8ebdc3ff5a0bba3865e9984173",
+      "nlines": 170,
+      "symbols": [
+        {
+          "id": "flask/json/__init__.py::module_residual::::0",
+          "name": "__init__.py",
+          "kind": "module_region",
+          "parent": null,
+          "lines": [
+            [
+              1,
+              12
+            ]
+          ]
+        },
+        {
+          "id": "flask/json/__init__.py::function::dumps::221",
+          "name": "dumps",
+          "kind": "function",
+          "parent": null,
+          "lines": [
+            [
+              13,
+              44
+            ]
+          ]
+        },
+        {
+          "id": "flask/json/__init__.py::function::dump::1274",
+          "name": "dump",
+          "kind": "function",
+          "parent": null,
+          "lines": [
+            [
+              47,
+              74
+            ]
+          ]
+        },
+        {
+          "id": "flask/json/__init__.py::function::loads::2282",
+          "name": "loads",
+          "kind": "function",
+          "parent": null,
+          "lines": [
+            [
+              77,
+              105
+            ]
+          ]
+        },
+        {
+          "id": "flask/json/__init__.py::function::load::3238",
+          "name": "load",
+          "kind": "function",
+          "parent": null,
+          "lines": [
+            [
+              108,
+              135
+            ]
+          ]
+        },
+        {
+          "id": "flask/json/__init__.py::function::jsonify::4209",
+          "name": "jsonify",
+          "kind": "function",
+          "parent": null,
+          "lines": [
+            [
+              138,
+              170
+            ]
+          ]
+        }
+      ],
+      "known_empty": false
+    },
+    "flask/json/provider.py": {
+      "tokens": 1833,
+      "sha256": "cefdd0dfdde6bb6f73e7b853aa789de432e2af52a8c920c1c2af17228235b72c",
+      "nlines": 215,
+      "symbols": [
+        {
+          "id": "flask/json/provider.py::module_residual::::0",
+          "name": "provider.py",
+          "kind": "module_region",
+          "parent": null,
+          "lines": [
+            [
+              1,
+              18
+            ]
+          ]
+        },
+        {
+          "id": "flask/json/provider.py::class::JSONProvider::318::s0",
+          "name": "JSONProvider",
+          "kind": "class",
+          "parent": null,
+          "lines": [
+            [
+              19,
+              38
+            ]
+          ]
+        },
+        {
+          "id": "flask/json/provider.py::method::JSONProvider.__init__::1067",
+          "name": "__init__",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              38,
+              39
+            ]
+          ]
+        },
+        {
+          "id": "flask/json/provider.py::method::JSONProvider.dumps::1154",
+          "name": "dumps",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              41,
+              47
+            ]
+          ]
+        },
+        {
+          "id": "flask/json/provider.py::method::JSONProvider.dump::1406",
+          "name": "dump",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              49,
+              57
+            ]
+          ]
+        },
+        {
+          "id": "flask/json/provider.py::method::JSONProvider.loads::1814",
+          "name": "loads",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              59,
+              65
+            ]
+          ]
+        },
+        {
+          "id": "flask/json/provider.py::method::JSONProvider.load::2070",
+          "name": "load",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              67,
+              73
+            ]
+          ]
+        },
+        {
+          "id": "flask/json/provider.py::method::JSONProvider._prepare_response_obj::2386",
+          "name": "_prepare_response_obj",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              75,
+              87
+            ]
+          ]
+        },
+        {
+          "id": "flask/json/provider.py::method::JSONProvider.response::2762",
+          "name": "response",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              89,
+              105
+            ]
+          ]
+        },
+        {
+          "id": "flask/json/provider.py::function::_default::3535",
+          "name": "_default",
+          "kind": "function",
+          "parent": null,
+          "lines": [
+            [
+              108,
+              121
+            ]
+          ]
+        },
+        {
+          "id": "flask/json/provider.py::class::DefaultJSONProvider::3966::s0",
+          "name": "DefaultJSONProvider",
+          "kind": "class",
+          "parent": null,
+          "lines": [
+            [
+              124,
+              166
+            ]
+          ]
+        },
+        {
+          "id": "flask/json/provider.py::method::DefaultJSONProvider.dumps::5627",
+          "name": "dumps",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              166,
+              179
+            ]
+          ]
+        },
+        {
+          "id": "flask/json/provider.py::method::DefaultJSONProvider.loads::6237",
+          "name": "loads",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              181,
+              187
+            ]
+          ]
+        },
+        {
+          "id": "flask/json/provider.py::method::DefaultJSONProvider.response::6505",
+          "name": "response",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              189,
+              215
+            ]
+          ]
+        }
+      ],
+      "known_empty": false
+    },
+    "flask/json/tag.py": {
+      "tokens": 2255,
+      "sha256": "0e168dc2e20e85db7647be28382f58e19f19a6bc4562245be5d50fe5bcb220dc",
+      "nlines": 327,
+      "symbols": [
+        {
+          "id": "flask/json/tag.py::module_residual::::0",
+          "name": "tag.py",
+          "kind": "module_region",
+          "parent": null,
+          "lines": [
+            [
+              1,
+              59
+            ]
+          ]
+        },
+        {
+          "id": "flask/json/tag.py::class::JSONTag::1625::s0",
+          "name": "JSONTag",
+          "kind": "class",
+          "parent": null,
+          "lines": [
+            [
+              60,
+              69
+            ]
+          ]
+        },
+        {
+          "id": "flask/json/tag.py::method::JSONTag.__init__::1906",
+          "name": "__init__",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              69,
+              71
+            ]
+          ]
+        },
+        {
+          "id": "flask/json/tag.py::method::JSONTag.check::2066",
+          "name": "check",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              73,
+              75
+            ]
+          ]
+        },
+        {
+          "id": "flask/json/tag.py::method::JSONTag.to_json::2213",
+          "name": "to_json",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              77,
+              80
+            ]
+          ]
+        },
+        {
+          "id": "flask/json/tag.py::method::JSONTag.to_python::2411",
+          "name": "to_python",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              82,
+              85
+            ]
+          ]
+        },
+        {
+          "id": "flask/json/tag.py::method::JSONTag.tag::2607",
+          "name": "tag",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              87,
+              90
+            ]
+          ]
+        },
+        {
+          "id": "flask/json/tag.py::class::TagDict::2803::s0",
+          "name": "TagDict",
+          "kind": "class",
+          "parent": null,
+          "lines": [
+            [
+              93,
+              103
+            ]
+          ]
+        },
+        {
+          "id": "flask/json/tag.py::method::TagDict.check::3048",
+          "name": "check",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              103,
+              108
+            ]
+          ]
+        },
+        {
+          "id": "flask/json/tag.py::method::TagDict.to_json::3245",
+          "name": "to_json",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              110,
+              112
+            ]
+          ]
+        },
+        {
+          "id": "flask/json/tag.py::method::TagDict.to_python::3385",
+          "name": "to_python",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              114,
+              116
+            ]
+          ]
+        },
+        {
+          "id": "flask/json/tag.py::class::PassDict::3501::s0",
+          "name": "PassDict",
+          "kind": "class",
+          "parent": null,
+          "lines": [
+            [
+              119,
+              122
+            ]
+          ]
+        },
+        {
+          "id": "flask/json/tag.py::method::PassDict.check::3550",
+          "name": "check",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              122,
+              123
+            ]
+          ]
+        },
+        {
+          "id": "flask/json/tag.py::method::PassDict.to_json::3633",
+          "name": "to_json",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              125,
+              128
+            ]
+          ]
+        },
+        {
+          "id": "flask/json/tag.py::class::PassDict::3501::s2",
+          "name": "PassDict",
+          "kind": "class",
+          "parent": null,
+          "lines": [
+            [
+              128,
+              130
+            ]
+          ]
+        },
+        {
+          "id": "flask/json/tag.py::class::TagTuple::3863::s0",
+          "name": "TagTuple",
+          "kind": "class",
+          "parent": null,
+          "lines": [
+            [
+              133,
+              137
+            ]
+          ]
+        },
+        {
+          "id": "flask/json/tag.py::method::TagTuple.check::3927",
+          "name": "check",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              137,
+              138
+            ]
+          ]
+        },
+        {
+          "id": "flask/json/tag.py::method::TagTuple.to_json::4011",
+          "name": "to_json",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              140,
+              141
+            ]
+          ]
+        },
+        {
+          "id": "flask/json/tag.py::method::TagTuple.to_python::4119",
+          "name": "to_python",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              143,
+              144
+            ]
+          ]
+        },
+        {
+          "id": "flask/json/tag.py::class::PassList::4193::s0",
+          "name": "PassList",
+          "kind": "class",
+          "parent": null,
+          "lines": [
+            [
+              147,
+              150
+            ]
+          ]
+        },
+        {
+          "id": "flask/json/tag.py::method::PassList.check::4242",
+          "name": "check",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              150,
+              151
+            ]
+          ]
+        },
+        {
+          "id": "flask/json/tag.py::method::PassList.to_json::4325",
+          "name": "to_json",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              153,
+              154
+            ]
+          ]
+        },
+        {
+          "id": "flask/json/tag.py::class::PassList::4193::s2",
+          "name": "PassList",
+          "kind": "class",
+          "parent": null,
+          "lines": [
+            [
+              154,
+              156
+            ]
+          ]
+        },
+        {
+          "id": "flask/json/tag.py::class::TagBytes::4449::s0",
+          "name": "TagBytes",
+          "kind": "class",
+          "parent": null,
+          "lines": [
+            [
+              159,
+              163
+            ]
+          ]
+        },
+        {
+          "id": "flask/json/tag.py::method::TagBytes.check::4513",
+          "name": "check",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              163,
+              164
+            ]
+          ]
+        },
+        {
+          "id": "flask/json/tag.py::method::TagBytes.to_json::4597",
+          "name": "to_json",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              166,
+              167
+            ]
+          ]
+        },
+        {
+          "id": "flask/json/tag.py::method::TagBytes.to_python::4692",
+          "name": "to_python",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              169,
+              170
+            ]
+          ]
+        },
+        {
+          "id": "flask/json/tag.py::class::TagMarkup::4770::s0",
+          "name": "TagMarkup",
+          "kind": "class",
+          "parent": null,
+          "lines": [
+            [
+              173,
+              181
+            ]
+          ]
+        },
+        {
+          "id": "flask/json/tag.py::method::TagMarkup.check::5047",
+          "name": "check",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              181,
+              182
+            ]
+          ]
+        },
+        {
+          "id": "flask/json/tag.py::method::TagMarkup.to_json::5149",
+          "name": "to_json",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              184,
+              185
+            ]
+          ]
+        },
+        {
+          "id": "flask/json/tag.py::method::TagMarkup.to_python::5233",
+          "name": "to_python",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              187,
+              188
+            ]
+          ]
+        },
+        {
+          "id": "flask/json/tag.py::class::TagUUID::5308::s0",
+          "name": "TagUUID",
+          "kind": "class",
+          "parent": null,
+          "lines": [
+            [
+              191,
+              195
+            ]
+          ]
+        },
+        {
+          "id": "flask/json/tag.py::method::TagUUID.check::5371",
+          "name": "check",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              195,
+              196
+            ]
+          ]
+        },
+        {
+          "id": "flask/json/tag.py::method::TagUUID.to_json::5454",
+          "name": "to_json",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              198,
+              199
+            ]
+          ]
+        },
+        {
+          "id": "flask/json/tag.py::method::TagUUID.to_python::5526",
+          "name": "to_python",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              201,
+              202
+            ]
+          ]
+        },
+        {
+          "id": "flask/json/tag.py::class::TagDateTime::5599::s0",
+          "name": "TagDateTime",
+          "kind": "class",
+          "parent": null,
+          "lines": [
+            [
+              205,
+              209
+            ]
+          ]
+        },
+        {
+          "id": "flask/json/tag.py::method::TagDateTime.check::5666",
+          "name": "check",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              209,
+              210
+            ]
+          ]
+        },
+        {
+          "id": "flask/json/tag.py::method::TagDateTime.to_json::5753",
+          "name": "to_json",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              212,
+              213
+            ]
+          ]
+        },
+        {
+          "id": "flask/json/tag.py::method::TagDateTime.to_python::5832",
+          "name": "to_python",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              215,
+              216
+            ]
+          ]
+        },
+        {
+          "id": "flask/json/tag.py::class::TaggedJSONSerializer::5911::s0",
+          "name": "TaggedJSONSerializer",
+          "kind": "class",
+          "parent": null,
+          "lines": [
+            [
+              219,
+              249
+            ]
+          ]
+        },
+        {
+          "id": "flask/json/tag.py::method::TaggedJSONSerializer.__init__::6663",
+          "name": "__init__",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              249,
+              254
+            ]
+          ]
+        },
+        {
+          "id": "flask/json/tag.py::method::TaggedJSONSerializer.register::6848",
+          "name": "register",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              256,
+              287
+            ]
+          ]
+        },
+        {
+          "id": "flask/json/tag.py::method::TaggedJSONSerializer.tag::7943",
+          "name": "tag",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              289,
+              295
+            ]
+          ]
+        },
+        {
+          "id": "flask/json/tag.py::method::TaggedJSONSerializer.untag::8181",
+          "name": "untag",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              297,
+              307
+            ]
+          ]
+        },
+        {
+          "id": "flask/json/tag.py::method::TaggedJSONSerializer._untag_scan::8508",
+          "name": "_untag_scan",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              309,
+              319
+            ]
+          ]
+        },
+        {
+          "id": "flask/json/tag.py::method::TaggedJSONSerializer.dumps::8947",
+          "name": "dumps",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              321,
+              323
+            ]
+          ]
+        },
+        {
+          "id": "flask/json/tag.py::method::TaggedJSONSerializer.loads::9117",
+          "name": "loads",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              325,
+              327
+            ]
+          ]
+        }
+      ],
+      "known_empty": false
+    }
+  },
+  "source": "judge/c51-flask/run/host/raw/module_10.attempt-1.txt",
+  "accepted": true
+}

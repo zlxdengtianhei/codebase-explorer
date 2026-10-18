@@ -20,17 +20,17 @@ import pytest
 from cbe.graph import (
     GraphError,
     _merge_capabilities,
-    _normalize_joern_payload,
     _prefer_resolved_imports,
     analyze_graph,
-    available_graph_languages,
     discover_config,
     discover_sources,
-    graph_suffixes,
     query_graph,
 )
 from cbe.graph_backends._paths import canonical_repo_path
+from cbe.graph_backends import DEPCRUISE_LANGUAGES, JOERN_LANGUAGE_FLAGS
 from cbe.graph_backends.joern import _capabilities_for
+from cbe.graph_backends.joern import _normalize as _normalize_joern_payload
+from cbe.source_context import suffix_languages
 
 FIXTURES = Path(__file__).parent / "fixtures" / "graphs"
 
@@ -82,14 +82,14 @@ def test_discover_sources_covers_registry_extensions(tmp_path: Path) -> None:
                         "m.kt": "kotlin", "m.swift": "swift", "m.tsx": "tsx"}
 
 
-def test_graph_suffixes_match_source_context_registry() -> None:
-    from cbe.source_context import supported_languages
+def test_suffix_languages_match_the_published_language_list() -> None:
+    from cbe.source_context import available_languages
 
     registry = {}
-    for entry in supported_languages()["languages"]:
+    for entry in available_languages()["languages"]:
         for suffix in entry["suffixes"]:
             registry[suffix.lower()] = entry["name"]
-    assert graph_suffixes() == registry
+    assert suffix_languages() == registry
 
 
 def test_discover_config_hashes_build_files(tmp_path: Path) -> None:
@@ -192,8 +192,8 @@ def test_prefer_resolved_imports_keeps_unrelated_unresolved() -> None:
 
 def test_prefer_resolved_imports_supersedes_same_target() -> None:
     edges = [
-        {"id": "resolved", "path": "main.js", "kind": "import", "status": "resolved", "expression": "./util"},
-        {"id": "decl", "path": "main.js", "kind": "import", "status": "unresolved", "expression": "require('./util')"},
+        {"id": "resolved", "source": "file:main.js", "target": "file:util.js", "path": "main.js", "kind": "import", "status": "resolved", "expression": "./util", "backend": "dependency-cruiser"},
+        {"id": "decl", "source": "file:main.js", "target": None, "path": "main.js", "kind": "import", "status": "unresolved", "expression": "require('./util')", "backend": "joern"},
         {"id": "other", "path": "main.js", "kind": "import", "status": "unresolved", "expression": "require('./other')"},
     ]
     assert {edge["id"] for edge in _prefer_resolved_imports(edges)} == {"resolved", "other"}
@@ -344,13 +344,12 @@ def test_merge_capabilities_prefers_best_and_keeps_unavailable() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_available_graph_languages_covers_registry() -> None:
-    languages = available_graph_languages()["languages"]
+def test_every_registered_language_has_a_graph_backend() -> None:
     for name in ("c", "cpp", "python", "javascript", "typescript", "tsx", "java",
                  "go", "ruby", "rust", "php", "c_sharp", "kotlin", "swift"):
-        assert languages[name]["backends"].get("joern") is True
-    assert languages["python"]["backends"]["grimp"] is True
-    assert languages["tsx"]["backends"]["dependency-cruiser"] is True
+        assert name in JOERN_LANGUAGE_FLAGS
+    assert set(suffix_languages().values()) <= set(JOERN_LANGUAGE_FLAGS)
+    assert "tsx" in DEPCRUISE_LANGUAGES
 
 
 # ---------------------------------------------------------------------------
@@ -430,7 +429,7 @@ def test_integration_python_import(tmp_path: Path) -> None:
                           backend="imports", languages=["python"], timeout=120)
     imports = {edge["source"]: edge["target"] for edge in graph["edges"]
                if edge["kind"] == "import" and edge["status"] == "resolved"}
-    assert imports.get("module:app.main") == "module:app.util"
+    assert imports.get("file:app/main.py") == "file:app/util.py"
 
 
 def test_graph_output_is_json_serializable() -> None:

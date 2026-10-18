@@ -32,27 +32,17 @@ import hashlib
 import json
 import os
 import re
+from collections.abc import Iterable
 from datetime import datetime, timezone
 
+from cbe import source_context
 from cbe.graph_backends._paths import canonical_repo_path
+from cbe.graph_backends.identity import repository_files, validate_identities
+from cbe.graph_backends.resolution import resolve_declarations, import_token
+
+BACKEND_FAILURE_CODES = frozenset({"backend_error", "backend_timeout", "frontend_error", "backend_unavailable"})
 
 SCHEMA_GRAPH = "cbe-graph/1"
-
-#: Fallback suffix -> language map.  The live map is derived from
-#: ``cbe.source_context`` so the graph layer and the chunk layer cannot drift.
-_FALLBACK_SUFFIXES: dict[str, str] = {
-    ".c": "c", ".h": "c",
-    ".cc": "cpp", ".cpp": "cpp", ".cxx": "cpp", ".c++": "cpp",
-    ".hh": "cpp", ".hpp": "cpp", ".hxx": "cpp", ".h++": "cpp", ".inl": "cpp",
-    ".py": "python",
-    ".js": "javascript", ".jsx": "javascript", ".mjs": "javascript", ".cjs": "javascript",
-    ".ts": "typescript", ".mts": "typescript", ".cts": "typescript",
-    ".tsx": "tsx",
-    ".java": "java", ".go": "go",
-    ".rb": "ruby", ".rake": "ruby", ".gemspec": "ruby", ".ru": "ruby",
-    ".rs": "rust", ".php": "php", ".phtml": "php", ".cs": "c_sharp",
-    ".kt": "kotlin", ".kts": "kotlin", ".swift": "swift",
-}
 
 #: Build/module-resolution files that change what an analyzer sees.
 GRAPH_CONFIG_NAMES = frozenset({
@@ -67,63 +57,35 @@ GRAPH_CONFIG_NAMES = frozenset({
 GRAPH_CONFIG_SUFFIXES = (".csproj", ".sln", ".gemspec", ".cmake", ".mk")
 
 GRAPH_KINDS = frozenset({"import", "call", "cfg", "dataflow"})
-STATUSES = frozenset({"resolved", "ambiguous", "unresolved", "external", "unsupported"})
-CAPABILITY_STATUSES = frozenset({"resolved", "partial", "empty", "unsupported", "failed", "unavailable"})
 _CAPABILITY_RANK = {"resolved": 6, "partial": 5, "empty": 4, "unsupported": 3,
                     "failed": 2, "unavailable": 1}
 
 
 class GraphError(ValueError):
-    """Raised when no graph could be produced or an input is invalid."""
+    """Raised when no graph could be produced or an input is invalid.
+
+    A failed build may still have written an auditable, non-authoritative graph.
+    """
+
+    def __init__(self, message: str, *, graph: dict | None = None):
+        super().__init__(message)
+        self.graph = graph
 
 
-def _excluded_dir_names() -> frozenset[str]:
-    from cbe.inventory import DEFAULT_EXCLUDE_DIR_NAMES  # noqa: PLC0415
-
-    return DEFAULT_EXCLUDE_DIR_NAMES
-
-
-def graph_suffixes() -> dict[str, str]:
-    """Return suffix -> language, taken from the source-context registry."""
-
-    try:
-        from cbe.source_context import supported_languages  # noqa: PLC0415
-
-        result: dict[str, str] = {}
-        for entry in supported_languages().get("languages", []):
-            name = entry.get("name")
-            for suffix in entry.get("suffixes", []):
-                if name and suffix:
-                    result[str(suffix).lower()] = name
-        if result:
-            return result
-    except Exception:
-        pass
-    return dict(_FALLBACK_SUFFIXES)
-
-
-def discover_sources(repo, languages: list[str] | None = None) -> list[dict]:
+def discover_sources(repo, languages: list[str] | None = None, *, suffix_map=None) -> list[dict]:
     """Return ``[{path, language, sha256}]`` for source files under ``repo``."""
 
-    suffix_map = graph_suffixes()
+    suffix_map = source_context.suffix_languages() if suffix_map is None else suffix_map
     wanted = set(languages) if languages else None
-    excluded = _excluded_dir_names()
     manifest: list[dict] = []
     repo = repo.resolve()
-    for dirpath, dirnames, filenames in os.walk(repo, topdown=True, followlinks=False):
-        dirnames.sort()
-        dirnames[:] = [name for name in dirnames if name not in excluded]
-        for filename in sorted(filenames):
-            full = os.path.join(dirpath, filename)
-            if os.path.islink(full) or not os.path.isfile(full):
-                continue
-            language = suffix_map.get(os.path.splitext(filename)[1].lower())
-            if language is None or (wanted is not None and language not in wanted):
-                continue
-            rel = os.path.relpath(full, repo).replace(os.sep, "/")
-            with open(full, "rb") as handle:
-                digest = hashlib.sha256(handle.read()).hexdigest()
-            manifest.append({"path": rel, "language": language, "sha256": digest})
+    for rel in sorted(repository_files(repo)):
+        language = suffix_map.get(os.path.splitext(rel)[1].lower())
+        if language is None or (wanted is not None and language not in wanted):
+            continue
+        with (repo / rel).open("rb") as handle:
+            digest = hashlib.sha256(handle.read()).hexdigest()
+        manifest.append({"path": rel, "language": language, "sha256": digest})
     manifest.sort(key=lambda entry: entry["path"])
     return manifest
 
@@ -131,7 +93,7 @@ def discover_sources(repo, languages: list[str] | None = None) -> list[dict]:
 def discover_config(repo) -> list[dict]:
     """Return ``[{path, sha256}]`` for build/module-resolution files."""
 
-    excluded = _excluded_dir_names()
+    excluded = source_context.DEFAULT_EXCLUDE_DIR_NAMES
     repo = os.path.abspath(str(repo))
     found: list[dict] = []
     for dirpath, dirnames, filenames in os.walk(repo, topdown=True, followlinks=False):
@@ -200,6 +162,116 @@ def validate_graph_provenance(repo, graph: dict) -> None:
             raise GraphError(f"graph {label} drift: {', '.join(changed[:10])}; rebuild the graph")
 
 
+def graph_quality(graph: dict, *, existing_paths: Iterable[str] | None = None) -> dict:
+    """Pure audit of a graph and an optional repository-file snapshot.
+
+    Language is the declaration/source language (manifest, then node metadata),
+    never the target language. Null endpoints denote absent external/unresolved
+    targets and are not dangling IDs. With no file snapshot, existence is unknown
+    rather than silently reported as zero; persisted build audits retain it.
+    """
+    nodes, edges = graph.get("nodes", []), graph.get("edges", [])
+    by_id = {n.get("id"): n for n in nodes}
+    manifest = {row["path"]: row.get("language", "unknown")
+                for row in graph.get("source_manifest", [])}
+    capabilities = graph.get("capabilities", [])
+    if isinstance(capabilities, dict):
+        capabilities = [{"language": language, "graph": kind, "status": status}
+                        for language, kinds in capabilities.items() if isinstance(kinds, dict)
+                        for kind, status in kinds.items()]
+    languages = set(manifest.values()) | {c.get("language") or "unknown" for c in capabilities}
+    statuses = ("resolved", "ambiguous", "unresolved", "external", "unsupported")
+    counts = {(language, kind): dict.fromkeys(statuses, 0)
+              for language in languages for kind in sorted(GRAPH_KINDS)}
+    dangling = []
+    for edge in edges:
+        source = by_id.get(edge.get("source"), {})
+        edge_path, source_path = edge.get("path"), source.get("path")
+        language = (manifest.get(edge_path) if isinstance(edge_path, str) else None)
+        language = (language or (manifest.get(source_path) if isinstance(source_path, str) else None)
+                    or edge.get("language") or source.get("language") or "unknown")
+        key = (language, edge.get("kind") or "unknown")
+        row = counts.setdefault(key, dict.fromkeys(statuses, 0))
+        status = edge.get("status") or "unknown"
+        row[status] = row.get(status, 0) + 1
+        missing = [edge[endpoint] for endpoint in ("source", "target")
+                   if edge.get(endpoint) is not None and edge[endpoint] not in by_id]
+        if missing:
+            dangling.append({"id": edge.get("id"), "missing_endpoints": missing})
+    anchored = [n for n in nodes if isinstance(n.get("path"), str)]
+    outside = [n for n in anchored if n["path"] not in manifest]
+    missing_files = None
+    if existing_paths is not None:
+        existing = set(existing_paths)
+        missing_files = [n for n in anchored if n["path"] not in existing]
+    diagnostics = graph.get("diagnostics", [])
+    no_backend = any(d.get("code") == "no_backend_completed" for d in diagnostics)
+    backend = graph.get("backend") or {}
+    completed = (False if no_backend or backend.get("name") == "none" else
+                 True if backend.get("components") or any(
+                     c.get("status") in {"resolved", "partial", "empty"} for c in capabilities) else None)
+    return {
+        "edge_counts": [{"language": language, "kind": kind, "statuses": row,
+                         "total": sum(row.values())}
+                        for (language, kind), row in sorted(counts.items())],
+        "dangling_edges": {"count": len(dangling), "examples": dangling[:5]},
+        "nodes_outside_manifest": {"count": len(outside), "examples": [n.get("id") for n in outside[:5]]},
+        "nodes_missing_files": {"count": None if missing_files is None else len(missing_files),
+                                "examples": [] if missing_files is None else [n.get("id") for n in missing_files[:5]]},
+        "file_existence_checked": existing_paths is not None,
+        "empty_graph": not nodes and not edges,
+        "backend_completed": completed,
+        "incomplete_capabilities": [dict(c) for c in capabilities
+                                    if c.get("status") not in {"resolved", "empty"}],
+        "frontend_failures": [dict(d) for d in diagnostics if d.get("code") in BACKEND_FAILURE_CODES],
+    }
+
+
+def read_graph_quality(graph: dict, *, existing_paths: Iterable[str] | None = None,
+                       repo=None) -> dict:
+    """Read a persisted audit, or compute it; an explicit file snapshot refreshes it.
+
+    ``repo`` supplies a file snapshot only for a legacy graph without an audit.
+    """
+    if existing_paths is None and graph.get("quality"):
+        return graph["quality"]
+    if existing_paths is None and repo is not None:
+        existing_paths = repository_files(repo)
+    return graph_quality(graph, existing_paths=existing_paths)
+
+
+def graph_state(graph: object, *, quality: dict | None = None) -> tuple[str, str]:
+    """Classify availability once for prompts and quality consumers.
+
+    An explicit failed build takes precedence over unsupported capabilities.
+    A completed backend can produce an empty graph even if another capability
+    failed. Older graphs without completion evidence retain capability fallback.
+    """
+    if graph is None:
+        return "absent", "no graph was provided for this run"
+    if not isinstance(graph, dict) or graph.get("schema") != SCHEMA_GRAPH:
+        found = graph.get("schema") if isinstance(graph, dict) else type(graph).__name__
+        return "unsupported", f"graph schema is {found!r}, expected 'cbe-graph/1'"
+    quality = read_graph_quality(graph) if quality is None else quality
+    if quality["backend_completed"] is False:
+        return "failed", "no backend completed; the empty graph is not authoritative"
+    nodes, edges = graph.get("nodes") or [], graph.get("edges") or []
+    if nodes or edges:
+        return "provided", f"{len(nodes)} nodes, {len(edges)} edges"
+    if quality["backend_completed"] is True:
+        return "empty", "the analyzer ran and found no relation"
+    statuses = {c.get("status") for c in quality["incomplete_capabilities"]}
+    if statuses & {"failed", "unavailable"}:
+        return "failed", "backend failed or was unavailable"
+    if "unsupported" in statuses:
+        return "unsupported", "no requested language/graph type is supported"
+    diagnostics = {row.get("code") for row in graph.get("diagnostics") or []}
+    if "no_language_requested" in diagnostics or (
+            "analyzed_languages" in graph and not graph["analyzed_languages"]):
+        return "unsupported", "no language was selected for analysis"
+    return "empty", "the analyzer ran and found no relation"
+
+
 def analyze_graph(
     repo,
     output,
@@ -207,13 +279,13 @@ def analyze_graph(
     backend: str = "auto",
     languages: list[str] | None = None,
     joern_home=None,
+    joern_heap: str | None = None,
     depcruise_bin=None,
     timeout: int = 300,
-    max_methods: int = 200,
+    max_methods: int | None = None,
     max_reaching_defs: int = 50000,
     dataflow_path_methods: list[str] | None = None,
     max_paths_per_method: int = 5,
-    **options,
 ) -> dict:
     """Build a ``cbe-graph/1`` graph and write it to ``output``.
 
@@ -226,18 +298,23 @@ def analyze_graph(
 
     from cbe import graph_backends as backends  # noqa: PLC0415
 
-    for name, value in (("timeout", timeout), ("max_methods", max_methods),
+    for name, value in (("timeout", timeout),
                         ("max_reaching_defs", max_reaching_defs),
                         ("max_paths_per_method", max_paths_per_method)):
         if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
             raise GraphError(f"{name} must be a positive integer")
+    if max_methods is not None and (isinstance(max_methods, bool) or not isinstance(max_methods, int) or max_methods <= 0):
+        raise GraphError("max_methods must be a positive integer or None")
+    if joern_heap is not None and not re.fullmatch(r"[1-9][0-9]*[kKmMgG]", joern_heap):
+        raise GraphError("joern_heap must be a positive JVM heap size, such as 8g or 4096m")
     repo = Path(repo).expanduser().resolve()
     if not repo.is_dir():
         raise GraphError(f"repository root is not a directory: {repo}")
     output = Path(output).expanduser()
     # Frontends can read sibling languages (for example C/C++ headers or
     # JS/TS imports). Bind every registered source even for a language filter.
-    manifest = discover_sources(repo)
+    suffix_map = source_context.suffix_languages()
+    manifest = discover_sources(repo, suffix_map=suffix_map)
     config_manifest = discover_config(repo)
     detected = sorted({entry["language"] for entry in manifest})
     requested = sorted(set(languages)) if languages else detected
@@ -265,7 +342,7 @@ def analyze_graph(
             try:
                 fragment = backends.build_with_joern(
                     repo, run_dir / "joern", requested, joern, timeout,
-                    max_reaching_defs=max_reaching_defs,
+                    joern_heap=joern_heap, max_methods=max_methods, max_reaching_defs=max_reaching_defs,
                     dataflow_path_methods=dataflow_path_methods,
                     max_paths_per_method=max_paths_per_method)
             except backends.JoernError as exc:
@@ -275,16 +352,17 @@ def analyze_graph(
                 fragments.append(fragment)
                 components.append(fragment["backend"])
                 diagnostics.extend(fragment["diagnostics"])
-                ran = ran or bool(fragment["raw"])
+                ran = ran or (bool(fragment["raw"]) and any(
+                    c.get("status") in {"resolved", "partial", "empty"} for c in fragment["capabilities"]))
 
     if use_imports:
         depcruise = backends.find_depcruise(depcruise_bin)
         import_languages = [lang for lang in requested if lang in backends.DEPCRUISE_LANGUAGES]
-        if depcruise is None:
+        if depcruise is None and import_languages:
             diagnostics.append({"path": None, "code": "backend_unavailable",
                                 "message": "dependency-cruiser not found; JS/TS import graph skipped"})
             extra_capabilities.extend(_unavailable("dependency-cruiser", import_languages, ("import",)))
-        elif import_languages:
+        elif depcruise is not None and import_languages:
             fragment = backends.build_with_depcruise(repo, run_dir / "depcruise", depcruise,
                                                      timeout, import_languages)
             if fragment["nodes"] or not fragment["diagnostics"]:
@@ -294,7 +372,7 @@ def analyze_graph(
             fragments.append(fragment)
             diagnostics.extend(fragment["diagnostics"])
         if "python" in requested:
-            fragment = backends.build_with_grimp(repo, requested)
+            fragment = backends.build_with_grimp(repo, requested, suffix_map)
             if fragment["nodes"]:
                 components.append({"name": "grimp", "version": _grimp_version()})
                 ran = True
@@ -304,15 +382,30 @@ def analyze_graph(
     if not fragments:
         raise GraphError("no graph backend was available for the requested languages")
 
+    files = repository_files(repo)
     nodes, edges = _merge(fragments)
-    edges = _prefer_resolved_imports(edges)
+    nodes, edges = resolve_declarations(repo, nodes, edges, files=files, diagnostics=diagnostics, suffix_map=suffix_map)
+    # The merge boundary validates identities; declaration resolution above
+    # is the only authority for turning an include into a repository file.
+    nodes, edges, identity_diagnostics = validate_identities(nodes, edges, files)
+    diagnostics.extend(identity_diagnostics)
+    edges = _prefer_resolved_imports(edges, suffix_map=suffix_map)
     capabilities = _merge_capabilities(fragments, requested, extra_capabilities)
+    for capability in capabilities:
+        if capability.get("backend") == "joern" and capability.get("graph") == "import" and capability.get("status") not in {"failed", "unsupported", "unavailable"}:
+            relevant = [e for e in edges if e.get("kind") == "import"
+                        and suffix_map.get(Path(e.get("path") or "").suffix.lower()) == capability.get("language")]
+            counts = {status: sum(e.get("status") == status for e in relevant)
+                      for status in ("resolved", "external", "unresolved")}
+            capability.update(counts)
+            capability["status"] = "partial" if counts["unresolved"] else ("resolved" if relevant else "empty")
+            capability["limitations"] = "; ".join(f"{n} {s}" for s, n in counts.items()) + "; static repository-bounded resolution"
 
     if not ran:
         diagnostics.append({"path": None, "code": "no_backend_completed",
                             "message": "no backend completed; graph is empty and not authoritative"})
 
-    source_stable = discover_sources(repo) == manifest
+    source_stable = discover_sources(repo, suffix_map=suffix_map) == manifest
     config_stable = discover_config(repo) == config_manifest
     if not source_stable:
         diagnostics.append({"path": None, "code": "source_changed_during_build",
@@ -343,8 +436,12 @@ def analyze_graph(
         "capabilities": capabilities,
         "diagnostics": diagnostics,
     }
+    graph["quality"] = graph_quality(graph, existing_paths=files)
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(graph, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    if not ran:
+        causes = "; ".join(d["message"] for d in diagnostics if d.get("code") in BACKEND_FAILURE_CODES)
+        raise GraphError("no graph backend completed" + (f": {causes}" if causes else ""), graph=graph)
     return graph
 
 
@@ -483,55 +580,45 @@ def _merge(fragments: list[dict]) -> tuple[list[dict], list[dict]]:
     return nodes, edges
 
 
-_IMPORT_INCLUDE = re.compile(r'#\s*include\s*(.+?)\s*$')
-_IMPORT_JS = re.compile(r"""(?:require|from)\s*\(?\s*(.+?)\s*[)\s]*$""")
-_IMPORT_FROM = re.compile(r"^from\s+([.\w]+)\s+import")
-_IMPORT_PY = re.compile(r"^import\s+([\w.]+)")
-_IMPORT_GO = re.compile(r"import\s+(?:\w+\s+)?(.+)$")
+def _prefer_resolved_imports(edges: list[dict], *, suffix_map=None) -> list[dict]:
+    """Merge resolved file evidence by endpoints, retaining every expression."""
+    from pathlib import PurePosixPath
 
+    suffix_map = source_context.suffix_languages() if suffix_map is None else suffix_map
 
-def _import_token(expression: object) -> str | None:
-    if not expression:
-        return None
-    text = str(expression).strip()
-    if not text:
-        return None
-    for pattern in (_IMPORT_INCLUDE, _IMPORT_JS, _IMPORT_FROM, _IMPORT_PY, _IMPORT_GO):
-        match = pattern.search(text)
-        if match:
-            return _clean_import_token(match.group(1))
-    # A bare module specifier (dependency-cruiser / Grimp `expression`).
-    if " " not in text and "#" not in text and len(text) < 300:
-        return _clean_import_token(text)
-    return None
+    def specifier(edge):
+        return import_token(edge.get("expression") or "", PurePosixPath(edge.get("path") or "").suffix, suffix_map)
 
-
-def _clean_import_token(token: str) -> str | None:
-    cleaned = token.strip().strip("\"'<>").strip().lower().lstrip("./")
-    return cleaned or None
-
-
-def _prefer_resolved_imports(edges: list[dict]) -> list[dict]:
-    """Drop an unresolved import only when a resolved import matches it.
-
-    Matching requires the same file *and* the same declared target token, so a
-    resolved ``from good import ok`` can never erase an unrelated
-    ``import missing_dependency``.  Unmatched unresolved imports are retained
-    with their backend evidence.
-    """
-
-    resolved = [(edge.get("path"), _import_token(edge.get("expression")))
-                for edge in edges
-                if edge.get("kind") == "import" and edge.get("status") == "resolved"]
-    resolved_set = {(path, token) for path, token in resolved if token}
-    kept: list[dict] = []
-    for edge in edges:
-        if edge.get("kind") == "import" and edge.get("status") == "unresolved":
-            token = _import_token(edge.get("expression"))
-            if token and (edge.get("path"), token) in resolved_set:
-                continue
-        kept.append(edge)
-    return kept
+    resolved_declarations = {(e.get("source"), specifier(e)) for e in edges
+                             if e.get("kind") == "import" and e.get("status") == "resolved"
+                             and e.get("backend") != "joern" and specifier(e)}
+    groups = {}
+    result = []
+    # Prefer the dedicated resolver as the representative, independent of
+    # fragment ordering. Joern evidence is retained in expressions.
+    ordered = sorted(edges, key=lambda e: e.get("backend") == "joern")
+    for edge in ordered:
+        if (edge.get("kind") == "import" and edge.get("backend") == "joern"
+                and edge.get("status") == "unresolved" and specifier(edge)
+                and (edge.get("source"), specifier(edge)) in resolved_declarations):
+            continue
+        if edge.get("kind") != "import" or edge.get("status") != "resolved" or not edge.get("target"):
+            result.append(edge)
+            continue
+        key = (edge.get("source"), edge.get("target"), edge.get("kind"))
+        if key not in groups:
+            merged = dict(edge)
+            merged["expressions"] = list(edge.get("expressions") or ([edge["expression"]] if edge.get("expression") else []))
+            groups[key] = merged
+            result.append(merged)
+        else:
+            merged = groups[key]
+            if edge.get("resolution_basis") and not merged.get("resolution_basis"):
+                merged["resolution_basis"] = edge["resolution_basis"]
+            for expression in edge.get("expressions") or [edge.get("expression")]:
+                if expression and expression not in merged["expressions"]:
+                    merged["expressions"].append(expression)
+    return result
 
 
 def _unavailable(backend: str, languages: list[str], kinds: tuple[str, ...]) -> list[dict]:
@@ -578,7 +665,7 @@ def _depcruise_version(binary, timeout: int) -> str:
 
     try:
         completed = subprocess.run([str(binary), "--version"], check=False, capture_output=True,
-                                   text=True, timeout=timeout)
+                                   text=True, timeout=timeout, stdin=subprocess.DEVNULL)
     except (OSError, subprocess.TimeoutExpired):
         return "unknown"
     text = (completed.stdout or completed.stderr).strip()
@@ -592,29 +679,3 @@ def _grimp_version() -> str:
         return version("grimp")
     except Exception:
         return "unknown"
-
-
-def _normalize_joern_payload(payload: dict, version: str = "unknown",
-                             namespace: str = "cpg") -> tuple[list[dict], list[dict]]:
-    """Map a raw Joern export payload to standard nodes/edges.  Test helper."""
-
-    from cbe.graph_backends.joern import _normalize  # noqa: PLC0415
-
-    return _normalize(payload, version, namespace)
-
-
-def available_graph_languages() -> dict:
-    """Report which languages the graph layer can attempt, and via which backend."""
-
-    from cbe import graph_backends as backends  # noqa: PLC0415
-
-    languages: dict[str, dict] = {}
-    for language in graph_suffixes().values():
-        entry = languages.setdefault(language, {"backends": {}})
-        if language in backends.JOERN_LANGUAGE_FLAGS:
-            entry["backends"]["joern"] = True
-        if language in backends.DEPCRUISE_LANGUAGES:
-            entry["backends"]["dependency-cruiser"] = True
-        if language == "python":
-            entry["backends"]["grimp"] = True
-    return {"schema": SCHEMA_GRAPH, "languages": languages}

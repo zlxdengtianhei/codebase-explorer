@@ -24,7 +24,6 @@ the raw expression.
 
 from __future__ import annotations
 
-import hashlib
 import json
 import os
 import re
@@ -32,6 +31,9 @@ import shlex
 import shutil
 import subprocess
 from pathlib import Path
+
+from .identity import repository_files, file_id
+from ._calls import CallResolver
 
 #: language id (canonical, matches ``cbe.source_context``) -> Joern frontend
 #: flag.  ``pythonsrc``/``javasrc`` are the source frontends; ``python``/``java``
@@ -81,7 +83,7 @@ import java.nio.file.{Files, Paths}
 import scala.util.{Try, Success, Failure}
 
 @main def main(cpgFile: String, outFile: String, maxReachingDefs: Int,
-               pathMethods: String, maxPathsPerMethod: Int): Unit = {
+               pathMethods: String, maxPathsPerMethod: Int, maxMethods: Int): Unit = {
   val cpg = importCpg(cpgFile).get
   implicit val engineConfig: EngineConfig = EngineConfig()
 
@@ -106,6 +108,11 @@ import scala.util.{Try, Success, Failure}
   )
 
   val files = cpg.file.map(f => ujson.Obj("name" -> f.name, "hash" -> f.hash.getOrElse(""))).l
+
+  val types = cpg.typeDecl.filterNot(_.isExternal).map { t =>
+    ujson.Obj("name" -> t.name, "fullName" -> t.fullName,
+              "file" -> t.filename, "inherits" -> t.inheritsFromTypeFullName.toList)
+  }.l
 
   val methods = realMethods.map { m =>
     ujson.Obj(
@@ -140,7 +147,8 @@ import scala.util.{Try, Success, Failure}
     )
   }.l
 
-  val cfg = realMethods.map { m =>
+  val cfgMethods = if (maxMethods > 0) realMethods.take(maxMethods) else realMethods
+  val cfg = cfgMethods.map { m =>
     val nodes = m.cfgNode.l
     val idx = nodes.zipWithIndex.map { case (n, i) => n.id -> i }.toMap
     val nodeJson = nodes.zipWithIndex.map { case (n, i) =>
@@ -175,16 +183,16 @@ import scala.util.{Try, Success, Failure}
   // Native REACHING_DEF definition-use edges: the bounded base data-flow graph.
   val rdSeen = scala.collection.mutable.Set[(Long, Long)]()
   val rdBuf = scala.collection.mutable.ArrayBuffer[ujson.Obj]()
-  var rdTruncated = false
+  var rdOmitted = 0
   realMethods.foreach { m =>
     m.ast.foreach { n =>
-      if (!rdTruncated && n.label != "METHOD") {
+      if (n.label != "METHOD") {
         n.out("REACHING_DEF").foreach { o =>
           val t = o.asInstanceOf[AstNode]
           val key = (n.id, t.id)
           if (!rdSeen.contains(key)) {
             rdSeen.add(key)
-            if (rdBuf.size >= maxReachingDefs) rdTruncated = true
+            if (rdBuf.size >= maxReachingDefs) rdOmitted += 1
             else rdBuf += ujson.Obj("source" -> elemJson(n), "target" -> elemJson(t))
           }
         }
@@ -223,16 +231,20 @@ import scala.util.{Try, Success, Failure}
     "backend" -> "joern",
     "cpgFile" -> cpgFile,
     "files" -> files,
+    "types" -> types,
     "methods" -> methods,
     "calls" -> calls,
     "cfg" -> cfg,
+    "cfgMethodsOmitted" -> (realMethods.size - cfgMethods.size),
     "imports" -> imports,
     "reachingDefs" -> rdBuf.toList,
-    "reachingDefsTruncated" -> rdTruncated,
+    "reachingDefsTruncated" -> (rdOmitted > 0),
+    "reachingDefsOmitted" -> rdOmitted,
     "dataflowPaths" -> pathBuf.toList,
     "dataflowErrors" -> errBuf.toList
   )
-  Files.write(Paths.get(outFile), ujson.write(root, indent = 2).getBytes("UTF-8"))
+  val writer = Files.newBufferedWriter(Paths.get(outFile), java.nio.charset.StandardCharsets.UTF_8)
+  try ujson.writeTo(root, writer, indent = -1) finally writer.close()
   println("WROTE " + outFile)
 }
 """
@@ -260,9 +272,9 @@ def find_joern(joern_home: Path | str | None = None) -> Path | None:
     return None
 
 
-def _run(argv: list[str], timeout: int, cwd: Path) -> subprocess.CompletedProcess:
-    return subprocess.run(argv, cwd=str(cwd), check=False,
-                          capture_output=True, text=True, timeout=timeout)
+def _run(argv: list[str], timeout: int, cwd: Path, *, env=None) -> subprocess.CompletedProcess:
+    return subprocess.run(argv, cwd=str(cwd), check=False, env=env,
+                          capture_output=True, text=True, timeout=timeout, stdin=subprocess.DEVNULL)
 
 
 def joern_version(joern_bin: Path, timeout: int) -> str:
@@ -286,6 +298,8 @@ def build_with_joern(
     max_reaching_defs: int = DEFAULT_MAX_REACHING_DEFS,
     dataflow_path_methods: list[str] | None = None,
     max_paths_per_method: int = 5,
+    max_methods: int | None = None,
+    joern_heap: str | None = None,
 ) -> dict:
     """Parse each frontend's languages with Joern and return a normalized fragment.
 
@@ -301,6 +315,11 @@ def build_with_joern(
     script = run_dir / "joern_export.sc"
     script.write_text(_EXPORT_SCRIPT, encoding="utf-8")
 
+    joern_env = None
+    if joern_heap:
+        joern_env = os.environ.copy()
+        # Last -Xmx wins, preserving unrelated caller JVM options.
+        joern_env["JAVA_TOOL_OPTIONS"] = (joern_env.get("JAVA_TOOL_OPTIONS", "") + f" -Xmx{joern_heap}").strip()
     version = joern_version(joern_bin, timeout)
     roots = [str(repo), str(joern_home)]
     diagnostics: list[dict] = []
@@ -309,6 +328,7 @@ def build_with_joern(
     edges: list[dict] = []
     raw: list[dict] = []
     path_methods = ",".join(dataflow_path_methods or [])
+    files = repository_files(repo)
 
     by_language: dict[str, list[str]] = {}
     for language in languages:
@@ -329,7 +349,7 @@ def build_with_joern(
         export = run_dir / f"cpg-{flag}.json"
         try:
             parsed = _run([str(parse_bin), str(repo), "--language", flag, "-o", str(cpg)],
-                          timeout=timeout, cwd=run_dir)
+                          timeout=timeout, cwd=run_dir, env=joern_env)
         except subprocess.TimeoutExpired:
             for language in langs:
                 capabilities.extend(_failed_capabilities(language, "joern", "backend_timeout"))
@@ -352,10 +372,11 @@ def build_with_joern(
             exported = _run(
                 [str(joern_bin), "--script", str(script),
                  "--param", f"cpgFile={cpg}", "--param", f"outFile={export}",
+                 "--param", f"maxMethods={max_methods if max_methods is not None else -1}",
                  "--param", f"maxReachingDefs={max_reaching_defs}",
                  "--param", f"pathMethods={path_methods}",
                  "--param", f"maxPathsPerMethod={max_paths_per_method}", "--nocolors"],
-                timeout=timeout, cwd=run_dir)
+                timeout=timeout, cwd=run_dir, env=joern_env)
         except subprocess.TimeoutExpired:
             for language in langs:
                 capabilities.extend(_failed_capabilities(language, "joern", "backend_timeout"))
@@ -365,8 +386,11 @@ def build_with_joern(
         if exported.returncode != 0 or not export.exists():
             for language in langs:
                 capabilities.extend(_failed_capabilities(language, "joern", "backend_error"))
-            diagnostics.append({"path": None, "code": "backend_error",
-                                "message": f"joern export failed for frontend {flag} (exit {exported.returncode})"})
+            message = f"joern export failed for frontend {flag} (exit {exported.returncode})"
+            cause = _first_error_line((exported.stderr or "") + "\n" + (exported.stdout or ""), roots)
+            if cause:
+                message += f": {cause}"
+            diagnostics.append({"path": None, "code": "backend_error", "message": message})
             continue
         try:
             payload = json.loads(export.read_text(encoding="utf-8"))
@@ -379,14 +403,15 @@ def build_with_joern(
         payload["_languages"] = langs
         payload["_frontend"] = FRONTEND_NAME.get(flag, flag)
         raw.append(payload)
-        f_nodes, f_edges = _normalize(payload, version, namespace)
+        payload["_files"] = files
+        f_nodes, f_edges = _normalize(payload, version, namespace, diagnostics=diagnostics)
         nodes.extend(f_nodes)
         edges.extend(f_edges)
         frontend_error = None
         if not payload.get("methods"):
             # joern-parse may have exited 0 after a frontend failed to load the
             # project; recover the real cause instead of reporting empty success.
-            frontend_error = _frontend_error_from_direct_run(parse_output, run_dir, timeout, roots)
+            frontend_error = _frontend_error_from_direct_run(parse_output, run_dir, timeout, roots, env=joern_env)
             if frontend_error:
                 diagnostics.append({"path": None, "code": "frontend_error",
                                     "message": f"joern frontend {flag} reported an error while "
@@ -398,10 +423,17 @@ def build_with_joern(
             diagnostics.append({"path": None, "code": "dataflow_path_error",
                                 "message": f"value-flow path query failed for {error.get('method')}: "
                                            f"{error.get('kind')}: {error.get('message')}"})
+        omitted = payload.get("cfgMethodsOmitted", 0)
+        if omitted:
+            diagnostics.append({"path": None, "code": "cfg_methods_omitted",
+                                "message": f"CFG export for frontend {flag} omitted {omitted} methods "
+                                           f"(max_methods={max_methods})"})
         if payload.get("reachingDefsTruncated"):
             diagnostics.append({"path": None, "code": "reaching_defs_truncated",
+                                "edges_omitted": payload.get("reachingDefsOmitted"),
                                 "message": f"REACHING_DEF export for frontend {flag} hit the "
-                                           f"{max_reaching_defs}-edge cap"})
+                                           f"{max_reaching_defs}-edge cap; "
+                                           f"{payload.get('reachingDefsOmitted', 'unknown')} edges omitted"})
 
     # A whole-run CLI failure (OSError) raises above.  Per-frontend failures are
     # returned as ``failed`` capabilities + diagnostics so the exact cause
@@ -443,16 +475,18 @@ def _scrub_text(text: str, roots: list[str]) -> str:
 
 def _first_error_line(text: str, roots: list[str]) -> str | None:
     candidates = [line.strip() for line in (text or "").splitlines()
-                  if _ERROR_MARKERS.search(line) and "process exited with code" not in line.lower()]
+                  if (_ERROR_MARKERS.search(line) or "OutOfMemoryError" in line)
+                  and "process exited with code" not in line.lower()]
     if not candidates:
         return None
     primary = [line for line in candidates if _PRIMARY_CAUSE.search(line)]
-    chosen = max(primary or candidates, key=len)
+    oom = [line for line in candidates if "OutOfMemoryError" in line]
+    chosen = max(oom or primary or candidates, key=len)
     return _scrub_text(chosen, roots)[:300]
 
 
 def _frontend_error_from_direct_run(parse_output: str, run_dir: Path, timeout: int,
-                                    roots: list[str]) -> str | None:
+                                    roots: list[str], *, env=None) -> str | None:
     """Re-run the exact frontend command ``joern-parse`` used, to capture its error.
 
     ``joern-parse`` can exit 0 while a frontend logged a load failure and wrote
@@ -470,7 +504,7 @@ def _frontend_error_from_direct_run(parse_output: str, run_dir: Path, timeout: i
     if not argv:
         return None
     try:
-        completed = _run(argv, timeout, run_dir)
+        completed = _run(argv, timeout, run_dir, env=env)
     except (OSError, subprocess.TimeoutExpired):
         return None
     return _first_error_line((completed.stdout or "") + "\n" + (completed.stderr or ""), roots)
@@ -497,7 +531,8 @@ def _failed_capabilities(language: str, backend: str, code: str) -> list[dict]:
             for kind in ("call", "cfg", "dataflow", "import")]
 
 
-def _normalize(payload: dict, version: str, namespace: str = "cpg") -> tuple[list[dict], list[dict]]:
+def _normalize(payload: dict, version: str, namespace: str = "cpg", *,
+               diagnostics: list[dict] | None = None) -> tuple[list[dict], list[dict]]:
     """Map a raw Joern export payload to standard nodes/edges.
 
     Every id is namespaced by the analyzed CPG and keyed on Joern's native
@@ -539,6 +574,7 @@ def _normalize(payload: dict, version: str, namespace: str = "cpg") -> tuple[lis
         if native is not None:
             method_by_native[int(native)] = node_id
 
+    call_resolver = CallResolver(payload.get("methods", []), payload.get("_files"), payload.get("types"))
     for call in payload.get("calls", []):
         if not _visible_call(call):
             continue
@@ -548,37 +584,22 @@ def _normalize(payload: dict, version: str, namespace: str = "cpg") -> tuple[lis
         if caller is None:
             caller = f"{namespace}/caller/{rel}:{call.get('line', -1)}:{call.get('caller', '')}"
             add_node(caller, "function", path=rel, start=call.get("line"), name=call.get("caller"))
-        internal: list[str] = []
-        externals: list[str] = []
-        for callee in call.get("callees", []) or []:
-            native = callee.get("nodeId")
-            full = callee.get("fullName") or call.get("name", "")
-            if callee.get("external"):
-                eid = f"{namespace}/ext/{full}"
-                add_node(eid, "external", name=full, external=True, joern_id=native)
-                externals.append(eid)
-            else:
-                mapped = method_by_native.get(int(native)) if native is not None else None
-                if mapped is None:
-                    mapped = f"{namespace}/ext/{full}"
-                    add_node(mapped, "external", name=full, external=True, joern_id=native)
-                internal.append(mapped)
-        internal = list(dict.fromkeys(internal))
-        externals = list(dict.fromkeys(externals))
+        status, native_targets, external_names = call_resolver.resolve(call)
+        internal = [method_by_native[native] for native in native_targets]
+        externals = []
+        for full in external_names:
+            eid = f"{namespace}/ext/{full}"
+            add_node(eid, "external", name=full, external=True)
+            externals.append(eid)
         candidates = internal + externals
-        if len(internal) == 1:
-            target, status = internal[0], "resolved"
-        elif len(internal) > 1:
-            target, status = None, "ambiguous"
-        elif externals:
-            target, status = externals[0], "external"
-        else:
-            target, status = None, "unresolved"
+        target = candidates[0] if status in {"resolved", "external"} and candidates else None
         edge = {
             "id": f"{namespace}/call/{call.get('nodeId')}",
             "source": caller, "target": target, "kind": "call", "status": status,
             "path": rel, "line": call.get("line"), "column": call.get("column"),
-            "expression": call.get("code"), "method_full_name": call.get("methodFullName"),
+            "expression": call.get("code"),
+            "method_full_name": external_names[0] if len(external_names) == 1 else call.get("methodFullName"),
+            "analyzer_method_full_name": call.get("methodFullName"),
             "analyzer_id": call.get("nodeId"), "backend": "joern",
         }
         if len(candidates) > 1:
@@ -610,12 +631,12 @@ def _normalize(payload: dict, version: str, namespace: str = "cpg") -> tuple[lis
 
     for imp in payload.get("imports", []):
         rel = _norm_path(imp.get("file", ""))
-        file_id = f"file:{rel}" if rel else None
-        if file_id:
-            add_node(file_id, "file", path=rel, name=Path(rel).name)
+        file_node_id = file_id(rel, payload.get("_files", {rel}))
+        if file_node_id:
+            add_node(file_node_id, "file", path=rel, name=Path(rel).name)
         edges.append({
             "id": f"{namespace}/import/{imp.get('nodeId')}",
-            "source": file_id, "target": None, "kind": "import", "status": "unresolved",
+            "source": file_node_id, "target": None, "kind": "import", "status": "unresolved",
             "path": rel, "expression": imp.get("code"), "analyzer_id": imp.get("nodeId"),
             "backend": "joern",
         })
@@ -657,6 +678,8 @@ def _normalize(payload: dict, version: str, namespace: str = "cpg") -> tuple[lis
                 })
             previous = eid
 
+    if diagnostics is not None:
+        diagnostics.extend(call_resolver.diagnostics)
     return nodes, edges
 
 
@@ -667,9 +690,11 @@ def _capabilities_for(language: str, payload: dict, version: str,
                             limitations=f"frontend error: {frontend_error}")
                 for kind in ("call", "cfg", "dataflow", "import")]
     calls = [call for call in payload.get("calls", []) if _visible_call(call)]
-    resolved = sum(1 for call in calls if _call_status(call) == "resolved")
-    external = sum(1 for call in calls if _call_status(call) == "external")
-    ambiguous = sum(1 for call in calls if _call_status(call) == "ambiguous")
+    resolver = CallResolver(payload.get("methods", []), payload.get("_files"), payload.get("types"))
+    statuses = [resolver.resolve(call)[0] for call in calls]
+    resolved = statuses.count("resolved")
+    external = statuses.count("external")
+    ambiguous = statuses.count("ambiguous")
     unresolved = len(calls) - resolved - external - ambiguous
 
     if resolved and not (ambiguous or unresolved):
@@ -682,7 +707,9 @@ def _capabilities_for(language: str, payload: dict, version: str,
     cfg_methods = sum(1 for cfg in payload.get("cfg", []) if cfg.get("edges"))
     rd_edges = len(payload.get("reachingDefs", []))
     has_methods = bool(payload.get("methods"))
-    if rd_edges:
+    if payload.get("reachingDefsTruncated"):
+        df_status = "partial"
+    elif rd_edges:
         df_status = "resolved"
     elif has_methods:
         df_status = "empty"
@@ -722,26 +749,20 @@ def _capabilities_for(language: str, payload: dict, version: str,
                     condition="; ".join(conditions) or None,
                     resolved=resolved, external=external, ambiguous=ambiguous,
                     unresolved=unresolved),
-        _capability(language, "cfg", "resolved" if cfg_methods else ("empty" if has_methods else "unsupported"),
-                    version, backend="joern", methods_with_edges=cfg_methods),
+        _capability(language, "cfg", "partial" if payload.get("cfgMethodsOmitted", 0) else ("resolved" if cfg_methods else ("empty" if has_methods else "unsupported")),
+                    version, backend="joern", methods_with_edges=cfg_methods,
+                    methods_omitted=payload.get("cfgMethodsOmitted", 0),
+                    limitations=f"{payload['cfgMethodsOmitted']} methods omitted" if payload.get("cfgMethodsOmitted") else None),
         _capability(language, "dataflow", df_status, version, backend="joern",
                     scope="reaching_def", reaching_def_edges=rd_edges,
-                    limitations=None if rd_edges else "analyzer ran but produced no REACHING_DEF edges",
+                    reaching_defs_truncated=bool(payload.get("reachingDefsTruncated")),
+                    edges_omitted=payload.get("reachingDefsOmitted", None if payload.get("reachingDefsTruncated") else 0),
+                    limitations=(f"REACHING_DEF export truncated; {payload.get('reachingDefsOmitted', 'unknown')} edges omitted"
+                                 if payload.get("reachingDefsTruncated") else
+                                 (None if rd_edges else "analyzer ran but produced no REACHING_DEF edges")),
                     condition="local reaching definitions; inter-procedural value-flow paths are a separate opt-in query"),
         _capability(language, "import",
                     "partial" if payload.get("imports") else ("empty" if has_methods else "unsupported"),
                     version, backend="joern",
-                    limitations="import/include declarations only; not resolved to target files"),
+                    limitations="static import/include declarations; repository resolution applied at graph merge"),
     ]
-
-
-def _call_status(call: dict) -> str:
-    internal = [c for c in call.get("callees", []) or [] if not c.get("external")]
-    externals = [c for c in call.get("callees", []) or [] if c.get("external")]
-    if len(internal) == 1:
-        return "resolved"
-    if len(internal) > 1:
-        return "ambiguous"
-    if externals:
-        return "external"
-    return "unresolved"

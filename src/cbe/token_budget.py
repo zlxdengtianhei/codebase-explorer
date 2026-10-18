@@ -5,7 +5,6 @@ from __future__ import annotations
 import hashlib
 import base64
 from functools import lru_cache
-from importlib.metadata import version
 from importlib.resources import files
 
 import tiktoken
@@ -20,10 +19,6 @@ O200K_PATTERN = "|".join([
     r"\p{N}{1,3}", r" ?[^\s\p{L}\p{N}]+[\r\n/]*", r"\s*[\r\n]+",
     r"\s+(?!\S)", r"\s+",
 ])
-
-
-def tokenizer_version() -> str:
-    return version("tiktoken")
 
 
 @lru_cache(maxsize=1)
@@ -44,6 +39,29 @@ def _encoding() -> tiktoken.Encoding:
     return tiktoken.Encoding(name=TOKENIZER, pat_str=O200K_PATTERN,
                              mergeable_ranks=ranks,
                              special_tokens={"<|endoftext|>": 199999, "<|endofprompt|>": 200018})
+
+
+def count_section_tokens(sections: list[tuple[str, str]]) -> dict[str, int]:
+    """Partition full-text tokens by the section containing each token's first byte.
+
+    A boundary-spanning token belongs to its starting section. This preserves
+    the full-text BPE total, unlike independently tokenizing each line.
+    """
+    from bisect import bisect_right
+
+    boundaries, labels, offset = [], [], 0
+    for label, text in sections:
+        if text:
+            boundaries.append(offset)
+            labels.append(label)
+            offset += len(text.encode("utf-8"))
+    counts = dict.fromkeys(labels, 0)
+    offset = 0
+    encoding = _encoding()
+    for token in encoding.encode_ordinary("".join(text for _, text in sections)):
+        counts[labels[bisect_right(boundaries, offset) - 1]] += 1
+        offset += len(encoding.decode_single_token_bytes(token))
+    return counts
 
 
 def count_text_tokens(text: str) -> int:

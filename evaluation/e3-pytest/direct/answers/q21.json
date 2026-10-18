@@ -1,0 +1,31 @@
+{
+  "qid": 21,
+  "question": "How does the RunAndParse class decouple the concerns of test execution orchestration from XML schema validation and document parsing to maintain separation of responsibilities?",
+  "arm": "direct",
+  "answer": "`RunAndParse` acts as a thin orchestrator that confines itself solely to running pytest with JUnit-XML reporting enabled: its `__call__` simply forwards to `run()`, which only assembles the command-line invocation (adding `-p junitxml`, `--junitxml=junit.xml`, and `-o junit_family=<family>`) and executes it through `pytester`. It implements no XML handling of its own. Instead:\n\n- **Document parsing** is delegated to the standard XML parser, with the resulting document wrapped in a dedicated `DomNode` accessor class that owns all node-navigation and attribute-access logic; tests perform their assertions against that returned wrapper, not against raw XML inside `RunAndParse`.\n- **Schema validation** is delegated to independent validation helpers (the `xmlschema` library checking against the bundled Jenkins XSD schemas), which are exercised only in tests specifically targeting schema conformance (e.g., the stricter xunit2 family), never within `RunAndParse` itself.\n\nBy composing these three independent pieces \u2014 execution (pytester run), parsing (parser + `DomNode`), and validation (schema helpers) \u2014 rather than embedding them, the class keeps each responsibility isolated, so each can evolve, be reused, or be tested separately without affecting the others.",
+  "valid": true,
+  "wall_seconds": 160.93433991703205,
+  "attempts": [
+    {
+      "answer": "`RunAndParse` acts as a thin orchestrator that confines itself solely to running pytest with JUnit-XML reporting enabled: its `__call__` simply forwards to `run()`, which only assembles the command-line invocation (adding `-p junitxml`, `--junitxml=junit.xml`, and `-o junit_family=<family>`) and executes it through `pytester`. It implements no XML handling of its own. Instead:\n\n- **Document parsing** is delegated to the standard XML parser, with the resulting document wrapped in a dedicated `DomNode` accessor class that owns all node-navigation and attribute-access logic; tests perform their assertions against that returned wrapper, not against raw XML inside `RunAndParse`.\n- **Schema validation** is delegated to independent validation helpers (the `xmlschema` library checking against the bundled Jenkins XSD schemas), which are exercised only in tests specifically targeting schema conformance (e.g., the stricter xunit2 family), never within `RunAndParse` itself.\n\nBy composing these three independent pieces \u2014 execution (pytester run), parsing (parser + `DomNode`), and validation (schema helpers) \u2014 rather than embedding them, the class keeps each responsibility isolated, so each can evolve, be reused, or be tested separately without affecting the others.",
+      "valid": true,
+      "usage": {
+        "completion_tokens": 9154,
+        "prompt_tokens": 108,
+        "total_tokens": 9262,
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": null,
+          "audio_tokens": null,
+          "reasoning_tokens": 8889,
+          "rejected_prediction_tokens": null
+        },
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 64
+        }
+      },
+      "response_model": "glm-5.3-flash"
+    }
+  ]
+}

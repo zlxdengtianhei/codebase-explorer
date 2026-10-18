@@ -1,0 +1,808 @@
+{
+  "name": "s51b1-module_1",
+  "source": "s51b1/host/raw/module_1.attempt-2.txt",
+  "paths": [
+    "flask/__init__.py",
+    "flask/blueprints.py",
+    "flask/globals.py",
+    "flask/helpers.py",
+    "flask/wrappers.py"
+  ],
+  "inventory": {
+    "flask/__init__.py": {
+      "tokens": 424,
+      "sha256": "2daebda4dc29fed5cb36c912a6115a234e9a4b5f9c33fd795e4bfeffd0cc9386",
+      "nlines": 39,
+      "symbols": [
+        {
+          "id": "flask/__init__.py::module_residual::::0",
+          "name": "__init__.py",
+          "kind": "module_region",
+          "parent": null,
+          "lines": [
+            [
+              1,
+              39
+            ]
+          ]
+        }
+      ],
+      "known_empty": false
+    },
+    "flask/blueprints.py": {
+      "tokens": 1035,
+      "sha256": "a79404da5635f0622d6ddaff44a46967c0e8d7b8343ef4062206644940e15f69",
+      "nlines": 128,
+      "symbols": [
+        {
+          "id": "flask/blueprints.py::module_residual::::0",
+          "name": "blueprints.py",
+          "kind": "module_region",
+          "parent": null,
+          "lines": [
+            [
+              1,
+              17
+            ]
+          ]
+        },
+        {
+          "id": "flask/blueprints.py::class::Blueprint::456::s0",
+          "name": "Blueprint",
+          "kind": "class",
+          "parent": null,
+          "lines": [
+            [
+              18,
+              19
+            ]
+          ]
+        },
+        {
+          "id": "flask/blueprints.py::method::Blueprint.__init__::494",
+          "name": "__init__",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              19,
+              53
+            ]
+          ]
+        },
+        {
+          "id": "flask/blueprints.py::method::Blueprint.get_send_file_max_age::1699",
+          "name": "get_send_file_max_age",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              55,
+              80
+            ]
+          ]
+        },
+        {
+          "id": "flask/blueprints.py::method::Blueprint.send_static_file::2666",
+          "name": "send_static_file",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              82,
+              102
+            ]
+          ]
+        },
+        {
+          "id": "flask/blueprints.py::method::Blueprint.open_resource::3487",
+          "name": "open_resource",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              104,
+              128
+            ]
+          ]
+        }
+      ],
+      "known_empty": false
+    },
+    "flask/globals.py": {
+      "tokens": 599,
+      "sha256": "1abe9a4e0a96c8bb28c232e2b08993fffdfb9bb694be2230755e54a46a40ca4d",
+      "nlines": 77,
+      "symbols": [
+        {
+          "id": "flask/globals.py::module_residual::::0",
+          "name": "globals.py",
+          "kind": "module_region",
+          "parent": null,
+          "lines": [
+            [
+              1,
+              17
+            ]
+          ]
+        },
+        {
+          "id": "flask/globals.py::class::ProxyMixin::383",
+          "name": "ProxyMixin",
+          "kind": "class",
+          "parent": null,
+          "lines": [
+            [
+              17,
+              18
+            ]
+          ]
+        },
+        {
+          "id": "flask/globals.py::method::ProxyMixin._get_current_object::424",
+          "name": "_get_current_object",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              18,
+              18
+            ]
+          ]
+        },
+        {
+          "id": "flask/globals.py::module_residual::::463",
+          "name": "globals.py",
+          "kind": "module_region",
+          "parent": null,
+          "lines": [
+            [
+              18,
+              22
+            ]
+          ]
+        },
+        {
+          "id": "flask/globals.py::class::FlaskProxy::612",
+          "name": "FlaskProxy",
+          "kind": "class",
+          "parent": null,
+          "lines": [
+            [
+              22,
+              22
+            ]
+          ]
+        },
+        {
+          "id": "flask/globals.py::class::AppContextProxy::665",
+          "name": "AppContextProxy",
+          "kind": "class",
+          "parent": null,
+          "lines": [
+            [
+              24,
+              24
+            ]
+          ]
+        },
+        {
+          "id": "flask/globals.py::class::_AppCtxGlobalsProxy::733",
+          "name": "_AppCtxGlobalsProxy",
+          "kind": "class",
+          "parent": null,
+          "lines": [
+            [
+              26,
+              26
+            ]
+          ]
+        },
+        {
+          "id": "flask/globals.py::class::RequestProxy::813",
+          "name": "RequestProxy",
+          "kind": "class",
+          "parent": null,
+          "lines": [
+            [
+              28,
+              28
+            ]
+          ]
+        },
+        {
+          "id": "flask/globals.py::class::SessionMixinProxy::872",
+          "name": "SessionMixinProxy",
+          "kind": "class",
+          "parent": null,
+          "lines": [
+            [
+              30,
+              30
+            ]
+          ]
+        },
+        {
+          "id": "flask/globals.py::module_residual::::940",
+          "name": "globals.py",
+          "kind": "module_region",
+          "parent": null,
+          "lines": [
+            [
+              30,
+              64
+            ]
+          ]
+        },
+        {
+          "id": "flask/globals.py::function::__getattr__::2052",
+          "name": "__getattr__",
+          "kind": "function",
+          "parent": null,
+          "lines": [
+            [
+              65,
+              77
+            ]
+          ]
+        }
+      ],
+      "known_empty": false
+    },
+    "flask/helpers.py": {
+      "tokens": 5702,
+      "sha256": "4e2b647be02a93f655ddd058105c5ed8e9ffe3daef398ef3dd21e3a3817623fb",
+      "nlines": 679,
+      "symbols": [
+        {
+          "id": "flask/helpers.py::module_residual::::0",
+          "name": "helpers.py",
+          "kind": "module_region",
+          "parent": null,
+          "lines": [
+            [
+              1,
+              27
+            ]
+          ]
+        },
+        {
+          "id": "flask/helpers.py::function::get_debug_flag::671",
+          "name": "get_debug_flag",
+          "kind": "function",
+          "parent": null,
+          "lines": [
+            [
+              28,
+              33
+            ]
+          ]
+        },
+        {
+          "id": "flask/helpers.py::function::get_load_dotenv::968",
+          "name": "get_load_dotenv",
+          "kind": "function",
+          "parent": null,
+          "lines": [
+            [
+              36,
+              48
+            ]
+          ]
+        },
+        {
+          "id": "flask/helpers.py::function::stream_with_context::1384",
+          "name": "stream_with_context",
+          "kind": "function",
+          "parent": null,
+          "lines": [
+            [
+              51,
+              54
+            ]
+          ]
+        },
+        {
+          "id": "flask/helpers.py::function::stream_with_context::1503",
+          "name": "stream_with_context",
+          "kind": "function",
+          "parent": null,
+          "lines": [
+            [
+              57,
+              60
+            ]
+          ]
+        },
+        {
+          "id": "flask/helpers.py::function::stream_with_context::1675::s0",
+          "name": "stream_with_context",
+          "kind": "function",
+          "parent": null,
+          "lines": [
+            [
+              63,
+              120
+            ]
+          ]
+        },
+        {
+          "id": "flask/helpers.py::function::stream_with_context.decorator::3684",
+          "name": "decorator",
+          "kind": "function",
+          "parent": null,
+          "lines": [
+            [
+              120,
+              122
+            ]
+          ]
+        },
+        {
+          "id": "flask/helpers.py::function::stream_with_context::1675::s1",
+          "name": "stream_with_context",
+          "kind": "function",
+          "parent": null,
+          "lines": [
+            [
+              122,
+              126
+            ]
+          ]
+        },
+        {
+          "id": "flask/helpers.py::function::stream_with_context.generator::3962",
+          "name": "generator",
+          "kind": "function",
+          "parent": null,
+          "lines": [
+            [
+              126,
+              141
+            ]
+          ]
+        },
+        {
+          "id": "flask/helpers.py::function::stream_with_context::1675::s2",
+          "name": "stream_with_context",
+          "kind": "function",
+          "parent": null,
+          "lines": [
+            [
+              141,
+              148
+            ]
+          ]
+        },
+        {
+          "id": "flask/helpers.py::function::make_response::4767",
+          "name": "make_response",
+          "kind": "function",
+          "parent": null,
+          "lines": [
+            [
+              151,
+              197
+            ]
+          ]
+        },
+        {
+          "id": "flask/helpers.py::function::url_for::6632",
+          "name": "url_for",
+          "kind": "function",
+          "parent": null,
+          "lines": [
+            [
+              200,
+              251
+            ]
+          ]
+        },
+        {
+          "id": "flask/helpers.py::function::redirect::8460",
+          "name": "redirect",
+          "kind": "function",
+          "parent": null,
+          "lines": [
+            [
+              254,
+              278
+            ]
+          ]
+        },
+        {
+          "id": "flask/helpers.py::function::abort::9414",
+          "name": "abort",
+          "kind": "function",
+          "parent": null,
+          "lines": [
+            [
+              281,
+              301
+            ]
+          ]
+        },
+        {
+          "id": "flask/helpers.py::function::get_template_attribute::10227",
+          "name": "get_template_attribute",
+          "kind": "function",
+          "parent": null,
+          "lines": [
+            [
+              304,
+              323
+            ]
+          ]
+        },
+        {
+          "id": "flask/helpers.py::function::flash::11001",
+          "name": "flash",
+          "kind": "function",
+          "parent": null,
+          "lines": [
+            [
+              326,
+              357
+            ]
+          ]
+        },
+        {
+          "id": "flask/helpers.py::function::get_flashed_messages::12384",
+          "name": "get_flashed_messages",
+          "kind": "function",
+          "parent": null,
+          "lines": [
+            [
+              360,
+              399
+            ]
+          ]
+        },
+        {
+          "id": "flask/helpers.py::function::_prepare_send_file_kwargs::14156",
+          "name": "_prepare_send_file_kwargs",
+          "kind": "function",
+          "parent": null,
+          "lines": [
+            [
+              402,
+              414
+            ]
+          ]
+        },
+        {
+          "id": "flask/helpers.py::function::send_file::14586",
+          "name": "send_file",
+          "kind": "function",
+          "parent": null,
+          "lines": [
+            [
+              417,
+              540
+            ]
+          ]
+        },
+        {
+          "id": "flask/helpers.py::function::send_from_directory::19860",
+          "name": "send_from_directory",
+          "kind": "function",
+          "parent": null,
+          "lines": [
+            [
+              543,
+              584
+            ]
+          ]
+        },
+        {
+          "id": "flask/helpers.py::function::get_root_path::21443",
+          "name": "get_root_path",
+          "kind": "function",
+          "parent": null,
+          "lines": [
+            [
+              587,
+              641
+            ]
+          ]
+        },
+        {
+          "id": "flask/helpers.py::function::_split_blueprint_path::23567",
+          "name": "_split_blueprint_path",
+          "kind": "function",
+          "parent": null,
+          "lines": [
+            [
+              644,
+              651
+            ]
+          ]
+        },
+        {
+          "id": "flask/helpers.py::class::_CollectErrors::23759::s0",
+          "name": "_CollectErrors",
+          "kind": "class",
+          "parent": null,
+          "lines": [
+            [
+              654,
+              659
+            ]
+          ]
+        },
+        {
+          "id": "flask/helpers.py::method::_CollectErrors.__init__::23945",
+          "name": "__init__",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              659,
+              660
+            ]
+          ]
+        },
+        {
+          "id": "flask/helpers.py::method::_CollectErrors.__enter__::24024",
+          "name": "__enter__",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              662,
+              663
+            ]
+          ]
+        },
+        {
+          "id": "flask/helpers.py::method::_CollectErrors.__exit__::24071",
+          "name": "__exit__",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              665,
+              674
+            ]
+          ]
+        },
+        {
+          "id": "flask/helpers.py::method::_CollectErrors.raise_any::24335",
+          "name": "raise_any",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              676,
+              679
+            ]
+          ]
+        }
+      ],
+      "known_empty": false
+    },
+    "flask/wrappers.py": {
+      "tokens": 2130,
+      "sha256": "8d492fe2655e93622ae21c3177846faab20c6faf41bf43c49438162e6779391a",
+      "nlines": 257,
+      "symbols": [
+        {
+          "id": "flask/wrappers.py::module_residual::::0",
+          "name": "wrappers.py",
+          "kind": "module_region",
+          "parent": null,
+          "lines": [
+            [
+              1,
+              17
+            ]
+          ]
+        },
+        {
+          "id": "flask/wrappers.py::class::Request::430::s0",
+          "name": "Request",
+          "kind": "class",
+          "parent": null,
+          "lines": [
+            [
+              18,
+              59
+            ]
+          ]
+        },
+        {
+          "id": "flask/wrappers.py::method::Request.max_content_length::2132",
+          "name": "max_content_length",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              59,
+              86
+            ]
+          ]
+        },
+        {
+          "id": "flask/wrappers.py::method::Request.max_content_length::3417",
+          "name": "max_content_length",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              88,
+              90
+            ]
+          ]
+        },
+        {
+          "id": "flask/wrappers.py::method::Request.max_form_memory_size::3551",
+          "name": "max_form_memory_size",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              92,
+              113
+            ]
+          ]
+        },
+        {
+          "id": "flask/wrappers.py::method::Request.max_form_memory_size::4583",
+          "name": "max_form_memory_size",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              115,
+              117
+            ]
+          ]
+        },
+        {
+          "id": "flask/wrappers.py::method::Request.max_form_parts::4723",
+          "name": "max_form_parts",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              119,
+              140
+            ]
+          ]
+        },
+        {
+          "id": "flask/wrappers.py::method::Request.max_form_parts::5735",
+          "name": "max_form_parts",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              142,
+              144
+            ]
+          ]
+        },
+        {
+          "id": "flask/wrappers.py::method::Request.endpoint::5857",
+          "name": "endpoint",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              146,
+              159
+            ]
+          ]
+        },
+        {
+          "id": "flask/wrappers.py::method::Request.blueprint::6316",
+          "name": "blueprint",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              161,
+              178
+            ]
+          ]
+        },
+        {
+          "id": "flask/wrappers.py::method::Request.blueprints::6902",
+          "name": "blueprints",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              180,
+              195
+            ]
+          ]
+        },
+        {
+          "id": "flask/wrappers.py::method::Request._load_form_data::7328",
+          "name": "_load_form_data",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              197,
+              210
+            ]
+          ]
+        },
+        {
+          "id": "flask/wrappers.py::method::Request.on_json_loading_failed::7830",
+          "name": "on_json_loading_failed",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              212,
+              219
+            ]
+          ]
+        },
+        {
+          "id": "flask/wrappers.py::class::Response::8110",
+          "name": "Response",
+          "kind": "class",
+          "parent": null,
+          "lines": [
+            [
+              222,
+              246
+            ]
+          ]
+        },
+        {
+          "id": "flask/wrappers.py::method::Response.max_cookie_size::8953",
+          "name": "max_cookie_size",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              246,
+              257
+            ]
+          ]
+        }
+      ],
+      "known_empty": false
+    }
+  },
+  "payload": {
+    "units": [
+      {
+        "id": "flask/__init__.py::module_residual::::0",
+        "kind": "module_region",
+        "explain": "Pure re-export facade: binds the public flask API names (Flask, Blueprint, Config, context helpers, current_app/g/request/session, helper functions, signals, templating functions, Request/Response) to their defining modules using explicit 'as' rebinding. Contains no logic; runtime behavior resides entirely in the imported modules.",
+        "summary": "Public re-export surface of the flask package.",
+        "relations": [
+          {
+            "target": "flask/blueprints.py::class::Blueprint::456::s0",
+            "kind": "import",
+            "basis": "from .blueprints import Blueprint as Blueprint"
+          },
+          {
+            "target": "flask/wrappers.py::class::Request::430::s0",
+            "kind": "import",
+            "basis": "from .wrappers import Request as Request"
+          },
+          {
+            "target": "flask/wrappers.py::class::Response::8110",
+            "kind": "import",
+            "basis": "from .wrappers import Response as Response"
+          }
+        ],
+        "uncertainties": [
+          "Import-time side effects of the referenced modules are not visible in this file."
+        ]
+      }
+    ],
+    "dispositions_placeholder": false,
+    "batch_notes": "Corrected: units array contains only proper unit objects; full dispositions object follows in the actual dispositions field.",
+    "x": null
+  },
+  "baseline_units": 1,
+  "baseline_program_missing": 60
+}

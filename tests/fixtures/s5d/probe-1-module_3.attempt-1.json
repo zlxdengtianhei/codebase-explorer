@@ -1,0 +1,1589 @@
+{
+  "payload": {
+    "units": [
+      {
+        "id": "flask/app.py::module_residual::::0",
+        "kind": "module_region",
+        "explain": "Module header of flask/app.py: imports stdlib modules (collections.abc, inspect, os, sys, typing, weakref, datetime, functools, itertools, types, urllib.parse), Werkzeug pieces (datastructures, exceptions, routing, serving, wrappers, wsgi), and intra-package imports from flask.cli, flask.typing, flask.ctx, flask.globals, flask.helpers, flask.sansio.app, flask.sessions, flask.signals, flask.templating, and flask.wrappers. A TYPE_CHECKING block imports WSGI types and testing classes for annotations only. TypeVars T_shell_context_processor, T_teardown, T_template_filter, T_template_global, T_template_test are bound to flask.typing callback protocols.",
+        "summary": "Imports and TypeVar definitions for the concrete Flask application class.",
+        "uncertainties": [
+          "Behavior of imported symbols is defined in their own modules, not here."
+        ]
+      },
+      {
+        "id": "flask/app.py::function::_make_timedelta::2439",
+        "kind": "function",
+        "explain": "Normalizes a cache-lifetime value to a timedelta or None. Returns None unchanged if value is None, returns value unchanged if it is already a timedelta, and otherwise interprets value as a number of seconds and returns timedelta(seconds=value). No side effects; no error handling for non-numeric values.",
+        "summary": "Convert an int/None cache-lifetime value into a timedelta, passing through None and timedelta.",
+        "uncertainties": [
+          "Callers of this helper are not visible in this file; its exact call sites are unproven here."
+        ]
+      },
+      {
+        "id": "flask/app.py::function::remove_ctx::2802::s0",
+        "kind": "function",
+        "explain": "Decorator supporting the deprecated pre-3.2 override signatures for Flask request-lifecycle methods. Wraps a subclass method that lacks the new ctx parameter: the wrapper drops a leading AppContext positional argument (when present) from the arguments supplied by the new-style base implementation, then calls the wrapped function with the remaining args/kwargs. update_wrapper copies __name__/__doc__ onto the wrapper. Side effect: the wrapper replaces the method on the subclass (done by __init_subclass__, not here).",
+        "summary": "Decorator wrapping legacy Flask method overrides to strip the leading AppContext argument before calling them.",
+        "members": [
+          "flask/app.py::function::remove_ctx.wrapper::2833",
+          "flask/app.py::function::remove_ctx::2802::s1"
+        ],
+        "uncertainties": [
+          "Non-AppContext first arguments are passed through unchanged; behavior when the caller passes something that is not an AppContext but is meant as ctx is undefined by this reading."
+        ]
+      },
+      {
+        "id": "flask/app.py::module_residual::::2622",
+        "kind": "module_region",
+        "explain": "Small residual region between _make_timedelta and remove_ctx defining the TypeVar F bound to a callable; F parameterizes the remove_ctx/add_ctx decorators. No executable behavior.",
+        "summary": "TypeVar F definition used by the ctx-compatibility decorators.",
+        "uncertainties": []
+      },
+      {
+        "id": "flask/app.py::module_residual::::3089",
+        "kind": "module_region",
+        "explain": "Residual region between add_ctx and the Flask class body; in the source it contains only the boundary between the add_ctx decorator and the class definition, no additional statements.",
+        "summary": "Residual region preceding the Flask class definition.",
+        "uncertainties": []
+      },
+      {
+        "id": "flask/app.py::function::add_ctx::3205::s0",
+        "kind": "function",
+        "explain": "Counterpart to remove_ctx: wraps the Flask base implementation of the deprecated-signature methods so that when a subclass override calls super().method() with the old signature (no ctx), the base still receives an AppContext. The wrapper prepends app_ctx._get_current_object(): if no positional args are given it becomes the sole first argument; if the first positional arg is not an AppContext it is prepended before the existing args. Then calls f with the adjusted args. update_wrapper preserves metadata.",
+        "summary": "Decorator wrapping Flask base methods to insert the current AppContext for legacy super() calls.",
+        "members": [
+          "flask/app.py::function::add_ctx.wrapper::3233",
+          "flask/app.py::function::add_ctx::3205::s1"
+        ],
+        "uncertainties": [
+          "Behavior depends on the app_ctx context proxy having a current object at call time; behavior when no app context is active is not shown here."
+        ]
+      },
+      {
+        "id": "flask/app.py::class::Flask::3592::s0",
+        "kind": "class",
+        "explain": "The concrete WSGI application class, subclassing the sansio App. It extends App with WSGI-specific behavior: request dispatch, error handling, response conversion, teardown, static file serving, Jinja environment creation, URL building, the dev server (run), and test helpers. Class-level state includes default_config (a Mapping of default configuration keys such as DEBUG, TESTING, PROPAGATE_EXCEPTIONS, SESSION_COOKIE_* values, SEND_FILE_MAX_AGE_DEFAULT, TRAP_HTTP_EXCEPTIONS, MAX_COOKIE_SIZE, etc.), request_class=Request, response_class=Response, and a class-level session_interface instance of SecureCookieSessionInterface (shared as a default). Instances are normally created as Flask(import_name) with optional static/template folder and instance-path configuration; __init__ adds the static route via a weakref to avoid a reference cycle and builds a cli.AppGroup named after the app. Methods marked in the inventory below handle lifecycle; the class as a unit covers its identity, inheritance from App, and class attributes. Methods with actual logic each get their own unit.",
+        "summary": "Concrete Flask WSGI application class extending sansio.App with dispatch, error handling, static files, templating, and dev-server support.",
+        "relations": [
+          {
+            "target": "flask/sansio/app.py::class::App",
+            "kind": "inherit",
+            "basis": "class Flask(App) and __init__ calls super().__init__"
+          },
+          {
+            "target": "flask/sansio/app.py::method::App.add_url_rule::24963",
+            "kind": "call",
+            "basis": "__init__ calls self.add_url_rule for the static route"
+          },
+          {
+            "target": "flask/sessions.py::class::SecureCookieSessionInterface",
+            "kind": "use",
+            "basis": "session_interface default instance"
+          }
+        ],
+        "uncertainties": [
+          "The sansio App base class and its attributes (config, url_map, jinja_options, etc.) are defined in another module; their behavior is not proven here."
+        ],
+        "members": []
+      },
+      {
+        "id": "flask/app.py::method::Flask.__init_subclass__::10159",
+        "kind": "method",
+        "explain": "Runs when Flask is subclassed. Iterates the twelve lifecycle methods whose signatures gained an AppContext ctx parameter; for each, compares the subclass attribute with the Flask base. If overridden, inspects the second parameter (after self) and accepts it only if: no annotation and named 'ctx', a string annotation whose last dotted component is 'AppContext', or a class annotation that is a subclass of AppContext. Otherwise it emits a DeprecationWarning about Flask 4.0, sets the subclass attribute to remove_ctx(method) so old-style overrides still get called correctly, and mutates the Flask base method in place with add_ctx(base_method) so legacy super() calls still receive a ctx. Note: the Flask class attribute is mutated for any violating subclass, affecting the shared base; this is intended so the compatibility shims line up.",
+        "summary": "Detects deprecated pre-3.2 override signatures in subclasses and wraps them with ctx-compatibility shims, warning via DeprecationWarning.",
+        "relations": [
+          {
+            "target": "flask/app.py::function::remove_ctx::2802::s0",
+            "kind": "call",
+            "basis": "setattr(cls, method.__name__, remove_ctx(method))"
+          },
+          {
+            "target": "flask/app.py::function::add_ctx::3205::s0",
+            "kind": "call",
+            "basis": "setattr(Flask, method.__name__, add_ctx(base_method))"
+          }
+        ],
+        "uncertainties": [
+          "inspect.signature on decorated/bound attributes could raise for exotic overrides; not guarded here."
+        ]
+      },
+      {
+        "id": "flask/app.py::method::Flask.__init__::12493",
+        "kind": "method",
+        "explain": "Constructs the app. Delegates all parameter validation and basic state (root_path, config, url_map, static folder detection) to App.__init__ with the same keyword arguments. Then creates self.cli as a cli.AppGroup named after self.name, and, if the app has a static folder, registers the static route '<static_url_path>/<path:filename>' with endpoint 'static' and a view function that goes through a weakref to self (avoiding a reference cycle, per the cited issue). Asserts bool(static_host) == host_matching when a static folder exists, so a static_host without host_matching (or vice versa) raises AssertionError at construction. The static route is added without checking that the static folder exists on disk.",
+        "summary": "Initialize the Flask app: create the CLI group and register the static-file route via a weakref-backed view.",
+        "relations": [
+          {
+            "target": "flask/sansio/app.py::method::App.add_url_rule::24963",
+            "kind": "call",
+            "basis": "self.add_url_rule(...) for the static route"
+          },
+          {
+            "target": "flask/app.py::method::Flask.send_static_file::15828",
+            "kind": "call",
+            "basis": "static route view calls self_ref().send_static_file(**kw)"
+          }
+        ],
+        "extras": [
+          {
+            "topic": "failure",
+            "note": "Asserts bool(static_host) == host_matching when a static folder is configured; mismatch raises AssertionError during construction."
+          }
+        ],
+        "uncertainties": [
+          "Behavior inherited from App.__init__ (path resolution, config loading defaults) lives in flask/sansio/app.py and is not proven from this file."
+        ]
+      },
+      {
+        "id": "flask/app.py::method::Flask.get_send_file_max_age::14868",
+        "kind": "method",
+        "explain": "Resolves the cache max-age for a file path from config['SEND_FILE_MAX_AGE_DEFAULT']. Returns None if unset (meaning conditional requests instead of a timed cache), converts a timedelta to total whole seconds via int(total_seconds()), and returns any other value as-is. Pure lookup; no I/O.",
+        "summary": "Return the SEND_FILE_MAX_AGE_DEFAULT config as int seconds or None.",
+        "uncertainties": [
+          "The final untyped return assumes the config value is already an int when not None/timedelta; a bad config value would be returned unvalidated."
+        ]
+      },
+      {
+        "id": "flask/app.py::method::Flask.send_static_file::15828",
+        "kind": "method",
+        "explain": "View function serving files from static_folder. Raises RuntimeError if has_static_folder is false (i.e. static_folder not configured). Otherwise computes max_age via get_send_file_max_age and delegates to helpers.send_from_directory(self.static_folder, filename, max_age=max_age), inheriting its security and error behavior (404/404-style responses for missing files come from that helper).",
+        "summary": "Static-file view: serve a file from static_folder via send_from_directory or raise if no static folder.",
+        "relations": [
+          {
+            "target": "flask/app.py::method::Flask.get_send_file_max_age::14868",
+            "kind": "call",
+            "basis": "max_age = self.get_send_file_max_age(filename)"
+          },
+          {
+            "target": "flask/helpers.py::function::send_from_directory::19860",
+            "kind": "call",
+            "basis": "return send_from_directory(...)"
+          }
+        ],
+        "extras": [
+          {
+            "topic": "failure",
+            "note": "Raises RuntimeError when 'static_folder' is not set, instead of returning a 404 response."
+          }
+        ],
+        "uncertainties": [
+          "Exact error-response semantics (404 vs 403, traversal protection) are defined in helpers.send_from_directory, outside this file."
+        ]
+      },
+      {
+        "id": "flask/app.py::method::Flask.open_resource::16649",
+        "kind": "method",
+        "explain": "Opens a file relative to root_path. Only read modes are permitted: mode must be one of 'r', 'rt', 'rb'; anything else raises ValueError('Resources can only be opened for reading.'). For binary mode, opens with built-in open(path, mode); for text modes, opens with the given encoding (default None means locale default). The file is returned as a regular file object usable with a with block; no automatic closing here. Paths are joined with os.path.join so absolute resource paths would escape root_path per os.path semantics.",
+        "summary": "Open a read-only file relative to the app root_path, rejecting write modes.",
+        "extras": [
+          {
+            "topic": "failure",
+            "note": "Raises ValueError for any mode other than 'r', 'rt', or 'rb'."
+          }
+        ],
+        "uncertainties": [
+          "Whether absolute or '../'-containing resource values are rejected is not guarded; relies on os.path.join/open behavior."
+        ]
+      },
+      {
+        "id": "flask/app.py::method::Flask.open_instance_resource::17892",
+        "kind": "method",
+        "explain": "Opens a file relative to instance_path. Unlike open_resource, write modes are allowed. Binary modes (mode containing 'b') open without encoding; otherwise opens in text mode with encoding, defaulting to 'utf-8'. No existence or permission checks; OS errors propagate.",
+        "summary": "Open a file relative to the instance folder, allowing write modes.",
+        "uncertainties": []
+      },
+      {
+        "id": "flask/app.py::method::Flask.create_jinja_environment::18766",
+        "kind": "method",
+        "explain": "Builds the Jinja Environment once, from self.jinja_options. Copies the options dict; fills in 'autoescape' with select_jinja_autoescape if absent, and 'auto_reload' with config['TEMPLATES_AUTO_RELOAD'] falling back to self.debug when that config is None. Instantiates self.jinja_environment(self, **options), then injects template globals: url_for (the method), get_flashed_messages, config, and the request/session/g proxies (the proxies are included so imported templates can access them). Sets the 'json.dumps_function' policy to self.json.dumps. Changing jinja_options after this runs has no effect because the environment is created from a snapshot.",
+        "summary": "Create the Jinja Environment with autoescape/auto_reload defaults and Flask template globals.",
+        "relations": [
+          {
+            "target": "flask/app.py::method::Flask.url_for::43940",
+            "kind": "use",
+            "basis": "url_for is exposed as a Jinja global"
+          }
+        ],
+        "uncertainties": [
+          "jinja_environment attribute and select_jinja_autoescape are defined on the sansio App; behavior of the returned Environment is defined in flask.templating."
+        ]
+      },
+      {
+        "id": "flask/app.py::method::Flask.create_url_adapter::20236",
+        "kind": "method",
+        "explain": "Creates the Werkzeug MapAdapter. With a request: assigns config['TRUSTED_HOSTS'] to request.trusted_hosts if set, normalizes request.host via werkzeug.wsgi.get_host against those trusted hosts, then computes server_name from config['SERVER_NAME'] \u2014 set to None when url_map.host_matching is enabled (so the real host is honored) \u2014 and computes subdomain: None when subdomain_matching is enabled, otherwise forced to url_map.default_subdomain or '' to disable subdomain matching. Binds via url_map.bind_to_environ(request.environ, server_name=..., subdomain=...). Without a request: returns url_map.bind(SERVER_NAME, script_name=APPLICATION_ROOT, url_scheme=PREFERRED_URL_SCHEME) if SERVER_NAME is configured, else None. bind_to_environ can raise for untrusted hosts per Werkzeug.",
+        "summary": "Bind a Werkzeug URL map adapter for a request, or for app-only use when SERVER_NAME is set.",
+        "relations": [
+          {
+            "target": "flask/ctx.py::method::AppContext.__init__::9828",
+            "kind": "use",
+            "basis": "AppContext.__init__ calls this method to obtain the url_adapter"
+          }
+        ],
+        "uncertainties": [
+          "Exact exception behavior of bind_to_environ (e.g. host mismatch) is Werkzeug-defined, not shown here."
+        ]
+      },
+      {
+        "id": "flask/app.py::method::Flask.raise_routing_exception::22516",
+        "kind": "method",
+        "explain": "Re-raises the request's routing_exception to the caller (which lets wsgi_app/ctx handle it as an HTTP exception). In debug mode only, a RequestRedirect that would discard a form body is intercepted: if the routing exception is a RequestRedirect whose code is not 307/308 and the request method is not GET/HEAD/OPTIONS, it raises debughelpers.FormDataRoutingRedirect(request) instead, giving a clearer error. 307/308 redirects and safe methods are always re-raised unchanged; non-RequestRedirect routing exceptions are re-raised unchanged. Always raises; returns NoReturn.",
+        "summary": "Re-raise routing exceptions, converting body-discarding RequestRedirects to FormDataRoutingRedirect in debug mode.",
+        "relations": [
+          {
+            "target": "flask/debughelpers.py::method::FormDataRoutingRedirect.__init__::1875",
+            "kind": "raise",
+            "basis": "raise FormDataRoutingRedirect(request) after a local import"
+          }
+        ],
+        "uncertainties": [
+          "Behavior when request.routing_exception is None (attribute typed via sansio) is not visible; the caller presumably never invokes it then."
+        ]
+      },
+      {
+        "id": "flask/app.py::method::Flask.update_template_context::23492",
+        "kind": "method",
+        "explain": "Mutates the given context dict in place with template context processors. Processor lookup names start with None (app-level) and, if the app context has a request, extend with the request's blueprints in reverse order (most specific first). For each name present in template_context_processors, each processor is invoked through ensure_sync and its returned dict merged. After all processors, the original context snapshot (values passed by the caller, e.g. render_template kwargs) is re-applied so explicit values win over processor values. No return value.",
+        "summary": "Run template context processors and re-apply caller-provided context so explicit values take precedence.",
+        "relations": [
+          {
+            "target": "flask/app.py::method::Flask.ensure_sync::42693",
+            "kind": "call",
+            "basis": "self.ensure_sync(func)()"
+          }
+        ],
+        "uncertainties": [
+          "Whether ctx.has_request/blueprints semantics include nested blueprints is defined by the request object, not here."
+        ]
+      },
+      {
+        "id": "flask/app.py::method::Flask.make_shell_context::24762",
+        "kind": "method",
+        "explain": "Builds the interactive-shell namespace: starts from {'app': self, 'g': g} and updates with the dict returned by each registered shell context processor in registration order (later processors can override earlier keys, including 'app'/'g'). Returns the resulting dict.",
+        "summary": "Return the shell namespace including app, g, and all shell context processor results.",
+        "uncertainties": []
+      },
+      {
+        "id": "flask/app.py::method::Flask.run::25161",
+        "kind": "method",
+        "explain": "Development-only server launcher; documented as unsuitable for production. If FLASK_RUN_FROM_CLI is 'true', it prints a red warning (unless running under the reloader) and returns without starting a server. If load_dotenv resolves truthy (via helpers.get_load_dotenv, which also honors the FLASK_SKIP_DOTENV env var), cli.load_dotenv() loads .env/.flaskenv files; then if FLASK_DEBUG is set, self.debug is refreshed via helpers.get_debug_flag. An explicit debug argument overrides everything. Host/port defaults come from config['SERVER_NAME'] parsed with urlsplit('//SERVER_NAME'): host falls back to its hostname then '127.0.0.1'; port is int(port) when truthy or 0, else SERVER_NAME's port, else 5000. Werkzeug run_simple options default: use_reloader=debug, use_debugger=debug, threaded=True. Prints the server banner, imports werkzeug.serving.run_simple lazily, and blocks in run_simple(host, port, self, **options); the finally block resets self._got_first_request to False so the app can restart in an interactive session. Unknown **options are forwarded to run_simple and may raise there.",
+        "summary": "Run the Werkzeug development server with debug/dotenv/SERVER_NAME defaults; ignore when started via 'flask run'.",
+        "relations": [
+          {
+            "target": "flask/cli.py::function::load_dotenv::23871",
+            "kind": "call",
+            "basis": "cli.load_dotenv()"
+          },
+          {
+            "target": "flask/cli.py::function::show_server_banner::26078",
+            "kind": "call",
+            "basis": "cli.show_server_banner(self.debug, self.name)"
+          },
+          {
+            "target": "flask/helpers.py::function::get_debug_flag::671",
+            "kind": "call",
+            "basis": "self.debug = get_debug_flag()"
+          },
+          {
+            "target": "flask/helpers.py::function::get_load_dotenv::968",
+            "kind": "call",
+            "basis": "if get_load_dotenv(load_dotenv):"
+          }
+        ],
+        "extras": [
+          {
+            "topic": "side_effect",
+            "note": "Mutates self.debug and self._got_first_request; loads dotenv files which may change the working directory."
+          },
+          {
+            "topic": "condition",
+            "note": "Returns without starting a server when FLASK_RUN_FROM_CLI is 'true'."
+          }
+        ],
+        "uncertainties": [
+          "run_simple's option handling and server behavior are Werkzeug-defined."
+        ]
+      },
+      {
+        "id": "flask/app.py::method::Flask.test_client::30209",
+        "kind": "method",
+        "explain": "Returns a test client instance: self.test_client_class if set, else a lazily imported flask.testing.FlaskClient. The client is constructed as cls(self, self.response_class, use_cookies=use_cookies, **kwargs), so extra kwargs are forwarded to the client constructor. Exceptions in app code are only visible to tests when app.testing (or debug) makes them propagate; otherwise they surface as 500 responses.",
+        "summary": "Create a test client (custom class or default FlaskClient) bound to this app.",
+        "uncertainties": [
+          "Constructor contract of FlaskClient is defined in flask.testing, not here."
+        ]
+      },
+      {
+        "id": "flask/app.py::method::Flask.test_cli_runner::32738",
+        "kind": "method",
+        "explain": "Returns self.test_cli_runner_class(self, **kwargs) if set, else a lazily imported flask.testing.FlaskCliRunner(self, **kwargs). The app is passed as the first constructor argument.",
+        "summary": "Create a CLI test runner (custom class or default FlaskCliRunner) for this app.",
+        "uncertainties": [
+          "FlaskCliRunner constructor semantics are defined in flask.testing."
+        ]
+      },
+      {
+        "id": "flask/app.py::method::Flask.handle_http_exception::33294",
+        "kind": "method",
+        "explain": "Handles an HTTPException raised during dispatch. Returns the exception unchanged when e.code is None (proxy-style exceptions without codes) or when it is a werkzeug RoutingException (internal control-flow like slash redirects, deliberately not routed to error handlers). Otherwise looks up an error handler via _find_error_handler(e, ctx.request.blueprints); if none is found, returns the exception itself (which becomes the error response); otherwise calls the handler through ensure_sync with the exception and returns its result.",
+        "summary": "Handle HTTPExceptions: pass through code-less and routing exceptions, else dispatch to a registered error handler.",
+        "relations": [
+          {
+            "target": "flask/app.py::method::Flask.ensure_sync::42693",
+            "kind": "call",
+            "basis": "self.ensure_sync(handler)(e)"
+          },
+          {
+            "target": "flask/sansio/app.py::method::App._find_error_handler::34163",
+            "kind": "call",
+            "basis": "self._find_error_handler(e, ctx.request.blueprints)"
+          }
+        ],
+        "uncertainties": [
+          "Handler return-value typing (ResponseReturnValue) is trusted; a handler returning an invalid value surfaces later in make_response."
+        ]
+      },
+      {
+        "id": "flask/app.py::method::Flask.handle_user_exception::34661",
+        "kind": "method",
+        "explain": "Entry point for exceptions raised in view/handler code. If the exception is a BadRequestKeyError and debug or TRAP_BAD_REQUEST_ERRORS is set, sets e.show_exception = True so the missing key is displayed. If the exception is an HTTPException and trap_http_exception(e) is False, forwards it to handle_http_exception(ctx, e). Otherwise, looks up a handler via _find_error_handler(e, ctx.request.blueprints); if none exists, re-raises the original exception (bare 'raise', preserving traceback); otherwise calls the handler through ensure_sync and returns its result.",
+        "summary": "Convert or propagate user exceptions: HTTPExceptions go to handle_http_exception, other errors go to handlers or re-raise.",
+        "relations": [
+          {
+            "target": "flask/app.py::method::Flask.handle_http_exception::33294",
+            "kind": "call",
+            "basis": "return self.handle_http_exception(ctx, e)"
+          },
+          {
+            "target": "flask/sansio/app.py::method::App.trap_http_exception::35122",
+            "kind": "call",
+            "basis": "self.trap_http_exception(e)"
+          },
+          {
+            "target": "flask/sansio/app.py::method::App._find_error_handler::34163",
+            "kind": "call",
+            "basis": "self._find_error_handler(e, ctx.request.blueprints)"
+          }
+        ],
+        "extras": [
+          {
+            "topic": "failure",
+            "note": "Re-raises the original exception, preserving its traceback, when no error handler is registered."
+          }
+        ],
+        "uncertainties": []
+      },
+      {
+        "id": "flask/app.py::method::Flask.handle_exception::35864",
+        "kind": "method",
+        "explain": "Last-resort handler for unhandled exceptions or exceptions raised in error handlers. Captures sys.exc_info(), sends the got_request_exception signal (with ensure_sync as the async wrapper). Determines propagate from config['PROPAGATE_EXCEPTIONS'], defaulting to (testing or debug) when None; if propagating, re-raises the active exception (bare raise when exc_info[1] is e) or raises e. Otherwise logs the exception via log_exception(ctx, exc_info), builds InternalServerError(original_exception=e), looks up a handler for it (handlers registered for InternalServerError/500 receive the InternalServerError, never the original), and returns finalize_request(ctx, server_error, from_error_handler=True), so after-request functions still run and failures in that path are logged rather than raised.",
+        "summary": "Convert an unhandled exception into a 500 InternalServerError response, or re-raise when exceptions propagate.",
+        "relations": [
+          {
+            "target": "flask/app.py::method::Flask.log_exception::38078",
+            "kind": "call",
+            "basis": "self.log_exception(ctx, exc_info)"
+          },
+          {
+            "target": "flask/app.py::method::Flask.finalize_request::40993",
+            "kind": "call",
+            "basis": "return self.finalize_request(ctx, server_error, from_error_handler=True)"
+          },
+          {
+            "target": "flask/sansio/app.py::method::App._find_error_handler::34163",
+            "kind": "call",
+            "basis": "self._find_error_handler(server_error, ctx.request.blueprints)"
+          }
+        ],
+        "extras": [
+          {
+            "topic": "side_effect",
+            "note": "Sends the got_request_exception signal and logs the exception before producing the 500 response."
+          },
+          {
+            "topic": "condition",
+            "note": "PROPAGATE_EXCEPTIONS unset means propagate when testing or debug is enabled."
+          }
+        ],
+        "uncertainties": [
+          "Whether got_request_exception.send can itself raise (signal receivers are invoked synchronously) is not guarded here."
+        ]
+      },
+      {
+        "id": "flask/app.py::method::Flask.log_exception::38078",
+        "kind": "method",
+        "explain": "Logs the exception via self.logger.error with a message containing the request path and method ('Exception on <path> [<method>]') and exc_info passed to the logging call for the traceback. Assumes an active request in ctx; ctx.request.path/method are read directly.",
+        "summary": "Log the current exception with request path and method via the app logger.",
+        "uncertainties": []
+      },
+      {
+        "id": "flask/app.py::method::Flask.dispatch_request::38653",
+        "kind": "method",
+        "explain": "Matches the request to a view and invokes it. If req.routing_exception is set, passes it to raise_routing_exception (which re-raises it, possibly transformed in debug). Reads req.url_rule (typed as Rule); if the rule allows automatic options and the method is OPTIONS, returns make_default_options_response(ctx). Otherwise calls the view function self.view_functions[rule.endpoint] with req.view_args as kwargs, through ensure_sync so async views work. Unknown endpoints (missing from view_functions) would raise KeyError; not guarded. Returns the raw view return value, which need not be a Response.",
+        "summary": "Dispatch the request to its view function, handling routing exceptions and automatic OPTIONS.",
+        "relations": [
+          {
+            "target": "flask/app.py::method::Flask.raise_routing_exception::22516",
+            "kind": "call",
+            "basis": "self.raise_routing_exception(req)"
+          },
+          {
+            "target": "flask/app.py::method::Flask.make_default_options_response::42219",
+            "kind": "call",
+            "basis": "return self.make_default_options_response(ctx)"
+          },
+          {
+            "target": "flask/app.py::method::Flask.ensure_sync::42693",
+            "kind": "call",
+            "basis": "self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)"
+          }
+        ],
+        "uncertainties": [
+          "url_rule/view_args being non-None relies on routing having matched; the type: ignore comments acknowledge this."
+        ]
+      },
+      {
+        "id": "flask/app.py::method::Flask.full_dispatch_request::38653x",
+        "kind": "method",
+        "explain": "Placeholder id in inventory refers to the full-dispatch pipeline below.",
+        "summary": "Pipeline: first-request flag and deprecation warning, request_started signal, preprocess/dispatch, exception conversion, finalization.",
+        "relations": [],
+        "uncertainties": []
+      },
+      {
+        "id": "flask/app.py::method::Flask.full_dispatch_request::39934",
+        "kind": "method",
+        "explain": "Runs the full request cycle. If this is not the first request handled and self.should_ignore_error is defined (not None), warns DeprecationWarning that should_ignore_error is deprecated (to be removed in Flask 3.3). Sets self._got_first_request = True unconditionally. Then: sends request_started (with ensure_sync as async wrapper), runs preprocess_request(ctx); if it returned None, runs dispatch_request(ctx). Any Exception raised in that block is converted via handle_user_exception(ctx, e). Finally returns finalize_request(ctx, rv), which builds the response and runs after-request functions. Only Exception (not BaseException) is caught here.",
+        "summary": "First-request bookkeeping, preprocess and dispatch the request, convert exceptions, and finalize into a response.",
+        "relations": [
+          {
+            "target": "flask/app.py::method::Flask.preprocess_request::54901",
+            "kind": "call",
+            "basis": "rv = self.preprocess_request(ctx)"
+          },
+          {
+            "target": "flask/app.py::method::Flask.dispatch_request::38653",
+            "kind": "call",
+            "basis": "rv = self.dispatch_request(ctx)"
+          },
+          {
+            "target": "flask/app.py::method::Flask.handle_user_exception::34661",
+            "kind": "call",
+            "basis": "rv = self.handle_user_exception(ctx, e)"
+          },
+          {
+            "target": "flask/app.py::method::Flask.finalize_request::40993",
+            "kind": "call",
+            "basis": "return self.finalize_request(ctx, rv)"
+          }
+        ],
+        "extras": [
+          {
+            "topic": "side_effect",
+            "note": "Sets self._got_first_request = True before dispatch, enabling first-request-only warnings/behavior."
+          }
+        ],
+        "uncertainties": [
+          "should_ignore_error is referenced via the sansio base; its definition/None-ness is external."
+        ]
+      },
+      {
+        "id": "flask/app.py::method::Flask.finalize_request::40993",
+        "kind": "method",
+        "explain": "Turns a view/error-handler return value into a Response: make_response(rv), then process_response(ctx, response) and the request_finished signal inside a try. If those raise: when from_error_handler is False the exception propagates; when True (error path), the exception is logged with self.logger.exception and the (possibly partially processed) response is returned. Returns the final Response.",
+        "summary": "Convert a view return value into a response, run after-request processing, and log failures on the error path.",
+        "relations": [
+          {
+            "target": "flask/app.py::method::Flask.make_response::49069",
+            "kind": "call",
+            "basis": "response = self.make_response(rv)"
+          },
+          {
+            "target": "flask/app.py::method::Flask.process_response::56063",
+            "kind": "call",
+            "basis": "response = self.process_response(ctx, response)"
+          }
+        ],
+        "extras": [
+          {
+            "topic": "failure",
+            "note": "Called with from_error_handler=True by handle_exception, so after-request failures are logged instead of raised."
+          }
+        ],
+        "uncertainties": []
+      },
+      {
+        "id": "flask/app.py::method::Flask.make_default_options_response::42219",
+        "kind": "method",
+        "explain": "Builds the automatic OPTIONS response: an empty self.response_class() whose Allow header is set to the allowed methods reported by ctx.url_adapter.allowed_methods() (url_adapter assumed present; the type: ignore notes the possibility of None). Override point for changing automatic OPTIONS behavior.",
+        "summary": "Return an empty response whose Allow header lists the route's allowed methods.",
+        "uncertainties": [
+          "Behavior when ctx has no url_adapter (AttributeError from None) is not guarded."
+        ]
+      },
+      {
+        "id": "flask/app.py::method::Flask.ensure_sync::42693",
+        "kind": "method",
+        "explain": "Adapts a callable for synchronous WSGI invocation: coroutine functions (per inspect.iscoroutinefunction) are wrapped via async_to_sync; everything else is returned unchanged. Override point for custom async handling.",
+        "summary": "Return async functions wrapped for sync calling; pass other callables through unchanged.",
+        "relations": [
+          {
+            "target": "flask/app.py::method::Flask.async_to_sync::43192",
+            "kind": "call",
+            "basis": "return self.async_to_sync(func)"
+          }
+        ],
+        "uncertainties": []
+      },
+      {
+        "id": "flask/app.py::method::Flask.async_to_sync::43192",
+        "kind": "method",
+        "explain": "Converts a coroutine function into a sync callable using asgiref.sync.async_to_sync, imported lazily. If asgiref is not installed, raises RuntimeError('Install Flask with the 'async' extra ...') with the ImportError suppressed (from None). Returns the asgiref wrapper; the caller invokes the result to run the coroutine to completion.",
+        "summary": "Wrap a coroutine function with asgiref's async_to_sync, raising RuntimeError if asgiref is missing.",
+        "extras": [
+          {
+            "topic": "failure",
+            "note": "Raises RuntimeError when the asgiref dependency is absent; the original ImportError is chained off (None)."
+          }
+        ],
+        "uncertainties": [
+          "Precise event-loop behavior of the asgiref wrapper is library-defined."
+        ]
+      },
+      {
+        "id": "flask/app.py::method::Flask.url_for::43940",
+        "kind": "method",
+        "explain": "Builds a URL for an endpoint. Adapter selection: if an app context is active and has a request, uses ctx.url_adapter and the current blueprint; an endpoint starting with '.' is made relative to the active blueprint (or the leading dot is stripped when there is none), and URLs default to internal unless _scheme forces external (_external = _scheme is not None). Outside a request, uses the app context's url_adapter if an app context is active, otherwise builds one via create_url_adapter(None); if no adapter is available (no SERVER_NAME), raises RuntimeError explaining the configuration needed, and URLs default to external. Validates that _scheme requires _external=True (ValueError otherwise). Calls self.inject_url_defaults(endpoint, values), then url_adapter.build(endpoint, values, method=_method, url_scheme=_scheme, force_external=_external). On BuildError, merges _anchor/_method/_scheme/_external into values and delegates to self.handle_url_build_error(error, endpoint, values); if that returns a string it is returned, otherwise the BuildError propagates per the sansio method. A non-None _anchor is URL-quoted with a permissive safe set and appended as '#anchor'.",
+        "summary": "Build a URL for an endpoint using the request or app URL adapter, with blueprint-relative endpoints and build-error handling.",
+        "relations": [
+          {
+            "target": "flask/sansio/app.py::method::App.inject_url_defaults::37394",
+            "kind": "call",
+            "basis": "self.inject_url_defaults(endpoint, values)"
+          },
+          {
+            "target": "flask/sansio/app.py::method::App.handle_url_build_error::38226",
+            "kind": "call",
+            "basis": "return self.handle_url_build_error(error, endpoint, values)"
+          },
+          {
+            "target": "flask/app.py::method::Flask.create_url_adapter::20236",
+            "kind": "call",
+            "basis": "url_adapter = self.create_url_adapter(None)"
+          }
+        ],
+        "extras": [
+          {
+            "topic": "failure",
+            "note": "Raises RuntimeError when building URLs outside a request without SERVER_NAME; ValueError when _scheme is given with _external=False."
+          }
+        ],
+        "uncertainties": [
+          "Whether handle_url_build_error always raises or may return is determined by the sansio implementation, not this file."
+        ]
+      },
+      {
+        "id": "flask/app.py::method::Flask.make_response::49069",
+        "kind": "method",
+        "explain": "Coerces a view return value into self.response_class. Tuple unpacking: 3-tuples are (body, status, headers); 2-tuples are (body, headers) when the second element is a Headers/dict/tuple/list, else (body, status); other lengths raise TypeError. A None body raises TypeError naming the endpoint from the request proxy. Non-response bodies: str/bytes/bytearray/iterator become response_class(rv, status=status, headers=headers) with status/headers consumed there; dict/list become self.json.response(rv) (JSON response; status/headers from tuple unpacking are not applied in this branch); a werkzeug BaseResponse or any callable is coerced via response_class.force_type(rv, request.environ) \u2014 this requires an active request context, and a TypeError there is re-raised as a new TypeError with appended guidance and the original traceback. Anything else raises TypeError listing accepted types. Afterwards an unpacked status is applied (string sets rv.status, otherwise rv.status_code) and unpacked headers update rv.headers. Returns the Response.",
+        "summary": "Convert any supported view return value (body, tuples, dict/list JSON, WSGI callable, Response) into a Response.",
+        "relations": [
+          {
+            "target": "flask/json/provider.py::method::JSONProvider.response::2762",
+            "kind": "use",
+            "basis": "self.json.response(rv) \u2014 two candidate provider implementations; exact target unresolved"
+          }
+        ],
+        "extras": [
+          {
+            "topic": "failure",
+            "note": "Raises TypeError for None returns, malformed tuples, and unsupported return types; coerces foreign Responses or WSGI callables via force_type."
+          },
+          {
+            "topic": "condition",
+            "note": "In the dict/list JSON branch, tuple-supplied status/headers are not applied to the JSON response."
+          }
+        ],
+        "uncertainties": [
+          "Whether self.json.response consumes or should consume tuple status/headers is defined in flask.json.provider and not visible here.",
+          "The graph shows two candidate implementations of response() (JSONProvider / DefaultJSONProvider); which one runs depends on the configured json provider."
+        ]
+      },
+      {
+        "id": "flask/app.py::method::Flask.preprocess_request::54901",
+        "kind": "method",
+        "explain": "Pre-dispatch hooks. Runs url_value_preprocessors for None (app-level) and the request's blueprints in reverse order, calling each with (req.endpoint, req.view_args). Then runs before_request_funcs for the same names, each through ensure_sync; the first non-None return value short-circuits and is returned (it becomes the response value, skipping the view). Returns None when all before-request functions return None. URL value preprocessors cannot short-circuit.",
+        "summary": "Run URL value preprocessors and before_request functions; a non-None before_request return short-circuits dispatch.",
+        "relations": [
+          {
+            "target": "flask/app.py::method::Flask.ensure_sync::42693",
+            "kind": "call",
+            "basis": "rv = self.ensure_sync(before_func)()"
+          }
+        ],
+        "uncertainties": []
+      },
+      {
+        "id": "flask/app.py::method::Flask.process_response::56063",
+        "kind": "method",
+        "explain": "Post-dispatch hooks, in reverse registration order. First runs ctx._after_request_functions (deferred, e.g. from streaming within the request), then after_request_funcs for each of the request's blueprints then None (app-level), each through ensure_sync, chaining the response through each function's return. Finally, if the session is not a null session (session_interface.is_null_session(ctx._get_session())), saves it via session_interface.save_session(self, session, response). Returns the final response.",
+        "summary": "Run after_request functions in reverse order and save the non-null session onto the response.",
+        "relations": [
+          {
+            "target": "flask/ctx.py::method::AppContext._get_session::12637",
+            "kind": "call",
+            "basis": "ctx._get_session() called twice (is_null_session and save_session)"
+          },
+          {
+            "target": "flask/sessions.py::method::SecureCookieSessionInterface.save_session::13274",
+            "kind": "call",
+            "basis": "self.session_interface.save_session(self, ctx._get_session(), response)"
+          }
+        ],
+        "uncertainties": [
+          "Behavior of _after_request_functions population is defined in flask.ctx."
+        ]
+      },
+      {
+        "id": "flask/app.py::method::Flask.do_teardown_request::57237",
+        "kind": "method",
+        "explain": "Runs request teardown before the request context pops (invoked by AppContext.pop). Iterates the request's blueprints then None; for each name with registered teardown_request_funcs, runs each function in reverse registration order with exc, inside a _CollectErrors context so an error in one callback does not stop later callbacks. Then sends the request_tearing_down signal (with exc) under the same collector, and finally collect_errors.raise_any('Errors during request teardown'), which re-raises the collected errors if any occurred (behavior of the helpers._CollectErrors helper).",
+        "summary": "Run teardown_request functions and the request_tearing_down signal, collecting errors instead of stopping at the first.",
+        "relations": [
+          {
+            "target": "flask/helpers.py::method::_CollectErrors.__init__::23945",
+            "kind": "use",
+            "basis": "collect_errors = _CollectErrors(); errors collected across callbacks"
+          },
+          {
+            "target": "flask/ctx.py::method::AppContext.pop::15235",
+            "kind": "contract",
+            "basis": "docstring and graph: called by AppContext.pop"
+          }
+        ],
+        "uncertainties": [
+          "Exact raise semantics (single exception vs ExceptionGroup) of _CollectErrors.raise_any are defined in flask.helpers, not proven here."
+        ]
+      },
+      {
+        "id": "flask/app.py::method::Flask.do_teardown_appcontext::58575",
+        "kind": "method",
+        "explain": "Runs app teardown before the app context pops (invoked by AppContext.pop). Runs teardown_appcontext_funcs in reverse order with exc under _CollectErrors, then sends appcontext_tearing_down (with exc) under the collector, then raises collected errors via collect_errors.raise_any('Errors during app teardown'). As with do_teardown_request, all callbacks run even if earlier ones raise.",
+        "summary": "Run teardown_appcontext functions and the appcontext_tearing_down signal, collecting errors across callbacks.",
+        "relations": [
+          {
+            "target": "flask/helpers.py::method::_CollectErrors.__init__::23945",
+            "kind": "use",
+            "basis": "collect_errors = _CollectErrors()"
+          },
+          {
+            "target": "flask/ctx.py::method::AppContext.pop::15235",
+            "kind": "contract",
+            "basis": "docstring and graph: called by AppContext.pop"
+          }
+        ],
+        "uncertainties": [
+          "raise_any failure shape is defined in flask.helpers."
+        ]
+      },
+      {
+        "id": "flask/app.py::method::Flask.app_context::59585",
+        "kind": "method",
+        "explain": "Creates and returns a new AppContext(self); nothing is pushed by this method itself \u2014 pushing happens via the context manager or ctx.push(), which makes current_app and g available. Used directly for setup/testing outside request handling or CLI commands.",
+        "summary": "Create (but do not push) an AppContext for this application.",
+        "relations": [
+          {
+            "target": "flask/ctx.py::method::AppContext.__init__::9828",
+            "kind": "call",
+            "basis": "return AppContext(self)"
+          }
+        ],
+        "uncertainties": []
+      },
+      {
+        "id": "flask/app.py::method::Flask.request_context::60220",
+        "kind": "method",
+        "explain": "Creates an AppContext carrying a request built from the given WSGI environment via AppContext.from_environ(self, environ). Intended for internal use; the docs steer external code to test_request_context because a valid environ is nontrivial. Pushing the result makes request, session, g, and current_app available.",
+        "summary": "Create an AppContext with a request built from a WSGI environment.",
+        "relations": [
+          {
+            "target": "flask/ctx.py::method::AppContext.from_environ::11203",
+            "kind": "call",
+            "basis": "return AppContext.from_environ(self, environ)"
+          }
+        ],
+        "uncertainties": [
+          "from_environ's request construction and session handling are defined in flask.ctx."
+        ]
+      },
+      {
+        "id": "flask/app.py::method::Flask.test_request_context::60965",
+        "kind": "method",
+        "explain": "Builds a WSGI environ for testing: constructs flask.testing.EnvironBuilder(self, *args, **kwargs) (which applies app defaults like PREFERRED_URL_SCHEME and SERVER_NAME), calls builder.get_environ() inside try/finally so builder.close() always runs, then returns self.request_context(environ). Accepts the same arguments as werkzeug.test.EnvironBuilder; a json kwarg is serialized and defaults content_type to application/json (per EnvironBuilder).",
+        "summary": "Create a request-bearing AppContext from EnvironBuilder arguments for testing.",
+        "relations": [
+          {
+            "target": "flask/testing.py::method::EnvironBuilder.__init__::1667",
+            "kind": "call",
+            "basis": "EnvironBuilder(self, *args, **kwargs)"
+          },
+          {
+            "target": "flask/app.py::method::Flask.request_context::60220",
+            "kind": "call",
+            "basis": "return self.request_context(environ)"
+          }
+        ],
+        "uncertainties": [
+          "get_environ failure modes are Werkzeug/testing-defined."
+        ]
+      },
+      {
+        "id": "flask/app.py::method::Flask.wsgi_app::63059",
+        "kind": "method",
+        "explain": "The actual WSGI application (kept separate from __call__ so middleware can wrap it without losing the app object). Creates ctx = request_context(environ), pushes it, and runs full_dispatch_request(ctx). On Exception, records error and produces handle_exception(ctx, e); on BaseException (bare except), records error and re-raises. Returns response(environ, start_response) \u2014 the JSON provider's response method supplies this callable for the final WSGI invocation. The finally block always: preserves the context for the Werkzeug debugger if environ contains 'werkzeug.debug.preserve_context'; clears the recorded error if should_ignore_error is defined and returns truthy for it; and calls ctx.pop(error), which runs request/app teardown with the error (or None if ignored/absent). Teardown therefore runs even on unhandled errors.",
+        "summary": "WSGI entry pipeline: push request context, dispatch, convert errors, return response, always pop context with teardown.",
+        "relations": [
+          {
+            "target": "flask/ctx.py::method::AppContext.push::14047",
+            "kind": "call",
+            "basis": "ctx.push()"
+          },
+          {
+            "target": "flask/ctx.py::method::AppContext.pop::15235",
+            "kind": "call",
+            "basis": "ctx.pop(error)"
+          },
+          {
+            "target": "flask/json/provider.py::method::JSONProvider.response::2762",
+            "kind": "use",
+            "basis": "response(environ, start_response); graph shows two candidate provider response methods, exact one unresolved"
+          }
+        ],
+        "extras": [
+          {
+            "topic": "side_effect",
+            "note": "Pushes and pops the AppContext; teardown functions receive the caught error unless should_ignore_error suppresses it."
+          }
+        ],
+        "uncertainties": [
+          "The exact response(environ, start_response) implementation (JSONProvider.response vs DefaultJSONProvider.response) depends on the configured json provider; unresolved in this batch.",
+          "BaseException path re-raises after the finally block runs."
+        ]
+      },
+      {
+        "id": "flask/app.py::method::Flask.__call__::64944",
+        "kind": "method",
+        "explain": "WSGI-server entry point; simply delegates to wsgi_app(environ, start_response) so middleware wrapping wsgi_app does not replace the app object.",
+        "summary": "WSGI call entry delegating to wsgi_app.",
+        "relations": [
+          {
+            "target": "flask/app.py::method::Flask.wsgi_app::63059",
+            "kind": "call",
+            "basis": "return self.wsgi_app(environ, start_response)"
+          }
+        ],
+        "uncertainties": []
+      }
+    ],
+    "dispositions": {
+      "flask/app.py::module_residual::::0": {
+        "how": "index_only",
+        "unit": null,
+        "reason": "Import and TypeVar header; no executable behavior."
+      },
+      "flask/app.py::function::_make_timedelta::2439": {
+        "how": "unit",
+        "unit": "flask/app.py::function::_make_timedelta::2439",
+        "reason": "Branching normalization logic worth its own unit."
+      },
+      "flask/app.py::module_residual::::2622": {
+        "how": "index_only",
+        "unit": null,
+        "reason": "Only the F TypeVar definition."
+      },
+      "flask/app.py::function::remove_ctx::2802::s0": {
+        "how": "unit",
+        "unit": "flask/app.py::function::remove_ctx::2802::s0",
+        "reason": "Decorator with real logic; wrapper and tail segment grouped inside."
+      },
+      "flask/app.py::function::remove_ctx.wrapper::2833": {
+        "how": "grouped",
+        "unit": "flask/app.py::function::remove_ctx::2802::s0",
+        "reason": "Wrapper body is the core of the decorator unit."
+      },
+      "flask/app.py::function::remove_ctx::2802::s1": {
+        "how": "grouped",
+        "unit": "flask/app.py::function::remove_ctx::2802::s0",
+        "reason": "Decorator tail (update_wrapper/return), no separate logic."
+      },
+      "flask/app.py::module_residual::::3089": {
+        "how": "index_only",
+        "unit": null,
+        "reason": "Empty residual region before the class body."
+      },
+      "flask/app.py::function::add_ctx::3205::s0": {
+        "how": "unit",
+        "unit": "flask/app.py::function::add_ctx::3205::s0",
+        "reason": "Decorator with real logic; wrapper and tail segment grouped inside."
+      },
+      "flask/app.py::function::add_ctx.wrapper::3233": {
+        "how": "grouped",
+        "unit": "flask/app.py::function::add_ctx::3205::s0",
+        "reason": "Wrapper body is the core of the decorator unit."
+      },
+      "flask/app.py::function::add_ctx::3205::s1": {
+        "how": "grouped",
+        "unit": "flask/app.py::function::add_ctx::3205::s0",
+        "reason": "Decorator tail (update_wrapper/return), no separate logic."
+      },
+      "flask/app.py::class::Flask::3592::s0": {
+        "how": "unit",
+        "unit": "flask/app.py::class::Flask::3592::s0",
+        "reason": "Class identity, inheritance, and class attributes; methods get their own units."
+      },
+      "flask/app.py::method::Flask.__init_subclass__::10159": {
+        "how": "unit",
+        "unit": "flask/app.py::method::Flask.__init_subclass__::10159",
+        "reason": "Signature inspection, warning, and shim installation logic."
+      },
+      "flask/app.py::method::Flask.__init__::12493": {
+        "how": "unit",
+        "unit": "flask/app.py::method::Flask.__init__::12493",
+        "reason": "CLI group creation and static route registration logic."
+      },
+      "flask/app.py::method::Flask.get_send_file_max_age::14868": {
+        "how": "unit",
+        "unit": "flask/app.py::method::Flask.get_send_file_max_age::14868",
+        "reason": "Config conversion branching."
+      },
+      "flask/app.py::method::Flask.send_static_file::15828": {
+        "how": "unit",
+        "unit": "flask/app.py::method::Flask.send_static_file::15828",
+        "reason": "Static-serving view with RuntimeError boundary."
+      },
+      "flask/app.py::method::Flask.open_resource::16649": {
+        "how": "unit",
+        "unit": "flask/app.py::method::Flask.open_resource::16649",
+        "reason": "Read-only mode validation and file opening."
+      },
+      "flask/app.py::method::Flask.open_instance_resource::17892": {
+        "how": "unit",
+        "unit": "flask/app.py::method::Flask.open_instance_resource::17892",
+        "reason": "Instance-file opening with mode/encoding branching."
+      },
+      "flask/app.py::method::Flask.create_jinja_environment::18766": {
+        "how": "unit",
+        "unit": "flask/app.py::method::Flask.create_jinja_environment::18766",
+        "reason": "Environment option merging and global injection."
+      },
+      "flask/app.py::method::Flask.create_url_adapter::20236": {
+        "how": "unit",
+        "unit": "flask/app.py::method::Flask.create_url_adapter::20236",
+        "reason": "Multi-branch URL adapter binding logic."
+      },
+      "flask/app.py::method::Flask.raise_routing_exception::22516": {
+        "how": "unit",
+        "unit": "flask/app.py::method::Flask.raise_routing_exception::22516",
+        "reason": "Debug-mode redirect interception and raising."
+      },
+      "flask/app.py::method::Flask.update_template_context::23492": {
+        "how": "unit",
+        "unit": "flask/app.py::method::Flask.update_template_context::23492",
+        "reason": "Context processor iteration and precedence re-application."
+      },
+      "flask/app.py::method::Flask.make_shell_context::24762": {
+        "how": "unit",
+        "unit": "flask/app.py::method::Flask.make_shell_context::24762",
+        "reason": "Processor aggregation with small logic."
+      },
+      "flask/app.py::method::Flask.run::25161": {
+        "how": "unit",
+        "unit": "flask/app.py::method::Flask.run::25161",
+        "reason": "Substantial server-launch logic with env/config handling."
+      },
+      "flask/app.py::method::Flask.test_client::30209": {
+        "how": "unit",
+        "unit": "flask/app.py::method::Flask.test_client::30209",
+        "reason": "Lazy class selection and constructor forwarding."
+      },
+      "flask/app.py::method::Flask.test_cli_runner::32738": {
+        "how": "unit",
+        "unit": "flask/app.py::method::Flask.test_cli_runner::32738",
+        "reason": "Lazy class selection; small but real logic."
+      },
+      "flask/app.py::method::Flask.handle_http_exception::33294": {
+        "how": "unit",
+        "unit": "flask/app.py::method::Flask.handle_http_exception::33294",
+        "reason": "Exception-class branching and handler dispatch."
+      },
+      "flask/app.py::method::Flask.handle_user_exception::34661": {
+        "how": "unit",
+        "unit": "flask/app.py::method::Flask.handle_user_exception::34661",
+        "reason": "Trap/fallback/re-raise ordering logic."
+      },
+      "flask/app.py::method::Flask.handle_exception::35864": {
+        "how": "unit",
+        "unit": "flask/app.py::method::Flask.handle_exception::35864",
+        "reason": "Propagation, signal, logging, and 500 conversion."
+      },
+      "flask/app.py::method::Flask.log_exception::38078": {
+        "how": "unit",
+        "unit": "flask/app.py::method::Flask.log_exception::38078",
+        "reason": "Logging contract; kept as small unit per inventory."
+      },
+      "flask/app.py::method::Flask.dispatch_request::38653": {
+        "how": "unit",
+        "unit": "flask/app.py::method::Flask.dispatch_request::38653",
+        "reason": "Routing-exception handling and view dispatch."
+      },
+      "flask/app.py::method::Flask.full_dispatch_request::39934": {
+        "how": "unit",
+        "unit": "flask/app.py::method::Flask.full_dispatch_request::39934",
+        "reason": "Pipeline with deprecation warning and error conversion."
+      },
+      "flask/app.py::method::Flask.finalize_request::40993": {
+        "how": "unit",
+        "unit": "flask/app.py::method::Flask.finalize_request::40993",
+        "reason": "Response finalization with error-path fallback."
+      },
+      "flask/app.py::method::Flask.make_default_options_response::42219": {
+        "how": "unit",
+        "unit": "flask/app.py::method::Flask.make_default_options_response::42219",
+        "reason": "Allow-header construction; real behavior despite small body."
+      },
+      "flask/app.py::method::Flask.ensure_sync::42693": {
+        "how": "unit",
+        "unit": "flask/app.py::method::Flask.ensure_sync::42693",
+        "reason": "Coroutine detection branch and override point."
+      },
+      "flask/app.py::method::Flask.async_to_sync::43192": {
+        "how": "unit",
+        "unit": "flask/app.py::method::Flask.async_to_sync::43192",
+        "reason": "Import failure handling and asgiref wrapping."
+      },
+      "flask/app.py::method::Flask.url_for::43940": {
+        "how": "unit",
+        "unit": "flask/app.py::method::Flask.url_for::43940",
+        "reason": "Complex URL-building logic with error handling."
+      },
+      "flask/app.py::method::Flask.make_response::49069": {
+        "how": "unit",
+        "unit": "flask/app.py::method::Flask.make_response::49069",
+        "reason": "Large multi-type response conversion logic."
+      },
+      "flask/app.py::method::Flask.preprocess_request::54901": {
+        "how": "unit",
+        "unit": "flask/app.py::method::Flask.preprocess_request::54901",
+        "reason": "Preprocessor iteration with short-circuit semantics."
+      },
+      "flask/app.py::method::Flask.process_response::56063": {
+        "how": "unit",
+        "unit": "flask/app.py::method::Flask.process_response::56063",
+        "reason": "After-request chain and session saving."
+      },
+      "flask/app.py::method::Flask.do_teardown_request::57237": {
+        "how": "unit",
+        "unit": "flask/app.py::method::Flask.do_teardown_request::57237",
+        "reason": "Teardown error-collection logic."
+      },
+      "flask/app.py::method::Flask.do_teardown_appcontext::58575": {
+        "how": "unit",
+        "unit": "flask/app.py::method::Flask.do_teardown_appcontext::58575",
+        "reason": "Teardown error-collection logic."
+      },
+      "flask/app.py::method::Flask.app_context::59585": {
+        "how": "unit",
+        "unit": "flask/app.py::method::Flask.app_context::59585",
+        "reason": "Context factory with push contract worth documenting."
+      },
+      "flask/app.py::method::Flask.request_context::60220": {
+        "how": "unit",
+        "unit": "flask/app.py::method::Flask.request_context::60220",
+        "reason": "Environ-to-context factory with internal-use contract."
+      },
+      "flask/app.py::method::Flask.test_request_context::60965": {
+        "how": "unit",
+        "unit": "flask/app.py::method::Flask.test_request_context::60965",
+        "reason": "Builder lifecycle (close in finally) and context creation."
+      },
+      "flask/app.py::method::Flask.wsgi_app::63059": {
+        "how": "unit",
+        "unit": "flask/app.py::method::Flask.wsgi_app::63059",
+        "reason": "Core WSGI pipeline with error and teardown handling."
+      },
+      "flask/app.py::method::Flask.__call__::64944": {
+        "how": "unit",
+        "unit": "flask/app.py::method::Flask.__call__::64944",
+        "reason": "Trivial delegate; kept as unit to match inventory method identity."
+      }
+    },
+    "batch_notes": "All inventory ids dispositioned; remove_ctx/add_ctx wrapper and tail segments grouped into their decorator units. The only graph ambiguity is the response(environ, start_response) call in wsgi_app, which the graph reports as JSONProvider.response or DefaultJSONProvider.response depending on the configured provider; recorded as 'use' with uncertainty. Sansio App attributes (config, url_map, jinja_options, view_functions, _find_error_handler, should_ignore_error) are external boundaries and their behavior is not proven from this file."
+  },
+  "paths": [
+    "flask/app.py"
+  ],
+  "inventory": {
+    "flask/app.py": {
+      "tokens": 13841,
+      "sha256": "510b83880097af4450933561cba96e5a1c432bf53ea9264ca947da53752e3a2b",
+      "nlines": 1625,
+      "symbols": [
+        {
+          "id": "flask/app.py::module_residual::::0",
+          "name": "app.py",
+          "kind": "module_region",
+          "parent": null,
+          "lines": [
+            [
+              1,
+              72
+            ]
+          ]
+        },
+        {
+          "id": "flask/app.py::function::_make_timedelta::2439",
+          "name": "_make_timedelta",
+          "kind": "function",
+          "parent": null,
+          "lines": [
+            [
+              73,
+              77
+            ]
+          ]
+        },
+        {
+          "id": "flask/app.py::module_residual::::2622",
+          "name": "app.py",
+          "kind": "module_region",
+          "parent": null,
+          "lines": [
+            [
+              77,
+              84
+            ]
+          ]
+        },
+        {
+          "id": "flask/app.py::function::remove_ctx::2802::s0",
+          "name": "remove_ctx",
+          "kind": "function",
+          "parent": null,
+          "lines": [
+            [
+              85,
+              86
+            ]
+          ]
+        },
+        {
+          "id": "flask/app.py::function::remove_ctx.wrapper::2833",
+          "name": "wrapper",
+          "kind": "function",
+          "parent": null,
+          "lines": [
+            [
+              86,
+              90
+            ]
+          ]
+        },
+        {
+          "id": "flask/app.py::function::remove_ctx::2802::s1",
+          "name": "remove_ctx",
+          "kind": "function",
+          "parent": null,
+          "lines": [
+            [
+              90,
+              92
+            ]
+          ]
+        },
+        {
+          "id": "flask/app.py::module_residual::::3089",
+          "name": "app.py",
+          "kind": "module_region",
+          "parent": null,
+          "lines": [
+            [
+              92,
+              96
+            ]
+          ]
+        },
+        {
+          "id": "flask/app.py::function::add_ctx::3205::s0",
+          "name": "add_ctx",
+          "kind": "function",
+          "parent": null,
+          "lines": [
+            [
+              97,
+              98
+            ]
+          ]
+        },
+        {
+          "id": "flask/app.py::function::add_ctx.wrapper::3233",
+          "name": "wrapper",
+          "kind": "function",
+          "parent": null,
+          "lines": [
+            [
+              98,
+              104
+            ]
+          ]
+        },
+        {
+          "id": "flask/app.py::function::add_ctx::3205::s1",
+          "name": "add_ctx",
+          "kind": "function",
+          "parent": null,
+          "lines": [
+            [
+              104,
+              106
+            ]
+          ]
+        },
+        {
+          "id": "flask/app.py::class::Flask::3592::s0",
+          "name": "Flask",
+          "kind": "class",
+          "parent": null,
+          "lines": [
+            [
+              109,
+              252
+            ]
+          ]
+        },
+        {
+          "id": "flask/app.py::method::Flask.__init_subclass__::10159",
+          "name": "__init_subclass__",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              252,
+              306
+            ]
+          ]
+        },
+        {
+          "id": "flask/app.py::method::Flask.__init__::12493",
+          "name": "__init__",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              308,
+              361
+            ]
+          ]
+        },
+        {
+          "id": "flask/app.py::method::Flask.get_send_file_max_age::14868",
+          "name": "get_send_file_max_age",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              363,
+              388
+            ]
+          ]
+        },
+        {
+          "id": "flask/app.py::method::Flask.send_static_file::15828",
+          "name": "send_static_file",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              390,
+              410
+            ]
+          ]
+        },
+        {
+          "id": "flask/app.py::method::Flask.open_resource::16649",
+          "name": "open_resource",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              412,
+              443
+            ]
+          ]
+        },
+        {
+          "id": "flask/app.py::method::Flask.open_instance_resource::17892",
+          "name": "open_instance_resource",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              445,
+              465
+            ]
+          ]
+        },
+        {
+          "id": "flask/app.py::method::Flask.create_jinja_environment::18766",
+          "name": "create_jinja_environment",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              467,
+              505
+            ]
+          ]
+        },
+        {
+          "id": "flask/app.py::method::Flask.create_url_adapter::20236",
+          "name": "create_url_adapter",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              507,
+              558
+            ]
+          ]
+        },
+        {
+          "id": "flask/app.py::method::Flask.raise_routing_exception::22516",
+          "name": "raise_routing_exception",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              560,
+              586
+            ]
+          ]
+        },
+        {
+          "id": "flask/app.py::method::Flask.update_template_context::23492",
+          "name": "update_template_context",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              588,
+              616
+            ]
+          ]
+        },
+        {
+          "id": "flask/app.py::method::Flask.make_shell_context::24762",
+          "name": "make_shell_context",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              618,
+              628
+            ]
+          ]
+        },
+        {
+          "id": "flask/app.py::method::Flask.run::25161",
+          "name": "run",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              630,
+              753
+            ]
+          ]
+        },
+        {
+          "id": "flask/app.py::method::Flask.test_client::30209",
+          "name": "test_client",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              755,
+              811
+            ]
+          ]
+        },
+        {
+          "id": "flask/app.py::method::Flask.test_cli_runner::32738",
+          "name": "test_cli_runner",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              813,
+              828
+            ]
+          ]
+        },
+        {
+          "id": "flask/app.py::method::Flask.handle_http_exception::33294",
+          "name": "handle_http_exception",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              830,
+              863
+            ]
+          ]
+        },
+        {
+          "id": "flask/app.py::method::Flask.handle_user_exception::34661",
+          "name": "handle_user_exception",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              865,
+              895
+            ]
+          ]
+        },
+        {
+          "id": "flask/app.py::method::Flask.handle_exception::35864",
+          "name": "handle_exception",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              897,
+              948
+            ]
+          ]
+        },
+        {
+          "id": "flask/app.py::method::Flask.log_exception::38078",
+          "name": "log_exception",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              950,
+              964
+            ]
+          ]
+        },
+        {
+          "id": "flask/app.py::method::Flask.dispatch_request::38653",
+          "name": "dispatch_request",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              966,
+              990
+            ]
+          ]
+        },
+        {
+          "id": "flask/app.py::method::Flask.full_dispatch_request::39934",
+          "name": "full_dispatch_request",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              992,
+              1019
+            ]
+          ]
+        },
+        {
+          "id": "flask/app.py::method::Flask.finalize_request::40993",
+          "name": "finalize_request",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              1021,
+              1051
+            ]
+          ]
+        },
+        {
+          "id": "flask/app.py::method::Flask.make_default_options_response::42219",
+          "name": "make_default_options_response",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              1053,
+              1063
+            ]
+          ]
+        },
+        {
+          "id": "flask/app.py::method::Flask.ensure_sync::42693",
+          "name": "ensure_sync",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              1065,
+              1077
+            ]
+          ]
+        },
+        {
+          "id": "flask/app.py::method::Flask.async_to_sync::43192",
+          "name": "async_to_sync",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              1079,
+              1100
+            ]
+          ]
+        },
+        {
+          "id": "flask/app.py::method::Flask.url_for::43940",
+          "name": "url_for",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              1102,
+              1222
+            ]
+          ]
+        },
+        {
+          "id": "flask/app.py::method::Flask.make_response::49069",
+          "name": "make_response",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              1224,
+              1364
+            ]
+          ]
+        },
+        {
+          "id": "flask/app.py::method::Flask.preprocess_request::54901",
+          "name": "preprocess_request",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              1366,
+              1392
+            ]
+          ]
+        },
+        {
+          "id": "flask/app.py::method::Flask.process_response::56063",
+          "name": "process_response",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              1394,
+              1418
+            ]
+          ]
+        },
+        {
+          "id": "flask/app.py::method::Flask.do_teardown_request::57237",
+          "name": "do_teardown_request",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              1420,
+              1451
+            ]
+          ]
+        },
+        {
+          "id": "flask/app.py::method::Flask.do_teardown_appcontext::58575",
+          "name": "do_teardown_appcontext",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              1453,
+              1479
+            ]
+          ]
+        },
+        {
+          "id": "flask/app.py::method::Flask.app_context::59585",
+          "name": "app_context",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              1481,
+              1499
+            ]
+          ]
+        },
+        {
+          "id": "flask/app.py::method::Flask.request_context::60220",
+          "name": "request_context",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              1501,
+              1515
+            ]
+          ]
+        },
+        {
+          "id": "flask/app.py::method::Flask.test_request_context::60965",
+          "name": "test_request_context",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              1517,
+              1564
+            ]
+          ]
+        },
+        {
+          "id": "flask/app.py::method::Flask.wsgi_app::63059",
+          "name": "wsgi_app",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              1566,
+              1616
+            ]
+          ]
+        },
+        {
+          "id": "flask/app.py::method::Flask.__call__::64944",
+          "name": "__call__",
+          "kind": "method",
+          "parent": null,
+          "lines": [
+            [
+              1618,
+              1625
+            ]
+          ]
+        }
+      ],
+      "known_empty": false
+    }
+  },
+  "source": "runs/s5d/flask-1/run/host/raw/module_3.attempt-1.txt",
+  "accepted": false
+}

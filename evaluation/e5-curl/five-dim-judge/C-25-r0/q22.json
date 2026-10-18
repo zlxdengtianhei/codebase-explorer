@@ -1,0 +1,125 @@
+{
+  "qid": 22,
+  "question": "After an application sets CURLMOPT_NETWORK_CHANGED with CURLMNWC_CLEAR_CONNS on a multi handle, why does libcurl set the no_reuse bit on every pooled connection it visits, including connections that it does not close at that moment?\n\nBuild assumptions: Default build; connections live in the multi handle's own pool (no share with CURL_LOCK_DATA_CONNECT).",
+  "arm": "C",
+  "max_steps": 25,
+  "repeat": 0,
+  "answer_valid": true,
+  "judge_model": "codex/gpt-6.1-sol",
+  "draws": [
+    {
+      "draw": 1,
+      "score": {
+        "correctness": 10,
+        "completeness": 11,
+        "relevance": 18,
+        "clarity": 16,
+        "reasoning": 11
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 97,
+            "prompt_tokens": 6948,
+            "total_tokens": 7045,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 48,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 10,\n  \"completeness\": 11,\n  \"relevance\": 18,\n  \"clarity\": 16,\n  \"reasoning\": 11\n}",
+          "wall_seconds": 6.82049975002883
+        }
+      ]
+    },
+    {
+      "draw": 2,
+      "score": {
+        "correctness": 10,
+        "completeness": 11,
+        "relevance": 18,
+        "clarity": 16,
+        "reasoning": 11
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 109,
+            "prompt_tokens": 6948,
+            "total_tokens": 7057,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 60,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 6784
+            }
+          },
+          "response": "{\n  \"correctness\": 10,\n  \"completeness\": 11,\n  \"relevance\": 18,\n  \"clarity\": 16,\n  \"reasoning\": 11\n}",
+          "wall_seconds": 6.8038598749553785
+        }
+      ]
+    },
+    {
+      "draw": 3,
+      "score": {
+        "correctness": 10,
+        "completeness": 12,
+        "relevance": 18,
+        "clarity": 16,
+        "reasoning": 11
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 102,
+            "prompt_tokens": 6948,
+            "total_tokens": 7050,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 53,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 10,\n  \"completeness\": 12,\n  \"relevance\": 18,\n  \"clarity\": 16,\n  \"reasoning\": 11\n}",
+          "wall_seconds": 4.500523958005942
+        }
+      ]
+    }
+  ],
+  "score": {
+    "correctness": 10,
+    "completeness": 11,
+    "relevance": 18,
+    "clarity": 16,
+    "reasoning": 11
+  },
+  "total": 66,
+  "main_total_na5": 66,
+  "failure_type": null,
+  "judge_total_range": 1,
+  "wall_seconds": 18.149913750006817
+}

@@ -1,0 +1,106 @@
+{
+  "passed": true,
+  "request_rows": 3482,
+  "rows_with_unique_available_upstream_id": 3418,
+  "request_id_missing": 1070,
+  "response_id_missing": 64,
+  "both_upstream_ids_missing": 64,
+  "normalized_duplicate_rows_preserved": [
+    {
+      "session": "e5-direct",
+      "time": "2026-10-18T11:16:07+02:00",
+      "status": "499",
+      "rows": 3,
+      "reason": "No upstream IDs and CSV timestamp has second resolution; preserve receipt multiplicity, corroborated by74 client direct attempts"
+    }
+  ],
+  "known_recorded_cost_usd": 8.318145,
+  "by_session": {
+    "e5-rubric-main-sec": {
+      "requests": 102,
+      "input_tokens": 148033.0,
+      "cache_read_tokens": 516608.0,
+      "cache_write_tokens": 0.0,
+      "output_tokens": 66612.0,
+      "reasoning_tokens": 10078.0,
+      "cost_usd": 1.013869
+    },
+    "e5-fivedim-main-sec": {
+      "requests": 102,
+      "input_tokens": 166814.0,
+      "cache_read_tokens": 555520.0,
+      "cache_write_tokens": 0.0,
+      "output_tokens": 10141.0,
+      "reasoning_tokens": 5193.0,
+      "cost_usd": 0.490612
+    },
+    "e5-answer-main-sec": {
+      "requests": 907,
+      "input_tokens": 1137032.0,
+      "cache_read_tokens": 14272576.0,
+      "cache_write_tokens": 0.0,
+      "output_tokens": 341033.0,
+      "reasoning_tokens": 221448.0,
+      "cost_usd": 0.769247
+    },
+    "e5-fivedim-direct": {
+      "requests": 87,
+      "input_tokens": 95127.0,
+      "cache_read_tokens": 438528.0,
+      "cache_write_tokens": 0.0,
+      "output_tokens": 7669.0,
+      "reasoning_tokens": 3786.0,
+      "cost_usd": 0.310819
+    },
+    "e5-direct": {
+      "requests": 74,
+      "input_tokens": 2810.0,
+      "cache_read_tokens": 1536.0,
+      "cache_write_tokens": 0.0,
+      "output_tokens": 194924.0,
+      "reasoning_tokens": 188799.0,
+      "cost_usd": 0.097931
+    },
+    "e5-rubric-main": {
+      "requests": 359,
+      "input_tokens": 454856.0,
+      "cache_read_tokens": 1848192.0,
+      "cache_write_tokens": 0.0,
+      "output_tokens": 190983.0,
+      "reasoning_tokens": 33005.0,
+      "cost_usd": 3.004433
+    },
+    "e5-fivedim-main": {
+      "requests": 357,
+      "input_tokens": 540968.0,
+      "cache_read_tokens": 1963648.0,
+      "cache_write_tokens": 0.0,
+      "output_tokens": 35525.0,
+      "reasoning_tokens": 18080.0,
+      "cost_usd": 1.633621
+    },
+    "e5-answer-main": {
+      "requests": 1494,
+      "input_tokens": 2069382.0,
+      "cache_read_tokens": 9690816.0,
+      "cache_write_tokens": 0.0,
+      "output_tokens": 792951.0,
+      "reasoning_tokens": 533755.0,
+      "cost_usd": 0.997613
+    }
+  },
+  "unknown_usage_499_by_session": {
+    "e5-rubric-main-sec": 0,
+    "e5-fivedim-main-sec": 0,
+    "e5-answer-main-sec": 2,
+    "e5-fivedim-direct": 0,
+    "e5-direct": 45,
+    "e5-rubric-main": 1,
+    "e5-fivedim-main": 0,
+    "e5-answer-main": 16
+  },
+  "unknown_usage_499_total": 64,
+  "gateway_client_observed_input_output_differences_all_zero": true,
+  "secondary_known_usage_successful_gateway_requests": 905,
+  "secondary_history_plus_known_processing_error_plus_timeouts": "904+1+2=907, gateway200=905 and499=2"
+}

@@ -18,7 +18,8 @@ from pathlib import Path
 
 import pytest
 
-from cbe.graph import analyze_graph, graph_suffixes
+from cbe.graph import analyze_graph
+from cbe.source_context import suffix_languages
 from cbe.graph_backends.joern import (
     JOERN_LANGUAGE_FLAGS,
     _capabilities_for,
@@ -77,7 +78,7 @@ def test_first_error_line_returns_none_without_markers() -> None:
 
 
 def test_language_flags_cover_registry_languages() -> None:
-    registry = set(graph_suffixes().values())
+    registry = set(suffix_languages().values())
     missing = registry - set(JOERN_LANGUAGE_FLAGS)
     assert not missing, f"registry languages without a Joern frontend route: {sorted(missing)}"
     assert JOERN_LANGUAGE_FLAGS["c_sharp"] == "csharpsrc"
@@ -129,8 +130,11 @@ def test_rust_without_cargo_is_failed_not_empty(tmp_path: Path) -> None:
     repo = tmp_path / "flat_rust"
     (repo / "src").mkdir(parents=True)
     (repo / "src" / "main.rs").write_text("fn main() { println!(\"hi\"); }\n", encoding="utf-8")
-    graph = analyze_graph(repo, tmp_path / "flat.json", backend="joern", languages=["rust"],
-                          joern_home=_JOERN_HOME, timeout=600)
+    with pytest.raises(ValueError, match="no graph backend completed"):
+        analyze_graph(repo, tmp_path / "flat.json", backend="joern", languages=["rust"],
+                      joern_home=_JOERN_HOME, timeout=600)
+    import json
+    graph = json.loads((tmp_path / "flat.json").read_text())
     assert _capability(graph, "rust", "call")["status"] == "failed"
     assert any(d["code"] == "frontend_error" for d in graph["diagnostics"])
     assert not any(c["status"] == "empty" for c in graph["capabilities"] if c["language"] == "rust")
@@ -171,8 +175,11 @@ def test_swift_extra_language_parses_but_cross_file_is_partial(tmp_path: Path) -
 @pytest.mark.skipif(not _JOERN_HOME, reason="CBE_JOERN_HOME is not set")
 def test_php_without_runtime_is_failed_with_cause(tmp_path: Path) -> None:
     repo = _copy_case(tmp_path, "php")
-    graph = analyze_graph(repo, tmp_path / "php.json", backend="joern", languages=["php"],
-                          joern_home=_JOERN_HOME, timeout=600)
+    with pytest.raises(ValueError, match="no graph backend completed"):
+        analyze_graph(repo, tmp_path / "php.json", backend="joern", languages=["php"],
+                      joern_home=_JOERN_HOME, timeout=600)
+    import json
+    graph = json.loads((tmp_path / "php.json").read_text())
     assert _capability(graph, "php", "call")["status"] == "failed"
     assert any(d["code"] == "backend_error" and "php" in d["message"].lower()
                for d in graph["diagnostics"])

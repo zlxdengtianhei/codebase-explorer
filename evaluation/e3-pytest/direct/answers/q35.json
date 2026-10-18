@@ -1,0 +1,31 @@
+{
+  "qid": 35,
+  "question": "Why does the SysCapture class maintain consistency between its captured buffer state and the original system stream when snap() and writeorg() operations are interleaved during test execution?",
+  "arm": "direct",
+  "answer": "SysCapture keeps its captured output and the original stream in sync because it holds two independent references: `tmpfile` (a CaptureIO in-memory buffer) and `_old` (the saved original `sys.stdout`/`sys.stderr`). `snap()` reads the buffer's contents and then truncates/rewinds it, so every snapshot returns exactly the output written since the last snap and no stale data accumulates. `writeorg()` writes directly to the saved `_old` stream and flushes it, so forwarded data goes straight to the real system stream and never re-enters the capture buffer. Since snapshot reads/reset and forwarded writes act on separate, dedicated targets, interleaving the two operations cannot duplicate, lose, or misorder output \u2014 the buffer always reflects precisely the test's captured output since the previous snap, while forwarded output lands immediately and correctly on the genuine stream (e.g., when pytest echoes captured output for failing tests or handles live output).",
+  "valid": true,
+  "wall_seconds": 30.826613749959506,
+  "attempts": [
+    {
+      "answer": "SysCapture keeps its captured output and the original stream in sync because it holds two independent references: `tmpfile` (a CaptureIO in-memory buffer) and `_old` (the saved original `sys.stdout`/`sys.stderr`). `snap()` reads the buffer's contents and then truncates/rewinds it, so every snapshot returns exactly the output written since the last snap and no stale data accumulates. `writeorg()` writes directly to the saved `_old` stream and flushes it, so forwarded data goes straight to the real system stream and never re-enters the capture buffer. Since snapshot reads/reset and forwarded writes act on separate, dedicated targets, interleaving the two operations cannot duplicate, lose, or misorder output \u2014 the buffer always reflects precisely the test's captured output since the previous snap, while forwarded output lands immediately and correctly on the genuine stream (e.g., when pytest echoes captured output for failing tests or handles live output).",
+      "valid": true,
+      "usage": {
+        "completion_tokens": 1540,
+        "prompt_tokens": 112,
+        "total_tokens": 1652,
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": null,
+          "audio_tokens": null,
+          "reasoning_tokens": 1344,
+          "rejected_prediction_tokens": null
+        },
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 64
+        }
+      },
+      "response_model": "glm-5.3-flash"
+    }
+  ]
+}

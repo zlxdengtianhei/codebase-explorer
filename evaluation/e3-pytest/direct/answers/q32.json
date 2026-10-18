@@ -1,0 +1,31 @@
+{
+  "qid": 32,
+  "question": "Why would repeated invocations of pytester.getitem() followed by evaluate_xfail_marks() impact test suite performance, and what internal caching mechanisms could mitigate redundant AST parsing and mark evaluation across multiple test evaluations?",
+  "arm": "direct",
+  "answer": "**Performance impact**\n\n- Each `pytester.getitem()` call re-parses the source file into a fresh AST (`ast.parse`) and re-compiles/re-imports the module to trigger collection. Nothing deduplicates identical source across calls, so parse + compile + import cost is paid every time.\n- Collection rebuilds the whole node tree (Session \u2192 Module \u2192 Function) and re-derives marks from `@pytest.mark` attributes each run.\n- `evaluate_xfail_marks()` walks the item chain via `iter_markers()` and may `eval()` condition expressions on every invocation; historically it was also re-run in each test phase (setup/call/teardown), multiplying overhead across repeated evaluations.\n\n**Caching mechanisms that mitigate this**\n\n- `Node.own_markers` is unpacked once in `Node.__init__` (via `get_unpacked_marks`) and stored on the node, so mark objects aren't re-derived from the function's `__pytest_mark` attributes repeatedly.\n- The evaluated xfail result is memoized per item in `item._store[xfailed_key]` during `pytest_runtest_setup` and reused by the call/report phases instead of re-evaluating marks.\n- `cached_property`-style storage on nodes (e.g., for marker lists / `listchain` results) avoids re-walking the parent chain on each `iter_markers()` call.\n- Bytecode caching (`__pycache__`/`.pyc` files, `sys.pycache_prefix`) and `sys.modules` import caching eliminate repeated AST parse/compile and module execution for unchanged files.\n- A global memo (e.g., `functools.lru_cache`) keyed on source hash \u2192 parsed AST or mark evaluation results would further deduplicate redundant work across multiple `getitem()`/`evaluate_xfail_marks()` invocations.",
+  "valid": true,
+  "wall_seconds": 45.04395583301084,
+  "attempts": [
+    {
+      "answer": "**Performance impact**\n\n- Each `pytester.getitem()` call re-parses the source file into a fresh AST (`ast.parse`) and re-compiles/re-imports the module to trigger collection. Nothing deduplicates identical source across calls, so parse + compile + import cost is paid every time.\n- Collection rebuilds the whole node tree (Session \u2192 Module \u2192 Function) and re-derives marks from `@pytest.mark` attributes each run.\n- `evaluate_xfail_marks()` walks the item chain via `iter_markers()` and may `eval()` condition expressions on every invocation; historically it was also re-run in each test phase (setup/call/teardown), multiplying overhead across repeated evaluations.\n\n**Caching mechanisms that mitigate this**\n\n- `Node.own_markers` is unpacked once in `Node.__init__` (via `get_unpacked_marks`) and stored on the node, so mark objects aren't re-derived from the function's `__pytest_mark` attributes repeatedly.\n- The evaluated xfail result is memoized per item in `item._store[xfailed_key]` during `pytest_runtest_setup` and reused by the call/report phases instead of re-evaluating marks.\n- `cached_property`-style storage on nodes (e.g., for marker lists / `listchain` results) avoids re-walking the parent chain on each `iter_markers()` call.\n- Bytecode caching (`__pycache__`/`.pyc` files, `sys.pycache_prefix`) and `sys.modules` import caching eliminate repeated AST parse/compile and module execution for unchanged files.\n- A global memo (e.g., `functools.lru_cache`) keyed on source hash \u2192 parsed AST or mark evaluation results would further deduplicate redundant work across multiple `getitem()`/`evaluate_xfail_marks()` invocations.",
+      "valid": true,
+      "usage": {
+        "completion_tokens": 1998,
+        "prompt_tokens": 120,
+        "total_tokens": 2118,
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": null,
+          "audio_tokens": null,
+          "reasoning_tokens": 1620,
+          "rejected_prediction_tokens": null
+        },
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 64
+        }
+      },
+      "response_model": "glm-5.3-flash"
+    }
+  ]
+}

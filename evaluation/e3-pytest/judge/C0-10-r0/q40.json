@@ -1,0 +1,125 @@
+{
+  "qid": 40,
+  "question": "Where does the data flow from pytester.inline_run() through the test execution pipeline to ultimately validate that tmp_path remains functional when the current process's user id lacks a corresponding valid user entry?",
+  "arm": "C0",
+  "max_steps": 10,
+  "repeat": 0,
+  "answer_valid": true,
+  "judge_model": "codex/gpt-6.1-sol",
+  "draws": [
+    {
+      "draw": 1,
+      "score": {
+        "correctness": 14,
+        "completeness": 16,
+        "relevance": 17,
+        "clarity": 17,
+        "reasoning": 15
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 84,
+            "prompt_tokens": 7263,
+            "total_tokens": 7347,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 51,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\"correctness\":14,\"completeness\":16,\"relevance\":17,\"clarity\":17,\"reasoning\":15}",
+          "wall_seconds": 7.391044708027039
+        }
+      ]
+    },
+    {
+      "draw": 2,
+      "score": {
+        "correctness": 14,
+        "completeness": 16,
+        "relevance": 17,
+        "clarity": 17,
+        "reasoning": 15
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 93,
+            "prompt_tokens": 7263,
+            "total_tokens": 7356,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 44,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 7040
+            }
+          },
+          "response": "{\n  \"correctness\": 14,\n  \"completeness\": 16,\n  \"relevance\": 17,\n  \"clarity\": 17,\n  \"reasoning\": 15\n}",
+          "wall_seconds": 4.169001333997585
+        }
+      ]
+    },
+    {
+      "draw": 3,
+      "score": {
+        "correctness": 14,
+        "completeness": 16,
+        "relevance": 16,
+        "clarity": 17,
+        "reasoning": 15
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 109,
+            "prompt_tokens": 7263,
+            "total_tokens": 7372,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 60,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 7040
+            }
+          },
+          "response": "{\n  \"correctness\": 14,\n  \"completeness\": 16,\n  \"relevance\": 16,\n  \"clarity\": 17,\n  \"reasoning\": 15\n}",
+          "wall_seconds": 4.6483464580378495
+        }
+      ]
+    }
+  ],
+  "score": {
+    "correctness": 14,
+    "completeness": 16,
+    "relevance": 17,
+    "clarity": 17,
+    "reasoning": 15
+  },
+  "total": 79,
+  "main_total_na5": 79,
+  "failure_type": null,
+  "judge_total_range": 1,
+  "wall_seconds": 16.208959625044372
+}

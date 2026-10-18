@@ -1,0 +1,125 @@
+{
+  "qid": 10,
+  "question": "For an https:// URL, libcurl may race a first connection attempt over HTTP/3 against a second attempt over HTTP/2. In an ngtcp2 build, how does the HTTP/3 attempt's 'has the server replied yet' signal reach the racing logic, and how does it affect when the HTTP/2 attempt is started?\n\nBuild assumptions: USE_NGTCP2 and USE_NGHTTP3 plus nghttp2; OpenSSL; CURLOPT_HTTP_VERSION set so that the first attempt is h3 and the second h2 (e.g. CURL_HTTP_VERSION_3 with fallback allowed); no HTTPS-RR records; no proxy; non-Windows.",
+  "arm": "C",
+  "max_steps": 25,
+  "repeat": 0,
+  "answer_valid": true,
+  "judge_model": "codex/gpt-6.1-sol",
+  "draws": [
+    {
+      "draw": 1,
+      "score": {
+        "correctness": 11,
+        "completeness": 12,
+        "relevance": 15,
+        "clarity": 15,
+        "reasoning": 13
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 106,
+            "prompt_tokens": 7767,
+            "total_tokens": 7873,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 57,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 11,\n  \"completeness\": 12,\n  \"relevance\": 15,\n  \"clarity\": 15,\n  \"reasoning\": 13\n}",
+          "wall_seconds": 7.387461458041798
+        }
+      ]
+    },
+    {
+      "draw": 2,
+      "score": {
+        "correctness": 11,
+        "completeness": 12,
+        "relevance": 15,
+        "clarity": 15,
+        "reasoning": 14
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 101,
+            "prompt_tokens": 7767,
+            "total_tokens": 7868,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 52,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 4096
+            }
+          },
+          "response": "{\n  \"correctness\": 11,\n  \"completeness\": 12,\n  \"relevance\": 15,\n  \"clarity\": 15,\n  \"reasoning\": 14\n}",
+          "wall_seconds": 7.826059541024733
+        }
+      ]
+    },
+    {
+      "draw": 3,
+      "score": {
+        "correctness": 11,
+        "completeness": 12,
+        "relevance": 16,
+        "clarity": 15,
+        "reasoning": 14
+      },
+      "calls": [
+        {
+          "requested_model": "codex/gpt-6.1-sol",
+          "response_model": "gpt-6.1-sol",
+          "usage": {
+            "completion_tokens": 120,
+            "prompt_tokens": 7767,
+            "total_tokens": 7887,
+            "completion_tokens_details": {
+              "accepted_prediction_tokens": null,
+              "audio_tokens": null,
+              "reasoning_tokens": 71,
+              "rejected_prediction_tokens": null
+            },
+            "prompt_tokens_details": {
+              "audio_tokens": null,
+              "cache_write_tokens": 0,
+              "cached_tokens": 7552
+            }
+          },
+          "response": "{\n  \"correctness\": 11,\n  \"completeness\": 12,\n  \"relevance\": 16,\n  \"clarity\": 15,\n  \"reasoning\": 14\n}",
+          "wall_seconds": 6.862485707970336
+        }
+      ]
+    }
+  ],
+  "score": {
+    "correctness": 11,
+    "completeness": 12,
+    "relevance": 15,
+    "clarity": 15,
+    "reasoning": 14
+  },
+  "total": 67,
+  "main_total_na5": 67,
+  "failure_type": null,
+  "judge_total_range": 2,
+  "wall_seconds": 22.088822500023525
+}

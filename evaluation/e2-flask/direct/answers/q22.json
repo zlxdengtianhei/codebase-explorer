@@ -1,0 +1,31 @@
+{
+  "qid": 22,
+  "question": "How does the type-safe dictionary structure used as a view function return type annotation decouple JSON response serialization from HTTP status representation to maintain type safety?",
+  "arm": "direct",
+  "answer": "In `flask/typing.py`, Flask splits the view return type into separate aliases rather than one combined structure:\n\n- `ResponseValue` (which includes `dict[str, t.Any]`) represents **only the payload** \u2014 a returned dict is always interpreted purely as JSON data that `self.json.response(rv)` serializes in `make_response`.\n- HTTP status is represented independently as `StatusCode` (an `int`), and only appears in dedicated positional tuple variants of the `ResponseReturnValue` union: `tuple[ResponseValue, int]`, `tuple[ResponseValue, int, Headers]`.\n\nBecause serialization (dict body) and status (int) occupy distinct, fixed positions in the union, type checkers can validate each element independently, Flask's runtime never has to guess whether a dict encodes status data, and adding a status requires returning a tuple rather than polluting the dict \u2014 keeping both concerns type-safe and decoupled.",
+  "valid": true,
+  "wall_seconds": 55.72804470802657,
+  "attempts": [
+    {
+      "answer": "In `flask/typing.py`, Flask splits the view return type into separate aliases rather than one combined structure:\n\n- `ResponseValue` (which includes `dict[str, t.Any]`) represents **only the payload** \u2014 a returned dict is always interpreted purely as JSON data that `self.json.response(rv)` serializes in `make_response`.\n- HTTP status is represented independently as `StatusCode` (an `int`), and only appears in dedicated positional tuple variants of the `ResponseReturnValue` union: `tuple[ResponseValue, int]`, `tuple[ResponseValue, int, Headers]`.\n\nBecause serialization (dict body) and status (int) occupy distinct, fixed positions in the union, type checkers can validate each element independently, Flask's runtime never has to guess whether a dict encodes status data, and adding a status requires returning a tuple rather than polluting the dict \u2014 keeping both concerns type-safe and decoupled.",
+      "valid": true,
+      "usage": {
+        "completion_tokens": 2552,
+        "prompt_tokens": 108,
+        "total_tokens": 2660,
+        "completion_tokens_details": {
+          "accepted_prediction_tokens": null,
+          "audio_tokens": null,
+          "reasoning_tokens": 2359,
+          "rejected_prediction_tokens": null
+        },
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 64
+        }
+      },
+      "response_model": "glm-5.3-flash"
+    }
+  ]
+}
