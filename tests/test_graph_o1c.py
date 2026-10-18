@@ -1,4 +1,6 @@
 """C1b counterexamples: search evidence must precede repository identity."""
+import pytest
+
 from cbe.graph_backends.resolution import ImportResolver, resolve_declarations
 from cbe.graph_backends.identity import validate_identities
 
@@ -117,6 +119,7 @@ def test_cli_default_exports_all_cfg_methods(tmp_path, monkeypatch):
 
 
 def test_suffix_registry_is_built_once_per_graph(tmp_path, monkeypatch):
+    pytest.importorskip("grimp")  # the Python import graph needs the `graphs` extra
     from cbe import graph, source_context
     from cbe.graph_backends import resolution
     original = source_context.suffix_languages
@@ -138,6 +141,7 @@ def test_suffix_registry_is_built_once_per_graph(tmp_path, monkeypatch):
 
 
 def test_python_only_build_does_not_report_unused_dependency_cruiser(tmp_path, monkeypatch):
+    pytest.importorskip("grimp")  # the Python import graph needs the `graphs` extra
     from cbe import graph, graph_backends
     monkeypatch.setattr(graph_backends, "find_depcruise", lambda *args: None)
     (tmp_path / "app").mkdir()
