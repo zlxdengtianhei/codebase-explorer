@@ -995,8 +995,25 @@ def _extract_declarations(spec: GrammarSpec, offsets: OffsetMap, root: Any, path
                 return
             # Function bindings retain their established extraction path.
         name = _ordinary_name(spec, offsets, node, scope)
+        if name and ntype == "type_definition":
+            defined_type = node.child_by_field_name("type")
+            if (defined_type is not None and defined_type.type in spec.class_kinds
+                    and _is_type_definition(spec, defined_type)):
+                # The existing type owns the definition, with its original id
+                # and full span. The typedef adds searchable aliases, no unit.
+                first = len(declarations)
+                for child in node.named_children:
+                    visit(child, parent, scope, [None])
+                for declaration in declarations[first:]:
+                    if declaration.node == defined_type:
+                        declaration.signature += "\n" + name
+                return
         if name:
-            decl = _make_declaration(spec, offsets, node, path, parent, "module_region", prefix[0], name=name)
+            decl = _make_declaration(spec, offsets, node, path, parent, "module_region", prefix[0],
+                                     name=name.split(", ", 1)[0])
+            # Search metadata holds every name, without duplicating the list in
+            # inventory names and canonical ids. Do not truncate long runs.
+            decl.signature = name
             prefix[0] = None
             if node.type == "variable_declarator" and node == node.parent.named_children[-1]:
                 decl.end_byte = node.parent.end_byte
@@ -1042,11 +1059,7 @@ def _coalesce_declarations(offsets: OffsetMap, declarations: list[_Declaration],
             if (previous.parent_id == decl.parent_id and owner(previous) == owner(decl)
                     and decl.start_byte >= previous.end_byte and not gap.strip()):
                 previous.end_byte = decl.end_byte
-                previous.name += ", " + decl.name
-                scope = previous.qualified_name.rsplit(".", 1)[0] + "." if previous.parent_id else ""
-                previous.qualified_name = scope + previous.name
-                previous.symbol_id = canonical_symbol_id(path, "module_region", previous.qualified_name, previous.start_byte)
-                previous.signature = _text(offsets, previous.start_byte, previous.end_byte).strip()[:_SIGNATURE_LIMIT]
+                previous.signature += ", " + decl.signature
                 continue
         result.append(decl)
     return result
@@ -1280,8 +1293,7 @@ def _plan_chunks(
     for decl in declarations:
         holes = [(child.start_byte, child.end_byte) for child in by_parent.get(decl.symbol_id, ())]
         if decl.kind == "module_region":
-            # A typedef can enclose an existing struct/union/enum declaration.
-            # Preserve that declaration's identity and let it own its bytes.
+            # Value declarations can also enclose existing type definitions.
             holes += [(other.start_byte, other.end_byte) for other in declarations
                       if other is not decl and decl.start_byte <= other.start_byte
                       and other.end_byte <= decl.end_byte
@@ -1403,6 +1415,8 @@ def source_signatures(path: str, source: str, language: str) -> tuple[dict[str, 
         if end < 0:
             end = declaration.end_byte
         signature = raw[declaration.start_byte:end].decode("utf-8").strip()
+        if declaration.signature and declaration.signature not in signature:
+            signature += "\n" + declaration.signature
         by_id[declaration.symbol_id] = signature
         start_line = _line_of(starts, offsets.char_of_byte(declaration.start_byte))
         by_location[declaration.qualified_name, start_line] = signature

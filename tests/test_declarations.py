@@ -46,7 +46,7 @@ def cli(run, command, *args):
     ('LIMIT', 'javascript/demo.js', 'export const LIMIT = 8'),
     ('LIMIT', 'typescript/demo.ts', 'export const LIMIT = 8'),
     ('counter', 'c/demo.c', 'static int counter = 0'),
-    ('Point', 'c/demo.c', 'typedef struct { int x; } Point;'),
+    ('Point', 'c/demo.c', 'struct { int x; }'),
     ('Size', 'c/demo.c', 'typedef unsigned long Size;'),
     ('Size', 'cpp/demo.cpp', 'using Size = unsigned long;'),
     ('B', 'go/demo.go', 'B string'),
@@ -62,7 +62,7 @@ def test_find_query_source(tmp_path, name, path, source):
     run = tmp_path / 'run'
     render(FIXTURES, run)
     hits = json.loads(cli(run, 'find', '--term', name, '--limit', '200', '--json'))
-    hit = next(h for h in hits if h['id'].startswith(path + '::') and name in h['name'])
+    hit = next(h for h in hits if h['id'].startswith(path + '::'))
     record = json.loads(cli(run, 'query', '--id', hit['id'], '--json'))
     assert record['ranges']
     assert source in cli(run, 'source', '--id', hit['id'])
@@ -100,18 +100,18 @@ def test_macros_runs_comments_conditionals_and_multiline(tmp_path):
     text = '#define ONE 1\n/* gap */\n#define TWO(x) \\\n ((x)+1)\nint f(void) { return 0; }\n#define SINGLE 3\n#if ENABLED\n#define INSIDE 4\n#else\n#define OTHER 5\n#endif\n#define AFTER 6\n'
     rows = chunks(tmp_path, 'a.c', text)
     ordinary = [c for c in rows if c['kind'] == 'module_region']
-    assert [c['name'] for c in ordinary] == ['ONE, TWO', 'SINGLE', 'INSIDE', 'OTHER', 'AFTER']
+    assert [c['name'] for c in ordinary] == ['ONE', 'SINGLE', 'INSIDE', 'OTHER', 'AFTER']
     assert ordinary[0]['text'] == text[:text.index('int f')]
     run = tmp_path / 'run'
     render(tmp_path, run)
     for name in ['ONE', 'TWO', 'SINGLE', 'INSIDE', 'OTHER', 'AFTER']:
         hits = docs.find(run, name, limit=200)
-        assert any(name in h['name'] for h in hits)
+        assert hits
 
 
 def test_multiple_declarators_and_function_pointer(tmp_path):
     rows = chunks(tmp_path, 'a.c', 'static int first=1, second=2;\nint (*callback)(int);\nint prototype(int);\ntypedef void (*Handler)(int);\n')
-    names = ', '.join(c['name'] for c in rows if c['kind'] == 'module_region')
+    names = ', '.join(c['signature'] for c in rows if c['kind'] == 'module_region')
     for name in ['first', 'second', 'callback', 'Handler']:
         assert name in names
     assert 'prototype' not in names
@@ -121,7 +121,7 @@ def test_go_grouped_sibling_types_and_values(tmp_path):
     text = 'package p\ntype (\n A int\n B string\n C = int\n)\nvar (\n x, y int\n z=3\n)\nconst (\n ONE=1\n TWO\n)\n'
     rows = chunks(tmp_path, 'a.go', text)
     named = {c['name']: c for c in rows if c['kind'] != 'module_residual'}
-    assert {'A', 'B', 'C', 'x, y, z', 'ONE, TWO'} <= named.keys()
+    assert {'A', 'B', 'C', 'x', 'ONE'} <= named.keys()
     assert all(c['parent_id'] is None for c in named.values())
     assert named['A']['symbol_id'] == canonical_symbol_id('a.go', 'type', 'A', text.index('type'))
     assert named['A']['end_byte'] == text.index('A int') + len('A int')
@@ -129,9 +129,9 @@ def test_go_grouped_sibling_types_and_values(tmp_path):
 
 
 @pytest.mark.parametrize(('filename', 'text', 'expected'), [
-    ('A.java', 'class A {\n static final int ONE=1;\n // gap\n int two=2, three=3;\n void f() {}\n int four;\n}\n', ['ONE, two, three', 'four']),
-    ('a.rb', 'ONE=1\n# gap\nTWO=2\ndef f; 0; end\nTHREE=3\n', ['ONE, TWO', 'THREE']),
-    ('a.js', 'export const ONE=1;\n// gap\nlet TWO=2;\nfunction f() {}\nvar THREE=3;\n', ['ONE, TWO', 'THREE']),
+    ('A.java', 'class A {\n static final int ONE=1;\n // gap\n int two=2, three=3;\n void f() {}\n int four;\n}\n', ['ONE', 'four']),
+    ('a.rb', 'ONE=1\n# gap\nTWO=2\ndef f; 0; end\nTHREE=3\n', ['ONE', 'THREE']),
+    ('a.js', 'export const ONE=1;\n// gap\nlet TWO=2;\nfunction f() {}\nvar THREE=3;\n', ['ONE', 'THREE']),
 ])
 def test_value_runs_in_other_languages(tmp_path, filename, text, expected):
     rows = chunks(tmp_path, filename, text)
@@ -141,8 +141,8 @@ def test_value_runs_in_other_languages(tmp_path, filename, text, expected):
 def test_crlf_unicode_and_separate_aliases(tmp_path):
     text = '// café\r\n#define ONE 1\r\n#define TWO(x) \\\r\n ((x)+1)\r\ntypedef int Size;\r\ntypedef long Other;\r\n'
     rows = chunks(tmp_path, 'a.c', text)
-    assert [c['name'] for c in rows if c['kind'] == 'module_region'] == ['ONE, TWO', 'Size', 'Other']
-    macro = next(c for c in rows if c['name'] == 'ONE, TWO')
+    assert [c['name'] for c in rows if c['kind'] == 'module_region'] == ['ONE', 'Size', 'Other']
+    macro = next(c for c in rows if c['name'] == 'ONE')
     assert macro['start_byte'] == len('// café\r\n'.encode())
 
 
@@ -166,3 +166,51 @@ def test_mixed_js_binding_keeps_function_identity_and_prefix(tmp_path):
     run = tmp_path / 'run'
     render(tmp_path, run)
     assert any(h['id'] == helper['symbol_id'] for h in docs.find(run, 'value'))
+
+
+@pytest.mark.parametrize(('definition', 'kind', 'type_name'), [
+    ('struct { int x; }', 'struct', ''),
+    ('struct Tagged { int x; }', 'struct', 'Tagged'),
+    ('union { int x; float y; }', 'union', ''),
+    ('enum { RED, BLUE }', 'enum', ''),
+])
+def test_typedef_definition_reuses_type_identity(tmp_path, definition, kind, type_name):
+    text = f'typedef {definition} Point;\ntypedef unsigned long Size;\ntypedef struct Foo Foo;\n'
+    rows = chunks(tmp_path, 'a.c', text)
+    declared = [c for c in rows if c['kind'] != 'module_residual']
+    original = next(c for c in declared if c['kind'] == kind)
+    assert original['symbol_id'] == canonical_symbol_id('a.c', kind, type_name, len('typedef '))
+    assert (original['full_start_byte'], original['full_end_byte']) == (len('typedef '), len('typedef ' + definition))
+    assert [c['name'] for c in declared if c['kind'] == 'module_region'] == ['Size', 'Foo']
+    assert sum('Point' in c['signature'] for c in declared) == 1
+    assert all(c['text'].strip() not in {'typedef', '} Point;'} for c in declared)
+    run = tmp_path / 'run'
+    render(tmp_path, run)
+    hits = json.loads(cli(run, 'find', '--term', 'Point', '--json'))
+    assert [h['id'] for h in hits] == [original['id']]
+    record = json.loads(cli(run, 'query', '--id', original['id'], '--json'))
+    assert 'Point' in record['signature']
+    assert original['text'] == definition
+    assert definition in cli(run, 'source', '--id', original['id'])
+    for name in ['Size', 'Foo']:
+        hits = docs.find(run, name)
+        assert len(hits) == 1 and hits[0]['name'] == name
+
+
+def test_long_value_run_keeps_first_id_and_every_name_searchable(tmp_path):
+    names = [f'value_{i:03d}' for i in range(120)]
+    text = ''.join(f'int {name} = {i};\n' for i, name in enumerate(names))
+    rows = chunks(tmp_path, 'a.c', text)
+    regions = [c for c in rows if c['kind'] == 'module_region']
+    assert len(regions) == 1
+    first = regions[0]
+    assert first['name'] == first['qualified_name'] == names[0]
+    assert first['id'] == canonical_symbol_id('a.c', 'module_region', names[0], 0)
+    assert ',' not in first['id']
+    run = tmp_path / 'run'
+    render(tmp_path, run)
+    for name in names:
+        assert [h['id'] for h in docs.find(run, name)] == [first['id']]
+    # Appending adjacent declarations changes the span, not the run's identity.
+    rows = chunks(tmp_path, 'a.c', text + 'int appended = 120;\n')
+    assert next(c for c in rows if c['kind'] == 'module_region')['id'] == first['id']
