@@ -844,7 +844,8 @@ def query(run_dir: Path, symbol_id: str, edges: str | None = None) -> dict[str, 
                   "imports": [e for e in table.values() if e.get("kind") == "import"
                               and e.get("path") == symbol_id]}
     else:
-        raise SemanticError(f"unknown unit, symbol or file: {symbol_id}")
+        raise SemanticError(f"unknown unit, symbol or file: {symbol_id}; "
+                            f"first use cbe find --run-dir {run_dir} --term {symbol_id}")
     record.setdefault("name", symbol_id)
     record["display_name"] = catalog.get("short_names", {}).get(symbol_id, record["name"])
     if edges:
