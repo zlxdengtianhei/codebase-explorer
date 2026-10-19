@@ -64,7 +64,7 @@ def _mark_result(csv_path: Path, task: str, attempt: int, result: str) -> None:
     with CSV_LOCK:
         with csv_path.open(newline="", encoding="utf-8") as stream:
             rows = list(csv.DictReader(stream))
-        for row in rows:
+        for row in reversed(rows):
             if row["task"] == task and row["attempt"] == str(attempt):
                 row["result"] = result
                 break
