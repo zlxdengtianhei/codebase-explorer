@@ -214,3 +214,86 @@ def test_long_value_run_keeps_first_id_and_every_name_searchable(tmp_path):
     # Appending adjacent declarations changes the span, not the run's identity.
     rows = chunks(tmp_path, 'a.c', text + 'int appended = 120;\n')
     assert next(c for c in rows if c['kind'] == 'module_region')['id'] == first['id']
+
+
+@pytest.mark.parametrize('filename', ['a.cpp', 'a.h'])
+@pytest.mark.parametrize('source', [
+    'FMT_NORETURN FMT_API void compare(const char* s1, const char* s2);',
+    'FMT_API int compare(const char* s1, const char* s2);',
+    'FMT_CONSTEXPR auto compare(const char* s1, const char* s2) -> int { return 0; }',
+    'template <typename Char> FMT_CONSTEXPR auto compare(const Char* s1, const Char* s2) -> int { return 0; }',
+    'int prototype(int parameter);',
+    'int *prototype(int parameter);',
+    'int (prototype)(int parameter);',
+    'int value, prototype(int parameter);',
+    'int broken ERROR_TOKEN = 1;',
+    'auto value = [] { return 1; }();',
+])
+def test_cpp_functions_and_uncertain_declarations_are_not_values(tmp_path, filename, source):
+    (tmp_path / filename).write_text(source + '\n')
+    context = build_context(tmp_path, paths=[filename])
+    assert {d['code'] for d in context['diagnostics']} <= {'syntax_error', 'ambiguous_language'}
+    assert ''.join(c['text'] for c in context['chunks']) == source + '\n'
+    assert not [c for c in context['chunks'] if c['kind'] == 'module_region']
+
+
+@pytest.mark.parametrize('source,name', [
+    ('int (*fp)(int);', 'fp'),
+    ('int (*callbacks[2])(int);', 'callbacks'),
+    ('int (&ref)(int) = target;', 'ref'),
+    ('static int counter = 0;', 'counter'),
+    ('constexpr int LIMIT = 8;', 'LIMIT'),
+    ('const int *pointer = nullptr;', 'pointer'),
+    ('int array[4];', 'array'),
+    ('typedef int Function(int);', 'Function'),
+])
+def test_cpp_variable_declarators_keep_the_declared_name(tmp_path, source, name):
+    rows = chunks(tmp_path, 'a.cpp', source + '\n')
+    assert [c['name'] for c in rows if c['kind'] == 'module_region'] == [name]
+
+
+@pytest.mark.parametrize('filename,source,kind,name,start,end', [
+    ('a.c', 'struct S { int x; } value;\n', 'struct', 'S', 0, 19),
+    ('a.cpp', 'auto value = [] { struct Inner {}; return Inner{}; }();\n', 'struct', 'Inner', 18, 33),
+    ('a.js', 'const value = class Inner { method() {} };\n', 'class', 'Inner', 0, 41),
+    ('A.java', 'class A { static Object value = new Object() { void method() {} }; }\n', 'method', 'method', 47, 63),
+])
+def test_ordinary_region_never_encloses_existing_declaration(tmp_path, filename, source, kind, name, start, end):
+    rows = chunks(tmp_path, filename, source)
+    existing = next(c for c in rows if c['name'] == name and c['kind'] == kind)
+    assert existing['symbol_id'] == canonical_symbol_id(filename, kind, name if filename != 'A.java' else 'A.method', start)
+    assert (existing['full_start_byte'], existing['full_end_byte']) == (start, end)
+    assert not [c for c in rows if c['kind'] == 'module_region']
+
+
+def test_query_does_not_repeat_coalesced_search_names(tmp_path):
+    (tmp_path / 'a.c').write_text('int first = 1;\nint second = 2;\n')
+    run = tmp_path / 'run'
+    context, _ = render(tmp_path, run)
+    region = next(c for c in context['chunks'] if c['kind'] == 'module_region')
+    assert region['signature'] == 'first, second'
+    record = json.loads(cli(run, 'query', '--id', region['id'], '--json'))
+    assert record['signature'].count('first') == record['signature'].count('second') == 1
+
+
+@pytest.mark.parametrize('filename', ['a.js', 'a.ts', 'a.tsx'])
+def test_destructuring_names_are_bindings_not_properties_or_defaults(tmp_path, filename):
+    source = ('export const {property: renamed, shorthand, missing = fallback, '
+              'nested: {inner}, ...rest} = receiver.call(argument);\n'
+              'const [first, , ...others] = receiver.values;\n')
+    rows = chunks(tmp_path, filename, source)
+    regions = [c for c in rows if c['kind'] == 'module_region']
+    assert len(regions) == 1
+    assert regions[0]['name'] == 'renamed'
+    assert regions[0]['signature'] == 'renamed, shorthand, missing, inner, rest, first, others'
+
+
+@pytest.mark.parametrize('filename,source,name', [
+    ('A.java', 'class A { static Object holder = receiver.call(argument); }\n', 'holder'),
+    ('a.go', 'package p\nvar holder = receiver.Call(argument)\n', 'holder'),
+    ('a.rb', 'HOLDER = receiver.call(argument)\n', 'HOLDER'),
+])
+def test_other_language_values_use_declared_names(tmp_path, filename, source, name):
+    rows = chunks(tmp_path, filename, source)
+    assert [c['name'] for c in rows if c['kind'] == 'module_region'] == [name]
+    assert [c['signature'] for c in rows if c['kind'] == 'module_region'] == [name]

@@ -834,20 +834,54 @@ _ORDINARY_DECLARATIONS = {
 }
 
 
-def _declarator_name(offsets: OffsetMap, node: Any) -> str:
-    if node.type in _IDENTIFIER_TYPES:
+def _declarator_name(offsets: OffsetMap, node: Any, *, type_alias: bool = False) -> str:
+    if node.type == "identifier" or (type_alias and node.type == "type_identifier"):
         return _text(offsets, node.start_byte, node.end_byte)
-    child = node.child_by_field_name("declarator") or node.child_by_field_name("name")
-    if child is not None:
-        return _declarator_name(offsets, child)
-    if node.type == "parenthesized_declarator":
-        return next((name for child in node.named_children if (name := _declarator_name(offsets, child))), "")
-    return ""
+    if node.type == "function_declarator":
+        child = node.child_by_field_name("declarator")
+        if not type_alias:
+            # Parentheses alone do not make a function a variable: the
+            # innermost name must be reached through a pointer or reference.
+            if child is None or child.type != "parenthesized_declarator":
+                return ""
+            inner = [part for part in child.named_children if part.type != "comment"]
+            if len(inner) != 1 or inner[0].type not in {"pointer_declarator", "reference_declarator"}:
+                return ""
+    elif node.type in {"init_declarator", "array_declarator", "pointer_declarator", "reference_declarator"}:
+        child = node.child_by_field_name("declarator")
+        if child is None and node.type == "reference_declarator":
+            child = next(iter(node.named_children), None)
+    elif node.type == "parenthesized_declarator":
+        parts = [part for part in node.named_children if part.type != "comment"]
+        child = parts[0] if len(parts) == 1 else None
+    else:
+        return ""
+    return _declarator_name(offsets, child, type_alias=type_alias) if child is not None else ""
+
+
+def _binding_names(offsets: OffsetMap, node: Any) -> list[str]:
+    if node.type in {"identifier", "shorthand_property_identifier_pattern"}:
+        return [_text(offsets, node.start_byte, node.end_byte)]
+    if node.type in {"pair_pattern", "assignment_pattern", "object_assignment_pattern"}:
+        field = "value" if node.type == "pair_pattern" else "left"
+        binding = node.child_by_field_name(field)
+        return _binding_names(offsets, binding) if binding is not None else []
+    if node.type in {"object_pattern", "array_pattern", "rest_pattern"}:
+        return [name for child in node.named_children for name in _binding_names(offsets, child)]
+    return []
+
+
+def _contains_node(node: Any, kinds: set[str]) -> bool:
+    return node.type in kinds or any(_contains_node(child, kinds) for child in node.named_children)
 
 
 def _ordinary_name(spec: GrammarSpec, offsets: OffsetMap, node: Any, scope: str | None) -> str:
     if (node.type not in _ORDINARY_DECLARATIONS.get(spec.name, ()) or scope == "function"
             or (scope == "class" and spec.name not in {"java", "ruby"})):
+        return ""
+    if spec.name in {"c", "cpp"} and node.has_error:
+        # Recovery can split a macro-prefixed function into a fake variable
+        # followed by its prototype, or even misidentify a macro's own name.
         return ""
     if spec.name == "java":
         return ", ".join(_node_name(offsets, child) for child in node.named_children
@@ -875,6 +909,8 @@ def _ordinary_name(spec: GrammarSpec, offsets: OffsetMap, node: Any, scope: str 
                and (value := child.child_by_field_name("value")) is not None
                and value.type in spec.value_function_kinds for child in siblings[index + 1:]):
             return ""  # Preserve the prefix owned by the existing first function binding.
+        binding = node.child_by_field_name("name")
+        return ", ".join(_binding_names(offsets, binding)) if binding is not None else ""
     if spec.name == "go":
         def names_in(part: Any) -> list[str]:
             if part.type in {"var_spec", "const_spec"}:
@@ -883,22 +919,14 @@ def _ordinary_name(spec: GrammarSpec, offsets: OffsetMap, node: Any, scope: str 
             return [name for child in part.named_children for name in names_in(child)]
         return ", ".join(names_in(node))
     if spec.name in {"c", "cpp"} and node.type in {"declaration", "type_definition"}:
+        if node.type == "declaration" and _contains_node(node, {"function_definition", "compound_statement"}):
+            return ""
         names = []
         for declarator in node.children_by_field_name("declarator"):
-            # A function pointer is a variable; a bare function declarator is a prototype.
-            current = declarator
-            while current.type in {"init_declarator", "pointer_declarator", "reference_declarator"}:
-                current = current.child_by_field_name("declarator")
-                if current is None:
-                    break
-            if current is not None and current.type == "function_declarator":
-                inner = current.child_by_field_name("declarator")
-                if inner is None or inner.type != "parenthesized_declarator":
-                    if node.type != "type_definition":
-                        continue
-            name = _declarator_name(offsets, declarator)
-            if name:
-                names.append(name)
+            name = _declarator_name(offsets, declarator, type_alias=node.type == "type_definition")
+            if not name:
+                return ""  # Do not publish a mixed variable/function declaration either.
+            names.append(name)
         return ", ".join(names)
     names = node.children_by_field_name("name")
     return ", ".join(_text(offsets, child.start_byte, child.end_byte) for child in names)
@@ -1009,6 +1037,15 @@ def _extract_declarations(spec: GrammarSpec, offsets: OffsetMap, root: Any, path
                         declaration.signature += "\n" + name
                 return
         if name:
+            # Discover children before committing the ordinary region. A value
+            # must not wrap another unit or consume its wrapper prefix.
+            first = len(declarations)
+            holder = [prefix[0]]
+            for child in node.named_children:
+                visit(child, parent, scope, holder)
+            if len(declarations) != first:
+                prefix[0] = holder[0]
+                return
             decl = _make_declaration(spec, offsets, node, path, parent, "module_region", prefix[0],
                                      name=name.split(", ", 1)[0])
             # Search metadata holds every name, without duplicating the list in
@@ -1020,14 +1057,15 @@ def _extract_declarations(spec: GrammarSpec, offsets: OffsetMap, root: Any, path
             declarations.append(decl)
             if parent is not None:
                 parent.children.append(decl)
-            # Keep existing nested type identities under their original parent.
-            for child in node.named_children:
-                visit(child, parent, scope, [None])
             return
         for child in node.named_children:
             visit(child, parent, scope, prefix)
 
     visit(root, None, None, [None])
+    declarations = [decl for decl in declarations
+                    if decl.kind != "module_region" or not any(
+                        other is not decl and decl.start_byte <= other.start_byte
+                        and other.end_byte <= decl.end_byte for other in declarations)]
     return _coalesce_declarations(offsets, declarations, path)
 
 
@@ -1292,12 +1330,6 @@ def _plan_chunks(
     exclusive: dict[str, list[tuple[int, int]]] = {}
     for decl in declarations:
         holes = [(child.start_byte, child.end_byte) for child in by_parent.get(decl.symbol_id, ())]
-        if decl.kind == "module_region":
-            # Value declarations can also enclose existing type definitions.
-            holes += [(other.start_byte, other.end_byte) for other in declarations
-                      if other is not decl and decl.start_byte <= other.start_byte
-                      and other.end_byte <= decl.end_byte
-                      and (other.start_byte, other.end_byte) != (decl.start_byte, decl.end_byte)]
         exclusive[decl.symbol_id] = _subtract_ranges(
             decl.start_byte, decl.exclusive_end_byte or decl.end_byte, holes)
 
@@ -1415,7 +1447,7 @@ def source_signatures(path: str, source: str, language: str) -> tuple[dict[str, 
         if end < 0:
             end = declaration.end_byte
         signature = raw[declaration.start_byte:end].decode("utf-8").strip()
-        if declaration.signature and declaration.signature not in signature:
+        if declaration.kind != "module_region" and declaration.signature and declaration.signature not in signature:
             signature += "\n" + declaration.signature
         by_id[declaration.symbol_id] = signature
         start_line = _line_of(starts, offsets.char_of_byte(declaration.start_byte))
