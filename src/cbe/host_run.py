@@ -482,6 +482,33 @@ def _title(state: dict[str, Any], task: dict[str, Any]) -> str:
 # ---------------------------------------------------------------- plan
 
 
+def _runtime_environment() -> dict[str, Any]:
+    """Record declared distribution requirements, including optional dependencies."""
+    import importlib.metadata as metadata
+    import platform
+    import re
+    import sys
+
+    try:
+        requirements = metadata.requires("codebase-explorer") or []
+    except metadata.PackageNotFoundError:
+        # A source checkout can run without its own distribution metadata.
+        import tomllib
+        project = tomllib.loads((Path(__file__).parents[2] / "pyproject.toml").read_text(encoding="utf-8"))["project"]
+        requirements = list(project["dependencies"])
+        for extra in project.get("optional-dependencies", {}).values():
+            requirements.extend(extra)
+    dependencies = {}
+    for requirement in requirements:
+        name = re.match(r"[A-Za-z0-9][A-Za-z0-9._-]*", requirement).group()
+        try:
+            dependencies[name] = metadata.version(name)
+        except metadata.PackageNotFoundError:
+            dependencies[name] = None
+    return {"at": _now(), "python": sys.version, "platform": platform.platform(),
+            "cbe": __version__, "dependencies": dependencies}
+
+
 def plan(repo: Path, run_dir: Path | None = None, *, review: str = DEFAULT_REVIEW, jobs: int = 4,
          host: str = "other", driver: str = "host",
          graph_path: Path | None = None, batch_target_tokens: int = batching.TARGET_TOKENS,
@@ -534,6 +561,7 @@ def plan(repo: Path, run_dir: Path | None = None, *, review: str = DEFAULT_REVIE
         "modules": [{"number": module.number, "bucket": module.bucket, "title": batching.fallback_title(module),
                      "files": [item.path for item in module.files], "page": None} for module in modules],
         "tasks": tasks, "rendered": False, "verify": None,
+        "runtime_environments": [_runtime_environment()],
     }
     for code in ("source_reassembly_fallback", "context_fallback"):
         fallbacks = [row for row in context.get("diagnostics", []) if row.get("code") == code]
@@ -1109,6 +1137,7 @@ def resume(run_dir: Path, *, owner: str | None = None, retry_failed: bool = True
     different graph is rejected instead of silently ignored."""
     with locked_state(run_dir) as state:
         _verified_context(run_dir, state)
+        state.setdefault("runtime_environments", []).append(_runtime_environment())
         _auto_complete_empty_modules(run_dir, state)
         if graph_path is not None:
             frozen = state.get("context") or {}
