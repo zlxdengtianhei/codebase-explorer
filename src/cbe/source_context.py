@@ -34,6 +34,7 @@ import bisect
 import hashlib
 import json
 import os
+import re
 from dataclasses import dataclass, field
 from pathlib import Path, PurePosixPath
 from typing import Any
@@ -771,6 +772,7 @@ class _Declaration:
     children: list["_Declaration"] = field(default_factory=list)
     ancestors: tuple[str, ...] = ()
     signature: str = ""
+    exclusive_end_byte: int | None = None
 
 
 def _text(offsets: OffsetMap, start_byte: int, end_byte: int) -> str:
@@ -819,6 +821,89 @@ def _body_start(offsets: OffsetMap, node: Any) -> int:
     return -1
 
 
+# Ordinary declarations share the existing module-region publication path.
+_ORDINARY_DECLARATIONS = {
+    "c": {"preproc_def", "preproc_function_def", "declaration", "type_definition"},
+    "cpp": {"preproc_def", "preproc_function_def", "declaration", "type_definition", "alias_declaration"},
+    "go": {"var_declaration", "const_declaration"},
+    "javascript": {"variable_declarator"},
+    "typescript": {"variable_declarator"},
+    "tsx": {"variable_declarator"},
+    "java": {"field_declaration", "constant_declaration"},
+    "ruby": {"assignment"},
+}
+
+
+def _declarator_name(offsets: OffsetMap, node: Any) -> str:
+    if node.type in _IDENTIFIER_TYPES:
+        return _text(offsets, node.start_byte, node.end_byte)
+    child = node.child_by_field_name("declarator") or node.child_by_field_name("name")
+    if child is not None:
+        return _declarator_name(offsets, child)
+    if node.type == "parenthesized_declarator":
+        return next((name for child in node.named_children if (name := _declarator_name(offsets, child))), "")
+    return ""
+
+
+def _ordinary_name(spec: GrammarSpec, offsets: OffsetMap, node: Any, scope: str | None) -> str:
+    if (node.type not in _ORDINARY_DECLARATIONS.get(spec.name, ()) or scope == "function"
+            or (scope == "class" and spec.name not in {"java", "ruby"})):
+        return ""
+    if spec.name == "java":
+        return ", ".join(_node_name(offsets, child) for child in node.named_children
+                         if child.type == "variable_declarator")
+    if spec.name == "ruby":
+        left = node.child_by_field_name("left")
+        if left is not None and left.type in {"constant", "scope_resolution"}:
+            return _text(offsets, left.start_byte, left.end_byte)
+        return ""
+    ancestor = node.parent
+    while ancestor is not None:
+        if ancestor.type in {"statement_block", "compound_statement", "block", "for_statement", "if_statement"}:
+            return ""
+        ancestor = ancestor.parent
+    if spec.name in {"javascript", "typescript", "tsx"}:
+        ancestor = node.parent
+        while ancestor is not None:
+            if ancestor.type not in {"lexical_declaration", "variable_declaration", "export_statement",
+                                     "ambient_declaration", "declare_statement", "program"}:
+                return ""
+            ancestor = ancestor.parent
+        siblings = list(node.parent.named_children)
+        index = siblings.index(node)
+        if any(child.type in spec.binding_kinds
+               and (value := child.child_by_field_name("value")) is not None
+               and value.type in spec.value_function_kinds for child in siblings[index + 1:]):
+            return ""  # Preserve the prefix owned by the existing first function binding.
+    if spec.name == "go":
+        def names_in(part: Any) -> list[str]:
+            if part.type in {"var_spec", "const_spec"}:
+                return [_text(offsets, child.start_byte, child.end_byte)
+                        for child in part.children_by_field_name("name")]
+            return [name for child in part.named_children for name in names_in(child)]
+        return ", ".join(names_in(node))
+    if spec.name in {"c", "cpp"} and node.type in {"declaration", "type_definition"}:
+        names = []
+        for declarator in node.children_by_field_name("declarator"):
+            # A function pointer is a variable; a bare function declarator is a prototype.
+            current = declarator
+            while current.type in {"init_declarator", "pointer_declarator", "reference_declarator"}:
+                current = current.child_by_field_name("declarator")
+                if current is None:
+                    break
+            if current is not None and current.type == "function_declarator":
+                inner = current.child_by_field_name("declarator")
+                if inner is None or inner.type != "parenthesized_declarator":
+                    if node.type != "type_definition":
+                        continue
+            name = _declarator_name(offsets, declarator)
+            if name:
+                names.append(name)
+        return ", ".join(names)
+    names = node.children_by_field_name("name")
+    return ", ".join(_text(offsets, child.start_byte, child.end_byte) for child in names)
+
+
 def _extract_declarations(spec: GrammarSpec, offsets: OffsetMap, root: Any, path: str) -> list[_Declaration]:
     declarations: list[_Declaration] = []
 
@@ -845,6 +930,29 @@ def _extract_declarations(spec: GrammarSpec, offsets: OffsetMap, root: Any, path
                 prefix[0] = None
             return
 
+        if spec.name == "go" and ntype == "type_declaration" and scope != "function":
+            specs = [child for child in node.named_children if child.type in {"type_spec", "type_alias"}]
+            legacy = _make_declaration(spec, offsets, node, path, parent, "type", prefix[0])
+            prefix[0] = None
+            for index, child in enumerate(specs):
+                if index == 0:
+                    # Keep the existing group's canonical identity and full span.
+                    # Old grammars' alias-only groups may have no discovered name.
+                    owns_first = legacy.name == _node_name(offsets, child)
+                    legacy.exclusive_end_byte = (child.end_byte if owns_first else child.start_byte)
+                    if len(specs) == 1 and owns_first:
+                        legacy.exclusive_end_byte = None
+                    declarations.append(legacy)
+                    if parent is not None:
+                        parent.children.append(legacy)
+                    if owns_first:
+                        continue
+                decl = _make_declaration(spec, offsets, child, path, parent, "module_region", None)
+                declarations.append(decl)
+                if parent is not None:
+                    parent.children.append(decl)
+            return
+
         if ntype in spec.class_kinds:
             if not _is_type_definition(spec, node):
                 # C/C++ type reference or forward declaration: not a chunk
@@ -857,7 +965,7 @@ def _extract_declarations(spec: GrammarSpec, offsets: OffsetMap, root: Any, path
             declarations.append(decl)
             if parent is not None:
                 parent.children.append(decl)
-            child_scope = scope if decl.kind in {"namespace", "module"} else "class"
+            child_scope = scope if decl.kind in {"namespace", "module"} or spec.name == "go" else "class"
             for child in node.named_children:
                 visit(child, decl, child_scope, [None])
             return
@@ -885,12 +993,63 @@ def _extract_declarations(spec: GrammarSpec, offsets: OffsetMap, root: Any, path
                     parent.children.append(decl)
                 visit(value, decl, "function", [None])
                 return
-            # fall through: a plain variable declaration is not a chunk boundary
+            # Function bindings retain their established extraction path.
+        name = _ordinary_name(spec, offsets, node, scope)
+        if name:
+            decl = _make_declaration(spec, offsets, node, path, parent, "module_region", prefix[0], name=name)
+            prefix[0] = None
+            if node.type == "variable_declarator" and node == node.parent.named_children[-1]:
+                decl.end_byte = node.parent.end_byte
+            declarations.append(decl)
+            if parent is not None:
+                parent.children.append(decl)
+            # Keep existing nested type identities under their original parent.
+            for child in node.named_children:
+                visit(child, parent, scope, [None])
+            return
         for child in node.named_children:
             visit(child, parent, scope, prefix)
 
     visit(root, None, None, [None])
-    return declarations
+    return _coalesce_declarations(offsets, declarations, path)
+
+
+def _coalesce_declarations(offsets: OffsetMap, declarations: list[_Declaration], path: str) -> list[_Declaration]:
+    """Combine adjacent value declarations without crossing syntax or scope boundaries."""
+    def category(decl: _Declaration) -> str:
+        if decl.kind != "module_region":
+            return ""
+        ntype = decl.node.type
+        if ntype in {"preproc_def", "preproc_function_def"}:
+            return "macro"
+        return ntype if ntype in {"declaration", "var_declaration", "const_declaration", "variable_declarator",
+                                 "field_declaration", "constant_declaration", "assignment"} else ""
+
+    def owner(decl: _Declaration) -> Any:
+        node = decl.node.parent
+        while node is not None and node.type in {"lexical_declaration", "variable_declaration", "export_statement"}:
+            node = node.parent
+        return node
+
+    result: list[_Declaration] = []
+    for decl in sorted(declarations, key=lambda item: (item.start_byte, -item.end_byte)):
+        previous = result[-1] if result else None
+        if previous is not None and category(decl) and category(decl) == category(previous):
+            gap = _text(offsets, previous.end_byte, decl.start_byte)
+            gap = re.sub(r"/\*.*?\*/|//[^\n]*", "", gap, flags=re.S)
+            if decl.node.type == "assignment":
+                gap = re.sub(r"#[^\n]*|(?m:^=begin\b).*?^=end\b", "", gap, flags=re.S | re.M)
+            if (previous.parent_id == decl.parent_id and owner(previous) == owner(decl)
+                    and decl.start_byte >= previous.end_byte and not gap.strip()):
+                previous.end_byte = decl.end_byte
+                previous.name += ", " + decl.name
+                scope = previous.qualified_name.rsplit(".", 1)[0] + "." if previous.parent_id else ""
+                previous.qualified_name = scope + previous.name
+                previous.symbol_id = canonical_symbol_id(path, "module_region", previous.qualified_name, previous.start_byte)
+                previous.signature = _text(offsets, previous.start_byte, previous.end_byte).strip()[:_SIGNATURE_LIMIT]
+                continue
+        result.append(decl)
+    return result
 
 
 def _is_type_definition(spec: GrammarSpec, node: Any) -> bool:
@@ -916,12 +1075,14 @@ def _make_declaration(
     parent: _Declaration | None,
     kind: str,
     extend_start: int | None,
+    *,
+    name: str | None = None,
 ) -> _Declaration:
     start_byte = node.start_byte
     if extend_start is not None:
         start_byte = min(start_byte, extend_start)
     end_byte = node.end_byte
-    name = _node_name(offsets, node)
+    name = name if name is not None else _node_name(offsets, node)
     scope = parent.qualified_name if parent is not None else ""
     qualified = f"{parent.qualified_name}.{name}" if parent is not None and name else (name or scope)
     symbol_id = canonical_symbol_id(path, kind, qualified or name, start_byte)
@@ -1118,9 +1279,18 @@ def _plan_chunks(
     exclusive: dict[str, list[tuple[int, int]]] = {}
     for decl in declarations:
         holes = [(child.start_byte, child.end_byte) for child in by_parent.get(decl.symbol_id, ())]
-        exclusive[decl.symbol_id] = _subtract_ranges(decl.start_byte, decl.end_byte, holes)
+        if decl.kind == "module_region":
+            # A typedef can enclose an existing struct/union/enum declaration.
+            # Preserve that declaration's identity and let it own its bytes.
+            holes += [(other.start_byte, other.end_byte) for other in declarations
+                      if other is not decl and decl.start_byte <= other.start_byte
+                      and other.end_byte <= decl.end_byte
+                      and (other.start_byte, other.end_byte) != (decl.start_byte, decl.end_byte)]
+        exclusive[decl.symbol_id] = _subtract_ranges(
+            decl.start_byte, decl.exclusive_end_byte or decl.end_byte, holes)
 
-    covered = [(decl.start_byte, decl.end_byte) for decl in declarations if decl.parent_id is None]
+    covered = [(decl.start_byte, decl.exclusive_end_byte or decl.end_byte)
+               for decl in declarations if decl.parent_id is None]
     residual = _leftover_ranges(total_bytes, covered)
 
     boundaries, statement_boundaries = _collect_named_boundaries(root)

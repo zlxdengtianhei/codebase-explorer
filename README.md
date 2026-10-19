@@ -642,3 +642,19 @@ Joern nodes with filenames outside the source manifest retain their identity
 and relations but have an unknown location, with `unknown_node_location`
 diagnostics. A graph whose capabilities all failed is reported as failed unless
 a component explicitly records successful completion.
+
+## Named declaration coverage
+
+Newly built source contexts index these declarations as `module_region` candidates, so `cbe find` can locate their names, `cbe query` can inspect their ids and ranges, and `cbe source` can read their frozen source:
+
+| Language | Additional named declarations |
+|---|---|
+| C / C++ | Object and function macros, including continuations and conditional branches; file and namespace variables (`static`, `extern`, globals, `constexpr`); C/C++ `typedef` and C++ `using` aliases |
+| Go | Every name in grouped `type` declarations; package `var` and `const`, including groups |
+| JavaScript / TypeScript / TSX | Ordinary top-level `const`, `let` and `var`, including exports |
+| Java | Class fields and interface constants |
+| Ruby | Constant assignments at file, module and class scope |
+
+Adjacent value declarations of the same category and scope share one region when only whitespace or comments separate them. Every declared name remains searchable; querying the shared id returns the run's source. A declaration with several variable names also exposes every name. Type aliases are not coalesced with adjacent declarations. Existing struct, union and enum definitions keep their own identities, including inside an anonymous C typedef such as `typedef struct { int x; } Point;`.
+
+Macros are indexed as written: CBE does not expand them, evaluate conditions or synthesize calls. Function-local variables (including local `static` variables), C/C++ function prototypes, C/C++ struct fields and enum members do not become additional named regions. Python assignment behavior is unchanged. A mixed JavaScript declaration such as `export const value=1, helper=()=>2` keeps the existing function unit's id and range; `value` is searchable through that unit's signature rather than receiving a separate region. New child regions can change a containing namespace/class/module's exclusive source ranges and segment ids; existing declaration canonical ids and full spans remain stable when rebuilding the same source.

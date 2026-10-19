@@ -16,6 +16,10 @@
   last accepted overview, dependency descriptions and key flows while the system
   task is queued again, with an INDEX note that the overview will update.
   Unhandled missing keys now print an English internal-error message.
+- Index C/C++ macros, file/namespace variables and type aliases, grouped Go
+  types and package values, JS/TS top-level variables, Java fields and Ruby
+  constants by name using existing module regions. Coalesce adjacent value
+  declarations; preserve existing callable identities and byte-exact source.
 
 - Add a shared Tree-sitter source context with declaration metadata, original
   byte ranges, hashes, diagnostics, and optional analyzed graph evidence.
