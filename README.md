@@ -608,7 +608,7 @@ Shorter walkthroughs, one repository per language, show the generated map and re
 
 | Language | Repository | Video | Subtitles | Length |
 |---|---|---|---|---|
-| Python | flask | [cbe-flask.mp4](https://github.com/zlxdengtianhei/codebase-explorer/releases/download/walkthrough-v2.2.0.dev0/cbe-flask.mp4) | [cbe-flask.srt](https://github.com/zlxdengtianhei/codebase-explorer/releases/download/walkthrough-v2.2.0.dev0/cbe-flask.srt) | 6:36 |
+| Python | flask | [cbe-flask.mp4](https://github.com/zlxdengtianhei/codebase-explorer/releases/download/walkthrough-v2.2.0.dev0/cbe-flask.mp4) | [cbe-flask.srt](https://github.com/zlxdengtianhei/codebase-explorer/releases/download/walkthrough-v2.2.0.dev0/cbe-flask.srt) | 6:37 |
 | TypeScript | tsdown | [cbe-tsdown.mp4](https://github.com/zlxdengtianhei/codebase-explorer/releases/download/walkthrough-v2.2.0.dev0/cbe-tsdown.mp4) | [cbe-tsdown.srt](https://github.com/zlxdengtianhei/codebase-explorer/releases/download/walkthrough-v2.2.0.dev0/cbe-tsdown.srt) | 6:33 |
 | Ruby | ruby_llm | [cbe-ruby_llm.mp4](https://github.com/zlxdengtianhei/codebase-explorer/releases/download/walkthrough-v2.2.0.dev0/cbe-ruby_llm.mp4) | [cbe-ruby_llm.srt](https://github.com/zlxdengtianhei/codebase-explorer/releases/download/walkthrough-v2.2.0.dev0/cbe-ruby_llm.srt) | 7:06 |
 | Java | gson | [cbe-gson.mp4](https://github.com/zlxdengtianhei/codebase-explorer/releases/download/walkthrough-v2.2.0.dev0/cbe-gson.mp4) | [cbe-gson.srt](https://github.com/zlxdengtianhei/codebase-explorer/releases/download/walkthrough-v2.2.0.dev0/cbe-gson.srt) | 7:05 |
