@@ -157,6 +157,7 @@ def build_parser() -> argparse.ArgumentParser:
     context_query.add_argument("--path", action="append", dest="paths", required=True)
 
     find_p = sub.add_parser("find", help="Search the generated symbol catalogue")
+    find_p.set_defaults(usage_parser=find_p)
     find_p.add_argument("--run-dir", type=_abs, required=True)
     find_p.add_argument("term_pos", nargs="?", metavar="TERM")
     find_p.add_argument("--term")
@@ -164,6 +165,7 @@ def build_parser() -> argparse.ArgumentParser:
     find_p.add_argument("--json", action="store_true", help="machine-readable locator fields")
 
     query_p = sub.add_parser("query", help="Return explanation and evidence by unit ID, symbol ID or file path")
+    query_p.set_defaults(usage_parser=query_p)
     query_p.add_argument("--run-dir", type=_abs, required=True)
     query_p.add_argument("id_pos", nargs="?", metavar="ID")
     query_p.add_argument("--id")
@@ -232,9 +234,9 @@ def main(argv: list[str] | None = None) -> int:
         field = "term" if args.command == "find" else "id"
         positional, flagged = getattr(args, field + "_pos"), getattr(args, field)
         if positional is None and flagged is None:
-            parser.error(f"missing {field}")
+            args.usage_parser.error(f"missing {field}")
         if positional is not None and flagged is not None and positional != flagged:
-            parser.error(f"positional {field} conflicts with --{field}")
+            args.usage_parser.error(f"positional {field} conflicts with --{field}")
         setattr(args, field, flagged if flagged is not None else positional)
     try:
         header_language = getattr(args, "header_language", None)
@@ -371,7 +373,7 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(exc.to_dict(), ensure_ascii=False), file=sys.stderr)
         return 2
     except KeyError as exc:
-        print(f"内部错误：缺少键 {exc.args[0]}", file=sys.stderr)
+        print(f"cbe: internal error: missing key {exc.args[0]}", file=sys.stderr)
         return 2
     except (FileNotFoundError, ValueError) as exc:
         print(str(exc), file=sys.stderr)

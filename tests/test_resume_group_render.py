@@ -24,4 +24,4 @@ def test_cli_labels_unhandled_keyerror(tmp_path, capsys, monkeypatch):
         raise KeyError("grp:format-h-dragon")
     monkeypatch.setattr(docs, "query", missing)
     assert cli.main(["query", "--run-dir", str(tmp_path), "grp:format-h-dragon"]) == 2
-    assert capsys.readouterr().err == "内部错误：缺少键 grp:format-h-dragon\n"
+    assert capsys.readouterr().err == "cbe: internal error: missing key grp:format-h-dragon\n"

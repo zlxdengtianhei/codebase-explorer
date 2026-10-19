@@ -1047,3 +1047,55 @@ def test_details_parallel_with_names_keep_prompts_and_wait_before_tree(tmp_path,
     index = (run_dir / "docs/INDEX.md").read_text()
     assert all(title in index for title in expected_titles)
     assert [item["kind"] for item in host_run.next_tasks(run_dir)["tasks"]] == ["tree"]
+
+
+@pytest.mark.parametrize("accepted_system", [True, False])
+def test_resume_new_group_preserves_last_accepted_system(tmp_path, accepted_system):
+    run_dir = Path(host_run.plan(_repo(tmp_path), tmp_path / "run", review="none", jobs=8)["run_dir"])
+    _drive(run_dir)
+    accepted = run_dir / "host/accepted"
+    tree = json.loads((accepted / "tree.json").read_text())
+    root = tree["nodes"][0]
+    child = {**root, "id": "service", "parent": root["id"], "title": "Service",
+             "unit_ids": root["unit_ids"][1:]}
+    root["unit_ids"] = root["unit_ids"][:1]
+    tree["nodes"].append(child)
+    tree["depends_on"] = [{"from": root["id"], "to": "service"}]
+    (accepted / "tree.json").write_text(json.dumps(tree))
+    system_path = accepted / "system.json"
+    system = {"overview": "Previously accepted overview.", "maintenance_navigation": "Open Service.",
+              "dependency_descriptions": [{"from": root["id"], "to": "service",
+                                           "description": "Preserved dependency explanation."}],
+              "key_flows": [{"name": "Saved flow", "description": "Preserved flow explanation.",
+                             "steps": [root["unit_ids"][0], child["unit_ids"][0]]}]}
+    if accepted_system:
+        system_path.write_text(json.dumps(system))
+    else:
+        system_path.unlink()
+    state_path = run_dir / "host/state.json"
+    state = json.loads(state_path.read_text())
+    task = state["tasks"]["module_1"]
+    task["status"] = "leased"
+    state["tasks"]["system"]["covered"] = []
+    state_path.write_text(json.dumps(state))
+    detail = json.loads((accepted / "module_1.json").read_text())
+    detail["units"].append({"id": "grp:new-helper", "kind": "group",
+                            "explain": "Newly resumed helper.", "extras": [],
+                            "relations": [], "uncertainties": []})
+    (run_dir / "host/outbox/module_1.json").write_text(json.dumps(detail))
+    assert cli.main(["host", "resume", "--run-dir", str(run_dir)]) == 0
+    state = json.loads(state_path.read_text())
+    assert state["tasks"]["module_1"]["status"] == "done"
+    assert state["tasks"]["system"]["status"] == "pending"
+    assert "grp:new-helper" in json.loads((run_dir / "catalog.json").read_text())["units"]
+    index = (run_dir / "docs/INDEX.md").read_text()
+    pages = "\n".join(p.read_text() for p in (run_dir / "docs/nodes").glob("*.md"))
+    if accepted_system:
+        assert "Preserved dependency explanation." in pages
+        assert "Previously accepted overview." in index
+        assert "Preserved flow explanation." in index
+        assert "The overview was written before some modules finished" in index
+    else:
+        assert "The overview and navigation are mechanical" in index
+        assert "Preserved dependency explanation." not in pages
+        assert "The overview was written before some modules finished" not in index

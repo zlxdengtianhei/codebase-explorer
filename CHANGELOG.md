@@ -11,9 +11,11 @@
 - Report external graphs with only failed capabilities as failed. Joern nodes
   whose filenames are outside the source manifest keep an unknown location and
   a diagnostic instead of a false file anchor.
-- Render flow steps for newly resumed groups without assuming the previous tree
-  already owns them; retain their catalog links while navigation is pending.
-  Unhandled missing keys now print an explicit internal-error message.
+- Resume newly grouped units without crashing when the previous tree does not
+  own them yet; retain catalog links while navigation is pending. Preserve the
+  last accepted overview, dependency descriptions and key flows while the system
+  task is queued again, with an INDEX note that the overview will update.
+  Unhandled missing keys now print an English internal-error message.
 
 - Add a shared Tree-sitter source context with declaration metadata, original
   byte ranges, hashes, diagnostics, and optional analyzed graph evidence.

@@ -33,7 +33,9 @@ def test_missing_or_conflicting_argument_has_example(run, capsys, command, flag,
     with pytest.raises(SystemExit) as exc:
         cli.main([command, "--run-dir", str(run), *[flag if v == "FLAG" else v for v in values]])
     assert exc.value.code != 0
-    assert f"example: cbe {command} --run-dir" in capsys.readouterr().err
+    error = capsys.readouterr().err
+    assert error.startswith(f"usage: cbe {command} ")
+    assert f"example: cbe {command} --run-dir" in error
 
 
 @pytest.mark.parametrize("command", ["find", "query"])

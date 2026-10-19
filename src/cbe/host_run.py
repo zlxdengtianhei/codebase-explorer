@@ -1324,12 +1324,15 @@ def _render(run_dir: Path, state: dict[str, Any]) -> None:
         if task.get("region") and task["status"] == "failed":
             index_notes.append(f"Region `{tid}` failed; its subtree uses the mechanical fallback.")
     system_task = state["tasks"]["system"]
-    system = _accepted(run_dir, "system") if system_task["status"] == "done" else None
+    system = _accepted(run_dir, "system")
     if system is None:
         index_notes.append("The overview and navigation are mechanical because the `system` task is "
                            + ("failed; resume the run to retry it." if system_task["status"] == "failed"
                               else "not finished yet."))
     else:
+        if system_task["status"] != "done":
+            index_notes.append("The overview was written before some modules finished; it will update "
+                               "when the resumed `system` task completes.")
         index_notes += [f"CBE normalized the overview after a second invalid answer: {flag}"
                         for flag in system_task["flags"]]
     if pending:

@@ -634,6 +634,10 @@ An optional dependency that is not installed has a null version.
 A resumed detail answer can introduce a grouped unit before the responsibility
 tree has been rebuilt. Flow steps for these units link to the catalog and say
 `not assigned to a node`; resume the tree/system tasks to complete navigation.
+Until a new system answer is accepted, rendering keeps the last accepted overview,
+dependency descriptions and key flows. INDEX notes that this overview predates
+some completed modules and will update when the resumed system task completes.
+Without an accepted system answer, rendering uses a mechanical overview.
 Joern nodes with filenames outside the source manifest retain their identity
 and relations but have an unknown location, with `unknown_node_location`
 diagnostics. A graph whose capabilities all failed is reported as failed unless
