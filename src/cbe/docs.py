@@ -443,7 +443,11 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
         for i, uid in enumerate(flow["steps"]):
             if i:
                 steps.append(" → (model-inferred) → " if i in flow["inferred_steps"] else " → ")
-            steps.append(f"[{link_text(name_of(uid))}](nodes/{owner[uid]}.md#{anchor(uid)})")
+            if owner.get(uid) in nodes:
+                steps.append(f"[{link_text(name_of(uid))}](nodes/{owner[uid]}.md#{anchor(uid)})")
+            else:
+                # A resumed module can introduce units before the accepted tree is rebuilt.
+                steps.append(f"[{link_text(name_of(uid))}](../catalog.json) (not assigned to a node)")
         index_lines += ["  " + "".join(steps)]
     if index_notes:
         index_lines += ["", "## Generation notes", ""] + [f"- {item}" for item in index_notes]

@@ -370,7 +370,10 @@ def main(argv: list[str] | None = None) -> int:
     except ContextError as exc:
         print(json.dumps(exc.to_dict(), ensure_ascii=False), file=sys.stderr)
         return 2
-    except (FileNotFoundError, ValueError, KeyError) as exc:
+    except KeyError as exc:
+        print(f"内部错误：缺少键 {exc.args[0]}", file=sys.stderr)
+        return 2
+    except (FileNotFoundError, ValueError) as exc:
         print(str(exc), file=sys.stderr)
         return 2
 
