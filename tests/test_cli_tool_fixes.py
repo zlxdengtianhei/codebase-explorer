@@ -46,6 +46,14 @@ def test_parser_errors_also_show_example(capsys, command, arguments):
     assert f"example: cbe {command} --run-dir" in capsys.readouterr().err
 
 
+def test_version_uses_installed_command_name(capsys):
+    from cbe import __version__
+    with pytest.raises(SystemExit) as exc:
+        cli.main(["--version"])
+    assert exc.value.code == 0
+    assert capsys.readouterr().out == f"cbe {__version__}\n"
+
+
 def test_unknown_query_suggests_find(run, capsys):
     assert cli.main(["query", "--run-dir", str(run), "LIMIT"]) == 2
     assert "cbe find --run-dir" in capsys.readouterr().err

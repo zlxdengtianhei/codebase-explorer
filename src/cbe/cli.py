@@ -29,7 +29,7 @@ def build_parser() -> argparse.ArgumentParser:
     from cbe.model_settings import MODEL_DEFAULTS
 
     parser = _UsageParser(
-        prog="python -m cbe",
+        prog="cbe",
         description="Codebase Explorer: a navigable, source-grounded documentation map of a repository",
     )
     from cbe import __version__
