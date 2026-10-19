@@ -16,6 +16,17 @@
   last accepted overview, dependency descriptions and key flows while the system
   task is queued again, with an INDEX note that the overview will update.
   Unhandled missing keys now print an English internal-error message.
+- Index C/C++ macros, file/namespace variables and type aliases, grouped Go
+  types and package values, JS/TS top-level variables, Java fields and Ruby
+  constants by name using existing module regions. Coalesce adjacent value
+  declarations under the first name and stable anchor, keeping every name
+  searchable through signature metadata. A typedef enclosing a type definition
+  adds searchable aliases to the existing type unit, without fragment regions;
+  typedefs without definitions remain individual regions. Keep adjacent `using`
+  aliases separate even when headers use the C grammar, and confirm uncertain
+  header declaration scopes from C++ identifier ancestors. C++ header syntax
+  recovery can still assign individual declarations the wrong scope. Preserve existing
+  callable and type identities, full byte ranges and byte-exact source.
 
 - Add a shared Tree-sitter source context with declaration metadata, original
   byte ranges, hashes, diagnostics, and optional analyzed graph evidence.

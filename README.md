@@ -642,3 +642,19 @@ Joern nodes with filenames outside the source manifest retain their identity
 and relations but have an unknown location, with `unknown_node_location`
 diagnostics. A graph whose capabilities all failed is reported as failed unless
 a component explicitly records successful completion.
+
+## Named declaration coverage
+
+Newly built source contexts index these declarations as `module_region` candidates, so `cbe find` can locate their names, `cbe query` can inspect their ids and ranges, and `cbe source` can read their frozen source:
+
+| Language | Additional named declarations |
+|---|---|
+| C / C++ | Object and function macros, including continuations and conditional branches; file and namespace variables (`static`, `extern`, globals, `constexpr`); C/C++ `typedef` and C++ `using` aliases |
+| Go | Every name in grouped `type` declarations; package `var` and `const`, including groups |
+| JavaScript / TypeScript / TSX | Ordinary top-level `const`, `let` and `var`, including exports |
+| Java | Class fields and interface constants |
+| Ruby | Constant assignments at file, module and class scope |
+
+Adjacent value declarations of the same category and scope share one region when only whitespace or comments separate them. The region's name, qualified name and canonical id use the first declared name and its anchor; the other names remain searchable through the existing signature metadata, without repeating a name list in the prompt inventory or published query signature. Querying the shared id returns the run's source. A declaration with several variable names also exposes every name. JavaScript and TypeScript destructuring exposes bound names, excluding property keys and default-value expressions. Function prototypes and macro-prefixed functions do not become variable regions; function pointer variables remain eligible. An ordinary declaration enclosing an existing function, type or other declaration yields to that unit and the residual source. Type aliases are not coalesced with adjacent declarations. A typedef enclosing a struct, union or enum definition adds its alias names to that existing type unit's searchable signature instead of creating a separate region. The type keeps its original id and full byte range, including for `typedef struct { int x; } Point;`. Typedefs without a definition, such as `typedef unsigned long Size;` or `typedef struct Foo Foo;`, remain separate named regions.
+
+Macros are indexed as written, including definitions inside functions: CBE does not expand them, evaluate conditions or synthesize calls. Ordinary C/C++ declarations require a confirmed file or namespace scope; error nodes, function bodies, parameter lists and type bodies exclude them. For ambiguous C++ `.h` files parsed as C, a C++ tree confirms declaration scope when the C tree has syntax errors; declarations whose scope cannot be confirmed remain residual source. When C++ header parsing has syntax errors, individual declarations can be assigned the wrong scope, including with `--header-language cpp`. Function-local variables (including local `static` variables), C/C++ function prototypes, C/C++ struct fields and enum members do not become additional named regions. Python assignment behavior is unchanged. A mixed JavaScript declaration such as `export const value=1, helper=()=>2` keeps the existing function unit's id and range; `value` is searchable through that unit's signature rather than receiving a separate region. New child regions can change a containing namespace/class/module's exclusive source ranges and segment ids; existing declaration canonical ids and full spans remain stable when rebuilding the same source.
