@@ -22,7 +22,10 @@
   declarations under the first name and stable anchor, keeping every name
   searchable through signature metadata. A typedef enclosing a type definition
   adds searchable aliases to the existing type unit, without fragment regions;
-  typedefs without definitions remain individual regions. Preserve existing
+  typedefs without definitions remain individual regions. Keep adjacent `using`
+  aliases separate even when headers use the C grammar, and confirm uncertain
+  header declaration scopes from C++ identifier ancestors. C++ header syntax
+  recovery can still assign individual declarations the wrong scope. Preserve existing
   callable and type identities, full byte ranges and byte-exact source.
 
 - Add a shared Tree-sitter source context with declaration metadata, original

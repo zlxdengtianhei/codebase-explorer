@@ -980,9 +980,28 @@ def _extract_declarations(spec: GrammarSpec, offsets: OffsetMap, root: Any, path
             return True
         if header_root is None:
             return False
-        counterpart = header_root.descendant_for_byte_range(node.start_byte, node.end_byte - 1)
-        return (counterpart.start_byte == node.start_byte and counterpart.end_byte == node.end_byte
-                and _ordinary_name(cpp_spec, offsets, counterpart, None) == name)
+        # Anchor each declared identifier, rather than the whole declaration:
+        # C recovery can give namespace declarations different spans/scopes.
+        def identifiers(part: Any) -> list[Any]:
+            if part.type in {"identifier", "type_identifier"}:
+                return [part]
+            return [item for child in part.named_children for item in identifiers(child)]
+
+        anchors = identifiers(node)
+        for declared_name in name.split(", "):
+            anchor = next((item for item in anchors
+                           if _text(offsets, item.start_byte, item.end_byte) == declared_name), None)
+            if anchor is None:
+                return False
+            counterpart = header_root.descendant_for_byte_range(anchor.start_byte, anchor.end_byte - 1)
+            while counterpart is not None and counterpart.type not in {"declaration", "alias_declaration", "type_definition"}:
+                if counterpart.type in {"parameter_list", "compound_statement", "field_declaration_list", "ERROR"}:
+                    return False
+                counterpart = counterpart.parent
+            if (counterpart is None
+                    or declared_name not in _ordinary_name(cpp_spec, offsets, counterpart, None).split(", ")):
+                return False
+        return True
 
     def visit(
         node: Any,
@@ -1072,6 +1091,17 @@ def _extract_declarations(spec: GrammarSpec, offsets: OffsetMap, root: Any, path
                 return
             # Function bindings retain their established extraction path.
         name = _ordinary_name(spec, offsets, node, scope)
+        if check_header_scope and not name and ntype in {"declaration", "type_definition"}:
+            ancestor = node.parent
+            while ancestor is not None and ancestor.type != "function_definition":
+                ancestor = ancestor.parent
+            declared_type = ancestor.child_by_field_name("type") if ancestor is not None else None
+            if declared_type is not None and _text(offsets, declared_type.start_byte, declared_type.end_byte) == "namespace":
+                # C calls a namespace a function and can put ERROR in its using
+                # aliases. Confirm these candidates in C++, retaining C vetoes elsewhere.
+                names = [_declarator_name(offsets, child, type_alias=ntype == "type_definition")
+                         for child in node.children_by_field_name("declarator")]
+                name = ", ".join(names) if names and all(names) else ""
         if name and not header_scope_matches(node, name):
             name = ""
         if name and ntype == "type_definition":
@@ -1126,6 +1156,10 @@ def _coalesce_declarations(offsets: OffsetMap, declarations: list[_Declaration],
         if decl.kind != "module_region":
             return ""
         ntype = decl.node.type
+        first = next((child for child in decl.node.children if child.type != "comment"), None)
+        if (ntype in {"alias_declaration", "type_definition", "type_spec", "type_alias"}
+                or (first is not None and _text(offsets, first.start_byte, first.end_byte) in {"typedef", "using"})):
+            return ""
         if ntype in {"preproc_def", "preproc_function_def"}:
             return "macro"
         return ntype if ntype in {"declaration", "var_declaration", "const_declaration", "variable_declarator",

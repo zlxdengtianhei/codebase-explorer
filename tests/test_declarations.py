@@ -316,15 +316,19 @@ def test_cpp_scope_recovery_never_indexes_locals_fields_or_forward_types(tmp_pat
 @pytest.mark.parametrize('filename,source,names', [
     ('a.cpp', 'namespace ns { constexpr int LIMIT=8; using Size=unsigned long; }\nstatic int counter=0;\n', ['LIMIT', 'Size', 'counter']),
     ('a.cpp', 'extern "C" { int value=1; }\ntemplate <typename T> constexpr T limit = 8;\n', ['value', 'limit']),
-    ('a.h', 'static int counter=0;\nconstexpr int LIMIT=8;\nusing Size=Counter;\n', ['counter']),
+    ('a.h', 'static int counter=0;\nconstexpr int LIMIT=8;\nusing Size=Counter;\n', ['counter', 'Size']),
+    ('a.h', 'namespace ns { constexpr int LIMIT=8; using Size=unsigned long; }\nstatic int counter=0;\n', ['LIMIT', 'Size', 'counter']),
     ('a.c', 'static int counter=0;\nextern int global;\n', ['counter']),
 ])
 def test_permitted_c_cpp_declaration_scopes(tmp_path, filename, source, names):
     (tmp_path / filename).write_text(source)
     context = build_context(tmp_path, paths=[filename])
     assert [c['name'] for c in context['chunks'] if c['kind'] == 'module_region'] == names
-    if filename == 'a.h':
-        assert next(c['signature'] for c in context['chunks'] if c['kind'] == 'module_region') == 'counter, LIMIT, Size'
+    if source.startswith('namespace'):
+        regions = [c for c in context['chunks'] if c['kind'] == 'module_region']
+        assert [c['signature'] for c in regions] == ['LIMIT', 'Size', 'counter']
+    elif filename == 'a.h':
+        assert next(c['signature'] for c in context['chunks'] if c['kind'] == 'module_region') == 'counter, LIMIT'
     assert ''.join(c['text'] for c in context['chunks']) == source
 
 
@@ -337,4 +341,42 @@ def test_macros_inside_functions_are_indexed_without_local_variables(tmp_path, f
     function = next(c for c in context['chunks'] if c['kind'] == 'function')
     assert function['symbol_id'] == canonical_symbol_id(filename, 'function', 'f', 0)
     assert function['full_end_byte'] == len(source.rstrip())
+    assert ''.join(c['text'] for c in context['chunks']) == source
+
+
+@pytest.mark.parametrize('filename', ['aliases.h', 'aliases.cpp'])
+def test_adjacent_using_aliases_are_separate_regions(tmp_path, filename):
+    source = 'using A = int;\n/* alias */ using B = long;\nint value=0;\n'
+    (tmp_path / filename).write_text(source)
+    context = build_context(tmp_path, paths=[filename])
+    regions = [c for c in context['chunks'] if c['kind'] == 'module_region']
+    assert [(c['name'], c['signature']) for c in regions] == [('A', 'A'), ('B', 'B'), ('value', 'value')]
+    assert [c['text'] for c in regions[:2]] == ['using A = int;', 'using B = long;']
+    assert ''.join(c['text'] for c in context['chunks']) == source
+
+
+@pytest.mark.parametrize('filename', ['constructor.h', 'constructor.cpp'])
+def test_macro_constructor_locals_are_not_regions(tmp_path, filename):
+    source = '''template <typename Char> class basic_string_view {
+  const Char* data_;
+  unsigned size_;
+#if FMT_GCC_VERSION
+  FMT_ALWAYS_INLINE
+#endif
+  FMT_CONSTEXPR basic_string_view(const Char* s) : data_(s) {
+#if FMT_HAS_BUILTIN(__builtin_strlen) || FMT_GCC_VERSION || FMT_CLANG_VERSION
+    if (std::is_same<Char, char>::value && !detail::is_constant_evaluated()) {
+      size_ = __builtin_strlen(detail::narrow(s));
+      return;
+    }
+#endif
+    size_t len = 0;
+    while (*s++) ++len;
+    size_ = len;
+  }
+};
+'''
+    (tmp_path / filename).write_text(source)
+    context = build_context(tmp_path, paths=[filename])
+    assert not [c for c in context['chunks'] if c['kind'] == 'module_region']
     assert ''.join(c['text'] for c in context['chunks']) == source
