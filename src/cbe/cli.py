@@ -15,12 +15,21 @@ def _abs(value: str) -> Path:
     return path
 
 
+class _UsageParser(argparse.ArgumentParser):
+    def error(self, message: str) -> None:
+        command = getattr(self, "example_command", self.prog.rsplit(" ", 1)[-1])
+        if command in {"find", "query"} and "example:" not in message:
+            value = "LIMIT" if command == "find" else "grp:example"
+            message += f"; example: cbe {command} --run-dir /absolute/run {value}"
+        super().error(message)
+
+
 def build_parser() -> argparse.ArgumentParser:
     from cbe.host_run import DEFAULT_REVIEW, DETAIL_MAX_ATTEMPTS, MAX_ATTEMPTS, REVIEW_MODES
     from cbe.model_settings import MODEL_DEFAULTS
 
-    parser = argparse.ArgumentParser(
-        prog="python -m cbe",
+    parser = _UsageParser(
+        prog="cbe",
         description="Codebase Explorer: a navigable, source-grounded documentation map of a repository",
     )
     from cbe import __version__
@@ -148,14 +157,18 @@ def build_parser() -> argparse.ArgumentParser:
     context_query.add_argument("--path", action="append", dest="paths", required=True)
 
     find_p = sub.add_parser("find", help="Search the generated symbol catalogue")
+    find_p.set_defaults(usage_parser=find_p)
     find_p.add_argument("--run-dir", type=_abs, required=True)
-    find_p.add_argument("--term", required=True)
+    find_p.add_argument("term_pos", nargs="?", metavar="TERM")
+    find_p.add_argument("--term")
     find_p.add_argument("--limit", type=int, default=25)
     find_p.add_argument("--json", action="store_true", help="machine-readable locator fields")
 
     query_p = sub.add_parser("query", help="Return explanation and evidence by unit ID, symbol ID or file path")
+    query_p.set_defaults(usage_parser=query_p)
     query_p.add_argument("--run-dir", type=_abs, required=True)
-    query_p.add_argument("--id", required=True)
+    query_p.add_argument("id_pos", nargs="?", metavar="ID")
+    query_p.add_argument("--id")
     query_p.add_argument("--json", action="store_true", help="machine-readable object (no duplicate detail)")
     query_p.add_argument("--edges", default=None, help="expand frozen raw edges: all or comma-separated kinds")
     source_p = sub.add_parser("source", help="Print frozen source by unit ID, symbol ID or file path; verify SHA-256 first")
@@ -214,7 +227,17 @@ def main(argv: list[str] | None = None) -> int:
     from cbe.source_context import ContextError
 
     parser = build_parser()
+    argv = sys.argv[1:] if argv is None else argv
+    parser.example_command = argv[0] if argv else ""
     args = parser.parse_args(argv)
+    if args.command in {"find", "query"}:
+        field = "term" if args.command == "find" else "id"
+        positional, flagged = getattr(args, field + "_pos"), getattr(args, field)
+        if positional is None and flagged is None:
+            args.usage_parser.error(f"missing {field}")
+        if positional is not None and flagged is not None and positional != flagged:
+            args.usage_parser.error(f"positional {field} conflicts with --{field}")
+        setattr(args, field, flagged if flagged is not None else positional)
     try:
         header_language = getattr(args, "header_language", None)
         if header_language:
@@ -349,7 +372,10 @@ def main(argv: list[str] | None = None) -> int:
     except ContextError as exc:
         print(json.dumps(exc.to_dict(), ensure_ascii=False), file=sys.stderr)
         return 2
-    except (FileNotFoundError, ValueError, KeyError) as exc:
+    except KeyError as exc:
+        print(f"cbe: internal error: missing key {exc.args[0]}", file=sys.stderr)
+        return 2
+    except (FileNotFoundError, ValueError) as exc:
         print(str(exc), file=sys.stderr)
         return 2
 

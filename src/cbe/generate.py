@@ -64,7 +64,7 @@ def _mark_result(csv_path: Path, task: str, attempt: int, result: str) -> None:
     with CSV_LOCK:
         with csv_path.open(newline="", encoding="utf-8") as stream:
             rows = list(csv.DictReader(stream))
-        for row in rows:
+        for row in reversed(rows):
             if row["task"] == task and row["attempt"] == str(attempt):
                 row["result"] = result
                 break
@@ -236,6 +236,9 @@ def generate(repo: Path, run_dir: Path, *, model: str, config: Path | None = Non
             api_overrides["base_url"] = api_base_url
         if api_key_env:
             api_overrides["api_key_env"] = api_key_env
+    previous_wall = 0.0
+    if resume and (run_dir / "summary.json").is_file():
+        previous_wall = json.loads((run_dir / "summary.json").read_text(encoding="utf-8")).get("wall_seconds", 0)
     started = time.monotonic()
     if resume:
         host_run.resume(run_dir, owner=host, graph_path=graph_path)
@@ -320,7 +323,7 @@ def generate(repo: Path, run_dir: Path, *, model: str, config: Path | None = Non
         host_run.mark_partial(run_dir, *_delivery_problem(run_dir))
     result = host_run.finish(run_dir)
     summary = {**result, "status": result.get("status", "partial"),
-               "stopped": stopped, "wall_seconds": round(time.monotonic() - started, 3),
+               "stopped": stopped, "wall_seconds": round(previous_wall + time.monotonic() - started, 3),
                "run_dir": str(run_dir), "index": str(run_dir / "docs" / "INDEX.md"),
                "progress_log": str(run_dir / "progress.log"), "host": host, "model": model,
                "input_token_basis": ("Devin CLI reported input_tokens; cache inclusion is unverified"

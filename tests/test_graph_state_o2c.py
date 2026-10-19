@@ -37,6 +37,29 @@ def test_prompt_and_index_share_availability(tmp_path, value, state, prompt_text
     assert opening.startswith(index_text)
 
 
+def test_components_with_only_failed_capabilities_are_failed():
+    value = {"schema": "cbe-graph/1", "nodes": [], "edges": [],
+             "backend": {"name": "test", "components": [{"name": "joern"}]},
+             "capabilities": [{"language": "go", "graph": "call", "status": "failed"}]}
+    assert graph.graph_state(value)[0] == "failed"
+
+
+@pytest.mark.parametrize("status", ["resolved", "partial", "empty"])
+def test_one_successful_capability_keeps_empty_result(status):
+    value = {"schema": "cbe-graph/1", "nodes": [], "edges": [],
+             "backend": {"name": "test", "components": [{"name": "joern"}]},
+             "capabilities": [{"language": "go", "graph": "call", "status": "failed"},
+                              {"language": "go", "graph": "cfg", "status": status}]}
+    assert graph.graph_state(value)[0] == "empty"
+
+
+def test_explicit_successful_component_is_completion_evidence():
+    value = {"schema": "cbe-graph/1", "nodes": [], "edges": [],
+             "backend": {"name": "test", "components": [{"name": "joern", "status": "empty"}]},
+             "capabilities": [{"language": "go", "graph": "call", "status": "failed"}]}
+    assert graph.graph_state(value)[0] == "empty"
+
+
 def test_read_quality_keeps_snapshot_and_refreshes_explicit_files(tmp_path):
     value = copy.deepcopy(EMPTY)
     value["source_manifest"] = [{"path": "main.py", "language": "python"}]

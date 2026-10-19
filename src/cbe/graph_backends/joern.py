@@ -543,12 +543,23 @@ def _normalize(payload: dict, version: str, namespace: str = "cpg", *,
     nodes: list[dict] = []
     edges: list[dict] = []
     seen_nodes: set[str] = set()
+    source_files = payload.get("_files")
+    if source_files is not None:
+        from cbe.source_context import suffix_languages
+        suffixes = suffix_languages()
+        source_files = {p for p in source_files if Path(p).suffix.lower() in suffixes}
 
     def add_node(node_id: str, kind: str, *, path=None, start=None, end=None, name=None,
                  external=False, owner=None, joern_id=None, label=None, backend="joern") -> None:
         if node_id in seen_nodes:
             return
         seen_nodes.add(node_id)
+        if path is not None and source_files is not None and path not in source_files:
+            if diagnostics is not None:
+                diagnostics.append({"code": "unknown_node_location", "path": None,
+                                    "node": node_id, "analyzer_path": path,
+                                    "message": f"Joern node {node_id} has no source file for {path!r}; location left unknown"})
+            path = None
         entry = {"id": node_id, "kind": kind, "path": path, "start_line": start,
                  "end_line": end, "name": name, "backend": backend}
         if external:

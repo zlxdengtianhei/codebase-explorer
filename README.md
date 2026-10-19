@@ -98,7 +98,7 @@ cbe --version
 cbe languages
 ```
 
-`cbe --version` prints `python -m cbe 2.2.0.dev0`. When `cbe` runs from a source tree without installed package metadata, it prints `python -m cbe source` instead.
+`cbe --version` prints `cbe 2.2.0.dev0`. When `cbe` runs from a source tree without installed package metadata, it prints `cbe source` instead.
 
 The standard installation includes Tree-sitter grammars for C, C++, Python, JavaScript, TypeScript/TSX, Java, and Go. The `languages` extra adds Ruby, Rust, PHP, and C#; `languages-community` adds the community grammars for Kotlin and Swift:
 
@@ -614,3 +614,31 @@ Shorter walkthroughs, one repository per language, show the generated map and re
 | Java | gson | [cbe-gson.mp4](https://github.com/zlxdengtianhei/codebase-explorer/releases/download/walkthrough-v2.2.0.dev0/cbe-gson.mp4) | [cbe-gson.srt](https://github.com/zlxdengtianhei/codebase-explorer/releases/download/walkthrough-v2.2.0.dev0/cbe-gson.srt) | 7:05 |
 
 The flask video uses the catalog in `evaluation/e2-flask/cbe-docs/catalog.json.gz`; the others use `examples/<repo>/catalog.json.gz`. Decompress a catalog with `gzip -dk` before running the commands. fmt (C++) has no video because its generation stayed partial.
+
+## Command and resume details
+
+`cbe find --run-dir "$RUN" LIMIT` accepts the same search term as `--term LIMIT`.
+`cbe query --run-dir "$RUN" "$ID"` accepts the same ID as `--id "$ID"`.
+The flag forms and JSON output remain compatible. If both forms are supplied,
+their values must match; omitting both is an error. An unknown query ID suggests
+using `cbe find` first.
+
+For script generation, `summary.json` records `wall_seconds` as the cumulative
+running time of all process segments, excluding idle time between segments.
+Each plan and resume appends a record to `runtime_environments` in
+`host/state.json`: UTC time, Python version, platform, CBE version, and installed
+versions of the runtime dependencies declared by the package, including extras.
+An optional dependency that is not installed has a null version.
+`cbe --version` prints `cbe <version>`.
+
+A resumed detail answer can introduce a grouped unit before the responsibility
+tree has been rebuilt. Flow steps for these units link to the catalog and say
+`not assigned to a node`; resume the tree/system tasks to complete navigation.
+Until a new system answer is accepted, rendering keeps the last accepted overview,
+dependency descriptions and key flows. INDEX notes that this overview predates
+some completed modules and will update when the resumed system task completes.
+Without an accepted system answer, rendering uses a mechanical overview.
+Joern nodes with filenames outside the source manifest retain their identity
+and relations but have an unknown location, with `unknown_node_location`
+diagnostics. A graph whose capabilities all failed is reported as failed unless
+a component explicitly records successful completion.

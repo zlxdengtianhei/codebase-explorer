@@ -2,6 +2,21 @@
 
 ## 2.2.0.dev0 (unreleased)
 
+- Accept positional search terms and query IDs alongside `--term`/`--id`, with
+  conflict checks and examples for missing arguments; unknown IDs suggest `find`.
+  Version and usage output identify the command as `cbe`.
+- Preserve the latest physical call's result label when resumed attempts repeat,
+  accumulate script wall time across active segments, and append interpreter,
+  platform and declared dependency versions on every plan and resume.
+- Report external graphs with only failed capabilities as failed. Joern nodes
+  whose filenames are outside the source manifest keep an unknown location and
+  a diagnostic instead of a false file anchor.
+- Resume newly grouped units without crashing when the previous tree does not
+  own them yet; retain catalog links while navigation is pending. Preserve the
+  last accepted overview, dependency descriptions and key flows while the system
+  task is queued again, with an INDEX note that the overview will update.
+  Unhandled missing keys now print an English internal-error message.
+
 - Add a shared Tree-sitter source context with declaration metadata, original
   byte ranges, hashes, diagnostics, and optional analyzed graph evidence.
 - Integrate structured detail, unique primary ownership in a semantic module

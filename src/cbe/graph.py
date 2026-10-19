@@ -207,9 +207,12 @@ def graph_quality(graph: dict, *, existing_paths: Iterable[str] | None = None) -
     diagnostics = graph.get("diagnostics", [])
     no_backend = any(d.get("code") == "no_backend_completed" for d in diagnostics)
     backend = graph.get("backend") or {}
-    completed = (False if no_backend or backend.get("name") == "none" else
+    successful = {"resolved", "partial", "empty"}
+    all_failed = bool(capabilities) and all(c.get("status") == "failed" for c in capabilities)
+    successful_component = any(c.get("status") in successful for c in backend.get("components", []))
+    completed = (False if no_backend or backend.get("name") == "none" or (all_failed and not successful_component) else
                  True if backend.get("components") or any(
-                     c.get("status") in {"resolved", "partial", "empty"} for c in capabilities) else None)
+                     c.get("status") in successful for c in capabilities) else None)
     return {
         "edge_counts": [{"language": language, "kind": kind, "statuses": row,
                          "total": sum(row.values())}
