@@ -875,9 +875,34 @@ def _contains_node(node: Any, kinds: set[str]) -> bool:
     return node.type in kinds or any(_contains_node(child, kinds) for child in node.named_children)
 
 
+def _c_declaration_scope(node: Any) -> bool:
+    child = node
+    ancestor = node.parent
+    while ancestor is not None:
+        if ancestor.type == "declaration_list":
+            if ancestor.parent is None or ancestor.parent.type not in {"namespace_definition", "linkage_specification"}:
+                return False
+        elif ancestor.type == "template_declaration":
+            payload = [part for part in ancestor.named_children
+                       if part.type not in {"template_parameter_list", "requires_clause", "comment"}]
+            if payload != [child]:
+                return False
+        elif ancestor.type not in {"translation_unit", "preproc_if", "preproc_ifdef", "preproc_else",
+                                   "preproc_elif", "namespace_definition", "linkage_specification"}:
+            return False
+        child, ancestor = ancestor, ancestor.parent
+    return True
+
+
 def _ordinary_name(spec: GrammarSpec, offsets: OffsetMap, node: Any, scope: str | None) -> str:
-    if (node.type not in _ORDINARY_DECLARATIONS.get(spec.name, ()) or scope == "function"
-            or (scope == "class" and spec.name not in {"java", "ruby"})):
+    if node.type not in _ORDINARY_DECLARATIONS.get(spec.name, ()):
+        return ""
+    if spec.name in {"c", "cpp"} and node.type in {"preproc_def", "preproc_function_def"}:
+        name = node.child_by_field_name("name")
+        return _text(offsets, name.start_byte, name.end_byte) if name is not None and not node.has_error else ""
+    if (scope == "function" or (scope == "class" and spec.name not in {"java", "ruby"})):
+        return ""
+    if spec.name in {"c", "cpp"} and not _c_declaration_scope(node):
         return ""
     if spec.name in {"c", "cpp"} and node.has_error:
         # Recovery can split a macro-prefixed function into a fake variable
@@ -919,6 +944,10 @@ def _ordinary_name(spec: GrammarSpec, offsets: OffsetMap, node: Any, scope: str 
             return [name for child in part.named_children for name in names_in(child)]
         return ", ".join(names_in(node))
     if spec.name in {"c", "cpp"} and node.type in {"declaration", "type_definition"}:
+        declared_type = node.child_by_field_name("type")
+        if (declared_type is not None and _text(offsets, declared_type.start_byte, declared_type.end_byte)
+                in ({"class"} if spec.name == "c" else {"import", "module"})):
+            return ""  # C++ keywords can look like C-style variable types during recovery.
         if node.type == "declaration" and _contains_node(node, {"function_definition", "compound_statement"}):
             return ""
         names = []
@@ -934,6 +963,26 @@ def _ordinary_name(spec: GrammarSpec, offsets: OffsetMap, node: Any, scope: str 
 
 def _extract_declarations(spec: GrammarSpec, offsets: OffsetMap, root: Any, path: str) -> list[_Declaration]:
     declarations: list[_Declaration] = []
+    # C recovery may flatten C++ locals and fields directly into a header's
+    # translation unit. A second tree only vetoes uncertain ordinary regions;
+    # existing functions/types continue to use the original tree and identities.
+    check_header_scope = spec.name == "c" and PurePosixPath(path).suffix.lower() == ".h" and root.has_error
+    header_root = None
+    cpp_spec = next((item for item in _all_specs() if item.name == "cpp"), None)
+    if check_header_scope and cpp_spec is not None:
+        try:
+            header_root = _make_parser(cpp_spec).parse(offsets.raw).root_node
+        except (ImportError, AttributeError):
+            pass  # Without scope evidence, leave uncertain declarations residual.
+
+    def header_scope_matches(node: Any, name: str) -> bool:
+        if not check_header_scope or node.type in {"preproc_def", "preproc_function_def"}:
+            return True
+        if header_root is None:
+            return False
+        counterpart = header_root.descendant_for_byte_range(node.start_byte, node.end_byte - 1)
+        return (counterpart.start_byte == node.start_byte and counterpart.end_byte == node.end_byte
+                and _ordinary_name(cpp_spec, offsets, counterpart, None) == name)
 
     def visit(
         node: Any,
@@ -1023,6 +1072,8 @@ def _extract_declarations(spec: GrammarSpec, offsets: OffsetMap, root: Any, path
                 return
             # Function bindings retain their established extraction path.
         name = _ordinary_name(spec, offsets, node, scope)
+        if name and not header_scope_matches(node, name):
+            name = ""
         if name and ntype == "type_definition":
             defined_type = node.child_by_field_name("type")
             if (defined_type is not None and defined_type.type in spec.class_kinds

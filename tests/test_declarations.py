@@ -297,3 +297,44 @@ def test_other_language_values_use_declared_names(tmp_path, filename, source, na
     rows = chunks(tmp_path, filename, source)
     assert [c['name'] for c in rows if c['kind'] == 'module_region'] == [name]
     assert [c['signature'] for c in rows if c['kind'] == 'module_region'] == [name]
+
+
+@pytest.mark.parametrize('filename', ['a.h', 'a.cpp'])
+@pytest.mark.parametrize('source', [
+    'class X;\nstruct S;\nenum E;\n',
+    'class Box { int data_; using value_type = int; };\n',
+    'template <typename T> FMT_CONSTEXPR auto f(T parameter) -> int { int num_zeros=0; return num_zeros; }\n',
+    'namespace ns { inline auto f(int x) -> int { int local=0; return local; } }\n',
+])
+def test_cpp_scope_recovery_never_indexes_locals_fields_or_forward_types(tmp_path, filename, source):
+    (tmp_path / filename).write_text(source)
+    context = build_context(tmp_path, paths=[filename])
+    assert not [c for c in context['chunks'] if c['kind'] == 'module_region']
+    assert ''.join(c['text'] for c in context['chunks']) == source
+
+
+@pytest.mark.parametrize('filename,source,names', [
+    ('a.cpp', 'namespace ns { constexpr int LIMIT=8; using Size=unsigned long; }\nstatic int counter=0;\n', ['LIMIT', 'Size', 'counter']),
+    ('a.cpp', 'extern "C" { int value=1; }\ntemplate <typename T> constexpr T limit = 8;\n', ['value', 'limit']),
+    ('a.h', 'static int counter=0;\nconstexpr int LIMIT=8;\nusing Size=Counter;\n', ['counter']),
+    ('a.c', 'static int counter=0;\nextern int global;\n', ['counter']),
+])
+def test_permitted_c_cpp_declaration_scopes(tmp_path, filename, source, names):
+    (tmp_path / filename).write_text(source)
+    context = build_context(tmp_path, paths=[filename])
+    assert [c['name'] for c in context['chunks'] if c['kind'] == 'module_region'] == names
+    if filename == 'a.h':
+        assert next(c['signature'] for c in context['chunks'] if c['kind'] == 'module_region') == 'counter, LIMIT, Size'
+    assert ''.join(c['text'] for c in context['chunks']) == source
+
+
+@pytest.mark.parametrize('filename', ['a.c', 'a.cpp', 'a.h'])
+def test_macros_inside_functions_are_indexed_without_local_variables(tmp_path, filename):
+    source = 'int f(void) {\n#define LOCAL_MACRO(x) ((x)+1)\n int local=0; return LOCAL_MACRO(local);\n}\n'
+    (tmp_path / filename).write_text(source)
+    context = build_context(tmp_path, paths=[filename])
+    assert [c['name'] for c in context['chunks'] if c['kind'] == 'module_region'] == ['LOCAL_MACRO']
+    function = next(c for c in context['chunks'] if c['kind'] == 'function')
+    assert function['symbol_id'] == canonical_symbol_id(filename, 'function', 'f', 0)
+    assert function['full_end_byte'] == len(source.rstrip())
+    assert ''.join(c['text'] for c in context['chunks']) == source
