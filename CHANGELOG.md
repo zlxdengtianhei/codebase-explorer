@@ -57,9 +57,12 @@
   `docs/DEPENDENCIES.md`; reading stats, graph coverage and generation notes move to
   `docs/RUN.md`. The system overview no
   longer carries `maintenance_navigation`.
-- Check detail explanations for identifiers absent from their own unit's frozen source.
-  Re-ask isolated suspect units, reject a largely suspect answer as a batch, and mark
-  last-attempt survivors in the catalogue, query text, node pages, task flags and summary.
+- An explanation answer whose explanations look attached to the wrong symbols is refused and
+  asked again: at least three explanations, and at least 30% of the answer, name only
+  identifiers that are not in their own unit's source. If the last answer is still like that,
+  it is kept and each such unit is marked (`ungrounded` in `catalog.json`, a `check:` line in
+  `cbe query` and on the node page, `ungrounded_count` in `summary.json`). The model review
+  (`--review`) is unchanged. See "Answer-time grounding" in `docs/reference.md`.
 - Change the detail answer contract. Symbols are named by short numbers from a
   numbered list in the prompt (`{"units":[{"h":[12],"explain":"..."}]}`); the
   program derives ids, kinds, groups and the full `dispositions` map. Usable units

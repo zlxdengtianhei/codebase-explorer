@@ -57,8 +57,8 @@ def gap_note(gaps: list[dict], invalid: list[dict], problem: str | None = None) 
         lines.append("These units were rejected; return each again, corrected:")
         lines += [f"- h={row['h']}: {row['why']}" for row in invalid]
     if gaps:
-        lines.append("These symbols still have no accepted unit. Give each a unit, alone or grouped with related "
-                     "symbols (tests that pin the same behavior go in one group):")
+        lines.append("These functions, methods or classes with real logic still have no unit. Give each a "
+                     "unit, alone or grouped with related symbols (tests that pin the same behavior go in one group):")
         lines += [f"{row['n']} {row['kind']} {row['name']} ({row['path']})" for row in gaps]
     lines.append("Return the same JSON shape with only the additional units, using the same symbol numbers.")
     return "\n".join(lines)

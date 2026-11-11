@@ -12,6 +12,13 @@ STOP = {"true", "false", "null", "none", "nil", "self", "this", "void", "int", "
         "private", "new", "in", "is", "not", "and", "or", "id", "args", "kwargs", "i.e", "e.g"}
 
 
+#: An answer is rejected when at least this many of its explanations, and at least this share of
+#: them, are suspect. Measured on seven runs: the one wrong answer had 59% suspect, the other 56
+#: answers at most 14%.
+BATCH_MIN = 3
+BATCH_SHARE = 0.3
+
+
 def idents(text):
     return {t for t in IDENT.findall(text)}
 

@@ -854,23 +854,21 @@ def _detail_table(state: dict[str, Any], task: dict[str, Any]) -> list[dict]:
     return symbols.batch_table(state["modules"][task["module"]]["files"], state["inventory"])
 
 
-def _gaps(run_dir: Path, state: dict[str, Any], table: list[dict], units: list[dict],
-          invalid: list[dict] | None = None) -> list[dict]:
-    """Symbols with logic or a grounding rejection that still need a unit."""
+def _gaps(run_dir: Path, state: dict[str, Any], table: list[dict], units: list[dict]) -> list[dict]:
+    """Symbols with logic that no unit explains yet (see ``checks.find_gaps``)."""
     wanted = {row["id"] for row in table if row["kind"] in checks.GAP_KINDS}
     tokens = {chunk["id"]: count_text_tokens(chunk.get("text") or "")
               for chunk in _verified_context(run_dir, state).get("chunks") or [] if chunk["id"] in wanted}
-    gaps = checks.find_gaps(table, units, tokens)
-    covered = checks.covered_ids(units, table)
-    rejected = {n for row in invalid or [] if row.get("grounding") for n in row.get("h") or []}
-    return gaps + [row for row in table if row["n"] in rejected and row["id"] not in covered
-                   and row["id"] not in {gap["id"] for gap in gaps}]
+    return checks.find_gaps(table, units, tokens)
 
 
 def _ground_answer(run_dir: Path, state: dict[str, Any], table: list[dict], decoded, final: bool) -> str | None:
-    """Reject or mark this answer's explanations whose names have no source grounding."""
-    context = _verified_context(run_dir, state)
-    chunks = {chunk["id"]: chunk for chunk in context.get("chunks") or []}
+    """Reject an answer whose explanations look attached to the wrong symbols (see ``grounding``).
+
+    One suspect explanation is not acted on: about 3% of correct explanations are suspect, and a
+    re-ask sends the whole batch again. Explanations attached to the wrong numbers show as many
+    suspects in one answer. On the last answer the suspects are kept and marked ``ungrounded``."""
+    chunks = {chunk["id"]: chunk for chunk in _verified_context(run_dir, state).get("chunks") or []}
     by_id = {row["id"]: row for row in table}
     names = grounding.repo_names(symbol["name"] for entry in (state.get("inventory") or {}).values()
                                  for symbol in entry.get("symbols") or [])
@@ -878,35 +876,29 @@ def _ground_answer(run_dir: Path, state: dict[str, Any], table: list[dict], deco
     for unit in decoded.units:
         ids = [unit["id"], *(unit.get("members") or [])]
         text = [chunks[sid].get("text") or "" for sid in ids if sid in chunks]
-        text += [by_id[sid]["path"] for sid in ids if sid in by_id]
-        text += ids
+        text += [by_id[sid]["path"] for sid in ids if sid in by_id] + ids
         missing = grounding.ungrounded(unit["explain"], "\n".join(text), names)
         if missing:
             suspects[unit["id"]] = missing
-
-    def rejected(unit: dict, words: list[str]) -> dict:
-        ids = {unit["id"], *(unit.get("members") or [])}
-        why = (f"ungrounded names {', '.join(words)} in {unit['id']}; not found in this unit's source"
-               if words else f"{unit['id']} was discarded with the batch; rewrite it against its own source")
-        return {"h": [row["n"] for row in table if row["id"] in ids], "why": why, "grounding": True}
-
-    batch_bad = len(suspects) >= 3 and len(suspects) >= 0.3 * len(decoded.units)
-    if batch_bad and not final:
-        decoded.invalid += [rejected(unit, suspects.get(unit["id"], [])) for unit in decoded.units]
-        decoded.units = []
-        return (f"ungrounded: {len(suspects)} unit explanation(s) mention identifiers not found in the source "
-                "under their own symbol number(s); they look attached to other numbers. Check every explanation "
-                "against the source under its number and answer again.")
+    if len(suspects) < grounding.BATCH_MIN or len(suspects) < grounding.BATCH_SHARE * len(decoded.units):
+        return None
     if final:
         for unit in decoded.units:
             if unit["id"] in suspects:
                 unit["ungrounded"] = suspects[unit["id"]]
         decoded.flags += [f"ungrounded: {uid}: {', '.join(words)}" for uid, words in suspects.items()]
-    else:
-        decoded.invalid += [rejected(unit, suspects[unit["id"]]) for unit in decoded.units
-                            if unit["id"] in suspects]
-        decoded.units = [unit for unit in decoded.units if unit["id"] not in suspects]
-    return None
+        return None
+    for unit in decoded.units:
+        ids = {unit["id"], *(unit.get("members") or [])}
+        words = suspects.get(unit["id"])
+        decoded.invalid.append({
+            "h": [row["n"] for row in table if row["id"] in ids],
+            "why": (f"names {', '.join(words)}, not found in the source under these numbers" if words
+                    else "discarded with the rest of that answer; write it again from the source under these numbers")})
+    decoded.units = []
+    return (f"ungrounded: {len(suspects)} explanation(s) name identifiers that are not in the source under "
+            "their own symbol numbers; they look attached to other numbers. None of that answer was kept. "
+            "Check every explanation against the source under its number and answer again.")
 
 
 def _tree_nodes(state: dict[str, Any], task: dict[str, Any], tree: "treename.Tree") -> dict[str, str]:
@@ -933,9 +925,9 @@ def _retry_note(run_dir: Path, state: dict[str, Any], task: dict[str, Any]) -> s
         return _tree_retry_note(run_dir, state, task)
     partial = _load_partial(run_dir, task["id"])
     table = _detail_table(state, task)
-    problem = task["errors"][-1][:300] if task["errors"] and task["errors"][-1].startswith("schema_error") else None
-    return prompts.gap_note(_gaps(run_dir, state, table, partial["units"], partial["invalid"]),
-                            partial["invalid"], problem)
+    problem = (task["errors"][-1][:300] if task["errors"]
+               and task["errors"][-1].startswith(("schema_error", "ungrounded")) else None)
+    return prompts.gap_note(_gaps(run_dir, state, table, partial["units"]), partial["invalid"], problem)
 
 
 def _settle_detail(run_dir: Path, state: dict[str, Any], task: dict[str, Any], value: dict[str, Any] | None,
@@ -959,27 +951,16 @@ def _settle_detail(run_dir: Path, state: dict[str, Any], task: dict[str, Any], v
             error = f"schema_error:{exc}"
     if decoded is not None:
         grounding_error = _ground_answer(run_dir, state, table, decoded, final)
-        previous = partial["invalid"]
         partial["units"] += decoded.units
         partial["flags"] += decoded.flags
         partial["invalid"] = decoded.invalid
-        by_number = {row["n"]: row for row in table}
-        covered = checks.covered_ids(partial["units"], table)
-        current = {tuple(row["h"]) for row in decoded.invalid if row.get("grounding")}
-        for row in previous:
-            if not row.get("grounding"):
-                continue
-            pending = [n for n in row.get("h") or []
-                       if n in by_number and by_number[n]["id"] not in covered]
-            if pending and tuple(pending) not in current:
-                partial["invalid"].append({**row, "h": pending})
         partial["notes"] = decoded.notes or partial["notes"]
         partial["decoded"] = True
         if grounding_error:
             _partial_path(run_dir, task["id"]).parent.mkdir(exist_ok=True)
             write_json(_partial_path(run_dir, task["id"]), partial)
             return grounding_error, None, []
-    gaps = _gaps(run_dir, state, table, partial["units"], partial["invalid"])
+    gaps = _gaps(run_dir, state, table, partial["units"])
     if decoded is not None and not gaps:
         # A rejected unit alone never earns a re-ask: if its symbols mattered they are gaps, and
         # a unit that names no symbol (a stray string in the list) has nothing to recover.

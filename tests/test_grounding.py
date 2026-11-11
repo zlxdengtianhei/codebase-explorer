@@ -46,23 +46,14 @@ def _start(tmp_path: Path):
     return run, host_run.next_tasks(run)["tasks"][0]
 
 
-def test_one_ungrounded_unit_is_rejected_and_reasked_by_number(tmp_path: Path) -> None:
+def test_one_ungrounded_unit_alone_is_accepted_without_a_mark(tmp_path: Path) -> None:
     run, item = _start(tmp_path)
     answer = _good(item, run)
-    changed = answer["units"][1]
-    changed["explain"] = "Unit missing_name does its job."
+    answer["units"][1]["explain"] = "Unit missing_name does its job."
     result = _answer_task(run, item, answer)
-    assert not result["accepted"] and result["error"].startswith("incomplete:")
-    partial = json.loads((run / "host" / "partial" / f"{item['task']}.json").read_text())
-    assert len(partial["units"]) == 2
-    assert partial["invalid"][0]["h"] == changed["h"]
-    assert "missing_name" in partial["invalid"][0]["why"]
-
-    again = host_run.next_tasks(run)["tasks"][0]
-    prompt = Path(again["prompt_file"]).read_text()
-    assert "2 function beta" in prompt and "ungrounded names missing_name" in prompt
-    corrected = {"units": [{"h": changed["h"], "explain": "Unit beta does its job."}]}
-    assert _answer_task(run, again, corrected)["accepted"]
+    assert result["accepted"] and not [flag for flag in result["flags"] if flag.startswith("ungrounded")]
+    accepted = json.loads((run / "host" / "accepted" / f"{item['task']}.json").read_text())
+    assert len(accepted["units"]) == 3 and not any("ungrounded" in unit for unit in accepted["units"])
 
 
 def test_ungrounded_batch_discards_all_of_this_answer(tmp_path: Path) -> None:
@@ -71,29 +62,31 @@ def test_ungrounded_batch_discards_all_of_this_answer(tmp_path: Path) -> None:
     for unit, name in zip(answer["units"], ("missing_name", "other_name", "third_name")):
         unit["explain"] = f"Unit {name} does its job."
     result = _answer_task(run, item, answer)
-    assert not result["accepted"] and result["error"].startswith("ungrounded: 3 unit explanation(s)")
+    assert not result["accepted"] and result["error"].startswith("ungrounded: 3 explanation(s)")
     assert "look attached to other numbers" in result["error"]
     partial = json.loads((run / "host" / "partial" / f"{item['task']}.json").read_text())
     assert partial["units"] == [] and len(partial["invalid"]) == 3
-    prompt = Path(host_run.next_tasks(run)["tasks"][0]["prompt_file"]).read_text()
-    assert all(f"{n} function {name}" in prompt for n, name in enumerate(("alpha", "beta", "gamma"), 1))
+    again = host_run.next_tasks(run)["tasks"][0]
+    prompt = Path(again["prompt_file"]).read_text()
+    assert "Your last answer could not be used: ungrounded: 3 explanation(s)" in prompt
+    assert "names missing_name, not found in the source under these numbers" in prompt
+    assert _answer_task(run, again, _good(again, run))["accepted"]
 
 
-def test_final_ungrounded_unit_is_kept_marked_and_visible(tmp_path: Path) -> None:
+def test_an_answer_still_ungrounded_at_the_last_attempt_is_kept_marked_and_visible(tmp_path: Path) -> None:
     run, item = _start(tmp_path)
-    for attempt in range(3):
+    for attempt in range(host_run.DETAIL_MAX_ATTEMPTS):
         answer = _good(item, run)
-        answer["units"][0]["explain"] = "Unit missing_name does its job."
+        for unit, name in zip(answer["units"], ("missing_name", "other_name", "third_name")):
+            unit["explain"] = f"Unit {name} does its job."
         result = _answer_task(run, item, answer)
-        if attempt < 2:
+        if attempt < host_run.DETAIL_MAX_ATTEMPTS - 1:
             assert not result["accepted"]
             item = host_run.next_tasks(run)["tasks"][0]
     assert result["accepted"]
-    grounding_flags = [flag for flag in result["flags"] if flag.startswith("ungrounded: ")]
-    assert len(grounding_flags) == 1 and grounding_flags[0].endswith(": missing_name")
+    assert len([flag for flag in result["flags"] if flag.startswith("ungrounded: ")]) == 3
     accepted = json.loads((run / "host" / "accepted" / f"{item['task']}.json").read_text())
-    marked = next(unit for unit in accepted["units"] if unit.get("ungrounded"))
-    assert marked["ungrounded"] == ["missing_name"]
+    marked = next(unit for unit in accepted["units"] if unit.get("ungrounded") == ["missing_name"])
 
     _drive(run)
     catalog = json.loads((run / "catalog.json").read_text())
@@ -102,4 +95,4 @@ def test_final_ungrounded_unit_is_kept_marked_and_visible(tmp_path: Path) -> Non
     assert line in catalog_query.query_text(catalog_query.query(run, marked["id"]))
     pages = "".join(path.read_text() for path in (run / "docs" / "nodes").glob("*.md"))
     assert line in pages
-    assert json.loads((run / "summary.json").read_text())["ungrounded_count"] == 1
+    assert json.loads((run / "summary.json").read_text())["ungrounded_count"] == 3
