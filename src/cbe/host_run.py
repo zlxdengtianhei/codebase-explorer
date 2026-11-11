@@ -1426,7 +1426,7 @@ def _basis(run_dir: Path, state: dict[str, Any], context: dict[str, Any]) -> dic
                for record in [*(task.get("usage") or []), *(task.get("exact_usage") or [])]]
     models = {part.strip() for record in records for part in str(record.get("model") or "").split(",")
               if part.strip()}
-    for path in (state_dir(run_dir) / "raw").glob("*.api.json"):
+    for path in (run_dir / "raw").glob("*.api.json"):  # written by `cbe generate` for every call
         try:
             actual = json.loads(path.read_text(encoding="utf-8")).get("actual_model")
         except (OSError, ValueError):

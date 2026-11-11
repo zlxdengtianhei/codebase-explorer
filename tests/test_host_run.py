@@ -824,6 +824,11 @@ def test_update_graph_adds_dataflow_without_rerunning_a_complete_run(tmp_path: P
         host_run._verified_context(run_dir, verifier)  # the old one no longer is
     assert cli.main(["host", "update-graph", "--run-dir", str(run_dir), "--graph", str(graph_path)]) == 0
     assert json.loads(capsys.readouterr().out)["status"] == "nothing to update"
+    # `cbe generate` writes one record per call; its model name is part of the basis
+    (run_dir / "raw").mkdir()
+    (run_dir / "raw" / "module_1-1.api.json").write_text(json.dumps({"actual_model": "some/model"}))
+    host_run.render(run_dir)
+    assert json.loads((run_dir / "summary.json").read_text())["basis"]["models"] == ["some/model"]
 
 
 def _assert_update_refused(run_dir: Path, graph_path: Path, capsys, message: str) -> None:
