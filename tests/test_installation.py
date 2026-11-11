@@ -135,6 +135,18 @@ def test_user_scope_honors_host_config_roots(tmp_path: Path, monkeypatch: pytest
     assert cli._targets(args) == [tmp_path / "dsh-home/skills", tmp_path / "xdg-config/opencode/skills"]
 
 
+def test_pi_targets_are_its_project_and_user_skill_directories(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("HOME", str(tmp_path / "home"))
+    project = tmp_path / "repo"
+    project.mkdir()
+    parser = cli._parser()
+    in_project = parser.parse_args(["install", "--host", "pi", "--scope", "project", "--project", str(project)])
+    assert cli._targets(in_project) == [project / ".pi/skills"]
+    for_user = parser.parse_args(["install", "--host", "pi", "--scope", "user"])
+    assert cli._targets(for_user) == [tmp_path / "home/.pi/agent/skills"]
+    assert "pi" in cli.HOSTS
+
+
 def test_runtime_note_command_runs_pasted_into_a_shell_and_warns_against_variables(
         tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     bin_dir = tmp_path / "tool env" / "bin"

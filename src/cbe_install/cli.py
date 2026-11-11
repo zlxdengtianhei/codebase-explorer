@@ -19,18 +19,20 @@ from . import (AGENTS_RESOURCE, BUSINESS_MODULE, PRODUCT, RUNTIME_MODULES, RUNTI
                SOURCE_AGENT_BASE, SOURCE_PARENT_LEVEL, SOURCE_SKILL_BASE)
 
 MANIFEST = ".skill-install.json"
-HOSTS = ("codex", "claude-code", "dsh", "opencode")
+HOSTS = ("codex", "claude-code", "dsh", "opencode", "pi")
 PROJECT_DIRS = {
     "codex": (".agents", "skills"),
     "claude-code": (".claude", "skills"),
     "dsh": (".dsh", "skills"),
     "opencode": (".opencode", "skills"),
+    "pi": (".pi", "skills"),
 }
 USER_DIRS = {
     "codex": (".agents", "skills"),
     "claude-code": (".claude", "skills"),
     "dsh": (".dsh", "skills"),
     "opencode": (".config", "opencode", "skills"),
+    "pi": (".pi", "agent", "skills"),
 }
 
 
@@ -326,7 +328,7 @@ def _targets(args: argparse.Namespace) -> list[Path]:
         return [Path(args.dir).expanduser().resolve()]
     hosts = args.host or []
     if not hosts:
-        raise InstallError("choose --host codex|claude-code|dsh|opencode|all, or --dir PATH; use --interactive for prompts")
+        raise InstallError("choose --host codex|claude-code|dsh|opencode|pi|all, or --dir PATH; use --interactive for prompts")
     if "all" in hosts:
         hosts = list(HOSTS)
     hosts = list(dict.fromkeys(hosts))
@@ -348,7 +350,7 @@ def _targets(args: argparse.Namespace) -> list[Path]:
 
 
 def _prompt(args: argparse.Namespace) -> None:
-    choice = input("Host (codex/claude-code/dsh/opencode/all/custom): ").strip().lower()
+    choice = input("Host (codex/claude-code/dsh/opencode/pi/all/custom): ").strip().lower()
     if choice == "custom":
         args.dir = input("Skill parent directory: ").strip()
         if not args.dir:
