@@ -5,7 +5,7 @@
 - Remove the OpenCode and Devin completion paths. `cbe generate` now talks only
   to an OpenAI-compatible endpoint and requires `--model`; `--host api` is still
   accepted, other `--host` values are rejected. The built-in Z.AI and Devin
-  default models are gone. `cbe-install` drops the `opencode` and `dsh` hosts.
+  default models are gone.
   Rename the hidden plugin directory to `plugin/` so the skill is easy to find.
 - Accept positional search terms and query IDs alongside `--term`/`--id`, with
   conflict checks and examples for missing arguments; unknown IDs suggest `find`.

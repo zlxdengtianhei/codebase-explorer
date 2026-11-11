@@ -19,14 +19,18 @@ from . import (AGENTS_RESOURCE, BUSINESS_MODULE, PRODUCT, RUNTIME_MODULES, RUNTI
                SOURCE_AGENT_BASE, SOURCE_PARENT_LEVEL, SOURCE_SCRIPT, SOURCE_SKILL_BASE)
 
 MANIFEST = ".skill-install.json"
-HOSTS = ("codex", "claude-code")
+HOSTS = ("codex", "claude-code", "dsh", "opencode")
 PROJECT_DIRS = {
     "codex": (".agents", "skills"),
     "claude-code": (".claude", "skills"),
+    "dsh": (".dsh", "skills"),
+    "opencode": (".opencode", "skills"),
 }
 USER_DIRS = {
     "codex": (".agents", "skills"),
     "claude-code": (".claude", "skills"),
+    "dsh": (".dsh", "skills"),
+    "opencode": (".config", "opencode", "skills"),
 }
 
 
@@ -339,7 +343,7 @@ def _targets(args: argparse.Namespace) -> list[Path]:
         return [Path(args.dir).expanduser().resolve()]
     hosts = args.host or []
     if not hosts:
-        raise InstallError("choose --host codex|claude-code|all, or --dir PATH; use --interactive for prompts")
+        raise InstallError("choose --host codex|claude-code|dsh|opencode|all, or --dir PATH; use --interactive for prompts")
     if "all" in hosts:
         hosts = list(HOSTS)
     hosts = list(dict.fromkeys(hosts))
@@ -351,12 +355,17 @@ def _targets(args: argparse.Namespace) -> list[Path]:
     else:
         bases = []
         for host in hosts:
-            bases.append(Path.home().joinpath(*USER_DIRS[host]))
+            if host == "dsh" and os.environ.get("DSH_HOME"):
+                bases.append(Path(os.environ["DSH_HOME"]).expanduser() / "skills")
+            elif host == "opencode" and os.environ.get("XDG_CONFIG_HOME"):
+                bases.append(Path(os.environ["XDG_CONFIG_HOME"]).expanduser() / "opencode" / "skills")
+            else:
+                bases.append(Path.home().joinpath(*USER_DIRS[host]))
     return list(dict.fromkeys(bases))
 
 
 def _prompt(args: argparse.Namespace) -> None:
-    choice = input("Host (codex/claude-code/all/custom): ").strip().lower()
+    choice = input("Host (codex/claude-code/dsh/opencode/all/custom): ").strip().lower()
     if choice == "custom":
         args.dir = input("Skill parent directory: ").strip()
         if not args.dir:
