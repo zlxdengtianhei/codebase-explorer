@@ -307,7 +307,9 @@ def test_missing_joern_has_one_written_failure_contract(tmp_path, monkeypatch, c
     value = json.loads(output.read_text())
     assert value["backend"]["name"] == "none"
     messages = [d["message"] for d in value["diagnostics"] if d["code"] == "backend_unavailable"]
-    assert messages == ["Joern CLI not found; call/cfg/dataflow/import graph skipped"]
+    assert len(messages) == 1
+    assert messages[0].startswith("Joern CLI not found; call/cfg/dataflow/import graph skipped; "
+                                  "run `cbe graph setup` (downloads about ")
     assert not any(d["code"] == "no_python_packages" for d in value["diagnostics"])
     capsys.readouterr()
 

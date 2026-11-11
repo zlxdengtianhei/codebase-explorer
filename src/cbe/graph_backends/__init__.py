@@ -20,9 +20,9 @@ from .joern import (
     JOERN_LANGUAGE_FLAGS,
     JoernError,
     build_with_joern,
-    find_joern,
     joern_version,
 )
+from .toolchain import find_java, find_joern, setup_hint
 
 __all__ = [
     "DEPCRUISE_LANGUAGES",
@@ -35,6 +35,8 @@ __all__ = [
     "build_with_joern",
     "canonical_repo_path",
     "find_depcruise",
+    "find_java",
     "find_joern",
     "joern_version",
+    "setup_hint",
 ]

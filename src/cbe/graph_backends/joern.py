@@ -29,13 +29,13 @@ import os
 import re
 from collections import Counter
 import shlex
-import shutil
 import subprocess
 from pathlib import Path
 
 from .identity import repository_files, file_id
 from ._calls import CallResolver
 from .resolution import go_modules
+from .toolchain import MIN_JAVA_MAJOR, JavaInstall, find_joern, java_environment, setup_hint  # noqa: F401
 
 #: language id (canonical, matches ``cbe.source_context``) -> Joern frontend
 #: flag.  ``pythonsrc``/``javasrc`` are the source frontends; ``python``/``java``
@@ -258,32 +258,15 @@ class JoernError(RuntimeError):
     """Raised when the Joern CLI is missing or a whole run fails."""
 
 
-def find_joern(joern_home: Path | str | None = None) -> Path | None:
-    """Locate the Joern CLI directory that holds ``joern`` and ``joern-parse``."""
-
-    candidates: list[Path] = []
-    for base in (joern_home, os.environ.get("CBE_JOERN_HOME")):
-        if not base:
-            continue
-        base = Path(base).expanduser()
-        candidates += [base, base / "joern-cli", base / "bin"]
-    which = shutil.which("joern")
-    if which:
-        candidates.append(Path(which).parent)
-    for candidate in candidates:
-        if (candidate / "joern").is_file() and (candidate / "joern-parse").is_file():
-            return candidate
-    return None
-
-
 def _run(argv: list[str], timeout: int, cwd: Path, *, env=None) -> subprocess.CompletedProcess:
     return subprocess.run(argv, cwd=str(cwd), check=False, env=env,
                           capture_output=True, text=True, timeout=timeout, stdin=subprocess.DEVNULL)
 
 
-def joern_version(joern_bin: Path, timeout: int) -> str:
+def joern_version(joern_bin: Path, timeout: int, java: JavaInstall | None = None) -> str:
     try:
-        completed = _run([str(joern_bin), "--version"], timeout=timeout, cwd=joern_bin.parent)
+        completed = _run([str(joern_bin), "--version"], timeout=timeout, cwd=joern_bin.parent,
+                         env=java_environment(java))
     except (OSError, subprocess.TimeoutExpired):
         return "unknown"
     for line in (completed.stdout + completed.stderr).splitlines():
@@ -304,6 +287,7 @@ def build_with_joern(
     max_paths_per_method: int = 5,
     max_methods: int | None = None,
     joern_heap: str | None = None,
+    java: JavaInstall | None = None,
 ) -> dict:
     """Parse each frontend's languages with Joern and return a normalized fragment.
 
@@ -319,12 +303,12 @@ def build_with_joern(
     script = run_dir / "joern_export.sc"
     script.write_text(_EXPORT_SCRIPT, encoding="utf-8")
 
-    joern_env = None
+    joern_env = java_environment(java)
     if joern_heap:
-        joern_env = os.environ.copy()
+        joern_env = dict(joern_env or os.environ)
         # Last -Xmx wins, preserving unrelated caller JVM options.
         joern_env["JAVA_TOOL_OPTIONS"] = (joern_env.get("JAVA_TOOL_OPTIONS", "") + f" -Xmx{joern_heap}").strip()
-    version = joern_version(joern_bin, timeout)
+    version = joern_version(joern_bin, timeout, java)
     roots = [str(repo), str(joern_home)]
     diagnostics: list[dict] = []
     capabilities: list[dict] = []
@@ -373,6 +357,8 @@ def build_with_joern(
             cause = _first_error_line(parse_output, roots)
             if cause:
                 message += f": {cause}"
+            if java is None:
+                message += f"; no Java {MIN_JAVA_MAJOR}+ was found, {setup_hint()}"
             diagnostics.append({"path": None, "code": "backend_error", "message": message})
             continue
         try:

@@ -336,13 +336,15 @@ def analyze_graph(
         if joern is None:
             joern_missing = True
             diagnostics.append({"path": None, "code": "backend_unavailable",
-                                "message": "Joern CLI not found; call/cfg/dataflow/import graph skipped"})
+                                "message": "Joern CLI not found; call/cfg/dataflow/import graph skipped; "
+                                           + backends.setup_hint()})
             extra_capabilities.extend(_unavailable("joern", requested, ("call", "cfg", "dataflow", "import")))
         else:
             try:
                 fragment = backends.build_with_joern(
                     repo, run_dir / "joern", requested, joern, timeout,
-                    joern_heap=joern_heap, max_methods=max_methods, max_reaching_defs=max_reaching_defs,
+                    joern_heap=joern_heap, java=backends.find_java(), max_methods=max_methods,
+                    max_reaching_defs=max_reaching_defs,
                     dataflow_path_methods=dataflow_path_methods,
                     max_paths_per_method=max_paths_per_method)
             except backends.JoernError as exc:

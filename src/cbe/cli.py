@@ -119,6 +119,13 @@ def build_parser() -> argparse.ArgumentParser:
 
     graph_p = sub.add_parser("graph", help="Build and query source-linked code graphs")
     graph_sub = graph_p.add_subparsers(dest="graph_command", required=True)
+    graph_setup = graph_sub.add_parser(
+        "setup", help="Download and unpack Joern and a Java runtime into the user cache directory")
+    graph_setup.add_argument("--check", action="store_true",
+                             help="download nothing; report the Joern and Java found and what is missing")
+    graph_setup.add_argument("--force", action="store_true", help="download and unpack again even if installed")
+    graph_setup.add_argument("--with-java", action="store_true",
+                             help="download a JRE even when Java 21+ is already available")
     graph_build = graph_sub.add_parser("build", help="Run the configured open-source analyzers")
     graph_build.add_argument("repo", type=lambda value: Path(value).expanduser().resolve())
     graph_build.add_argument("--output", type=_abs, required=True, help="graph JSON output path")
@@ -256,6 +263,17 @@ def main(argv: list[str] | None = None) -> int:
             from cbe.graph import analyze_graph, query_graph, read_graph_quality, GraphError, BACKEND_FAILURE_CODES
 
             build_error = None
+            if args.graph_command == "setup":
+                from cbe.graph_backends import toolchain
+
+                try:
+                    value = (toolchain.check() if args.check else
+                             toolchain.setup(force=args.force, with_java=args.with_java))
+                except toolchain.SetupError as exc:
+                    print(f"cbe graph setup: {exc}", file=sys.stderr)
+                    return 2
+                print(json.dumps(value, ensure_ascii=False, indent=2))
+                return 2 if value["missing"] else 0
             if args.graph_command == "build":
                 try:
                     graph = analyze_graph(args.repo, args.output, backend=args.backend,
