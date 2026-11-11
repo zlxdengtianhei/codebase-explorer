@@ -21,6 +21,23 @@ from cbe.source_context import suffix_languages
 SYSTEM_INCLUDE_PREFIXES = frozenset({"sys", "netinet", "arpa", "net", "linux", "asm", "asm-generic"})
 
 
+def go_modules(repo: Path, files) -> dict[str, str]:
+    """Read root and nested Go module identities without searching the host."""
+    modules = {}
+    for path in sorted(files):
+        if PurePosixPath(path).name != "go.mod":
+            continue
+        try:
+            text = (repo / path).read_text(encoding="utf-8")
+        except OSError:
+            continue
+        match = re.search(r"(?m)^\s*module\s+(\S+)\s*$", text)
+        if match:
+            parent = PurePosixPath(path).parent
+            modules[match[1]] = "" if str(parent) == "." else str(parent)
+    return modules
+
+
 class ImportResolver:
     def __init__(self, repo: Path, files=None, suffix_map=None):
         self.repo = repo
@@ -33,9 +50,20 @@ class ImportResolver:
                 self.suffix_files.setdefault("/".join(parts[start:]), []).append(path)
         self.diagnostics = []
         self.include_basis = {}
+        self.go_modules = go_modules(repo, self.files)
         self.python_roots = [""]
-        if "src" in {p.split("/")[0] for p in self.files} and "src/__init__.py" not in self.files:
-            self.python_roots.append("src/")
+        # Locate import roots from package ancestry rather than assuming that
+        # top-level packages live at the repository root (src/ is common).
+        for path in self.files:
+            if not path.endswith("/__init__.py"):
+                continue
+            package = PurePosixPath(path).parent
+            top = package
+            while str(top.parent) != "." and str(top.parent / "__init__.py") in self.files:
+                top = top.parent
+            root = "" if str(top.parent) == "." else str(top.parent) + "/"
+            if root not in self.python_roots:
+                self.python_roots.append(root)
 
     def python_file(self, module: str) -> str | None:
         stem = module.replace(".", "/")
@@ -174,13 +202,19 @@ class ImportResolver:
                     return [("resolved", matches[0])] if len(matches) == 1 else [("unresolved", None)]
             return [("external", token)]
         if suffix == ".go":
-            # A Go import names a package, not an individual source file. Do
-            # not invent one for local packages with multiple files.
-            mod = self.repo / "go.mod"
-            if mod.is_file():
-                match = re.search(r"(?m)^module\s+(\S+)", mod.read_text(encoding="utf-8"))
-                if match and (token == match[1] or token.startswith(match[1] + "/")):
-                    return [("unresolved", None)]
+            # A package import maps to every non-test Go source in its
+            # directory. Exploding the declaration preserves real file
+            # identities instead of inventing one representative file.
+            for module, root in sorted(self.go_modules.items(), key=lambda row: len(row[0]), reverse=True):
+                if token != module and not token.startswith(module + "/"):
+                    continue
+                relative = token[len(module):].lstrip("/")
+                directory = PurePosixPath(root) / relative if relative else PurePosixPath(root)
+                prefix = "" if str(directory) == "." else str(directory).rstrip("/") + "/"
+                targets = sorted(path for path in self.files if path.startswith(prefix)
+                                 and "/" not in path[len(prefix):] and path.endswith(".go")
+                                 and not path.endswith("_test.go"))
+                return [("resolved", path) for path in targets] or [("unresolved", None)]
             return [("external", token)]
         if suffix == ".rs":
             parts = token.split("::")

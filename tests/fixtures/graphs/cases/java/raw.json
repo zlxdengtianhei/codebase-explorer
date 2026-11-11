@@ -1,0 +1,1184 @@
+{
+  "backend": "joern",
+  "cpgFile": "<run>/cpg-javasrc.bin",
+  "files": [
+    {
+      "name": "src/demo/Helper.java",
+      "hash": ""
+    },
+    {
+      "name": "src/demo/Main.java",
+      "hash": ""
+    },
+    {
+      "name": "<unknown>",
+      "hash": ""
+    }
+  ],
+  "types": [
+    {
+      "name": "Helper",
+      "fullName": "demo.Helper",
+      "file": "src/demo/Helper.java",
+      "inherits": [
+        "java.lang.Object"
+      ]
+    },
+    {
+      "name": "Main",
+      "fullName": "demo.Main",
+      "file": "src/demo/Main.java",
+      "inherits": [
+        "java.lang.Object"
+      ]
+    }
+  ],
+  "methods": [
+    {
+      "name": "helper",
+      "fullName": "demo.Helper.helper:int(int)",
+      "file": "src/demo/Helper.java",
+      "line": 3,
+      "signature": "int(int)",
+      "nodeId": "107374182400"
+    },
+    {
+      "name": "<init>",
+      "fullName": "demo.Helper.<init>:void()",
+      "file": "src/demo/Helper.java",
+      "line": 2,
+      "signature": "void()",
+      "nodeId": "107374182401"
+    },
+    {
+      "name": "run",
+      "fullName": "demo.Main.run:int()",
+      "file": "src/demo/Main.java",
+      "line": 3,
+      "signature": "int()",
+      "nodeId": "107374182402"
+    },
+    {
+      "name": "<init>",
+      "fullName": "demo.Main.<init>:void()",
+      "file": "src/demo/Main.java",
+      "line": 2,
+      "signature": "void()",
+      "nodeId": "107374182403"
+    }
+  ],
+  "calls": [
+    {
+      "caller": "demo.Helper.helper:int(int)",
+      "callerId": "107374182400",
+      "callerFile": "src/demo/Helper.java",
+      "line": 3,
+      "column": 48,
+      "name": "<operator>.addition",
+      "code": "value + 1",
+      "methodFullName": "<operator>.addition",
+      "dispatchType": "STATIC_DISPATCH",
+      "callees": [
+        {
+          "nodeId": "107374182404",
+          "fullName": "<operator>.addition",
+          "external": true,
+          "file": "<empty>",
+          "line": -1
+        }
+      ],
+      "nodeId": "30064771072"
+    },
+    {
+      "caller": "demo.Main.run:int()",
+      "callerId": "107374182402",
+      "callerFile": "src/demo/Main.java",
+      "line": 4,
+      "column": 12,
+      "name": "<operator>.assignment",
+      "code": "Object value = new Object()",
+      "methodFullName": "<operator>.assignment",
+      "dispatchType": "STATIC_DISPATCH",
+      "callees": [
+        {
+          "nodeId": "107374182405",
+          "fullName": "<operator>.assignment",
+          "external": true,
+          "file": "<empty>",
+          "line": -1
+        }
+      ],
+      "nodeId": "30064771073"
+    },
+    {
+      "caller": "demo.Main.run:int()",
+      "callerId": "107374182402",
+      "callerFile": "src/demo/Main.java",
+      "line": 4,
+      "column": 20,
+      "name": "<operator>.alloc",
+      "code": "new Object()",
+      "methodFullName": "<operator>.alloc",
+      "dispatchType": "STATIC_DISPATCH",
+      "callees": [
+        {
+          "nodeId": "107374182406",
+          "fullName": "<operator>.alloc",
+          "external": true,
+          "file": "<empty>",
+          "line": -1
+        }
+      ],
+      "nodeId": "30064771074"
+    },
+    {
+      "caller": "demo.Main.run:int()",
+      "callerId": "107374182402",
+      "callerFile": "src/demo/Main.java",
+      "line": 4,
+      "column": -1,
+      "name": "<init>",
+      "code": "new Object()",
+      "methodFullName": "java.lang.Object.<init>:void()",
+      "dispatchType": "STATIC_DISPATCH",
+      "callees": [
+        {
+          "nodeId": "107374182407",
+          "fullName": "java.lang.Object.<init>:void()",
+          "external": true,
+          "file": "<empty>",
+          "line": -1
+        }
+      ],
+      "nodeId": "30064771075"
+    },
+    {
+      "caller": "demo.Main.run:int()",
+      "callerId": "107374182402",
+      "callerFile": "src/demo/Main.java",
+      "line": 5,
+      "column": 5,
+      "name": "getField",
+      "code": "getField(\"x\")",
+      "methodFullName": "java.lang.Object.getField:<unresolvedSignature>(1)",
+      "dispatchType": "DYNAMIC_DISPATCH",
+      "callees": [
+        {
+          "nodeId": "107374182408",
+          "fullName": "java.lang.Object.getField:<unresolvedSignature>(1)",
+          "external": true,
+          "file": "<empty>",
+          "line": -1
+        }
+      ],
+      "nodeId": "30064771076"
+    },
+    {
+      "caller": "demo.Main.run:int()",
+      "callerId": "107374182402",
+      "callerFile": "src/demo/Main.java",
+      "line": 6,
+      "column": 12,
+      "name": "helper",
+      "code": "Helper.helper(1)",
+      "methodFullName": "demo.Helper.helper:int(int)",
+      "dispatchType": "STATIC_DISPATCH",
+      "callees": [
+        {
+          "nodeId": "107374182400",
+          "fullName": "demo.Helper.helper:int(int)",
+          "external": false,
+          "file": "src/demo/Helper.java",
+          "line": 3
+        }
+      ],
+      "nodeId": "30064771077"
+    }
+  ],
+  "cfg": [
+    {
+      "method": "demo.Helper.helper:int(int)",
+      "methodId": "107374182400",
+      "file": "src/demo/Helper.java",
+      "line": 3,
+      "nodeId": "107374182400",
+      "nodes": [
+        {
+          "i": 0,
+          "label": "BLOCK",
+          "line": 3,
+          "column": 39,
+          "order": 2,
+          "code": "<empty>",
+          "file": "src/demo/Helper.java",
+          "ownerMethod": "demo.Helper.helper:int(int)",
+          "nodeId": "25769803776"
+        },
+        {
+          "i": 1,
+          "label": "RETURN",
+          "line": 3,
+          "column": 41,
+          "order": 1,
+          "code": "return value + 1;",
+          "file": "src/demo/Helper.java",
+          "ownerMethod": "demo.Helper.helper:int(int)",
+          "nodeId": "141733920768"
+        },
+        {
+          "i": 2,
+          "label": "CALL",
+          "line": 3,
+          "column": 48,
+          "order": 1,
+          "code": "value + 1",
+          "file": "src/demo/Helper.java",
+          "ownerMethod": "demo.Helper.helper:int(int)",
+          "nodeId": "30064771072"
+        },
+        {
+          "i": 3,
+          "label": "IDENTIFIER",
+          "line": 3,
+          "column": 48,
+          "order": 1,
+          "code": "value",
+          "file": "src/demo/Helper.java",
+          "ownerMethod": "demo.Helper.helper:int(int)",
+          "nodeId": "68719476736"
+        },
+        {
+          "i": 4,
+          "label": "LITERAL",
+          "line": 3,
+          "column": 56,
+          "order": 2,
+          "code": "1",
+          "file": "src/demo/Helper.java",
+          "ownerMethod": "demo.Helper.helper:int(int)",
+          "nodeId": "90194313216"
+        }
+      ],
+      "edges": [
+        {
+          "from": 1,
+          "to": -1
+        },
+        {
+          "from": 2,
+          "to": 1
+        },
+        {
+          "from": 3,
+          "to": 4
+        },
+        {
+          "from": 4,
+          "to": 2
+        }
+      ]
+    },
+    {
+      "method": "demo.Helper.<init>:void()",
+      "methodId": "107374182401",
+      "file": "src/demo/Helper.java",
+      "line": 2,
+      "nodeId": "107374182401",
+      "nodes": [
+        {
+          "i": 0,
+          "label": "BLOCK",
+          "line": 2,
+          "column": 1,
+          "order": 2,
+          "code": "<empty>",
+          "file": "src/demo/Helper.java",
+          "ownerMethod": "demo.Helper.<init>:void()",
+          "nodeId": "25769803777"
+        }
+      ],
+      "edges": []
+    },
+    {
+      "method": "demo.Main.run:int()",
+      "methodId": "107374182402",
+      "file": "src/demo/Main.java",
+      "line": 3,
+      "nodeId": "107374182402",
+      "nodes": [
+        {
+          "i": 0,
+          "label": "BLOCK",
+          "line": 3,
+          "column": 27,
+          "order": 1,
+          "code": "<empty>",
+          "file": "src/demo/Main.java",
+          "ownerMethod": "demo.Main.run:int()",
+          "nodeId": "25769803778"
+        },
+        {
+          "i": 1,
+          "label": "CALL",
+          "line": 4,
+          "column": 12,
+          "order": 2,
+          "code": "Object value = new Object()",
+          "file": "src/demo/Main.java",
+          "ownerMethod": "demo.Main.run:int()",
+          "nodeId": "30064771073"
+        },
+        {
+          "i": 2,
+          "label": "CALL",
+          "line": 4,
+          "column": -1,
+          "order": 3,
+          "code": "new Object()",
+          "file": "src/demo/Main.java",
+          "ownerMethod": "demo.Main.run:int()",
+          "nodeId": "30064771075"
+        },
+        {
+          "i": 3,
+          "label": "CALL",
+          "line": 5,
+          "column": 5,
+          "order": 4,
+          "code": "getField(\"x\")",
+          "file": "src/demo/Main.java",
+          "ownerMethod": "demo.Main.run:int()",
+          "nodeId": "30064771076"
+        },
+        {
+          "i": 4,
+          "label": "RETURN",
+          "line": 6,
+          "column": 5,
+          "order": 5,
+          "code": "return Helper.helper(1);",
+          "file": "src/demo/Main.java",
+          "ownerMethod": "demo.Main.run:int()",
+          "nodeId": "141733920769"
+        },
+        {
+          "i": 5,
+          "label": "IDENTIFIER",
+          "line": 4,
+          "column": 12,
+          "order": 1,
+          "code": "value",
+          "file": "src/demo/Main.java",
+          "ownerMethod": "demo.Main.run:int()",
+          "nodeId": "68719476737"
+        },
+        {
+          "i": 6,
+          "label": "CALL",
+          "line": 4,
+          "column": 20,
+          "order": 2,
+          "code": "new Object()",
+          "file": "src/demo/Main.java",
+          "ownerMethod": "demo.Main.run:int()",
+          "nodeId": "30064771074"
+        },
+        {
+          "i": 7,
+          "label": "IDENTIFIER",
+          "line": 4,
+          "column": 12,
+          "order": 1,
+          "code": "value",
+          "file": "src/demo/Main.java",
+          "ownerMethod": "demo.Main.run:int()",
+          "nodeId": "68719476738"
+        },
+        {
+          "i": 8,
+          "label": "IDENTIFIER",
+          "line": 5,
+          "column": 5,
+          "order": 1,
+          "code": "value",
+          "file": "src/demo/Main.java",
+          "ownerMethod": "demo.Main.run:int()",
+          "nodeId": "68719476739"
+        },
+        {
+          "i": 9,
+          "label": "LITERAL",
+          "line": 5,
+          "column": 20,
+          "order": 2,
+          "code": "\"x\"",
+          "file": "src/demo/Main.java",
+          "ownerMethod": "demo.Main.run:int()",
+          "nodeId": "90194313217"
+        },
+        {
+          "i": 10,
+          "label": "CALL",
+          "line": 6,
+          "column": 12,
+          "order": 1,
+          "code": "Helper.helper(1)",
+          "file": "src/demo/Main.java",
+          "ownerMethod": "demo.Main.run:int()",
+          "nodeId": "30064771077"
+        },
+        {
+          "i": 11,
+          "label": "IDENTIFIER",
+          "line": 6,
+          "column": 12,
+          "order": 1,
+          "code": "Helper",
+          "file": "src/demo/Main.java",
+          "ownerMethod": "demo.Main.run:int()",
+          "nodeId": "68719476740"
+        },
+        {
+          "i": 12,
+          "label": "LITERAL",
+          "line": 6,
+          "column": 26,
+          "order": 2,
+          "code": "1",
+          "file": "src/demo/Main.java",
+          "ownerMethod": "demo.Main.run:int()",
+          "nodeId": "90194313218"
+        }
+      ],
+      "edges": [
+        {
+          "from": 1,
+          "to": 7
+        },
+        {
+          "from": 2,
+          "to": 8
+        },
+        {
+          "from": 3,
+          "to": 11
+        },
+        {
+          "from": 4,
+          "to": -1
+        },
+        {
+          "from": 5,
+          "to": 6
+        },
+        {
+          "from": 6,
+          "to": 1
+        },
+        {
+          "from": 7,
+          "to": 2
+        },
+        {
+          "from": 8,
+          "to": 9
+        },
+        {
+          "from": 9,
+          "to": 3
+        },
+        {
+          "from": 10,
+          "to": 4
+        },
+        {
+          "from": 11,
+          "to": 12
+        },
+        {
+          "from": 12,
+          "to": 10
+        }
+      ]
+    },
+    {
+      "method": "demo.Main.<init>:void()",
+      "methodId": "107374182403",
+      "file": "src/demo/Main.java",
+      "line": 2,
+      "nodeId": "107374182403",
+      "nodes": [
+        {
+          "i": 0,
+          "label": "BLOCK",
+          "line": 2,
+          "column": 1,
+          "order": 2,
+          "code": "<empty>",
+          "file": "src/demo/Main.java",
+          "ownerMethod": "demo.Main.<init>:void()",
+          "nodeId": "25769803779"
+        }
+      ],
+      "edges": []
+    }
+  ],
+  "cfgMethodsOmitted": 0,
+  "imports": [],
+  "reachingDefs": [
+    {
+      "source": {
+        "label": "METHOD_PARAMETER_IN",
+        "line": 3,
+        "column": 28,
+        "code": "int value",
+        "file": "src/demo/Helper.java",
+        "ownerMethod": "demo.Helper.helper:int(int)",
+        "nodeId": "111669149696"
+      },
+      "target": {
+        "label": "METHOD_PARAMETER_OUT",
+        "line": 3,
+        "column": 28,
+        "code": "int value",
+        "file": "src/demo/Helper.java",
+        "ownerMethod": "demo.Helper.helper:int(int)",
+        "nodeId": "115964116992"
+      }
+    },
+    {
+      "source": {
+        "label": "METHOD_PARAMETER_IN",
+        "line": 3,
+        "column": 28,
+        "code": "int value",
+        "file": "src/demo/Helper.java",
+        "ownerMethod": "demo.Helper.helper:int(int)",
+        "nodeId": "111669149696"
+      },
+      "target": {
+        "label": "IDENTIFIER",
+        "line": 3,
+        "column": 48,
+        "code": "value",
+        "file": "src/demo/Helper.java",
+        "ownerMethod": "demo.Helper.helper:int(int)",
+        "nodeId": "68719476736"
+      }
+    },
+    {
+      "source": {
+        "label": "RETURN",
+        "line": 3,
+        "column": 41,
+        "code": "return value + 1;",
+        "file": "src/demo/Helper.java",
+        "ownerMethod": "demo.Helper.helper:int(int)",
+        "nodeId": "141733920768"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 3,
+        "column": 17,
+        "code": "RET",
+        "file": "src/demo/Helper.java",
+        "ownerMethod": "demo.Helper.helper:int(int)",
+        "nodeId": "124554051584"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": 3,
+        "column": 48,
+        "code": "value + 1",
+        "file": "src/demo/Helper.java",
+        "ownerMethod": "demo.Helper.helper:int(int)",
+        "nodeId": "30064771072"
+      },
+      "target": {
+        "label": "RETURN",
+        "line": 3,
+        "column": 41,
+        "code": "return value + 1;",
+        "file": "src/demo/Helper.java",
+        "ownerMethod": "demo.Helper.helper:int(int)",
+        "nodeId": "141733920768"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": 3,
+        "column": 48,
+        "code": "value + 1",
+        "file": "src/demo/Helper.java",
+        "ownerMethod": "demo.Helper.helper:int(int)",
+        "nodeId": "30064771072"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 3,
+        "column": 17,
+        "code": "RET",
+        "file": "src/demo/Helper.java",
+        "ownerMethod": "demo.Helper.helper:int(int)",
+        "nodeId": "124554051584"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": 3,
+        "column": 48,
+        "code": "value",
+        "file": "src/demo/Helper.java",
+        "ownerMethod": "demo.Helper.helper:int(int)",
+        "nodeId": "68719476736"
+      },
+      "target": {
+        "label": "METHOD_PARAMETER_OUT",
+        "line": 3,
+        "column": 28,
+        "code": "int value",
+        "file": "src/demo/Helper.java",
+        "ownerMethod": "demo.Helper.helper:int(int)",
+        "nodeId": "115964116992"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": 3,
+        "column": 48,
+        "code": "value",
+        "file": "src/demo/Helper.java",
+        "ownerMethod": "demo.Helper.helper:int(int)",
+        "nodeId": "68719476736"
+      },
+      "target": {
+        "label": "CALL",
+        "line": 3,
+        "column": 48,
+        "code": "value + 1",
+        "file": "src/demo/Helper.java",
+        "ownerMethod": "demo.Helper.helper:int(int)",
+        "nodeId": "30064771072"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": 3,
+        "column": 48,
+        "code": "value",
+        "file": "src/demo/Helper.java",
+        "ownerMethod": "demo.Helper.helper:int(int)",
+        "nodeId": "68719476736"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 3,
+        "column": 17,
+        "code": "RET",
+        "file": "src/demo/Helper.java",
+        "ownerMethod": "demo.Helper.helper:int(int)",
+        "nodeId": "124554051584"
+      }
+    },
+    {
+      "source": {
+        "label": "LITERAL",
+        "line": 3,
+        "column": 56,
+        "code": "1",
+        "file": "src/demo/Helper.java",
+        "ownerMethod": "demo.Helper.helper:int(int)",
+        "nodeId": "90194313216"
+      },
+      "target": {
+        "label": "CALL",
+        "line": 3,
+        "column": 48,
+        "code": "value + 1",
+        "file": "src/demo/Helper.java",
+        "ownerMethod": "demo.Helper.helper:int(int)",
+        "nodeId": "30064771072"
+      }
+    },
+    {
+      "source": {
+        "label": "METHOD_PARAMETER_IN",
+        "line": 2,
+        "column": 1,
+        "code": "this",
+        "file": "src/demo/Helper.java",
+        "ownerMethod": "demo.Helper.<init>:void()",
+        "nodeId": "111669149697"
+      },
+      "target": {
+        "label": "METHOD_PARAMETER_OUT",
+        "line": 2,
+        "column": 1,
+        "code": "this",
+        "file": "src/demo/Helper.java",
+        "ownerMethod": "demo.Helper.<init>:void()",
+        "nodeId": "115964116993"
+      }
+    },
+    {
+      "source": {
+        "label": "METHOD_PARAMETER_IN",
+        "line": 2,
+        "column": 1,
+        "code": "this",
+        "file": "src/demo/Helper.java",
+        "ownerMethod": "demo.Helper.<init>:void()",
+        "nodeId": "111669149697"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 2,
+        "column": 1,
+        "code": "RET",
+        "file": "src/demo/Helper.java",
+        "ownerMethod": "demo.Helper.<init>:void()",
+        "nodeId": "124554051585"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": 4,
+        "column": 12,
+        "code": "Object value = new Object()",
+        "file": "src/demo/Main.java",
+        "ownerMethod": "demo.Main.run:int()",
+        "nodeId": "30064771073"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 3,
+        "column": 17,
+        "code": "RET",
+        "file": "src/demo/Main.java",
+        "ownerMethod": "demo.Main.run:int()",
+        "nodeId": "124554051586"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": 4,
+        "column": 12,
+        "code": "value",
+        "file": "src/demo/Main.java",
+        "ownerMethod": "demo.Main.run:int()",
+        "nodeId": "68719476737"
+      },
+      "target": {
+        "label": "IDENTIFIER",
+        "line": 4,
+        "column": 12,
+        "code": "value",
+        "file": "src/demo/Main.java",
+        "ownerMethod": "demo.Main.run:int()",
+        "nodeId": "68719476738"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": 4,
+        "column": 12,
+        "code": "value",
+        "file": "src/demo/Main.java",
+        "ownerMethod": "demo.Main.run:int()",
+        "nodeId": "68719476737"
+      },
+      "target": {
+        "label": "CALL",
+        "line": 4,
+        "column": 12,
+        "code": "Object value = new Object()",
+        "file": "src/demo/Main.java",
+        "ownerMethod": "demo.Main.run:int()",
+        "nodeId": "30064771073"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": 4,
+        "column": 20,
+        "code": "new Object()",
+        "file": "src/demo/Main.java",
+        "ownerMethod": "demo.Main.run:int()",
+        "nodeId": "30064771074"
+      },
+      "target": {
+        "label": "IDENTIFIER",
+        "line": 4,
+        "column": 12,
+        "code": "value",
+        "file": "src/demo/Main.java",
+        "ownerMethod": "demo.Main.run:int()",
+        "nodeId": "68719476737"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": 4,
+        "column": 20,
+        "code": "new Object()",
+        "file": "src/demo/Main.java",
+        "ownerMethod": "demo.Main.run:int()",
+        "nodeId": "30064771074"
+      },
+      "target": {
+        "label": "CALL",
+        "line": 4,
+        "column": 12,
+        "code": "Object value = new Object()",
+        "file": "src/demo/Main.java",
+        "ownerMethod": "demo.Main.run:int()",
+        "nodeId": "30064771073"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": 4,
+        "column": -1,
+        "code": "new Object()",
+        "file": "src/demo/Main.java",
+        "ownerMethod": "demo.Main.run:int()",
+        "nodeId": "30064771075"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 3,
+        "column": 17,
+        "code": "RET",
+        "file": "src/demo/Main.java",
+        "ownerMethod": "demo.Main.run:int()",
+        "nodeId": "124554051586"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": 4,
+        "column": 12,
+        "code": "value",
+        "file": "src/demo/Main.java",
+        "ownerMethod": "demo.Main.run:int()",
+        "nodeId": "68719476738"
+      },
+      "target": {
+        "label": "CALL",
+        "line": 4,
+        "column": -1,
+        "code": "new Object()",
+        "file": "src/demo/Main.java",
+        "ownerMethod": "demo.Main.run:int()",
+        "nodeId": "30064771075"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": 4,
+        "column": 12,
+        "code": "value",
+        "file": "src/demo/Main.java",
+        "ownerMethod": "demo.Main.run:int()",
+        "nodeId": "68719476738"
+      },
+      "target": {
+        "label": "IDENTIFIER",
+        "line": 5,
+        "column": 5,
+        "code": "value",
+        "file": "src/demo/Main.java",
+        "ownerMethod": "demo.Main.run:int()",
+        "nodeId": "68719476739"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": 5,
+        "column": 5,
+        "code": "getField(\"x\")",
+        "file": "src/demo/Main.java",
+        "ownerMethod": "demo.Main.run:int()",
+        "nodeId": "30064771076"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 3,
+        "column": 17,
+        "code": "RET",
+        "file": "src/demo/Main.java",
+        "ownerMethod": "demo.Main.run:int()",
+        "nodeId": "124554051586"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": 5,
+        "column": 5,
+        "code": "value",
+        "file": "src/demo/Main.java",
+        "ownerMethod": "demo.Main.run:int()",
+        "nodeId": "68719476739"
+      },
+      "target": {
+        "label": "CALL",
+        "line": 5,
+        "column": 5,
+        "code": "getField(\"x\")",
+        "file": "src/demo/Main.java",
+        "ownerMethod": "demo.Main.run:int()",
+        "nodeId": "30064771076"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": 5,
+        "column": 5,
+        "code": "value",
+        "file": "src/demo/Main.java",
+        "ownerMethod": "demo.Main.run:int()",
+        "nodeId": "68719476739"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 3,
+        "column": 17,
+        "code": "RET",
+        "file": "src/demo/Main.java",
+        "ownerMethod": "demo.Main.run:int()",
+        "nodeId": "124554051586"
+      }
+    },
+    {
+      "source": {
+        "label": "LITERAL",
+        "line": 5,
+        "column": 20,
+        "code": "\"x\"",
+        "file": "src/demo/Main.java",
+        "ownerMethod": "demo.Main.run:int()",
+        "nodeId": "90194313217"
+      },
+      "target": {
+        "label": "IDENTIFIER",
+        "line": 5,
+        "column": 5,
+        "code": "value",
+        "file": "src/demo/Main.java",
+        "ownerMethod": "demo.Main.run:int()",
+        "nodeId": "68719476739"
+      }
+    },
+    {
+      "source": {
+        "label": "LITERAL",
+        "line": 5,
+        "column": 20,
+        "code": "\"x\"",
+        "file": "src/demo/Main.java",
+        "ownerMethod": "demo.Main.run:int()",
+        "nodeId": "90194313217"
+      },
+      "target": {
+        "label": "CALL",
+        "line": 5,
+        "column": 5,
+        "code": "getField(\"x\")",
+        "file": "src/demo/Main.java",
+        "ownerMethod": "demo.Main.run:int()",
+        "nodeId": "30064771076"
+      }
+    },
+    {
+      "source": {
+        "label": "RETURN",
+        "line": 6,
+        "column": 5,
+        "code": "return Helper.helper(1);",
+        "file": "src/demo/Main.java",
+        "ownerMethod": "demo.Main.run:int()",
+        "nodeId": "141733920769"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 3,
+        "column": 17,
+        "code": "RET",
+        "file": "src/demo/Main.java",
+        "ownerMethod": "demo.Main.run:int()",
+        "nodeId": "124554051586"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": 6,
+        "column": 12,
+        "code": "Helper.helper(1)",
+        "file": "src/demo/Main.java",
+        "ownerMethod": "demo.Main.run:int()",
+        "nodeId": "30064771077"
+      },
+      "target": {
+        "label": "RETURN",
+        "line": 6,
+        "column": 5,
+        "code": "return Helper.helper(1);",
+        "file": "src/demo/Main.java",
+        "ownerMethod": "demo.Main.run:int()",
+        "nodeId": "141733920769"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": 6,
+        "column": 12,
+        "code": "Helper.helper(1)",
+        "file": "src/demo/Main.java",
+        "ownerMethod": "demo.Main.run:int()",
+        "nodeId": "30064771077"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 3,
+        "column": 17,
+        "code": "RET",
+        "file": "src/demo/Main.java",
+        "ownerMethod": "demo.Main.run:int()",
+        "nodeId": "124554051586"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": 6,
+        "column": 12,
+        "code": "Helper",
+        "file": "src/demo/Main.java",
+        "ownerMethod": "demo.Main.run:int()",
+        "nodeId": "68719476740"
+      },
+      "target": {
+        "label": "CALL",
+        "line": 6,
+        "column": 12,
+        "code": "Helper.helper(1)",
+        "file": "src/demo/Main.java",
+        "ownerMethod": "demo.Main.run:int()",
+        "nodeId": "30064771077"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": 6,
+        "column": 12,
+        "code": "Helper",
+        "file": "src/demo/Main.java",
+        "ownerMethod": "demo.Main.run:int()",
+        "nodeId": "68719476740"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 3,
+        "column": 17,
+        "code": "RET",
+        "file": "src/demo/Main.java",
+        "ownerMethod": "demo.Main.run:int()",
+        "nodeId": "124554051586"
+      }
+    },
+    {
+      "source": {
+        "label": "LITERAL",
+        "line": 6,
+        "column": 26,
+        "code": "1",
+        "file": "src/demo/Main.java",
+        "ownerMethod": "demo.Main.run:int()",
+        "nodeId": "90194313218"
+      },
+      "target": {
+        "label": "CALL",
+        "line": 6,
+        "column": 12,
+        "code": "Helper.helper(1)",
+        "file": "src/demo/Main.java",
+        "ownerMethod": "demo.Main.run:int()",
+        "nodeId": "30064771077"
+      }
+    },
+    {
+      "source": {
+        "label": "METHOD_PARAMETER_IN",
+        "line": 2,
+        "column": 1,
+        "code": "this",
+        "file": "src/demo/Main.java",
+        "ownerMethod": "demo.Main.<init>:void()",
+        "nodeId": "111669149698"
+      },
+      "target": {
+        "label": "METHOD_PARAMETER_OUT",
+        "line": 2,
+        "column": 1,
+        "code": "this",
+        "file": "src/demo/Main.java",
+        "ownerMethod": "demo.Main.<init>:void()",
+        "nodeId": "115964116994"
+      }
+    },
+    {
+      "source": {
+        "label": "METHOD_PARAMETER_IN",
+        "line": 2,
+        "column": 1,
+        "code": "this",
+        "file": "src/demo/Main.java",
+        "ownerMethod": "demo.Main.<init>:void()",
+        "nodeId": "111669149698"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 2,
+        "column": 1,
+        "code": "RET",
+        "file": "src/demo/Main.java",
+        "ownerMethod": "demo.Main.<init>:void()",
+        "nodeId": "124554051587"
+      }
+    }
+  ],
+  "reachingDefsTruncated": false,
+  "reachingDefsOmitted": 0,
+  "dataflowPaths": [],
+  "dataflowErrors": [],
+  "_languages": [
+    "java"
+  ],
+  "_frontend": "javasrc2cpg",
+  "_repo_root": "<repo>",
+  "_go_modules": {},
+  "_files": [
+    "src/demo/Helper.java",
+    "src/demo/Main.java"
+  ]
+}

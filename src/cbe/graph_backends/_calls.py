@@ -4,26 +4,37 @@ from __future__ import annotations
 import ast
 import builtins
 from pathlib import PurePosixPath
+import posixpath
 import re
 
 
+_UNKNOWN_NAMES = ("<unresolvedNamespace>", "<unresolvedName>", "<unresolvedSignature>",
+                  "<unknownFullName>", "<empty>")
+
+
 class CallResolver:
-    def __init__(self, methods: list[dict], files=None, types=None):
+    def __init__(self, methods: list[dict], files=None, types=None, go_modules=None,
+                 javascript_packages=None):
         self.methods = {int(m["nodeId"]): m for m in methods if m.get("nodeId") is not None}
+        self.method_names = {m.get("name") for m in methods}
         self.files = set(files) if files is not None else {m.get("file", "") for m in methods if m.get("file")}
         self.diagnostics: list[dict] = []
+        self.go_modules = go_modules or {}
+        self.javascript_packages = set(javascript_packages or ())
         self.python_modules = set()
         self.python_top_modules = set()
         for path in self.files:
             if path.endswith(".py"):
                 module = path[:-3].removesuffix("/__init__").removeprefix("src/")
                 self.python_modules.add(PurePosixPath(path).stem)
-                if "/" not in module:
-                    self.python_top_modules.add(module)
-                    self.python_modules.add(module)
+                top = module.split("/", 1)[0]
+                if top:
+                    self.python_top_modules.add(top)
+                    self.python_modules.add(top)
         self.by_file: dict[str, dict[str, list[int]]] = {}
         self.by_pair: dict[str, list[int]] = {}
         self.by_full: dict[str, list[int]] = {}
+        self.internal_prefixes = set()
         self.classes = {"Self"}
         method_names = {m.get("fullName") for m in methods}
         # pysrc2cpg also emits TYPE_DECL for every function. Those entries
@@ -33,13 +44,23 @@ class CallResolver:
         self.types_by_name = {}
         for full, entry in self.types.items():
             name = entry.get("name") or full.split(".")[-1]
+            self.internal_prefixes.add(full)
+            if "." in full and not str(entry.get("file", "")).endswith(".py"):
+                self.internal_prefixes.add(full.rsplit(".", 1)[0])
             self.classes.add(name)
             self.types_by_name.setdefault(name, []).append(full)
         for native, method in self.methods.items():
             full = method.get("fullName", "")
+            owner = full.rsplit(".", 1)[0]
+            if (owner and owner != full and "<clinit>" not in full
+                    and not str(method.get("file", "")).endswith(".py")):
+                self.internal_prefixes.add(owner)
             self.by_full.setdefault(full, []).append(native)
-            self.by_file.setdefault(method.get("file", ""), {}).setdefault(
-                full.partition(":")[2], []).append(native)
+            by_file = self.by_file.setdefault(method.get("file", ""), {})
+            by_file.setdefault(full.partition(":")[2], []).append(native)
+            member = full.rsplit(":", 1)[-1]
+            if member != full.partition(":")[2]:
+                by_file.setdefault(member, []).append(native)
             # Python frontend: path.py:<module>.Class.method. Do not match
             # a bare method name, which confuses unrelated receiver types.
             name = full.split(":")[-1]
@@ -96,9 +117,12 @@ class CallResolver:
         internal = list(dict.fromkeys(int(c["nodeId"]) for c in callees
                                      if not c.get("external") and c.get("nodeId") is not None
                                      and int(c["nodeId"]) in self.methods))
-        if internal:
-            return ("resolved" if len(internal) == 1 else "ambiguous", internal, [])
         full = call.get("methodFullName") or ""
+        if internal:
+            # Name-only binding with an unknown receiver is not a resolution.
+            if full == "<unknownFullName>":
+                return "ambiguous", internal, []
+            return ("resolved" if len(internal) == 1 else "ambiguous", internal, [])
         # Python's frontend leaves builtin exception constructors without any
         # callee and with an unknown full name. A known builtin expression is
         # stronger evidence than that missing analyzer name.
@@ -111,8 +135,12 @@ class CallResolver:
                 name = expression.func.id
                 if callable(getattr(builtins, name, None)):
                     return "external", [], ["__builtin." + name]
-        if full == "<unknownFullName>" or any(c.get("fullName") == "<unknownFullName>" for c in callees):
+        if any(marker in full for marker in _UNKNOWN_NAMES) or any(
+                any(marker in str(c.get("fullName") or "") for marker in _UNKNOWN_NAMES) for c in callees):
             return "unresolved", [], []
+        relative = self._relative_typescript_target(call, full)
+        if relative is not None:
+            return relative
         # A leading // is a relative import whose package prefix was lost.
         # Search only package ancestors; an unrelated basename is not evidence.
         if full.startswith("//") and ".py:<module>." in full and str(call.get("callerFile", "")).endswith(".py"):
@@ -129,8 +157,7 @@ class CallResolver:
             return ("resolved" if len(exact) == 1 else "ambiguous", exact, [])
         # A repository-qualified miss is analyzer guesswork, not a known
         # external target. Never salvage its last two components.
-        if (any(full.startswith(path + ":") for path in self.files)
-                or (".py:" in full and full.split(".py:", 1)[0] in self.python_top_modules)):
+        if self._repository_qualified(full):
             return "unresolved", [], []
         if re.fullmatch(r"[A-Za-z_]\w*\.[A-Za-z_]\w*", full):
             matches = self.by_pair.get(full, [])
@@ -149,5 +176,56 @@ class CallResolver:
                          and full.split(".", 1)[0] in self.python_modules))):
             return "unresolved", [], []
         external = list(dict.fromkeys(c.get("fullName") or call.get("name", "") for c in callees if c.get("external")))
+        if (full.startswith("ANY.") and str(call.get("callerFile", "")).endswith(
+                (".cc", ".cpp", ".cxx", ".h", ".hpp", ".hh", ".go"))):
+            return "unresolved", [], []
+        if str(call.get("callerFile", "")).endswith((".cc", ".cpp", ".cxx", ".h", ".hpp", ".hh")):
+            if (not full.startswith(("std.", "__gnu"))
+                    and re.fullmatch(r"(?:[A-Za-z_]\w*\.)*([A-Za-z_]\w*)\.\1(?::.*)?", full)):
+                return "unresolved", [], []
+            if full.split(":", 1)[0] in self.method_names:
+                return "unresolved", [], []
+        if any(self._repository_qualified(name) for name in external):
+            return "unresolved", [], []
         # An internal callee missing from the exported method set is unknown.
         return ("external", [], external) if external else ("unresolved", [], [])
+
+    def _repository_qualified(self, full: str) -> bool:
+        if any(full.startswith(path + ":") for path in self.files):
+            return True
+        if ".py:" in full:
+            module = full.split(".py:", 1)[0]
+            if any(module == top or module.startswith(top + "/") for top in self.python_top_modules):
+                return True
+        if any(full == module or full.startswith(module + ".") or full.startswith(module + "/")
+               for module in self.go_modules):
+            return True
+        if any(full == package or full.startswith(package + ":") for package in self.javascript_packages):
+            return True
+        return any(prefix and full.startswith(prefix + ".") for prefix in self.internal_prefixes)
+
+    def _relative_typescript_target(self, call: dict, full: str):
+        path = str(call.get("callerFile", ""))
+        if not path.endswith((".ts", ".tsx", ".mts", ".cts")) or ":" not in full:
+            return None
+        relative, _, member = full.partition(":")
+        if not relative.endswith((".js", ".jsx", ".mjs", ".cjs")):
+            return None
+        stem = posixpath.normpath(posixpath.join(posixpath.dirname(path), relative))
+        if stem == ".." or stem.startswith("../"):
+            return "unresolved", [], []
+        replacements = {".js": (".ts", ".tsx"), ".jsx": (".tsx",),
+                        ".mjs": (".mts",), ".cjs": (".cts",)}
+        suffix = next(suffix for suffix in replacements if stem.endswith(suffix))
+        base = stem[:-len(suffix)]
+        candidates = [base + ext for ext in replacements[suffix]]
+        candidates += [base + "/index" + ext for ext in (".ts", ".tsx")]
+        candidates = [candidate for candidate in candidates if candidate in self.files]
+        matches = list(dict.fromkeys(
+            native for candidate in candidates
+            for native in self.by_file.get(candidate, {}).get(member, [])))
+        if len(matches) == 1:
+            return "resolved", matches, []
+        if len(matches) > 1:
+            return "ambiguous", matches, []
+        return ("unresolved", [], []) if candidates else None

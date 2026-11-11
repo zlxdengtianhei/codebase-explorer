@@ -1,0 +1,4 @@
+package demo;
+public class Helper {
+  public static int helper(int value) { return value + 1; }
+}

@@ -1,0 +1,3075 @@
+{
+  "backend": "joern",
+  "cpgFile": "<run>/cpg-rubysrc.bin",
+  "files": [
+    {
+      "name": "helper.rb",
+      "hash": ""
+    },
+    {
+      "name": "main.rb",
+      "hash": ""
+    },
+    {
+      "name": "<unknown>",
+      "hash": ""
+    }
+  ],
+  "types": [
+    {
+      "name": "<body>",
+      "fullName": "helper.rb:<main>.Helper.<body>",
+      "file": "helper.rb",
+      "inherits": []
+    },
+    {
+      "name": "compute",
+      "fullName": "helper.rb:<main>.Helper.compute",
+      "file": "helper.rb",
+      "inherits": []
+    },
+    {
+      "name": "Helper",
+      "fullName": "helper.rb:<main>.Helper",
+      "file": "helper.rb",
+      "inherits": []
+    },
+    {
+      "name": "Helper<class>",
+      "fullName": "helper.rb:<main>.Helper<class>",
+      "file": "helper.rb",
+      "inherits": []
+    },
+    {
+      "name": "<body>",
+      "fullName": "main.rb:<main>.Builder.<body>",
+      "file": "main.rb",
+      "inherits": []
+    },
+    {
+      "name": "map",
+      "fullName": "main.rb:<main>.Builder.map",
+      "file": "main.rb",
+      "inherits": []
+    },
+    {
+      "name": "initialize",
+      "fullName": "main.rb:<main>.Builder.initialize",
+      "file": "main.rb",
+      "inherits": []
+    },
+    {
+      "name": "Builder",
+      "fullName": "main.rb:<main>.Builder",
+      "file": "main.rb",
+      "inherits": []
+    },
+    {
+      "name": "Builder<class>",
+      "fullName": "main.rb:<main>.Builder<class>",
+      "file": "main.rb",
+      "inherits": []
+    },
+    {
+      "name": "run",
+      "fullName": "main.rb:<main>.run",
+      "file": "main.rb",
+      "inherits": []
+    }
+  ],
+  "methods": [
+    {
+      "name": "<body>",
+      "fullName": "helper.rb:<main>.Helper.<body>",
+      "file": "helper.rb",
+      "line": 1,
+      "signature": "",
+      "nodeId": "107374182400"
+    },
+    {
+      "name": "compute",
+      "fullName": "helper.rb:<main>.Helper.compute",
+      "file": "helper.rb",
+      "line": 2,
+      "signature": "",
+      "nodeId": "107374182401"
+    },
+    {
+      "name": "<main>",
+      "fullName": "helper.rb:<main>",
+      "file": "helper.rb",
+      "line": 1,
+      "signature": "",
+      "nodeId": "107374182402"
+    },
+    {
+      "name": "<body>",
+      "fullName": "main.rb:<main>.Builder.<body>",
+      "file": "main.rb",
+      "line": 2,
+      "signature": "",
+      "nodeId": "107374182403"
+    },
+    {
+      "name": "map",
+      "fullName": "main.rb:<main>.Builder.map",
+      "file": "main.rb",
+      "line": 3,
+      "signature": "",
+      "nodeId": "107374182404"
+    },
+    {
+      "name": "initialize",
+      "fullName": "main.rb:<main>.Builder.initialize",
+      "file": "main.rb",
+      "line": 3,
+      "signature": "",
+      "nodeId": "107374182405"
+    },
+    {
+      "name": "run",
+      "fullName": "main.rb:<main>.run",
+      "file": "main.rb",
+      "line": 7,
+      "signature": "",
+      "nodeId": "107374182406"
+    },
+    {
+      "name": "<main>",
+      "fullName": "main.rb:<main>",
+      "file": "main.rb",
+      "line": 1,
+      "signature": "",
+      "nodeId": "107374182407"
+    }
+  ],
+  "calls": [
+    {
+      "caller": "helper.rb:<main>.Helper.compute",
+      "callerId": "107374182401",
+      "callerFile": "helper.rb",
+      "line": 3,
+      "column": 4,
+      "name": "<operator>.addition",
+      "code": "value + 1",
+      "methodFullName": "<operator>.addition",
+      "dispatchType": "STATIC_DISPATCH",
+      "callees": [
+        {
+          "nodeId": "107374182408",
+          "fullName": "<operator>.addition",
+          "external": true,
+          "file": "<empty>",
+          "line": -1
+        }
+      ],
+      "nodeId": "30064771072"
+    },
+    {
+      "caller": "helper.rb:<main>",
+      "callerId": "107374182402",
+      "callerFile": "helper.rb",
+      "line": 1,
+      "column": 0,
+      "name": "<operator>.assignment",
+      "code": "self.Helper = module Helper (...)",
+      "methodFullName": "<operator>.assignment",
+      "dispatchType": "STATIC_DISPATCH",
+      "callees": [
+        {
+          "nodeId": "107374182409",
+          "fullName": "<operator>.assignment",
+          "external": true,
+          "file": "<empty>",
+          "line": -1
+        }
+      ],
+      "nodeId": "30064771073"
+    },
+    {
+      "caller": "helper.rb:<main>",
+      "callerId": "107374182402",
+      "callerFile": "helper.rb",
+      "line": -1,
+      "column": -1,
+      "name": "<operator>.fieldAccess",
+      "code": "self.Helper",
+      "methodFullName": "<operator>.fieldAccess",
+      "dispatchType": "STATIC_DISPATCH",
+      "callees": [
+        {
+          "nodeId": "107374182410",
+          "fullName": "<operator>.fieldAccess",
+          "external": true,
+          "file": "<empty>",
+          "line": -1
+        }
+      ],
+      "nodeId": "30064771074"
+    },
+    {
+      "caller": "helper.rb:<main>",
+      "callerId": "107374182402",
+      "callerFile": "helper.rb",
+      "line": 1,
+      "column": 0,
+      "name": "<body>",
+      "code": "(<tmp-0> = self::Helper)::<body>()",
+      "methodFullName": "helper.rb:<main>.Helper.<body>",
+      "dispatchType": "STATIC_DISPATCH",
+      "callees": [
+        {
+          "nodeId": "107374182400",
+          "fullName": "helper.rb:<main>.Helper.<body>",
+          "external": false,
+          "file": "helper.rb",
+          "line": 1
+        }
+      ],
+      "nodeId": "30064771075"
+    },
+    {
+      "caller": "main.rb:<main>.run",
+      "callerId": "107374182406",
+      "callerFile": "main.rb",
+      "line": 8,
+      "column": 2,
+      "name": "map",
+      "code": "values.map(&:size)",
+      "methodFullName": "main.rb:<main>.Builder.map",
+      "dispatchType": "DYNAMIC_DISPATCH",
+      "callees": [
+        {
+          "nodeId": "107374182404",
+          "fullName": "main.rb:<main>.Builder.map",
+          "external": false,
+          "file": "main.rb",
+          "line": 3
+        }
+      ],
+      "nodeId": "30064771076"
+    },
+    {
+      "caller": "main.rb:<main>.run",
+      "callerId": "107374182406",
+      "callerFile": "main.rb",
+      "line": 8,
+      "column": 2,
+      "name": "<operator>.fieldAccess",
+      "code": "values.map",
+      "methodFullName": "<operator>.fieldAccess",
+      "dispatchType": "STATIC_DISPATCH",
+      "callees": [
+        {
+          "nodeId": "107374182410",
+          "fullName": "<operator>.fieldAccess",
+          "external": true,
+          "file": "<empty>",
+          "line": -1
+        }
+      ],
+      "nodeId": "30064771077"
+    },
+    {
+      "caller": "main.rb:<main>.run",
+      "callerId": "107374182406",
+      "callerFile": "main.rb",
+      "line": 9,
+      "column": 2,
+      "name": "compute",
+      "code": "(<tmp-0> = Helper).compute(1)",
+      "methodFullName": "helper.rb:<main>.Helper.compute",
+      "dispatchType": "DYNAMIC_DISPATCH",
+      "callees": [
+        {
+          "nodeId": "107374182401",
+          "fullName": "helper.rb:<main>.Helper.compute",
+          "external": false,
+          "file": "helper.rb",
+          "line": 2
+        }
+      ],
+      "nodeId": "30064771078"
+    },
+    {
+      "caller": "main.rb:<main>.run",
+      "callerId": "107374182406",
+      "callerFile": "main.rb",
+      "line": 9,
+      "column": 2,
+      "name": "<operator>.fieldAccess",
+      "code": "(<tmp-0> = Helper).compute",
+      "methodFullName": "<operator>.fieldAccess",
+      "dispatchType": "STATIC_DISPATCH",
+      "callees": [
+        {
+          "nodeId": "107374182410",
+          "fullName": "<operator>.fieldAccess",
+          "external": true,
+          "file": "<empty>",
+          "line": -1
+        }
+      ],
+      "nodeId": "30064771079"
+    },
+    {
+      "caller": "main.rb:<main>.run",
+      "callerId": "107374182406",
+      "callerFile": "main.rb",
+      "line": 9,
+      "column": 2,
+      "name": "<operator>.assignment",
+      "code": "<tmp-0> = Helper",
+      "methodFullName": "<operator>.assignment",
+      "dispatchType": "STATIC_DISPATCH",
+      "callees": [
+        {
+          "nodeId": "107374182409",
+          "fullName": "<operator>.assignment",
+          "external": true,
+          "file": "<empty>",
+          "line": -1
+        }
+      ],
+      "nodeId": "30064771080"
+    },
+    {
+      "caller": "main.rb:<main>.run",
+      "callerId": "107374182406",
+      "callerFile": "main.rb",
+      "line": 9,
+      "column": 2,
+      "name": "<operator>.fieldAccess",
+      "code": "self.Helper",
+      "methodFullName": "<operator>.fieldAccess",
+      "dispatchType": "STATIC_DISPATCH",
+      "callees": [
+        {
+          "nodeId": "107374182410",
+          "fullName": "<operator>.fieldAccess",
+          "external": true,
+          "file": "<empty>",
+          "line": -1
+        }
+      ],
+      "nodeId": "30064771081"
+    },
+    {
+      "caller": "main.rb:<main>",
+      "callerId": "107374182407",
+      "callerFile": "main.rb",
+      "line": -1,
+      "column": -1,
+      "name": "require_relative",
+      "code": "require_relative \"helper\"",
+      "methodFullName": "__core.Kernel.require_relative",
+      "dispatchType": "STATIC_DISPATCH",
+      "callees": [
+        {
+          "nodeId": "107374182411",
+          "fullName": "__core.Kernel.require_relative",
+          "external": true,
+          "file": "<empty>",
+          "line": -1
+        }
+      ],
+      "nodeId": "30064771082"
+    },
+    {
+      "caller": "main.rb:<main>",
+      "callerId": "107374182407",
+      "callerFile": "main.rb",
+      "line": 2,
+      "column": 0,
+      "name": "<operator>.assignment",
+      "code": "self.Builder = class Builder (...)",
+      "methodFullName": "<operator>.assignment",
+      "dispatchType": "STATIC_DISPATCH",
+      "callees": [
+        {
+          "nodeId": "107374182409",
+          "fullName": "<operator>.assignment",
+          "external": true,
+          "file": "<empty>",
+          "line": -1
+        }
+      ],
+      "nodeId": "30064771083"
+    },
+    {
+      "caller": "main.rb:<main>",
+      "callerId": "107374182407",
+      "callerFile": "main.rb",
+      "line": -1,
+      "column": -1,
+      "name": "<operator>.fieldAccess",
+      "code": "self.Builder",
+      "methodFullName": "<operator>.fieldAccess",
+      "dispatchType": "STATIC_DISPATCH",
+      "callees": [
+        {
+          "nodeId": "107374182410",
+          "fullName": "<operator>.fieldAccess",
+          "external": true,
+          "file": "<empty>",
+          "line": -1
+        }
+      ],
+      "nodeId": "30064771084"
+    },
+    {
+      "caller": "main.rb:<main>",
+      "callerId": "107374182407",
+      "callerFile": "main.rb",
+      "line": 2,
+      "column": 0,
+      "name": "<body>",
+      "code": "(<tmp-0> = self::Builder)::<body>()",
+      "methodFullName": "main.rb:<main>.Builder.<body>",
+      "dispatchType": "STATIC_DISPATCH",
+      "callees": [
+        {
+          "nodeId": "107374182403",
+          "fullName": "main.rb:<main>.Builder.<body>",
+          "external": false,
+          "file": "main.rb",
+          "line": 2
+        }
+      ],
+      "nodeId": "30064771085"
+    },
+    {
+      "caller": "main.rb:<main>",
+      "callerId": "107374182407",
+      "callerFile": "main.rb",
+      "line": 7,
+      "column": 0,
+      "name": "<operator>.assignment",
+      "code": "self.run = def run (...)",
+      "methodFullName": "<operator>.assignment",
+      "dispatchType": "STATIC_DISPATCH",
+      "callees": [
+        {
+          "nodeId": "107374182409",
+          "fullName": "<operator>.assignment",
+          "external": true,
+          "file": "<empty>",
+          "line": -1
+        }
+      ],
+      "nodeId": "30064771086"
+    },
+    {
+      "caller": "main.rb:<main>",
+      "callerId": "107374182407",
+      "callerFile": "main.rb",
+      "line": -1,
+      "column": -1,
+      "name": "<operator>.fieldAccess",
+      "code": "self.run",
+      "methodFullName": "<operator>.fieldAccess",
+      "dispatchType": "STATIC_DISPATCH",
+      "callees": [
+        {
+          "nodeId": "107374182410",
+          "fullName": "<operator>.fieldAccess",
+          "external": true,
+          "file": "<empty>",
+          "line": -1
+        }
+      ],
+      "nodeId": "30064771087"
+    }
+  ],
+  "cfg": [
+    {
+      "method": "helper.rb:<main>.Helper.<body>",
+      "methodId": "107374182400",
+      "file": "helper.rb",
+      "line": 1,
+      "nodeId": "107374182400",
+      "nodes": [
+        {
+          "i": 0,
+          "label": "BLOCK",
+          "line": 1,
+          "column": 0,
+          "order": 2,
+          "code": "<empty>",
+          "file": "helper.rb",
+          "ownerMethod": "helper.rb:<main>",
+          "nodeId": "25769803776"
+        }
+      ],
+      "edges": []
+    },
+    {
+      "method": "helper.rb:<main>.Helper.compute",
+      "methodId": "107374182401",
+      "file": "helper.rb",
+      "line": 2,
+      "nodeId": "107374182401",
+      "nodes": [
+        {
+          "i": 0,
+          "label": "BLOCK",
+          "line": 3,
+          "column": 4,
+          "order": 3,
+          "code": "<empty>",
+          "file": "helper.rb",
+          "ownerMethod": "helper.rb:<main>",
+          "nodeId": "25769803777"
+        },
+        {
+          "i": 1,
+          "label": "RETURN",
+          "line": 3,
+          "column": 4,
+          "order": 1,
+          "code": "value + 1",
+          "file": "helper.rb",
+          "ownerMethod": "helper.rb:<main>",
+          "nodeId": "141733920768"
+        },
+        {
+          "i": 2,
+          "label": "CALL",
+          "line": 3,
+          "column": 4,
+          "order": 1,
+          "code": "value + 1",
+          "file": "helper.rb",
+          "ownerMethod": "helper.rb:<main>",
+          "nodeId": "30064771072"
+        },
+        {
+          "i": 3,
+          "label": "IDENTIFIER",
+          "line": 3,
+          "column": 4,
+          "order": 1,
+          "code": "value",
+          "file": "helper.rb",
+          "ownerMethod": "helper.rb:<main>",
+          "nodeId": "68719476736"
+        },
+        {
+          "i": 4,
+          "label": "LITERAL",
+          "line": 3,
+          "column": 12,
+          "order": 2,
+          "code": "1",
+          "file": "helper.rb",
+          "ownerMethod": "helper.rb:<main>",
+          "nodeId": "90194313216"
+        }
+      ],
+      "edges": [
+        {
+          "from": 1,
+          "to": -1
+        },
+        {
+          "from": 2,
+          "to": 1
+        },
+        {
+          "from": 3,
+          "to": 4
+        },
+        {
+          "from": 4,
+          "to": 2
+        }
+      ]
+    },
+    {
+      "method": "helper.rb:<main>",
+      "methodId": "107374182402",
+      "file": "helper.rb",
+      "line": 1,
+      "nodeId": "107374182402",
+      "nodes": [
+        {
+          "i": 0,
+          "label": "BLOCK",
+          "line": 1,
+          "column": 0,
+          "order": 2,
+          "code": "<empty>",
+          "file": "helper.rb",
+          "ownerMethod": "helper.rb:<main>",
+          "nodeId": "25769803778"
+        },
+        {
+          "i": 1,
+          "label": "CALL",
+          "line": 1,
+          "column": 0,
+          "order": 1,
+          "code": "self.Helper = module Helper (...)",
+          "file": "helper.rb",
+          "ownerMethod": "helper.rb:<main>",
+          "nodeId": "30064771073"
+        },
+        {
+          "i": 2,
+          "label": "CALL",
+          "line": 1,
+          "column": 0,
+          "order": 2,
+          "code": "(<tmp-0> = self::Helper)::<body>()",
+          "file": "helper.rb",
+          "ownerMethod": "helper.rb:<main>",
+          "nodeId": "30064771075"
+        },
+        {
+          "i": 3,
+          "label": "CALL",
+          "line": -1,
+          "column": -1,
+          "order": 1,
+          "code": "self.Helper",
+          "file": "helper.rb",
+          "ownerMethod": "helper.rb:<main>",
+          "nodeId": "30064771074"
+        },
+        {
+          "i": 4,
+          "label": "TYPE_REF",
+          "line": 1,
+          "column": 0,
+          "order": 2,
+          "code": "module Helper (...)",
+          "file": "helper.rb",
+          "ownerMethod": "helper.rb:<main>",
+          "nodeId": "176093659136"
+        },
+        {
+          "i": 5,
+          "label": "IDENTIFIER",
+          "line": -1,
+          "column": -1,
+          "order": 1,
+          "code": "<tmp-0>",
+          "file": "helper.rb",
+          "ownerMethod": "helper.rb:<main>",
+          "nodeId": "68719476738"
+        },
+        {
+          "i": 6,
+          "label": "IDENTIFIER",
+          "line": -1,
+          "column": -1,
+          "order": 1,
+          "code": "self",
+          "file": "helper.rb",
+          "ownerMethod": "helper.rb:<main>",
+          "nodeId": "68719476737"
+        },
+        {
+          "i": 7,
+          "label": "FIELD_IDENTIFIER",
+          "line": 1,
+          "column": 0,
+          "order": 2,
+          "code": "Helper",
+          "file": "helper.rb",
+          "ownerMethod": "helper.rb:<main>",
+          "nodeId": "55834574848"
+        }
+      ],
+      "edges": [
+        {
+          "from": 1,
+          "to": 5
+        },
+        {
+          "from": 2,
+          "to": -1
+        },
+        {
+          "from": 3,
+          "to": 4
+        },
+        {
+          "from": 4,
+          "to": 1
+        },
+        {
+          "from": 5,
+          "to": 2
+        },
+        {
+          "from": 6,
+          "to": 7
+        },
+        {
+          "from": 7,
+          "to": 3
+        }
+      ]
+    },
+    {
+      "method": "main.rb:<main>.Builder.<body>",
+      "methodId": "107374182403",
+      "file": "main.rb",
+      "line": 2,
+      "nodeId": "107374182403",
+      "nodes": [
+        {
+          "i": 0,
+          "label": "BLOCK",
+          "line": 2,
+          "column": 0,
+          "order": 2,
+          "code": "<empty>",
+          "file": "main.rb",
+          "ownerMethod": "main.rb:<main>",
+          "nodeId": "25769803779"
+        }
+      ],
+      "edges": []
+    },
+    {
+      "method": "main.rb:<main>.Builder.map",
+      "methodId": "107374182404",
+      "file": "main.rb",
+      "line": 3,
+      "nodeId": "107374182404",
+      "nodes": [
+        {
+          "i": 0,
+          "label": "BLOCK",
+          "line": 4,
+          "column": 4,
+          "order": 3,
+          "code": "<empty>",
+          "file": "main.rb",
+          "ownerMethod": "main.rb:<main>",
+          "nodeId": "25769803780"
+        },
+        {
+          "i": 1,
+          "label": "RETURN",
+          "line": 4,
+          "column": 4,
+          "order": 1,
+          "code": "value",
+          "file": "main.rb",
+          "ownerMethod": "main.rb:<main>",
+          "nodeId": "141733920769"
+        },
+        {
+          "i": 2,
+          "label": "IDENTIFIER",
+          "line": 4,
+          "column": 4,
+          "order": 1,
+          "code": "value",
+          "file": "main.rb",
+          "ownerMethod": "main.rb:<main>",
+          "nodeId": "68719476739"
+        }
+      ],
+      "edges": [
+        {
+          "from": 1,
+          "to": -1
+        },
+        {
+          "from": 2,
+          "to": 1
+        }
+      ]
+    },
+    {
+      "method": "main.rb:<main>.Builder.initialize",
+      "methodId": "107374182405",
+      "file": "main.rb",
+      "line": 3,
+      "nodeId": "107374182405",
+      "nodes": [
+        {
+          "i": 0,
+          "label": "BLOCK",
+          "line": 3,
+          "column": 2,
+          "order": 2,
+          "code": "<empty>",
+          "file": "main.rb",
+          "ownerMethod": "main.rb:<main>",
+          "nodeId": "25769803781"
+        }
+      ],
+      "edges": []
+    },
+    {
+      "method": "main.rb:<main>.run",
+      "methodId": "107374182406",
+      "file": "main.rb",
+      "line": 7,
+      "nodeId": "107374182406",
+      "nodes": [
+        {
+          "i": 0,
+          "label": "BLOCK",
+          "line": 8,
+          "column": 2,
+          "order": 3,
+          "code": "<empty>",
+          "file": "main.rb",
+          "ownerMethod": "main.rb:<main>",
+          "nodeId": "25769803783"
+        },
+        {
+          "i": 1,
+          "label": "CALL",
+          "line": 8,
+          "column": 2,
+          "order": 1,
+          "code": "values.map(&:size)",
+          "file": "main.rb",
+          "ownerMethod": "main.rb:<main>",
+          "nodeId": "30064771076"
+        },
+        {
+          "i": 2,
+          "label": "RETURN",
+          "line": 9,
+          "column": 2,
+          "order": 2,
+          "code": "Helper.compute(1)",
+          "file": "main.rb",
+          "ownerMethod": "main.rb:<main>",
+          "nodeId": "141733920770"
+        },
+        {
+          "i": 3,
+          "label": "CALL",
+          "line": 8,
+          "column": 2,
+          "order": 1,
+          "code": "values.map",
+          "file": "main.rb",
+          "ownerMethod": "main.rb:<main>",
+          "nodeId": "30064771077"
+        },
+        {
+          "i": 4,
+          "label": "IDENTIFIER",
+          "line": 8,
+          "column": 2,
+          "order": 2,
+          "code": "values",
+          "file": "main.rb",
+          "ownerMethod": "main.rb:<main>",
+          "nodeId": "68719476741"
+        },
+        {
+          "i": 5,
+          "label": "LITERAL",
+          "line": 8,
+          "column": 14,
+          "order": 3,
+          "code": ":size",
+          "file": "main.rb",
+          "ownerMethod": "main.rb:<main>",
+          "nodeId": "90194313217"
+        },
+        {
+          "i": 6,
+          "label": "CALL",
+          "line": 9,
+          "column": 2,
+          "order": 1,
+          "code": "(<tmp-0> = Helper).compute(1)",
+          "file": "main.rb",
+          "ownerMethod": "main.rb:<main>",
+          "nodeId": "30064771078"
+        },
+        {
+          "i": 7,
+          "label": "IDENTIFIER",
+          "line": 8,
+          "column": 2,
+          "order": 1,
+          "code": "values",
+          "file": "main.rb",
+          "ownerMethod": "main.rb:<main>",
+          "nodeId": "68719476740"
+        },
+        {
+          "i": 8,
+          "label": "FIELD_IDENTIFIER",
+          "line": 8,
+          "column": 2,
+          "order": 2,
+          "code": "map",
+          "file": "main.rb",
+          "ownerMethod": "main.rb:<main>",
+          "nodeId": "55834574849"
+        },
+        {
+          "i": 9,
+          "label": "CALL",
+          "line": 9,
+          "column": 2,
+          "order": 1,
+          "code": "(<tmp-0> = Helper).compute",
+          "file": "main.rb",
+          "ownerMethod": "main.rb:<main>",
+          "nodeId": "30064771079"
+        },
+        {
+          "i": 10,
+          "label": "IDENTIFIER",
+          "line": -1,
+          "column": -1,
+          "order": 2,
+          "code": "<tmp-0>",
+          "file": "main.rb",
+          "ownerMethod": "main.rb:<main>",
+          "nodeId": "68719476744"
+        },
+        {
+          "i": 11,
+          "label": "LITERAL",
+          "line": 9,
+          "column": 17,
+          "order": 3,
+          "code": "1",
+          "file": "main.rb",
+          "ownerMethod": "main.rb:<main>",
+          "nodeId": "90194313218"
+        },
+        {
+          "i": 12,
+          "label": "CALL",
+          "line": 9,
+          "column": 2,
+          "order": 1,
+          "code": "<tmp-0> = Helper",
+          "file": "main.rb",
+          "ownerMethod": "main.rb:<main>",
+          "nodeId": "30064771080"
+        },
+        {
+          "i": 13,
+          "label": "FIELD_IDENTIFIER",
+          "line": 9,
+          "column": 2,
+          "order": 2,
+          "code": "compute",
+          "file": "main.rb",
+          "ownerMethod": "main.rb:<main>",
+          "nodeId": "55834574851"
+        },
+        {
+          "i": 14,
+          "label": "IDENTIFIER",
+          "line": -1,
+          "column": -1,
+          "order": 1,
+          "code": "<tmp-0>",
+          "file": "main.rb",
+          "ownerMethod": "main.rb:<main>",
+          "nodeId": "68719476742"
+        },
+        {
+          "i": 15,
+          "label": "CALL",
+          "line": 9,
+          "column": 2,
+          "order": 2,
+          "code": "self.Helper",
+          "file": "main.rb",
+          "ownerMethod": "main.rb:<main>",
+          "nodeId": "30064771081"
+        },
+        {
+          "i": 16,
+          "label": "IDENTIFIER",
+          "line": 9,
+          "column": 2,
+          "order": 1,
+          "code": "self",
+          "file": "main.rb",
+          "ownerMethod": "main.rb:<main>",
+          "nodeId": "68719476743"
+        },
+        {
+          "i": 17,
+          "label": "FIELD_IDENTIFIER",
+          "line": 9,
+          "column": 2,
+          "order": 2,
+          "code": "Helper",
+          "file": "main.rb",
+          "ownerMethod": "main.rb:<main>",
+          "nodeId": "55834574850"
+        }
+      ],
+      "edges": [
+        {
+          "from": 1,
+          "to": 14
+        },
+        {
+          "from": 2,
+          "to": -1
+        },
+        {
+          "from": 3,
+          "to": 4
+        },
+        {
+          "from": 4,
+          "to": 5
+        },
+        {
+          "from": 5,
+          "to": 1
+        },
+        {
+          "from": 6,
+          "to": 2
+        },
+        {
+          "from": 7,
+          "to": 8
+        },
+        {
+          "from": 8,
+          "to": 3
+        },
+        {
+          "from": 9,
+          "to": 10
+        },
+        {
+          "from": 10,
+          "to": 11
+        },
+        {
+          "from": 11,
+          "to": 6
+        },
+        {
+          "from": 12,
+          "to": 13
+        },
+        {
+          "from": 13,
+          "to": 9
+        },
+        {
+          "from": 14,
+          "to": 16
+        },
+        {
+          "from": 15,
+          "to": 12
+        },
+        {
+          "from": 16,
+          "to": 17
+        },
+        {
+          "from": 17,
+          "to": 15
+        }
+      ]
+    },
+    {
+      "method": "main.rb:<main>",
+      "methodId": "107374182407",
+      "file": "main.rb",
+      "line": 1,
+      "nodeId": "107374182407",
+      "nodes": [
+        {
+          "i": 0,
+          "label": "BLOCK",
+          "line": 1,
+          "column": 0,
+          "order": 2,
+          "code": "<empty>",
+          "file": "main.rb",
+          "ownerMethod": "main.rb:<main>",
+          "nodeId": "25769803782"
+        },
+        {
+          "i": 1,
+          "label": "METHOD",
+          "line": 7,
+          "column": 0,
+          "order": 1,
+          "code": "def run(values)",
+          "file": "main.rb",
+          "ownerMethod": "main.rb:<main>",
+          "nodeId": "107374182406"
+        },
+        {
+          "i": 2,
+          "label": "CALL",
+          "line": -1,
+          "column": -1,
+          "order": 1,
+          "code": "require_relative \"helper\"",
+          "file": "main.rb",
+          "ownerMethod": "main.rb:<main>",
+          "nodeId": "30064771082"
+        },
+        {
+          "i": 3,
+          "label": "CALL",
+          "line": 2,
+          "column": 0,
+          "order": 2,
+          "code": "self.Builder = class Builder (...)",
+          "file": "main.rb",
+          "ownerMethod": "main.rb:<main>",
+          "nodeId": "30064771083"
+        },
+        {
+          "i": 4,
+          "label": "CALL",
+          "line": 2,
+          "column": 0,
+          "order": 3,
+          "code": "(<tmp-0> = self::Builder)::<body>()",
+          "file": "main.rb",
+          "ownerMethod": "main.rb:<main>",
+          "nodeId": "30064771085"
+        },
+        {
+          "i": 5,
+          "label": "CALL",
+          "line": 7,
+          "column": 0,
+          "order": 4,
+          "code": "self.run = def run (...)",
+          "file": "main.rb",
+          "ownerMethod": "main.rb:<main>",
+          "nodeId": "30064771086"
+        },
+        {
+          "i": 6,
+          "label": "LITERAL",
+          "line": 1,
+          "column": 17,
+          "order": 1,
+          "code": "\"helper\"",
+          "file": "main.rb",
+          "ownerMethod": "main.rb:<main>",
+          "nodeId": "90194313219"
+        },
+        {
+          "i": 7,
+          "label": "CALL",
+          "line": -1,
+          "column": -1,
+          "order": 1,
+          "code": "self.Builder",
+          "file": "main.rb",
+          "ownerMethod": "main.rb:<main>",
+          "nodeId": "30064771084"
+        },
+        {
+          "i": 8,
+          "label": "TYPE_REF",
+          "line": 2,
+          "column": 0,
+          "order": 2,
+          "code": "class Builder (...)",
+          "file": "main.rb",
+          "ownerMethod": "main.rb:<main>",
+          "nodeId": "176093659137"
+        },
+        {
+          "i": 9,
+          "label": "IDENTIFIER",
+          "line": -1,
+          "column": -1,
+          "order": 1,
+          "code": "<tmp-0>",
+          "file": "main.rb",
+          "ownerMethod": "main.rb:<main>",
+          "nodeId": "68719476746"
+        },
+        {
+          "i": 10,
+          "label": "CALL",
+          "line": -1,
+          "column": -1,
+          "order": 1,
+          "code": "self.run",
+          "file": "main.rb",
+          "ownerMethod": "main.rb:<main>",
+          "nodeId": "30064771087"
+        },
+        {
+          "i": 11,
+          "label": "METHOD_REF",
+          "line": 7,
+          "column": 0,
+          "order": 2,
+          "code": "def run (...)",
+          "file": "main.rb",
+          "ownerMethod": "main.rb:<main>",
+          "nodeId": "120259084288"
+        },
+        {
+          "i": 12,
+          "label": "IDENTIFIER",
+          "line": -1,
+          "column": -1,
+          "order": 1,
+          "code": "self",
+          "file": "main.rb",
+          "ownerMethod": "main.rb:<main>",
+          "nodeId": "68719476745"
+        },
+        {
+          "i": 13,
+          "label": "FIELD_IDENTIFIER",
+          "line": 2,
+          "column": 0,
+          "order": 2,
+          "code": "Builder",
+          "file": "main.rb",
+          "ownerMethod": "main.rb:<main>",
+          "nodeId": "55834574852"
+        },
+        {
+          "i": 14,
+          "label": "IDENTIFIER",
+          "line": -1,
+          "column": -1,
+          "order": 1,
+          "code": "self",
+          "file": "main.rb",
+          "ownerMethod": "main.rb:<main>",
+          "nodeId": "68719476747"
+        },
+        {
+          "i": 15,
+          "label": "FIELD_IDENTIFIER",
+          "line": 7,
+          "column": 0,
+          "order": 2,
+          "code": "run",
+          "file": "main.rb",
+          "ownerMethod": "main.rb:<main>",
+          "nodeId": "55834574853"
+        },
+        {
+          "i": 16,
+          "label": "METHOD_REF",
+          "line": -1,
+          "column": -1,
+          "order": -1,
+          "code": "self.run",
+          "file": "main.rb",
+          "ownerMethod": "main.rb:<main>",
+          "nodeId": "120259084289"
+        }
+      ],
+      "edges": [
+        {
+          "from": 1,
+          "to": -1
+        },
+        {
+          "from": 2,
+          "to": 12
+        },
+        {
+          "from": 3,
+          "to": 9
+        },
+        {
+          "from": 4,
+          "to": 14
+        },
+        {
+          "from": 5,
+          "to": -1
+        },
+        {
+          "from": 6,
+          "to": 2
+        },
+        {
+          "from": 7,
+          "to": 8
+        },
+        {
+          "from": 8,
+          "to": 3
+        },
+        {
+          "from": 9,
+          "to": 4
+        },
+        {
+          "from": 10,
+          "to": 11
+        },
+        {
+          "from": 11,
+          "to": 5
+        },
+        {
+          "from": 12,
+          "to": 13
+        },
+        {
+          "from": 13,
+          "to": 7
+        },
+        {
+          "from": 14,
+          "to": 15
+        },
+        {
+          "from": 15,
+          "to": 10
+        }
+      ]
+    }
+  ],
+  "cfgMethodsOmitted": 0,
+  "imports": [
+    {
+      "file": "",
+      "line": -1,
+      "code": "<empty>",
+      "nodeId": "73014444032"
+    }
+  ],
+  "reachingDefs": [
+    {
+      "source": {
+        "label": "METHOD_PARAMETER_IN",
+        "line": 1,
+        "column": 0,
+        "code": "self",
+        "file": "helper.rb",
+        "ownerMethod": "helper.rb:<main>",
+        "nodeId": "111669149696"
+      },
+      "target": {
+        "label": "METHOD_PARAMETER_OUT",
+        "line": 1,
+        "column": 0,
+        "code": "self",
+        "file": "helper.rb",
+        "ownerMethod": "helper.rb:<main>",
+        "nodeId": "115964116992"
+      }
+    },
+    {
+      "source": {
+        "label": "METHOD_PARAMETER_IN",
+        "line": 1,
+        "column": 0,
+        "code": "self",
+        "file": "helper.rb",
+        "ownerMethod": "helper.rb:<main>",
+        "nodeId": "111669149696"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 1,
+        "column": 0,
+        "code": "RET",
+        "file": "helper.rb",
+        "ownerMethod": "helper.rb:<main>",
+        "nodeId": "124554051584"
+      }
+    },
+    {
+      "source": {
+        "label": "METHOD_PARAMETER_IN",
+        "line": 2,
+        "column": 2,
+        "code": "self",
+        "file": "helper.rb",
+        "ownerMethod": "helper.rb:<main>",
+        "nodeId": "111669149697"
+      },
+      "target": {
+        "label": "METHOD_PARAMETER_OUT",
+        "line": 2,
+        "column": 2,
+        "code": "self",
+        "file": "helper.rb",
+        "ownerMethod": "helper.rb:<main>",
+        "nodeId": "115964116993"
+      }
+    },
+    {
+      "source": {
+        "label": "METHOD_PARAMETER_IN",
+        "line": 2,
+        "column": 2,
+        "code": "self",
+        "file": "helper.rb",
+        "ownerMethod": "helper.rb:<main>",
+        "nodeId": "111669149697"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 2,
+        "column": 2,
+        "code": "RET",
+        "file": "helper.rb",
+        "ownerMethod": "helper.rb:<main>",
+        "nodeId": "124554051585"
+      }
+    },
+    {
+      "source": {
+        "label": "METHOD_PARAMETER_IN",
+        "line": 2,
+        "column": 19,
+        "code": "value",
+        "file": "helper.rb",
+        "ownerMethod": "helper.rb:<main>",
+        "nodeId": "111669149698"
+      },
+      "target": {
+        "label": "METHOD_PARAMETER_OUT",
+        "line": 2,
+        "column": 19,
+        "code": "value",
+        "file": "helper.rb",
+        "ownerMethod": "helper.rb:<main>",
+        "nodeId": "115964116994"
+      }
+    },
+    {
+      "source": {
+        "label": "METHOD_PARAMETER_IN",
+        "line": 2,
+        "column": 19,
+        "code": "value",
+        "file": "helper.rb",
+        "ownerMethod": "helper.rb:<main>",
+        "nodeId": "111669149698"
+      },
+      "target": {
+        "label": "IDENTIFIER",
+        "line": 3,
+        "column": 4,
+        "code": "value",
+        "file": "helper.rb",
+        "ownerMethod": "helper.rb:<main>",
+        "nodeId": "68719476736"
+      }
+    },
+    {
+      "source": {
+        "label": "RETURN",
+        "line": 3,
+        "column": 4,
+        "code": "value + 1",
+        "file": "helper.rb",
+        "ownerMethod": "helper.rb:<main>",
+        "nodeId": "141733920768"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 2,
+        "column": 2,
+        "code": "RET",
+        "file": "helper.rb",
+        "ownerMethod": "helper.rb:<main>",
+        "nodeId": "124554051585"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": 3,
+        "column": 4,
+        "code": "value + 1",
+        "file": "helper.rb",
+        "ownerMethod": "helper.rb:<main>",
+        "nodeId": "30064771072"
+      },
+      "target": {
+        "label": "RETURN",
+        "line": 3,
+        "column": 4,
+        "code": "value + 1",
+        "file": "helper.rb",
+        "ownerMethod": "helper.rb:<main>",
+        "nodeId": "141733920768"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": 3,
+        "column": 4,
+        "code": "value + 1",
+        "file": "helper.rb",
+        "ownerMethod": "helper.rb:<main>",
+        "nodeId": "30064771072"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 2,
+        "column": 2,
+        "code": "RET",
+        "file": "helper.rb",
+        "ownerMethod": "helper.rb:<main>",
+        "nodeId": "124554051585"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": 3,
+        "column": 4,
+        "code": "value",
+        "file": "helper.rb",
+        "ownerMethod": "helper.rb:<main>",
+        "nodeId": "68719476736"
+      },
+      "target": {
+        "label": "METHOD_PARAMETER_OUT",
+        "line": 2,
+        "column": 19,
+        "code": "value",
+        "file": "helper.rb",
+        "ownerMethod": "helper.rb:<main>",
+        "nodeId": "115964116994"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": 3,
+        "column": 4,
+        "code": "value",
+        "file": "helper.rb",
+        "ownerMethod": "helper.rb:<main>",
+        "nodeId": "68719476736"
+      },
+      "target": {
+        "label": "CALL",
+        "line": 3,
+        "column": 4,
+        "code": "value + 1",
+        "file": "helper.rb",
+        "ownerMethod": "helper.rb:<main>",
+        "nodeId": "30064771072"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": 3,
+        "column": 4,
+        "code": "value",
+        "file": "helper.rb",
+        "ownerMethod": "helper.rb:<main>",
+        "nodeId": "68719476736"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 2,
+        "column": 2,
+        "code": "RET",
+        "file": "helper.rb",
+        "ownerMethod": "helper.rb:<main>",
+        "nodeId": "124554051585"
+      }
+    },
+    {
+      "source": {
+        "label": "LITERAL",
+        "line": 3,
+        "column": 12,
+        "code": "1",
+        "file": "helper.rb",
+        "ownerMethod": "helper.rb:<main>",
+        "nodeId": "90194313216"
+      },
+      "target": {
+        "label": "CALL",
+        "line": 3,
+        "column": 4,
+        "code": "value + 1",
+        "file": "helper.rb",
+        "ownerMethod": "helper.rb:<main>",
+        "nodeId": "30064771072"
+      }
+    },
+    {
+      "source": {
+        "label": "METHOD_PARAMETER_IN",
+        "line": 1,
+        "column": 0,
+        "code": "self",
+        "file": "helper.rb",
+        "ownerMethod": "helper.rb:<main>",
+        "nodeId": "111669149699"
+      },
+      "target": {
+        "label": "METHOD_PARAMETER_OUT",
+        "line": 1,
+        "column": 0,
+        "code": "self",
+        "file": "helper.rb",
+        "ownerMethod": "helper.rb:<main>",
+        "nodeId": "115964116995"
+      }
+    },
+    {
+      "source": {
+        "label": "METHOD_PARAMETER_IN",
+        "line": 1,
+        "column": 0,
+        "code": "self",
+        "file": "helper.rb",
+        "ownerMethod": "helper.rb:<main>",
+        "nodeId": "111669149699"
+      },
+      "target": {
+        "label": "IDENTIFIER",
+        "line": -1,
+        "column": -1,
+        "code": "self",
+        "file": "helper.rb",
+        "ownerMethod": "helper.rb:<main>",
+        "nodeId": "68719476737"
+      }
+    },
+    {
+      "source": {
+        "label": "METHOD_PARAMETER_IN",
+        "line": 1,
+        "column": 0,
+        "code": "self",
+        "file": "helper.rb",
+        "ownerMethod": "helper.rb:<main>",
+        "nodeId": "111669149699"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 1,
+        "column": 0,
+        "code": "RET",
+        "file": "helper.rb",
+        "ownerMethod": "helper.rb:<main>",
+        "nodeId": "124554051586"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": 1,
+        "column": 0,
+        "code": "self.Helper = module Helper (...)",
+        "file": "helper.rb",
+        "ownerMethod": "helper.rb:<main>",
+        "nodeId": "30064771073"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 1,
+        "column": 0,
+        "code": "RET",
+        "file": "helper.rb",
+        "ownerMethod": "helper.rb:<main>",
+        "nodeId": "124554051586"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": -1,
+        "column": -1,
+        "code": "self.Helper",
+        "file": "helper.rb",
+        "ownerMethod": "helper.rb:<main>",
+        "nodeId": "30064771074"
+      },
+      "target": {
+        "label": "CALL",
+        "line": 1,
+        "column": 0,
+        "code": "self.Helper = module Helper (...)",
+        "file": "helper.rb",
+        "ownerMethod": "helper.rb:<main>",
+        "nodeId": "30064771073"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": -1,
+        "column": -1,
+        "code": "self.Helper",
+        "file": "helper.rb",
+        "ownerMethod": "helper.rb:<main>",
+        "nodeId": "30064771074"
+      },
+      "target": {
+        "label": "METHOD_PARAMETER_OUT",
+        "line": 1,
+        "column": 0,
+        "code": "self",
+        "file": "helper.rb",
+        "ownerMethod": "helper.rb:<main>",
+        "nodeId": "115964116995"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": -1,
+        "column": -1,
+        "code": "self.Helper",
+        "file": "helper.rb",
+        "ownerMethod": "helper.rb:<main>",
+        "nodeId": "30064771074"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 1,
+        "column": 0,
+        "code": "RET",
+        "file": "helper.rb",
+        "ownerMethod": "helper.rb:<main>",
+        "nodeId": "124554051586"
+      }
+    },
+    {
+      "source": {
+        "label": "TYPE_REF",
+        "line": 1,
+        "column": 0,
+        "code": "module Helper (...)",
+        "file": "helper.rb",
+        "ownerMethod": "helper.rb:<main>",
+        "nodeId": "176093659136"
+      },
+      "target": {
+        "label": "CALL",
+        "line": -1,
+        "column": -1,
+        "code": "self.Helper",
+        "file": "helper.rb",
+        "ownerMethod": "helper.rb:<main>",
+        "nodeId": "30064771074"
+      }
+    },
+    {
+      "source": {
+        "label": "TYPE_REF",
+        "line": 1,
+        "column": 0,
+        "code": "module Helper (...)",
+        "file": "helper.rb",
+        "ownerMethod": "helper.rb:<main>",
+        "nodeId": "176093659136"
+      },
+      "target": {
+        "label": "CALL",
+        "line": 1,
+        "column": 0,
+        "code": "self.Helper = module Helper (...)",
+        "file": "helper.rb",
+        "ownerMethod": "helper.rb:<main>",
+        "nodeId": "30064771073"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": 1,
+        "column": 0,
+        "code": "(<tmp-0> = self::Helper)::<body>()",
+        "file": "helper.rb",
+        "ownerMethod": "helper.rb:<main>",
+        "nodeId": "30064771075"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 1,
+        "column": 0,
+        "code": "RET",
+        "file": "helper.rb",
+        "ownerMethod": "helper.rb:<main>",
+        "nodeId": "124554051586"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": -1,
+        "column": -1,
+        "code": "<tmp-0>",
+        "file": "helper.rb",
+        "ownerMethod": "helper.rb:<main>",
+        "nodeId": "68719476738"
+      },
+      "target": {
+        "label": "CALL",
+        "line": 1,
+        "column": 0,
+        "code": "(<tmp-0> = self::Helper)::<body>()",
+        "file": "helper.rb",
+        "ownerMethod": "helper.rb:<main>",
+        "nodeId": "30064771075"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": -1,
+        "column": -1,
+        "code": "<tmp-0>",
+        "file": "helper.rb",
+        "ownerMethod": "helper.rb:<main>",
+        "nodeId": "68719476738"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 1,
+        "column": 0,
+        "code": "RET",
+        "file": "helper.rb",
+        "ownerMethod": "helper.rb:<main>",
+        "nodeId": "124554051586"
+      }
+    },
+    {
+      "source": {
+        "label": "METHOD_PARAMETER_IN",
+        "line": 2,
+        "column": 0,
+        "code": "self",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "111669149700"
+      },
+      "target": {
+        "label": "METHOD_PARAMETER_OUT",
+        "line": 2,
+        "column": 0,
+        "code": "self",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "115964116996"
+      }
+    },
+    {
+      "source": {
+        "label": "METHOD_PARAMETER_IN",
+        "line": 2,
+        "column": 0,
+        "code": "self",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "111669149700"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 2,
+        "column": 0,
+        "code": "RET",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "124554051587"
+      }
+    },
+    {
+      "source": {
+        "label": "METHOD_PARAMETER_IN",
+        "line": 3,
+        "column": 2,
+        "code": "self",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "111669149701"
+      },
+      "target": {
+        "label": "METHOD_PARAMETER_OUT",
+        "line": 3,
+        "column": 2,
+        "code": "self",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "115964116997"
+      }
+    },
+    {
+      "source": {
+        "label": "METHOD_PARAMETER_IN",
+        "line": 3,
+        "column": 2,
+        "code": "self",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "111669149701"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 3,
+        "column": 2,
+        "code": "RET",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "124554051588"
+      }
+    },
+    {
+      "source": {
+        "label": "METHOD_PARAMETER_IN",
+        "line": 3,
+        "column": 10,
+        "code": "value",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "111669149702"
+      },
+      "target": {
+        "label": "METHOD_PARAMETER_OUT",
+        "line": 3,
+        "column": 10,
+        "code": "value",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "115964116998"
+      }
+    },
+    {
+      "source": {
+        "label": "METHOD_PARAMETER_IN",
+        "line": 3,
+        "column": 10,
+        "code": "value",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "111669149702"
+      },
+      "target": {
+        "label": "IDENTIFIER",
+        "line": 4,
+        "column": 4,
+        "code": "value",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "68719476739"
+      }
+    },
+    {
+      "source": {
+        "label": "METHOD_PARAMETER_IN",
+        "line": 3,
+        "column": 10,
+        "code": "value",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "111669149702"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 3,
+        "column": 2,
+        "code": "RET",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "124554051588"
+      }
+    },
+    {
+      "source": {
+        "label": "RETURN",
+        "line": 4,
+        "column": 4,
+        "code": "value",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "141733920769"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 3,
+        "column": 2,
+        "code": "RET",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "124554051588"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": 4,
+        "column": 4,
+        "code": "value",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "68719476739"
+      },
+      "target": {
+        "label": "RETURN",
+        "line": 4,
+        "column": 4,
+        "code": "value",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "141733920769"
+      }
+    },
+    {
+      "source": {
+        "label": "METHOD_PARAMETER_IN",
+        "line": 3,
+        "column": 2,
+        "code": "self",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "111669149703"
+      },
+      "target": {
+        "label": "METHOD_PARAMETER_OUT",
+        "line": 3,
+        "column": 2,
+        "code": "self",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "115964116999"
+      }
+    },
+    {
+      "source": {
+        "label": "METHOD_PARAMETER_IN",
+        "line": 3,
+        "column": 2,
+        "code": "self",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "111669149703"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 3,
+        "column": 2,
+        "code": "RET",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "124554051589"
+      }
+    },
+    {
+      "source": {
+        "label": "METHOD_PARAMETER_IN",
+        "line": 7,
+        "column": 0,
+        "code": "self",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "111669149704"
+      },
+      "target": {
+        "label": "METHOD_PARAMETER_OUT",
+        "line": 7,
+        "column": 0,
+        "code": "self",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "115964117000"
+      }
+    },
+    {
+      "source": {
+        "label": "METHOD_PARAMETER_IN",
+        "line": 7,
+        "column": 0,
+        "code": "self",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "111669149704"
+      },
+      "target": {
+        "label": "IDENTIFIER",
+        "line": 9,
+        "column": 2,
+        "code": "self",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "68719476743"
+      }
+    },
+    {
+      "source": {
+        "label": "METHOD_PARAMETER_IN",
+        "line": 7,
+        "column": 0,
+        "code": "self",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "111669149704"
+      },
+      "target": {
+        "label": "CALL",
+        "line": 9,
+        "column": 2,
+        "code": "self.Helper",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "30064771081"
+      }
+    },
+    {
+      "source": {
+        "label": "METHOD_PARAMETER_IN",
+        "line": 7,
+        "column": 0,
+        "code": "self",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "111669149704"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 7,
+        "column": 0,
+        "code": "RET",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "124554051590"
+      }
+    },
+    {
+      "source": {
+        "label": "METHOD_PARAMETER_IN",
+        "line": 7,
+        "column": 8,
+        "code": "values",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "111669149705"
+      },
+      "target": {
+        "label": "IDENTIFIER",
+        "line": 8,
+        "column": 2,
+        "code": "values",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "68719476741"
+      }
+    },
+    {
+      "source": {
+        "label": "METHOD_PARAMETER_IN",
+        "line": 7,
+        "column": 8,
+        "code": "values",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "111669149705"
+      },
+      "target": {
+        "label": "IDENTIFIER",
+        "line": 8,
+        "column": 2,
+        "code": "values",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "68719476740"
+      }
+    },
+    {
+      "source": {
+        "label": "METHOD_PARAMETER_IN",
+        "line": 7,
+        "column": 8,
+        "code": "values",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "111669149705"
+      },
+      "target": {
+        "label": "METHOD_PARAMETER_OUT",
+        "line": 7,
+        "column": 8,
+        "code": "values",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "115964117001"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": 8,
+        "column": 2,
+        "code": "values.map(&:size)",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "30064771076"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 7,
+        "column": 0,
+        "code": "RET",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "124554051590"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": 8,
+        "column": 2,
+        "code": "values",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "68719476741"
+      },
+      "target": {
+        "label": "CALL",
+        "line": 8,
+        "column": 2,
+        "code": "values.map(&:size)",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "30064771076"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": 8,
+        "column": 2,
+        "code": "values",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "68719476741"
+      },
+      "target": {
+        "label": "METHOD_PARAMETER_OUT",
+        "line": 7,
+        "column": 8,
+        "code": "values",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "115964117001"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": 8,
+        "column": 2,
+        "code": "values",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "68719476741"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 7,
+        "column": 0,
+        "code": "RET",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "124554051590"
+      }
+    },
+    {
+      "source": {
+        "label": "LITERAL",
+        "line": 8,
+        "column": 14,
+        "code": ":size",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "90194313217"
+      },
+      "target": {
+        "label": "IDENTIFIER",
+        "line": 8,
+        "column": 2,
+        "code": "values",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "68719476741"
+      }
+    },
+    {
+      "source": {
+        "label": "LITERAL",
+        "line": 8,
+        "column": 14,
+        "code": ":size",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "90194313217"
+      },
+      "target": {
+        "label": "CALL",
+        "line": 8,
+        "column": 2,
+        "code": "values.map(&:size)",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "30064771076"
+      }
+    },
+    {
+      "source": {
+        "label": "RETURN",
+        "line": 9,
+        "column": 2,
+        "code": "Helper.compute(1)",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "141733920770"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 7,
+        "column": 0,
+        "code": "RET",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "124554051590"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": 9,
+        "column": 2,
+        "code": "(<tmp-0> = Helper).compute(1)",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "30064771078"
+      },
+      "target": {
+        "label": "RETURN",
+        "line": 9,
+        "column": 2,
+        "code": "Helper.compute(1)",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "141733920770"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": 9,
+        "column": 2,
+        "code": "(<tmp-0> = Helper).compute(1)",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "30064771078"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 7,
+        "column": 0,
+        "code": "RET",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "124554051590"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": 9,
+        "column": 2,
+        "code": "<tmp-0> = Helper",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "30064771080"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 7,
+        "column": 0,
+        "code": "RET",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "124554051590"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": -1,
+        "column": -1,
+        "code": "<tmp-0>",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "68719476742"
+      },
+      "target": {
+        "label": "IDENTIFIER",
+        "line": -1,
+        "column": -1,
+        "code": "<tmp-0>",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "68719476744"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": -1,
+        "column": -1,
+        "code": "<tmp-0>",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "68719476742"
+      },
+      "target": {
+        "label": "CALL",
+        "line": 9,
+        "column": 2,
+        "code": "<tmp-0> = Helper",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "30064771080"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": 9,
+        "column": 2,
+        "code": "self.Helper",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "30064771081"
+      },
+      "target": {
+        "label": "METHOD_PARAMETER_OUT",
+        "line": 7,
+        "column": 0,
+        "code": "self",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "115964117000"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": 9,
+        "column": 2,
+        "code": "self.Helper",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "30064771081"
+      },
+      "target": {
+        "label": "IDENTIFIER",
+        "line": -1,
+        "column": -1,
+        "code": "<tmp-0>",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "68719476742"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": 9,
+        "column": 2,
+        "code": "self.Helper",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "30064771081"
+      },
+      "target": {
+        "label": "CALL",
+        "line": 9,
+        "column": 2,
+        "code": "<tmp-0> = Helper",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "30064771080"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": 9,
+        "column": 2,
+        "code": "self.Helper",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "30064771081"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 7,
+        "column": 0,
+        "code": "RET",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "124554051590"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": -1,
+        "column": -1,
+        "code": "<tmp-0>",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "68719476744"
+      },
+      "target": {
+        "label": "CALL",
+        "line": 9,
+        "column": 2,
+        "code": "(<tmp-0> = Helper).compute(1)",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "30064771078"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": -1,
+        "column": -1,
+        "code": "<tmp-0>",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "68719476744"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 7,
+        "column": 0,
+        "code": "RET",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "124554051590"
+      }
+    },
+    {
+      "source": {
+        "label": "LITERAL",
+        "line": 9,
+        "column": 17,
+        "code": "1",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "90194313218"
+      },
+      "target": {
+        "label": "IDENTIFIER",
+        "line": -1,
+        "column": -1,
+        "code": "<tmp-0>",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "68719476744"
+      }
+    },
+    {
+      "source": {
+        "label": "LITERAL",
+        "line": 9,
+        "column": 17,
+        "code": "1",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "90194313218"
+      },
+      "target": {
+        "label": "CALL",
+        "line": 9,
+        "column": 2,
+        "code": "(<tmp-0> = Helper).compute(1)",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "30064771078"
+      }
+    },
+    {
+      "source": {
+        "label": "METHOD_PARAMETER_IN",
+        "line": 1,
+        "column": 0,
+        "code": "self",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "111669149706"
+      },
+      "target": {
+        "label": "IDENTIFIER",
+        "line": -1,
+        "column": -1,
+        "code": "self",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "68719476745"
+      }
+    },
+    {
+      "source": {
+        "label": "METHOD_PARAMETER_IN",
+        "line": 1,
+        "column": 0,
+        "code": "self",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "111669149706"
+      },
+      "target": {
+        "label": "IDENTIFIER",
+        "line": -1,
+        "column": -1,
+        "code": "self",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "68719476747"
+      }
+    },
+    {
+      "source": {
+        "label": "METHOD_PARAMETER_IN",
+        "line": 1,
+        "column": 0,
+        "code": "self",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "111669149706"
+      },
+      "target": {
+        "label": "METHOD_PARAMETER_OUT",
+        "line": 1,
+        "column": 0,
+        "code": "self",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "115964117002"
+      }
+    },
+    {
+      "source": {
+        "label": "METHOD_PARAMETER_IN",
+        "line": 1,
+        "column": 0,
+        "code": "self",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "111669149706"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 1,
+        "column": 0,
+        "code": "RET",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "124554051591"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": -1,
+        "column": -1,
+        "code": "require_relative \"helper\"",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "30064771082"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 1,
+        "column": 0,
+        "code": "RET",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "124554051591"
+      }
+    },
+    {
+      "source": {
+        "label": "LITERAL",
+        "line": 1,
+        "column": 17,
+        "code": "\"helper\"",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "90194313219"
+      },
+      "target": {
+        "label": "CALL",
+        "line": -1,
+        "column": -1,
+        "code": "require_relative \"helper\"",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "30064771082"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": 2,
+        "column": 0,
+        "code": "self.Builder = class Builder (...)",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "30064771083"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 1,
+        "column": 0,
+        "code": "RET",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "124554051591"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": -1,
+        "column": -1,
+        "code": "self.Builder",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "30064771084"
+      },
+      "target": {
+        "label": "CALL",
+        "line": 2,
+        "column": 0,
+        "code": "self.Builder = class Builder (...)",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "30064771083"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": -1,
+        "column": -1,
+        "code": "self.Builder",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "30064771084"
+      },
+      "target": {
+        "label": "IDENTIFIER",
+        "line": -1,
+        "column": -1,
+        "code": "self",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "68719476747"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": -1,
+        "column": -1,
+        "code": "self.Builder",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "30064771084"
+      },
+      "target": {
+        "label": "METHOD_PARAMETER_OUT",
+        "line": 1,
+        "column": 0,
+        "code": "self",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "115964117002"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": -1,
+        "column": -1,
+        "code": "self.Builder",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "30064771084"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 1,
+        "column": 0,
+        "code": "RET",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "124554051591"
+      }
+    },
+    {
+      "source": {
+        "label": "TYPE_REF",
+        "line": 2,
+        "column": 0,
+        "code": "class Builder (...)",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "176093659137"
+      },
+      "target": {
+        "label": "CALL",
+        "line": -1,
+        "column": -1,
+        "code": "self.Builder",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "30064771084"
+      }
+    },
+    {
+      "source": {
+        "label": "TYPE_REF",
+        "line": 2,
+        "column": 0,
+        "code": "class Builder (...)",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "176093659137"
+      },
+      "target": {
+        "label": "CALL",
+        "line": 2,
+        "column": 0,
+        "code": "self.Builder = class Builder (...)",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "30064771083"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": 2,
+        "column": 0,
+        "code": "(<tmp-0> = self::Builder)::<body>()",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "30064771085"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 1,
+        "column": 0,
+        "code": "RET",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "124554051591"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": -1,
+        "column": -1,
+        "code": "<tmp-0>",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "68719476746"
+      },
+      "target": {
+        "label": "CALL",
+        "line": 2,
+        "column": 0,
+        "code": "(<tmp-0> = self::Builder)::<body>()",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "30064771085"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": -1,
+        "column": -1,
+        "code": "<tmp-0>",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "68719476746"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 1,
+        "column": 0,
+        "code": "RET",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "124554051591"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": 7,
+        "column": 0,
+        "code": "self.run = def run (...)",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "30064771086"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 1,
+        "column": 0,
+        "code": "RET",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "124554051591"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": -1,
+        "column": -1,
+        "code": "self.run",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "30064771087"
+      },
+      "target": {
+        "label": "METHOD_PARAMETER_OUT",
+        "line": 1,
+        "column": 0,
+        "code": "self",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "115964117002"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": -1,
+        "column": -1,
+        "code": "self.run",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "30064771087"
+      },
+      "target": {
+        "label": "CALL",
+        "line": 7,
+        "column": 0,
+        "code": "self.run = def run (...)",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "30064771086"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": -1,
+        "column": -1,
+        "code": "self.run",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "30064771087"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 1,
+        "column": 0,
+        "code": "RET",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "124554051591"
+      }
+    },
+    {
+      "source": {
+        "label": "METHOD_REF",
+        "line": 7,
+        "column": 0,
+        "code": "def run (...)",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "120259084288"
+      },
+      "target": {
+        "label": "CALL",
+        "line": -1,
+        "column": -1,
+        "code": "self.run",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "30064771087"
+      }
+    },
+    {
+      "source": {
+        "label": "METHOD_REF",
+        "line": 7,
+        "column": 0,
+        "code": "def run (...)",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "120259084288"
+      },
+      "target": {
+        "label": "CALL",
+        "line": 7,
+        "column": 0,
+        "code": "self.run = def run (...)",
+        "file": "main.rb",
+        "ownerMethod": "main.rb:<main>",
+        "nodeId": "30064771086"
+      }
+    }
+  ],
+  "reachingDefsTruncated": false,
+  "reachingDefsOmitted": 0,
+  "dataflowPaths": [],
+  "dataflowErrors": [],
+  "_languages": [
+    "ruby"
+  ],
+  "_frontend": "rubysrc2cpg",
+  "_repo_root": "<repo>",
+  "_go_modules": {},
+  "_files": [
+    "helper.rb",
+    "main.rb",
+    "raw.json",
+    "tests/helper_test.rb"
+  ],
+  "_non_call_sites": {
+    "synthetic": 13
+  }
+}

@@ -27,6 +27,7 @@ from __future__ import annotations
 import json
 import os
 import re
+from collections import Counter
 import shlex
 import shutil
 import subprocess
@@ -34,6 +35,7 @@ from pathlib import Path
 
 from .identity import repository_files, file_id
 from ._calls import CallResolver
+from .resolution import go_modules
 
 #: language id (canonical, matches ``cbe.source_context``) -> Joern frontend
 #: flag.  ``pythonsrc``/``javasrc`` are the source frontends; ``python``/``java``
@@ -69,7 +71,7 @@ FRONTEND_NAME = {
 }
 
 #: Syntax noise that is not a user-visible call relation.
-_SYNTHETIC_CALL = re.compile(r"^(?:<operator>|__ecma\.|_?tmp\d+\.)")
+_SYNTHETIC_CALL = re.compile(r"^(?:<operators?>|__ecma\.|_?tmp\d+\.)")
 
 #: REACHING_DEF is capped so a very large program cannot exhaust the run dir.
 DEFAULT_MAX_REACHING_DEFS = 50000
@@ -142,6 +144,7 @@ import scala.util.{Try, Success, Failure}
       "name" -> c.name,
       "code" -> c.code,
       "methodFullName" -> c.methodFullName,
+      "dispatchType" -> c.dispatchType.toString,
       "callees" -> callees,
       "nodeId" -> c.id
     )
@@ -177,7 +180,8 @@ import scala.util.{Try, Success, Failure}
 
   val imports = cpg.imports.map { i =>
     val f = i.file.name.headOption.getOrElse("")
-    ujson.Obj("file" -> f, "code" -> i.code.linesIterator.toList.headOption.getOrElse(""), "nodeId" -> i.id)
+    ujson.Obj("file" -> f, "line" -> i.lineNumber.getOrElse(-1),
+              "code" -> i.code.linesIterator.toList.headOption.getOrElse(""), "nodeId" -> i.id)
   }.l
 
   // Native REACHING_DEF definition-use edges: the bounded base data-flow graph.
@@ -327,6 +331,7 @@ def build_with_joern(
     nodes: list[dict] = []
     edges: list[dict] = []
     raw: list[dict] = []
+    non_call_sites = Counter()
     path_methods = ",".join(dataflow_path_methods or [])
     files = repository_files(repo)
 
@@ -348,8 +353,10 @@ def build_with_joern(
         cpg = run_dir / f"cpg-{flag}.bin"
         export = run_dir / f"cpg-{flag}.json"
         try:
-            parsed = _run([str(parse_bin), str(repo), "--language", flag, "-o", str(cpg)],
-                          timeout=timeout, cwd=run_dir, env=joern_env)
+            parse_argv = [str(parse_bin), str(repo), "--language", flag, "-o", str(cpg)]
+            if flag == "rubysrc":
+                parse_argv += ["--frontend-args", "--no-default-exclude"]
+            parsed = _run(parse_argv, timeout=timeout, cwd=run_dir, env=joern_env)
         except subprocess.TimeoutExpired:
             for language in langs:
                 capabilities.extend(_failed_capabilities(language, "joern", "backend_timeout"))
@@ -402,11 +409,17 @@ def build_with_joern(
             continue
         payload["_languages"] = langs
         payload["_frontend"] = FRONTEND_NAME.get(flag, flag)
+        payload["_repo_root"] = str(repo)
+        payload["_go_modules"] = go_modules(repo, files)
+        payload["_javascript_packages"] = _javascript_packages(repo, files)
+        payload["_c_macros"] = sorted(_c_macro_names(repo, files)) if flag == "c" else []
+        _attach_call_source_lines(payload, repo)
         raw.append(payload)
         payload["_files"] = files
         f_nodes, f_edges = _normalize(payload, version, namespace, diagnostics=diagnostics)
         nodes.extend(f_nodes)
         edges.extend(f_edges)
+        non_call_sites.update(payload.get("_non_call_sites", {}))
         frontend_error = None
         if not payload.get("methods"):
             # joern-parse may have exited 0 after a frontend failed to load the
@@ -447,8 +460,79 @@ def build_with_joern(
         "edges": edges,
         "capabilities": capabilities,
         "diagnostics": diagnostics,
+        "non_call_sites": dict(sorted(non_call_sites.items())),
         "raw": raw,
     }
+
+
+def _c_macro_names(repo: Path, files) -> set[str]:
+    """Read real C/C++ #define nodes with the grammars already used by CBE."""
+    from cbe.source_context import _grammar_for_suffix, _make_parser  # noqa: PLC0415
+    names = set()
+    parsers = {}
+    for path in sorted(files):
+        suffix = Path(path).suffix.lower()
+        if suffix not in {".c", ".h", ".cc", ".cpp", ".cxx", ".hpp", ".hh"}:
+            continue
+        spec = _grammar_for_suffix(suffix)
+        if spec is None:
+            continue
+        try:
+            parser = parsers.get(spec.name)
+            if parser is None:
+                parser = parsers[spec.name] = _make_parser(spec)
+            data = (repo / path).read_bytes()
+            root = parser.parse(data).root_node
+            stack = [root]
+            while stack:
+                node = stack.pop()
+                if node.type in {"preproc_def", "preproc_function_def"}:
+                    name = node.child_by_field_name("name")
+                    if name is not None:
+                        names.add(data[name.start_byte:name.end_byte].decode("utf-8"))
+                stack.extend(node.children)
+        except (OSError, ValueError, RuntimeError, ImportError):
+            continue
+    return names
+
+
+def _attach_call_source_lines(payload: dict, repo: Path) -> None:
+    """Add source evidence only where generated calls need disambiguation."""
+    cache = {}
+    for call in payload.get("calls", []):
+        if call.get("name") != "require" or not str(call.get("callerFile", "")).endswith(
+                (".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs", ".mts", ".cts")):
+            continue
+        path = _norm_path(call.get("callerFile", ""))
+        line = call.get("line")
+        if not path or not isinstance(line, int) or line <= 0:
+            continue
+        if path not in cache:
+            try:
+                cache[path] = (repo / path).read_text(encoding="utf-8").splitlines()
+            except OSError:
+                cache[path] = []
+        if line <= len(cache[path]):
+            statement = []
+            for source_line in cache[path][line - 1:line + 19]:
+                statement.append(source_line.strip())
+                if ";" in source_line:
+                    break
+            call["sourceCode"] = "\n".join(statement)
+
+
+def _javascript_packages(repo: Path, files) -> list[str]:
+    names = set()
+    for path in sorted(files):
+        if Path(path).name != "package.json":
+            continue
+        try:
+            value = json.loads((repo / path).read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if isinstance(value, dict) and isinstance(value.get("name"), str):
+            names.add(value["name"])
+    return sorted(names)
 
 
 def _norm_path(raw: str) -> str | None:
@@ -510,8 +594,87 @@ def _frontend_error_from_direct_run(parse_output: str, run_dir: Path, timeout: i
     return _first_error_line((completed.stdout or "") + "\n" + (completed.stderr or ""), roots)
 
 
-def _visible_call(call: dict) -> bool:
-    return not _SYNTHETIC_CALL.match(str(call.get("name", "")))
+def _non_call_reason(call: dict, imports=(), types=(), macro_names=()) -> str | None:
+    """Classify analyzer-generated call nodes using language-specific facts."""
+    name = str(call.get("name", ""))
+    code = str(call.get("code", ""))
+    full = str(call.get("methodFullName", ""))
+    path = str(call.get("callerFile", ""))
+    if name.startswith(("<operator>", "<operators>")):
+        return "operator"  # Joern's node for +, =, [] and the like: never a call site, not counted
+    if _SYNTHETIC_CALL.match(name) or full.startswith("ANY.ANY:"):
+        return "synthetic"
+    if path.endswith((".c", ".h", ".cc", ".cpp", ".cxx", ".hpp", ".hh")) \
+            and (call.get("dispatchType") == "INLINED" or name in macro_names):
+        return "macro"
+    cpp_builtin = {"bool", "char", "short", "int", "long", "float", "double",
+                   "signed", "unsigned", "wchar_t", "char8_t", "char16_t", "char32_t"}
+    if path.endswith((".cc", ".cpp", ".cxx", ".h", ".hpp", ".hh")):
+        if name in cpp_builtin and full.startswith(name + "." + name + ":"):
+            return "type_conversion"
+        if full.startswith("struct.struct:") and "{" in code and "}" in code:
+            return "literal"
+    if path.endswith((".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs", ".mts", ".cts")):
+        source = str(call.get("sourceCode", ""))
+        if name == "require" and (any(imp.get("file") == path and imp.get("line") == call.get("line")
+                                      for imp in imports)
+                                 or re.match(r"^(?:import|export)\b[\s\S]*\bfrom\b", source)):
+            return "import_statement"
+        if (re.fullmatch(r"_iterator_\d+\.next\(\)", code)
+                or re.fullmatch(r"_tmp_\d+\.push\(.*\)", code)):
+            return "synthetic"
+    if path.endswith(".py"):
+        if ("<fakeNew>" in code or "__newInstance.__init__" in code
+                or code.startswith("def <body>") or re.fullmatch(r"enter_tmp\d+\(\)", code)
+                or code == "__exit__()"):
+            return "synthetic"
+        if full == "<unknownFullName>" and name in {"__iter__", "__next__"}:
+            return "synthetic"
+        callees = call.get("callees") or []
+        if ((str(call.get("caller", "")).endswith(":<module>")
+             or "<metaClassAdapter>" in str(call.get("caller", ""))) and len(callees) == 1
+                and not callees[0].get("external")
+                and callees[0].get("line") == call.get("line")
+                and re.fullmatch(r"[A-Za-z_]\w*\([^)]*\)", code)):
+            return "synthetic"
+    go_builtin_conversion = (not name and full.endswith(".") and re.match(
+        r"^(?:\[\])?(?:string|bool|byte|rune|error|int(?:8|16|32|64)?|uint(?:8|16|32|64)?|uintptr|"
+        r"float(?:32|64)|complex(?:64|128))\(", code))
+    if go_builtin_conversion:
+        return "type_conversion"
+    go_literal_type = any(str(value.get("file", "")).endswith(".go")
+                          and full == str(value.get("fullName", "")) + ".<init>" for value in types)
+    if (path.endswith(".go") or go_literal_type) and full.endswith(".<init>") \
+            and "{" in code and "}" in code:
+        return "literal"
+    if path.endswith(".rb"):
+        if full == "<unknownFullName>" and code.startswith("defined?("):
+            return "synthetic"
+        if full == "__core.Array.initialize" and (code.startswith("%w[") or
+                (code.startswith("[") and code.endswith("]"))):
+            return "literal"
+    if path.endswith(".go"):
+        go_types = {"string", "bool", "byte", "rune", "error", "int", "int8", "int16",
+                    "int32", "int64", "uint", "uint8", "uint16", "uint32", "uint64",
+                    "uintptr", "float32", "float64", "complex64", "complex128"}
+        if (name in go_types or (not name and full.endswith("."))
+                or any(name == value.get("name") and full == value.get("fullName") for value in types)):
+            return "type_conversion"
+    if name == "<body>":
+        return "synthetic"
+    return None
+
+
+def _visible_call(call: dict, imports=(), types=(), macro_names=()) -> bool:
+    return _non_call_reason(call, imports, types, macro_names) is None
+
+
+def _absent_files(language: str, payload: dict) -> list[str]:
+    from cbe.source_context import suffix_languages  # noqa: PLC0415
+    suffixes = {suffix for suffix, lang in suffix_languages().items() if lang == language}
+    present = {_norm_path(method.get("file", "")) for method in payload.get("methods", [])}
+    return sorted(path for path in payload.get("_files") or ()
+                  if Path(path).suffix.lower() in suffixes and path not in present)
 
 
 def _capability(language, graph, status, version, *, backend, limitations=None,
@@ -585,9 +748,16 @@ def _normalize(payload: dict, version: str, namespace: str = "cpg", *,
         if native is not None:
             method_by_native[int(native)] = node_id
 
-    call_resolver = CallResolver(payload.get("methods", []), payload.get("_files"), payload.get("types"))
+    call_resolver = CallResolver(payload.get("methods", []), payload.get("_files"),
+                                 payload.get("types"), payload.get("_go_modules"),
+                                 payload.get("_javascript_packages"))
+    non_call_sites = Counter()
     for call in payload.get("calls", []):
-        if not _visible_call(call):
+        reason = _non_call_reason(call, payload.get("imports", []), payload.get("types", []),
+                                  payload.get("_c_macros", []))
+        if reason:
+            if reason != "operator":
+                non_call_sites[reason] += 1
             continue
         rel = _norm_path(call.get("callerFile", ""))
         native_caller = call.get("callerId")
@@ -640,7 +810,21 @@ def _normalize(payload: dict, version: str, namespace: str = "cpg", *,
                 "path": rel, "owner": owner_node, "backend": "joern",
             })
 
-    for imp in payload.get("imports", []):
+    payload["_non_call_sites"] = dict(sorted(non_call_sites.items()))
+
+    import_declarations = [imp for imp in payload.get("imports", [])
+                           if imp.get("file") and imp.get("code") not in (None, "", "<empty>")]
+    import_keys = {(imp.get("file"), imp.get("line"), imp.get("code")) for imp in import_declarations}
+    for call in payload.get("calls", []):
+        if (call.get("name") not in {"require", "require_relative"}
+                or not str(call.get("callerFile", "")).endswith(".rb")):
+            continue
+        key = (call.get("callerFile"), call.get("line"), call.get("code"))
+        if key not in import_keys:
+            import_keys.add(key)
+            import_declarations.append({"file": key[0], "line": key[1], "code": key[2],
+                                        "nodeId": f"{call.get('nodeId')}:import"})
+    for imp in import_declarations:
         rel = _norm_path(imp.get("file", ""))
         file_node_id = file_id(rel, payload.get("_files", {rel}))
         if file_node_id:
@@ -648,7 +832,8 @@ def _normalize(payload: dict, version: str, namespace: str = "cpg", *,
         edges.append({
             "id": f"{namespace}/import/{imp.get('nodeId')}",
             "source": file_node_id, "target": None, "kind": "import", "status": "unresolved",
-            "path": rel, "expression": imp.get("code"), "analyzer_id": imp.get("nodeId"),
+            "path": rel, "line": imp.get("line"), "expression": imp.get("code"),
+            "analyzer_id": imp.get("nodeId"),
             "backend": "joern",
         })
 
@@ -691,6 +876,15 @@ def _normalize(payload: dict, version: str, namespace: str = "cpg", *,
 
     if diagnostics is not None:
         diagnostics.extend(call_resolver.diagnostics)
+        if payload.get("methods"):
+            for language in payload.get("_languages", []):
+                absent = _absent_files(language, payload)
+                if absent:
+                    diagnostics.append({"path": None, "code": "files_absent_from_graph",
+                                        "language": language, "count": len(absent),
+                                        "examples": absent[:5],
+                                        "message": f"{len(absent)} {language} manifest files have no method nodes: "
+                                                   + ", ".join(absent[:5])})
     return nodes, edges
 
 
@@ -700,8 +894,16 @@ def _capabilities_for(language: str, payload: dict, version: str,
         return [_capability(language, kind, "failed", version, backend="joern",
                             limitations=f"frontend error: {frontend_error}")
                 for kind in ("call", "cfg", "dataflow", "import")]
-    calls = [call for call in payload.get("calls", []) if _visible_call(call)]
-    resolver = CallResolver(payload.get("methods", []), payload.get("_files"), payload.get("types"))
+    calls = [call for call in payload.get("calls", [])
+             if _visible_call(call, payload.get("imports", []), payload.get("types", []),
+                              payload.get("_c_macros", []))]
+    non_call_sites = Counter(
+        reason for call in payload.get("calls", [])
+        if (reason := _non_call_reason(call, payload.get("imports", []), payload.get("types", []),
+                                        payload.get("_c_macros", []))) not in (None, "operator"))
+    resolver = CallResolver(payload.get("methods", []), payload.get("_files"),
+                            payload.get("types"), payload.get("_go_modules"),
+                            payload.get("_javascript_packages"))
     statuses = [resolver.resolve(call)[0] for call in calls]
     resolved = statuses.count("resolved")
     external = statuses.count("external")
@@ -735,7 +937,7 @@ def _capabilities_for(language: str, payload: dict, version: str,
     if language in ("javascript", "typescript", "tsx", "python", "ruby"):
         conditions.append("dynamic dispatch and monkey-patching can hide call targets")
     if language == "ruby":
-        conditions.append("rubysrc2cpg skips paths whose component is test, tests or spec")
+        conditions.append("rubysrc2cpg runs with --no-default-exclude; remaining absent files are diagnosed")
     if language == "rust":
         conditions.append("rust2cpg requires a Cargo project layout (Cargo.toml + src)")
     if language == "php":
@@ -753,13 +955,19 @@ def _capabilities_for(language: str, payload: dict, version: str,
         call_notes.append(f"{unresolved} unresolved")
     if not calls:
         call_notes.append("analyzer ran but produced no user-visible calls")
+    if non_call_sites:
+        call_notes.append("excluded non-call sites: " + ", ".join(
+            f"{count} {reason}" for reason, count in sorted(non_call_sites.items())))
+    absent = _absent_files(language, payload)
+    if absent:
+        call_notes.append(f"{len(absent)} manifest files have no method nodes")
 
     return [
         _capability(language, "call", call_status, version, backend="joern",
                     limitations="; ".join(call_notes) or None,
                     condition="; ".join(conditions) or None,
                     resolved=resolved, external=external, ambiguous=ambiguous,
-                    unresolved=unresolved),
+                    unresolved=unresolved, non_call_sites=dict(sorted(non_call_sites.items()))),
         _capability(language, "cfg", "partial" if payload.get("cfgMethodsOmitted", 0) else ("resolved" if cfg_methods else ("empty" if has_methods else "unsupported")),
                     version, backend="joern", methods_with_edges=cfg_methods,
                     methods_omitted=payload.get("cfgMethodsOmitted", 0),
