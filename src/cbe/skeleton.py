@@ -42,6 +42,7 @@ from dataclasses import dataclass
 import networkx as nx
 from networkx.algorithms.community import louvain_communities
 
+GRAIN = (5, 30)       # units per leaf module
 MIN_LEAF = 3          # a leaf with fewer units always tries to join a neighbour
 TOP_MAX = 9           # stop stacking levels at this many top nodes
 TEXT_NEIGHBORS = 5
@@ -72,7 +73,7 @@ _STOP = frozenset(
     "after before inside outside".split())
 
 
-def _tokens(text: str) -> list[str]:
+def word_tokens(text: str) -> list[str]:
     text = re.sub(r"([a-z0-9])([A-Z])", r"\1 \2", text)
     text = re.sub(r"([A-Z]+)([A-Z][a-z])", r"\1 \2", text)
     out = []
@@ -86,7 +87,7 @@ def _tokens(text: str) -> list[str]:
     return out
 
 
-def _symbol_words(ident: str) -> str:
+def symbol_words(ident: str) -> str:
     """Name part of ``path::kind::Name::offset`` ids; the slug of ``grp:`` ids."""
     parts = ident.split("::")
     if len(parts) >= 3:
@@ -94,7 +95,7 @@ def _symbol_words(ident: str) -> str:
     return re.sub(r"^[a-z]+:", "", ident).replace("-", " ").replace("_", " ")
 
 
-def _paths(unit: dict) -> list[str]:
+def unit_paths(unit: dict) -> list[str]:
     seen: list[str] = []
     for rng in unit.get("ranges") or []:
         path = rng.get("path")
@@ -106,13 +107,13 @@ def _paths(unit: dict) -> list[str]:
 
 
 def _unit_doc(uid: str, unit: dict) -> list[str]:
-    words = _tokens(unit.get("summary") or "")
-    words += _tokens(_symbol_words(uid))
+    words = word_tokens(unit.get("summary") or "")
+    words += word_tokens(symbol_words(uid))
     for member in unit.get("folded_members") or []:
         if isinstance(member, str):
-            words += _tokens(_symbol_words(member))
-    for path in _paths(unit):
-        words += _tokens(path.replace("/", " ").replace(".", " ").replace("_", " "))
+            words += word_tokens(symbol_words(member))
+    for path in unit_paths(unit):
+        words += word_tokens(path.replace("/", " ").replace(".", " ").replace("_", " "))
     return words
 
 
@@ -191,7 +192,7 @@ def _build_graph(units: dict, edges: list[dict], w: Weights):
     anchors_of: dict[str, list[str]] = {}
     profile: dict[str, dict[str, float]] = {}
     for uid in uids:
-        files = _paths(units[uid])
+        files = unit_paths(units[uid])
         anchors: list[str] = []
         prof: dict[str, float] = defaultdict(float)
         for path in files:
@@ -335,7 +336,7 @@ def _shape_leaves(parts, G, dep_text, anchors_of, profile, units, grain):
             break
     # straggler pool: no tie to anything, so only the path order is left
     pool_units = sorted((u for k in isolated if k in leaves for u in leaves[k]["m"]),
-                        key=lambda u: ((_paths(units[u]) or [""])[0], u))
+                        key=lambda u: ((unit_paths(units[u]) or [""])[0], u))
     for k in isolated:
         leaves.pop(k, None)
     chunks = [pool_units[i:i + POOL_CHUNK] for i in range(0, len(pool_units), POOL_CHUNK)]
@@ -344,10 +345,10 @@ def _shape_leaves(parts, G, dep_text, anchors_of, profile, units, grain):
     if len(chunks) == 1 and len(chunks[0]) < MIN_LEAF and leaves:
         # too few stragglers for a leaf of their own: each joins the leaf that shares the longest path prefix
         for u in chunks.pop():
-            mine = (_paths(units[u]) or [""])[0]
+            mine = (unit_paths(units[u]) or [""])[0]
             def common(k):
                 return max(len(posixpath.commonpath([mine, p]) if mine and p else "")
-                           for v in leaves[k]["m"] for p in [(_paths(units[v]) or [""])[0]])
+                           for v in leaves[k]["m"] for p in [(unit_paths(units[v]) or [""])[0]])
             fits = [k for k in leaves if len(leaves[k]["m"]) < grain[1]] or list(leaves)
             home = max(sorted(fits), key=lambda k: (common(k), -len(leaves[k]["m"])))
             leaves[home]["m"].add(u)
@@ -401,15 +402,14 @@ def _node_id(unit_ids) -> str:
 # ----------------------------------------------------------------- build ---
 
 def build(units: dict[str, dict], edges: list[dict], *, seed: int = 20261111,
-          grain: tuple[int, int] = (5, 30), weights: Weights = Weights()) -> dict:
-    """Return ``{"nodes": [{"id", "parent", "unit_ids", "level"[, "flag"]}], "candidates": {unit: [leaf, leaf]}}``.
+          grain: tuple[int, int] = GRAIN, weights: Weights = Weights()) -> dict:
+    """Return ``{"nodes": [{"id", "parent", "unit_ids", "level"[, "flag"]}]}``.
 
     ``level`` is the depth below the root (root 0).  Only leaves hold units.  A leaf outside
-    ``grain`` carries ``flag``: why it is outside.  ``candidates`` maps every unit to at most
-    two other leaf modules, the ones it is tied to most strongly.
+    ``grain`` carries ``flag``: why it is outside.
     """
     if not units:
-        return {"nodes": [], "candidates": {}}
+        return {"nodes": []}
     G, uids, dep, text, anchors_of, profile = _build_graph(units, edges, weights)
     dep_text = nx.Graph()
     dep_text.add_nodes_from(uids)
@@ -465,43 +465,7 @@ def build(units: dict[str, dict], edges: list[dict], *, seed: int = 20261111,
 
     emit(root, None, 0)
 
-    # candidate homes
-    leaf_of = {u: ids[name] for name, e in tree.items() for u in e["units"]}
-    leaf_names = {ids[n]: n for n, e in tree.items() if not e["children"]}
-    parent_of = {n["id"]: n["parent"] for n in nodes}
-    owner_leaf = {u: leaf for u, leaf in leaf_of.items()}
-    profs = {lid: _profile_of(tree[leaf_names[lid]]["units"], profile) for lid in leaf_names}
-    module_ties: dict[str, dict[str, float]] = {}
-    for lid in sorted(leaf_names):
-        ties: dict[str, float] = defaultdict(float)
-        for u in tree[leaf_names[lid]]["units"]:
-            for v, data in dep_text[u].items():
-                other = owner_leaf[v]
-                if other != lid:
-                    ties[other] += data["weight"]
-        for other in leaf_names:
-            if other != lid and profs[lid]:
-                shared = sum(min(v, profs[other].get(a, 0.0)) for a, v in profs[lid].items() if a in profs[other])
-                if shared > 0:
-                    ties[other] += shared
-        module_ties[lid] = ties
-    candidates: dict[str, list[str]] = {}
-    for u in uids:
-        home = leaf_of[u]
-        per: dict[str, float] = defaultdict(float)
-        for v, data in dep_text[u].items():
-            other = leaf_of[v]
-            if other != home:
-                per[other] += data["weight"]
-        pick = sorted(per, key=lambda m: (-per[m], m))[:2]
-        if len(pick) < 2:
-            rest = module_ties[home]
-            siblings = [m for m in leaf_names if m != home and parent_of[m] == parent_of[home]]
-            pad = sorted((m for m in leaf_names if m != home and m not in pick),
-                         key=lambda m: (-rest.get(m, 0.0), m not in siblings, m))
-            pick += pad[:2 - len(pick)]
-        candidates[u] = pick
-    return {"nodes": nodes, "candidates": candidates}
+    return {"nodes": nodes}
 
 
 def _subtree_units(tree: dict, name: str) -> list[str]:

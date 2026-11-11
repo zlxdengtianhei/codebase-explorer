@@ -66,14 +66,6 @@ def check_invariants(res, units, grain=(5, 30)):
             assert grain[0] <= size <= grain[1] or n.get("flag"), f"{size} units outside grain without a flag"
     assert sorted(owner) == sorted(units)
     assert all(len(v) == 1 for v in owner.values())
-    leaf_ids = {n["id"] for n in nodes if not kids[n["id"]]}
-    home = {u: o[0] for u, o in owner.items()}
-    assert sorted(res["candidates"]) == sorted(units)
-    for u, picks in res["candidates"].items():
-        assert len(picks) <= 2 and len(set(picks)) == len(picks)
-        assert home[u] not in picks and set(picks) <= leaf_ids
-        if len(leaf_ids) >= 3:
-            assert len(picks) == 2
 
 
 def test_same_input_same_bytes():
@@ -135,7 +127,7 @@ def test_tiny_inputs(n):
 
 
 def test_empty_input():
-    assert build({}, []) == {"nodes": [], "candidates": {}}
+    assert build({}, []) == {"nodes": []}
 
 
 def test_helper_called_by_everyone_does_not_glue_everyone():
