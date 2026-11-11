@@ -7,6 +7,11 @@
   accepted, other `--host` values are rejected. The built-in Z.AI and Devin
   default models are gone.
   Rename the hidden plugin directory to `plugin/` so the skill is easy to find.
+- Remove the Python-only concrete-facts layer: `catalog.json` no longer carries
+  `facts`, and `cbe find` no longer matches Python defaults, constants or raise
+  text (read them with `cbe source`). Planning builds one inventory, from the
+  Tree-sitter chunks, for every language. Remove the unused `test_repos/`
+  submodules and the reader for dict-shaped graph capabilities.
 - Accept positional search terms and query IDs alongside `--term`/`--id`, with
   conflict checks and examples for missing arguments; unknown IDs suggest `find`.
   Version and usage output identify the command as `cbe`.
