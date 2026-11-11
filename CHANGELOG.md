@@ -2,6 +2,11 @@
 
 ## 2.2.0.dev0 (unreleased)
 
+- Internal structure only, no change in behaviour or output: `docs.render` is one short function
+  that calls a shared preparation step and one writer per document; the catalogue lookups
+  (`find`, `query`, `source`, `layer_metrics`) live in `cbe.catalog_query`; `source_context` is split
+  into `grammars`, `declarations` and `source_context`, and the graph-versus-source check moved to
+  `graph`. Every name that was importable from `cbe.docs` and `cbe.source_context` still is.
 - Rendering a complete host run again (`cbe host render`) keeps the `wall_seconds` it finished
   with. Before, every later render replaced it with the time since the plan.
 - Python concrete facts are back in `catalog.json`: parameter defaults, named constants,
