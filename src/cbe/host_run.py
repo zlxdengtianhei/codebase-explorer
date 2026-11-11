@@ -963,8 +963,11 @@ def _settle_detail(run_dir: Path, state: dict[str, Any], task: dict[str, Any], v
         partial["notes"] = decoded.notes or partial["notes"]
         partial["decoded"] = True
     gaps = _gaps(run_dir, state, table, partial["units"])
-    if decoded is not None and not gaps and not decoded.invalid:
+    if decoded is not None and not gaps:
+        # A rejected unit alone never earns a re-ask: if its symbols mattered they are gaps, and
+        # a unit that names no symbol (a stray string in the list) has nothing to recover.
         error = None
+        partial["flags"] += [f"invalid unit h={row['h']}: {row['why']}" for row in decoded.invalid]
     elif not final or not partial["decoded"]:
         if decoded is not None:
             _partial_path(run_dir, task["id"]).parent.mkdir(exist_ok=True)

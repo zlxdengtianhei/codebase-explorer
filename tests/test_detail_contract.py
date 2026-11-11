@@ -172,8 +172,10 @@ def test_a_run_planned_for_the_old_answer_format_says_to_plan_again(tmp_path) ->
         host_run.resume(run)
 
 
-def test_old_format_answers_are_not_accepted(tmp_path) -> None:
-    """A full-id answer with dispositions has no ``h``: its units are rejected, nothing is published."""
+def test_old_format_answers_are_not_accepted(tmp_path, monkeypatch) -> None:
+    """A full-id answer with dispositions has no ``h``: its units are rejected, so the symbols
+    with logic are gaps and nothing is published."""
+    monkeypatch.setattr(checks, "GAP_MIN_TOKENS", 1)
     run = tmp_path / "run"
     host_run.plan(_tiny_repo(tmp_path), run, review="none", jobs=1, driver="script")
     state = json.loads((run / "host" / "state.json").read_text())
@@ -251,6 +253,22 @@ def test_a_response_between_refusals_restarts_the_count(tmp_path, monkeypatch) -
     _model(monkeypatch, behave)
     result = generator.generate(_tiny_repo(tmp_path), tmp_path / "run", model="m", review="none", jobs=1)
     assert result["status"] == "complete" and result["stopped"] is None
+
+
+def test_a_rejected_unit_alone_costs_no_re_ask_but_is_flagged(tmp_path, monkeypatch) -> None:
+    """A stray non-object in the units list names no symbol: nothing is lost, so the answer is
+    accepted at once and the junk is recorded in the task's flags."""
+    def behave(task, attempt, prompt):
+        answer = _semantic_answer(prompt)
+        if task == "module_1":
+            answer["units"].insert(0, "stray text")
+        return answer
+
+    calls, _ = _model(monkeypatch, behave)
+    result = generator.generate(_tiny_repo(tmp_path), tmp_path / "run", model="m", review="none", jobs=1)
+    assert result["status"] == "complete" and calls.count(("module_1", 1)) == 1 and ("module_1", 2) not in calls
+    state = json.loads((tmp_path / "run" / "host" / "state.json").read_text())
+    assert any("not an object" in flag for flag in state["tasks"]["module_1"]["flags"])
 
 
 def test_an_answer_with_a_gap_is_marked_incomplete_in_calls_csv(tmp_path, monkeypatch) -> None:
