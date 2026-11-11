@@ -1,7 +1,12 @@
 # Changelog
 
-## 2.2.0.dev0 (unreleased)
+## 2.2.0 (2026-11-12)
 
+- First release on PyPI: `uv tool install codebase-explorer`.
+- Python module-level and class-level variables are named entries of the symbol list, as
+  the constants, variables and fields of C, C++, JavaScript, TypeScript, Java, Go and Ruby
+  already were: `cbe find NAME` finds them and `cbe query` prints the declaration and its lines.
+  Only a single name on the left of an assignment directly in a module or class body counts.
 - C#: calls to repository methods resolve. Joern's C# frontend writes repository types without
   their namespace in a call's full name and with it in the method's own, so C# calls are also
   matched with the namespaces inside the signature removed; a name with overloads gives an
@@ -44,7 +49,7 @@
   the same one-sentence version error as `cbe host render`. Before, they still read catalogues
   without `symbol_index`.
 - Package metadata (licence file, classifiers, project links) and a workflow that builds,
-  checks and publishes to PyPI when a `v<version>` tag is pushed. Nothing is published yet.
+  checks and publishes to PyPI when a `v<version>` tag is pushed.
 - `docs.render` is one short function that calls a shared preparation step and one writer per
   document; the catalogue lookups (`find`, `query`, `source`, `layer_metrics`) live in
   `cbe.catalog_query`; `source_context` is split into `grammars`, `declarations` and

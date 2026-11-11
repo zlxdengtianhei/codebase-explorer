@@ -12,16 +12,16 @@ This page holds the command-level detail that the [README](../README.md) leaves 
 
 ## Install and inspect a repository
 
-CBE is not published on PyPI. Install it from GitHub, or from a checkout of this repository:
+Install CBE from PyPI, or from a checkout of this repository:
 
 ```sh
-uv tool install git+https://github.com/zlxdengtianhei/codebase-explorer   # or: pipx install git+https://github.com/zlxdengtianhei/codebase-explorer
-uv tool install --python 3.13 .                                           # from a checkout
+uv tool install codebase-explorer        # or: pipx install codebase-explorer
+uv tool install --python 3.13 .          # from a checkout
 cbe --version
 cbe languages
 ```
 
-`cbe --version` prints `cbe 2.2.0.dev0`. When `cbe` runs from a source tree without installed package metadata, it prints `cbe source` instead.
+`cbe --version` prints `cbe 2.2.0`. When `cbe` runs from a source tree without installed package metadata, it prints `cbe source` instead.
 
 The standard installation includes Tree-sitter grammars for C, C++, Python, JavaScript, TypeScript/TSX, Java, and Go. The `languages` extra adds Ruby, Rust, PHP, and C#; `languages-community` adds the community grammars for Kotlin and Swift:
 
@@ -279,8 +279,8 @@ This is the step-by-step run that the README's earlier Quickstart documented. It
 1. Install CBE and check the grammars:
 
    ```sh
-   uv tool install --python 3.13 /path/to/codebase-explorer   # a checkout; or install from GitHub, see the README
-   cbe --version    # prints: cbe 2.2.0.dev0
+   uv tool install --python 3.13 /path/to/codebase-explorer   # a checkout; or `uv tool install codebase-explorer` from PyPI
+   cbe --version    # prints: cbe 2.2.0
    cbe languages    # c, cpp, python, javascript, typescript, tsx, java and go show "available": true
    ```
 

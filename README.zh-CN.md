@@ -13,7 +13,7 @@ https://github.com/user-attachments/assets/f0c3cc47-d0c2-4727-820e-65508c19408c
 
 文件树只告诉你文件在哪，不告诉你每一块是干什么的。CBE（Codebase Explorer）读一个仓库，写出文件树缺的那部分：一页列出整棵模块树（module tree），每个模块一行，说明它负责什么；再给每个模块一页，讲清其中每个函数和类，并链接到准确的源码行。你可以直接读。编码 agent 用三条命令就能在里面查。
 
-**想试一下：** `uv tool install git+https://github.com/zlxdengtianhei/codebase-explorer`（需要 Python 3.12 或 3.13）。然后二选一：在 Claude Code 里用你自己的订阅生成；或在命令行接任意 OpenAI 兼容的端点生成（模型用 `--model` 指定）。步骤见[快速上手](#快速上手)。
+**想试一下：** `uv tool install codebase-explorer`（需要 Python 3.12 或 3.13）。然后二选一：在 Claude Code 里用你自己的订阅生成；或在命令行接任意 OpenAI 兼容的端点生成（模型用 `--model` 指定）。步骤见[快速上手](#快速上手)。
 
 ## 能得到什么
 
@@ -39,11 +39,11 @@ https://github.com/user-attachments/assets/f0c3cc47-d0c2-4727-820e-65508c19408c
 
 ## 快速上手
 
-CBE 没有发布到 PyPI，需要 Python 3.12 或 3.13。有两种用法，最后都得到同一个 `docs/` 目录。常用的是 A：让你的编码 agent 加载 Skill 来做，花你自己的订阅额度。B 用于脚本和批量运行。
+CBE 在 PyPI 上的包名是 `codebase-explorer`，需要 Python 3.12 或 3.13。有两种用法，最后都得到同一个 `docs/` 目录。常用的是 A：让你的编码 agent 加载 Skill 来做，花你自己的订阅额度。B 用于脚本和批量运行。
 
 **A. 常用方式：在你的编码 agent 里用，花你自己的订阅额度。** 下面的步骤以 Claude Code 为例；装上 Skill 后，由它的子代理（subagent）写讲解。
 
-1. 安装 CBE：`uv tool install git+https://github.com/zlxdengtianhei/codebase-explorer`（或 `pipx install git+https://github.com/zlxdengtianhei/codebase-explorer`）。
+1. 安装 CBE：`uv tool install codebase-explorer`（或 `pipx install codebase-explorer`）。
 2. 可选，要调用图（call graph）时：`cbe graph setup` 会把 Joern 和 Java 运行时下载到你的用户缓存目录（约 1.9 GB；支持 Linux x86_64 和 macOS）。
 3. 在你的项目里装 Skill：`cbe-install install --host claude-code`。
 4. 在那里启动 Claude Code，对它说：“Use the codebase-explorer skill to generate documentation for this repository.”
@@ -168,7 +168,6 @@ flowchart LR
 - C 和 C++ 文件不跑预处理。宏多的头文件会被切得很粗，宏可能被当成函数名。
 - 讲解由模型写。`cbe host verify` 通过，只说明结构和引用自洽，不说明讲解是对的。请用 `cbe source` 对照源码核实。
 - 没有增量更新：源码变了，要重新生成。
-- CBE 还没有发布到 PyPI。
 
 ## 示例与文档
 

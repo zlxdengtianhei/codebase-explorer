@@ -13,7 +13,7 @@ https://github.com/user-attachments/assets/f0c3cc47-d0c2-4727-820e-65508c19408c
 
 A file tree shows where files are, not what each part is for. CBE (Codebase Explorer) reads a repository and writes what the tree lacks: one page that lists the whole module tree with a line on what each module is responsible for, and a page per module that explains each function and class and links to the exact source lines. You read it. A coding agent can look things up in it with three commands.
 
-**To try it:** `uv tool install git+https://github.com/zlxdengtianhei/codebase-explorer` (Python 3.12 or 3.13). Then generate inside Claude Code on your own subscription, or from the command line with any OpenAI-compatible endpoint (you name the model with `--model`). The steps are in [Quickstart](#quickstart).
+**To try it:** `uv tool install codebase-explorer` (Python 3.12 or 3.13). Then generate inside Claude Code on your own subscription, or from the command line with any OpenAI-compatible endpoint (you name the model with `--model`). The steps are in [Quickstart](#quickstart).
 
 ## What you get
 
@@ -39,11 +39,11 @@ Full example: [flask](examples/flask/docs/INDEX.md). More in [Examples and docs]
 
 ## Quickstart
 
-CBE is not on PyPI. It needs Python 3.12 or 3.13. There are two ways to run it. Both end in the same `docs/` folder. The usual one is A: your coding agent loads the skill and does the work on your own subscription. B is for scripts and batch runs.
+CBE is on PyPI as `codebase-explorer`. It needs Python 3.12 or 3.13. There are two ways to run it. Both end in the same `docs/` folder. The usual one is A: your coding agent loads the skill and does the work on your own subscription. B is for scripts and batch runs.
 
 **A. The usual way: inside your coding agent, on your own subscription.** The steps below use Claude Code; the skill makes its subagents write the explanations.
 
-1. Install CBE: `uv tool install git+https://github.com/zlxdengtianhei/codebase-explorer` (or `pipx install git+https://github.com/zlxdengtianhei/codebase-explorer`).
+1. Install CBE: `uv tool install codebase-explorer` (or `pipx install codebase-explorer`).
 2. Optional, for the call graph: `cbe graph setup` downloads Joern and a Java runtime into your user cache directory (about 1.9 GB; Linux x86_64 and macOS).
 3. In your project, install the skill: `cbe-install install --host claude-code`.
 4. Start Claude Code there and ask: "Use the codebase-explorer skill to generate documentation for this repository."
@@ -168,7 +168,6 @@ What we do not claim: that grouping by function lets an agent locate code more a
 - C and C++ files are not preprocessed. A header with many macros is cut into coarse chunks, and a macro can be taken for a function name.
 - A model writes the explanations. `cbe host verify` passing shows that the structure and references are consistent. It does not show that an explanation is correct. Check explanations against the source (`cbe source`).
 - There are no incremental updates: when the source changes, generate again.
-- CBE is not on PyPI.
 
 ## Examples and docs
 

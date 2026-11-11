@@ -179,7 +179,7 @@ Choose a model that your own account can use. CBE does not promise that a provid
 
 ## What a run costs: the earlier table
 
-This table was measured before the answer-format and module-tree changes of 2.2.0.dev0: the `Generation runs` rows of the evaluation ran at CBE commits `9c6499e` and `a87674d`, when the model also built the module tree. The current cost readings are in the README, section "What it costs". The table stays here because it covers repositories up to 1.7 million tokens, and the current readings cover one repository (flask). Do not compare the two directly.
+This table was measured before the answer-format and module-tree changes of 2.2.0: the `Generation runs` rows of the evaluation ran at CBE commits `9c6499e` and `a87674d`, when the model also built the module tree. The current cost readings are in the README, section "What it costs". The table stays here because it covers repositories up to 1.7 million tokens, and the current readings cover one repository (flask). Do not compare the two directly.
 
 The rows below are copied from the [Generation runs](../evaluation/README.md#generation-runs) table of the evaluation. All runs used `zai/glm-5.3-flash` through the Magpie gateway. `cost_usd` comes from the gateway's own price table, not from a provider's public price list; re-price with a dated public price list before you compare it with other reports. Request and token counts do not depend on prices.
 
