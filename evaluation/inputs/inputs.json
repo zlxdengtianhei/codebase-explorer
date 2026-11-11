@@ -135,5 +135,28 @@
     "files": 22,
     "tokens": 1708,
     "all_files": 23
+  },
+  {
+    "name": "flask",
+    "sha": "85c5d93cbd049c4bd0679c36fd1ddcae8c37b642",
+    "source": "$WORK/repos/flask",
+    "paths": [
+      "src/flask"
+    ],
+    "archive_command": [
+      "git",
+      "-C",
+      "$WORK/repos/flask",
+      "archive",
+      "85c5d93cbd049c4bd0679c36fd1ddcae8c37b642",
+      "src/flask"
+    ],
+    "copy": "$WORK/eval/flask-85c5d93",
+    "expected_files": 24,
+    "expected_tokens": 74720,
+    "cap": 0.54,
+    "files": 24,
+    "tokens": 74720,
+    "all_files": 26
   }
 ]

@@ -1,0 +1,113 @@
+{
+  "polyglot": {
+    "title": "Polyglot fixture",
+    "description": "A synthetic collection of small programs, closures, class samples and parser edge-case files in thirteen languages, kept in [source/](source/).",
+    "language": "multiple",
+    "origin": "Origin: synthetic fixture in this repository, manifest SHA-256 `6b19d76603fb65d1961c8c2eb449b0ff9d101eedfdd0e0a1f09676b2b6b4965c`",
+    "scope": "all of `source/` (23 files; CBE reads 22)",
+    "read": [
+      "worker-and-queue-case-study.md",
+      "javascript-closures-and-async.md",
+      "edge-case-parsing-fixtures.md"
+    ],
+    "term": "Worker"
+  },
+  "cjson": {
+    "title": "cJSON",
+    "description": "A C library that parses, builds, prints and edits JSON as in-memory trees, with a utilities layer for JSON Pointer, JSON Patch and Merge Patch.",
+    "language": "C",
+    "origin": "Upstream: https://github.com/DaveGamble/cJSON at `6d9f2443ab071f86e5d9b43025a40929ec41c46c`",
+    "scope": "`cJSON.c`, `cJSON.h`, `cJSON_Utils.c`, `cJSON_Utils.h`",
+    "read": [
+      "json-parser.md",
+      "json-printing-and-serialization.md",
+      "json-pointer-resolution.md"
+    ],
+    "term": "cJSON_InitHooks",
+    "repo_url": "https://github.com/DaveGamble/cJSON",
+    "sha": "6d9f2443ab071f86e5d9b43025a40929ec41c46c"
+  },
+  "tsdown": {
+    "title": "tsdown",
+    "description": "A TypeScript/JavaScript bundler: it loads and normalizes user configs, runs per-format Rolldown builds, and finishes packages with generated exports, lint checks and optional single-executable output.",
+    "language": "TypeScript",
+    "origin": "Upstream: https://github.com/rolldown/tsdown at `2b1be7e0accdb1d6e903cd42642666431fc5e93d`",
+    "scope": "`src/` without `*.test.ts`",
+    "read": [
+      "build-orchestration-and-lifecycle.md",
+      "rolldown-option-assembly.md",
+      "config-resolution-and-normalization.md"
+    ],
+    "term": "resolveConfig",
+    "repo_url": "https://github.com/rolldown/tsdown",
+    "sha": "2b1be7e0accdb1d6e903cd42642666431fc5e93d"
+  },
+  "ruby_llm": {
+    "title": "ruby_llm",
+    "description": "A Ruby gem with one API for chat, streaming, embeddings, tool calling and model metadata across OpenAI, Anthropic, Gemini, Bedrock and other providers, plus Rails persistence helpers.",
+    "language": "Ruby",
+    "origin": "Upstream: https://github.com/crmne/ruby_llm at `1e315ab4b3f3a150c443dc9a17f504756c2aad6f`",
+    "scope": "`lib/` (147 files; CBE reads 115)",
+    "read": [
+      "provider-adapters-and-tools.md",
+      "streaming-and-result-objects.md",
+      "tool-definition-and-execution.md"
+    ],
+    "term": "Tool",
+    "repo_url": "https://github.com/crmne/ruby_llm",
+    "sha": "1e315ab4b3f3a150c443dc9a17f504756c2aad6f"
+  },
+  "flask": {
+    "title": "Flask",
+    "description": "A Python WSGI micro-framework: an I/O-free sansio layer (Scaffold, Blueprint, App base) under the concrete Flask app, its request lifecycle and contexts, a test client and the command line.",
+    "language": "Python",
+    "origin": "Upstream: https://github.com/pallets/flask at `85c5d93cbd049c4bd0679c36fd1ddcae8c37b642`",
+    "scope": "`src/flask`",
+    "model_note": "Claude Code host path: headless `claude -p --model sonnet` driving the codebase-explorer skill, whose subagents ran `claude-sonnet-5-5` (no gateway, no API config)",
+    "read": [
+      "flask-app-request-lifecycle.md",
+      "scaffold-and-blueprint-registration.md",
+      "app-and-request-context-management.md"
+    ],
+    "term": "dispatch_request",
+    "gaps": [
+      "Host path: there is no `calls.csv`. Requests are subagent runs and prompt tokens are summed per turn of each subagent (cache reads counted every turn), so they do not compare with the API-path examples."
+    ],
+    "host": true,
+    "repo_url": "https://github.com/pallets/flask",
+    "sha": "85c5d93cbd049c4bd0679c36fd1ddcae8c37b642"
+  },
+  "fmt": {
+    "title": "fmt",
+    "description": "A C++ formatting library: a compiled core engine with extensions for compile-time format strings, chrono dates and times, colors, ranges, std types and OS I/O.",
+    "language": "C++",
+    "origin": "Upstream: https://github.com/fmtlib/fmt at `b4ffa39b9994c961418406f47358791d89a5aa48`",
+    "scope": "`include/` and `src/`, read as C++ (`--header-language cpp`)",
+    "read": [
+      "core-formatting-implementation.md",
+      "chrono-and-time-formatting.md",
+      "float-to-decimal-conversion.md"
+    ],
+    "term": "vformat",
+    "gaps": [
+      "The second `find` row above, `FMT_EXPORT`, is a macro the parser took for a function name; the unit is the `dynamic_format_arg_store` class declared at `include/fmt/args.h:L66-L78`."
+    ],
+    "repo_url": "https://github.com/fmtlib/fmt",
+    "sha": "b4ffa39b9994c961418406f47358791d89a5aa48"
+  },
+  "gson": {
+    "title": "Gson",
+    "description": "A Java library that converts objects to JSON and back, built on a streaming reader and writer, an in-memory JsonElement tree, reflective field binding and a pluggable TypeAdapter framework.",
+    "language": "Java",
+    "origin": "Upstream: https://github.com/google/gson at `e2292f9c9f2e07a4791827e8eea34aa7d80545d6`",
+    "scope": "`gson/src/main/java`",
+    "read": [
+      "type-adapter-framework.md",
+      "json-reading-infrastructure.md",
+      "reflective-object-binding.md"
+    ],
+    "term": "toJson",
+    "repo_url": "https://github.com/google/gson",
+    "sha": "e2292f9c9f2e07a4791827e8eea34aa7d80545d6"
+  }
+}
