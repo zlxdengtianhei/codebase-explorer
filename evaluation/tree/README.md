@@ -3,6 +3,8 @@
 Measures how well a division of a repo's code units into modules ("a tree") works. Not part of the installed package.
 Design: the owner's `DESIGN_tree.md`, section 5. Inputs: the five `catalog.json.gz` files and the cloned git histories.
 
+The scales' T0 ("the published tree") means the old `catalog.json.gz` files in `examples/` and `evaluation/e2-flask/` as of commit `67a99ee`. The examples were regenerated later, so to reproduce T0 take those files from that commit (`git show 67a99ee:examples/<name>/catalog.json.gz`).
+
 ```sh
 export PYTHONPATH=<worktree>/src:<worktree>/evaluation/tree
 PY=python   # an environment with codebase-explorer installed
