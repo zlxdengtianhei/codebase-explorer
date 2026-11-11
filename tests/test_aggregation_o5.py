@@ -112,3 +112,15 @@ def test_principles_report_cohesion_and_granularity_readings():
     assert not rows["P2"]["ok"]
     assert rows["P3"]["out_of_bounds"] == {"one": 1, "two": 1, "infra": 1}
 
+
+
+def test_introduction_length_reads_each_module_against_the_explanations_under_it():
+    nodes = [{"id": "root", "parent": None, "capability": "c" * 10, "summary": "", "unit_ids": []},
+             {"id": "short", "parent": "root", "capability": "c" * 10, "summary": "s" * 10, "unit_ids": ["u1"]},
+             {"id": "long", "parent": "root", "capability": "c" * 30, "summary": "s" * 30, "unit_ids": ["u2"]}]
+    units = {"u1": {"explain": "e" * 40}, "u2": {"explain": "e" * 20}}
+    reading = principles.report({"nodes": nodes}, [], units)["introduction_length"]
+    assert reading["ok"] is False and list(reading["overlong"]) == ["long"]
+    assert reading["overlong"]["long"] == {"introduction_chars": 60, "detail_chars": 20}
+    assert reading["max_ratio"] == 3.0
+    assert "introduction_length" not in principles.report({"nodes": nodes}, [])

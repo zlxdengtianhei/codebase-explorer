@@ -2,6 +2,9 @@
 
 ## 2.2.0.dev0 (unreleased)
 
+- `summary.json` reports `introduction_length` again: for every module, the length of its
+  capability and summary against the unit explanations under it (`overlong`, `max_ratio`).
+  `RUN.md` shows one line. The reading had been dropped with the other advisory checks.
 - In a directory without the frozen source (`context.json`), such as a published example,
   `cbe source`, `cbe query --edges` and `cbe host verify/render/status/cost` say so in one
   sentence and exit with code 2. `find` and `query` work there. Node pages of published
