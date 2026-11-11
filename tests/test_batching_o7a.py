@@ -22,7 +22,7 @@ def test_indexed_directory_matches_preindex_order_and_reads_imports_once(strict)
     for i in range(48):
         imports = {f"prefix.pkg.area.f{rng.randrange(48):02}" for _ in range(4)}
         imports.update({f"f{(i + 3) % 48:02}.py", f"./f{(i + 1) % 48:02}"})
-        files.append(batching.SourceFile(f"pkg/area/f{i:02}.py", "", rng.randrange(400, 2400), "", [],
+        files.append(batching.SourceFile(f"pkg/area/f{i:02}.py", "", rng.randrange(400, 2400), "",
                                          CountedImports(imports)))
     # File order within each group is also part of the old contract. Normal
     # fill reorders these three groups by size; strict packing preserves order.
@@ -41,9 +41,9 @@ def test_indexed_directory_matches_preindex_order_and_reads_imports_once(strict)
 
 
 def test_index_preserves_boolean_matches_for_multiple_aliases_and_empty_imports():
-    files = [batching.SourceFile("a.py", "", 10_000, "", [], {"b", "b.py", "prefix.b", ""}),
-             batching.SourceFile("b.py", "", 10_000, "", [], set()),
-             batching.SourceFile("c.py", "", 10_000, "", [], {"a"})]
+    files = [batching.SourceFile("a.py", "", 10_000, "", {"b", "b.py", "prefix.b", ""}),
+             batching.SourceFile("b.py", "", 10_000, "", set()),
+             batching.SourceFile("c.py", "", 10_000, "", {"a"})]
     # a -> b counts once despite three matching aliases; the empty import
     # matches the empty top-level candidate, as the original exact test did.
     packed = batching._pack_directory(files, strict=True)
@@ -51,9 +51,9 @@ def test_index_preserves_boolean_matches_for_multiple_aliases_and_empty_imports(
 
 
 def test_equal_import_weights_and_token_distances_keep_preindex_pair_order():
-    files = [batching.SourceFile("pkg/a.py", "", 10_000, "", [], {"b", "c"}),
-             batching.SourceFile("pkg/b.py", "", 10_000, "", [], set()),
-             batching.SourceFile("pkg/c.py", "", 10_000, "", [], set())]
+    files = [batching.SourceFile("pkg/a.py", "", 10_000, "", {"b", "c"}),
+             batching.SourceFile("pkg/b.py", "", 10_000, "", set()),
+             batching.SourceFile("pkg/c.py", "", 10_000, "", set())]
     # a-b and a-c each have one import and exactly meet the 20k target.
     # Only one pair fits: merging all three would exceed the 25k cap.
     # Fixed expectation independently recorded with dd82d6c's plan(), loaded
@@ -64,15 +64,15 @@ def test_equal_import_weights_and_token_distances_keep_preindex_pair_order():
 
 
 def test_index_keeps_literal_paths_as_candidates():
-    files = [batching.SourceFile("a.py", "", 10_000, "", [], {"./b.py"}),
-             batching.SourceFile("./b.py", "", 10_000, "", [], set())]
+    files = [batching.SourceFile("a.py", "", 10_000, "", {"./b.py"}),
+             batching.SourceFile("./b.py", "", 10_000, "", set())]
     assert [[f.path for f in group] for group in batching._pack_directory(files, strict=True)] == [
         ["./b.py", "a.py"]]
 
 
 def test_whole_file_larger_than_group_target_stays_alone() -> None:
-    large = batching.SourceFile("tests/large.py", "", 31_732, "large", [])
-    small = batching.SourceFile("tests/small.py", "", 500, "small", [])
+    large = batching.SourceFile("tests/large.py", "", 31_732, "large")
+    small = batching.SourceFile("tests/small.py", "", 500, "small")
     modules = batching.plan([small, large])
     assert len(modules) == 2
     assert any(module.files == [large] for module in modules)

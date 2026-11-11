@@ -119,7 +119,7 @@ def test_missing_cache_keeps_observed_input_and_output(tmp_path) -> None:
 
 def test_directory_plan_keeps_subsystems_and_their_tests_apart() -> None:
     def source(path, tokens, imports=()):
-        return batching.SourceFile(path, "", tokens, "unused", [], set(imports))
+        return batching.SourceFile(path, "", tokens, "unused", set(imports))
 
     files = [
         source("pkg/app/base.py", 13_000),
@@ -142,27 +142,27 @@ def test_directory_plan_keeps_subsystems_and_their_tests_apart() -> None:
 
 
 def test_plan_preserves_whole_large_file_and_rejects_oversized_one() -> None:
-    large = batching.SourceFile("pkg/huge.py", "", 31_000, "unused", [])
+    large = batching.SourceFile("pkg/huge.py", "", 31_000, "unused")
     assert batching.plan([large])[0].files == [large]
-    too_large = batching.SourceFile("pkg/impossible.py", "", 60_001, "unused", [])
+    too_large = batching.SourceFile("pkg/impossible.py", "", 60_001, "unused")
     with pytest.raises(batching.BatchingError, match="one whole source file"):
         batching.plan([too_large])
 
 
-def test_primary_directory_share_uses_direct_parent_not_a_common_ancestor() -> None:
+def test_primary_directory_is_the_direct_parent_holding_most_files() -> None:
     module = batching.Module(0, [
-        batching.SourceFile("pkg/a/x.py", "", 1, "unused", []),
-        batching.SourceFile("pkg/a/y.py", "", 1, "unused", []),
-        batching.SourceFile("pkg/b/z.py", "", 1, "unused", []),
+        batching.SourceFile("pkg/a/x.py", "", 1, "unused"),
+        batching.SourceFile("pkg/a/y.py", "", 1, "unused"),
+        batching.SourceFile("pkg/b/z.py", "", 1, "unused"),
     ], "pkg")
-    assert batching.primary_directory(module) == ("pkg/a", 2 / 3)
+    assert batching.primary_directory(module) == "pkg/a"
 
 
 def test_test_name_prefers_root_implementation_over_same_named_cli_adapter() -> None:
     files = [
-        batching.SourceFile("pkg/result.py", "", 3_000, "unused", []),
-        batching.SourceFile("pkg/bin/result.py", "", 3_000, "unused", []),
-        batching.SourceFile("t/unit/tasks/test_result.py", "", 2_000, "unused", []),
+        batching.SourceFile("pkg/result.py", "", 3_000, "unused"),
+        batching.SourceFile("pkg/bin/result.py", "", 3_000, "unused"),
+        batching.SourceFile("t/unit/tasks/test_result.py", "", 2_000, "unused"),
     ]
     modules = batching.plan(files)
     test_module = next(module for module in modules if module.is_test)
@@ -171,9 +171,9 @@ def test_test_name_prefers_root_implementation_over_same_named_cli_adapter() -> 
 
 def test_exact_test_directory_beats_singularized_neighbor() -> None:
     files = [
-        batching.SourceFile("pkg/app/base.py", "", 100, "unused", []),
-        batching.SourceFile("pkg/apps/beat.py", "", 100, "unused", []),
-        batching.SourceFile("t/unit/apps/test_beat.py", "", 100, "unused", []),
+        batching.SourceFile("pkg/app/base.py", "", 100, "unused"),
+        batching.SourceFile("pkg/apps/beat.py", "", 100, "unused"),
+        batching.SourceFile("t/unit/apps/test_beat.py", "", 100, "unused"),
     ]
     modules = batching.plan(files)
     test_module = next(module for module in modules if module.is_test)

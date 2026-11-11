@@ -582,10 +582,9 @@ def plan(repo: Path, run_dir: Path | None = None, *, review: str = DEFAULT_REVIE
                     "graph_present": bool(context.get("graph")),
                     "graph_digest": context_digest(context["graph"]) if context.get("graph") else None},
         "inventory": inventory,
-        "files": [{"path": item.path, "tokens": item.tokens, "digest": item.digest,
-                   "signatures": item.signatures} for item in files],
+        "files": [{"path": item.path, "tokens": item.tokens, "digest": item.digest} for item in files],
         "modules": [{"number": module.number, "bucket": module.bucket, "title": batching.fallback_title(module),
-                     "files": [item.path for item in module.files], "page": None} for module in modules],
+                     "files": [item.path for item in module.files]} for module in modules],
         "tasks": tasks, "rendered": False, "verify": None,
         "runtime_environments": [_runtime_environment()],
     }
@@ -1435,8 +1434,6 @@ def _render(run_dir: Path, state: dict[str, Any]) -> None:
         log_event(run_dir, "render", f"failed: {exc}", error=str(exc))
         return
     state.pop("render_error", None)
-    for row in state["modules"]:
-        row["page"] = None  # node pages own the published units now
     state["published"] = {"units": meta["units_rendered"], "nodes": meta["nodes"]}
     reason = state.get("partial_reason")
     complete = all(task["status"] == "done" for task in state["tasks"].values()) and not reason
@@ -1623,8 +1620,6 @@ def _status_markdown(state: dict[str, Any]) -> str:
              "| Task | Module | State | Attempts | Seconds | Output | Note |", "|---|---|---|---:|---:|---|---|"]
     for task in sorted(state["tasks"].values(), key=lambda row: (ORDER.get(row["kind"], 0), row["module"] or 0)):
         output = task["output"] or ""
-        if task["module"] is not None and state["modules"][task["module"]].get("page") and task["kind"] == "module":
-            output = state["modules"][task["module"]]["page"]
         task_unexplained = sum(row["task"] == task["id"] for row in unexplained)
         shape_flags = [flag for flag in task["flags"] if not flag.startswith("unexplained: ")]
         note = (task["errors"][-1][:120] if task["status"] in {"failed", "pending"} and task["errors"]

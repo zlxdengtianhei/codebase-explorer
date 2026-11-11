@@ -595,7 +595,6 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
         "symbol_index": symbol_index,
         "inventory": inventory,
         "short_names": names,
-        "merges": [],
         "symbols": catalog_symbol_rows,
         "files": catalog_file_rows,
     }
@@ -1066,8 +1065,6 @@ def layer_metrics(run_dir: Path) -> dict:
                 category = "signature_location"
             elif in_footer:
                 category = "footer"
-            elif stripped.startswith("> **ID corrected by CBE.**"):
-                category = "node_text"
             elif in_units and stripped in body_lines:
                 category = "model_body"
             elif stripped.startswith(("### ", '<a id="u-')):
@@ -1101,8 +1098,7 @@ def layer_metrics(run_dir: Path) -> dict:
             "scope": "Breakdown partitions full Markdown BPE tokens by the first byte's line: model_body "
                      "is published unit explain, summary, extras and uncertainties; signature_location includes "
                      "shared source-file reference definitions (including ones used by relations); "
-                     "heading_anchor, relations, footer, INDEX and node_text (including labels/whitespace "
-                     "and program-written ID correction notices) "
+                     "heading_anchor, relations, footer, INDEX and node_text (including labels/whitespace) "
                      "partition the rest. model_body/source and published_markdown/source use complete frozen files. "
                      "semantic: all published Markdown (node pages + INDEX, including navigation, "
                      "signatures and commands); deterministic: catalog.json as serialized, including "

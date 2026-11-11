@@ -71,7 +71,7 @@ def test_api_complete_usage_and_explicit_price(tmp_path):
 
 
 def test_custom_batch_limits_are_local_and_preserve_whole_files():
-    files = [batching.SourceFile(f"pkg/area/{name}.py", "", tokens, "digest", [], {"pkg.area.a"})
+    files = [batching.SourceFile(f"pkg/area/{name}.py", "", tokens, "digest", {"pkg.area.a"})
              for name, tokens in [("a", 6000), ("b", 5000), ("c", 3000), ("large", 14000)]]
     ordinary = [[f.path for f in m.files] for m in batching.plan(files)]
     small = batching.plan(files, target_tokens=8000, max_tokens=10000)

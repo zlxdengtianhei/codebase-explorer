@@ -37,7 +37,6 @@ class SourceFile:
     source: str
     tokens: int
     digest: str
-    signatures: list[str]
     imports: set[str] = field(default_factory=set)
 
     @property
@@ -59,24 +58,6 @@ class Module:
     @property
     def is_test(self) -> bool:
         return all(item.is_test for item in self.files)
-
-
-def _signatures(path: str, source: str) -> list[str]:
-    if not path.endswith(".py"):
-        return []
-    try:
-        tree = ast.parse(source)
-    except SyntaxError:
-        return []
-    rows: list[str] = []
-    for node in tree.body:
-        if isinstance(node, ast.ClassDef):
-            rows.append(node.name)
-            rows.extend(f"{node.name}.{child.name}" for child in node.body
-                        if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)))
-        elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            rows.append(node.name)
-    return rows
 
 
 def _imports(path: str, source: str) -> set[str]:
@@ -115,7 +96,7 @@ def scan(repo: Path) -> list[SourceFile]:
             raise BatchingError(f"source is not UTF-8: {path.relative_to(repo)}") from exc
         rel = path.relative_to(repo).as_posix()
         files.append(SourceFile(rel, source, count_text_tokens(source), hashlib.sha256(raw).hexdigest(),
-                                _signatures(rel, source), _imports(rel, source)))
+                                _imports(rel, source)))
     if not files:
         raise BatchingError("no supported source files")
     return files
@@ -287,14 +268,13 @@ def plan(files: list[SourceFile], *, target_tokens: int = TARGET_TOKENS,
 
 
 def fallback_title(module: Module) -> str:
-    directory, _ = primary_directory(module)
+    directory = primary_directory(module)
     return f"{'Tests' if module.is_test else 'Source'} in {directory or '.'}"[:80]
 
 
-def primary_directory(module: Module) -> tuple[str, float]:
+def primary_directory(module: Module) -> str:
     counts: dict[str, int] = {}
     for item in module.files:
         directory = Path(item.path).parent.as_posix()
         counts[directory] = counts.get(directory, 0) + 1
-    directory = min(counts, key=lambda path: (-counts[path], path))
-    return directory, counts[directory] / len(module.files)
+    return min(counts, key=lambda path: (-counts[path], path))
