@@ -920,8 +920,7 @@ def _detail_table(state: dict[str, Any], task: dict[str, Any]) -> list[dict]:
 
 def _gaps(run_dir: Path, state: dict[str, Any], table: list[dict], units: list[dict]) -> list[dict]:
     """Symbols with logic that no unit explains yet (see ``checks.find_gaps``)."""
-    wanted = {row["id"] for row in table
-              if row["kind"] in checks.GAP_KINDS and not batching.is_test_path(row["path"])}
+    wanted = {row["id"] for row in table if row["kind"] in checks.GAP_KINDS}
     tokens = {chunk["id"]: count_text_tokens(chunk.get("text") or "")
               for chunk in _verified_context(run_dir, state).get("chunks") or [] if chunk["id"] in wanted}
     return checks.find_gaps(table, units, tokens)

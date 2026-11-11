@@ -146,10 +146,24 @@ def test_gap_guard_ignores_what_a_unit_or_group_already_explains() -> None:
     assert checks.find_gaps(TABLE, units, TOKENS) == []
 
 
-def test_gap_guard_ignores_test_files() -> None:
+def test_gap_guard_treats_test_files_like_any_other() -> None:
+    """Tests carry information too (which behavior is pinned where), so a test function that no
+    unit mentions is a gap like any other; the prompt asks for tests to come in as groups."""
     table = symbols.batch_table(["tests/test_x.py"], {"tests/test_x.py": {"symbols": [
-        {"id": "tests/test_x.py::test_a", "name": "test_a", "kind": "function", "parent": None, "lines": [[1, 30]]}]}})
-    assert checks.find_gaps(table, [], {"tests/test_x.py::test_a": 900}) == []
+        {"id": "tests/test_x.py::test_a", "name": "test_a", "kind": "function", "parent": None, "lines": [[1, 30]]},
+        {"id": "tests/test_x.py::test_b", "name": "test_b", "kind": "function", "parent": None, "lines": [[31, 33]]}]}})
+    tokens = {"tests/test_x.py::test_a": 900, "tests/test_x.py::test_b": 12}
+    assert [row["name"] for row in checks.find_gaps(table, [], tokens)] == ["test_a"]
+    group = checks.decode_details({"units": [{"h": [1, 2], "title": "x behavior", "explain": "Pins x."}]}, table).units
+    assert checks.find_gaps(table, group, tokens) == []
+
+
+def test_the_prompt_asks_for_tests_to_be_grouped_by_the_behavior_they_pin() -> None:
+    from cbe import prompts
+    text = prompts.detail_prompt(["pkg/jobs.py"], _inventory())
+    assert "Tests are no exception: group the tests that pin the same behavior into one unit" in text
+    assert "test cases and trivial accessors" not in text and "Test functions and trivial accessors" not in text
+    assert "tests that pin the same behavior go in one group" in prompts.gap_note(TABLE[:1], [])
 
 
 def test_the_threshold_is_not_negligible() -> None:

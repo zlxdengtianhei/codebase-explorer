@@ -18,7 +18,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Any
 
-from cbe.batching import Module, fallback_title, is_test_path
+from cbe.batching import Module, fallback_title
 
 
 def json_object(text: str) -> dict[str, Any]:
@@ -416,7 +416,7 @@ def find_gaps(table: list[dict], units: list[dict[str, Any]], tokens: dict[str, 
     done = covered_ids(units, table)
     return [row for row in table
             if row["id"] not in done and row["kind"] in GAP_KINDS
-            and not is_test_path(row["path"]) and tokens.get(row["id"], 0) >= GAP_MIN_TOKENS]
+            and tokens.get(row["id"], 0) >= GAP_MIN_TOKENS]
 
 
 def assemble_details(table: list[dict], units: list[dict[str, Any]], *, notes: str = "") -> dict[str, Any]:

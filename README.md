@@ -506,7 +506,8 @@ a number that two units list stays with the first; a unit left without a symbol
 or without an `explain` is rejected and the other units are kept. Only an answer
 that is not a JSON object, or has no `units` list, is refused whole. A symbol that
 no unit lists is indexed without prose, unless it is a function, method or class
-outside test files whose own source is at least 40 tokens: that is a gap. When an
+whose own source is at least 40 tokens (tests included): that is a gap. The prompt asks
+for tests to be handed in as groups, one unit per behavior they pin. When an
 answer leaves gaps or rejected units, the re-ask repeats the first ask unchanged
 and appends only the gaps, so the provider's prefix cache can serve it, and the
 model returns only additional units. After the last answer (3 for module and
