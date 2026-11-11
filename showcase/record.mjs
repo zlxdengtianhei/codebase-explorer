@@ -1,5 +1,6 @@
 // Record the play-mode page frame by frame with headless Chrome.
 //   node record.mjs --data cjson --out DIR [--fps 30] [--from 0 --to END]       numbered frames
+//   node record.mjs --mode tour --data flask --out DIR --fps 15                  narrated-tour frames
 //   node record.mjs --data flask --out DIR --times 3.8,10.8 --prefix flask     single named frames
 //   node record.mjs --data cjson --out DIR --interactive hover.png             interactive-mode screenshot
 import puppeteer from 'puppeteer-core';
@@ -12,6 +13,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const arg = (k, d) => { const i = process.argv.indexOf('--' + k); return i < 0 ? d : process.argv[i + 1]; };
 const data = arg('data', 'cjson'), out = arg('out'), fps = +arg('fps', 30), from = +arg('from', 0), to = arg('to', null);
 const times = arg('times', null), prefix = arg('prefix', 'shot'), inter = arg('interactive', null), lang = arg('lang', 'en');
+const mode = arg('mode', 'play');
 const chrome = arg('chrome', process.env.CHROME || ['google-chrome', 'google-chrome-stable', 'chromium', 'chromium-browser', 'chrome']
   .flatMap(n => (process.env.PATH || '').split(path.delimiter).map(d => path.join(d, n))).find(p => fs.existsSync(p)));
 if (!chrome) { console.error('no Chrome found; set CHROME=/path/to/chrome'); process.exit(2); }
@@ -35,7 +37,7 @@ const page = await browser.newPage();
 await page.setViewport({ width: 1280, height: 720, deviceScaleFactor: 1 });
 page.on('console', m => { if (m.type() === 'error') console.error('page:', m.text()); });
 page.on('pageerror', e => console.error('pageerror:', e.message));
-const q = inter ? `?data=${data}&lang=${lang}` : `?mode=play&record=1&data=${data}&lang=${lang}`;
+const q = inter ? `?data=${data}&lang=${lang}` : `?mode=${mode}&record=1&data=${data}&lang=${lang}`;
 await page.goto(base + q);
 await page.waitForFunction('window.__ready === true || window.__error', { timeout: 60000 });
 const err = await page.evaluate('window.__error'); if (err) { console.error(err); process.exit(1); }
@@ -54,7 +56,7 @@ if (inter) {
   for (const t of times.split(',').map(Number)) { await page.evaluate(t => window.__render(t), t); await shot(path.join(out, `${prefix}_${t.toFixed(2)}.png`)); }
 } else {
   const end = to == null ? await page.evaluate('window.__total') : +to;
-  const n = Math.round((end - from) * fps);
+  const n = mode === 'tour' ? Math.ceil((end - from) * fps) : Math.round((end - from) * fps);
   for (let k = 0; k < n; k++) {
     await page.evaluate(t => window.__render(t), from + k / fps);
     await shot(path.join(out, `frame_${String(k).padStart(5, '0')}.png`));

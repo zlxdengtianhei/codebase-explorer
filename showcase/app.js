@@ -20,7 +20,8 @@ const LABEL_W = 170, BIG_FONT = 20, BIG_LH = 23, R3 = 0.8;               // R3: 
 const SANS = '"IBM Plex Sans", system-ui, sans-serif', MONO = '"IBM Plex Mono", ui-monospace, monospace';
 
 const qs = new URLSearchParams(location.search);
-const MODE = qs.get('mode') === 'play' ? 'play' : 'interactive';
+const requestedMode = qs.get('mode');
+const MODE = requestedMode === 'play' || requestedMode === 'tour' ? requestedMode : 'interactive';
 const RECORD = qs.has('record');
 const DATA = qs.get('data') || 'cjson';
 const LANG = qs.get('lang') || 'en';
@@ -414,6 +415,39 @@ function stateAt(M, T) {
   return S;
 }
 
+// A tour stretches the existing six scenes to the measured narration. Its state is still
+// produced by stateAt; only the two additional overlays and the virtual clock differ.
+function tourAt(M, timing, tour, t) {
+  const items = timing.items;
+  let ix = items.length - 1;
+  for (let i = 0; i < items.length; i++) {
+    const end = i + 1 < items.length ? items[i + 1].t0 : timing.duration;
+    if (t >= items[i].t0 && t < end) { ix = i; break; }
+  }
+  const cue = items[ix], entry = tour.items[ix];
+  const p = clamp((t - cue.t0) / Math.max(0.001, cue.t1 - cue.t0));
+  const ranges = { code: [0, 3.999], edges: [4, 10.999], modules: [11, 16.999], system: [17, 21.999], read: [22, 27.999], ask: [28, 34.999] };
+  let oldT = 0;
+  if (entry.scene === 'system' && entry.focus) oldT = 21.9;
+  else if (ranges[entry.scene]) oldT = lerp(ranges[entry.scene][0], ranges[entry.scene][1], p);
+  const S = stateAt(M, oldT);
+  S.fade = 0; S.tourT = t; S.tourCue = { ...cue, caption: entry.caption || entry.say };
+  S.tourFocusTops = [];
+  if (entry.scene === 'edges') S.counter = { value: tour.facts.symbols, label: 'symbols' };
+  if (entry.focus) {
+    const ids = Array.isArray(entry.focus) ? entry.focus : [entry.focus];
+    const focused = ids[Math.min(ids.length - 1, Math.floor(p * ids.length))];
+    S.tourFocusTops = [focused]; S.tourCard = focused;
+    S.sidebar = 0; S.focusMod = -1; S.focusUnit = -1; S.zoom = 0; S.dimOthers = 0; S.panel = 0;
+  }
+  if (entry.scene === 'start') S.start = entry;
+  return S;
+}
+function tourTopAlpha(M, S, mi) {
+  if (!S.tourFocusTops || !S.tourFocusTops.length) return 1;
+  return S.tourFocusTops.includes(M.tops[M.mods[mi].top].id) ? 1 : 0.35;
+}
+
 // ---------- rendering -------------------------------------------------------------------------
 let bgCanvas = null;
 function bgImage() {
@@ -432,6 +466,7 @@ function render(M, S) {
   const { units, L, rad } = M, n = units.length;
   ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.clearRect(0, 0, W, H);
   ctx.drawImage(bgImage(), 0, 0);
+  if (S.start) { drawStartCard(S.start); drawSubtitle(M, S); return; }
 
   // camera: zoom about a world point to a screen point, in log scale
   const fm = S.focusMod >= 0 ? M.cam(S.focusMod) : null;
@@ -485,11 +520,12 @@ function render(M, S) {
   if (haveTree && S.topA > 0.01 && z < 0.98) {
     const a = S.topA * (1 - z) * mapAlpha;
     M.tops.forEach((t, k) => {
-      const r = M.topRects[k];
-      ctx.globalAlpha = a;
-      rrect(r.x, r.y, r.w, r.h, 18); ctx.fillStyle = hsl(t.hue, 60, 60, 0.07); ctx.fill();
-      ctx.strokeStyle = hsl(t.hue, 65, 66, 0.5); ctx.lineWidth = 2; ctx.stroke();
-      t.titleLines.forEach((ln, j) => text(ln, r.x + 10, r.y + 28 + j * t.tlh, t.tfont, hsl(t.hue, 75, 78), 'left', a));
+      const r = M.topRects[k], focused = S.tourFocusTops && S.tourFocusTops.includes(t.id);
+      const ta = a * (S.tourFocusTops && S.tourFocusTops.length && !focused ? 0.35 : 1);
+      ctx.globalAlpha = ta;
+      rrect(r.x, r.y, r.w, r.h, 18); ctx.fillStyle = hsl(t.hue, 60, 60, focused ? 0.14 : 0.07); ctx.fill();
+      ctx.strokeStyle = hsl(t.hue, 65, 66, focused ? 0.95 : 0.5); ctx.lineWidth = focused ? 4 : 2; ctx.stroke();
+      t.titleLines.forEach((ln, j) => text(ln, r.x + 10, r.y + 28 + j * t.tlh, t.tfont, hsl(t.hue, 75, 78), 'left', ta));
     });
     ctx.globalAlpha = mapAlpha;
   }
@@ -502,7 +538,7 @@ function render(M, S) {
       cx /= m.units.length; cy /= m.units.length;
       let r = 0; for (const i of m.units) r = Math.max(r, Math.hypot(sx[i] - cx, sy[i] - cy) + sr[i]);
       mc[mi] = { cx, cy, r: r + 9 * Math.pow(cs, 0.6) };
-      const dim = mi === S.focusMod ? 1 : 1 - 0.93 * S.dimOthers;
+      const dim = (mi === S.focusMod ? 1 : 1 - 0.93 * S.dimOthers) * tourTopAlpha(M, S, mi);
       const mv = S.play ? (S.move[2] < 0.5 ? 1 - prog(S.move[2], 0, 0.1) : prog(S.move[2], 0.9, 1)) : 1;   // units are mid-flight: no rings
       if (S.haloA > 0.01 && mv > 0.01) {
         ctx.globalAlpha = S.haloA * dim * mv * mapAlpha;
@@ -515,7 +551,7 @@ function render(M, S) {
   }
 
   // edges
-  const nodim = i => (haveTree && M.modOf[i] !== S.focusMod ? 1 - 0.93 * S.dimOthers : 1);
+  const nodim = i => (haveTree && M.modOf[i] !== S.focusMod ? 1 - 0.93 * S.dimOthers : 1) * (haveTree ? tourTopAlpha(M, S, M.modOf[i]) : 1);
   ctx.lineCap = 'round';
   if (z > 0.3) { ctx.save(); ctx.beginPath(); ctx.rect(SIDEBAR_W, 112, PANEL_X - SIDEBAR_W, 528); ctx.clip(); }
   const inferred = M.data.edge_basis === 'inferred';
@@ -567,14 +603,14 @@ function render(M, S) {
     M.mods.forEach((m, mi) => {
       const c = mc[mi];
       if (m.big) {
-        const a = (S.play ? prog(S.labelT, 12.3 + 0.1 * m.big, 13.0 + 0.1 * m.big) * S.labelOut : 0) * lz;
+        const a = (S.play ? prog(S.labelT, 12.3 + 0.1 * m.big, 13.0 + 0.1 * m.big) * S.labelOut : 0) * lz * tourTopAlpha(M, S, mi);
         if (a > 0.01) {
           const font = `600 ${BIG_FONT}px ${SANS}`, lines = wrap(m.label, font, LABEL_W, 3, true);
           let y = c.cy + c.r + 20;
           for (const ln of lines) { haloText(ln, c.cx, y, font, m.cssLight, 'center', a); y += BIG_LH; }
         }
       }
-      const a2 = (S.play ? S.smallA : 1) * lz;
+      const a2 = (S.play ? S.smallA : 1) * lz * tourTopAlpha(M, S, mi);
       if (a2 > 0.01 && m.systemLabel) {
         const { font, lines, lh, x, y: y0 } = m.systemLabel;
         let y = y0;
@@ -603,6 +639,7 @@ function render(M, S) {
   drawSidebar(M, S);
   drawPanel(M, S);
   drawTerminal(M, S);
+  if (S.tourCard) drawTourCard(M, S.tourCard);
   drawHeader(M, S);
   drawLegend(M, S);
   drawSubtitle(M, S);
@@ -614,7 +651,8 @@ function fmtK(v) { return v >= 1000 ? (v / 1000).toFixed(1) + 'k' : String(v); }
 function drawHeader(M, S) {
   const st = M.data.stats, s = S.play ? S.stats : 1, ui = M.sub.ui;
   text(M.data.name, 40, 62, `600 46px ${SANS}`, C.ink);
-  const parts = [`${st.files} ${ui.files}`, `${fmtK(Math.round(st.tokens * s))} ${ui.tokens}`, `${Math.round(st.units * s)} ${ui.units}`];
+  const counter = S.counter || { value: st.units, label: ui.units };
+  const parts = [`${st.files} ${ui.files}`, `${fmtK(Math.round(st.tokens * s))} ${ui.tokens}`, `${Math.round(counter.value * s)} ${counter.label}`];
   text(parts.join('  ·  '), 42, 98, `400 24px ${SANS}`, C.muted);
   // step indicator
   const steps = M.sub.steps, font = `400 22px ${SANS}`, fontB = `600 22px ${SANS}`, gap = 30;
@@ -639,12 +677,58 @@ function drawLegend(M, S) {
 }
 function drawSubtitle(M, S) {
   if (!S.play) return;
+  if (S.tourCue) { drawTourSubtitle(S); return; }
   const cue = M.sub.cues.find(c => S.T >= c.t0 && S.T < c.t1);
   if (!cue) return;
   const a = Math.min(prog(S.T, cue.t0, cue.t0 + 0.3), 1 - prog(S.T, cue.t1 - 0.2, cue.t1));
   const font = `400 30px ${SANS}`, w = tw(cue.text, font), y = 685;
   ctx.globalAlpha = a * 0.78; rrect(W / 2 - w / 2 - 26, y - 38, w + 52, 56, 14); ctx.fillStyle = '#04090f'; ctx.fill(); ctx.globalAlpha = 1;
   text(cue.text, W / 2, y, font, '#f2f7ff', 'center', a);
+}
+function tourCaptionParts(caption) {
+  const font = `400 26px ${SANS}`, maxW = 1160;
+  if (wrap(caption, font, maxW).length <= 2) return [caption];
+  const stops = [];
+  for (const m of caption.matchAll(/[.!?,]\s+/g)) stops.push(m.index + m[0].trim().length);
+  const feasible = stops.map(at => [caption.slice(0, at).trim(), caption.slice(at).trim()])
+    .filter(parts => parts.every(part => wrap(part, font, maxW).length <= 2));
+  const choices = feasible.length ? feasible : stops.map(at => [caption.slice(0, at).trim(), caption.slice(at).trim()]);
+  choices.sort((a, b) => Math.abs(a[0].length - a[1].length) - Math.abs(b[0].length - b[1].length));
+  return choices[0] || [caption];
+}
+function drawTourSubtitle(S) {
+  const cue = S.tourCue, parts = tourCaptionParts(cue.caption);
+  const weights = parts.map(p => p.length), total = weights.reduce((a, b) => a + b, 0);
+  let p = clamp((S.tourT - cue.t0) / Math.max(0.001, cue.t1 - cue.t0)), selected = 0;
+  if (parts.length === 2 && p >= weights[0] / total) selected = 1;
+  const font = `400 26px ${SANS}`, lines = wrap(parts[selected], font, 1160), lh = 34;
+  const w = Math.max(...lines.map(line => tw(line, font))), bottom = 700, h = lines.length * lh + 20;
+  ctx.globalAlpha = 0.86; rrect(W / 2 - w / 2 - 24, bottom - h, w + 48, h, 12); ctx.fillStyle = '#04090f'; ctx.fill(); ctx.globalAlpha = 1;
+  lines.forEach((line, j) => text(line, W / 2, bottom - 14 - (lines.length - 1 - j) * lh, font, '#f2f7ff', 'center'));
+}
+function drawTourCard(M, id) {
+  const node = M.data.nodes.find(n => n.id === id);
+  if (!node) return;
+  const x = 40, y = 142, w = 382, pad = 24;
+  const titleFont = `600 27px ${SANS}`, capFont = `400 20px ${SANS}`;
+  const titles = wrap(node.title, titleFont, w - 2 * pad), caps = wrap(node.capability, capFont, w - 2 * pad);
+  const h = 32 + titles.length * 34 + 22 + caps.length * 27 + 24;
+  ctx.fillStyle = 'rgba(4,12,21,0.96)'; rrect(x, y, w, h, 16); ctx.fill();
+  ctx.strokeStyle = 'rgba(110,231,208,0.72)'; ctx.lineWidth = 2; ctx.stroke();
+  let ty = y + 40;
+  titles.forEach(line => { text(line, x + pad, ty, titleFont, C.ink); ty += 34; });
+  ty += 14;
+  caps.forEach(line => { text(line, x + pad, ty, capFont, C.muted); ty += 27; });
+}
+function drawStartCard(entry) {
+  const x = 60, y = 172, w = 1160, h = 360;
+  ctx.fillStyle = 'rgba(3,10,18,0.97)'; rrect(x, y, w, h, 22); ctx.fill();
+  ctx.strokeStyle = 'rgba(110,231,208,0.65)'; ctx.lineWidth = 2; ctx.stroke();
+  text('Map your own repository', W / 2, y + 70, `600 36px ${SANS}`, C.ink, 'center');
+  text('Install', W / 2, y + 132, `400 22px ${SANS}`, C.muted, 'center');
+  text(entry.install, W / 2, y + 178, `500 24px ${MONO}`, '#bffcf0', 'center');
+  text('Repository', W / 2, y + 248, `400 22px ${SANS}`, C.muted, 'center');
+  text(entry.repository, W / 2, y + 296, `500 26px ${MONO}`, C.teal, 'center');
 }
 function drawSidebar(M, S) {
   if (!M.treeOk || S.sidebar <= 0.003) return;
@@ -848,12 +932,24 @@ async function boot() {
     ['IBM Plex Mono', 'IBMPlexMono-Regular.woff2', '400'], ['IBM Plex Mono', 'IBMPlexMono-Medium.woff2', '500']];
   await Promise.all(fonts.map(async ([fam, file, wt]) => { const ff = new FontFace(fam, `url(fonts/${file})`, { weight: wt }); await ff.load(); document.fonts.add(ff); }));
   const [data, sub] = await Promise.all([fetch(`data/${DATA}.json`).then(r => r.json()), fetch(`subtitles/${LANG}.json`).then(r => r.json())]);
-  const M = buildModel(data, sub);
-  window.__model = M; window.__total = T_TOTAL;
-  window.__render = t => { render(M, stateAt(M, t)); };
+  let timing = null, tour = null;
+  if (MODE === 'tour') {
+    [tour, timing] = await Promise.all([
+      fetch(`tour/${DATA}.${LANG}.json`).then(r => r.json()),
+      fetch(`tour/${DATA}.${LANG}.timing.json`).then(r => r.json()),
+    ]);
+  }
+  const M = buildModel(data, sub), total = timing ? timing.duration : T_TOTAL;
+  window.__model = M; window.__total = total;
+  window.__render = t => { render(M, timing ? tourAt(M, timing, tour, t) : stateAt(M, t)); };
+  window.__tourState = t => {
+    if (!timing) return null;
+    const S = tourAt(M, timing, tour, t);
+    return { id: S.tourCue.id, focus: S.tourFocusTops, caption: S.tourCue.caption, scene: S.start ? 'start' : tour.items[timing.items.findIndex(c => c.id === S.tourCue.id)].scene };
+  };
   window.__ready = true;
-  if (MODE === 'play') {
-    if (!RECORD) { const t0 = performance.now(); const loop = () => { window.__render(((performance.now() - t0) / 1000) % T_TOTAL); requestAnimationFrame(loop); }; loop(); }
+  if (MODE === 'play' || MODE === 'tour') {
+    if (!RECORD) { const t0 = performance.now(); const loop = () => { window.__render(((performance.now() - t0) / 1000) % total); requestAnimationFrame(loop); }; loop(); }
     else window.__render(0);
   } else interactive(M);
 }

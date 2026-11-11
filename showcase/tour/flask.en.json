@@ -1,0 +1,91 @@
+{
+  "facts": { "symbols": 447 },
+  "items": [
+    {
+      "id": "1",
+      "scene": "code",
+      "say": "This is Flask. Twenty-four source files, about seventy-five thousand tokens. Opening a repository like this for the first time, where do you start reading?",
+      "caption": "This is Flask: 24 source files, about 75,000 tokens. Where do you start reading?"
+    },
+    {
+      "id": "2",
+      "scene": "edges",
+      "say": "Codebase Explorer cuts every file at its functions, classes and methods: four hundred and forty-seven of them here. Then it traces the calls between them. This step is ordinary code. No model is involved.",
+      "caption": "Codebase Explorer cuts every file at its functions, classes and methods: 447 of them here. Then it traces the calls between them. This step is ordinary code. No model is involved."
+    },
+    {
+      "id": "3",
+      "scene": "modules",
+      "say": "A language model writes what each one does, explaining small related ones together. That gives two hundred and ninety-three units. A program then groups units that call each other, sit close together and are described in similar words.",
+      "caption": "A language model writes what each one does, explaining small related ones together. That gives 293 units. A program then groups units that call each other, sit close together and are described in similar words."
+    },
+    {
+      "id": "4",
+      "scene": "system",
+      "say": "The same explanations and calls always give the same tree. The model only names the modules. It cannot move anything. The result is a map of the system. For Flask, it has eight parts.",
+      "caption": "The same explanations and calls always give the same tree. The model only names the modules. It cannot move anything. The result is a map of the system. For Flask, it has 8 parts."
+    },
+    {
+      "id": "5a",
+      "scene": "system",
+      "focus": "sansio-app-and-scaffold-foundations",
+      "say": "The foundations: the scaffold and blueprint base that the app and blueprints build on."
+    },
+    {
+      "id": "5b",
+      "scene": "system",
+      "focus": "runtime-app-contexts-and-testing",
+      "say": "The running app: the request lifecycle, the contexts that hold per-request state, and the testing tools."
+    },
+    {
+      "id": "5c",
+      "scene": "system",
+      "focus": "templates-views-and-wrappers",
+      "say": "Templates, views and wrappers: the view layer."
+    },
+    {
+      "id": "5d",
+      "scene": "system",
+      "focus": "session-interface-and-cookies",
+      "say": "Sessions, kept in signed cookies."
+    },
+    {
+      "id": "5e",
+      "scene": "system",
+      "focus": "configuration-loading",
+      "say": "Configuration, loaded from files, objects and environment variables."
+    },
+    {
+      "id": "5f",
+      "scene": "system",
+      "focus": ["json-providers-and-helpers", "tagged-json-serialization"],
+      "say": "Jason providers, and a tagged serializer for types Jason does not have.",
+      "caption": "JSON providers, and a tagged serializer for types JSON does not have."
+    },
+    {
+      "id": "5g",
+      "scene": "system",
+      "focus": "command-line-and-public-helpers",
+      "say": "And the command line, with the public helper functions."
+    },
+    {
+      "id": "6",
+      "scene": "read",
+      "say": "Open one module. Each unit has its signature, a short explanation written for people, and a link to the exact source lines."
+    },
+    {
+      "id": "7",
+      "scene": "ask",
+      "say": "Explanations are summaries. Exact facts stay in the code. So you, or your coding agent, can ask. C B E find locates a symbol. C B E source prints it from the frozen snapshot, after checking the file's hash.",
+      "caption": "Explanations are summaries. Exact facts stay in the code. So you, or your coding agent, can ask. cbe find locates a symbol. cbe source prints it from the frozen snapshot, after checking the file's hash."
+    },
+    {
+      "id": "8",
+      "scene": "start",
+      "say": "To map your own repository, install it with one command, then generate inside Claude Code, or with any OpenAI-compatible endpoint. The steps are in the read me.",
+      "caption": "To map your own repository, install it with one command, then generate inside Claude Code, or with any OpenAI-compatible endpoint. The steps are in the README.",
+      "install": "uv tool install git+https://github.com/zlxdengtianhei/codebase-explorer",
+      "repository": "github.com/zlxdengtianhei/codebase-explorer"
+    }
+  ]
+}
