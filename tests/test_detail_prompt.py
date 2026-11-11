@@ -68,6 +68,7 @@ def test_default_contract_reaches_both_detail_drivers(embed):
     assert "Do not emit a separate summary field" in text
     assert "LENGTH GUIDANCE:" in text
     assert "AVOID DUPLICATION:" in text
+    assert "WRITE DIRECTLY, DO NOT COMPRESS:" in text and "condition: outcome" in text
     assert "BEHAVIOR AND EVIDENCE:" in text
     assert "For members folded into the class without their own units" in text
     assert "Cover every behavior-changing branch and every failure path" in text

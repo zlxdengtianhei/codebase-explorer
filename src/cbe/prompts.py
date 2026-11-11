@@ -138,6 +138,12 @@ def detail_prompt(paths: list[str], inventory: dict[str, dict], *,
         "and paths determine the length. Information quality takes priority; remove repetition "
         "before removing behavior.")
     header.append(
+        "WRITE DIRECTLY, DO NOT COMPRESS: say the same facts in plainer words instead of dropping "
+        "them. When a unit has three or more conditions or cases, put each on its own line as "
+        "'- condition: outcome' after the responsibility sentence. Do not restate the signature, "
+        "parameter names or types; the page shows them above the prose. Put failure paths, "
+        "exceptions and side effects before routine detail.")
+    header.append(
         "AVOID DUPLICATION: Explain a class's class-level responsibility and collaboration; "
         "every class needs its own explanation, either as its own unit or, when it is grouped, "
         "as a sentence in the group's explain that says what the class itself is; "
