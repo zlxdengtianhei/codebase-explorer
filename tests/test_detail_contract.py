@@ -162,6 +162,7 @@ def test_the_prompt_asks_for_tests_to_be_grouped_by_the_behavior_they_pin() -> N
     from cbe import prompts
     text = prompts.detail_prompt(["pkg/jobs.py"], _inventory())
     assert "Tests are no exception: group the tests that pin the same behavior into one unit" in text
+    assert "every class needs its own explanation, either as its own unit or, when it is grouped" in text
     assert "test cases and trivial accessors" not in text and "Test functions and trivial accessors" not in text
     assert "tests that pin the same behavior go in one group" in prompts.gap_note(TABLE[:1], [])
 

@@ -152,6 +152,8 @@ def detail_prompt(paths: list[str], inventory: dict[str, dict], *,
         "before removing behavior.")
     header.append(
         "AVOID DUPLICATION: Explain a class's class-level responsibility and collaboration; "
+        "every class needs its own explanation, either as its own unit or, when it is grouped, "
+        "as a sentence in the group's explain that says what the class itself is; "
         "do not repeat the behavior of members that have their own units in this batch. "
         "For members folded into the class without their own units, explain their behavior, "
         "conditions, and failure paths inside the class unit, not just class attributes. "
