@@ -2,6 +2,12 @@
 
 ## 2.2.0.dev0 (unreleased)
 
+- `cbe-install` has a `pi` target: `.pi/skills/` in a project, `~/.pi/agent/skills/` for the user.
+- `cbe find`, `cbe query` and `cbe source` on a catalogue from another CBE version exit with
+  the same one-sentence version error as `cbe host render`. Before, they still read catalogues
+  without `symbol_index`.
+- Package metadata (licence file, classifiers, project links) and a workflow that builds,
+  checks and publishes to PyPI when a `v<version>` tag is pushed. Nothing is published yet.
 - `docs.render` is one short function that calls a shared preparation step and one writer per
   document; the catalogue lookups (`find`, `query`, `source`, `layer_metrics`) live in
   `cbe.catalog_query`; `source_context` is split into `grammars`, `declarations` and
