@@ -22,13 +22,14 @@ OUT="$(cd "$OUT" && pwd)"
 
 cd "$HERE"
 python3 "tour/check_tour.py" --script "$SCRIPT" --data "data/$DATA.json" --catalog "$HERE/../examples/$DATA/catalog.json.gz"
-"$KOKORO_PYTHON" "tour/make_audio.py" --script "$SCRIPT" --out "$OUT" --timing "$TIMING"
+"$KOKORO_PYTHON" "tour/make_audio.py" --script "$SCRIPT" --out "$OUT" --timing "$TIMING" --speed "${TOUR_SPEED:-1.06}"
 
 # Serialise the expensive frame recording across concurrent invocations.
 LOCK="${TMPDIR:-/tmp}/codebase-explorer-tour-record.lock"
 exec 9>"$LOCK"
 flock 9
 uptime
+WAITED=0
 while :; do
   LOAD="$(cut -d' ' -f1 /proc/loadavg)"
   if python3 -c "import sys
@@ -38,18 +39,20 @@ except ValueError:
     print('could not read 1-minute load; continuing')
     sys.exit(0)
 sys.exit(load > 12)"; then break; fi
+  if [ "$WAITED" -ge 300 ]; then echo "load is still $LOAD after 5 minutes; recording anyway"; break; fi
   echo "1-minute load $LOAD is above 12; waiting 15s"
   sleep 15
+  WAITED=$((WAITED + 15))
 done
 FPS=15
 FRAMES="$OUT/frames_$DATA"
 rm -rf "$FRAMES"; mkdir -p "$FRAMES"
-node record.mjs --mode tour --data "$DATA" --lang "$LANG" --out "$FRAMES" --fps "$FPS"
+node record.mjs --mode tour --data "$DATA" --lang "$LANG" --out "$FRAMES" --fps "$FPS" --caption-out "$OUT/caption_segments.txt"
 
 encode() {
   "$FFMPEG" -y -loglevel error -framerate "$FPS" -i "$FRAMES/frame_%05d.png" -i "$OUT/narration.wav" \
     -c:v libx264 -preset slow -crf "$1" -pix_fmt yuv420p -movflags +faststart \
-    -c:a aac -b:a 96k -ac 1 -shortest "$OUT/walkthrough-$DATA.mp4"
+    -af loudnorm=I=-16:TP=-1.5:LRA=11 -c:a aac -b:a 96k -ac 1 -shortest "$OUT/walkthrough-$DATA.mp4"
 }
 CRF_VALUE="${CRF:-23}"
 encode "$CRF_VALUE"

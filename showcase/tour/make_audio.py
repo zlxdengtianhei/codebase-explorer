@@ -18,6 +18,7 @@ def main():
     parser.add_argument("--timing", type=Path, help="also write the timeline here for browser playback")
     parser.add_argument("--model", default=None, type=Path)
     parser.add_argument("--voices", default=None, type=Path)
+    parser.add_argument("--speed", default=1.06, type=float)
     args = parser.parse_args()
 
     import os
@@ -46,7 +47,7 @@ def main():
         clip_path = clips / f"{entry['id']}.wav"
         meta_path = clips / f"{entry['id']}.json"
         cache_key = hashlib.sha256(json.dumps({
-            "say": entry["say"], "voice": "am_michael", "speed": 1.0,
+            "say": entry["say"], "voice": "am_michael", "speed": args.speed,
             "lang": "en-us", "trim_threshold": 0.002,
         }, sort_keys=True).encode("utf-8")).hexdigest()
         cached = False
@@ -61,7 +62,7 @@ def main():
             if voice is None:
                 voice = Kokoro(str(model), str(voices))
             samples, sample_rate = voice.create(
-                entry["say"], voice="am_michael", speed=1.0, lang="en-us"
+                entry["say"], voice="am_michael", speed=args.speed, lang="en-us"
             )
             samples = np.asarray(samples, dtype=np.float32)
             # Kokoro adds a short silent pad to every utterance. Remove only samples below
@@ -91,7 +92,7 @@ def main():
 
     duration = cursor
     sf.write(args.out / "narration.wav", np.concatenate(audio), rate, subtype="PCM_16")
-    result = {"voice": "am_michael", "sample_rate": rate, "duration": round(duration, 6), "items": timeline}
+    result = {"voice": "am_michael", "speed": args.speed, "sample_rate": rate, "duration": round(duration, 6), "items": timeline}
     encoded = json.dumps(result, indent=2, ensure_ascii=False) + "\n"
     (args.out / "timing.json").write_text(encoded, encoding="utf-8")
     if args.timing:

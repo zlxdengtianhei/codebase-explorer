@@ -13,7 +13,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const arg = (k, d) => { const i = process.argv.indexOf('--' + k); return i < 0 ? d : process.argv[i + 1]; };
 const data = arg('data', 'cjson'), out = arg('out'), fps = +arg('fps', 30), from = +arg('from', 0), to = arg('to', null);
 const times = arg('times', null), prefix = arg('prefix', 'shot'), inter = arg('interactive', null), lang = arg('lang', 'en');
-const mode = arg('mode', 'play');
+const mode = arg('mode', 'play'), captionOut = arg('caption-out', null);
 const chrome = arg('chrome', process.env.CHROME || ['google-chrome', 'google-chrome-stable', 'chromium', 'chromium-browser', 'chrome']
   .flatMap(n => (process.env.PATH || '').split(path.delimiter).map(d => path.join(d, n))).find(p => fs.existsSync(p)));
 if (!chrome) { console.error('no Chrome found; set CHROME=/path/to/chrome'); process.exit(2); }
@@ -41,6 +41,18 @@ const q = inter ? `?data=${data}&lang=${lang}` : `?mode=${mode}&record=1&data=${
 await page.goto(base + q);
 await page.waitForFunction('window.__ready === true || window.__error', { timeout: 60000 });
 const err = await page.evaluate('window.__error'); if (err) { console.error(err); process.exit(1); }
+if (captionOut) {
+  const segments = await page.evaluate('window.__captionSegments()');
+  for (let i = 0; i < segments.length; i++) {
+    const s = segments[i], prev = segments[i - 1];
+    if (s.lines > 2) throw new Error(`caption ${s.id}.${s.segment} has ${s.lines} lines`);
+    if (prev && prev.id === s.id && Math.abs(prev.t1 - s.t0) > 1e-9) throw new Error(`caption gap at ${s.id}.${s.segment}`);
+  }
+  fs.writeFileSync(captionOut, segments.map(s =>
+    `${s.id}.${s.segment} | ${s.t0.toFixed(6)}–${s.t1.toFixed(6)} | ${s.lines} lines | ${s.text}`
+  ).join('\n') + '\n');
+  console.log(`${segments.length} caption segments in ${captionOut}`);
+}
 const shot = f => page.screenshot({ path: f, type: 'png', optimizeForSpeed: true, clip: { x: 0, y: 0, width: 1280, height: 720 } });
 
 if (inter) {

@@ -685,23 +685,34 @@ function drawSubtitle(M, S) {
   ctx.globalAlpha = a * 0.78; rrect(W / 2 - w / 2 - 26, y - 38, w + 52, 56, 14); ctx.fillStyle = '#04090f'; ctx.fill(); ctx.globalAlpha = 1;
   text(cue.text, W / 2, y, font, '#f2f7ff', 'center', a);
 }
-function tourCaptionParts(caption) {
-  const font = `400 26px ${SANS}`, maxW = 1160;
-  if (wrap(caption, font, maxW).length <= 2) return [caption];
-  const stops = [];
-  for (const m of caption.matchAll(/[.!?,]\s+/g)) stops.push(m.index + m[0].trim().length);
-  const feasible = stops.map(at => [caption.slice(0, at).trim(), caption.slice(at).trim()])
-    .filter(parts => parts.every(part => wrap(part, font, maxW).length <= 2));
-  const choices = feasible.length ? feasible : stops.map(at => [caption.slice(0, at).trim(), caption.slice(at).trim()]);
-  choices.sort((a, b) => Math.abs(a[0].length - a[1].length) - Math.abs(b[0].length - b[1].length));
-  return choices[0] || [caption];
+function tourCaptionSegments(cue) {
+  const font = `400 28px ${SANS}`, maxW = 1160;
+  const sentences = (cue.caption.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [cue.caption]).map(s => s.trim()).filter(Boolean);
+  const parts = [];
+  for (const sentence of sentences) {
+    if (wrap(sentence, font, maxW).length <= 2) { parts.push(sentence); continue; }
+    const stops = [];
+    for (const m of sentence.matchAll(/[,;:]\s+/g)) stops.push(m.index + 1);
+    const choices = stops.map(at => [sentence.slice(0, at).trim(), sentence.slice(at).trim()])
+      .filter(parts => parts.every(part => wrap(part, font, maxW).length <= 2));
+    choices.sort((a, b) => Math.abs(a[0].length - a[1].length) - Math.abs(b[0].length - b[1].length));
+    parts.push(...(choices[0] || [sentence]));
+  }
+  const total = parts.reduce((n, part) => n + part.length, 0), duration = cue.t1 - cue.t0;
+  let start = cue.t0;
+  return parts.map((part, i) => {
+    const end = i === parts.length - 1 ? cue.t1 : start + duration * part.length / total;
+    const segment = { t0: start, t1: end, text: part, lines: wrap(part, font, maxW) };
+    start = end;
+    return segment;
+  });
 }
 function drawTourSubtitle(S) {
-  const cue = S.tourCue, parts = tourCaptionParts(cue.caption);
-  const weights = parts.map(p => p.length), total = weights.reduce((a, b) => a + b, 0);
-  let p = clamp((S.tourT - cue.t0) / Math.max(0.001, cue.t1 - cue.t0)), selected = 0;
-  if (parts.length === 2 && p >= weights[0] / total) selected = 1;
-  const font = `400 26px ${SANS}`, lines = wrap(parts[selected], font, 1160), lh = 34;
+  const cue = S.tourCue;
+  if (S.tourT < cue.t0 || S.tourT >= cue.t1) return;
+  const segments = tourCaptionSegments(cue), segment = segments.find(s => S.tourT >= s.t0 && S.tourT < s.t1);
+  if (!segment) return;
+  const font = `400 28px ${SANS}`, lines = segment.lines, lh = 36;
   const w = Math.max(...lines.map(line => tw(line, font))), bottom = 700, h = lines.length * lh + 20;
   ctx.globalAlpha = 0.86; rrect(W / 2 - w / 2 - 24, bottom - h, w + 48, h, 12); ctx.fillStyle = '#04090f'; ctx.fill(); ctx.globalAlpha = 1;
   lines.forEach((line, j) => text(line, W / 2, bottom - 14 - (lines.length - 1 - j) * lh, font, '#f2f7ff', 'center'));
@@ -947,6 +958,10 @@ async function boot() {
     const S = tourAt(M, timing, tour, t);
     return { id: S.tourCue.id, focus: S.tourFocusTops, caption: S.tourCue.caption, scene: S.start ? 'start' : tour.items[timing.items.findIndex(c => c.id === S.tourCue.id)].scene };
   };
+  window.__captionSegments = () => timing ? timing.items.flatMap((cue, i) => {
+    const entry = tour.items[i], withCaption = { ...cue, caption: entry.caption || entry.say };
+    return tourCaptionSegments(withCaption).map((s, j) => ({ id: cue.id, segment: j + 1, ...s, lines: s.lines.length }));
+  }) : [];
   window.__ready = true;
   if (MODE === 'play' || MODE === 'tour') {
     if (!RECORD) { const t0 = performance.now(); const loop = () => { window.__render(((performance.now() - t0) / 1000) % total); requestAnimationFrame(loop); }; loop(); }
