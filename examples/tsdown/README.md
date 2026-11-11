@@ -25,7 +25,7 @@ ranges: src/config/index.ts:L20-L68
 explain: Resolves an inline CLI config into a flat list of fully resolved build configs plus the config file paths used. It first resolves `cwd` to an absolute path, then loads the root config file(s…
 ```
 
-**This run.** `complete`, `cbe host verify` pass. 7 model tasks, 15 tree nodes, 113 units. 12 requests, 0 answers refused and asked again. Prompt 117,051 tokens (cached included, 3.03x source), output 26,229 tokens (0.678x source). `docs/INDEX.md`: 1,519 tokens. Wall time 195 s in 1 command(s). `docs/RUN.md` and `summary.json` were rendered again by CBE `cdf731e` without a model call; the node pages, `docs/INDEX.md` and `catalog.json.gz` are the original ones, byte for byte.
+**This run.** `complete`, `cbe host verify` pass. 7 model tasks, 15 tree nodes, 113 units. 12 requests, 0 answers refused and asked again. Prompt 117,051 tokens (cached included, 3.03x source), output 26,229 tokens (0.678x source). `docs/INDEX.md`: 1,519 tokens. Wall time 195 s in 1 command(s). `docs/RUN.md` and `summary.json` were rendered again by CBE `5a701bf` without a model call; the node pages, `docs/INDEX.md` and `catalog.json.gz` are the original ones, byte for byte.
 
 **Known gaps.**
 - Functions, methods and classes of at least 40 tokens that ended without an explanation (`unexplained`): 0. Indexed without prose and not asked for again (smaller symbols, declarations, leftover module-level code): 130 catalogue entries, 2 of them functions, methods or classes.

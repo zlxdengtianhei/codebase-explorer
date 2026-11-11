@@ -25,7 +25,7 @@ signatures: {"id": "gson/src/main/java/com/google/gson/Gson.java::method::Gson.t
 ranges: gson/src/main/java/com/google/gson/Gson.java:L565-L570
 ```
 
-**This run.** `complete`, `cbe host verify` pass. 18 model tasks, 49 tree nodes, 460 units. 36 requests, 13 answers refused and asked again. Prompt 529,583 tokens (cached included, 3.32x source), output 72,629 tokens (0.455x source). `docs/INDEX.md`: 3,612 tokens. Wall time 442 s in 1 command(s). `docs/RUN.md` and `summary.json` were rendered again by CBE `cdf731e` without a model call; the node pages, `docs/INDEX.md` and `catalog.json.gz` are the original ones, byte for byte.
+**This run.** `complete`, `cbe host verify` pass. 18 model tasks, 49 tree nodes, 460 units. 36 requests, 13 answers refused and asked again. Prompt 529,583 tokens (cached included, 3.32x source), output 72,629 tokens (0.455x source). `docs/INDEX.md`: 3,612 tokens. Wall time 442 s in 1 command(s). `docs/RUN.md` and `summary.json` were rendered again by CBE `5a701bf` without a model call; the node pages, `docs/INDEX.md` and `catalog.json.gz` are the original ones, byte for byte.
 
 **Known gaps.**
 - Functions, methods and classes of at least 40 tokens that ended without an explanation (`unexplained`): 0. Indexed without prose and not asked for again (smaller symbols, declarations, leftover module-level code): 503 catalogue entries, 217 of them functions, methods or classes.

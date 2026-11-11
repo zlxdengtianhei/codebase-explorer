@@ -14,6 +14,37 @@
   "unexplained": [],
   "known_empty": [],
   "wall_seconds": 301.404,
+  "basis": {
+    "cbe_version": "2.2.0.dev0",
+    "models": [
+      "group/glm-5.3-flash"
+    ],
+    "source": {
+      "files": 115,
+      "sha256": "ed4bf8f0ee4b242de5181081f554dbb61829401545baa8fccfa718ca2cd82904"
+    },
+    "graph": {
+      "digest": "4fff42c47772955e94fac0ab64b1b89a18894f4ee896883cf7c44321fa3693b1",
+      "backend": {
+        "name": "joern",
+        "version": "4.0.654",
+        "components": [
+          {
+            "name": "joern",
+            "version": "4.0.654"
+          }
+        ]
+      },
+      "edge_counts": {
+        "call": 2776,
+        "cfg": 53285,
+        "dataflow": 50000,
+        "import": 45
+      },
+      "updated": false,
+      "updated_at": null
+    }
+  },
   "run_dir": "<RUN>",
   "index": "<RUN>/docs/INDEX.md",
   "subagent_tasks": 21,
@@ -44,24 +75,24 @@
   "layers": {
     "tokenizer": "o200k_base",
     "source_tokens": 74885,
-    "semantic_tokens": 67337,
+    "semantic_tokens": 67494,
     "semantic_breakdown": {
       "model_body": 29419,
       "signature_location": 12599,
       "heading_anchor": 9134,
       "relations": 453,
       "footer": 3220,
-      "index": 4810,
+      "index": 4967,
       "node_text": 7702
     },
     "model_body_tokens": 29419,
     "model_body_source_ratio": 0.3928557120918742,
-    "published_markdown_source_ratio": 0.8992054483541431,
+    "published_markdown_source_ratio": 0.9013019963944715,
     "deterministic_tokens": 2142904,
     "catalog_tokens": 2142904,
     "frozen_graph_tokens": 0,
     "frozen_graph_bytes": 52564448,
-    "semantic_source_ratio": 0.8992054483541431,
+    "semantic_source_ratio": 0.9013019963944715,
     "deterministic_source_ratio": 28.615931094344663,
     "scope": "Breakdown partitions full Markdown BPE tokens by the first byte's line: model_body is published unit explain, summary, extras and uncertainties; signature_location includes shared source-file reference definitions (including ones used by relations); heading_anchor, relations, footer, INDEX and node_text (including labels/whitespace) partition the rest. model_body/source and published_markdown/source use complete frozen files. semantic: all published Markdown (node pages + INDEX, including navigation, signatures and commands); deterministic: catalog.json as serialized, including preserved prose copies and edge references, excluding the graph field; frozen graph is excluded from token ratios (frozen_graph_tokens=0), reported separately as frozen_graph_bytes using UTF-8 JSON with ensure_ascii=False and compact separators; complete graph evidence is expanded only with query --edges; source: complete frozen files counted once; context source chunks, host prompts, raw answers and summary.json excluded; layers are storage measures, not disjoint content classes"
   },

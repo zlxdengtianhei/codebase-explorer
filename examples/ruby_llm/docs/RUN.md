@@ -2,6 +2,13 @@
 
 Where this run's facts come from and what was and was not checked.
 
+## Generation basis
+
+- CBE version: `2.2.0.dev0`
+- Models: `group/glm-5.3-flash`
+- Source: 115 files · SHA-256 `ed4bf8f0ee4b242de5181081f554dbb61829401545baa8fccfa718ca2cd82904`
+- Graph: SHA-256 `4fff42c47772955e94fac0ab64b1b89a18894f4ee896883cf7c44321fa3693b1` · built by `joern` 4.0.654 · edges call=2776, cfg=53285, dataflow=50000, import=45 · replaced no
+
 ## Reading stats
 
 - units: 352 · semantic nodes: 35 · dispositioned inventory ids: 2037

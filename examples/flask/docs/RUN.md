@@ -2,6 +2,13 @@
 
 Where this run's facts come from and what was and was not checked.
 
+## Generation basis
+
+- CBE version: `2.2.0.dev0`
+- Models: none recorded
+- Source: 24 files · SHA-256 `818601e2a710c47c9bd1fd7bf8d62ee306dfce524d39a862018d36a7a47f2387`
+- Graph: SHA-256 `c11c3532ee88640e200d7608f29e9030fef5543706d909ee01d4d516bae3c4ae` · built by `joern` 4.0.654, `grimp` 3.17 · edges call=1360, cfg=22975, dataflow=44873, import=307 · replaced no
+
 ## Reading stats
 
 - units: 293 · semantic nodes: 31 · dispositioned inventory ids: 483
