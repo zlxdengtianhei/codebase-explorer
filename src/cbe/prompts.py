@@ -11,7 +11,7 @@ from cbe.projection import DEFAULT_GRAPH_MAX_TOKENS, graph_prompt_lines
 from cbe.token_budget import count_text_tokens
 
 
-TOOL_FREE_RULES = """You document source code in one response. Use only supplied source and signatures. Never use tools or ask to read files. Return exactly one JSON object, no Markdown fences. Separate observed syntax from inferred behavior; state uncertainty instead of inventing runtime facts. Be concise. Test functions and trivial accessors need no individual prose. Paths identify files; do not repeat large source passages."""
+TOOL_FREE_RULES = """You document source code in one response. Use only supplied source and signatures. Never use tools or ask to read files. Return exactly one JSON object, no Markdown fences. Separate observed syntax from inferred behavior; state uncertainty instead of inventing runtime facts. Be concise. Trivial accessors need no individual prose; tests that pin the same behavior share one explanation. Paths identify files; do not repeat large source passages."""
 
 
 FILE_TASK_RULES = (
@@ -24,8 +24,8 @@ FILE_TASK_RULES = (
     "(If your harness has no file-reading or file-writing tool, use the plainest command that reads or writes that one file.) "
     "You may Read a graph evidence file only when this task supplies its path. "
     "Separate observed syntax from inferred behavior; state uncertainty instead "
-    "of inventing runtime facts. Be concise. Test functions and trivial accessors need no individual prose. "
-    "Paths identify files; do not repeat large source passages.")
+    "of inventing runtime facts. Be concise. Trivial accessors need no individual prose; tests that pin the same "
+    "behavior share one explanation. Paths identify files; do not repeat large source passages.")
 NO_FILE_RULES = (
     "Everything you need is in this file. Do not read source files, run code, search the web, or modify "
     "the repository. Do not invent details that the supplied material does not show.")
@@ -58,7 +58,7 @@ def gap_note(gaps: list[dict], invalid: list[dict], problem: str | None = None) 
         lines += [f"- h={row['h']}: {row['why']}" for row in invalid]
     if gaps:
         lines.append("These functions, methods or classes with real logic still have no unit. Give each a "
-                     "unit, alone or grouped with related symbols:")
+                     "unit, alone or grouped with related symbols (tests that pin the same behavior go in one group):")
         lines += [f"{row['n']} {row['kind']} {row['name']} ({row['path']})" for row in gaps]
     lines.append("Return the same JSON shape with only the additional units, using the same symbol numbers.")
     return "\n".join(lines)
@@ -120,9 +120,11 @@ def detail_prompt(paths: list[str], inventory: dict[str, dict], *,
         "the numbered symbols.",
         "",
         "Symbols that no unit lists are indexed by position without prose. Leave out pure "
-        "constants, imports, re-exports, test cases and trivial accessors; give a unit to every "
-        "function, method or class with real logic. A file marked empty has no symbols and needs "
-        "no unit; do not invent prose for it.",
+        "constants, imports, re-exports and trivial accessors; give a unit to every other "
+        "function, method or class. Tests are no exception: group the tests that pin the same "
+        "behavior into one unit (h lists their numbers) and say in a sentence or two which "
+        "behavior they pin and any edge case worth knowing; do not write each test separately. "
+        "A file marked empty has no symbols and needs no unit; do not invent prose for it.",
     ]
     header.append(
         "LENGTH GUIDANCE: Spend prose on behavior, not a fixed introduction for every unit. "

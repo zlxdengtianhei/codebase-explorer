@@ -881,8 +881,7 @@ def _detail_table(state: dict[str, Any], task: dict[str, Any]) -> list[dict]:
 
 def _gaps(run_dir: Path, state: dict[str, Any], table: list[dict], units: list[dict]) -> list[dict]:
     """Symbols with logic that no unit explains yet (see ``checks.find_gaps``)."""
-    wanted = {row["id"] for row in table
-              if row["kind"] in checks.GAP_KINDS and not batching.is_test_path(row["path"])}
+    wanted = {row["id"] for row in table if row["kind"] in checks.GAP_KINDS}
     tokens = {chunk["id"]: count_text_tokens(chunk.get("text") or "")
               for chunk in _verified_context(run_dir, state).get("chunks") or [] if chunk["id"] in wanted}
     return checks.find_gaps(table, units, tokens)
@@ -942,8 +941,11 @@ def _settle_detail(run_dir: Path, state: dict[str, Any], task: dict[str, Any], v
         partial["notes"] = decoded.notes or partial["notes"]
         partial["decoded"] = True
     gaps = _gaps(run_dir, state, table, partial["units"])
-    if decoded is not None and not gaps and not decoded.invalid:
+    if decoded is not None and not gaps:
+        # A rejected unit alone never earns a re-ask: if its symbols mattered they are gaps, and
+        # a unit that names no symbol (a stray string in the list) has nothing to recover.
         error = None
+        partial["flags"] += [f"invalid unit h={row['h']}: {row['why']}" for row in decoded.invalid]
     elif not final or not partial["decoded"]:
         if decoded is not None:
             _partial_path(run_dir, task["id"]).parent.mkdir(exist_ok=True)

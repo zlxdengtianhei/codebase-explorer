@@ -146,10 +146,24 @@ def test_gap_guard_ignores_what_a_unit_or_group_already_explains() -> None:
     assert checks.find_gaps(TABLE, units, TOKENS) == []
 
 
-def test_gap_guard_ignores_test_files() -> None:
+def test_gap_guard_treats_test_files_like_any_other() -> None:
+    """Tests carry information too (which behavior is pinned where), so a test function that no
+    unit mentions is a gap like any other; the prompt asks for tests to come in as groups."""
     table = symbols.batch_table(["tests/test_x.py"], {"tests/test_x.py": {"symbols": [
-        {"id": "tests/test_x.py::test_a", "name": "test_a", "kind": "function", "parent": None, "lines": [[1, 30]]}]}})
-    assert checks.find_gaps(table, [], {"tests/test_x.py::test_a": 900}) == []
+        {"id": "tests/test_x.py::test_a", "name": "test_a", "kind": "function", "parent": None, "lines": [[1, 30]]},
+        {"id": "tests/test_x.py::test_b", "name": "test_b", "kind": "function", "parent": None, "lines": [[31, 33]]}]}})
+    tokens = {"tests/test_x.py::test_a": 900, "tests/test_x.py::test_b": 12}
+    assert [row["name"] for row in checks.find_gaps(table, [], tokens)] == ["test_a"]
+    group = checks.decode_details({"units": [{"h": [1, 2], "title": "x behavior", "explain": "Pins x."}]}, table).units
+    assert checks.find_gaps(table, group, tokens) == []
+
+
+def test_the_prompt_asks_for_tests_to_be_grouped_by_the_behavior_they_pin() -> None:
+    from cbe import prompts
+    text = prompts.detail_prompt(["pkg/jobs.py"], _inventory())
+    assert "Tests are no exception: group the tests that pin the same behavior into one unit" in text
+    assert "test cases and trivial accessors" not in text and "Test functions and trivial accessors" not in text
+    assert "tests that pin the same behavior go in one group" in prompts.gap_note(TABLE[:1], [])
 
 
 def test_the_threshold_is_not_negligible() -> None:
@@ -172,8 +186,10 @@ def test_a_run_planned_for_the_old_answer_format_says_to_plan_again(tmp_path) ->
         host_run.resume(run)
 
 
-def test_old_format_answers_are_not_accepted(tmp_path) -> None:
-    """A full-id answer with dispositions has no ``h``: its units are rejected, nothing is published."""
+def test_old_format_answers_are_not_accepted(tmp_path, monkeypatch) -> None:
+    """A full-id answer with dispositions has no ``h``: its units are rejected, so the symbols
+    with logic are gaps and nothing is published."""
+    monkeypatch.setattr(checks, "GAP_MIN_TOKENS", 1)
     run = tmp_path / "run"
     host_run.plan(_tiny_repo(tmp_path), run, review="none", jobs=1, driver="script")
     state = json.loads((run / "host" / "state.json").read_text())
@@ -247,6 +263,22 @@ def test_a_response_between_refusals_restarts_the_count(tmp_path, monkeypatch) -
     _model(monkeypatch, behave)
     result = generator.generate(_tiny_repo(tmp_path), tmp_path / "run", model="m", review="none", jobs=1)
     assert result["status"] == "complete" and result["stopped"] is None
+
+
+def test_a_rejected_unit_alone_costs_no_re_ask_but_is_flagged(tmp_path, monkeypatch) -> None:
+    """A stray non-object in the units list names no symbol: nothing is lost, so the answer is
+    accepted at once and the junk is recorded in the task's flags."""
+    def behave(task, attempt, prompt):
+        answer = _semantic_answer(prompt)
+        if task == "module_1":
+            answer["units"].insert(0, "stray text")
+        return answer
+
+    calls, _ = _model(monkeypatch, behave)
+    result = generator.generate(_tiny_repo(tmp_path), tmp_path / "run", model="m", review="none", jobs=1)
+    assert result["status"] == "complete" and calls.count(("module_1", 1)) == 1 and ("module_1", 2) not in calls
+    state = json.loads((tmp_path / "run" / "host" / "state.json").read_text())
+    assert any("not an object" in flag for flag in state["tasks"]["module_1"]["flags"])
 
 
 def test_an_answer_with_a_gap_is_marked_incomplete_in_calls_csv(tmp_path, monkeypatch) -> None:
