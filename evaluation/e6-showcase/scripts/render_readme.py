@@ -23,8 +23,10 @@ import tempfile
 from pathlib import Path
 
 MAX_LINE = 200
-MODEL_NOTE = ("GLM-5.3-flash through a local gateway: API path, route `group/glm-5.3-flash`, `--config` with reasoning effort low, "
-              "JSON-object responses, 49,152 max output tokens, batches of 8,000-10,000 tokens (the defaults of route `zai/glm-5.3-flash`)")
+MODEL_NOTE = ("GLM-5.3-flash through a local gateway, API path, route `group/glm-5.3-flash`, with `--config` "
+              '`{"timeout": 1800, "output_max_tokens": 49152, "reasoning_effort": "low", "response_format": {"type": "json_object"}, '
+              '"batch_target_tokens": 8000, "batch_max_tokens": 10000}` (the built-in defaults of route `zai/glm-5.3-flash`, '
+              "which a route name outside the model profile does not get)")
 
 
 def _cbe(args: list[str]) -> str:
