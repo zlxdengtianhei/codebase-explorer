@@ -7,7 +7,7 @@
 <a href="https://github.com/zlxdengtianhei/codebase-explorer/actions/workflows/wheel-install.yml"><img alt="CI" src="https://github.com/zlxdengtianhei/codebase-explorer/actions/workflows/wheel-install.yml/badge.svg"></a>
 </p>
 
-<p align="center"><img src="https://github.com/zlxdengtianhei/codebase-explorer/releases/download/walkthrough-v2.2.0.dev0/hero-1.gif" alt="35 秒动图：代码单元连线、聚成模块、显示系统地图；打开一个模块页，再用 cbe source 打印原始代码行" width="100%"></p>
+<p align="center"><img src="https://github.com/zlxdengtianhei/codebase-explorer/releases/download/walkthrough-v2.2.0.dev0/hero-2.gif" alt="35 秒动图：代码单元连线、聚成模块、显示系统地图；打开一个模块页，再用 cbe source 打印原始代码行" width="100%"></p>
 
 <p align="center">35 秒：代码单元、连线、模块、地图、打开一个模块页、查看源码。<a href="docs/videos.md">带旁白的讲解视频</a>。</p>
 
