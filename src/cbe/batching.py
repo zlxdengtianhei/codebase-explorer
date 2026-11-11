@@ -287,8 +287,11 @@ def plan(files: list[SourceFile], *, target_tokens: int = TARGET_TOKENS,
 
 
 def fallback_title(module: Module) -> str:
+    """A batch label a person can recognise in the progress log: directory plus its first files."""
     directory, _ = primary_directory(module)
-    return f"{'Tests' if module.is_test else 'Source'} in {directory or '.'}"[:80]
+    names = sorted(Path(item.path).name for item in module.files)
+    more = f" (+{len(names) - 2})" if len(names) > 2 else ""
+    return f"{directory or '.'}: {', '.join(names[:2])}{more}"[:80]
 
 
 def primary_directory(module: Module) -> tuple[str, float]:
