@@ -194,3 +194,13 @@ def test_source_not_delivered_names_failed_tasks_and_suggests_resume(tmp_path, m
     assert "start a new run" not in result["next_action"]
 
 
+
+
+def test_model_defaults_follow_the_model_across_gateway_prefixes(tmp_path):
+    from cbe import model_settings
+    exact = model_settings.load_config(tmp_path / "none.json", "zai/glm-5.3-flash")
+    assert exact["reasoning_effort"] == "low"
+    for route in ("group/glm-5.3-flash", "glm-5.3-flash", "my-gateway/zai/glm-5.3-flash"):
+        assert model_settings.load_config(tmp_path / "none.json", route) == exact
+    other = model_settings.load_config(tmp_path / "none.json", "group/some-other-model")
+    assert "reasoning_effort" not in other

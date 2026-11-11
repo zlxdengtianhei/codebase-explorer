@@ -284,7 +284,7 @@ cbe generate /absolute/path/to/repo --host api \
 
 `--config /absolute/path/to/config.json` provides host configuration. API credentials stay in environment variables or the supported credential-file reference. If no credential is configured, CBE omits the Authorization header for endpoints that allow unauthenticated requests. Do not put credentials in a URL. The API client records returned usage and preserves unknown values when usage is absent. Failed completions retain a bounded, redacted provider response, available usage, and finish reason before text extraction; truncation is explicit. A response with only reasoning and no answer remains a failed attempt. Reported token counts are transport/accounting evidence; they do not prove that a model understood the code.
 
-For `--host api`, exact model `zai/glm-5.3-flash` selects resource defaults from
+For `--host api`, the model `glm-5.3-flash` (under any gateway prefix, for example `zai/glm-5.3-flash` or `group/glm-5.3-flash`) selects resource defaults from
 `cbe/model_settings.py`: 1,800 seconds per call, `output_max_tokens: 49152` (including
 reasoning), `reasoning_effort: "low"`, JSON object response mode, and reading-batch target/max of
 8,000/10,000 source tokens. Whole files stay intact; a single file may exceed

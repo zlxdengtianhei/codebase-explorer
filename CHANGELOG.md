@@ -2,6 +2,9 @@
 
 ## 2.2.0.dev0 (unreleased)
 
+- Model defaults follow the model name across gateway prefixes: `group/glm-5.3-flash` now gets the
+  same defaults as `zai/glm-5.3-flash`. Before, any other prefix silently ran without the low
+  reasoning effort, JSON mode and batch sizes.
 - `cbe graph setup` installs Joern 4.0.654 and a Temurin 21 JRE into the user cache directory
   (`--check`, `--force`, `--with-java`). `graph build` finds Joern through `--joern-home`,
   `CBE_JOERN_HOME`, the cache, then `PATH`; a `--joern-home` or `CBE_JOERN_HOME` that is not a
