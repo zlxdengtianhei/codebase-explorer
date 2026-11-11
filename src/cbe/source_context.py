@@ -49,9 +49,14 @@ from cbe.grammars import (
     GrammarSpec,
     GraphSourceMismatch,
     OffsetMap,
+    _CALL_GRAPH,
     _EXTRA_SPECS,
+    _JOERN_FRONTENDS,
+    _JOERN_TESTED,
     _LOADED_LANGUAGES,
     _PLUGIN_ERRORS,
+    _TSX_SPEC,
+    _VARIABLE_FUNCTION_VALUES,
     _all_specs,
     _ensure_plugins,
     _grammar_for_suffix,
@@ -74,7 +79,9 @@ from cbe.grammars import (
 )
 from cbe.declarations import (
     _Declaration,
+    _IDENTIFIER_TYPES,
     _ORDINARY_DECLARATIONS,
+    _SIGNATURE_LIMIT,
     _binding_names,
     _body_start,
     _c_declaration_scope,
@@ -672,6 +679,12 @@ def build_context(
 # ---------------------------------------------------------------------------
 # Graph loading and pruning
 # ---------------------------------------------------------------------------
+
+
+def _graph_source_anchors(payload: dict[str, Any]):
+    from cbe.graph import _graph_source_anchors as anchors
+
+    yield from anchors(payload)
 
 
 def _load_graph(graph_path: Path, repo: Path, frozen_hashes: dict[str, str]) -> dict[str, Any]:
