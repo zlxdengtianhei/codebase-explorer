@@ -57,7 +57,7 @@ function tw(text, font) {
   if (v === undefined) { ctx.font = font; v = ctx.measureText(text).width; measureCache.set(k, v); }
   return v;
 }
-function wrap(text, font, maxW, maxLines = 99) {
+function wrap(text, font, maxW, maxLines = 99, wordBoundary = false) {
   const words = text.split(/\s+/).filter(Boolean), lines = [];
   let cur = '';
   for (const w of words) {
@@ -68,10 +68,17 @@ function wrap(text, font, maxW, maxLines = 99) {
   if (cur) lines.push(cur);
   if (lines.length > maxLines) {
     const kept = lines.slice(0, maxLines);
-    kept[maxLines - 1] = fit(kept[maxLines - 1] + ' ' + lines[maxLines], font, maxW, true);
+    const rest = kept[maxLines - 1] + ' ' + lines[maxLines];
+    kept[maxLines - 1] = wordBoundary ? fitWords(rest, font, maxW) : fit(rest, font, maxW, true);
     return kept;
   }
   return lines;
+}
+function fitWords(s, font, maxW) {           // clip at a word boundary with an ellipsis
+  const words = s.trim().split(/\s+/);
+  while (words.length > 1 && tw(words.join(' ') + '…', font) > maxW) words.pop();
+  const stem = words.join(' ').trimEnd();
+  return tw(stem + '…', font) <= maxW ? stem + '…' : fit(stem, font, maxW, true);
 }
 function fit(s, font, maxW, force) {         // clip to width with an ellipsis
   if (!force && tw(s, font) <= maxW) return s;
@@ -242,7 +249,7 @@ function buildModel(data, sub) {
   if (treeOk) {
     const g1 = groupLayout(mods.map(m => m.units), L0, data.pairs, FULL, (g, gi) => {
       const R = 8 + 11.5 * Math.sqrt(g.length) * rs / 1.3, big = mods[gi].big;
-      const ll = big ? wrap(mods[gi].label, `600 ${BIG_FONT}px ${SANS}`, LABEL_W, 2) : [];
+      const ll = big ? wrap(mods[gi].label, `600 ${BIG_FONT}px ${SANS}`, LABEL_W, 3, true) : [];
       const lw = Math.max(0, ...ll.map(l => tw(l, `600 ${BIG_FONT}px ${SANS}`)));
       return { hw: Math.max(R + 8, lw / 2 + 3), up: R + 6, dn: R + 8 + (big ? 3 + ll.length * BIG_LH : 0) };
     });
@@ -268,8 +275,8 @@ function buildModel(data, sub) {
   let L3 = L1;
 
   if (treeOk) {
-    // L3: tops as blocks (treemap), modules inside, units inside their cell (circle on top, small title below)
-    // space each module needs in the system scene: its circle plus a two-line title underneath
+    // L3: tops as blocks (treemap), modules inside, units inside their cell; selected leaf titles sit in a reserved strip
+    // space each module needs in the system scene: its circle plus room for a possible two-line title
     for (const m of mods) {
       const R = (8 + 11.5 * Math.sqrt(m.units.length) * rs / 1.3) * R3 * 0.9, D = 2 * R + 14;
       m.demand = D * (D + 44);
@@ -284,7 +291,8 @@ function buildModel(data, sub) {
       }
       t.titleLines = t.titleLines.map(l => fit(l, t.tfont, topRects[k].w - 20));
       t.hdr = 12 + t.titleLines.length * t.tlh;
-      const inner = inset(topRects[k], 6, t.hdr, 6, 6);
+      const hasLeaves = t.mods.some(mi => !mods[mi].own);
+      const inner = inset(topRects[k], 6, t.hdr, 6, hasLeaves ? 50 : 6);
       const ids = t.mods.slice().sort((a, b) => mods[b].units.length - mods[a].units.length || a - b);
       const rects = treemap(ids.map(m => mods[m].demand), inner);
       ids.forEach((mi, j) => {
@@ -294,6 +302,25 @@ function buildModel(data, sub) {
       });
     });
     cells = cellOf;
+    // In the system scene, label only the largest leaf cell in each top-level block.
+    // Keep a label only when the complete catalog title fits in two lines at 16 px or larger.
+    tops.forEach(t => {
+      const candidates = t.mods.filter(mi => !mods[mi].own && cellOf[mi])
+        .sort((a, b) => cellOf[b].w * cellOf[b].h - cellOf[a].w * cellOf[a].h || a - b);
+      let labelled = 0;
+      for (const mi of candidates) {
+        if (labelled >= 1) break;
+        const m = mods[mi], maxW = Math.min(220, Math.max(180, topRects[t.k].w - 16));
+        for (const px of [18, 17, 16]) {
+          const font = `400 ${px}px ${SANS}`, lines = wrap(m.label, font, maxW, 2);
+          if (lines.join(' ') !== m.label) continue;
+          const r = topRects[t.k];
+          m.systemLabel = { font, lines, lh: px + 2, x: r.x + r.w / 2, y: r.y + r.h - 30 };
+          labelled++;
+          break;
+        }
+      }
+    });
     const nodes3 = units.map((u, i) => ({ i, r: rad[i], x: 0, y: 0, m: modOf[i] }));
     for (const d of nodes3) { d.x = R4.x0 + (L1[d.i][0] - FULL.x0) / (FULL.x1 - FULL.x0) * (R4.x1 - R4.x0); d.y = R4.y0 + (L1[d.i][1] - FULL.y0) / (FULL.y1 - FULL.y0) * (R4.y1 - R4.y0); }
     simulate(nodes3, {
@@ -366,7 +393,7 @@ function stateAt(M, T) {
   const S = {
     T, play: true, appear: T, sweep: prog(T, 2.0, 3.9),
     move: [prog(T, 6.0, 10.2), 0, prog(T, 17.0, 19.4)],
-    fileA: prog(T, 0, 0.8) * (1 - prog(T, 6.2, 7.6)),
+    fileA: lerp(0.72, 1, prog(T, 0, 0.8)) * (1 - prog(T, 6.2, 7.6)),
     edgeT: T, edgeBase: [lerp(0.26, 0.08, prog(T, 12.5, 15)), lerp(0.26, 0.34, prog(T, 12.5, 15))],
     colorT: T, haloA: prog(T, 9.8, 10.8), labelT: T, labelOut: 1 - prog(T, 17.0, 17.4), smallA: prog(T, 18.9, 19.6), topA: prog(T, 18.6, 20.0),
     legendA: prog(T, 4.2, 5.0),
@@ -378,7 +405,7 @@ function stateAt(M, T) {
     capP: prog(T, 23.1, 24.0), nameP: prog(T, 24.0, 24.4), expP: prog(T, 24.4, 26.8), locP: prog(T, 27.0, 27.4),
     focusA: prog(T, 23.8, 24.3) * (1 - prog(T, END - 0.7, END - 0.3)),
     term: easeIO(prog(T, 28.1, 28.6)) * (1 - easeIO(prog(T, END - 0.8, END - 0.3))),
-    fade: Math.max(1 - prog(T, 0, 0.3), prog(T, END - 0.3, END)),
+    fade: prog(T, END - 0.3, END),
     focusMod: M.focusMod, focusUnit: M.focusUnit, hover: -1, hoverRow: -1, stats: easeOut(prog(T, 0.2, 1.8)),
     stage: T < 4 ? 0 : T < 11 ? 1 : T < 17 ? 2 : T < 22 ? 3 : T < 28 ? 4 : 5,
     // terminal: the `cbe source` output is on screen from 31.55 s to 34.2 s (2.6 s) before the terminal leaves
@@ -521,7 +548,7 @@ function render(M, S) {
   const sweepP = S.sweep * 1.12 - 0.06;
   for (let i = 0; i < n; i++) {
     let a = 1, r = sr[i];
-    if (S.play) { const t0 = 0.25 + 1.5 * M.rank01[i]; const u = clamp((S.appear - t0) / 0.45); a = u; r *= 0.4 + 0.6 * easeOut(u); }
+    if (S.play) { const t0 = 0.25 + 1.5 * M.rank01[i]; const u = clamp((S.appear - t0) / 0.45); a = lerp(0.68, 1, easeOut(u)); r *= 0.4 + 0.6 * easeOut(u); }
     if (a <= 0.01) continue;
     let col = colorOf(i);
     let bump = 0;
@@ -534,7 +561,7 @@ function render(M, S) {
   ctx.globalAlpha = 1;
 
   // module labels (screen space; hidden while zoomed). Module scene: titles of the biggest modules, right under the circle.
-  // System scene: every module gets a short title under its circle.
+  // System scene: the largest leaf in each multi-module top gets a full title in its label strip.
   if (haveTree) {
     const lz = (1 - clamp(z * 2.2)) * (1 - 0.6 * S.mapDim);
     M.mods.forEach((m, mi) => {
@@ -542,17 +569,16 @@ function render(M, S) {
       if (m.big) {
         const a = (S.play ? prog(S.labelT, 12.3 + 0.1 * m.big, 13.0 + 0.1 * m.big) * S.labelOut : 0) * lz;
         if (a > 0.01) {
-          const font = `600 ${BIG_FONT}px ${SANS}`, lines = wrap(m.label, font, LABEL_W, 2);
+          const font = `600 ${BIG_FONT}px ${SANS}`, lines = wrap(m.label, font, LABEL_W, 3, true);
           let y = c.cy + c.r + 20;
           for (const ln of lines) { haloText(ln, c.cx, y, font, m.cssLight, 'center', a); y += BIG_LH; }
         }
       }
       const a2 = (S.play ? S.smallA : 1) * lz;
-      if (a2 > 0.01 && !m.own && (!M.cells[mi] || M.cells[mi].lab)) {
-        const font = `400 18px ${SANS}`, txt = m.label.length > 18 ? m.label.slice(0, 17) + '…' : m.label;
-        const lines = wrap(txt, font, Math.min(150, M.cells[mi] ? M.cells[mi].w - 2 : 120), 2);
-        let y = c.cy + c.r + 17;
-        for (const ln of lines) { haloText(ln, c.cx, y, font, m.cssLight, 'center', a2); y += 20; }
+      if (a2 > 0.01 && m.systemLabel) {
+        const { font, lines, lh, x, y: y0 } = m.systemLabel;
+        let y = y0;
+        for (const ln of lines) { haloText(ln, x, y, font, m.cssLight, 'center', a2); y += lh; }
       }
     });
   }
@@ -696,7 +722,7 @@ function drawTerminal(M, S) {
   const f = M.data.find;
   if (!f || S.term <= 0.003) return;
   if (M.treeOk && S.sidebar > 0.5) { ctx.globalAlpha = 0.72 * S.term; ctx.fillStyle = '#06101b'; ctx.fillRect(0, 112, SIDEBAR_W, 530); ctx.globalAlpha = 1; }
-  const mono = `400 22px ${MONO}`, monoM = `500 22px ${MONO}`, lh = 29, pad = 24, CW = 13.2;
+  const mono = `400 20px ${MONO}`, monoM = `500 20px ${MONO}`, lh = 27, pad = 24, CW = tw('M', mono);
   const x = 40, w = 1200, maxCh = Math.floor((w - pad * 2) / CW);
   const cmd1 = `cbe find ${f.term}`, cmd2 = `cbe source --id ${f.source.id}`;
   const cmdW = maxCh - 2;
@@ -710,7 +736,18 @@ function drawTerminal(M, S) {
     srcLines = [f.src_raw[0], ...shown.map(l => (l.length > maxCh ? l.slice(0, maxCh - 1) + '…' : l))];
     if (body.length > shown.length) srcLines.push(`… ${body.length - shown.length} more lines`);
   } else srcLines = [`# ${f.source.loc}`, `${f.source.line}: ${f.source.sig}`];
-  const c1 = chop(cmd1, cmdW, 3), c2 = chop(cmd2, cmdW, 3);
+  const commandLines = (str, n, lines) => {
+    if (str.length <= n) return [str];
+    const stops = [];
+    for (let i = str.indexOf('::'); i >= 0; i = str.indexOf('::', i + 2)) stops.push(i + 2);
+    stops.sort((a, b) => Math.abs(a - str.length / 2) - Math.abs(b - str.length / 2) || a - b);
+    for (const stop of stops) {
+      const first = str.slice(0, stop), second = str.slice(stop);
+      if (first.length <= n && second.length <= n) return [first, second];
+    }
+    return chop(str, n, lines);
+  };
+  const c1 = commandLines(cmd1, cmdW, 3), c2 = commandLines(cmd2, cmdW, 3);
   const nLines = c1.length + findLines.length + c2.length + srcLines.length;
   const h = nLines * lh + 50;
   const top = lerp(H + 4, 640 - h, S.term);
@@ -720,12 +757,15 @@ function drawTerminal(M, S) {
   let ty = top + 40;
   const cursorOn = (Math.floor((S.play ? S.T : performance.now() / 1000) * 2.5) % 2) === 0;
   const typedCmd = (full, parts, n, y) => {         // typed text, wrapped over the lines of the command
-    const shown = full.slice(0, Math.max(0, Math.floor(n)));
+    const shown = full.slice(0, Math.max(0, Math.floor(n))), promptX = x + pad + 2 * CW;
     text('$', x + pad, y, monoM, C.teal);
-    parts.forEach((p, j) => { const start = j * cmdW, seg = shown.slice(start, start + cmdW); if (seg) text(seg, x + pad + 26.4, y + j * lh, mono, C.ink); });
+    let start = 0;
+    parts.forEach((p, j) => { const seg = shown.slice(start, start + p.length); if (seg) text(seg, promptX, y + j * lh, mono, C.ink); start += p.length; });
     if (cursorOn && n > 0 && n < full.length + 1) {
-      const j = Math.min(parts.length - 1, Math.floor(shown.length / cmdW)), seg = shown.slice(j * cmdW);
-      ctx.fillStyle = C.ink; ctx.fillRect(x + pad + 26.4 + seg.length * CW + 2, y + j * lh - 18, 11, 22);
+      let offset = 0, j = 0;
+      while (j < parts.length - 1 && shown.length > offset + parts[j].length) { offset += parts[j].length; j++; }
+      const seg = shown.slice(offset, offset + parts[j].length);
+      ctx.fillStyle = C.ink; ctx.fillRect(promptX + tw(seg, mono) + 2, y + j * lh - 17, 10, 20);
     }
   };
   typedCmd(cmd1, c1, S.typed[0], ty); ty += lh * c1.length;
