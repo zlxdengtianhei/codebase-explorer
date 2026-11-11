@@ -15,29 +15,8 @@ from pathlib import Path
 from typing import Any
 
 from cbe import batching, usage
-from cbe.headless_completion import invoke
+from cbe.api_completion import FIELDS, CSV_LOCK, invoke
 from cbe.model_settings import DEFAULT_API_CONFIG, load_config
-
-
-DEFAULT_HOST_CONFIG = {
-    "$schema": "https://opencode.ai/config.json",
-    "agent": {"cbe-completion": {
-        "mode": "primary",
-        "description": "One-shot source documentation with no tools",
-        "prompt": "You are a documentation completion engine. Follow the user-provided JSON schema and source evidence. Do not use tools, request files, or infer runtime behavior absent from the supplied source. Return only one JSON object.",
-        "permission": {"*": "deny"},
-    }},
-    # The run isolates XDG_CONFIG_HOME so unrelated global instructions do
-    # not enter every call. Include the default model definition in that
-    # isolated config; OpenCode still reads its normal auth store for the key.
-    "provider": {"zai-coding-plan": {
-        "npm": "@ai-sdk/openai-compatible",
-        "name": "Z.AI Coding Plan",
-        "options": {"baseURL": "https://api.z.ai/api/coding/paas/v4"},
-        "models": {"glm-5.3-flash": {"name": "GLM-5.3-Flash",
-                                     "limit": {"context": 200000, "output": 32768}}},
-    }},
-}
 
 
 class GenerateError(ValueError):
@@ -60,7 +39,6 @@ class SourceNotEmbedded(GenerateError):
 def _mark_result(csv_path: Path, task: str, attempt: int, result: str) -> None:
     # This runs after invoke has appended its row. Other workers may append
     # rows meanwhile, so rewrite under the same lock invoke uses.
-    from cbe.headless_completion import CSV_LOCK, FIELDS
     with CSV_LOCK:
         with csv_path.open(newline="", encoding="utf-8") as stream:
             rows = list(csv.DictReader(stream))
@@ -172,7 +150,7 @@ def _csv_task(task_id: str, review: str) -> str:
 
 def generate(repo: Path, run_dir: Path, *, model: str, config: Path | None = None,
              jobs: int = 4, review: str | None = None, timeout: int | None = None,
-             host: str = "opencode", resume: bool = False,
+             host: str = "api", resume: bool = False,
              graph_path: Path | None = None, api_base_url: str | None = None,
              api_key_env: str | None = None, default_timeout: int = 360) -> dict[str, Any]:
     """Script driver: the shared run state, with each task as one tool-free completion.
@@ -193,14 +171,10 @@ def generate(repo: Path, run_dir: Path, *, model: str, config: Path | None = Non
         raise GenerateError("repository root is not a directory")
     if jobs < 1 or default_timeout < 1 or review not in host_run.REVIEW_MODES or (timeout is not None and timeout < 1):
         raise GenerateError("jobs and timeout must be positive; review must be none, sample, or all")
-    if host not in {"opencode", "devin", "api"}:
-        raise GenerateError("host must be opencode, devin or api")
-    if host == "opencode" and ("/" not in model or model.startswith("/") or model.endswith("/")):
-        raise GenerateError("OpenCode model must be a provider/model name")
-    if host == "devin" and (not model or "/" in model):
-        raise GenerateError("Devin model must be one exact catalog model ID")
-    if host == "api" and not model:
-        raise GenerateError("API host requires a model name (--model)")
+    if host != "api":
+        raise GenerateError("host must be api")
+    if not model:
+        raise GenerateError("generate needs a model name (--model)")
     has_state = (run_dir / "host" / "state.json").is_file()
     if resume and not has_state:
         raise GenerateError("nothing to resume: the run directory has no run state")
@@ -208,34 +182,24 @@ def generate(repo: Path, run_dir: Path, *, model: str, config: Path | None = Non
         raise GenerateError("run directory already contains a run; pass --resume or choose a fresh run directory")
     run_dir.mkdir(parents=True, exist_ok=True)
     if config is None:
-        config = run_dir / f"{host}-completion.json"
+        config = run_dir / "api-completion.json"
         if not config.is_file():
-            if host == "devin":
-                from cbe.devin_completion import DEFAULT_DEVIN_CONFIG
-                default_config = DEFAULT_DEVIN_CONFIG
-            elif host == "api":
-                default_config = DEFAULT_API_CONFIG
-            else:
-                default_config = DEFAULT_HOST_CONFIG
-            config.write_text(json.dumps(default_config, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+            config.write_text(json.dumps(DEFAULT_API_CONFIG, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     else:
         config = config.resolve()
         if not config.is_file():
-            raise GenerateError(f"{host} config file does not exist")
+            raise GenerateError("config file does not exist")
     api_overrides: dict[str, Any] = {}
-    settings: dict[str, Any] = {}
-    if host == "api":
-        settings = load_config(config, model)
+    settings = load_config(config, model)
     # Keep the historical Python default (360) and CLI default (420), while
     # distinguishing an explicit --timeout from a model/config default.
     timeout = timeout if timeout is not None else settings.get("timeout", default_timeout)
-    if host == "api":
-        # Apply the CLI overrides in memory only: never copy a user config that
-        # may carry an auth header into the run directory.
-        if api_base_url:
-            api_overrides["base_url"] = api_base_url
-        if api_key_env:
-            api_overrides["api_key_env"] = api_key_env
+    # Apply the CLI overrides in memory only: never copy a user config that
+    # may carry an auth header into the run directory.
+    if api_base_url:
+        api_overrides["base_url"] = api_base_url
+    if api_key_env:
+        api_overrides["api_key_env"] = api_key_env
     previous_wall = 0.0
     if resume and (run_dir / "summary.json").is_file():
         previous_wall = json.loads((run_dir / "summary.json").read_text(encoding="utf-8")).get("wall_seconds", 0)
@@ -279,8 +243,8 @@ def generate(repo: Path, run_dir: Path, *, model: str, config: Path | None = Non
                     future = pool.submit(invoke, task=csv_task, attempt=item["attempt"],
                                          prompt=prompt,
                                          repo=repo, run_dir=run_dir, model=model, config=config,
-                                         timeout=timeout, csv_path=csv_path, host=host,
-                                         api_overrides=api_overrides or None)
+                                         timeout=timeout, csv_path=csv_path,
+                                         overrides=api_overrides or None)
                     active[future] = (item, csv_task)
             if not active:
                 break
@@ -317,7 +281,7 @@ def generate(repo: Path, run_dir: Path, *, model: str, config: Path | None = Non
                     _mark_result(csv_path, csv_task, item["attempt"], "normalized")
     if stopped or preflight is not None:
         host_run.release(run_dir)
-    cost = (usage.script_cost(run_dir, host=host, price=settings.get("price_per_million"))
+    cost = (usage.script_cost(run_dir, price=settings.get("price_per_million"))
             if csv_path.is_file() else {"calls": 0})
     if preflight is None:
         host_run.mark_partial(run_dir, *_delivery_problem(run_dir))
@@ -326,10 +290,7 @@ def generate(repo: Path, run_dir: Path, *, model: str, config: Path | None = Non
                "stopped": stopped, "wall_seconds": round(previous_wall + time.monotonic() - started, 3),
                "run_dir": str(run_dir), "index": str(run_dir / "docs" / "INDEX.md"),
                "progress_log": str(run_dir / "progress.log"), "host": host, "model": model,
-               "input_token_basis": ("Devin CLI reported input_tokens; cache inclusion is unverified"
-                                     if host == "devin" else
-                                     "provider prompt_tokens minus cached_tokens; cache reported separately"
-                                     if host == "api" else "OpenCode noncached input tokens"),
+               "input_token_basis": "provider prompt_tokens minus cached_tokens; cache reported separately",
                **cost}
     (run_dir / "summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
     if preflight is not None:

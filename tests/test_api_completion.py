@@ -10,7 +10,7 @@ from pathlib import Path
 import pytest
 
 from cbe import api_completion
-from cbe.headless_completion import Completion
+from cbe.api_completion import Completion
 
 
 class _Handler(http.server.BaseHTTPRequestHandler):

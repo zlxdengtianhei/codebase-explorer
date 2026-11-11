@@ -10,7 +10,7 @@ import os
 import pytest
 
 from cbe import batching, checks, docs, usage
-from cbe.headless_completion import Completion, _events
+from cbe.api_completion import Completion
 
 
 generator = importlib.import_module("cbe.generate")
@@ -47,20 +47,6 @@ def _semantic_answer(prompt: str) -> dict:
             "maintenance_navigation": "Open the root node.", **_system_answer(prompt)}
 
 
-def test_completion_events_keep_reasoning_and_reject_tools() -> None:
-    events = [
-        {"type": "text", "part": {"id": "part-1", "type": "text", "text": '{"ok":true}'}},
-        {"type": "step_finish", "part": {"type": "step-finish", "tokens": {
-            "input": 100, "output": 20, "reasoning": 7, "cache": {"read": 40}}}},
-        {"type": "tool", "part": {"id": "tool-1", "type": "tool", "tool": "read"}},
-    ]
-    text, usage, forbidden, error = _events("\n".join(json.dumps(event) for event in events))
-    assert text == '{"ok":true}'
-    assert usage == {"input": 100, "output": 27, "cache": 40}
-    assert forbidden == "read"
-    assert error is None
-
-
 def test_generate_renders_and_accounts_for_each_physical_call(tmp_path, monkeypatch) -> None:
     repo = tmp_path / "repo"
     (repo / "src" / "pkg").mkdir(parents=True)
@@ -80,7 +66,7 @@ def test_generate_renders_and_accounts_for_each_physical_call(tmp_path, monkeypa
         task = kwargs["task"]
         seen.append(task)
         value = _semantic_answer(kwargs["prompt"])
-        from cbe.headless_completion import _csv_row
+        from cbe.api_completion import _csv_row
         _csv_row(kwargs["csv_path"], {"task": task, "attempt": kwargs["attempt"],
                   "input_tokens": 200, "output_tokens": 2, "cache_tokens": 1,
                   "result": "ok", "seconds": 0.01})
@@ -88,9 +74,9 @@ def test_generate_renders_and_accounts_for_each_physical_call(tmp_path, monkeypa
 
     monkeypatch.setattr(generator, "invoke", fake_invoke)
     result = generator.generate(repo, run_dir, model="example/model", jobs=2)
-    host_config = json.loads((run_dir / "opencode-completion.json").read_text(encoding="utf-8"))
-    assert host_config["provider"]["zai-coding-plan"]["models"]["glm-5.3-flash"]
-    assert "apiKey" not in json.dumps(host_config)
+    api_config = json.loads((run_dir / "api-completion.json").read_text(encoding="utf-8"))
+    assert api_config["api_key_env"] == "OPENAI_API_KEY"
+    assert "apiKey" not in json.dumps(api_config)
     assert result["source_files"] == 2
     assert result["modules"] == 2
     assert result["calls"] == len(seen) == 6
@@ -132,14 +118,14 @@ def test_crlf_source_is_embedded_verbatim_and_the_run_completes(tmp_path, monkey
         assert any(raw in prompt for prompt in prompts), name
 
 
-def test_missing_devin_cache_keeps_observed_input_and_output(tmp_path) -> None:
+def test_missing_cache_keeps_observed_input_and_output(tmp_path) -> None:
     (tmp_path / "calls.csv").write_text(
         "task,attempt,input_tokens,output_tokens,cache_tokens,result,seconds\n"
         "module_1,1,100,20,10,ok,1\n"
         "module_2,1,80,15,,ok,2\n",
         encoding="utf-8",
     )
-    result = usage.script_cost(tmp_path, host="devin")
+    result = usage.script_cost(tmp_path)
     assert result["input_tokens"] == 180
     assert result["output_tokens"] == 35
     assert result["cache_tokens"] is None
@@ -220,7 +206,7 @@ def test_exact_test_directory_beats_singularized_neighbor() -> None:
 
 def test_generate_renders_partial_run_and_resume_finishes_pending_parts(tmp_path, monkeypatch, capsys) -> None:
     from cbe import cli
-    from cbe.headless_completion import _csv_row
+    from cbe.api_completion import _csv_row
 
     repo = tmp_path / "repo"
     (repo / "src" / "pkg").mkdir(parents=True)
@@ -282,7 +268,7 @@ def _tiny_repo(tmp_path):
 
 
 def _scripted_model(monkeypatch, *, input_tokens: int, prompts: dict[str, str]):
-    from cbe.headless_completion import _csv_row
+    from cbe.api_completion import _csv_row
 
     def fake_invoke(**kwargs):
         task = kwargs["task"]
@@ -366,7 +352,7 @@ def test_preflight_refuses_a_source_changed_since_the_plan(tmp_path, monkeypatch
     run_dir = tmp_path / "run"
     called: dict[str, str] = {}
     _scripted_model(monkeypatch, input_tokens=1_000, prompts=called)
-    host_run.plan(repo, run_dir, review="sample", jobs=2, host="opencode", driver="script")
+    host_run.plan(repo, run_dir, review="sample", jobs=2, host="api", driver="script")
     (repo / "tests" / "test_jobs.py").write_text("def test_reserve():\n    assert True\n", encoding="utf-8")
     with pytest.raises(generator.SourceNotEmbedded, match="test_jobs.py"):
         generator.generate(repo, run_dir, model="example/model", jobs=2, resume=True)
@@ -384,7 +370,7 @@ def test_preflight_accepts_files_that_are_empty_by_design(tmp_path) -> None:
     repo = _tiny_repo(tmp_path)
     (repo / "src" / "pkg" / "empty.py").write_text("", encoding="utf-8")
     run_dir = tmp_path / "run"
-    host_run.plan(repo, run_dir, review="none", jobs=2, host="opencode", driver="script")
+    host_run.plan(repo, run_dir, review="none", jobs=2, host="api", driver="script")
     state = json.loads((run_dir / "host" / "state.json").read_text(encoding="utf-8"))
     for number in range(len(state["modules"])):
         task_id = f"module_{number + 1}"
@@ -411,7 +397,7 @@ def test_per_call_delivery_failure_fails_the_module(tmp_path, monkeypatch) -> No
 
 
 def test_call_without_reported_usage_is_recorded_not_failed(tmp_path, monkeypatch) -> None:
-    from cbe.headless_completion import _csv_row
+    from cbe.api_completion import _csv_row
 
     repo = _tiny_repo(tmp_path)
     run_dir = tmp_path / "run"

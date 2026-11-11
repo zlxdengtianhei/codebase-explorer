@@ -37,15 +37,15 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     sub = parser.add_subparsers(dest="command", required=True)
 
-    generate_p = sub.add_parser("generate", help="Generate documentation through an API, OpenCode, or Devin")
+    generate_p = sub.add_parser("generate", help="Generate documentation through an OpenAI-compatible API")
     generate_p.add_argument("repo", type=lambda value: Path(value).expanduser().resolve())
     generate_p.add_argument("--run-dir", type=_abs, default=None)
-    generate_p.add_argument("--host", choices=("api", "opencode", "devin"), default="opencode")
+    generate_p.add_argument("--host", choices=("api",), default="api", help="the only completion path; kept so old commands still parse")
     generate_p.add_argument("--model", default=None)
     generate_p.add_argument("--config", type=_abs, default=None,
-                            help="optional host/API configuration file")
+                            help="optional API configuration file")
     generate_p.add_argument("--graph", type=_abs, default=None, help="analyzed graph matching this source snapshot")
-    generate_p.add_argument("--base-url", default=None, help="OpenAI-compatible API base URL (--host api)")
+    generate_p.add_argument("--base-url", default=None, help="OpenAI-compatible API base URL")
     generate_p.add_argument("--api-key-env", default=None, help="environment variable containing the API key")
     generate_p.add_argument("--jobs", type=int, default=4)
     generate_p.add_argument("--review", choices=REVIEW_MODES, default=DEFAULT_REVIEW)
@@ -333,17 +333,15 @@ def main(argv: list[str] | None = None) -> int:
                 args.run_dir = latest_run(repo)
             run_dir = args.run_dir or (repo / ".codebase-analysis" / "runs" /
                 (datetime.now(timezone.utc).strftime("generate-%Y%m%dT%H%M%SZ-") + uuid4().hex[:8]))
-            if args.host == "api" and not args.model:
-                raise ValueError("--host api requires --model")
-            if args.host != "api" and (args.base_url is not None or args.api_key_env is not None):
-                raise ValueError("--base-url and --api-key-env require --host api")
+            if not args.model:
+                raise ValueError("generate requires --model (the model ID at your endpoint); "
+                                 "set the endpoint with --base-url and the key variable with --api-key-env")
             if args.resume and header_language:
                 frozen = json.loads((run_dir / "context.json").read_text(encoding="utf-8"))
                 if any(row["language"] != header_language for row in frozen["files"]
                        if Path(row["path"]).suffix.lower() == ".h"):
                     raise ValueError("header language differs from the frozen context; start a new plan")
-            model = args.model or ("swe-2-medium" if args.host == "devin" else "zai-coding-plan/glm-5.3-flash")
-            value = generate(repo, run_dir, model=model, config=args.config,
+            value = generate(repo, run_dir, model=args.model, config=args.config,
                              jobs=args.jobs, review=args.review, timeout=args.timeout, default_timeout=420,
                              host=args.host, resume=args.resume, graph_path=args.graph,
                              api_base_url=args.base_url, api_key_env=args.api_key_env)

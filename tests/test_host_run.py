@@ -443,7 +443,7 @@ def test_script_prompt_embeds_source_and_host_task_lists_paths(tmp_path: Path) -
     repo = _repo(tmp_path)
     (repo / "src" / "pkg" / "empty.py").write_text("", encoding="utf-8")
     run_dir = tmp_path / "run"
-    host_run.plan(repo, run_dir, review="none", host="opencode", driver="script")
+    host_run.plan(repo, run_dir, review="none", host="api", driver="script")
     state = json.loads((run_dir / "host" / "state.json").read_text(encoding="utf-8"))
     batch = host_run.next_tasks(run_dir, limit=1)
     assert [item["task"] for item in batch["tasks"]] == ["names"]
@@ -470,7 +470,7 @@ def test_script_prompt_embeds_source_and_host_task_lists_paths(tmp_path: Path) -
 def test_script_prompt_refuses_changed_source(tmp_path: Path) -> None:
     repo = _repo(tmp_path)
     run_dir = tmp_path / "run"
-    host_run.plan(repo, run_dir, review="none", host="opencode", driver="script")
+    host_run.plan(repo, run_dir, review="none", host="api", driver="script")
     (repo / "src" / "pkg" / "jobs.py").write_text("changed = 1\n", encoding="utf-8")
     with pytest.raises(host_run.HostRunError, match="source changed"):
         for number in range(len(json.loads((run_dir / "host" / "state.json").read_text())["modules"])):
@@ -585,7 +585,7 @@ def test_plan_rejects_a_graph_that_does_not_match_the_source(tmp_path: Path) -> 
 
 
 def test_script_driver_carries_the_graph_into_the_module_prompt(tmp_path: Path, monkeypatch) -> None:
-    from cbe.headless_completion import Completion, _csv_row
+    from cbe.api_completion import Completion, _csv_row
     repo = _repo(tmp_path)
     graph_path = tmp_path / "graph.json"
     graph = _graph_for(repo, ["src/pkg/jobs.py", "src/pkg/cli.py"])

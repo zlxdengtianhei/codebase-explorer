@@ -68,7 +68,7 @@ This path documents the four core files of [cJSON](https://github.com/DaveGamble
 5. Generate the documents. This needs one of the following:
 
    - **A host agent with subagents (Claude Code or Codex).** The subagents run on your own subscription. Run `cbe-install install --host claude-code` (or `--host codex`) in `$HOME/cbe-demo/cjson`, start the agent there, and ask: "Use the codebase-explorer skill to generate documentation for this repository." The agent plans the run first; for these four files `cbe host plan` prints `"modules": 4` and `"tasks": 8`, and each review finding adds one repair task later. See [Generate through a host agent](#generate-through-a-host-agent).
-   - **An OpenAI-compatible endpoint, an API key and a model ID.** Pass `--host api`; without it, `cbe generate` drives a signed-in OpenCode CLI instead.
+   - **An OpenAI-compatible endpoint, an API key and a model ID.** `cbe generate` talks only to such an endpoint (`--host api`, the default, is still accepted).
 
      ```sh
      cbe generate "$HOME/cbe-demo/cjson" --host api \
@@ -285,7 +285,7 @@ reasoning), `reasoning_effort: "low"`, JSON object response mode, and reading-ba
 8,000/10,000 source tokens. Whole files stay intact; a single file may exceed
 the batch maximum up to the existing 60,000-token file limit. Other API model
 IDs retain 420 seconds, no explicit output/reasoning limit, and the original
-20,000/25,000 batch sizes. OpenCode and Devin keep their existing defaults.
+20,000/25,000 batch sizes.
 
 Set API resource values with `--config`; explicit `--timeout` takes precedence
 over the config, which takes precedence over model defaults. For example:
@@ -329,8 +329,7 @@ source-bearing response whose reported input is too small is marked
 failed tasks and suggests fixing the cause, then using `--resume`.
 
 API `summary.json` sums observed input/output tokens, including returned failed
-calls. The observed-total and missing-call conventions also apply to OpenCode
-and Devin summaries. Missing-call counters and `usage_complete: false` identify an incomplete
+calls. Missing-call counters and `usage_complete: false` identify an incomplete
 sum; absent usage is never estimated. Cache totals remain unknown when any
 cache counter is missing, with the known portion in `observed_cache_tokens`.
 API price is unknown (`priced_usd: null`) unless config supplies
@@ -338,13 +337,6 @@ API price is unknown (`priced_usd: null`) unless config supplies
 usage still prevents pricing. The raw API record includes `actual_model` from
 the provider response so gateway fallback can be distinguished from the
 requested model.
-
-The signed-in OpenCode and Devin drivers remain available:
-
-```sh
-cbe generate /absolute/path/to/repo --host opencode --model provider/model
-cbe generate /absolute/path/to/repo --host devin --model your-supported-model
-```
 
 Choose a model that your own account can use. CBE does not promise that a provider, model, or subscription is free.
 

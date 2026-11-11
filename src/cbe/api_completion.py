@@ -3,10 +3,10 @@
 This is a thin, tool-free client for any endpoint that speaks the OpenAI
 ``POST {base_url}/chat/completions`` shape (OpenAI, Azure OpenAI-compatible
 gateways, Command Code, local vLLM/Ollama OpenAI shims). It deliberately does
-not touch the product's system provider entry, any agent harness, or the
-OpenCode/Devin launchers; it is one more ``host`` for the existing
-``generate.py`` driver, and it returns the same :class:`Completion` record so
-the shared state, retry and usage accounting keep working unchanged.
+not touch the product's system provider entry or any agent harness; it is the
+completion call of the ``generate.py`` driver, and it returns a
+:class:`Completion` record that the shared state, retry and usage accounting
+consume.
 
 Secrets: the API key is read from an environment variable (default
 ``OPENAI_API_KEY``) or from a standard config file path. The key is never
@@ -18,20 +18,45 @@ unknown otherwise.
 
 from __future__ import annotations
 
+import csv
 import json
 import os
 import re
 import time
 import urllib.error
 import urllib.request
+from dataclasses import dataclass
 from pathlib import Path
+from threading import Lock
 from typing import Any
 
 from cbe.checks import json_object
-from cbe.headless_completion import Completion, _csv_row
-
 
 from cbe.model_settings import ApiConfigError, DEFAULT_API_CONFIG, OPTIONAL_REQUEST_KEYS, load_config
+
+
+#: calls.csv columns; unknown usage stays an empty field, never zero.
+FIELDS = ("task", "attempt", "input_tokens", "output_tokens", "cache_tokens", "result", "seconds")
+CSV_LOCK = Lock()
+
+
+@dataclass
+class Completion:
+    value: dict[str, Any] | None
+    error: str | None
+    raw_text: str
+    usage: dict[str, int | None] | None
+    seconds: float
+
+
+def _csv_row(path: Path, row: dict[str, Any]) -> None:
+    with CSV_LOCK:
+        first = not path.exists()
+        with path.open("a", encoding="utf-8", newline="") as stream:
+            writer = csv.DictWriter(stream, fieldnames=FIELDS)
+            if first:
+                writer.writeheader()
+            writer.writerow({field: row.get(field, "") for field in FIELDS})
 
 
 MAX_RESPONSE_BYTES = 8 * 1024 * 1024

@@ -1,6 +1,6 @@
 ---
 name: codebase-explorer
-description: Generate a navigable, source-grounded documentation map (INDEX, a semantic responsibility tree, node pages with structured detail units and program-derived source anchors, and a symbol catalogue) for a code repository. Inside Claude Code, Codex, or another agent harness with subagents, the host agent runs `cbe host` and dispatches one subagent per reading task on the user's own subscription; with an OpenAI-compatible endpoint, OpenCode, or a Devin CLI login, run `cbe generate`. Also use it to query a generated map, resume an interrupted run, or report a run's token usage and cost.
+description: Generate a navigable, source-grounded documentation map (INDEX, a semantic responsibility tree, node pages with structured detail units and program-derived source anchors, and a symbol catalogue) for a code repository. Inside Claude Code, Codex, or another agent harness with subagents, the host agent runs `cbe host` and dispatches one subagent per reading task on the user's own subscription; with an OpenAI-compatible endpoint, run `cbe generate`. Also use it to query a generated map, resume an interrupted run, or report a run's token usage and cost.
 ---
 
 # Codebase Explorer
@@ -12,8 +12,7 @@ Pick the path by where you run:
 | You are | Use | Model work runs on |
 |---|---|---|
 | Claude Code, Codex, or another harness that can start subagents | `cbe host ...` (below) | your subagents, on the user's subscription |
-| A shell with a signed-in OpenCode or Devin CLI | `cbe generate` (end of this file) | OpenCode or Devin, one tool-free call per task |
-| A shell or service that reaches an OpenAI-compatible endpoint, with no harness login | `cbe generate --host api` (end of this file) | that endpoint, one tool-free request per task |
+| A shell or service that reaches an OpenAI-compatible endpoint, with no harness login | `cbe generate` (end of this file) | that endpoint, one tool-free request per task |
 
 ## Runtime
 
@@ -91,14 +90,12 @@ cbe source --run-dir RUN --id ID --context 2
 
 `catalog.json` preserves the unit records and indexes graph edges. Complete graph evidence stays once in the frozen context and `query` expands it on demand. `summary.json` reports token ratios and their scope. Graph evidence describes static analysis; it does not prove runtime behavior. Confirm that the explanations answer the maintenance question before claiming semantic quality.
 
-## Script-driven generation (API, OpenCode, or Devin CLI)
+## Script-driven generation (OpenAI-compatible API)
 
 ```sh
-cbe generate . --model zai-coding-plan/glm-5.3-flash
-cbe generate . --host devin --model swe-2-medium --jobs 3
-cbe generate . --host api --model gpt-oss-120b \
+cbe generate . --model gpt-oss-120b \
   --base-url https://api.example.com/v1 --api-key-env MY_API_KEY
 ```
 
-`--host api` speaks the OpenAI-compatible `POST {base-url}/chat/completions` shape. The API key comes from the named environment variable (default `OPENAI_API_KEY`) or a standard config file, never from a flag, and CBE never writes it to the run log or any durable artifact. Check Devin's current cost label with `devin models list --format json` first; free offers change. The command runs every completion itself on the same run state as `cbe host`, prints `run_dir`, `index`, status, token totals, and elapsed time, and records each physical call in `calls.csv`. It exits 0 when complete and 3 when the docs are rendered with pending parts; continue with `cbe generate . --resume`. Review modes are `none`, `sample`, and `all`.
+`cbe generate` speaks the OpenAI-compatible `POST {base-url}/chat/completions` shape. The API key comes from the named environment variable (default `OPENAI_API_KEY`) or a standard config file, never from a flag, and CBE never writes it to the run log or any durable artifact. The command runs every completion itself on the same run state as `cbe host`, prints `run_dir`, `index`, status, token totals, and elapsed time, and records each physical call in `calls.csv`. It exits 0 when complete and 3 when the docs are rendered with pending parts; continue with `cbe generate . --resume`. Review modes are `none`, `sample`, and `all`.
 
