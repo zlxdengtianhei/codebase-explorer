@@ -50,7 +50,7 @@ CBE is not on PyPI. It needs Python 3.12 or 3.13. There are two ways to run it. 
 5. The agent prints the planned file, token, module and task counts, runs the subagents, and verifies the result.
 6. Open `<run_dir>/docs/INDEX.md`. The agent reports `run_dir`.
 
-The Claude Code path has run end to end (see [What it costs](#what-it-costs)). `cbe-install install --host` also takes `codex`, `opencode` and `dsh`: they install the skill, and we have not run them end to end. Details: [docs/running.md](docs/running.md#generate-through-a-host-agent).
+The Claude Code path has run end to end (see [What it costs](#what-it-costs)). The OpenCode path (`--host opencode`) has run end to end once, on a 22-file sample repository. `cbe-install install --host` also takes `codex` and `dsh`: they install the skill, and we have not run them end to end. Details: [docs/running.md](docs/running.md#generate-through-a-host-agent).
 
 **B. From the command line, with any OpenAI-compatible endpoint.** There is no default model: you must pass `--model`.
 

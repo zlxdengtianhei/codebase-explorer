@@ -50,7 +50,7 @@ CBE 没有发布到 PyPI，需要 Python 3.12 或 3.13。有两种用法，最�
 5. agent 会先报出计划的文件数、token 数、模块数和任务数，再跑子代理，最后校验结果。
 6. 打开 `<run_dir>/docs/INDEX.md`，`run_dir` 由 agent 告诉你。
 
-Claude Code 这条路径已经完整跑通过（见[成本](#成本)）。`cbe-install install --host` 还支持 `codex`、`opencode` 和 `dsh`：它们会装上 Skill，但我们没有完整跑过。详见 [docs/running.md](docs/running.md#generate-through-a-host-agent)。
+Claude Code 这条路径已经完整跑通过（见[成本](#成本)）。OpenCode 这条路径（`--host opencode`）完整跑通过 1 次，用的是一个 22 个文件的示例小仓。`cbe-install install --host` 还支持 `codex` 和 `dsh`：它们会装上 Skill，但我们没有完整跑过。详见 [docs/running.md](docs/running.md#generate-through-a-host-agent)。
 
 **B. 在命令行里用，接任何兼容 OpenAI 的端点。** 没有缺省模型，必须给 `--model`。
 
