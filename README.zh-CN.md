@@ -9,7 +9,7 @@
 
 <p align="center"><img src="https://github.com/zlxdengtianhei/codebase-explorer/releases/download/walkthrough-v2.2.0.dev0/hero-2.gif" alt="34 秒动图：代码单元连线、聚成模块、显示系统地图；打开一个模块页，再用 cbe source 打印原始代码行" width="100%"></p>
 
-<p align="center">34 秒：代码单元、连线、模块、地图、打开一个模块页、查看源码。<a href="docs/videos.md">带旁白的讲解视频</a>。</p>
+<p align="center">34 秒：代码单元、连线、模块、地图、打开一个模块页、查看源码。<br><a href="https://zlxdengtianhei.github.io/codebase-explorer/?data=flask">打开可交互的地图</a> · <a href="https://zlxdengtianhei.github.io/codebase-explorer/film.html">▶ 看 2 分钟的配音讲解</a>（英文配音，页内有中文文字稿）</p>
 
 文件树只告诉你文件在哪，不告诉你每一块是干什么的。CBE（Codebase Explorer）读一个仓库，写出文件树缺的那部分：一页列出整棵模块树（module tree），每个模块一行，说明它负责什么；再给每个模块一页，讲清其中每个函数和类，并链接到准确的源码行。你可以直接读。编码 agent 用三条命令就能在里面查。
 
