@@ -128,17 +128,14 @@ def _verified_context(run_dir: Path, state: dict[str, Any]) -> dict[str, Any]:
     raw = path.read_bytes()
     raw_digest = hashlib.sha256(raw).hexdigest()
     frozen = state.get("context") or {}
-    if frozen.get("raw_digest") and raw_digest != frozen["raw_digest"]:
-        raise HostRunError("frozen source context was modified after planning; start a new plan")
+    if raw_digest != frozen.get("raw_digest"):
+        raise HostRunError("frozen source context was modified after planning (or has no byte digest because "
+                           "an older build planned it); start a new plan")
     context = state.context if isinstance(state, _RunState) else None
     if context is None:
         context = json.loads(raw)
     if context.get("schema") != frozen.get("schema"):
         raise HostRunError("frozen context schema changed after planning; start a new plan")
-    # Canonical-only runs predate byte freezing. Verify their original contract
-    # once before recording the byte digest in the next successful state save.
-    if not frozen.get("raw_digest") and context_digest(context) != frozen.get("digest"):
-        raise HostRunError("frozen source context was modified after planning; start a new plan")
     if bool(context.get("graph")) != bool(frozen.get("graph_present")):
         raise HostRunError("frozen context graph presence changed after planning; start a new plan")
     planned = {row["path"]: row["digest"] for row in state["files"]}
@@ -147,7 +144,6 @@ def _verified_context(run_dir: Path, state: dict[str, Any]) -> dict[str, Any]:
         if context_files.get(path) != digest:
             raise HostRunError(f"frozen context and plan disagree on {path}; start a new plan")
     _verify_graph_manifest(Path(state["repo"]), state, context)
-    frozen["raw_digest"] = raw_digest
     if isinstance(state, _RunState):
         state.context = context
     return context
@@ -424,17 +420,9 @@ def locked_state(run_dir: Path) -> Iterator[dict[str, Any]]:
             pass
         state = _RunState(json.loads(state_path.read_text(encoding="utf-8")))
         if state.get("schema") != SCHEMA:
-            found = state.get("schema")
-            hint = ("; this run uses the older free-text module layout, which is not "
-                    "readable by this build. Start a new run instead of resuming it."
-                    if found == "cbe-host-run/1" else
-                    "; this run was planned for the older answer format (full inventory ids and "
-                    "dispositions), which this build no longer accepts. Run `plan` again for a fresh run."
-                    if found == "cbe-host-run/2" else ".")
-            raise HostRunError(f"unsupported run schema {found!r}{hint}")
-        if not state.get("semantic"):
-            raise HostRunError("this run uses the module-page layout of CBE before 2.2, which this build "
-                               "no longer renders; start a new run instead of resuming it")
+            raise HostRunError(f"unsupported run schema {state.get('schema')!r}: this run was planned for an "
+                               f"older answer format or module layout, which this build no longer accepts. "
+                               "Run `plan` again for a fresh run")
         yield state
         state["updated_at"] = _now()
         write_json(state_path, state)
@@ -574,9 +562,7 @@ def plan(repo: Path, run_dir: Path | None = None, *, review: str = DEFAULT_REVIE
         "schema": SCHEMA, "cbe_version": __version__, "run_tag": secrets.token_hex(3),
         "repo": str(repo), "run_dir": str(run_dir), "host": host, "driver": driver,
         "review": review, "jobs": jobs, "created_at": _now(), "updated_at": _now(), "status": "running",
-        "semantic": True,
         "context": {"schema": context.get("schema"),
-                    "digest": context_digest(context),
                     "graph_present": bool(context.get("graph")),
                     "graph_digest": context_digest(context["graph"]) if context.get("graph") else None},
         "inventory": inventory,

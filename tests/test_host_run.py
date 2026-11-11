@@ -912,17 +912,11 @@ def test_module_with_no_graph_node_gets_an_explicit_no_local_node_statement(tmp_
     assert "Batch-internal resolved calls" in anchored_prompt or "Graph: internal=" in anchored_prompt
 
 
-@pytest.mark.parametrize("legacy, tamper", [(False, "whitespace"), (False, "value"), (True, "value")],
-                         ids=["new-whitespace", "new-value", "legacy-value"])
+@pytest.mark.parametrize("tamper", ["whitespace", "value"])
 @pytest.mark.parametrize("operation", ["next", "submit", "resume", "render", "prompt", "verify"])
-def test_context_rejects_same_size_same_mtime_change(tmp_path, operation, legacy, tamper):
+def test_context_rejects_same_size_same_mtime_change(tmp_path, operation, tamper):
     run_dir = Path(host_run.plan(_repo(tmp_path), tmp_path / "run", review="none")["run_dir"])
     host_run.next_tasks(run_dir, limit=1)  # exercise an already-used context
-    if legacy:
-        state_path = run_dir / "host" / "state.json"
-        state = json.loads(state_path.read_text())
-        del state["context"]["raw_digest"]  # state shape written before the byte freeze
-        host_run.write_json(state_path, state)
     path = run_dir / "context.json"
     raw, stat = path.read_bytes(), path.stat()
     assert raw.endswith(b"\n")
@@ -984,20 +978,14 @@ def test_context_digest_not_recomputed_and_parsing_is_scoped_to_locked_operation
     host_run.verify(run_dir)
 
 
-def test_legacy_canonical_run_resumes_and_acquires_byte_freeze(tmp_path):
+def test_a_run_without_a_byte_digest_asks_for_a_new_plan(tmp_path):
+    """State written before the byte freeze has no ``raw_digest``; it is refused, not upgraded."""
     run_dir = Path(host_run.plan(_repo(tmp_path), tmp_path / "run", review="none")["run_dir"])
     state_path = run_dir / "host" / "state.json"
     state = json.loads(state_path.read_text())
-    state["context"].pop("raw_digest", None)  # shape written by dd82d6c
+    state["context"].pop("raw_digest")
     host_run.write_json(state_path, state)
-    assert not host_run.resume(run_dir)["changed_sources"]
-    upgraded = json.loads(state_path.read_text())
-    import hashlib
-    path = run_dir / "context.json"
-    assert upgraded["context"]["raw_digest"] == hashlib.sha256(path.read_bytes()).hexdigest()
-    raw = path.read_bytes()
-    path.write_bytes(raw[:-1] + b" ")
-    with pytest.raises(host_run.HostRunError, match="modified after planning"):
+    with pytest.raises(host_run.HostRunError, match="start a new plan"):
         host_run.resume(run_dir)
 
 
