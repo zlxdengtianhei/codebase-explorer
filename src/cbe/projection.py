@@ -11,6 +11,7 @@ from dataclasses import dataclass
 import re
 from typing import Any
 
+from cbe.records import SourceOwnership
 from cbe.token_budget import count_text_tokens
 
 DEFAULT_GRAPH_MAX_TOKENS = 3000
@@ -59,44 +60,13 @@ def unit_graph(graph: dict, paths: list[str], inventory: dict[str, dict],
     wanted = set(paths)
     nodes = {n["id"]: n for n in graph.get("nodes", [])}
     ids = {s["id"] for entry in inventory.values() for s in entry["symbols"]}
-    blocks: dict[str, list[dict]] = defaultdict(list)
+    parts: dict[str, list[dict]] = defaultdict(list)
     for chunk in chunks:
-        if chunk["id"] in ids:
-            blocks[chunk["path"]].append(chunk)
-    source_parts: dict[str, list[dict]] = defaultdict(list)
-    for chunk in chunks:
-        source_parts[chunk["path"]].append(chunk)
-    source_lines = {}
-    for path, parts in source_parts.items():
-        raw = b"".join(c.get("text", "").encode("utf-8")
-                       for c in sorted(parts, key=lambda c: c.get("start_byte", 0)))
-        starts = [0] + [i + 1 for i, byte in enumerate(raw) if byte == 10]
-        source_lines[path] = (raw, starts)
-
-    def at(path: str | None, line: int | None, column: int | None = None) -> str | None:
-        if path not in source_lines or line is None or line < 1:
-            return None
-        raw, starts = source_lines[path]
-        if line > len(starts):
-            return None
-        base = starts[line - 1]
-        if column is None:
-            point = base
-            while point < len(raw) and raw[point] in b" \t":
-                point += 1
-        else:
-            if column < 1:
-                return None
-            end = starts[line] if line < len(starts) else len(raw)
-            text = raw[base:end].decode("utf-8")
-            if column > len(text) + 1:
-                return None
-            point = base + len(text[:column - 1].encode("utf-8"))
-        for chunk in blocks[path]:
-            if chunk.get("start_byte", -1) <= point < chunk.get("end_byte", -1):
-                assert chunk["start_byte"] <= point < chunk["end_byte"]
-                return chunk["id"]
-        return None
+        parts[chunk["path"]].append(chunk)
+    sources = {path: b"".join(c.get("text", "").encode("utf-8")
+                              for c in sorted(rows, key=lambda c: c.get("start_byte", 0))).decode("utf-8")
+               for path, rows in parts.items()}
+    at = SourceOwnership(sources, chunks, ids).at
 
     def endpoint(node: dict) -> str | None:
         return at(node.get("path"), node.get("start_line"))
