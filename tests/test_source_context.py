@@ -811,6 +811,7 @@ def test_grammar_override_after_cache_is_effective(tmp_path):
 def test_plugin_load_errors_surface_in_discovery(monkeypatch):
     import importlib.metadata
 
+    import cbe.grammars as grammars
     import cbe.source_context as sc
 
     class BrokenEntry:
@@ -820,8 +821,8 @@ def test_plugin_load_errors_surface_in_discovery(monkeypatch):
             raise ImportError("no such grammar pack")
 
     monkeypatch.setattr(importlib.metadata, "entry_points", lambda group=None: [BrokenEntry()])
-    monkeypatch.setattr(sc, "_PLUGINS_LOADED", False)
-    monkeypatch.setattr(sc, "_PLUGIN_ERRORS", [])
+    monkeypatch.setattr(grammars, "_PLUGINS_LOADED", False)
+    monkeypatch.setattr(grammars, "_PLUGIN_ERRORS", [])
     result = sc.available_languages()
     assert any(e["entry_point"] == "broken-pack" for e in result["plugin_errors"])
 
