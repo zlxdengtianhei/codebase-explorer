@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from cbe import docs, host_run, treename
+from cbe import docs, host_run, treename, usage
 from test_host_run import _answer, _answer_task, _drive
 
 
@@ -162,42 +162,36 @@ def test_an_empty_run_completes_without_a_tree_task(tmp_path):
     assert state["tasks"]["system"]["status"] == "done"
 
 
-@pytest.mark.parametrize("kind", ["names", "tree"])
-def test_a_run_planned_with_the_old_tree_tasks_asks_for_a_new_plan(tmp_path, kind):
-    run = Path(host_run.plan(_repo(tmp_path, dirs=("alpha",), files=2), tmp_path / "run", review="none")["run_dir"])
+def _old_run(tmp_path, kind, finished=False):
+    """A run as an older build left it: it carries an old ``names`` or ``tree`` task."""
+    run = Path(host_run.plan(_repo(tmp_path, dirs=("alpha",), files=3), tmp_path / "run", review="none")["run_dir"])
+    if finished:
+        _drive(run)
     state = _state(run)
     state["tasks"][kind] = {**state["tasks"]["module_1"], "id": kind, "kind": kind, "module": None}
     (run / "host/state.json").write_text(json.dumps(state))
+    return run
+
+
+@pytest.mark.parametrize("kind", ["names", "tree"])
+def test_every_host_command_on_a_run_with_the_old_tree_tasks_asks_for_a_new_plan(tmp_path, kind):
+    run = _old_run(tmp_path, kind)
     for action in (lambda: host_run.next_tasks(run), lambda: host_run.resume(run),
                    lambda: host_run.completion_prompt(run, "module_1"),
-                   lambda: host_run.submit(run, "module_1", error="x")):
-        with pytest.raises(host_run.HostRunError, match="run `plan` again"):
+                   lambda: host_run.submit(run, "module_1", error="x"),
+                   lambda: host_run.status(run), lambda: host_run.render(run), lambda: host_run.verify(run),
+                   lambda: host_run.retry(run, "all"), lambda: usage.cost(run)):
+        with pytest.raises(host_run.HostRunError, match="run `plan` again") as error:
             action()
+        assert "`find`, `query` and `source` still work" in str(error.value)
 
 
-def test_a_finished_old_run_still_renders_and_searches(tmp_path):
-    run = Path(host_run.plan(_repo(tmp_path, dirs=("alpha",), files=3), tmp_path / "run", review="none")["run_dir"])
-    _drive(run)
-    state = _state(run)
-    tree = _tree_of(run)
-    host_run.write_json(run / "host/accepted/tree.json", tree)   # the file an old run carried
-    for tid in [t for t, row in state["tasks"].items() if row["kind"] in host_run.TREE_KINDS]:
-        state["tasks"].pop(tid)
-        (run / f"host/accepted/{tid}.json").unlink(missing_ok=True)
-    state.pop("skeleton")
-    state["tasks"]["names"] = {**state["tasks"]["module_1"], "id": "names", "kind": "names", "module": None}
-    state["tasks"]["tree"] = {**state["tasks"]["module_1"], "id": "tree", "kind": "tree", "module": None}
-    (run / "host/state.json").write_text(json.dumps(state))
-    assert host_run.render(run)["status"] in {"complete", "partial"}
-    assert host_run.verify(run)["ok"]
-    assert docs.find(run, "alpha_0_a")
-    # A tree that used region subtrees cannot be composed any more; the error says what to do.
-    state["aggregation"] = {"regions": [{"id": "region-0001", "unit_ids": []}]}
-    (run / "host/state.json").write_text(json.dumps(state))
-    with pytest.raises(host_run.HostRunError, match="region trees") as error:
-        host_run.render(run)
-    assert "`find`, `query` and `source` still work" in str(error.value) and "`plan` again" in str(error.value)
-    assert tree["nodes"]
+def test_find_query_and_source_still_work_on_a_finished_old_run(tmp_path):
+    run = _old_run(tmp_path, "tree", finished=True)
+    found = docs.find(run, "alpha_0_a")
+    assert found
+    assert docs.query(run, found[0]["id"])["id"] == found[0]["id"]
+    assert docs.source(run, found[0]["id"]).startswith("# ")
 
 
 # ----------------------------------------------------------------- treename

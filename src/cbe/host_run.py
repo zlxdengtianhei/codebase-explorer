@@ -60,7 +60,6 @@ REVIEW_MODES = ("none", "sample", "all")
 DEFAULT_REVIEW = "sample"
 TREE_KINDS = ("tree_name", "tree_top")
 ORDER = {"module": 1, "repair": 2, "tree_name": 3, "tree_top": 3, "review": 4, "system": 5}
-LEGACY_KINDS = ("names", "tree")   # tasks of runs planned before the program-made tree
 
 
 class HostRunError(ValueError):
@@ -184,17 +183,6 @@ def _semantic_units(run_dir: Path, state: dict[str, Any]) -> tuple[dict[str, dic
     return units, dispositions
 
 
-def _legacy_state(state: dict[str, Any]) -> bool:
-    return any(task["kind"] in LEGACY_KINDS for task in state["tasks"].values())
-
-
-def _refuse_legacy(state: dict[str, Any]) -> None:
-    if _legacy_state(state):
-        raise HostRunError("this run was planned with the earlier tree tasks (names, tree), which this build "
-                           "no longer runs; run `plan` again for a fresh run. Its finished docs can still be "
-                           "rendered, searched and queried")
-
-
 def _tree_names(run_dir: Path, state: dict[str, Any]) -> dict[str, dict]:
     """Records of every node a finished tree task has named, by node id."""
     names: dict[str, dict] = {}
@@ -207,15 +195,6 @@ def _tree_names(run_dir: Path, state: dict[str, Any]) -> dict[str, dict]:
 def _semantic_tree(run_dir: Path, state: dict[str, Any]) -> dict[str, Any]:
     """The tree as far as it is named: the frozen skeleton with the accepted names, program-made
     titles for the rest. Before the skeleton is frozen it is built from the units finished so far."""
-    if _legacy_state(state):
-        if state.get("aggregation", {}).get("regions"):
-            raise HostRunError("this run was built with region trees, which this build no longer composes; "
-                               "`find`, `query` and `source` still work on its docs and catalog; for the "
-                               "new entry page run `plan` again and generate")
-        tree = _accepted(run_dir, "tree")
-        if tree is None:
-            raise HostRunError("this run has no accepted tree; run `plan` again")
-        return tree
     records, edges = _aggregation_inputs(run_dir, state)
     fingerprint = _detail_fingerprint(run_dir, state)
     frozen = state.get("skeleton")
@@ -303,7 +282,7 @@ def _prepare_tree(run_dir: Path, state: dict[str, Any]) -> None:
     The same detail finds the same skeleton in the run state; changed detail (a late module, a
     repair) drops it and starts over."""
     tasks = state["tasks"]
-    if _legacy_state(state) or not _done_modules(state) or not all(
+    if not _done_modules(state) or not all(
             _settled(state, task) for task in tasks.values() if task["kind"] in {"module", "repair", "review"}):
         return
     fingerprint = _detail_fingerprint(run_dir, state)
@@ -423,6 +402,10 @@ def locked_state(run_dir: Path) -> Iterator[dict[str, Any]]:
             raise HostRunError(f"unsupported run schema {state.get('schema')!r}: this run was planned for an "
                                f"older answer format or module layout, which this build no longer accepts. "
                                "Run `plan` again for a fresh run")
+        if any(task["kind"] in {"names", "tree"} for task in state["tasks"].values()):
+            raise HostRunError("this run was made by an older build (it has the earlier tree tasks `names` and "
+                               "`tree`); `find`, `query` and `source` still work on it. For new documents run "
+                               "`plan` again and generate")
         yield state
         state["updated_at"] = _now()
         write_json(state_path, state)
@@ -619,8 +602,6 @@ def _settled(state: dict[str, Any], task: dict[str, Any]) -> bool:
 
 
 def _ready(state: dict[str, Any]) -> list[str]:
-    if _legacy_state(state):
-        return []
     tasks = state["tasks"]
     tree_names = [task for task in tasks.values() if task["kind"] == "tree_name"]
     ready = []
@@ -752,7 +733,6 @@ def _prompt(run_dir: Path, state: dict[str, Any], task: dict[str, Any]) -> str:
 def completion_prompt(run_dir: Path, task_id: str) -> str:
     """The same task as one tool-free completion: source is embedded."""
     with locked_state(run_dir) as state:
-        _refuse_legacy(state)
         task = state["tasks"][task_id]
         _, body = _body(run_dir, state, task, embed=True)
         prompt = prompts.TOOL_FREE_RULES + "\n\n" + body
@@ -770,7 +750,6 @@ def completion_prompt(run_dir: Path, task_id: str) -> str:
 def next_tasks(run_dir: Path, *, limit: int | None = None, owner: str | None = None,
                reclaim_after: int | None = None) -> dict[str, Any]:
     with locked_state(run_dir) as state:
-        _refuse_legacy(state)
         _verified_context(run_dir, state)
         _auto_complete_empty_modules(run_dir, state)
         _prepare_tree(run_dir, state)
@@ -1113,7 +1092,6 @@ def _apply_submit(run_dir: Path, state: dict[str, Any], task: dict[str, Any], re
 def submit(run_dir: Path, task_id: str, *, result: Path | None = None, usage: dict[str, Any] | None = None,
            error: str | None = None, raw_text: str | None = None) -> dict[str, Any]:
     with locked_state(run_dir) as state:
-        _refuse_legacy(state)
         # Evidence is only consumed against the frozen snapshot.
         _verified_context(run_dir, state)
         task = state["tasks"].get(task_id)
@@ -1204,7 +1182,6 @@ def resume(run_dir: Path, *, owner: str | None = None, retry_failed: bool = True
     A ``graph_path`` passed on resume must be the same graph the plan froze; a
     different graph is rejected instead of silently ignored."""
     with locked_state(run_dir) as state:
-        _refuse_legacy(state)
         _verified_context(run_dir, state)
         state.setdefault("runtime_environments", []).append(_runtime_environment())
         _auto_complete_empty_modules(run_dir, state)
@@ -1352,7 +1329,7 @@ def _render(run_dir: Path, state: dict[str, Any]) -> None:
         index_notes.append("Module names come from the program (frequent words and the main directory) "
                            "where these tasks are not finished: " + ", ".join(open_tree)
                            + "; resume the run to finish them.")
-    elif units and not state.get("skeleton") and not _legacy_state(state):
+    elif units and not state.get("skeleton"):
         index_notes.append("The module tree is a program grouping with program-made names: it is not frozen "
                            "yet because reading is not finished.")
     made = sum(1 for node in tree.get("nodes") or [] if node.get("note"))
