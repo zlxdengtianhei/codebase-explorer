@@ -32,7 +32,7 @@ class SourceNotEmbedded(GenerateError):
 
 
 # Module and repair detail tasks allow 3 answers; other tasks allow 2 (see
-# host_run). The provider's own pushback (HTTP 429/503) is waited out inside the
+# host_run). The provider's own pushback (HTTP 429/502/503/504) is waited out inside the
 # call and never uses an answer attempt. A task whose call still ends in
 # ``provider_limit`` goes back to the queue and the whole run pauses; the run
 # stops only after this many such calls in a row with no response in between.

@@ -61,9 +61,9 @@ def _csv_row(path: Path, row: dict[str, Any]) -> None:
             writer.writerow({field: row.get(field, "") for field in FIELDS})
 
 
-#: HTTP 429 and 503 are provider pushback, not answers: the call waits and repeats in place.
+#: HTTP 429, 502, 503 and 504 are provider pushback or a gateway hiccup, not answers: the call waits and repeats in place.
 #: A repeat does not use up an answer attempt; each one is a ``rate_limited`` row in calls.csv.
-RATE_LIMIT_STATUSES = (429, 503)
+RATE_LIMIT_STATUSES = (429, 502, 503, 504)
 RATE_LIMIT_RETRIES = 6
 BACKOFF_START_SECONDS = 5
 BACKOFF_MAX_SECONDS = 120
@@ -91,7 +91,7 @@ def _retry_delay(retry_after: str | None, retry: int) -> float:
 
 def _post(request: urllib.request.Request, timeout: int, *, task: str, attempt: int, csv_path: Path,
           secrets: list[str], pushback: list[dict[str, Any]], clock: dict[str, float]) -> tuple[int, bytes]:
-    """POST once, repeating in place after HTTP 429/503. ``pushback`` collects what each refusal said;
+    """POST once, repeating in place after HTTP 429/502/503/504. ``pushback`` collects what each refusal said;
     ``clock['started']`` is reset so a row's seconds cover its own request, not the wait before it."""
     for retry in range(RATE_LIMIT_RETRIES + 1):
         clock["started"] = time.monotonic()
