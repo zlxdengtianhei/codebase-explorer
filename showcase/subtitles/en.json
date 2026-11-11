@@ -1,0 +1,13 @@
+{
+  "lang": "en",
+  "steps": ["Code", "Edges", "Modules", "System", "Read", "Ask"],
+  "ui": {"files": "files", "tokens": "source tokens", "units": "units", "calls": "resolved calls", "inferred": "inferred relations (model)"},
+  "cues": [
+    {"t0": 0.0,  "t1": 4.0,  "text": "A repository is thousands of small pieces."},
+    {"t0": 4.0,  "t1": 11.0, "text": "CBE reads every piece and the calls between them."},
+    {"t0": 11.0, "t1": 17.0, "text": "Pieces that work together become modules."},
+    {"t0": 17.0, "t1": 22.0, "text": "Modules become a map of the system."},
+    {"t0": 22.0, "t1": 28.0, "text": "Open a module. Read what each piece does, with source lines."},
+    {"t0": 28.0, "t1": 35.0, "text": "Exact facts stay in the code. Ask for them when needed."}
+  ]
+}

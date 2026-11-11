@@ -1,645 +1,184 @@
-# Codebase Explorer
+<h1 align="center"><img src="docs/media/logo.svg" width="40" height="40" alt="" align="absmiddle">&nbsp;Codebase Explorer</h1>
+<p align="center">Codebase Explorer turns a source repository into a one-page module map and per-module explanations that people and coding agents can read and query.</p>
+<p align="center"><b>English</b> | <a href="README.zh-CN.md">简体中文</a></p>
+<p align="center">
+<a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
+<a href="pyproject.toml"><img alt="Python 3.12 and 3.13" src="https://img.shields.io/badge/python-3.12%20%7C%203.13-blue.svg"></a>
+<a href="https://github.com/zlxdengtianhei/codebase-explorer/actions/workflows/wheel-install.yml"><img alt="CI" src="https://github.com/zlxdengtianhei/codebase-explorer/actions/workflows/wheel-install.yml/badge.svg"></a>
+</p>
 
-Codebase Explorer (CBE) turns source code and code graphs into structured explanations, a semantic module tree, and a searchable documentation index. It freezes the source, splits it at syntax boundaries, and supplies the relevant code and graph evidence to the model. The same generation state supports host-agent subagents and an OpenAI-compatible API. [Evaluation](#evaluation) summarizes what six evaluation rounds measured and the conditions each result holds under.
+<p align="center"><img src="https://github.com/zlxdengtianhei/codebase-explorer/releases/download/walkthrough-v2.2.0.dev0/hero-1.gif" alt="35-second animation: code units are linked, grouped into modules, shown as a system map; one module page opens and cbe source prints the original lines" width="100%"></p>
 
-This checkout contains **2.2.0.dev0**. It is a development version; see [CHANGELOG.md](CHANGELOG.md) for the changes from 2.1.1. Python 3.12 or 3.13 is required.
+<p align="center">35 seconds: units, links, modules, map, one module page, then the source. <a href="docs/videos.md">Narrated walkthrough videos</a>.</p>
+
+A file tree shows where files are, not what each part is for. CBE (Codebase Explorer) reads a repository and writes what the tree lacks: one page that lists the whole module tree with a line on what each module is responsible for, and a page per module that explains each function and class and links to the exact source lines. You read it. A coding agent can look things up in it with three commands.
+
+## What you get
+
+- **A one-page map.** `docs/INDEX.md` shows the whole module tree, one line per module. Its size is capped at the larger of 2,000 tokens and 3% of the source.
+- **A tree without gaps, the same every time.** A program builds it: units that call or import each other, sit close together and use similar words are grouped. The same input gives the same tree. There are no empty nodes and no duplicate modules.
+- **A page per module.** Each unit has its signature, a source link, and an explanation written by a model. The explanations are written for people to read.
+- **Facts from commands, not from the model.** Signatures, calls and source lines come from `cbe find`, `cbe query` and `cbe source`. `cbe source` checks the file's SHA-256 against the frozen snapshot before it prints a line.
+
+The start of a real `docs/INDEX.md`, generated for flask (unedited):
+
+```markdown
+## Modules
+
+- [**Request Serving Application Runtime**](nodes/request-serving-application-runtime.md) — Combines the concrete WSGI Flask application with request and response wrappers, templating, context lifecycle, and view-facing helpers needed to serve live requests. (136 units; `flask/app.py`, `helpers.py`, `wrappers.py`)
+  - [**Request Helper Utilities and Tests**](nodes/request-helper-utilities-and-tests.md) — Provides view-facing helpers for files, flashing, redirects, streaming, and URL building, plus proxy globals and signal definitions, with focused behavioral tests. (42 units; `helpers.py`, `test_helpers.py`, `flask/blueprints.py`)
+    - [**Helpers, globals, and signals**](nodes/helpers-globals-and-signals.md) — Provides view-facing helpers for sending files, flashing messages, redirecting, streaming, and URL building, plus proxy globals and Flask's blinker signal definitions. (26 units; `helpers.py`, `flask/blueprints.py`, `globals.py`)
+    - [**Helper behavior tests**](nodes/helper-behavior-tests.md) — Verifies aborter selection and dispatch, app redirect delegation, open_resource read modes and encoding, and context-free redirect fallback behavior. (11 units; `test_helpers.py`)
+    - [**File and URL tests**](nodes/file-and-url-tests.md) — Tests custom URL converters, send_file family behavior with path-like objects, stream_with_context lifetime, and url_for inside request contexts. (5 units; `test_helpers.py`, `test_converters.py`)
+  - [**WSGI Request Dispatch Core**](nodes/wsgi-request-dispatch-core.md) — Implements the WSGI-callable Flask class and its pipeline: request entry, URL-to-view matching, response finalization, error handler resolution, and test and async wiring. (35 units; `flask/app.py`, `test_async.py`, `sansio/app.py`)
+```
+
+The page you read first got smaller. Size of that page in `o200k_base` tokens, on three full runs (the earlier version's tree is in the "before" column):
+
+| Repository | Before | Now | Empty tree nodes before / now |
+|---|---:|---:|---:|
+| flask | 16,076 | 3,078 | 22 / 0 |
+| ruby_llm | 15,938 | 2,074 | 8 / 0 |
+| gson | 12,643 | 2,514 | 16 / 0 |
+
+Full example: [flask](examples/flask/docs/INDEX.md). More in [Examples and docs](#examples-and-docs).
 
 ## Quickstart
 
-This path documents the four core files of [cJSON](https://github.com/DaveGamble/cJSON) at commit `6d9f244`, the same input as the cJSON example in the evaluation. Steps 1–4 run locally and make no model call. Step 5 needs a model. CBE has no PyPI package; install it from a checkout of this repository.
+CBE is not on PyPI. It needs Python 3.12 or 3.13. There are two ways to run it. Both end in the same `docs/` folder.
 
-1. Install CBE and check the grammars:
+**A. Inside Claude Code, on your own subscription.** The skill makes Claude Code's subagents write the explanations.
 
-   ```sh
-   uv tool install --python 3.13 /path/to/codebase-explorer
-   cbe --version    # prints: python -m cbe 2.2.0.dev0
-   cbe languages    # c, cpp, python, javascript, typescript, tsx, java and go show "available": true
-   ```
+1. Install CBE: `uv tool install git+https://github.com/zlxdengtianhei/codebase-explorer` (or `pipx install git+https://github.com/zlxdengtianhei/codebase-explorer`).
+2. Optional, for the call graph: `cbe graph setup` downloads Joern and a Java runtime into your user cache directory (about 1.9 GB; Linux x86_64 and macOS).
+3. In your project, install the skill: `cbe-install install --host claude-code`.
+4. Start Claude Code there and ask: "Use the codebase-explorer skill to generate documentation for this repository."
+5. The agent prints the planned file, token, module and task counts, runs the subagents, and verifies the result.
+6. Open `<run_dir>/docs/INDEX.md`. The agent reports `run_dir`.
 
-2. Get the input:
+The Claude Code path has run end to end (see [What it costs](#what-it-costs)). `cbe-install install --host` also takes `codex`, `opencode` and `dsh`: they install the skill, and we have not run them end to end. Details: [docs/running.md](docs/running.md#generate-through-a-host-agent).
 
-   ```sh
-   git clone https://github.com/DaveGamble/cJSON.git "$HOME/cbe-demo/cJSON"
-   mkdir -p "$HOME/cbe-demo/cjson"
-   git -C "$HOME/cbe-demo/cJSON" archive 6d9f2443ab071f86e5d9b43025a40929ec41c46c \
-     cJSON.c cJSON.h cJSON_Utils.c cJSON_Utils.h | tar -x -C "$HOME/cbe-demo/cjson"
-   ```
+**B. From the command line, with any OpenAI-compatible endpoint.** There is no default model: you must pass `--model`.
 
-3. Check how CBE reads the source. This takes under a second here:
-
-   ```sh
-   cbe context build "$HOME/cbe-demo/cjson" --output "$HOME/cbe-demo/context.json"
-   ```
-
-   ```text
-   {
-     "output": "<HOME>/cbe-demo/context.json",
-     "schema": "cbe-context/1",
-     "files": 4,
-     "chunks": 326,
-     "diagnostics": [
-       {
-         "path": "cJSON.c",
-         "code": "syntax_error",
-         "message": "tree contains an ERROR node near line 1; chunk coverage is preserved"
-       },
-       {
-         "path": "cJSON.h",
-         "code": "ambiguous_language",
-         "message": "'.h' is valid in c, cpp; parsed with c. Register a mapping or use a unique extension to remove the ambiguity."
-       },
-       ...
-     ]
-   }
-   ```
-
-   The full output lists five diagnostics: `syntax_error` for `cJSON.c`, `cJSON.h` and `cJSON_Utils.h`, and `ambiguous_language` for both headers. The `syntax_error` entries come from cJSON's macros; see [Known limitations and troubleshooting](#known-limitations-and-troubleshooting). Generation does not need this file, because `generate` and `host plan` freeze their own copy. Use it to see the file list, chunk count and diagnostics before you spend model calls.
-
-4. Optional: build a code graph with Joern. `cbe graph setup` downloads Joern and a Java runtime once (about 1.9 GB, see [Optional graph analyzers](#optional-graph-analyzers)). The build took 28 seconds here and makes no model call:
+1. Install CBE as in step 1 above.
+2. Put the key in an environment variable: `export CBE_API_KEY=...`
+3. Optional: build the call graph (`cbe graph setup`, then `cbe graph build /abs/repo --output /abs/graph.json`).
+4. Generate. Paths must be absolute:
 
    ```sh
-   cbe graph setup
-   cbe graph build "$HOME/cbe-demo/cjson" --output "$HOME/cbe-demo/graph.json" --with-dataflow
-   cbe graph capabilities --graph "$HOME/cbe-demo/graph.json"
+   cbe generate /abs/repo --model MODEL --base-url https://your-endpoint.example/v1 \
+     --api-key-env CBE_API_KEY --graph /abs/graph.json --run-dir /abs/run
    ```
 
-   The graph has 21,106 nodes and 33,164 edges. `capabilities` reports C imports `resolved` (3 resolved, 17 external), calls `partial` (350 resolved, 307 unresolved, 84 external), and CFG and dataflow `resolved`.
+5. Open `/abs/run/docs/INDEX.md`. Drop `--graph` to run without a call graph.
 
-5. Generate the documents. This needs one of the following:
-
-   - **A host agent with subagents (Claude Code or Codex).** The subagents run on your own subscription. Run `cbe-install install --host claude-code` (or `--host codex`) in `$HOME/cbe-demo/cjson`, start the agent there, and ask: "Use the codebase-explorer skill to generate documentation for this repository." The agent plans the run first; for these four files `cbe host plan` prints `"modules": 4` and `"tasks": 8`, and each review finding adds one repair task later. See [Generate through a host agent](#generate-through-a-host-agent).
-   - **An OpenAI-compatible endpoint, an API key and a model ID.** `cbe generate` talks only to such an endpoint (`--host api`, the default, is still accepted).
-
-     ```sh
-     cbe generate "$HOME/cbe-demo/cjson" --host api \
-       --base-url https://your-endpoint.example/v1 --api-key-env CBE_API_KEY \
-       --model your-model-id --graph "$HOME/cbe-demo/graph.json" \
-       --run-dir "$HOME/cbe-demo/run" --review sample
-     ```
-
-     In the evaluation, this input with `zai/glm-5.3-flash` took 13 gateway requests and 0.084977 USD by the gateway's own price table, and the first pass completed. [What a run costs](#what-a-run-costs) lists larger repositories.
-
-6. Read the result. Open `$HOME/cbe-demo/run/docs/INDEX.md`, then look up a symbol:
-
-   ```sh
-   cbe find --run-dir "$HOME/cbe-demo/run" --term cJSON_Parse --limit 3
-   cbe query --run-dir "$HOME/cbe-demo/run" --id 'cJSON.c::function::cJSON_Parse::33515'
-   ```
-
-   [Find and query](#find-and-query) shows the output from the evaluation's cJSON run. Inventory IDs such as `cJSON.c::function::cJSON_Parse::33515` come from the source, so the same four files give the same IDs. Summaries, explanations and `grp:` group IDs come from the model, so yours will differ.
-
-## Install and inspect a repository
-
-CBE is not published on PyPI. Install it from this checkout:
+Then look things up. `RUN` is the absolute run directory, and the ID is the second column of the `find` output:
 
 ```sh
-uv tool install --python 3.13 .
-cbe --version
-cbe languages
+cbe find   --run-dir "$RUN" --term url_for
+cbe query  --run-dir "$RUN" --id 'src/flask/helpers.py::function::url_for::6511'
+cbe source --run-dir "$RUN" --id 'src/flask/helpers.py::function::url_for::6511' --context 2
 ```
 
-`cbe --version` prints `cbe 2.2.0.dev0`. When `cbe` runs from a source tree without installed package metadata, it prints `cbe source` instead.
+Every other command and option is in [docs/reference.md](docs/reference.md).
 
-The standard installation includes Tree-sitter grammars for C, C++, Python, JavaScript, TypeScript/TSX, Java, and Go. The `languages` extra adds Ruby, Rust, PHP, and C#; `languages-community` adds the community grammars for Kotlin and Swift:
+## How it works
 
-```sh
-uv tool install --python 3.13 '.[graphs,languages,languages-community]'
-cbe languages
+```mermaid
+flowchart LR
+  A["Freeze the source"] --> B["Tree-sitter splits it at syntax boundaries"]
+  B --> C["Joern builds call and import graph (optional)"]
+  C --> D["Model explains each code unit"]
+  D --> E["Program groups units into a module tree"]
+  E --> F["Model names each module"]
+  F --> G["Render INDEX.md, module pages, catalog.json"]
+  classDef program fill:#dff7f3,stroke:#0f9b8e,color:#0f1b2d
+  classDef model fill:#fff0cc,stroke:#c98a00,color:#0f1b2d
+  class A,B,C,E,G program
+  class D,F model
 ```
 
-All use the same context interface. `cbe languages` reports extensions, grammar versions, provenance, availability, and plugin errors. Missing grammars and parse errors remain visible in diagnostics. ABAP, Jimple bytecode, and Ghidra output do not currently have a matching source grammar in this interface. A `.h` file defaults to C with an ambiguity diagnostic. Pass `--header-language cpp` to `context build`, `graph build`, `host plan`, or `generate` for C++ headers (`c` also selects C explicitly). A resumed run keeps its original language choice.
+Teal steps are ordinary code and make no model call. Amber steps are model calls.
 
-Build a source context without making a model call:
+- **Freeze.** CBE keeps a hashed copy of the source, so every line number and quote can be checked later.
+- **Split.** Tree-sitter cuts each file at syntax boundaries. Every byte lands in some chunk.
+- **Explain.** The model writes the explanations batch by batch. It names symbols by the short numbers in a list, so it cannot invent an ID. The program asks again only for the symbols the model skipped.
+- **Group.** The program, not the model, builds the module tree from calls and imports, location, and wording. The same input gives the same tree.
+- **Name.** The model gives each module a name, one line on what it is responsible for, and two or three sentences on how to read it. It cannot add, drop or move a node.
+- **Render.** The program writes `docs/INDEX.md`, one page per module, `DEPENDENCIES.md` and `RUN.md`, and the `catalog.json` that `find`, `query` and `source` read.
 
-```sh
-cbe context build /absolute/path/to/repo --output /absolute/path/to/context.json
-cbe context query --context /absolute/path/to/context.json --path src/example.py
-```
+## Code graph
 
-Chunks have stable identifiers within a snapshot, original byte and line ranges, source text, hashes, and declaration context. Nested declarations do not duplicate their parent's source. Joining a file's chunks in byte order reconstructs that file. Large declarations are segmented at syntax boundaries; indivisible large tokens and unsupported inputs are reported explicitly.
+Without a graph, CBE still works. With one, the explanation tasks and the dependency view also get static import, call and control-flow evidence. The graph comes from [Joern](https://joern.io/), which needs Java 21 or newer. `cbe graph setup` downloads the pinned Joern and, if no suitable Java is found, a Java runtime into your user cache directory (about 1.9 GB in total). `cbe graph setup --check` downloads nothing and reports what is installed. `cbe graph build` then writes the graph file that `--graph` takes. It does not export dataflow unless you pass `--with-dataflow`, because a generation run does not read it and it was over half of the graph file on flask (23 of 41 MB). To install Joern by hand, see [docs/reference.md](docs/reference.md#optional-graph-analyzers).
 
-### Optional graph analyzers
-
-Context building and generation work without any analyzer. A graph adds static import, call, control-flow and dataflow evidence to the detail tasks and to the dependency view. Without a graph, the run records that no graph was supplied, and no dependency pair can be graph-confirmed.
-
-| Analyzer | What it adds | How to install | How CBE finds it |
-|---|---|---|---|
-| Joern 4.0.654 and Java 21 or newer | Calls, CFG and dataflow; include and import declarations. The next section lists the languages and their conditions. | `cbe graph setup` downloads the pinned Joern release and, when no Java 21+ is found, a Temurin 21 JRE into the user cache directory (`~/.cache/cbe/tools` on Linux, `~/Library/Caches/cbe/tools` on macOS), after checking SHA-256 values pinned in the code. Linux x86_64 and macOS (arm64, x86_64) are supported; on other platforms install by hand (below). `cbe graph setup --check` downloads nothing and reports what it finds. | Joern: `--joern-home DIR`, then `CBE_JOERN_HOME`, then the cache directory, then `joern-parse` on `PATH`. `DIR` is the directory that holds `joern` and `joern-parse`; CBE also looks in `DIR/joern-cli`. A `--joern-home` or `CBE_JOERN_HOME` that does not hold `joern-parse` is an error naming that path; CBE does not fall back to the next place. Java: `JAVA_HOME`, then `java` on `PATH`, then the cache directory. |
-| dependency-cruiser 16 and Node.js | JavaScript and TypeScript import graph | `npm install dependency-cruiser@16` in a tools directory. Tested with 16.10.4 on Node.js 22.20.0. | `--depcruise-bin PATH` (for example `.../node_modules/.bin/depcruise`), then `CBE_DEPCRUISE_BIN`, then `depcruise` on `PATH` |
-| Grimp 3.17 | Python import graph | `uv tool install --python 3.13 '.[graphs]'` | Imported from the CBE environment |
-
-<details>
-<summary>Install Joern by hand</summary>
-
-`cbe graph setup` is the short way. To install yourself, download the `joern-cli-<os>-<arch>.zip` asset for your platform (for example `joern-cli-linux-x86_64.zip` or `joern-cli-macos-arm64.zip`) from the [Joern v4.0.654 release](https://github.com/joernio/joern/releases/tag/v4.0.654), unzip it, and pass the resulting `joern-cli` directory as `--joern-home DIR` or set `CBE_JOERN_HOME`. Each asset has a `.sha512` file next to it. Install Java 21 or newer yourself (Joern's [installation page](https://docs.joern.io/installation/) asks for JDK 19 and says newer JDKs might work; the graph in this README was built on JDK 21.0.9) and keep it on `PATH` or in `JAVA_HOME`. The macOS assets are pinned from upstream metadata and have not been exercised by us yet. Do not use a Joern version other than 4.0.654: the graph classification is tested against its output.
-
-</details>
-
-Check what ran with `cbe graph capabilities --graph /absolute/path/to/graph.json`. The `backend.components` list names each analyzer and its version, and every `capabilities` row gives a language, a graph kind and a status, for example `resolved`, `partial`, `empty`, `failed` or `unavailable`. The Quickstart graph reports:
-
-```text
-"backend": {"name": "joern", "version": "4.0.654", "components": [{"name": "joern", "version": "4.0.654"}]}
-```
-
-What a missing analyzer costs:
-
-- **No Joern:** no calls, CFG or dataflow for any language. `graph build` records `backend_unavailable` ("Joern CLI not found; call/cfg/dataflow/import graph skipped; run `cbe graph setup` (downloads about 1.9 GB)"). When no other analyzer covers the requested languages, as for the C-only Quickstart input, `graph build` exits 2 with `no graph backend was available for the requested languages`.
-- **No dependency-cruiser:** the JavaScript and TypeScript import graph is skipped with `backend_unavailable`. If Joern ran, it still records import declarations, but these do not establish a resolved file dependency.
-- **No Grimp:** the Python import graph is skipped with `backend_unavailable` ("grimp is not installed; Python import graph skipped (install the 'graphs' extra)").
-
-## Generate and query code graphs
-
-Tree-sitter provides syntax and code boundaries. Import resolution, calls, control flow, and data flow come from external analyzers. Each graph records the backend version, input hashes, capabilities, unresolved targets, and analysis conditions. A graph that does not match the current source is rejected when building a context.
-
-The graph adapters use [Joern](https://joern.io/), [Grimp](https://grimp.readthedocs.io/), and [dependency-cruiser](https://github.com/sverweij/dependency-cruiser) according to the language and graph type. The selected integration versions are Joern 4.0.654, Grimp 3.17, and dependency-cruiser 16. Install the `graphs` extra for Grimp (`uv tool install --python 3.13 '.[graphs]'`). Joern and dependency-cruiser are separate installations; `cbe graph setup` installs Joern and a JRE for you. The CBE package does not include Joern, Java, or Node dependencies.
-
-| Source language | Import backend | Call graph with Joern 4.0.654 | Relevant conditions |
-|---|---|---|---|
-| C / C++ | Joern include declarations | works | Include paths, macros and compilation settings affect results; virtual calls may bind to a static base target. |
-| Python | Grimp, plus Joern declarations | works | Package layout affects imports; dynamic and external calls can remain unresolved. |
-| JavaScript / TypeScript | dependency-cruiser, plus Joern declarations | works | Dynamic imports, CommonJS and external targets may remain partial. |
-| TSX | dependency-cruiser, plus Joern declarations | not tested | Uses the same Joern frontend as JavaScript and TypeScript. |
-| Java | Joern declarations | works | Project types and dependencies affect resolution. |
-| Go | Joern declarations | works | Cross-package calls may remain unresolved or external. |
-| Ruby | Joern declarations | works | CBE passes `--no-default-exclude` so `test`, `tests` and `spec` paths are analyzed. |
-| Rust | Joern declarations | needs `cargo` | The frontend runs `cargo` and needs a Cargo project layout; a flat source directory can fail. |
-| PHP | Joern declarations | needs `php` | An external PHP runtime (7 or later) must be on `PATH`. The local trial without it reported a failed analysis. |
-| C# | Joern declarations | known failure | Joern 4.0.654 failed on a real 55-file repository: the export script hit a null pointer error, and the build recorded a failed capability. A two-file test fixture works, so small inputs may succeed. |
-| Kotlin | Joern declarations | known failure | Joern 4.0.654 failed on a real 146-file repository: `joern-parse` stopped with `key not found: MethodRef`, and the build recorded a failed capability. A two-file test fixture works, so small inputs may succeed. |
-| Swift | Joern declarations | not tested | |
-
-"works" means a real repository of that language produced a call graph with Joern 4.0.654; resolution quality still depends on the code. `cbe languages` reports the same status as `call_graph` for each language. Source parsing and chunking support every language in the table whatever the call-graph column says.
-
-Joern import declarations do not establish a resolved file dependency. Capabilities describe the actual run, including frontend failures; a registered source language alone does not establish semantic graph coverage. `graph build` finds the Joern and Java that `cbe graph setup` installed. Pass `--joern-home` to use another Joern, and `--depcruise-bin` for a local dependency-cruiser executable:
-
-```sh
-cbe graph build /absolute/path/to/repo \
-  --output /absolute/path/to/graph.json \
-  --depcruise-bin /absolute/path/to/node_modules/.bin/depcruise
-cbe graph capabilities --graph /absolute/path/to/graph.json
-cbe graph query --graph /absolute/path/to/graph.json --path src/example.py --kind call
-cbe context build /absolute/path/to/repo \
-  --graph /absolute/path/to/graph.json --output /absolute/path/to/context.json
-```
-
-`--language` can limit analysis to a language. `--max-methods` limits only CFG export per frontend (default: unlimited); method identities and calls remain complete, diagnostics report the exact omitted method count, and CFG capability is `partial` when methods are omitted. Dataflow (reaching definitions) is not exported by default, because nothing in a generation run reads its content and it was over half of `graph.json` on flask (23 of 41 MB). `--with-dataflow` exports it; giving `--max-reaching-defs` (cap on reaching-definition edges, default 50,000) or `--dataflow-path-method` (sampled value-flow paths) also turns it on. Without it the dataflow capability is `not_requested`, and `cbe graph query --kind dataflow` and `cbe query --edges dataflow` answer "this graph was built without dataflow; rebuild with `cbe graph build --with-dataflow`". CFG is exported by default because its node labels feed the graph evidence in detail prompts. `--joern-heap 8g` sets the Joern JVM maximum heap through `JAVA_TOOL_OPTIONS`, preserving other JVM options; without it, JVM settings are inherited. Backend failures retain their cause in graph diagnostics and print a line to stderr. Partial builds succeed when another backend completes; if every backend fails, the command exits nonzero and retains a diagnostic graph when possible. Joern JSON is written compactly to a writer to avoid an extra whole-document string and byte array. `graph query` accepts `import`, `call`, `cfg`, or `dataflow`, a node ID, and an edge direction (`in`, `out`, or `both`). A local query retains boundary endpoints and identifies omitted scope. It can read the graph embedded in a generation run's frozen `context.json` for manual inspection of the evidence used at planning. Host detail tasks receive a bounded excerpt and a separate complete evidence file when the batch has graph nodes. The full graph stays in the output file; `graph build` prints a compact result and capability report.
-
-The graph's `quality` audit reports edge status counts, integrity issues, and incomplete capabilities; `cbe graph capabilities --graph /absolute/path/to/graph.json --repo /absolute/path/to/repo` refreshes the audit against current repository files.
-
-Graphs produced by CBE record the registered source set and recognized repository configuration files. Context building and generation check their hashes and reject additions, removals, edits, or unstable builds. These checks run before and after analysis of the repository; they do not create an isolated filesystem snapshot. External graphs without configuration provenance retain source-manifest validation, with configuration identity unknown.
-
-Graph kinds have different meanings:
-
-- **Import** edges identify static module, package, or include dependencies according to the selected resolver.
-- **Call** edges are static analysis results. Dynamic dispatch, reflection, unresolved imports, and external code can leave targets unknown or conditional.
-- **CFG** edges describe the analyzer's control-flow nodes. They are not a runtime execution trace.
-- **Dataflow** edges or paths describe the analyzer's definition/use or value-flow analysis, with its stated scope and library models. A local definition/use graph does not prove complete interprocedural data flow.
-
-C/C++ include paths, macros, build configuration, and generated sources affect analysis. Dynamic languages also require explicit uncertainty. Consult the generated `capabilities` and `diagnostics` instead of treating a nonempty graph as complete coverage.
-
-## Generate through a host agent
-
-Install the bundled skill in the project where the agent will run:
-
-```sh
-cbe-install install --host claude-code   # or --host codex
-```
-
-For Claude Code this installs two things: the skill in `.claude/skills/` and the `cbe-writer` subagent in `.claude/agents/` (Read and Write tools only, so the subagents that write results cannot run shell commands). `--scope user` installs both under `~/.claude/`. `cbe-install` never overwrites a skill or agent file that it did not install, and `cbe-install uninstall` removes what it installed.
-
-For Codex the skill goes to `.agents/skills/codebase-explorer/` in the project, or to `~/.agents/skills/` with `--scope user`. Codex finds skills in `.agents/skills` from the working directory up to the repository root and in `~/.agents/skills`. Invoke it with `$codebase-explorer`, or let Codex select it. No subagent file is installed for Codex.
-
-Both installs write the absolute path of the Python that runs CBE into the installed `SKILL.md`, so the agent does not need `cbe` on `PATH`. Run `cbe-install upgrade` after you move or reinstall the tool environment. `cbe-install doctor --host claude-code` (or `--host codex`) checks an install. In a scratch project:
-
-```text
-$ cbe-install install --host claude-code
-installed /path/to/project/.claude/skills/codebase-explorer
-installed /path/to/project/.claude/agents/cbe-writer.md
-runtime cbe: /path/to/tool-environment/bin/python -m cbe
-$ cbe-install install --host codex
-installed /path/to/project/.agents/skills/codebase-explorer
-runtime cbe: /path/to/tool-environment/bin/python -m cbe
-```
-
-Then ask the agent in that project, for example: "Use the codebase-explorer skill to generate documentation for this repository." The agent tells you the planned file, token, module and task counts, dispatches one subagent per task, and reports usage and cost at the end. So far the Claude Code path has run end to end on a small C repository (Claude Code 2.1.301 with Sonnet subagents). The Codex instructions have not been run end to end.
-
-The host uses its existing subagent facility and subscription. It drives the CLI's durable task loop:
-
-```sh
-cbe host plan /absolute/path/to/repo --graph /absolute/path/to/graph.json \
-  --run-dir /absolute/path/to/run --review sample --jobs 4 --host claude-code
-cbe host next --run-dir /absolute/path/to/run
-# Dispatch the returned task instructions to a subagent, then submit its JSON result.
-cbe host submit --run-dir /absolute/path/to/run --task TASK
-cbe host verify --run-dir /absolute/path/to/run
-```
-
-The skill describes the complete loop and the result contracts. `host plan` accepts `.` or any path for the repository; `--run-dir`, `--repo`, and `--graph` need absolute paths. The skill's commands avoid quoted shell variables, because Claude Code asks for confirmation before it runs a command with quoted text it cannot check, even when `cbe` is on the allow list. The `tasks` count that `plan` prints covers the planned tasks only; each review finding adds one repair task later. `next` leases every task it returns, including the re-ask of a rejected task, so each one needs a subagent; attempts at one task share a label and their usage adds up. `submit` prints one JSON object and exits 0 whether it accepts or rejects: `accepted: true` carries `normalized` and `flags`, and `accepted: false` carries `error`, `attempts`, and `task_status` (`pending` for a queued re-ask, `failed` when the attempts are used up). `progress.log` records both.
-
-Detail authors receive their assigned frozen source chunks and local graph evidence. The program, not the model, builds the module tree (`skeleton.build`): it groups units by their resolved call and import edges, shared files and directories, and similar wording, and gives each unit one primary place. The model only names the modules and the groups above them, from responsibility summaries, source locations and counted unit edges. Static resolved edges retain their analyzer kind. Detail authors' relations are a separate `kind=relation` category with `provenance=model_inferred`; they do not become static call evidence. Reports count the categories separately. A directory or a dense set of import edges does not by itself define a module's responsibility.
-
-Once all detail and review has settled, the program freezes the tree structure in `host/state.json`. `tree_name_<k>` tasks name the leaf modules in batches of about 12,000 prompt tokens and run in parallel; one `tree_top` task then names every group above them (a repository that is a single module has no `tree_top`). A model answer cannot add, remove or move a node or a unit. Answers are decoded node by node with short numbers (`M1`, `u3`, `G2`): good nodes are kept and a re-ask lists only the rejected ones. A node that is still unnamed after the last answer gets a title made by the program from its members' frequent words and main directory; the task completes, the node carries a `note`, and RUN.md and `summary.json` count these. The tree is always valid: no empty node, no two siblings with the same title, evidence units inside the node. A repair or a late reading batch changes the detail, so the skeleton and the names are made again.
-
-The dependency view labels pairs as **graph-confirmed** (tree and resolved call/import edges), **model-inferred** (tree only), or **graph-only** (graph only). The first two count edges between subtrees; graph-only counts direct node owners. **Containment** rows show resolved edges between ancestor direct units and a descendant subtree as `→ N / ← M`, relative to the listed pair. **Within containment** rows list direct owner pairs separately. Both containment categories stay out of Mermaid and the three dependency totals. Graph-only and within containment each keep their own top 40 pairs by edge count and report their own omitted count. `summary.json` records the full within containment count in `within_containment`. Key flows link unit ids; when the model supplies none, the report labels the first five paths **Program candidates, not selected by the model**. Program labels and navigation use English; model prose keeps its original language.
-
-Two advisory diagnostics, cohesion (P2) and granularity (P3), appear in `summary.json`; RUN.md shows one line for each. They never request a rewrite.
-
-`--graph` is optional. Without it the context explicitly records that no analyzed graph was supplied. The model must not invent missing relations. `--review` selects `none`, `sample`, or `all`. Operational completion, structural validity, and semantic review are separate results.
-
-## Use the generated docs from an agent
-
-Give an answering agent the documents as a map and the source as the authority, and tell it the order to use them in. Having the commands is not enough: in the evaluation, the agent that had CBE's documents and commands issued `find`/`query` in only 7 of 48 flask questions, executed them in 2 of 48 pytest questions, and ran them in 9 of 40 curl questions ([Q-A: flask](evaluation/README.md#q-a-flask-e2), [Q-A: pytest](evaluation/README.md#q-a-pytest-e3), [Q-A: curl](evaluation/README.md#q-a-curl-e5)). A prompt such as this one states the order:
-
-```text
-The repository is at /absolute/path/to/repo. CBE documentation for it is in
-/absolute/path/to/run/docs, and the CBE run directory is /absolute/path/to/run.
-
-1. Read /absolute/path/to/run/docs/INDEX.md first. Choose the responsibility
-   node that matches the question and open its page in docs/nodes/.
-2. To locate a symbol, run
-     cbe find --run-dir /absolute/path/to/run --term NAME
-   and copy an id from the second column. Then run
-     cbe query --run-dir /absolute/path/to/run --id ID
-   Always write --term and --id. A bare argument fails with exit code 2.
-3. Before you answer, read the source lines that the page or query cites:
-     cbe source --run-dir /absolute/path/to/run --id ID --context 2
-   or open the file. The explanations are written by a model. Where they
-   disagree with the source, the source is right.
-4. Cite file paths and line ranges in the answer.
-```
-
-This prompt was not part of the evaluation, so it is a suggestion, not a measured improvement. With the skill installed, the skill's "Read and query the result" section gives a Claude Code or Codex agent the same commands. You can ask, for example: "Use the codebase-explorer skill and the run at /absolute/path/to/run to answer: where does cJSON free a partially parsed tree?"
-
-## Generate through an API
-
-Use any configured OpenAI-compatible chat-completions endpoint:
-
-```sh
-# Supply the credential through the named environment variable using your normal secret setup.
-cbe generate /absolute/path/to/repo --host api \
-  --base-url https://your-endpoint.example/v1 --api-key-env CBE_API_KEY \
-  --model your-model-id --graph /absolute/path/to/graph.json \
-  --run-dir /absolute/path/to/run --review sample
-```
-
-`--config /absolute/path/to/config.json` provides host configuration. API credentials stay in environment variables or the supported credential-file reference. If no credential is configured, CBE omits the Authorization header for endpoints that allow unauthenticated requests. Do not put credentials in a URL. The API client records returned usage and preserves unknown values when usage is absent. Failed completions retain a bounded, redacted provider response, available usage, and finish reason before text extraction; truncation is explicit. A response with only reasoning and no answer remains a failed attempt. Reported token counts are transport/accounting evidence; they do not prove that a model understood the code.
-
-For `--host api`, the model `glm-5.3-flash` (under any gateway prefix, for example `zai/glm-5.3-flash` or `group/glm-5.3-flash`) selects resource defaults from
-`cbe/model_settings.py`: 1,800 seconds per call, `output_max_tokens: 49152` (including
-reasoning), `reasoning_effort: "low"`, JSON object response mode, and reading-batch target/max of
-8,000/10,000 source tokens. Whole files stay intact; a single file may exceed
-the batch maximum up to the existing 60,000-token file limit. Other API model
-IDs retain 420 seconds, no explicit output/reasoning limit, and the original
-20,000/25,000 batch sizes.
-
-Set API resource values with `--config`; explicit `--timeout` takes precedence
-over the config, which takes precedence over model defaults. For example:
-
-```json
-{
-  "timeout": 1800,
-  "output_max_tokens": 60000,
-  "reasoning_effort": "low",
-  "response_format": {"type": "json_object"},
-  "batch_target_tokens": 8000,
-  "batch_max_tokens": 10000
-}
-```
-
-The endpoint must support the configured request fields. Batch limits apply to
-new plans; `--resume` keeps the frozen batches. A response ending with `length`
-(or `max_tokens`/`max_output_tokens`) fails with `output_limit`, even if its JSON
-parses. Module and repair detail tasks allow 3 answers; other tasks allow 2.
-A detail answer is decoded unit by unit and a re-ask lists only what is missing
-(see the answer rules below); for the other tasks each rejection includes the
-error, and on the final invalid answer the driver normalizes usable content.
-Truncated attempts cannot be accepted by final normalization. HTTP 429, 502, 503 and 504
-are waited out inside the call (the server's `Retry-After`, else 5 s doubling to
-120 s, at most 6 repeats): they use no answer attempt and each shows as a
-`rate_limited` row in `calls.csv`. A call that is still refused goes back to the
-queue and the run pauses 60 s; the run stops with `provider_limit` only after 3
-such calls in a row with no response in between. Increase
-`output_max_tokens` caps API output (sent as the provider's `max_tokens` field);
-`batch_max_tokens` caps source input per reading batch.
-CLI help reads the model defaults table directly.
-
-API config is parsed and validated before planning or sending model requests.
-Malformed JSON or invalid resource settings exit 2 without a generated summary.
-Timeout and token limits must be positive integers (numeric strings and zero are
-rejected); prices must be three finite nonnegative numbers. An explicit batch
-target must not exceed its maximum. For models without a default batch target,
-setting only `batch_max_tokens` lowers the fallback target to that maximum when
-necessary; unspecified limits use the constants from `batching`.
-
-Timeouts and provider failures remain visible as their own errors. Only a
-source-bearing response whose reported input is too small is marked
-`source_not_delivered`. The rejected answer is not published; the status names
-failed tasks and suggests fixing the cause, then using `--resume`.
-
-API `summary.json` sums observed input/output tokens, including returned failed
-calls. Missing-call counters and `usage_complete: false` identify an incomplete
-sum; absent usage is never estimated. Cache totals remain unknown when any
-cache counter is missing, with the known portion in `observed_cache_tokens`.
-API price is unknown (`priced_usd: null`) unless config supplies
-`"price_per_million": [INPUT, OUTPUT, CACHE]` in USD per million tokens; missing
-usage still prevents pricing. The raw API record includes `actual_model` from
-the provider response so gateway fallback can be distinguished from the
-requested model.
-
-Choose a model that your own account can use. CBE does not promise that a provider, model, or subscription is free.
-
-### What a run costs
-
-The rows below are copied from the [Generation runs](evaluation/README.md#generation-runs) table of the evaluation. All runs used `zai/glm-5.3-flash` through `--host api` and the Magpie gateway. `cost_usd` comes from the gateway's own price table, not from a provider's public price list; re-price with a dated public price list before you compare it with other reports. Request and token counts do not depend on prices.
-
-| Repository | Source tokens (o200k) | Gateway requests | `cost_usd` (gateway price table) | First pass complete | Resumes |
-|---|---:|---:|---:|---|---:|
-| cJSON (4 files) | 34,364 | 13 | 0.084977 | yes | 0 |
-| flask | 125,125 | 33 | 0.250453 | yes | 0 |
-| svelte r1 / r2 / r3 | 531,705 | 128 / 136 / 144 | 0.828273 / 0.843545 / 1.018638 | no / no / no | 1 / 1 / 1 |
-| pytest | 752,827 | 194 | 1.660272 | no | 2 |
-| curl | 1,741,311 | 341 (1 HTTP 429) | 2.116713 | no (stopped by HTTP 429) | 2 |
-
-Read the table with these conditions:
-
-- One model, with CBE's defaults for that exact model ID (see above). With another model the counts and costs may differ.
-- The figures include the resumes. Most incomplete first passes came from malformed module answers: `schema_error` in 46 / 52 / 57 of 128 / 136 / 144 calls on svelte, 78 of 194 on pytest, and 112 of 341 on curl. The resumes used the same settings, with no code change and no manual repair.
-- flask ran at CBE commit `9c6499e`; the other rows at `a87674d`.
-- Building the graph makes no model calls and is not in these figures.
-- Wall clock was recorded only, on a heavily loaded machine through a shared gateway. For example, the three svelte runs took 2.32, 2.69 and 3.18 hours ([Q-C](evaluation/README.md#q-c-cost-and-size-e4b-e4c)).
-- The evaluation measured only the API path. A host-agent run spends your subscription instead; `cbe host import-usage` and `cbe host cost` report its usage afterwards.
-
-## Read, resume, and verify
-
-Open the `index` path in the generation result, `RUN/docs/INDEX.md`, where `RUN` is the run directory. The output includes the semantic navigation tree, detail explanations with source anchors, and a machine-readable catalogue.
-
-### Run directory layout
-
-Start at `docs/INDEX.md`; the files outside `docs/` serve the commands and scripts. The sizes are from the evaluation's cJSON run (4 files, 34,364 source tokens) and, where stated, from its svelte runs (440 files, 531,705 source tokens; [Q-C](evaluation/README.md#q-c-cost-and-size-e4b-e4c)).
-
-| Path in `RUN` | What it is | Size |
+| Status | Languages | Conditions |
 |---|---|---|
-| `docs/INDEX.md` | Start here. The overview, the module tree to its leaves with one capability line per node, key flows and the three lookup commands. Its size is capped at the larger of 2,000 tokens and 3% of the source tokens: over that, the deepest level is folded into the node pages first. | `summary.json` → `tree.index` records the budget and the tokens used |
-| `docs/DEPENDENCIES.md`, `docs/RUN.md` | Dependency view and list; then reading stats, graph coverage, generation notes and the cohesion and granularity readings. | |
-| `docs/nodes/<node>.md` | One page per responsibility node: its capability, what it depends on, then each unit with its signature, a program-derived source link, the explanation and its relations. The footer gives `find`, `query` and `source` commands. | 14 pages; `docs/` holds 114 KB |
-| `catalog.json` | The machine-readable catalogue that `find` and `query` read: units, every inventory symbol with its disposition (`unit`, `grouped` or `index_only`), files, tree nodes, node dependencies, key flows, and one shared table of call and import edges. | 1.1 MB; svelte about 27 MB |
-| `context.json` | The frozen source snapshot: every chunk's text, byte and line range and hash, plus the analyzed graph when the run had one. `source`, `query --edges` and verification read it. | 17.9 MB with the Joern graph (0.4 MB without); svelte about 250 MB |
-| `summary.json` | Status and counts for scripts: `status`, `deterministic_checks_ok`, `pending`, `failed`, unit and page counts, token usage (`input_tokens`, `output_tokens`, `usage_complete`, `priced_usd`), and the token ratios in `layers`. | 13 KB |
-| `STATUS.md` | One table row per task with its state, attempts, seconds and output, plus lists of normalized, ID-corrected and `index_only`-filled answers. | 1.4 KB |
-| `progress.log` | One line per plan, claim, acceptance, re-ask, failure, retry and render, with timestamps. | 5 KB |
-| `host/`, `raw/`, `calls.csv` | Run state (`host/state.json`), task instructions, accepted results and verification; raw model responses; one row per API call. You do not need these to read the documents. | — |
+| Works on real repositories | C, C++, Python, JavaScript, TypeScript, Java, Go, Ruby | Python imports use Grimp (the `graphs` extra); JavaScript and TypeScript imports use dependency-cruiser (Node.js). Go calls across packages can stay unresolved. Ruby's dynamic dispatch can bind a call to a method of the same name on another class: CBE marks such calls ambiguous, and some wrong bindings remain. |
+| Needs an extra tool | Rust, PHP | Rust needs `cargo` and a Cargo project layout. PHP needs `php` (7 or later). |
+| Fails on real repositories | C#, Kotlin | Joern 4.0.654 failed on a 55-file C# repository and a 146-file Kotlin repository. Two-file examples work, so small inputs may succeed. |
+| Not tested | Swift, TSX | |
 
-### Find and query
+`cbe languages` prints the same status for each language as `call_graph`. Source parsing and chunking work for every language in the table whatever the call-graph status is. Tree-sitter grammars for 13 languages come with the default install and two extras. More on analyzers and graph options: [docs/reference.md](docs/reference.md#optional-graph-analyzers).
 
-`find` searches the catalogue and `query` returns one entry by exact ID. Both read only `catalog.json`, so they work on any rendered run, complete or partial, without a model call. Both need an absolute `--run-dir`.
+## What it costs
 
-`cbe find --run-dir RUN --term TEXT [--limit N] [--json]` matches TEXT, ignoring case, against every catalogue field of each symbol: its ID, name, explanation, signatures, relations and graph edges. Exact name or ID matches come first; the other rows keep catalogue order. `--limit` defaults to 25. A search without a match prints nothing and exits 0. On the evaluation's cJSON run:
+Measured on flask, tests included: 65 files, 125k tokens. Model: GLM-5.3-Flash, called through `cbe generate`. One run to completion.
 
-```text
-$ cbe find --run-dir /absolute/path/to/run --term cJSON_Parse --limit 3
-cJSON_Parse | cJSON.c::function::cJSON_Parse::33515 | function | cJSON.c:L1227-L1230 | Convenience wrappers: cJSON_Parse parses a NUL-terminated string with no return_parse_end and no null-termination requirement; cJSON_ParseWithLength parses exactly buffer_length bytes with the same defaults. | match: id,explain,members,summary,signatures,signature,folded_members,outgoing,name,reason,display_name
-cJSON_New_Item | cJSON.c::function::cJSON_New_Item::6059 | function | cJSON.c:L241-L250 | Allocates one cJSON node via the given hooks and memsets it to zero, so type is cJSON_Invalid and all pointers are NULL. | match: incoming
-cJSON_Delete | cJSON.c::function::cJSON_Delete::6306 | function | cJSON.c:L253-L276 | Frees an item and its entire ->next sibling chain. | match: incoming
-```
+| Measure | Reading |
+|---|---|
+| Prompt tokens | 3.2–3.4 times the source tokens |
+| Output tokens | about 0.9 times the source tokens |
+| Explanation text the model wrote | about 30% of the source tokens |
+| Prompt tokens spent on re-asks after a rejected answer | about 22% (43% before the answer-format change; that earlier run also stopped midway on upstream rate limiting) |
 
-Each line is `name | id | kind | location | summary | match: fields`. Only the first row is `cJSON_Parse` itself. `cJSON_New_Item` and `cJSON_Delete` match only in `incoming`: the parser calls them, so they are neighbors, not the symbol you searched for. A row that ends with `ID corrected; may be inaccurate (see query)` belongs to a unit whose ID CBE corrected. `--json` prints the same rows as objects with `id`, `name`, `kind`, `location`, `summary` and `matched_fields`.
+These readings come from calls through an OpenAI-compatible gateway to GLM-5.3-Flash. CBE ships default settings (for example `reasoning_effort: low`) only for model names it knows. For any other model name, pass the settings you need with `--config`; [docs/running.md](docs/running.md#api-configuration-keys) lists every key.
 
-`cbe query --run-dir RUN --id ID [--json] [--edges all|import,call,cfg,dataflow]` takes an exact ID: an inventory symbol ID or unit ID from `find`, a `grp:` group ID, a file path, or a responsibility-node ID (the node page name without `.md`, for example `core-parsing`). The text view prints the explanation once, then one line per relation or edge:
+The host-agent path, measured once on flask's `src/` (24 files, about 75k tokens) with headless Claude Code (`claude -p`) and Sonnet subagents:
 
-```text
-$ cbe query --run-dir /absolute/path/to/run --id 'cJSON.c::function::cJSON_Parse::33515'
-cJSON_Parse  cJSON.c::function::cJSON_Parse::33515
-signature: CJSON_PUBLIC(cJSON *) cJSON_Parse(const char *value)
-signatures: {"id": "cJSON.c::function::cJSON_Parse::33515", "signature": "CJSON_PUBLIC(cJSON *) cJSON_Parse(const char *value)"}
-signatures: {"id": "cJSON.c::function::cJSON_ParseWithLength::33618", "signature": "CJSON_PUBLIC(cJSON *) cJSON_ParseWithLength(const char *value, size_t buffer_length)"}
-ranges: cJSON.c:L1227-L1230
-explain: Convenience wrappers: cJSON_Parse parses a NUL-terminated string with no return_parse_end and no null-termination requirement; cJSON_ParseWithLength parses exactly buffer_length bytes with the same defaults. Both forward to cJSON_ParseWithLengthOpts and inherit its failure semantics.
-folded_members: "cJSON.c::function::cJSON_Parse::33515"
-folded_members: "cJSON.c::function::cJSON_ParseWithLength::33618"
-internal_edge_counts: {'cfg': 4, 'dataflow': 10}
-outgoing: call cJSON_ParseWithOpts cJSON.c::function::cJSON_ParseWithOpts::31069 [resolved] cJSON.c:L1229 id=cpg:c/call/30064772040
-```
+| Measure | Reading |
+|---|---|
+| Subagent tasks | 8: 4 explanation batches, 1 sampled review, 2 tree-naming tasks, 1 overview. All were accepted on the first answer |
+| Wall clock | 293 seconds |
+| `cbe host verify` | all 15 checks passed |
+| Tokens | not collected for this run |
 
-Calls and imports keep their analyzer status (`resolved`, `unresolved`, `external`, `ambiguous`). CFG and dataflow edges inside the unit are only counted in `internal_edge_counts` (a graph built without dataflow shows no `dataflow` entry rather than 0); `--edges cfg,dataflow` or `--edges all` lists them from the frozen graph in `context.json`. `--edges dataflow` on a graph built without dataflow says to rebuild with `cbe graph build --with-dataflow`.
+Each table is one repository and one run. A host-agent run uses your subscription instead of an API key. Building the graph makes no model call. An older cost table for repositories up to 1.7 million tokens is in [docs/running.md](docs/running.md#what-a-run-costs-the-earlier-table); it was measured before the answer-format change, so do not compare it with the table above.
 
-**Grouped symbols.** The text view does not print a symbol's disposition, owning unit or page. Here `cJSON_Parse` has no unit of its own: the model folded it with `cJSON_ParseWithLength` into a group. `--json` shows this (excerpt):
+## How well does it work
 
-```text
-"node": "core-parsing",
-"page": "nodes/core-parsing.md",
-"anchor": "#u-0d57b2c47d88",
-"how": "grouped",
-"unit": "grp:cJSON.c-parse-entrypoints",
-"reason": "One-line wrapper folded with cJSON_ParseWithLength.",
-"unit_id": "grp:cJSON.c-parse-entrypoints",
-```
+What we measured, and what it shows. Everything here has conditions; the files in [`evaluation/tree/results/`](evaluation/tree/results/) hold the tables.
 
-Query the `unit_id` to get the whole group, with both members' ranges (`cJSON.c:L1227-L1230, cJSON.c:L1232-L1235`) and both outgoing calls. `grp:` IDs also appear in `find` results.
+- **Tree structure.** The new trees have no empty nodes and no duplicate modules on the three repositories above. The earlier trees had 22, 8 and 16 empty nodes.
+- **Call labels.** In seven repositories we took 10 edges of each status and checked them back against the source. For example, all 307 "unresolved" calls in cJSON were macros; they are no longer counted as calls. In fmt, "external" calls fell from 2,748 to 22.
+- **Does the tree help find the code to read?** We took 30 real commits from each of five repositories and asked three models which three modules to look at for the change. The new tree and the earlier tree could not be told apart. Against a plain directory listing, the module tree made no clear difference in repositories whose directories already have levels. It narrowed the reading only where directories are flat (flask, fmt): the three chosen modules held about 40% of the source and about 0.75–0.8 of the changed lines.
+- **How far to trust that ruler.** It is noisy: asked the same question again, the model gave an identical answer in only 9 to 23 of 30 cases.
+- **Earlier question-answering rounds** (CBE before the program-built tree). On flask and pytest (48 questions each), an agent with CBE documents and commands scored no differently from a source-only agent, and rarely ran the commands. One exploratory reading on curl scored higher with CBE (+5.60 rubric points, interval [+0.90, +10.82]) and comes with caveats listed in [evaluation/README.md](evaluation/README.md).
 
-**Index-only symbols.** A symbol with `"how": "index_only"` has no explanation page. The model judged it to have no behavior worth prose and recorded a reason. The text view prints that reason as `explain:`, and the JSON view has `"page": null` and the same `reason`:
+What we do not claim: that grouping by function lets an agent locate code more accurately than a directory tree does, or that CBE improves an agent's answers. The measurements above do not show either.
 
-```text
-$ cbe query --run-dir /absolute/path/to/run --id 'cJSON.c::function::cast_away_const::54779'
-cast_away_const  cJSON.c::function::cast_away_const::54779
-signature: static void* cast_away_const(const void* string)
-ranges: cJSON.c:L2073-L2076
-explain: One-expression const cast helper, no behavior worth prose.
-internal_edge_counts: {'cfg': 3, 'dataflow': 9}
-incoming: call add_item_to_object cJSON.c::function::add_item_to_object::55010 [resolved] cJSON.c:L2094 id=cpg:c/call/30064773003
-...
-```
+## Known limitations
 
-`STATUS.md` and `summary.json` list separately the `index_only` entries that CBE filled in during normalization (`index_only_filled`), so you can tell them from the model's own choices.
+- The call graph needs Joern and Java 21 or newer. `cbe graph setup` downloads both (about 1.9 GB).
+- C# and Kotlin call graphs failed on real repositories under the pinned Joern version. Two-file examples work.
+- Ruby's dynamic dispatch can bind a call to the wrong class's method. CBE marks many of these as ambiguous, and some wrong bindings remain.
+- C and C++ files are not preprocessed. A header with many macros is cut into coarse chunks, and a macro can be taken for a function name.
+- A model writes the explanations. `cbe host verify` passing shows that the structure and references are consistent. It does not show that an explanation is correct. Check explanations against the source (`cbe source`).
+- There are no incremental updates: when the source changes, generate again.
+- CBE is not on PyPI.
 
-**Common mistakes.** Each of these exits 2 and prints the error on stderr:
+## Examples and docs
 
-| You wrote | Error | Write instead |
-|---|---|---|
-| `cbe find --run-dir RUN cJSON_Parse` | `python -m cbe find: error: the following arguments are required: --term` | `cbe find --run-dir RUN --term cJSON_Parse` |
-| `cbe query --run-dir RUN 'cJSON.c::function::cJSON_Parse::33515'` | `python -m cbe query: error: the following arguments are required: --id` | `cbe query --run-dir RUN --id 'cJSON.c::function::cJSON_Parse::33515'` |
-| `cbe query --run-dir RUN --id cJSON_Parse` | `unknown unit, symbol or file: cJSON_Parse` | Run `find` first and copy the ID from its second column. |
-| `cbe find --run-dir runs/cjson/run --term x` | `python -m cbe find: error: argument --run-dir: expected an absolute path, got runs/cjson/run` | Give the absolute run directory. |
+- Generated documents: [flask](examples/flask/docs/INDEX.md), [cJSON](examples/cjson/), [fmt](examples/fmt/), [gson](examples/gson/), [ruby_llm](examples/ruby_llm/), [tsdown](examples/tsdown/), [polyglot](examples/polyglot/). Each example's README names the CBE commit that generated it; most were generated by an earlier version.
+- [docs/reference.md](docs/reference.md): install options, languages, graph analyzers, `find`, `query`, `source`, named declaration coverage.
+- [docs/running.md](docs/running.md): host-agent and API runs, the run directory, resume and verify, cost details, troubleshooting.
+- [docs/videos.md](docs/videos.md): walkthrough videos.
+- [evaluation/README.md](evaluation/README.md) and [CHANGELOG.md](CHANGELOG.md).
 
-In the curl evaluation, all 5 failed `find`/`query` commands of the answering agent returned 2: 4 passed the search term or unit ID as a positional argument, and 1 named an unknown unit ([Q-A: curl](evaluation/README.md#q-a-curl-e5)).
-
-`cbe source --run-dir RUN --id ID [--context N]` prints the frozen source behind an ID. It checks each file's SHA-256 against the snapshot before it prints any line:
-
-```text
-$ cbe source --run-dir /absolute/path/to/run --id 'cJSON.c::function::cJSON_Parse::33515'
-# cJSON.c:L1227-L1230
-1227: CJSON_PUBLIC(cJSON *) cJSON_Parse(const char *value)
-1228: {
-1229:     return cJSON_ParseWithOpts(value, 0, 0);
-1230: }
-```
-
-### Resume and verify
-
-`cbe host status --run-dir /absolute/path/to/run` prints every task's state, attempts, timing, output and the next action.
-
-Run state, task leases, attempts, accepted results, and the frozen context live inside the run directory. `STATUS.md` and `progress.log` expose progress. A failed task does not discard completed work. Continue after an interruption with:
-
-```sh
-cbe host resume --run-dir /absolute/path/to/run
-# Or use the same script driver and configuration:
-cbe generate /absolute/path/to/repo --host api --model your-model-id \
-  --base-url https://your-endpoint.example/v1 --api-key-env CBE_API_KEY \
-  --run-dir /absolute/path/to/run --resume
-```
-
-Source or graph drift is a reason to make a new plan. An old graph cannot silently become evidence for a new source revision. Verification checks the structure, coverage, source references, catalogue navigation to actual page anchors, and recorded review state; independent semantic review remains responsible for whether the explanations are correct and useful.
-
-`cbe host verify --run-dir /absolute/path/to/run` prints JSON and exits 0 only
-when `ok` is true; failed checks exit 3. Scripts can use the exit code or inspect
-`ok`. Verification updates `summary.json` (`deterministic_checks_ok` and `status`)
-and `STATUS.md`; a finished run with failed checks is `partial`, with failing
-check names in the status document. `cbe generate` likewise exits 3 for a partial
-run. Fix the reported cause and verify again; source drift requires a new plan.
-
-A detail answer never writes an inventory ID. The instruction lists the batch's
-symbols as numbered lines (number, kind, name, source lines); the answer names
-symbols by number: `{"units":[{"h":[12],"explain":"..."},{"h":[20,21],"title":"parse
-entrypoints","explain":"..."}],"notes":"optional"}`. One number makes a unit for
-that symbol; several numbers make a group, and CBE generates the `grp:` ID, the
-unit kind and the full `dispositions` map. A relation target is a number inside
-the batch, or a name string outside it. Model prose that looks like an inline
-Markdown link is rendered as literal text, including code such as
-`environ['werkzeug.debug.preserve_context'](ctx)`. Code spans and fenced code remain
-verbatim; source and navigation links are generated by CBE.
-
-CBE keeps every usable unit of an answer. An unknown number is dropped and noted;
-a number that two units list stays with the first; a unit left without a symbol
-or without an `explain` is rejected and the other units are kept. Only an answer
-that is not a JSON object, or has no `units` list, is refused whole. A symbol that
-no unit lists is indexed without prose, unless it is a function, method or class
-whose own source is at least 40 tokens (tests included): that is a gap. The prompt asks
-for tests to be handed in as groups, one unit per behavior they pin. When an
-answer leaves gaps or rejected units, the re-ask repeats the first ask unchanged
-and appends only the gaps, so the provider's prefix cache can serve it, and the
-model returns only additional units. After the last answer (3 for module and
-repair tasks) the symbols that are still unexplained are indexed without prose and
-flagged `unexplained`; the task still completes. `STATUS.md` and `summary.json`
-(`unexplained_count`, `unexplained`) list them, and the RUN.md notes name the
-affected modules. A run planned for the earlier answer format (full IDs and
-dispositions) is refused with a request to run `plan` again.
-
-Usage reports distinguish known counters, estimates, and missing values. Host-agent usage can be imported where the harness provides the corresponding session records. Unknown model prices remain `null` in JSON and `unknown` in the cost report, even when token counts are exact. `cbe host cost --price INPUT,OUTPUT,CACHE_WRITE,CACHE_READ` accepts supplied rates in USD per million tokens. `cbe host cost` prices exact rows by the model recorded in each transcript; `--model MODEL` prices only the rows that are still estimates, which `import-usage` lists as `tasks_without_exact_usage`. In Claude Code, subagents run in the background and their usage arrives only in a later notification, so the skill submits each task when its `DONE` hand-back arrives, without usage; `import-usage` then adds exact usage from the subagent transcripts. Price equivalents are not subscription invoices.
-
-## Known limitations and troubleshooting
-
-Each item below happened in the evaluation runs. The link after it names the section of [evaluation/README.md](evaluation/README.md) that records it.
-
-- **C and C++ macros produce `syntax_error`.** Tree-sitter parses each file without running the preprocessor. CBE still puts every byte of the file into some chunk, but a macro-heavy region can become one coarse chunk, and a macro can be taken for a name. In curl, 153 of the 485 source files (31.5%) reported `syntax_error` ([Q-A: curl](evaluation/README.md#q-a-curl-e5)). In cJSON, 3 files reported it, and `internal_malloc` and `internal_realloc` were registered as `function::CJSON_CDECL`, the calling-convention macro. In fmt, 19 files reported it, and the empty macro `FMT_END_EXPORT` was registered as a function that covers lines 928–1755 ([Showcase](evaluation/README.md#showcase-e6)). Read the `diagnostics` of `cbe context build` before you generate. For C++ headers, pass `--header-language cpp`.
-- **A run can stay `partial` after resumes.** fmt stayed partial after two resumes. Both resumes exited 2 with the task still leased, and the root cause was not located. `format.h` and `core.h` (39.663% of the source) have no published unit. After the resumes, 28 node pages lost their dependency notes, and `summary.json` under-counts 6 requests. The first-pass answer for `format.h` had been cut at the 49,152-token output limit ([Showcase](evaluation/README.md#showcase-e6)). `cbe host status --run-dir RUN` shows which task is leased or failed. The finished parts stay readable, and RUN.md names the pending work.
-- **First passes are often incomplete.** With `zai/glm-5.3-flash`, the first passes on svelte, pytest and curl ended incomplete, mostly because of malformed module answers (`schema_error`). The resumes used the same settings ([Showcase](evaluation/README.md#showcase-e6)). Every svelte run completed within one resume ([Q-C](evaluation/README.md#q-c-cost-and-size-e4b-e4c)). Continue with `cbe host resume` or `cbe generate ... --resume`.
-- **A provider rate limit can still stop a run.** The curl first pass stopped on an HTTP 429 response ([Generation runs](evaluation/README.md#generation-runs)), before the driver waited out 429, 502, 503 and 504. It now stops only after 3 refused calls in a row, each already repeated 6 times. Resume when the limit allows.
-- **A missing optional grammar turns a file into one whole-file chunk.** During the evaluation, the Python environment was rebuilt without all of the optional grammar packages. The polyglot example then had 7 whole-file fallbacks; with the grammars present it had 1 (`src/q.sql`, because CBE has no SQL grammar) ([Showcase](evaluation/README.md#showcase-e6), [Limitations](evaluation/README.md#limitations)). `cbe languages` shows each missing grammar as `"available": false` with its import error, and `context build` names each affected file, as here for a Ruby file without the `languages` extra:
-
-  ```text
-  {
-    "path": "greeter.rb",
-    "code": "grammar_unavailable",
-    "message": "grammar tree_sitter_ruby is not importable: No module named 'tree_sitter_ruby'"
-  },
-  {
-    "path": "greeter.rb",
-    "code": "context_fallback",
-    "reason": "grammar_unavailable",
-    "message": "grammar_unavailable: grammar tree_sitter_ruby is not importable: No module named 'tree_sitter_ruby'; froze one whole-file source chunk; declaration-level detail is unavailable"
-  }
-  ```
-
-  Reinstall with the extras that you need, for example `uv tool install --python 3.13 --reinstall '.[graphs,languages,languages-community]'`, and run `cbe languages` again.
-- **Graph limits omit edges.** Reaching definitions stop at `--max-reaching-defs` (default 50,000): ruby_llm omitted 38,310 edges, and the curl graph omitted 486,150. ruby_llm's import graph was empty (0 resolved; 46 imports without a path) ([Showcase](evaluation/README.md#showcase-e6), [Q-A: curl](evaluation/README.md#q-a-curl-e5)). The dataflow row of `cbe graph capabilities` reports `reaching_defs_truncated` and `edges_omitted`. Raise `--max-reaching-defs` when you need the omitted edges; dataflow is only exported when you ask for it (`--with-dataflow`).
-
-## Evaluation
-
-We evaluated CBE 2.2.0.dev0 in six rounds with one answering model (`zai/glm-5.3-flash`), one judge model family (`codex/gpt-6.1-sol`) and `o200k_base` token counts; [evaluation/README.md](evaluation/README.md) gives the input scope of each repository, every condition, the data and how to rerun it.
-
-- **Question answering, flask and pytest (48 SWE-QA questions each):** an agent given CBE documents and commands showed no difference detected against a source-only agent (C − S −0.46 [−3.08, +2.10] and −0.06 [−3.12, +3.15]); nearly all answers hit the 10-step limit, so this holds only at that limit, and the agent with commands rarely ran them, so it behaved close to the documents-only agent ([Q-A: flask](evaluation/README.md#q-a-flask-e2), [Q-A: pytest](evaluation/README.md#q-a-pytest-e3)).
-- **Question answering, curl (40 self-authored questions):** in this exploratory reading, the agent with CBE documents and commands scored 5.60 rubric points higher than the source-only agent, interval [+0.90, +10.82]. It is a single exploratory secondary reading: the lower end is close enough to 0 that one answer's scoring can pull it below 0, the five-dimension score showed no difference detected, the 25-step point estimate had the opposite sign (both intervals contain 0), the subgraph cards used to write the questions share an origin with CBE's dependency lines, only 9 of 40 questions in that arm ran `find` or `query`, and 15 of 96 subgroup intervals exclude 0 (about 4.8 by chance), with no conclusion drawn from them ([Q-A: curl](evaluation/README.md#q-a-curl-e5)).
-- **Coverage, svelte:** under one judge and the CodeWikiBench rubric, CBE and CodeWiki documents received identical verdicts (94/96 leaves each); no difference detected, and the input had no `.svelte` files ([Q-B](evaluation/README.md#q-b-coverage-e4q)).
-- **Generation cost, svelte, same input and model id:** CBE used 13.3%–18.0% of CodeWiki's gateway requests and 8.4%–11.4% of its prompt tokens; CBE 3 runs and CodeWiki 2, one repository, each tool on its own settings, costs from the gateway price table ([Q-C](evaluation/README.md#q-c-cost-and-size-e4b-e4c)).
-- **Showcase:** 5 of 6 small repositories (TypeScript, Ruby, C, C++, Java, a polyglot fixture) completed and passed `cbe host verify`; fmt stayed partial. Passing verify does not mean the explanations are correct ([Showcase](evaluation/README.md#showcase-e6)).
-
-The generated documents for the six showcase repositories are in [`examples/`](examples/). Each directory has a README that says how to read the documents and how to run `cbe find` and `cbe query` on them.
-
-## Walkthrough video
-
-A narrated walkthrough in English, with subtitles, follows CBE on cJSON: the generated map, `cbe find` and `cbe query`, how a run works, how to install and use CBE, and what the evaluation measured, with its conditions.
-
-[![Walkthrough video: Codebase Explorer on cJSON](docs/media/walkthrough-cover.png)](https://github.com/zlxdengtianhei/codebase-explorer/releases/tag/walkthrough-v2.2.0.dev0)
-
-- Overview, chapters 0–2 (2:48): [cbe-overview.mp4](https://github.com/zlxdengtianhei/codebase-explorer/releases/download/walkthrough-v2.2.0.dev0/cbe-overview.mp4)
-- Full walkthrough (18:54): [cbe-walkthrough.mp4](https://github.com/zlxdengtianhei/codebase-explorer/releases/download/walkthrough-v2.2.0.dev0/cbe-walkthrough.mp4), subtitles [cbe-walkthrough.srt](https://github.com/zlxdengtianhei/codebase-explorer/releases/download/walkthrough-v2.2.0.dev0/cbe-walkthrough.srt)
-- Chapters: 00:00 Find the answer · 00:33 What CBE is · 02:02 How it works · 04:19 Walk through cJSON · 08:15 Use CBE · 12:51 Scope and languages · 14:27 Evaluation, with conditions · 17:42 Limits and next steps
-
-The evaluation chapter shows only results that come with their conditions; the curl reading is in [evaluation/README.md](evaluation/README.md#q-a-curl-e5). The narration uses the Kokoro-82M voice model (Apache-2.0); the release notes list all credits and licenses. One shorter video per language (flask, tsdown, ruby_llm, gson) is listed in [Walkthrough videos by language](#walkthrough-videos-by-language).
-
-## Development
+## Development and license
 
 ```sh
 uv sync --python 3.13 --group dev
 uv run pytest -q
 ```
 
-The external graph tools are optional at installation time. Tests that require a real analyzer need that analyzer configured; ordinary package tests also exercise missing backends and invalid inputs. Platform support must be assessed for both CBE and the chosen analyzer.
-
-The generated files can be consumed by other tools through explicit paths. CBE does not require a shared database or a second task scheduler. To remove the isolated command, run `uv tool uninstall codebase-explorer`. The product license is [MIT](LICENSE); external analyzers and grammar packages retain their own licenses.
-
-## Walkthrough videos by language
-
-Shorter walkthroughs, one repository per language, show the generated map and real `cbe find` and `cbe query` output on the published examples, followed by that run's readings with their conditions. They are in the same release as the cJSON walkthrough.
-
-| Language | Repository | Video | Subtitles | Length |
-|---|---|---|---|---|
-| Python | flask | [cbe-flask.mp4](https://github.com/zlxdengtianhei/codebase-explorer/releases/download/walkthrough-v2.2.0.dev0/cbe-flask.mp4) | [cbe-flask.srt](https://github.com/zlxdengtianhei/codebase-explorer/releases/download/walkthrough-v2.2.0.dev0/cbe-flask.srt) | 6:37 |
-| TypeScript | tsdown | [cbe-tsdown.mp4](https://github.com/zlxdengtianhei/codebase-explorer/releases/download/walkthrough-v2.2.0.dev0/cbe-tsdown.mp4) | [cbe-tsdown.srt](https://github.com/zlxdengtianhei/codebase-explorer/releases/download/walkthrough-v2.2.0.dev0/cbe-tsdown.srt) | 6:33 |
-| Ruby | ruby_llm | [cbe-ruby_llm.mp4](https://github.com/zlxdengtianhei/codebase-explorer/releases/download/walkthrough-v2.2.0.dev0/cbe-ruby_llm.mp4) | [cbe-ruby_llm.srt](https://github.com/zlxdengtianhei/codebase-explorer/releases/download/walkthrough-v2.2.0.dev0/cbe-ruby_llm.srt) | 7:06 |
-| Java | gson | [cbe-gson.mp4](https://github.com/zlxdengtianhei/codebase-explorer/releases/download/walkthrough-v2.2.0.dev0/cbe-gson.mp4) | [cbe-gson.srt](https://github.com/zlxdengtianhei/codebase-explorer/releases/download/walkthrough-v2.2.0.dev0/cbe-gson.srt) | 7:05 |
-
-The flask video uses the catalog in `evaluation/e2-flask/cbe-docs/catalog.json.gz`; the others use `examples/<repo>/catalog.json.gz`. Decompress a catalog with `gzip -dk` before running the commands. fmt (C++) has no video because its generation stayed partial.
-
-## Command and resume details
-
-`cbe find --run-dir "$RUN" LIMIT` accepts the same search term as `--term LIMIT`.
-`cbe query --run-dir "$RUN" "$ID"` accepts the same ID as `--id "$ID"`.
-The flag forms and JSON output remain compatible. If both forms are supplied,
-their values must match; omitting both is an error. An unknown query ID suggests
-using `cbe find` first.
-
-For script generation, `summary.json` records `wall_seconds` as the cumulative
-running time of all process segments, excluding idle time between segments.
-Each plan and resume appends a record to `runtime_environments` in
-`host/state.json`: UTC time, Python version, platform, CBE version, and installed
-versions of the runtime dependencies declared by the package, including extras.
-An optional dependency that is not installed has a null version.
-`cbe --version` prints `cbe <version>`.
-
-A resumed detail answer can introduce a grouped unit before the responsibility
-tree has been rebuilt. Flow steps for these units link to the catalog and say
-`not assigned to a node`; resume the tree/system tasks to complete navigation.
-Until a new system answer is accepted, rendering keeps the last accepted overview,
-dependency descriptions and key flows. RUN.md notes that this overview predates
-some completed modules and will update when the resumed system task completes.
-Without an accepted system answer, rendering uses a mechanical overview.
-Joern nodes with filenames outside the source manifest retain their identity
-and relations but have an unknown location, with `unknown_node_location`
-diagnostics. A graph whose capabilities all failed is reported as failed unless
-a component explicitly records successful completion.
-
-## Named declaration coverage
-
-Newly built source contexts index these declarations as `module_region` candidates, so `cbe find` can locate their names, `cbe query` can inspect their ids and ranges, and `cbe source` can read their frozen source:
-
-| Language | Additional named declarations |
-|---|---|
-| C / C++ | Object and function macros, including continuations and conditional branches; file and namespace variables (`static`, `extern`, globals, `constexpr`); C/C++ `typedef` and C++ `using` aliases |
-| Go | Every name in grouped `type` declarations; package `var` and `const`, including groups |
-| JavaScript / TypeScript / TSX | Ordinary top-level `const`, `let` and `var`, including exports |
-| Java | Class fields and interface constants |
-| Ruby | Constant assignments at file, module and class scope |
-
-Adjacent value declarations of the same category and scope share one region when only whitespace or comments separate them. The region's name, qualified name and canonical id use the first declared name and its anchor; the other names remain searchable through the existing signature metadata, without repeating a name list in the prompt inventory or published query signature. Querying the shared id returns the run's source. A declaration with several variable names also exposes every name. JavaScript and TypeScript destructuring exposes bound names, excluding property keys and default-value expressions. Function prototypes and macro-prefixed functions do not become variable regions; function pointer variables remain eligible. An ordinary declaration enclosing an existing function, type or other declaration yields to that unit and the residual source. Type aliases are not coalesced with adjacent declarations. A typedef enclosing a struct, union or enum definition adds its alias names to that existing type unit's searchable signature instead of creating a separate region. The type keeps its original id and full byte range, including for `typedef struct { int x; } Point;`. Typedefs without a definition, such as `typedef unsigned long Size;` or `typedef struct Foo Foo;`, remain separate named regions.
-
-Macros are indexed as written, including definitions inside functions: CBE does not expand them, evaluate conditions or synthesize calls. Ordinary C/C++ declarations require a confirmed file or namespace scope; error nodes, function bodies, parameter lists and type bodies exclude them. For ambiguous C++ `.h` files parsed as C, a C++ tree confirms declaration scope when the C tree has syntax errors; declarations whose scope cannot be confirmed remain residual source. When C++ header parsing has syntax errors, individual declarations can be assigned the wrong scope, including with `--header-language cpp`. Function-local variables (including local `static` variables), C/C++ function prototypes, C/C++ struct fields and enum members do not become additional named regions. Python assignment behavior is unchanged. A mixed JavaScript declaration such as `export const value=1, helper=()=>2` keeps the existing function unit's id and range; `value` is searchable through that unit's signature rather than receiving a separate region. New child regions can change a containing namespace/class/module's exclusive source ranges and segment ids; existing declaration canonical ids and full spans remain stable when rebuilding the same source.
+Tests that need a real analyzer need that analyzer configured. The product license is [MIT](LICENSE); external analyzers and grammar packages keep their own licenses.

@@ -1,0 +1,9 @@
+# showcase: the code map page and the hero animation
+
+One static page, `index.html` + `app.js`, reads `data/<slug>.json` (made by `prepare_data.py` from a CBE `catalog.json`). Nothing on screen is typed by hand; the page does no clustering of its own (groups are the catalog's nodes that own units).
+- One command from a catalog to the film: `./make_media.sh --catalog RUN/catalog.json --name Flask [--graph GRAPH.json] [--out DIR]` (prepares `data/flask.json`, records, writes `hero_flask.mp4`, `.gif`, `_grid.jpg` into DIR, default `showcase/out/`). `npm install` once first. `--graph` is the raw CBE graph file; its resolved call edges are matched to units through the catalog's edge table. The lines are the resolved calls (solid, legend "resolved calls"); only a catalog without any resolved edge falls back to the model-inferred `relations` (dashed, legend "inferred").
+- Environment: `FFMPEG`, `CHROME` (else found on PATH), `CBE_PYTHON` (a Python that runs this checkout's `cbe`; the terminal scene then shows the real `cbe find` and `cbe source` output, read from the run folder next to the catalog, otherwise a fallback built from the catalog), `CRF`, `GIF_FPS` (12; use 10 if the GIF passes 8 MB), `GIF_COLORS` (64).
+- Interactive (hover a unit, click a module or a left-bar row, Esc to go back): `python3 -m http.server -d showcase`, open `/index.html?data=flask`.
+- Film mode: `?mode=play&data=flask` plays the 35 s script on a virtual clock; `window.__render(t)` draws the frame for time `t`, so frames repeat exactly.
+- Single frames: `node record.mjs --data flask --out DIR --times 3.8,10.8`; interactive screenshot: `node record.mjs --data flask --out DIR --interactive hover.png`.
+- Captions, step names and legend words are in `subtitles/<lang>.json` (`?lang=xx`); Latin fonts only (IBM Plex, SIL OFL, `fonts/`); d3-force 3.0.1 (ISC) is vendored in `vendor/`.

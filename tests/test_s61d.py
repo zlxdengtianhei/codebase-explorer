@@ -27,7 +27,8 @@ def test_submit_help_explains_answer_limits(capsys):
 
 def test_shipped_guidance_matches_detail_protocol():
     root = Path(__file__).parents[1]
-    for path in [root / 'README.md', root / 'plugin/skills/codebase-explorer/SKILL.md']:
+    # The answer rules moved from the README into docs/running.md.
+    for path in [root / 'docs/running.md', root / 'plugin/skills/codebase-explorer/SKILL.md']:
         text = path.read_text()
         assert 'detail tasks allow 3 answers; other tasks allow 2' in text
         assert 'final invalid answer' in text

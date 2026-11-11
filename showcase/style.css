@@ -1,0 +1,4 @@
+html, body { margin: 0; height: 100%; background: #040a12; overflow: hidden; }
+body { display: flex; align-items: center; justify-content: center; }
+#c { width: min(100vw, calc(100vh * 16 / 9)); height: auto; aspect-ratio: 16 / 9; display: block; }
+body.play #c { cursor: default; }
