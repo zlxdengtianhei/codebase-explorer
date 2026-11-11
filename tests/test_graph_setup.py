@@ -225,3 +225,18 @@ def test_missing_joern_message_points_at_setup(tmp_path, monkeypatch):
         analyze_graph(repo, tmp_path / "g.json", backend="joern")
     message = next(d["message"] for d in raised.value.graph["diagnostics"] if d["code"] == "backend_unavailable")
     assert "run `cbe graph setup` (downloads about" in message
+
+
+def test_languages_report_call_graph_status():
+    from cbe.source_context import available_languages
+
+    rows = {row["name"]: row["call_graph"] for row in available_languages()["languages"]}
+    for name in ("c", "cpp", "python", "javascript", "typescript", "java", "go", "ruby"):
+        assert rows[name] == {"status": "works"}
+    assert rows["c_sharp"]["status"] == "known_failure" and "4.0.654" in rows["c_sharp"]["note"]
+    assert rows["kotlin"]["status"] == "known_failure" and "MethodRef" in rows["kotlin"]["note"]
+    assert rows["php"]["status"] == "needs_tool" and "php" in rows["php"]["note"]
+    assert rows["rust"]["status"] == "needs_tool" and "cargo" in rows["rust"]["note"]
+    assert rows["swift"] == {"status": "untested"}
+    # Every language keeps its parsing support; only the note about graphs changes.
+    assert all("call_graph" in row and "suffixes" in row for row in available_languages()["languages"])

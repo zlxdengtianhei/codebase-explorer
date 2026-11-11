@@ -55,11 +55,11 @@ This path documents the four core files of [cJSON](https://github.com/DaveGamble
 
    The full output lists five diagnostics: `syntax_error` for `cJSON.c`, `cJSON.h` and `cJSON_Utils.h`, and `ambiguous_language` for both headers. The `syntax_error` entries come from cJSON's macros; see [Known limitations and troubleshooting](#known-limitations-and-troubleshooting). Generation does not need this file, because `generate` and `host plan` freeze their own copy. Use it to see the file list, chunk count and diagnostics before you spend model calls.
 
-4. Optional: build a code graph with Joern ([Optional graph analyzers](#optional-graph-analyzers) says how to install it). This took 28 seconds here and makes no model call:
+4. Optional: build a code graph with Joern. `cbe graph setup` downloads Joern and a Java runtime once (about 1.9 GB, see [Optional graph analyzers](#optional-graph-analyzers)). The build took 28 seconds here and makes no model call:
 
    ```sh
-   cbe graph build "$HOME/cbe-demo/cjson" --output "$HOME/cbe-demo/graph.json" \
-     --joern-home /path/to/joern-cli
+   cbe graph setup
+   cbe graph build "$HOME/cbe-demo/cjson" --output "$HOME/cbe-demo/graph.json"
    cbe graph capabilities --graph "$HOME/cbe-demo/graph.json"
    ```
 
@@ -124,9 +124,16 @@ Context building and generation work without any analyzer. A graph adds static i
 
 | Analyzer | What it adds | How to install | How CBE finds it |
 |---|---|---|---|
-| Joern 4.0.654 and a JDK | Calls, CFG and dataflow; include and import declarations. The next section lists the languages and their conditions. | Download the `joern-cli-<os>-<arch>.zip` asset for your platform (for example `joern-cli-macos-arm64.zip`) from the [Joern v4.0.654 release](https://github.com/joernio/joern/releases/tag/v4.0.654) and unzip it. Joern's [installation page](https://docs.joern.io/installation/) asks for JDK 19 and says newer JDKs might work; the graph in this README was built on JDK 21.0.9. | `--joern-home DIR`, then the `CBE_JOERN_HOME` environment variable, then `joern` on `PATH`. `DIR` is the directory that holds `joern` and `joern-parse`; CBE also looks in `DIR/joern-cli`. |
+| Joern 4.0.654 and Java 21 or newer | Calls, CFG and dataflow; include and import declarations. The next section lists the languages and their conditions. | `cbe graph setup` downloads the pinned Joern release and, when no Java 21+ is found, a Temurin 21 JRE into the user cache directory (`~/.cache/cbe/tools` on Linux, `~/Library/Caches/cbe/tools` on macOS), after checking SHA-256 values pinned in the code. Linux x86_64 and macOS (arm64, x86_64) are supported; on other platforms install by hand (below). `cbe graph setup --check` downloads nothing and reports what it finds. | Joern: `--joern-home DIR`, then `CBE_JOERN_HOME`, then the cache directory, then `joern-parse` on `PATH`. `DIR` is the directory that holds `joern` and `joern-parse`; CBE also looks in `DIR/joern-cli`. Java: `JAVA_HOME`, then `java` on `PATH`, then the cache directory. |
 | dependency-cruiser 16 and Node.js | JavaScript and TypeScript import graph | `npm install dependency-cruiser@16` in a tools directory. Tested with 16.10.4 on Node.js 22.20.0. | `--depcruise-bin PATH` (for example `.../node_modules/.bin/depcruise`), then `CBE_DEPCRUISE_BIN`, then `depcruise` on `PATH` |
 | Grimp 3.17 | Python import graph | `uv tool install --python 3.13 '.[graphs]'` | Imported from the CBE environment |
+
+<details>
+<summary>Install Joern by hand</summary>
+
+`cbe graph setup` is the short way. To install yourself, download the `joern-cli-<os>-<arch>.zip` asset for your platform (for example `joern-cli-linux-x86_64.zip` or `joern-cli-macos-arm64.zip`) from the [Joern v4.0.654 release](https://github.com/joernio/joern/releases/tag/v4.0.654), unzip it, and pass the resulting `joern-cli` directory as `--joern-home DIR` or set `CBE_JOERN_HOME`. Each asset has a `.sha512` file next to it. Install Java 21 or newer yourself (Joern's [installation page](https://docs.joern.io/installation/) asks for JDK 19 and says newer JDKs might work; the graph in this README was built on JDK 21.0.9) and keep it on `PATH` or in `JAVA_HOME`. Do not use a Joern version other than 4.0.654: the graph classification is tested against its output.
+
+</details>
 
 Check what ran with `cbe graph capabilities --graph /absolute/path/to/graph.json`. The `backend.components` list names each analyzer and its version, and every `capabilities` row gives a language, a graph kind and a status, for example `resolved`, `partial`, `empty`, `failed` or `unavailable`. The Quickstart graph reports:
 
@@ -136,7 +143,7 @@ Check what ran with `cbe graph capabilities --graph /absolute/path/to/graph.json
 
 What a missing analyzer costs:
 
-- **No Joern:** no calls, CFG or dataflow for any language. `graph build` records `backend_unavailable` ("Joern CLI not found; call/cfg/dataflow skipped"). When no other analyzer covers the requested languages, as for the C-only Quickstart input, `graph build` exits 2 with `no graph backend was available for the requested languages`.
+- **No Joern:** no calls, CFG or dataflow for any language. `graph build` records `backend_unavailable` ("Joern CLI not found; call/cfg/dataflow/import graph skipped; run `cbe graph setup` (downloads about 1.9 GB)"). When no other analyzer covers the requested languages, as for the C-only Quickstart input, `graph build` exits 2 with `no graph backend was available for the requested languages`.
 - **No dependency-cruiser:** the JavaScript and TypeScript import graph is skipped with `backend_unavailable`. If Joern ran, it still records import declarations, but these do not establish a resolved file dependency.
 - **No Grimp:** the Python import graph is skipped with `backend_unavailable` ("grimp is not installed; Python import graph skipped (install the 'graphs' extra)").
 
@@ -144,28 +151,30 @@ What a missing analyzer costs:
 
 Tree-sitter provides syntax and code boundaries. Import resolution, calls, control flow, and data flow come from external analyzers. Each graph records the backend version, input hashes, capabilities, unresolved targets, and analysis conditions. A graph that does not match the current source is rejected when building a context.
 
-The graph adapters use [Joern](https://joern.io/), [Grimp](https://grimp.readthedocs.io/), and [dependency-cruiser](https://github.com/sverweij/dependency-cruiser) according to the language and graph type. The selected integration versions are Joern 4.0.654, Grimp 3.17, and dependency-cruiser 16. Install the `graphs` extra for Grimp (`uv tool install --python 3.13 '.[graphs]'`). Joern and dependency-cruiser are separate installations. The CBE package does not include Joern, a JDK, or Node dependencies.
+The graph adapters use [Joern](https://joern.io/), [Grimp](https://grimp.readthedocs.io/), and [dependency-cruiser](https://github.com/sverweij/dependency-cruiser) according to the language and graph type. The selected integration versions are Joern 4.0.654, Grimp 3.17, and dependency-cruiser 16. Install the `graphs` extra for Grimp (`uv tool install --python 3.13 '.[graphs]'`). Joern and dependency-cruiser are separate installations; `cbe graph setup` installs Joern and a JRE for you. The CBE package does not include Joern, Java, or Node dependencies.
 
-| Source language | Import backend | Call / CFG / local definition-use backend | Relevant conditions |
+| Source language | Import backend | Call graph with Joern 4.0.654 | Relevant conditions |
 |---|---|---|---|
-| C / C++ | Joern include declarations | Joern | Include paths, macros and compilation settings affect results; virtual calls may bind to a static base target. |
-| Python | Grimp, plus Joern declarations | Joern | Package layout affects imports; dynamic and external calls can remain unresolved. |
-| JavaScript / TypeScript / TSX | dependency-cruiser, plus Joern declarations | Joern | Dynamic imports, CommonJS and external targets may remain partial. |
-| Java | Joern declarations | Joern | Project types and dependencies affect resolution. |
-| Go | Joern declarations | Joern | Cross-package calls may remain unresolved or external. |
-| Ruby | Joern declarations | Joern | The frontend excludes `test`, `tests` and `spec` paths by default. |
-| Rust | Joern declarations | Joern | The frontend requires a Cargo project layout; a flat source directory can fail. |
-| PHP | Joern declarations | Joern | An external PHP runtime (7 or later) is required. The local trial without it reported a failed analysis. |
-| C# | Joern declarations | Joern | Namespace and project layout affect resolution; the bundled AST generator must run on the host platform. |
-| Kotlin | Joern declarations | Joern | Project dependencies and build conditions affect resolution. |
-| Swift | Joern declarations | Joern | The frontend parses per file; the tested cross-file call remained external. |
+| C / C++ | Joern include declarations | works | Include paths, macros and compilation settings affect results; virtual calls may bind to a static base target. |
+| Python | Grimp, plus Joern declarations | works | Package layout affects imports; dynamic and external calls can remain unresolved. |
+| JavaScript / TypeScript | dependency-cruiser, plus Joern declarations | works | Dynamic imports, CommonJS and external targets may remain partial. |
+| TSX | dependency-cruiser, plus Joern declarations | not tested | Uses the same Joern frontend as JavaScript and TypeScript. |
+| Java | Joern declarations | works | Project types and dependencies affect resolution. |
+| Go | Joern declarations | works | Cross-package calls may remain unresolved or external. |
+| Ruby | Joern declarations | works | CBE passes `--no-default-exclude` so `test`, `tests` and `spec` paths are analyzed. |
+| Rust | Joern declarations | needs `cargo` | The frontend runs `cargo` and needs a Cargo project layout; a flat source directory can fail. |
+| PHP | Joern declarations | needs `php` | An external PHP runtime (7 or later) must be on `PATH`. The local trial without it reported a failed analysis. |
+| C# | Joern declarations | known failure | Joern 4.0.654: the export script fails with a null pointer error, so the build records a failed capability. |
+| Kotlin | Joern declarations | known failure | Joern 4.0.654: `joern-parse` fails with `key not found: MethodRef`, so the build records a failed capability. |
+| Swift | Joern declarations | not tested | |
 
-Joern import declarations do not establish a resolved file dependency. Capabilities describe the actual run, including frontend failures; a registered source language alone does not establish semantic graph coverage. Use an installed Joern distribution and, when needed, a local dependency-cruiser executable:
+"works" means a small tree of that language produced a call graph in a real run; resolution quality still depends on the code. `cbe languages` reports the same status as `call_graph` for each language. Source parsing and chunking support every language in the table whatever the call-graph column says.
+
+Joern import declarations do not establish a resolved file dependency. Capabilities describe the actual run, including frontend failures; a registered source language alone does not establish semantic graph coverage. `graph build` finds the Joern and Java that `cbe graph setup` installed. Pass `--joern-home` to use another Joern, and `--depcruise-bin` for a local dependency-cruiser executable:
 
 ```sh
 cbe graph build /absolute/path/to/repo \
   --output /absolute/path/to/graph.json \
-  --joern-home /absolute/path/to/joern-cli \
   --depcruise-bin /absolute/path/to/node_modules/.bin/depcruise
 cbe graph capabilities --graph /absolute/path/to/graph.json
 cbe graph query --graph /absolute/path/to/graph.json --path src/example.py --kind call
