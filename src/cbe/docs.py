@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from cbe.symbols import SemanticError, inventory_ids
+from cbe.treename import normalize_title
 
 
 # One repository file larger than this becomes its own inventory unit region set;
@@ -754,6 +755,13 @@ def verify(run_dir: Path, inventory: dict, units: dict, dispositions: dict,
           len(roots) == 1 and not cycle and seen == set(nodes),
           {"nodes": len(nodes), "roots": roots, "cycle": cycle,
            "unreachable": sorted(set(nodes) - seen)[:12]})
+    hollow = sorted(nid for nid, node in nodes.items() if not node.get("unit_ids") and not children[nid])
+    check("no_empty_nodes", not hollow or not units, hollow[:12])
+    clashes = [f"{kid}: {nodes[kid].get('title')!r}" for kids in children.values()
+               for i, kid in enumerate(kids)
+               if normalize_title(str(nodes[kid].get("title"))) in
+               {normalize_title(str(nodes[other].get("title"))) for other in kids[:i]}]
+    check("sibling_titles_distinct", not clashes, clashes[:12])
 
     bad_ranges = []
     for uid, unit in units.items():

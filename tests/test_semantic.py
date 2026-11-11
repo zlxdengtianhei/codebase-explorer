@@ -107,6 +107,37 @@ def test_render_publishes_node_pages_source_links_and_a_compatible_catalog(tmp_p
     assert checks["unique_primary_ownership"] and checks["relative_links_resolve"]
 
 
+def test_verify_flags_an_empty_node_and_sibling_nodes_with_the_same_title(tmp_path) -> None:
+    repo = tmp_path / "repo"
+    (repo / "pkg").mkdir(parents=True)
+    (repo / "pkg" / "jobs.py").write_text(SRC, encoding="utf-8")
+    inventory = _inventory()
+    ids = [row["id"] for row in inventory["pkg/jobs.py"]["symbols"]]
+    units = {uid: {"id": uid, "kind": "function", "explain": "Does its job.", "extras": [], "relations": [],
+                   "uncertainties": []} for uid in ids}
+    dispositions = {uid: {"how": "unit", "unit": uid} for uid in ids}
+
+    def node(nid, parent, title, unit_ids):
+        return {"id": nid, "parent": parent, "title": title, "capability": "c" * 50, "summary": "s",
+                "unit_ids": unit_ids}
+
+    good = {"nodes": [node("root", None, "Root", []), node("a", "root", "Alpha", ids[:1]),
+                      node("b", "root", "Beta", ids[1:])], "depends_on": []}
+    run = tmp_path / "run"
+    docs.render(run_dir=run, source_root=repo, inventory=inventory, units=units, dispositions=dispositions,
+                tree=good, languages={"pkg/jobs.py": "python"})
+
+    def failed(tree):
+        return {row["check"] for row in docs.verify(run, inventory, units, dispositions, tree) if not row["ok"]}
+
+    assert not failed(good) & {"no_empty_nodes", "sibling_titles_distinct"}
+    hollow = {"nodes": good["nodes"] + [node("c", "root", "Gamma", [])], "depends_on": []}
+    assert "no_empty_nodes" in failed(hollow)
+    twin = {"nodes": [good["nodes"][0], good["nodes"][1], {**good["nodes"][2], "title": " alpha! "}],
+            "depends_on": []}
+    assert "sibling_titles_distinct" in failed(twin)
+
+
 def test_catalog_language_is_the_frozen_context_language(tmp_path) -> None:
     repo = tmp_path / "repo"
     (repo / "ui").mkdir(parents=True)
