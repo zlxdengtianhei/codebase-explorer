@@ -1425,10 +1425,6 @@ def _render(run_dir: Path, state: dict[str, Any]) -> None:
         state["status"] = "partial"
     summary["status"] = state["status"]
     summary["deterministic_checks_ok"] = state["verify"]["ok"]
-    from cbe import principles
-    _, rolled_edges = _aggregation_inputs(run_dir, state)
-    principle_report = principles.report(tree, rolled_edges, _semantic_units(run_dir, state)[0])
-    summary["aggregation_principles"] = principle_report
     summary["tree"] = {"leaves": sum(1 for node in tree["nodes"] if node.get("unit_ids")),
                        "nodes": len(tree["nodes"]), "program_made_titles": made,
                        "naming_tasks": sum(task["kind"] in TREE_KINDS for task in state["tasks"].values()),
@@ -1437,8 +1433,6 @@ def _render(run_dir: Path, state: dict[str, Any]) -> None:
     summary["within_containment"] = meta["within_containment_count"]
     summary["key_flows"] = meta["key_flows"]
     summary["candidate_flows"] = meta["candidate_flows"]
-    with (run_dir / "docs" / "RUN.md").open("a", encoding="utf-8") as run_page:
-        run_page.write(principles.run_lines(principle_report, tree))
     summary["layers"] = docs.layer_metrics(run_dir)
     summary["semantic_review"] = _semantic_review_summary(run_dir, state)
     summary["truth"] = ("deterministic structure/coverage checks and the separate semantic review are "

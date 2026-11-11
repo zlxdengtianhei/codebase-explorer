@@ -56,8 +56,6 @@ Once all detail and review has settled, the program freezes the tree structure i
 
 The dependency view labels pairs as **graph-confirmed** (tree and resolved call/import edges), **model-inferred** (tree only), or **graph-only** (graph only). The first two count edges between subtrees; graph-only counts direct node owners. **Containment** rows show resolved edges between ancestor direct units and a descendant subtree as `→ N / ← M`, relative to the listed pair. **Within containment** rows list direct owner pairs separately. Both containment categories stay out of Mermaid and the three dependency totals. Graph-only and within containment each keep their own top 40 pairs by edge count and report their own omitted count. `summary.json` records the full within containment count in `within_containment`. Key flows link unit ids; when the model supplies none, the report labels the first five paths **Program candidates, not selected by the model**. Program labels and navigation use English; model prose keeps its original language.
 
-Three advisory diagnostics appear in `summary.json`: cohesion (P2), granularity (P3), and `introduction_length` (each module's capability and summary against the unit explanations under it). RUN.md shows one line for each. They never request a rewrite.
-
 `--graph` is optional. Without it the context explicitly records that no analyzed graph was supplied. The model must not invent missing relations. `--review` selects `none`, `sample`, or `all`. Operational completion, structural validity, and semantic review are separate results.
 
 ## Use the generated docs from an agent
@@ -213,7 +211,7 @@ Start at `docs/INDEX.md`; the files outside `docs/` serve the commands and scrip
 | Path in `RUN` | What it is | Size |
 |---|---|---|
 | `docs/INDEX.md` | Start here. The overview, the module tree to its leaves with one capability line per node, key flows and the three lookup commands. Its size is capped at the larger of 2,000 tokens and 3% of the source tokens: over that, the deepest level is folded into the node pages first. | `summary.json` → `tree.index` records the budget and the tokens used |
-| `docs/DEPENDENCIES.md`, `docs/RUN.md` | Dependency view and list; then reading stats, graph coverage, generation notes and the cohesion and granularity readings. | |
+| `docs/DEPENDENCIES.md`, `docs/RUN.md` | Dependency view and list; then reading stats, graph coverage and generation notes. | |
 | `docs/nodes/<node>.md` | One page per responsibility node: its capability, what it depends on, then each unit with its signature, a program-derived source link, the explanation and its relations. The footer gives `find`, `query` and `source` commands. | 14 pages; `docs/` holds 114 KB |
 | `catalog.json` | The machine-readable catalogue that `find` and `query` read: units, every inventory symbol with its disposition (`unit`, `grouped` or `index_only`), files, tree nodes, node dependencies, key flows, and one shared table of call and import edges. | 1.1 MB; svelte about 27 MB |
 | `context.json` | The frozen source snapshot: every chunk's text, byte and line range and hash, plus the analyzed graph when the run had one. `source`, `query --edges` and verification read it. | 17.9 MB with the Joern graph (0.4 MB without); svelte about 250 MB |

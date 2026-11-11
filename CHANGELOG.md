@@ -13,9 +13,8 @@
   option tables, format templates and literal raises, taken from the syntax tree at render
   time. `cbe find` matches them (`match: facts`) and `cbe query` prints them. Node pages do
   not show them. Other languages have no such table.
-- `summary.json` reports `introduction_length` again: for every module, the length of its
-  capability and summary against the unit explanations under it (`overlong`, `max_ratio`).
-  `RUN.md` shows one line. The reading had been dropped with the other advisory checks.
+- Remove the advisory cohesion, granularity and `introduction_length` readings. `summary.json`
+  no longer has `aggregation_principles`, and `RUN.md` no longer has a `Checks` section.
 - In a directory without the frozen source (`context.json`), such as a published example,
   `cbe source`, `cbe query --edges` and `cbe host verify/render/status/cost` say so in one
   sentence and exit with code 2. `find` and `query` work there. Node pages of published
@@ -49,8 +48,8 @@
   capability line per node, key flows and the three lookup commands, within
   max(2,000 tokens, 3% of the source tokens): the deepest level folds first, then each
   node shows one file instead of three. The dependency view moves to
-  `docs/DEPENDENCIES.md`; reading stats, graph coverage, generation notes and the
-  cohesion and granularity readings move to `docs/RUN.md`. The system overview no
+  `docs/DEPENDENCIES.md`; reading stats, graph coverage and generation notes move to
+  `docs/RUN.md`. The system overview no
   longer carries `maintenance_navigation`.
 - Change the detail answer contract. Symbols are named by short numbers from a
   numbered list in the prompt (`{"units":[{"h":[12],"explain":"..."}]}`); the
@@ -140,7 +139,7 @@
 - Code that imports CBE modules directly needs new import paths. The package is
   organized by responsibility: `batching`, `symbols`, `checks`,
   `projection`, `prompts`, `docs`, `records`, `usage`, `model_settings`,
-  `aggregation` and `principles` sit beside `host_run` (run state) and
+  `aggregation` sits beside `host_run` (run state) and
   `generate` (script driver). The `ir`, `parser`, `inventory`, `semantic`,
   `syntax_facts`, `callable_contracts` and `adapters` modules are removed.
 - `graph build --joern-heap SIZE` sets the Joern JVM maximum heap. A backend

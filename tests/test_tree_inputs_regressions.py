@@ -1,21 +1,9 @@
-"""Regressions at the public host boundary: the derived evidence cache and the principle readings."""
+"""Regression at the public host boundary: the derived evidence cache."""
 import json
 from pathlib import Path
 
-from cbe import host_run, principles
+from cbe import host_run
 from test_host_run import _drive, _repo
-
-
-def test_p2_counts_internal_and_external_edges():
-    nodes = [{"id": "root", "title": "Root", "parent": None, "unit_ids": []},
-             {"id": "one", "title": "One", "parent": "root", "unit_ids": ["a", "b"]},
-             {"id": "two", "title": "Two", "parent": "root", "unit_ids": ["c"]},
-             {"id": "infra", "title": "Infra", "parent": "root", "unit_ids": ["shared"]}]
-    edges = [{"from": "a", "to": "b", "kind": "call", "count": 7},
-             {"from": "a", "to": "shared", "kind": "call", "count": 2},
-             {"from": "c", "to": "shared", "kind": "call", "count": 3}]
-    rows = {r["principle"]: r for r in principles.report({"nodes": nodes}, edges)["checks"]}
-    assert rows["P2"]["modules"]["one"] == {"internal": 7, "external": 2, "internal_external_ratio": 3.5}
 
 
 def test_derived_cache_cannot_change_tree_evidence(tmp_path):

@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from cbe import aggregation, host_run, principles, source_context, treename
+from cbe import aggregation, host_run, source_context, treename
 from cbe.symbols import inventory_from_context
 from cbe.token_budget import count_text_tokens
 from test_host_run import _answer, _drive, _repo
@@ -47,8 +47,6 @@ def test_small_host_keeps_one_tree(tmp_path):
     run = Path(host_run.plan(_repo(tmp_path), tmp_path / "run", review="none")["run_dir"])
     handed = _drive(run)
     assert [t for t in handed if t.startswith("tree")] == ["tree_name_1"]
-    report = json.loads((run / "summary.json").read_text())["aggregation_principles"]
-    assert [c["principle"] for c in report["checks"]] == ["P2", "P3"]
 
 
 @pytest.mark.parametrize("failed_module", [False, True], ids=["repair", "failed-module"])
@@ -99,28 +97,3 @@ def test_single_tree_waits_for_review_and_repair(tmp_path, failed_module):
     assert _drive(run) == ["system"]
     state = json.loads((run / "host/state.json").read_text())
     assert state["status"] == ("partial" if failed_module else "complete")
-
-
-def test_principles_report_cohesion_and_granularity_readings():
-    def node(nid, ids):
-        return {"id": nid, "parent": None if nid == "root" else "root", "title": nid, "unit_ids": ids}
-    tree = {"nodes": [node("root", []), node("one", ["a"]), node("two", ["b"]), node("infra", ["shared"])]}
-    edges = [{"from": uid, "to": "shared", "kind": "call", "count": 4} for uid in ("a", "b")]
-    rows = {r["principle"]: r for r in principles.report(tree, edges)["checks"]}
-    assert set(rows) == {"P2", "P3"}
-    assert rows["P2"]["modules"]["one"] == {"internal": 0, "external": 4, "internal_external_ratio": 0.0}
-    assert not rows["P2"]["ok"]
-    assert rows["P3"]["out_of_bounds"] == {"one": 1, "two": 1, "infra": 1}
-
-
-
-def test_introduction_length_reads_each_module_against_the_explanations_under_it():
-    nodes = [{"id": "root", "parent": None, "capability": "c" * 10, "summary": "", "unit_ids": []},
-             {"id": "short", "parent": "root", "capability": "c" * 10, "summary": "s" * 10, "unit_ids": ["u1"]},
-             {"id": "long", "parent": "root", "capability": "c" * 30, "summary": "s" * 30, "unit_ids": ["u2"]}]
-    units = {"u1": {"explain": "e" * 40}, "u2": {"explain": "e" * 20}}
-    reading = principles.report({"nodes": nodes}, [], units)["introduction_length"]
-    assert reading["ok"] is False and list(reading["overlong"]) == ["long"]
-    assert reading["overlong"]["long"] == {"introduction_chars": 60, "detail_chars": 20}
-    assert reading["max_ratio"] == 3.0
-    assert "introduction_length" not in principles.report({"nodes": nodes}, [])
