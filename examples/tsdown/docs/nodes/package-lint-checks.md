@@ -36,7 +36,7 @@ Runs the are-the-types-wrong check on a packed tarball and reports problems thro
 
 Returns immediately if attw is disabled or no package.json was found (warn in the latter case). Destructures profile (default 'strict'), level (default 'warn'), and ignoreRules (default []) from options.attw, passing the rest to the core check. Warns if any ignoreRules value is not a known problem flag. Loads @arethetypeswrong/core via importWithError with resolvePaths, creates a package from the tarball buffer, and checks it. If the result has types, filters problems: ignored kinds are dropped; problems with a resolutionKind are kept only when their kind is not in the profile's ignore list (strict ignores none, node16 ignores node10, esm-only ignores node10 and node16-cjs); other problems always pass. Remaining problems are formatted (one line each) into an error message; a package without types yields 'Package has no types'. On error message it logs via logger[level] (so 'error' can fail the build); otherwise logs success with elapsed ms.
 
-calls: [formatProblem](../../catalog.json), [importWithError](../../catalog.json)
+calls: [formatProblem](../../catalog.json.gz), [importWithError](../../catalog.json.gz)
 
 **Uncertainties.**
 
@@ -51,7 +51,7 @@ Renders a single ATTW problem as a human-readable line, prefixing resolution kin
 
 Each ProblemKind gets a distinct message: NoResolution (❌), UntypedResolution (⚠️), FalseESM/FalseCJS (module-kind mismatch with types and implementation file names), CJSResolvesToESM (⚡), NamedExports (with optional missing-export list and all-missing marker), FallbackCondition, FalseExportDefault, MissingExportEquals, InternalResolutionError (file, option, specifier, mode), UnexpectedModuleSyntax (syntax 99 shown as ESM, else CJS), and CJSOnlyExportsDefault. Unknown kinds fall back to JSON.stringify of the problem.
 
-calls: [slash](../../catalog.json)
+calls: [slash](../../catalog.json.gz)
 
 <a id="u-43e206dc438b"></a>
 ### `AttwOptions`
@@ -69,7 +69,7 @@ Coordinates per-package post-build work once all of a package's bundles have fin
 
 Ignores bundles without a package; otherwise pushes the bundle into the package's registry and, if not all expected bundles have arrived yet, awaits the registry promise. Once complete, it collects the configs and dedupes those with exports options: more than one distinct exports config throws an Error listing the conflicting options (formatted with colors) and asking to merge them; a single config triggers writeExports with chunks merged per format (skipping bundles without exports options) and inlined deps merged across bundles. It then dedupes publint and attw configs; if either has multiple entries it warns (via the second publint config's logger) that configurations should be merged. If any publint or attw config exists, it packs a tarball once and runs all checks concurrently via Promise.all; any error there is caught and logged as 'Pack failed:' by the first config's logger rather than propagated. Finally resolves the registry promise so other waiters proceed.
 
-calls: [writeExports](../../catalog.json), [packTarball](../../catalog.json), [publint](../../catalog.json), [attw](../../catalog.json), [dedupeConfigs](../../catalog.json), [mergeInlinedDeps](../../catalog.json)
+calls: [writeExports](../../catalog.json.gz), [packTarball](../../catalog.json.gz), [publint](../../catalog.json.gz), [attw](../../catalog.json.gz), [dedupeConfigs](../../catalog.json.gz), [mergeInlinedDeps](../../catalog.json.gz)
 
 **Uncertainties.**
 
@@ -111,7 +111,7 @@ Runs the publint check on a packed tarball and logs each message.
 
 Returns immediately if publint is disabled or no package.json was found (warn in the latter case). Loads publint and publint/utils via importWithError using the configured resolvePaths, then runs publint with pack set to the tarball buffer. With no messages it logs success with elapsed ms; otherwise each message is formatted with formatMessage and logged at error/warn/info corresponding to its error/warning/suggestion type.
 
-calls: [importWithError](../../catalog.json)
+calls: [importWithError](../../catalog.json.gz)
 
 **Uncertainties.**
 

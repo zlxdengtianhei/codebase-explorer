@@ -64,7 +64,7 @@ Re-raises the routing exception stored on the request, except in one debug case 
 Never returns normally.
 The stored routing_exception is raised unchanged if any of these hold: not debug; it is not a RequestRedirect; its code is 307 or 308; or the request method is GET, HEAD or OPTIONS. Only for debug mode with a RequestRedirect whose code is not 307/308 and a body-carrying method does it import and raise FormDataRoutingRedirect(request).
 
-raises: [FormDataRoutingRedirect](../../catalog.json)
+raises: [FormDataRoutingRedirect](../../catalog.json.gz)
 
 ## Look up code
 

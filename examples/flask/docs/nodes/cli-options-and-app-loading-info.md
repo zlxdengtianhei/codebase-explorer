@@ -36,7 +36,7 @@ Exception raised when a Flask application cannot be found or loaded by the CLI.
 
 It subclasses click.UsageError, so Click reports it as a usage error rather than a traceback.
 
-inherits: [click.UsageError](../../catalog.json)
+inherits: [click.UsageError](../../catalog.json.gz)
 
 <a id="u-e0ddadae27ac"></a>
 ### `ScriptInfo`

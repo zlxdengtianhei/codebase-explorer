@@ -28,7 +28,7 @@ Inner TypeAdapter that reads and writes homogeneous collections.
 
 read returns null on a JSON null token; otherwise it constructs the collection via the injected ObjectConstructor (so the concrete Collection implementation comes from ConstructorConstructor, not hardcoded), then reads elements in a beginArray/hasNext loop with the element adapter, adding each, and ends the array. write emits nullValue for a null collection, else beginArray, each element through the (runtime-type-wrapping) element adapter, endArray. IOExceptions from reader/writer propagate; a constructor that fails would surface as whatever its construct() throws.
 
-calls: [ObjectConstructor](../../catalog.json)
+calls: [ObjectConstructor](../../catalog.json.gz)
 
 <a id="u-8a5f211d80d7"></a>
 ### `CollectionTypeAdapterFactory.java-collectiontypeadapterfactory`
@@ -39,7 +39,7 @@ TypeAdapterFactory adapting Collection subtypes; create returns null if the requ
 
 Otherwise it resolves the element type via GsonTypes.getCollectionElementType, obtains the element adapter from Gson and wraps it in a TypeAdapterRuntimeTypeWrapper (so serialization can use runtime subtypes), and obtains a collection constructor from the injected ConstructorConstructor with allowUnsafe=false — deliberately refusing Unsafe-based construction because half-initialized collections could throw confusing exceptions on Collection methods. It returns an Adapter binding the wrapped element adapter and the constructor. The class holds only the ConstructorConstructor as state.
 
-calls: [ConstructorConstructor.get](../../catalog.json), [GsonTypes.getCollectionElementType](../../catalog.json), [Gson.getAdapter](../../catalog.json)
+calls: [ConstructorConstructor.get](../../catalog.json.gz), [GsonTypes.getCollectionElementType](../../catalog.json.gz), [Gson.getAdapter](../../catalog.json.gz)
 
 <a id="u-b616c0d60e92"></a>
 ### `ConstructorConstructor.java-constructor-lookup-entrypoints`

@@ -51,7 +51,7 @@ Enables obug debug namespaces derived from the debug flag.
 
 Falsy input returns immediately. `true` enables 'tsdown:*'; otherwise the value is comma-split, array-normalized, each entry prefixed with 'tsdown:', and joined with commas. Existing enabled namespaces (from namespaces()) are appended so they stay active, then enable() is called.
 
-calls: [resolveComma](../../catalog.json)
+calls: [resolveComma](../../catalog.json.gz)
 
 <a id="u-ae3c2ff582c3"></a>
 ### `run.ts module code (L1–L17)`

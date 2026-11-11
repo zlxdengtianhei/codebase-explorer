@@ -34,7 +34,7 @@ String, Boolean, and Number nulls delegate to nullValue; non-null values are wra
 
 float, double, and Number overloads throw IllegalArgumentException for NaN/infinite values when the writer is not lenient (checked via doubleValue for Number); long and boolean primitives are put unconditionally.
 
-calls: [JsonWriter.isLenient](../../catalog.json)
+calls: [JsonWriter.isLenient](../../catalog.json.gz)
 
 <a id="u-db2378e1844e"></a>
 ### `JsonTreeWriter`
@@ -94,7 +94,7 @@ nullValue puts JsonNull.INSTANCE, which may be dropped by put when a member name
 
 put inserts a value: with a pendingName it adds the member to the enclosing JsonObject unless the value is JSON null and serializeNulls is off, then clears pendingName; with an empty stack it becomes the product; otherwise it is appended to the enclosing JsonArray, or IllegalStateException if the top is neither (i.e., a scalar was already written).
 
-calls: [JsonWriter.getSerializeNulls](../../catalog.json), [JsonObject.add](../../catalog.json), [JsonArray.add](../../catalog.json)
+calls: [JsonWriter.getSerializeNulls](../../catalog.json.gz), [JsonObject.add](../../catalog.json.gz), [JsonArray.add](../../catalog.json.gz)
 
 ## Look up code
 

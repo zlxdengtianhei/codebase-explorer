@@ -22,7 +22,7 @@ Abstract per-Date-subclass strategy: DATE converts a parsed java.util.Date to it
 
 Subclasses store their dateClass and implement deserialize(Date) to convert. createAdapterFactory(String) and createAdapterFactory(int,int) each build a DefaultDateTypeAdapter and wrap it via private createFactory using TypeAdapters.newFactory(dateClass, adapter), so the factory matches exactly that date class. Both are final; callers (e.g. GsonBuilder) obtain factories through these methods.
 
-calls: [TypeAdapters.newFactory](../../catalog.json)
+calls: [TypeAdapters.newFactory](../../catalog.json.gz)
 
 <a id="u-8c5cc11e52d1"></a>
 ### `DefaultDateTypeAdapter.java-defaultdatetypeadapter-class-and-constructors`
@@ -33,7 +33,7 @@ TypeAdapter that serializes Date subclasses to formatted strings and parses stri
 
 Two private constructors build an ordered list of DateFormat deserialization candidates: a pattern-based one uses SimpleDateFormat with Locale.US, plus a default-locale copy when the default locale is not US; a style-based one uses DateFormat.getDateTimeInstance(US), a default-locale copy, and, on Java 9+, a pre-Java-9 US format from PreJava9DateFormatProvider. The first format in the list is also the serialization format. dateType is null-checked. Because SimpleDateFormat captures default TimeZone/Locale at creation, instances are intentionally not cached statically.
 
-calls: [JavaVersion.isJava9OrLater](../../catalog.json), [PreJava9DateFormatProvider.getUsDateTimeFormat](../../catalog.json)
+calls: [JavaVersion.isJava9OrLater](../../catalog.json.gz), [PreJava9DateFormatProvider.getUsDateTimeFormat](../../catalog.json.gz)
 
 <a id="u-adc983d0aea0"></a>
 ### `DefaultDateTypeAdapter.java-read-write-deserializetodate`
@@ -44,7 +44,7 @@ write emits nullValue for null, otherwise formats the value with dateFormats.get
 
 read returns null on JSON null, else parses the string to a Date and converts via dateType.deserialize. deserializeToDate reads a string, then under synchronization tries each DateFormat in order, restoring each format's TimeZone in a finally and swallowing ParseException to try the next; if all fail it falls back to ISO8601Utils.parse, and on ParseException there throws JsonSyntaxException including the string and the reader's previous path.
 
-calls: [ISO8601Utils.parse](../../catalog.json)
+calls: [ISO8601Utils.parse](../../catalog.json.gz)
 
 <a id="u-92bb23ccfaeb"></a>
 ### `DefaultDateTypeAdapter.java-tostring`

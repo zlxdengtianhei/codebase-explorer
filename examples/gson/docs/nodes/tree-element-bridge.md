@@ -127,7 +127,7 @@ Writes a JsonElement tree to a writer, recursively.
 
 null or JsonNull writes nullValue. A JsonPrimitive writes its number as a number, its boolean as a boolean, otherwise its string value. A JsonArray writes beginArray, recurses on each element, endArray; a JsonObject writes beginObject, then each entry's name and recursed value, endObject. Any other JsonElement subclass throws IllegalArgumentException("Couldn't write <class>").
 
-calls: [JsonPrimitive.isNumber](../../catalog.json)
+calls: [JsonPrimitive.isNumber](../../catalog.json.gz)
 
 ## Look up code
 

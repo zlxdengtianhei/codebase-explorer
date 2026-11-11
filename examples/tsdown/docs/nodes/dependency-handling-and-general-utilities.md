@@ -117,7 +117,7 @@ If `external`/`noExternal`/`inlineOnly`/`skipNodeModulesBundle` is set, the corr
 
 - failure: Four distinct TypeErrors: each deprecated option paired with its deps.* replacement, plus skipNodeModulesBundle+alwaysBundle conflict.
 
-calls: [matchPattern](../../catalog.json)
+calls: [matchPattern](../../catalog.json.gz)
 
 <a id="u-6e036190d6a7"></a>
 ### `importWithError`

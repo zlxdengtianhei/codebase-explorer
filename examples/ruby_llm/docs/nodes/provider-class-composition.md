@@ -71,7 +71,7 @@ Formats chat content into GPUStack/OpenAI-style parts, delegating base helpers t
 
 format_content returns content.value for Raw content, to_json for Hash/Array, the content itself when not a Content, and otherwise builds a parts array: format_text of content.text when present, then per attachment an image_url part (format_image: url from for_llm, detail 'auto') for :image, format_text_file for :text, else raises UnsupportedAttachmentError with the attachment's mime_type.
 
-inherits: [Media](../../catalog.json)
+inherits: [Media](../../catalog.json.gz)
 
 **Uncertainties.**
 
@@ -102,7 +102,7 @@ Formats chat content into Ollama/OpenAI-style parts, delegating base helpers to 
 
 format_content returns content.value for Raw content, to_json for Hash/Array, the content itself when not a Content, and otherwise builds a parts array: format_text of content.text when present, then per attachment an image_url part (format_image: url from for_llm, detail 'auto') for :image, format_text_file for :text, else raises UnsupportedAttachmentError with the attachment's mime_type.
 
-inherits: [Media](../../catalog.json)
+inherits: [Media](../../catalog.json.gz)
 
 **Uncertainties.**
 

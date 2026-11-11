@@ -22,7 +22,7 @@ Flask is the concrete WSGI application class, extending the framework-neutral sa
 
 Class-level state: default_config is an ImmutableDict of default config keys (e.g. DEBUG None, PERMANENT_SESSION_LIFETIME 31 days, MAX_FORM_MEMORY_SIZE 500_000, MAX_FORM_PARTS 1000, MAX_COOKIE_SIZE 4093, PROVIDE_AUTOMATIC_OPTIONS True, PREFERRED_URL_SCHEME http). request_class and response_class default to the wrappers' Request and Response and can be overridden by subclasses. session_interface is a class-level SecureCookieSessionInterface instance shared by all apps unless reassigned. Routing, config, blueprint registries, hooks and handler lookup live in the base App, which is outside the files read.
 
-inherits: [App](../../catalog.json)
+inherits: [App](../../catalog.json.gz)
 
 <a id="u-77f2bfe17f97"></a>
 ### `_make_timedelta`
@@ -42,7 +42,7 @@ Constructs the app by delegating all path, static and routing options to the bas
 
 It sets self.cli to a new cli.AppGroup named after the app. If has_static_folder is true it asserts bool(static_host) == host_matching (AssertionError 'Invalid static_host/host_matching combination' otherwise, which is skippable under python -O) and registers `<static_url_path>/<path:filename>` with endpoint 'static'. The view is a lambda that holds only a weakref to the app, so the route does not create a reference cycle; if the app is already collected, calling it would fail on None. It never checks that the static folder exists on disk.
 
-calls: [App.__init__](../../catalog.json), [App.add_url_rule](../../catalog.json)
+calls: [App.__init__](../../catalog.json.gz), [App.add_url_rule](../../catalog.json.gz)
 
 **Uncertainties.**
 
@@ -121,7 +121,7 @@ View function that serves a file from the app's static folder.
 
 Raises RuntimeError if has_static_folder is false. Otherwise it computes max_age via self.get_send_file_max_age(filename) and returns send_from_directory(static_folder, filename, max_age=max_age). Path safety and NotFound handling are delegated to send_from_directory, outside these files.
 
-calls: [send_from_directory](../../catalog.json)
+calls: [send_from_directory](../../catalog.json.gz)
 
 <a id="u-42c783acd68d"></a>
 ### `Flask.test_cli_runner`

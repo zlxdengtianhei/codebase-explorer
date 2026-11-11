@@ -147,7 +147,7 @@ calls: [function::buildSingle][f1]
 
 Deletes the given output chunks/asset files by resolving each chunk's fileName against outDir and removing it, all concurrently.
 
-calls: [fsRemove](../../catalog.json)
+calls: [fsRemove](../../catalog.json.gz)
 
 <a id="u-31a32a6d82f5"></a>
 ### `cleanOutDir`
@@ -158,7 +158,7 @@ Collects and deletes files matched by each config's clean globs, skipping the ou
 
 When devtools is enabled with clean not explicitly false, 'node_modules/.rolldown' is appended to that config's clean list. Globs run with cwd=config.cwd, dotfiles included, matching files and directories; entries whose trailing-slash-normalized path equals the normalized outDir are excluded. All removals are deduplicated in a Set, logged as a count, then removed concurrently via fsRemove; if nothing matched, it returns without logging.
 
-calls: [fsRemove](../../catalog.json)
+calls: [fsRemove](../../catalog.json.gz)
 
 <a id="u-1fe6db3c3cb7"></a>
 ### `resolveClean`
@@ -169,7 +169,7 @@ Normalizes the user clean option into a glob-pattern array and refuses to clean 
 
 `true` becomes [slash(outDir)]; falsy becomes []. If any pattern resolves to the cwd, it throws an Error telling the user to pick a different path; otherwise the array is returned unchanged.
 
-calls: [slash](../../catalog.json)
+calls: [slash](../../catalog.json.gz)
 
 <a id="u-de7f8d83c517"></a>
 ### `startDevtoolsUI`

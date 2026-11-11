@@ -204,7 +204,7 @@ Wraps text plus attachments for LLM payloads.
 
 initialize accepts text and attachments; attachments are normalized via process_attachments (Hash values each processed, anything else passed through process_attachments_array_or_string, which uses Utils.to_safe_array and adds each element as an Attachment), then raises ArgumentError if both text is nil and attachments ended up empty. add_attachment appends an Attachment and returns self. format returns the plain string when there is text and no attachments, otherwise self, letting callers pass strings through unchanged. to_h serializes as {text:, attachments: [each.to_h]} for Rails.
 
-calls: [Attachment](../../catalog.json), [utils.rb-data-utilities](gemini-and-media-integrations.md#u-907fb557c5e2)
+calls: [Attachment](../../catalog.json.gz), [utils.rb-data-utilities](gemini-and-media-integrations.md#u-907fb557c5e2)
 
 **Uncertainties.**
 

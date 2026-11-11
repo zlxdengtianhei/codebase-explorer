@@ -117,7 +117,7 @@ Factory matching one exact type or a type hierarchy and producing TreeTypeAdapte
 
 The constructor extracts serializer/deserializer views of the adapter object and throws IllegalArgumentException if it implements neither (after a null check). create matches when exactType equals the requested token, or matchRawType and the exact type equals the requested raw type, or (no exactType) hierarchyType.isAssignableFrom(rawType); on match it returns a new TreeTypeAdapter with nullSafe defaulting true, otherwise null.
 
-calls: [TypeToken.equals](../../catalog.json)
+calls: [TypeToken.equals](../../catalog.json.gz)
 
 <a id="u-4e407330c43f"></a>
 ### `TypeToken.java-typetoken-accessors-and-equality`
@@ -214,7 +214,7 @@ calls: [gson/src/main/java/com/google/gson/internal/bind/TreeTypeAdapter.java:Tr
 
 delegate lazily resolves and caches gson.getDelegateAdapter(skipPastForGetDelegateAdapter, typeToken); the skipPast factory is only intended for that call, and concurrent races may assign the field more than once with the last assignment winning.
 
-calls: [Gson.getDelegateAdapter](../../catalog.json)
+calls: [Gson.getDelegateAdapter](../../catalog.json.gz)
 
 <a id="u-79ad1e7ebb16"></a>
 ### `TreeTypeAdapter.getSerializationDelegate`
@@ -230,7 +230,7 @@ getSerializationDelegate returns this when a serializer is configured, otherwise
 
 read delegates entirely to the delegate adapter when no deserializer is present; otherwise parses the whole reader into a JsonElement via Streams.parse, returns null when nullSafe and the tree is JSON null, and otherwise calls deserializer.deserialize with the type and the shared context.
 
-calls: [Streams.parse](../../catalog.json), [JsonDeserializer.deserialize](../../catalog.json)
+calls: [Streams.parse](../../catalog.json.gz), [JsonDeserializer.deserialize](../../catalog.json.gz)
 
 <a id="u-34a4da1a6f8f"></a>
 ### `TreeTypeAdapter.write`
@@ -239,7 +239,7 @@ calls: [Streams.parse](../../catalog.json), [JsonDeserializer.deserialize](../..
 
 write delegates to the delegate adapter when no serializer is present; otherwise writes nullValue when nullSafe and value is null, or serializes the value to a JsonElement via serializer.serialize and streams it out with Streams.write.
 
-calls: [Streams.write](../../catalog.json), [JsonSerializer.serialize](../../catalog.json)
+calls: [Streams.write](../../catalog.json.gz), [JsonSerializer.serialize](../../catalog.json.gz)
 
 ## Look up code
 

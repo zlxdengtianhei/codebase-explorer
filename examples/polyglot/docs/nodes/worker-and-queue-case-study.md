@@ -17,7 +17,7 @@ Worker owns a start counter and converts a JSON payload into a result dict.
 
 __init__ stores start (default 0) on the instance. run parses payload with json.loads (propagating any JSON decode or non-string-input error), reads data["n"] defaulting to 0, converts it to int, and passes it to helper, whose ValueError for negative values propagates unchanged. A nested function format_result formats the helper result as "n=<number>", and run returns {"ok": True, "text": ...}. close is an async method that resets self.start to 0 with no other side effects.
 
-calls: [helper](worker-and-queue-case-study.md#u-95536cf0fe0e), [json.loads](../../catalog.json)
+calls: [helper](worker-and-queue-case-study.md#u-95536cf0fe0e), [json.loads](../../catalog.json.gz)
 
 **Uncertainties.**
 

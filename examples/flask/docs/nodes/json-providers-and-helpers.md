@@ -26,7 +26,7 @@ Abstract hooks on the JSON provider base that subclasses must implement to seria
 
 Both simply raise NotImplementedError in the base class, so any base-class method that relies on them (dump, load, response) fails with that error unless a subclass overrides them.
 
-raises: [NotImplementedError](../../catalog.json)
+raises: [NotImplementedError](../../catalog.json.gz)
 
 <a id="u-e000fecd643a"></a>
 ### `provider.py-file-based-dump-and-load-defaults`
@@ -48,7 +48,7 @@ Base class defining the pluggable JSON interface for a Flask app; subclasses imp
 
 The constructor stores the app as a weakref.proxy on _app, so the provider does not keep the app alive; accessing _app after the app is collected would fail with a ReferenceError from the proxy. Other methods are documented as their own units.
 
-calls: [weakref.proxy](../../catalog.json)
+calls: [weakref.proxy](../../catalog.json.gz)
 
 <a id="u-77d06b3840e5"></a>
 ### `dump`
@@ -59,7 +59,7 @@ Module-level function that serializes data as JSON into a text file object, usin
 
 With an active app it calls current_app.json.dump(obj, fp, **kwargs) and returns nothing. Otherwise it sets the 'default' kwarg to the module's _default converter if the caller gave none, then calls json.dump(obj, fp, **kwargs). Writes to fp as a side effect; errors from serialization or from fp propagate. No ensure_ascii or sort_keys defaults are added in the fallback path.
 
-calls: [current_app.json.dump](../../catalog.json)
+calls: [current_app.json.dump](../../catalog.json.gz)
 
 <a id="u-8ad36294fdd0"></a>
 ### `dumps`
@@ -70,7 +70,7 @@ Module-level JSON serialization to a string that delegates to the current app's 
 
 When the proxy is truthy, it returns current_app.json.dumps(obj, **kwargs), so an app's provider fully controls output and kwargs defaults. Otherwise it sets kwargs default to the module's _default converter (only if the caller did not supply 'default') and calls json.dumps. In the fallback path no ensure_ascii or sort_keys defaults are applied, unlike the default provider. Exceptions from the underlying dumps (such as TypeError for unserializable objects) propagate.
 
-calls: [current_app.json.dumps](../../catalog.json); uses: [_default](../../catalog.json)
+calls: [current_app.json.dumps](../../catalog.json.gz); uses: [_default](../../catalog.json.gz)
 
 **Uncertainties.**
 
@@ -109,7 +109,7 @@ Fallback converter passed as the 'default' hook to json dumps for types the stan
 
 Checks run in this order and the first match returns. date (including datetime) is formatted by werkzeug http_date (RFC 822 style string). decimal.Decimal or uuid.UUID becomes str(o). A dataclass instance becomes dataclasses.asdict(o). Any object with an __html__ attribute becomes str(o.__html__()). Otherwise it raises TypeError saying the object type is not JSON serializable. Since the date check is first, datetime values are handled as dates; a dataclass type object itself would also satisfy is_dataclass.
 
-calls: [http_date](../../catalog.json); raises: [TypeError](../../catalog.json)
+calls: [http_date](../../catalog.json.gz); raises: [TypeError](../../catalog.json.gz)
 
 <a id="u-14ec69137186"></a>
 ### `DefaultJSONProvider.dumps`
@@ -120,7 +120,7 @@ Serializes an object to a JSON string using the standard json library with provi
 
 It fills in the 'default', 'ensure_ascii' and 'sort_keys' kwargs from the provider's attributes only if the caller did not pass them (setdefault), then returns json.dumps(obj, **kwargs). Other kwargs pass through. Errors from json.dumps, such as TypeError from default or from non-string keys with sort_keys, propagate.
 
-calls: [json.dumps](../../catalog.json)
+calls: [json.dumps](../../catalog.json.gz)
 
 <a id="u-ac89e9af25d7"></a>
 ### `DefaultJSONProvider.loads`
@@ -129,7 +129,7 @@ calls: [json.dumps](../../catalog.json)
 
 Parses JSON text or UTF-8 bytes using json.loads, passing kwargs through unchanged; no defaults are added and decoding errors from json propagate.
 
-calls: [json.loads](../../catalog.json)
+calls: [json.loads](../../catalog.json.gz)
 
 <a id="u-16b8b7e5134b"></a>
 ### `DefaultJSONProvider.response`
@@ -140,7 +140,7 @@ Builds the response for the default provider: serialized JSON plus a trailing ne
 
 Arguments are normalized by _prepare_response_obj (both args and kwargs raises TypeError; none gives None). Formatting: if compact is None and the app is in debug mode, or compact is False, it passes indent=2 to dumps; otherwise (compact True, or None outside debug) it passes separators (',', ':'). The text is f'{dumps(...)}\n' and the response is created with self._app.response_class and mimetype=self.mimetype. Dump options go through self.dumps, so ensure_ascii and sort_keys defaults apply.
 
-calls: [JSONProvider._prepare_response_obj](json-providers-and-helpers.md#u-6c61587de451), [response_class](../../catalog.json); uses: [DefaultJSONProvider.dumps](json-providers-and-helpers.md#u-14ec69137186)
+calls: [JSONProvider._prepare_response_obj](json-providers-and-helpers.md#u-6c61587de451), [response_class](../../catalog.json.gz); uses: [DefaultJSONProvider.dumps](json-providers-and-helpers.md#u-14ec69137186)
 
 <a id="u-6c61587de451"></a>
 ### `JSONProvider._prepare_response_obj`
@@ -151,7 +151,7 @@ Normalizes the arguments given to a response call into the single object to seri
 
 If both positional and keyword arguments are given it raises TypeError. If neither, it returns None. If exactly one positional argument, it returns that value as is. Otherwise it returns the args tuple if non-empty (multiple positionals, later serialized as a list) or else the kwargs dict.
 
-raises: [TypeError](../../catalog.json)
+raises: [TypeError](../../catalog.json.gz)
 
 <a id="u-3743f9a41781"></a>
 ### `JSONProvider.response`
@@ -162,7 +162,7 @@ Base implementation of building an application/json response from call arguments
 
 It normalizes args and kwargs with _prepare_response_obj (so mixing them raises TypeError), serializes the result with self.dumps(obj) without extra options, and wraps it in self._app.response_class with mimetype 'application/json'. No trailing newline or indentation is added. Depends on a subclass implementing dumps; otherwise NotImplementedError propagates.
 
-calls: [JSONProvider._prepare_response_obj](json-providers-and-helpers.md#u-6c61587de451), [response_class](../../catalog.json)
+calls: [JSONProvider._prepare_response_obj](json-providers-and-helpers.md#u-6c61587de451), [response_class](../../catalog.json.gz)
 
 ## Look up code
 

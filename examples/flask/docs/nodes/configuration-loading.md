@@ -27,7 +27,7 @@ A dict subclass that holds application configuration and can be filled from Pyth
 
 It adds a root_path for resolving relative filenames; only uppercase keys are accepted by the from_* loaders (except from_prefixed_env, which does not filter by case).
 
-inherits: [dict](../../catalog.json)
+inherits: [dict](../../catalog.json.gz)
 
 <a id="u-79758e5e60e2"></a>
 ### `ConfigAttribute`

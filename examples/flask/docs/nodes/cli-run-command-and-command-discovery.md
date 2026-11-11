@@ -29,7 +29,7 @@ The 'flask run' command, which loads the app and starts Werkzeug's development s
 The decorators define options (host 127.0.0.1, port 5000, cert, key, reload, debugger, threading, extra-files, exclude-patterns); the nested 'app' function is a fallback WSGI app.
 App loading: info.load_app() is tried. On any Exception: if running under the reloader, the traceback is printed immediately and a replacement WSGI app is defined that re-raises the saved error on every request (so the debugger can show it and the reloader keeps watching); otherwise the error is re-raised at once so the command fails. Then debug is read from get_debug_flag(); reload and debugger default to that value only when they are None (not passed). show_server_banner is called, then run_simple is called with the host, port, app, use_reloader, use_debugger, threaded=with_threads, ssl_context=cert, extra_files and exclude_patterns. This blocks until the server exits. An additional module-level statement (outside this function) inserts the debug option into this command's params.
 
-calls: [ScriptInfo.load_app](cli-run-command-and-command-discovery.md#u-3b32724f1b82), [show_server_banner](cli-run-command-and-command-discovery.md#u-b8abb08fd76f), [get_debug_flag](helpers-flask-blueprint-and-run.md#u-88884dd6c1eb), [werkzeug.run_simple](../../catalog.json)
+calls: [ScriptInfo.load_app](cli-run-command-and-command-discovery.md#u-3b32724f1b82), [show_server_banner](cli-run-command-and-command-discovery.md#u-b8abb08fd76f), [get_debug_flag](helpers-flask-blueprint-and-run.md#u-88884dd6c1eb), [werkzeug.run_simple](../../catalog.json.gz)
 
 <a id="u-f08e3cd8f1fb"></a>
 ### `prepare_import`

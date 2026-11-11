@@ -76,7 +76,7 @@ Tuples: length 3 is (body, status, headers); length 2 is treated as (body, heade
 If the body is not already a response_class: str/bytes/bytearray or an Iterator builds response_class(body, status, headers) and clears status/headers (the class handles them); dict or list goes through self.json.response and status/headers are applied afterwards; a werkzeug BaseResponse or any callable goes through response_class.force_type(rv, request.environ), whose TypeError is re-raised with an extended message; anything else raises TypeError describing the bad type.
 Finally a non-None status sets rv.status (for str/bytes) or rv.status_code (otherwise), and truthy headers are merged into rv.headers with update. A response_class instance is only changed by the tuple's status/headers.
 
-calls: [JSONProvider.response](../../catalog.json)
+calls: [JSONProvider.response](../../catalog.json.gz)
 
 **Uncertainties.**
 
