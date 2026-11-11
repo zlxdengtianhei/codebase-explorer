@@ -2,6 +2,8 @@
 
 ## 2.2.0.dev0 (unreleased)
 
+- Rendering a complete host run again (`cbe host render`) keeps the `wall_seconds` it finished
+  with. Before, every later render replaced it with the time since the plan.
 - Python concrete facts are back in `catalog.json`: parameter defaults, named constants,
   option tables, format templates and literal raises, taken from the syntax tree at render
   time. `cbe find` matches them (`match: facts`) and `cbe query` prints them. Node pages do

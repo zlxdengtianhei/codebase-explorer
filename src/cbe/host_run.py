@@ -269,6 +269,17 @@ def _aggregation_inputs(run_dir: Path, state: dict[str, Any]) -> tuple[dict, lis
     return payload
 
 
+def _wall_seconds(run_dir: Path, state: dict[str, Any]) -> float:
+    """Time from the plan to this render; a run that was already complete keeps the time it finished in."""
+    try:
+        previous = json.loads((run_dir / "summary.json").read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        previous = {}
+    if previous.get("status") == "complete" and type(previous.get("wall_seconds")) in (int, float):
+        return previous["wall_seconds"]
+    return round(time.time() - epoch(state["created_at"]), 3)
+
+
 def _invalidate_tree(run_dir: Path, state: dict[str, Any]) -> None:
     """Drop the frozen skeleton, its naming tasks and their answers (the detail changed)."""
     for tid in [tid for tid, task in state["tasks"].items() if task["kind"] in TREE_KINDS]:
@@ -1403,7 +1414,7 @@ def _render(run_dir: Path, state: dict[str, Any]) -> None:
                "unexplained": unexplained_rows,
                "known_empty": sorted(task["id"] for task in state["tasks"].values()
                                     if "known_empty" in task["flags"]),
-               "wall_seconds": round(time.time() - epoch(state["created_at"]), 3),
+               "wall_seconds": _wall_seconds(run_dir, state),
                "run_dir": str(run_dir), "index": str(run_dir / "docs" / "INDEX.md"),
                "subagent_tasks": sum(task["attempts"] for task in state["tasks"].values())}
     summary.update(_fallback_fields(state))

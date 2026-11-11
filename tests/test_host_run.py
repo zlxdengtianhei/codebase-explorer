@@ -1068,3 +1068,16 @@ def test_plan_covers_every_nonempty_file_byte_for_byte_with_one_inventory(tmp_pa
             assert joined == text, name
         else:
             assert symbols == [], name
+
+
+def test_rendering_a_complete_run_again_keeps_its_wall_time(tmp_path: Path, monkeypatch) -> None:
+    repo = _repo(tmp_path)
+    run_dir = Path(host_run.plan(repo, review="none", jobs=2, host="test")["run_dir"])
+    _drive(run_dir)
+    first = json.loads((run_dir / "summary.json").read_text(encoding="utf-8"))
+    assert first["status"] == "complete"
+    real_time = host_run.time.time
+    monkeypatch.setattr(host_run.time, "time", lambda: real_time() + 5000)
+    host_run.render(run_dir)
+    again = json.loads((run_dir / "summary.json").read_text(encoding="utf-8"))
+    assert again["wall_seconds"] == first["wall_seconds"]
