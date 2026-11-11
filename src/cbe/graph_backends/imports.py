@@ -254,8 +254,3 @@ def _python_package_roots(repo) -> list[tuple[str, object]]:
         elif "/" not in path and pure.suffix == ".py" and pure.name != "setup.py":
             found[(pure.stem, str(repo))] = None
     return [(name, pathlib.Path(root)) for name, root in sorted(found)]
-
-
-def _top_level_python_packages(repo) -> list[str]:
-    """Compatibility helper: import names discoverable from the whole tree."""
-    return [name for name, _ in _python_package_roots(repo)]
