@@ -2,6 +2,25 @@
 
 ## 2.2.0.dev0 (unreleased)
 
+- The program builds the module tree; the model only names it. After all detail and
+  review has settled, `skeleton.build` freezes the structure in the run state and
+  `tree_name_<k>` tasks (leaf modules, in batches of about 12,000 prompt tokens, in
+  parallel) and one `tree_top` task (all groups above them) name it. Answers are decoded
+  node by node with short numbers; a re-ask lists only the rejected nodes; a node still
+  unnamed after the last answer gets a program-made title (no numbering) and a `note`.
+  `validate_tree` adds three hard checks: no node without units and children, distinct
+  sibling titles, evidence units inside the node. Removed: the region tasks and merge
+  (`partition`, `compose`, `merge_inputs`, `Limits`, `CBE_TREE_*` variables), the
+  `names` task and the mechanical batch tree; the model can no longer add, drop or move
+  nodes or units. A run planned with the old `names` or `tree` tasks must be planned
+  again to continue; its finished docs still render, except a run built from region trees.
+- Entry page. `docs/INDEX.md` is the overview, the module tree to its leaves with one
+  capability line per node, key flows and the three lookup commands, within
+  max(2,000 tokens, 3% of the source tokens): the deepest level folds first, then each
+  node shows one file instead of three. The dependency view moves to
+  `docs/DEPENDENCIES.md`; reading stats, graph coverage, generation notes and the
+  cohesion and granularity readings move to `docs/RUN.md`. The system overview no
+  longer carries `maintenance_navigation`.
 - Change the detail answer contract. Symbols are named by short numbers from a
   numbered list in the prompt (`{"units":[{"h":[12],"explain":"..."}]}`); the
   program derives ids, kinds, groups and the full `dispositions` map. Usable units

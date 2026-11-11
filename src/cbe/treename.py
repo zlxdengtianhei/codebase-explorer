@@ -143,7 +143,7 @@ def name_blocks(batch: list[str], tree: Tree, units: dict[str, dict], edges: lis
         lines = [f"## {label_of[leaf]}  ({len(members)} units in {len(by_file)} files)"]
         for path in sorted(by_file):
             lines.append(f"file {path}")
-            lines += [f"  {codes[u]}: {_short(summary_sentence(units[u]))}" for u in sorted(by_file[path], key=codes.get)]
+            lines += [f"  {codes[u]}: {_short(summary_sentence(units[u]))}" for u in sorted(by_file[path], key=lambda u: int(codes[u][1:]))]
         for prefix, table in (("calls into", out_ties.get(leaf, {})), ("called from", in_ties.get(leaf, {}))):
             if line := _tie_line(prefix, table, label_of.get):
                 lines.append(line)
