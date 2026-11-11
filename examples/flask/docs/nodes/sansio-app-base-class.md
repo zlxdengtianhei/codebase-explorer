@@ -65,7 +65,7 @@ In a request context (_cv_request set): uses the request's adapter; an endpoint 
 Outside a request: uses the active app context's adapter if there is one, else create_url_adapter(None); a None adapter raises RuntimeError about missing SERVER_NAME; _external defaults to True.
 In both: _scheme given with a falsy _external raises ValueError. It then calls inject_url_defaults(endpoint, values) and url_adapter.build(...). On BuildError it merges _anchor/_method/_scheme/_external into values and returns the result of handle_url_build_error (which may itself return a string or raise). On success an _anchor is percent-quoted with a safe set and appended as '#anchor'. Note that the anchor is not appended to the value returned by the build error handler.
 
-calls: [App.inject_url_defaults](../../catalog.json), [App.handle_url_build_error](../../catalog.json)
+calls: [App.inject_url_defaults](../../catalog.json.gz), [App.handle_url_build_error](../../catalog.json.gz)
 
 <a id="u-c945a7570d6a"></a>
 ### `App`
@@ -77,7 +77,7 @@ App is the framework-agnostic (sansio) application base class built on Scaffold.
 It holds the central registries and routing, config and Jinja setup, while leaving request-handling and Jinja environment creation to a subclass.
 The class body defines overridable class attributes: aborter_class (werkzeug Aborter), jinja_environment, app_ctx_globals_class, config_class (Config), json_provider_class (DefaultJSONProvider), a shared mutable jinja_options dict, url_rule_class (Rule), url_map_class (Map), and test client/CLI runner classes defaulting to None. The testing, secret_key and permanent_session_lifetime attributes are ConfigAttribute descriptors bound to the TESTING, SECRET_KEY and PERMANENT_SESSION_LIFETIME config keys; the lifetime descriptor converts reads through the timedelta helper. default_config and response_class are only annotated here, so a subclass must supply them (make_config and redirect depend on them). jinja_options is a class-level dict, so mutating it affects all instances sharing it.
 
-inherits: [Scaffold](../../catalog.json)
+inherits: [Scaffold](../../catalog.json.gz)
 
 <a id="u-1485dc10cd8e"></a>
 ### `src/flask/sansio/app.py:_make_timedelta`
@@ -97,7 +97,7 @@ Constructs the application: initializes the Scaffold base, resolves the instance
 
 If instance_path is None it is computed by auto_find_instance_path; if given but not absolute (os.path.isabs false) it raises ValueError. The config is built with make_config(instance_relative_config), the aborter with make_aborter, and the JSON provider as json_provider_class(self). It initializes empty url_build_error_handlers, teardown_appcontext_funcs, shell_context_processors, blueprints and extensions containers, and creates the URL map as url_map_class(host_matching=host_matching). It stores subdomain_matching and sets _got_first_request to False, which later gates setup methods. Order matters: the instance path and config rely on the Scaffold-set root_path and import_name. make_config reads self.default_config, which this class only annotates.
 
-calls: [Scaffold.__init__](../../catalog.json), [App.make_config](sansio-app-base-class.md#u-7c1f1572f574), [App.auto_find_instance_path](sansio-app-base-class.md#u-401411ba15a9), [App.make_aborter](sansio-app-base-class.md#u-37e02c065230)
+calls: [Scaffold.__init__](../../catalog.json.gz), [App.make_config](sansio-app-base-class.md#u-7c1f1572f574), [App.auto_find_instance_path](sansio-app-base-class.md#u-401411ba15a9), [App.make_aborter](sansio-app-base-class.md#u-37e02c065230)
 
 **Uncertainties.**
 
@@ -175,7 +175,7 @@ Applies registered URL default functions to a values dict in place before URL bu
 
 The scopes are None (app-wide) first; if the endpoint contains a dot, it also adds the blueprint path portion (endpoint up to the last dot) split via _split_blueprint_path and iterated in reversed order of that helper's result. For each scope present in url_default_functions (checked with `in`, so no defaultdict entries are created), every function is called as func(endpoint, values) in registration order, and may mutate values. Parsed from the endpoint rather than the request, so it works outside a request context. Exceptions from the callbacks propagate.
 
-calls: [_split_blueprint_path](../../catalog.json)
+calls: [_split_blueprint_path](../../catalog.json.gz)
 
 **Uncertainties.**
 
@@ -217,7 +217,7 @@ Builds the Config object for the app.
 
 Uses root_path as the config root, or instance_path when instance_relative is true. Copies default_config into a new dict and overwrites its DEBUG entry with get_debug_flag(), so the environment-derived debug flag always wins over a default_config DEBUG value. Returns config_class(root_path, defaults). Requires instance_path to already be set when instance_relative is true, and default_config to exist.
 
-calls: [get_debug_flag](../../catalog.json)
+calls: [get_debug_flag](../../catalog.json.gz)
 
 <a id="u-1d21e745baf6"></a>
 ### `App.name`

@@ -164,7 +164,7 @@ Initializes the shared state of an application or blueprint.
 
 Stores import_name, then assigns static_folder and static_url_path through their property setters, and template_folder. root_path defaults to get_root_path(import_name) when None. Creates empty view_functions and the registries: error_handler_spec (nested defaultdicts), before_request_funcs, after_request_funcs, teardown_request_funcs, url_value_preprocessors and url_default_functions (defaultdict(list)), and template_context_processors, which starts with {None: [_default_template_ctx_processor]}. The registries are keyed by None for app-wide scope or a blueprint name.
 
-calls: [get_root_path](../../catalog.json)
+calls: [get_root_path](../../catalog.json.gz)
 
 <a id="u-83ed2a11651d"></a>
 ### `Scaffold.__repr__`

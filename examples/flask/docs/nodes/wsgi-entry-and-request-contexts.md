@@ -47,7 +47,7 @@ Creates a RequestContext from an environ built by the Flask EnvironBuilder from 
 
 The testing module is imported lazily. EnvironBuilder(self, *args, **kwargs) is built, request_context(builder.get_environ()) is returned, and builder.close() always runs in finally. The returned context is not pushed.
 
-calls: [EnvironBuilder.__init__](../../catalog.json)
+calls: [EnvironBuilder.__init__](../../catalog.json.gz)
 
 <a id="u-3dbd60ee2ed7"></a>
 ### `Flask.wsgi_app`
@@ -59,7 +59,7 @@ The core WSGI entry: creates and pushes a request context, dispatches, handles e
 The try block pushes the context and calls full_dispatch_request. An Exception is saved as error and converted with handle_exception (which may re-raise it, e.g. when propagating). A non-Exception BaseException is recorded as error and re-raised. If a response exists it is called with (environ, start_response) and its iterable returned.
 In finally: if environ contains 'werkzeug.debug.preserve_context', it is called with the current app and request contexts so the debugger can keep them. If error is not None and should_ignore_error(error) returns true, error is cleared. Then ctx.pop(error) runs, so teardown functions get the error unless ignored. Because response(...) runs before the pop, the context is popped before a lazy response body is iterated by the server, unless the context was preserved.
 
-calls: [App.should_ignore_error](../../catalog.json), [Flask.handle_exception](../../catalog.json)
+calls: [App.should_ignore_error](../../catalog.json.gz), [Flask.handle_exception](../../catalog.json.gz)
 
 **Uncertainties.**
 

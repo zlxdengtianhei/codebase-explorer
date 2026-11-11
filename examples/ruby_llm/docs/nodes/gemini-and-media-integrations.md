@@ -84,7 +84,7 @@ Represents an image produced by a model, holding url, base64 data, mime_type, re
 
 base64? is true when data is present. to_blob decodes Base64 data when present, otherwise performs an HTTP GET on the url via Connection.basic and returns the response body. save expands the path, binary-writes the blob, and returns the given path. The class method paint resolves configuration (context's config or the global one), defaults the model to config.default_image_model, resolves model and provider via Models.resolve, and delegates to provider_instance.paint with the model id and size (default '1024x1024'), returning its result.
 
-calls: [Connection.basic](../../catalog.json), [Models.resolve](../../catalog.json)
+calls: [Connection.basic](../../catalog.json.gz), [Models.resolve](../../catalog.json.gz)
 
 **Uncertainties.**
 

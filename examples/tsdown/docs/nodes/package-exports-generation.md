@@ -28,7 +28,7 @@ Adds a single CSS asset export unless css.splitting is enabled.
 
 Scans all chunks in every format for the first asset whose file name matches the CSS pattern, then maps './<file>' to its outDir-relative path; returns after the first match.
 
-calls: [slash](../../catalog.json)
+calls: [slash](../../catalog.json.gz)
 
 <a id="u-22adfbe936a8"></a>
 ### `exportMeta`
@@ -55,7 +55,7 @@ Computes the package.json export fields (main, module, types, exports, inlinedDe
 
 Warns if chunks contain neither cjs nor es formats. legacy defaults to false only when the build is pure ESM. For each es/cjs format it filters chunks to code entries (non-entries kept only when all is on and their facade module is neither virtual (\0-prefixed) nor from node_modules), dropping names matching exclude. A single non-dts entry (or one named index) becomes the root export '.', setting main (cjs) or module (es) and the corresponding types slot; 'x/index' names become './x'; others './name'. Each export accumulates per-format dist paths and a src path from the facade module. Exports are sorted with 'index' first, then alphabetically, and rendered via genSubExport; exportMeta adds './*' or './package.json'; exportCss adds a CSS asset export unless css.splitting is on. customExports is merged in (object) or awaited with the exports and context (function, isPublish false). When devExports is truthy, a parallel publishExports map is built the same way but with genSubExport(false, ...) and isPublish true. Returns main/module/types only when legacy (falling back to existing pkg fields), types otherwise preserving pkg.types, exports, inlinedDependencies only when emission is enabled, and publishExports.
 
-calls: [genSubExport](../../catalog.json), [exportMeta](../../catalog.json), [exportCss](../../catalog.json), [getExportName](../../catalog.json), [shouldExclude](../../catalog.json)
+calls: [genSubExport](../../catalog.json.gz), [exportMeta](../../catalog.json.gz), [exportCss](../../catalog.json.gz), [getExportName](../../catalog.json.gz), [shouldExclude](../../catalog.json.gz)
 
 **Uncertainties.**
 
@@ -68,7 +68,7 @@ calls: [genSubExport](../../catalog.json), [exportMeta](../../catalog.json), [ex
 
 Derives an export name from a chunk: slash-normalizes the file name, strips the extension, and detects .d files by the remaining '.d' suffix, trimming it; returns [name, originalFileName, isDts].
 
-calls: [stripExtname](../../catalog.json)
+calls: [stripExtname](../../catalog.json.gz)
 
 <a id="u-44615f0e8dc9"></a>
 ### `hasExportsTypes`
@@ -91,7 +91,7 @@ Joins a chunk's output path into a package-relative export path: computes the sl
 
 Returns whether a chunk export name matches any of the exclude patterns; false when the exclude list is absent or empty.
 
-calls: [matchPattern](../../catalog.json)
+calls: [matchPattern](../../catalog.json.gz)
 
 <a id="u-6b2cf5a6af2b"></a>
 ### `writeExports`
@@ -102,7 +102,7 @@ Writes generated export fields back into package.json on disk.
 
 Asserts options.pkg exists, calls generateExports to get main/module/types/exports/inlinedDependencies plus optional publishExports, and merges them into the package object (clearing packageJsonPath so it is not serialized). If publishExports is present, stores it under publishConfig.exports, creating publishConfig if needed. Reads the original file, re-serializes with the detected indentation, preserves a trailing newline, and writes only when the content actually changed.
 
-calls: [generateExports](../../catalog.json), [detectIndentation](../../catalog.json)
+calls: [generateExports](../../catalog.json.gz), [detectIndentation](../../catalog.json.gz)
 
 <a id="u-910af185da4f"></a>
 ### `ExportsOptions`

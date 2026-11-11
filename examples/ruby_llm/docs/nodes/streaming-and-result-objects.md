@@ -34,7 +34,7 @@ included mixes ContentExtraction, MessageProcessing, PayloadProcessing, and Prel
 
 - side_effect: Each streamed chunk is both accumulated into the final message and yielded to the caller's block.
 
-calls: [Connection.post](../../catalog.json), [StreamAccumulator.add](../../catalog.json), [handle_failed_response](../../catalog.json), [message_processing.rb-bedrock-event-stream-message-processing](bedrock-aws-integration.md#u-668f26439813)
+calls: [Connection.post](../../catalog.json.gz), [StreamAccumulator.add](../../catalog.json.gz), [handle_failed_response](../../catalog.json.gz), [message_processing.rb-bedrock-event-stream-message-processing](bedrock-aws-integration.md#u-668f26439813)
 
 **Uncertainties.**
 
@@ -49,7 +49,7 @@ Wraps moderation API results and provides the class-level entry point.
 
 moderate resolves config (context's or global), defaults the model to config.default_moderation_model or 'omni-moderation-latest', resolves model/provider via Models.resolve, and delegates to provider_instance.moderate with the model id. The instance is a value object over id, model, and results: content returns results; flagged? is true if any result's 'flagged' key is truthy; flagged_categories flat-maps each result's 'categories', selecting truthy entries and taking keys, uniq'd, tolerating a nil categories hash; category_scores and categories dig into the first result only, defaulting to {} when absent. All accessors use string keys, matching OpenAI-style JSON.
 
-calls: [Models.resolve](../../catalog.json)
+calls: [Models.resolve](../../catalog.json.gz)
 
 **Uncertainties.**
 
@@ -77,7 +77,7 @@ stream_url delegates to completion_url. build_chunk constructs a Chunk with role
 
 - failure: JSON.parse on non-JSON data raises before the type check.
 
-calls: [Chunk](../../catalog.json), [models.rb-anthropic-models-listing-and-usage-extraction](anthropic-model-metadata.md#u-9a70399f9e67)
+calls: [Chunk](../../catalog.json.gz), [models.rb-anthropic-models-listing-and-usage-extraction](anthropic-model-metadata.md#u-9a70399f9e67)
 
 **Uncertainties.**
 
@@ -138,7 +138,7 @@ Value object for audio transcription results (text, model, plus optional languag
 
 The class method transcribe pops :model, :language, :provider, :assume_model_exists (default false), and :context from kwargs, leaving the rest as provider options; resolves config from context or globally, defaults the model to config.default_transcription_model, resolves via Models.resolve, and delegates to provider_instance.transcribe with the audio file, model id, language (possibly nil), and remaining options.
 
-calls: [Models.resolve](../../catalog.json)
+calls: [Models.resolve](../../catalog.json.gz)
 
 **Uncertainties.**
 

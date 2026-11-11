@@ -22,7 +22,7 @@ Keeps the current request context alive while a streamed response generator runs
 The first two definitions are typing overloads; the nested decorator and generator are the inner pieces of the implementation.
 The argument is first passed to iter(). If that raises TypeError, the argument is treated as a generator function: a decorator wrapper is returned (with the original's metadata via update_wrapper) that calls the function with its arguments and passes the resulting generator back through stream_with_context. Otherwise an inner generator is created and started immediately with next(), which runs until its first dummy yield; it reads the request context var and raises RuntimeError right then if none is active. Inside, the context is entered with 'with ctx' and stays pushed while the real iterator is consumed via yield from; in a finally block gen.close() is called if present, so non-generator iterators get cleanup. The dummy value is discarded, and the started wrapped generator is returned. The request context is therefore pushed at call time but only popped when the stream ends, is closed or is garbage collected.
 
-uses: [_cv_request](../../catalog.json)
+uses: [_cv_request](../../catalog.json.gz)
 
 <a id="u-7680aedfd1b1"></a>
 ### `templating.py-stream`
@@ -125,7 +125,7 @@ Finds template source while recording every loader's outcome so the loading atte
 
 It asks every loader in order (no early exit), recording (loader, source object, result or None on TemplateNotFound) for each. The first successful result is kept as the answer. It then lazily imports and calls explain_template_loading_attempts with the app, template and attempts, which reports on them (its output behavior is outside this file). If a result was found it is returned, else TemplateNotFound is raised after the report. Loader errors other than TemplateNotFound propagate before the report.
 
-calls: [DispatchingJinjaLoader._iter_loaders](template-rendering-and-loading.md#u-eb5ed28e1cfb), [explain_template_loading_attempts](../../catalog.json)
+calls: [DispatchingJinjaLoader._iter_loaders](template-rendering-and-loading.md#u-eb5ed28e1cfb), [explain_template_loading_attempts](../../catalog.json.gz)
 
 <a id="u-e8e6fd78dfd8"></a>
 ### `DispatchingJinjaLoader._get_source_fast`

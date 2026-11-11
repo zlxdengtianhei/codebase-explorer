@@ -48,7 +48,7 @@ process_chunk iterates from offset 0, repeatedly calling process_message while o
 
 - failure: Any StandardError during chunk processing is logged and suppressed, so malformed chunks do not propagate.
 
-calls: [can_read_prelude?](../../catalog.json), [read_prelude](../../catalog.json), [process_payload](../../catalog.json), [find_next_message](../../catalog.json)
+calls: [can_read_prelude?](../../catalog.json.gz), [read_prelude](../../catalog.json.gz), [process_payload](../../catalog.json.gz), [find_next_message](../../catalog.json.gz)
 
 **Uncertainties.**
 

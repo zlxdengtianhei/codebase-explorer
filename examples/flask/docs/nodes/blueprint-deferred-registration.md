@@ -123,7 +123,7 @@ Blueprint is a Scaffold subclass collecting routes and callbacks as deferred fun
 
 It tracks whether it has ever been registered via the class attribute _got_registered_once, which locks further setup calls. Most decorators on it are setup methods that either record work on deferred_functions or write into Scaffold registries.
 
-inherits: [Scaffold](../../catalog.json)
+inherits: [Scaffold](../../catalog.json.gz)
 
 <a id="u-6140c4847d46"></a>
 ### `src/flask/sansio/blueprints.py:Blueprint.__init__`
@@ -181,7 +181,7 @@ Applies the blueprint to an application: validates the name, records it, merges 
 
 The name is options['name_prefix'] + '.' + options.get('name', self.name) with leading dots stripped. If that name is already in app.blueprints, raises ValueError (message says this or a different blueprint and suggests name=). first_bp_registration is true if this blueprint object isn't among app.blueprints values; first_name_registration is true when the name is new (always true after the check above). It then sets app.blueprints[name] and _got_registered_once = True, and builds the setup state via make_setup_state. If has_static_folder, adds a 'static' rule at static_url_path + '/<path:filename>' using send_static_file through the state (that attribute is not defined here). If first_bp_registration or first_name_registration, calls _merge_blueprint_funcs. Then each deferred function is called with the state, in order; exceptions propagate after the earlier mutations have been made. CLI: if self.cli.commands is non-empty, cli_group (options override self.cli_group) None merges commands into app.cli.commands directly; the sentinel renames the group to the registration name and adds it; any other value renames the group to that value and adds it. Nested blueprints: for each child, options are copied and subdomain computed (child's option, else its own; joined as child + '.' + parent when both exist, else whichever exists). url_prefix likewise (parent stripped of trailing slash, plus '/' plus child stripped of leading slash, else whichever exists). name_prefix is set to this blueprint's full name, then child.register(app, options) is called recursively.
 
-calls: [Blueprint.make_setup_state](blueprint-deferred-registration.md#u-cdd8d4a4352d), [blueprints.py-merge-blueprint-funcs](blueprint-deferred-registration.md#u-ba470935275d), [Blueprint.register](../../catalog.json)
+calls: [Blueprint.make_setup_state](blueprint-deferred-registration.md#u-cdd8d4a4352d), [blueprints.py-merge-blueprint-funcs](blueprint-deferred-registration.md#u-ba470935275d), [Blueprint.register](../../catalog.json.gz)
 
 **Uncertainties.**
 

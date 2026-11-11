@@ -48,7 +48,7 @@ Click Group subclass whose command decorator automatically wraps callbacks in wi
 
 Distinct from FlaskGroup, which adds app discovery.
 
-inherits: [click.Group](../../catalog.json)
+inherits: [click.Group](../../catalog.json.gz)
 
 <a id="u-afea71329c0c"></a>
 ### `FlaskGroup`

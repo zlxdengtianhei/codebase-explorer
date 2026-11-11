@@ -26,7 +26,7 @@ Handles an HTTPException by running a registered error handler, or returns the e
 
 Returns e unchanged if e.code is None (proxy exceptions) or if e is a RoutingException (internal redirects are never given to user handlers). Otherwise it looks up a handler via _find_error_handler(e, request.blueprints). If none is found it returns e; if found it calls the handler (wrapped with ensure_sync) with e and returns its result. Handler exceptions propagate.
 
-calls: [App._find_error_handler](../../catalog.json)
+calls: [App._find_error_handler](../../catalog.json.gz)
 
 <a id="u-fae95c7207e9"></a>
 ### `Flask.handle_user_exception`
@@ -37,7 +37,7 @@ Decides how an exception raised during dispatch is handled: returns a response v
 
 A BadRequestKeyError gets show_exception=True when debug or the TRAP_BAD_REQUEST_ERRORS config is truthy. An HTTPException that trap_http_exception does not trap goes to handle_http_exception and its result is returned. Otherwise a handler is found via _find_error_handler; if none exists the bare `raise` re-raises the active exception (this relies on being called while that exception is being handled), else the handler is called via ensure_sync and its value returned.
 
-calls: [Flask.handle_http_exception](../../catalog.json), [App.trap_http_exception](../../catalog.json)
+calls: [Flask.handle_http_exception](../../catalog.json.gz), [App.trap_http_exception](../../catalog.json.gz)
 
 <a id="u-947bcd626caf"></a>
 ### `App._find_error_handler`

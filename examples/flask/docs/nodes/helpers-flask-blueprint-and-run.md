@@ -44,7 +44,7 @@ Flask's WSGI-aware Blueprint, extending the sansio Blueprint with a Click comman
 
 Methods are documented separately; the class body itself only adds the three methods plus a constructor.
 
-inherits: [SansioBlueprint](../../catalog.json)
+inherits: [SansioBlueprint](../../catalog.json.gz)
 
 <a id="u-2111fdf38502"></a>
 ### `Blueprint.__init__`
@@ -55,7 +55,7 @@ Constructs a Blueprint by forwarding every argument to the sansio base initializ
 
 The cli_group default is the shared _sentinel value, so the base class can tell whether the caller passed it. After super().__init__, self.cli is a fresh AppGroup and its name is set to self.name (the blueprint name as set by the base class). No validation happens here; any validation of names or paths is in the base class.
 
-calls: [AppGroup](../../catalog.json)
+calls: [AppGroup](../../catalog.json.gz)
 
 <a id="u-b3f294891469"></a>
 ### `Blueprint.get_send_file_max_age`
@@ -84,7 +84,7 @@ View function that serves a file from the blueprint's static folder via send_fro
 
 Raises RuntimeError if the blueprint has no static folder (has_static_folder false). Otherwise it computes max_age with this blueprint's get_send_file_max_age and passes it explicitly, because send_file only consults the app's version. Missing or unsafe paths are handled inside send_from_directory (the 404 behavior is documented there, not here).
 
-calls: [Blueprint.get_send_file_max_age](helpers-flask-blueprint-and-run.md#u-b3f294891469), [send_from_directory](../../catalog.json)
+calls: [Blueprint.get_send_file_max_age](helpers-flask-blueprint-and-run.md#u-b3f294891469), [send_from_directory](../../catalog.json.gz)
 
 <a id="u-6855621e8eaf"></a>
 ### `_prepare_send_file_kwargs`
@@ -122,7 +122,7 @@ Stores a flash message in the session for the next request and sends the message
 
 Reads the '_flashes' list from the session (default new list), appends (category, message), and writes the list back to the session key explicitly so that sessions with external storage notice the change. It then sends the signal with the real app object as sender and the app's ensure_sync as async wrapper. Needs a request context with a session; failures there propagate.
 
-calls: [message_flashed](../../catalog.json)
+calls: [message_flashed](../../catalog.json.gz)
 
 <a id="u-88884dd6c1eb"></a>
 ### `get_debug_flag`
@@ -196,7 +196,7 @@ Sends a file or file-like object to the client by calling Werkzeug's send_file w
 
 All options are packed with the path and request.environ and passed through _prepare_send_file_kwargs, which fills in a default max_age callable, X-Sendfile setting, response class and root path. Behavior such as MIME detection, conditional and range responses, ETag, and errors for text-mode file objects is implemented in Werkzeug, not here. Paths are trusted and not checked, so untrusted user paths must not be passed. Requires a request context.
 
-calls: [_prepare_send_file_kwargs](helpers-flask-blueprint-and-run.md#u-6855621e8eaf), [werkzeug.utils.send_file](../../catalog.json)
+calls: [_prepare_send_file_kwargs](helpers-flask-blueprint-and-run.md#u-6855621e8eaf), [werkzeug.utils.send_file](../../catalog.json.gz)
 
 <a id="u-b61c28e0e520"></a>
 ### `send_from_directory`
@@ -207,7 +207,7 @@ Serves a file from a directory safely by delegating to Werkzeug's send_from_dire
 
 Extra keyword arguments are completed by _prepare_send_file_kwargs. Path-escape protection (safe_join) and the 404 NotFound for missing or non-regular files are implemented in Werkzeug. The directory is relative to the app's root path via the _root_path argument. Requires an app and request context.
 
-calls: [_prepare_send_file_kwargs](helpers-flask-blueprint-and-run.md#u-6855621e8eaf), [werkzeug.utils.send_from_directory](../../catalog.json)
+calls: [_prepare_send_file_kwargs](helpers-flask-blueprint-and-run.md#u-6855621e8eaf), [werkzeug.utils.send_from_directory](../../catalog.json.gz)
 
 <a id="u-221362c3f2fb"></a>
 ### `url_for`

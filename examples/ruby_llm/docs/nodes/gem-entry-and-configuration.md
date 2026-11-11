@@ -38,7 +38,7 @@ Bundles a Configuration with per-call provider connections.
 
 initialize stores the config and an empty connections hash (the hash is written but never read in this file). chat, embed, and paint forward all args, kwargs, and the block to Chat.new, Embedding.embed, and Image.paint respectively, injecting context: self so downstream calls use this configuration. connection_for simply returns the provider instance's connection.
 
-calls: [Chat](../../catalog.json), [Embedding.embed](../../catalog.json), [image.rb-generated-image](gemini-and-media-integrations.md#u-639ed55c69c8)
+calls: [Chat](../../catalog.json.gz), [Embedding.embed](../../catalog.json.gz), [image.rb-generated-image](gemini-and-media-integrations.md#u-639ed55c69c8)
 
 **Uncertainties.**
 

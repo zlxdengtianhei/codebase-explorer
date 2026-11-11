@@ -88,7 +88,7 @@ Destructures ~50 options with defaults (entry, plugins, clean:true, logLevel:'in
 
 - contract: Returns [] when filtered out, otherwise one ResolvedConfig per format.
 
-calls: [filterConfig](config-resolution-and-normalization.md#u-214398a0ba44), [filterEnv](config-resolution-and-normalization.md#u-bab6e24b1339), [resolveFeatureOption](config-resolution-and-normalization.md#u-af8d01c05608), [loadViteConfig](config-file-loading.md#u-0db73e2398fc), [resolveEntry](../../catalog.json), [resolveTarget](../../catalog.json), [resolveTsconfig](../../catalog.json), [resolveDepsConfig](../../catalog.json), [validateSea](../../catalog.json)
+calls: [filterConfig](config-resolution-and-normalization.md#u-214398a0ba44), [filterEnv](config-resolution-and-normalization.md#u-bab6e24b1339), [resolveFeatureOption](config-resolution-and-normalization.md#u-af8d01c05608), [loadViteConfig](config-file-loading.md#u-0db73e2398fc), [resolveEntry](../../catalog.json.gz), [resolveTarget](../../catalog.json.gz), [resolveTsconfig](../../catalog.json.gz), [resolveDepsConfig](../../catalog.json.gz), [validateSea](../../catalog.json.gz)
 
 **Uncertainties.**
 

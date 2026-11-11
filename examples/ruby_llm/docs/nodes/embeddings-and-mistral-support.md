@@ -102,7 +102,7 @@ Mistral embeddings integration: endpoint 'embeddings', payload {model, input} (d
 
 parse_embedding_response reads usage.prompt_tokens (default 0), maps body['data'] entries to their 'embedding' vectors, unwraps a single vector to a scalar when the input text was not an Array, and constructs Embedding with vectors, model, and input_tokens.
 
-calls: [Embedding.initialize](../../catalog.json)
+calls: [Embedding.initialize](../../catalog.json.gz)
 
 <a id="u-51b10f45ede9"></a>
 ### `embeddings.rb-vertexai-embeddings`
@@ -113,7 +113,7 @@ VertexAI embeddings integration: per-model predict URL, instances-based payload,
 
 embedding_url builds the {model}:predict path from config. render_embedding_payload flattens the text into instances of {content: t.to_s} and adds parameters.outputDimensionality only when dimensions is truthy. parse_embedding_response maps body['predictions''] embeddings.values to vectors, unwraps a single vector when the input text was not an Array, and constructs Embedding with input_tokens hardcoded to 0 (VertexAI does not report token usage here).
 
-calls: [Embedding.initialize](../../catalog.json)
+calls: [Embedding.initialize](../../catalog.json.gz)
 
 <a id="u-3f4cd3b8446c"></a>
 ### `mistral.rb-mistral-provider`
@@ -133,7 +133,7 @@ Lists Mistral models: URL 'models', Authorization header built from config.mistr
 
 created_at comes from capabilities.release_date_for (Time.parse) and is nil when no release date; name from format_display_name; family, context window, max tokens, modalities, capabilities, and pricing from the capabilities object; metadata carries object and owned_by from the API entry.
 
-calls: [release_date_for](../../catalog.json)
+calls: [release_date_for](../../catalog.json.gz)
 
 <a id="u-968d4388cf0e"></a>
 ### `models.rb-vertexai-model-builders`
@@ -151,7 +151,7 @@ build_model_from_api_data does the same shape but derives capabilities from the 
 
 Anthropic embeddings stub: `embed` raises an Error, and render_embedding_payload, embedding_url, and parse_embedding_response are aliased to it, so any embeddings call fails identically.
 
-raises: [Error](../../catalog.json)
+raises: [Error](../../catalog.json.gz)
 
 **Uncertainties.**
 

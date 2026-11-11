@@ -10,8 +10,9 @@ local paths: the run directory becomes `<RUN>` and the input directory becomes `
 The node pages hold source references (`[f1]: ../../../../in/x/file.c`) that point into the
 run's input directory.  They are rewritten to `<base>/<path>` (upstream blob URL) or
 `<local-dir>/<path>` (a copy of the input kept in the example); `<path>` is the longest tail of the
-link target that is a file in the catalog.  The command fails, after copying, if any published file (a `.gz` is read through) still holds
-`/home/` or `/Users/`.  Paths come only from arguments; none is written in this script.
+link target that is a file in the catalog.  Links to `../../catalog.json` are rewritten to the published
+`../../catalog.json.gz`.  The command fails, after copying, if any published file (a `.gz` is read through) still
+holds `/home/` or `/Users/`.  Paths come only from arguments; none is written in this script.
 """
 from __future__ import annotations
 
@@ -104,6 +105,7 @@ def publish(args: argparse.Namespace) -> int:
             text = _clean(src.read_text(encoding="utf-8"), pairs)
             if src.suffix == ".md":
                 text = _source_links(text, files, base)
+                text = text.replace("](../../catalog.json)", "](../../catalog.json.gz)")
             dest.write_text(text, encoding="utf-8")
     (example / "catalog.json.gz").write_bytes(
         _gzip_bytes(_clean((run / "catalog.json").read_text(encoding="utf-8"), pairs)))

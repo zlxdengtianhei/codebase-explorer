@@ -44,7 +44,7 @@ Both accept NUMBER or STRING tokens (IllegalStateException otherwise) and conver
 
 nextDouble additionally rejects NaN/infinite results with MalformedJsonException when the reader is not lenient. Both pop the primitive and bump the parent path index.
 
-calls: [JsonReader.isLenient](../../catalog.json)
+calls: [JsonReader.isLenient](../../catalog.json.gz)
 
 <a id="u-e3585375e799"></a>
 ### `JsonTreeReader.java-nextname`
@@ -134,7 +134,7 @@ numberFormatException creates a NumberFormatException whose message appends the 
 
 peek maps the top of stack to a token: empty stack means END_DOCUMENT; an Iterator is either an object's entry iterator (NAME if it has a next entry, else END_OBJECT) or an array iterator (pushes the next element and recurses, else END_ARRAY), distinguishing by whether the stack entry below is a JsonObject; JsonObject/JsonArray yield BEGIN_OBJECT/BEGIN_ARRAY; JsonPrimitive yields STRING, BOOLEAN, or NUMBER by its content kind (AssertionError if none); JsonNull yields NULL; the closed sentinel throws IllegalStateException; any custom JsonElement subclass throws MalformedJsonException naming the class.
 
-calls: [JsonPrimitive.isString](../../catalog.json), [JsonPrimitive.isBoolean](../../catalog.json), [JsonPrimitive.isNumber](../../catalog.json)
+calls: [JsonPrimitive.isString](../../catalog.json.gz), [JsonPrimitive.isBoolean](../../catalog.json.gz), [JsonPrimitive.isNumber](../../catalog.json.gz)
 
 <a id="u-714b59883760"></a>
 ### `JsonTreeReader.promoteNameToValue`

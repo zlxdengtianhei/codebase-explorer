@@ -25,7 +25,7 @@ tryBeginNesting consumes a BEGIN_ARRAY or BEGIN_OBJECT token and returns a new e
 
 readTerminal converts a non-nesting token to a JsonElement: STRING→JsonPrimitive(string), NUMBER→JsonPrimitive wrapping a LazilyParsedNumber of the raw text (preserving the original lexical form), BOOLEAN→JsonPrimitive(boolean), NULL→JsonNull.INSTANCE with the token consumed; any other token throws IllegalStateException("Unexpected token: ..."), which occurs only when the reader is in an invalid state.
 
-uses: [LazilyParsedNumber](../../catalog.json)
+uses: [LazilyParsedNumber](../../catalog.json.gz)
 
 <a id="u-0c16ea9ccdd9"></a>
 ### `JsonElementTypeAdapter.java-jsonelementtypeadapter-class-and-instance`
@@ -45,7 +45,7 @@ Reads any JSON value into an equivalent JsonElement tree.
 
 Fast path: if the reader is a JsonTreeReader, it returns nextJsonElement() directly, reusing an existing tree. Otherwise it starts with tryBeginNesting; a null result means the whole value is terminal and readTerminal supplies it. For arrays/objects it runs an explicit stack loop: while hasNext, an object reads a member name (arrays skip names), peeks, and gets the child via tryBeginNesting or readTerminal; the child is added to the current JsonArray or JsonObject, and if it nests, the current element is pushed and the child becomes current. When a level is exhausted it ends the array/object, then either returns the current (root) element or pops the enclosing element from the Deque. Malformed structure surfaces as reader IOExceptions; the IllegalStateException path comes only from readTerminal on an invalid reader state.
 
-calls: [JsonTreeReader.nextJsonElement](../../catalog.json)
+calls: [JsonTreeReader.nextJsonElement](../../catalog.json.gz)
 
 ## Look up code
 

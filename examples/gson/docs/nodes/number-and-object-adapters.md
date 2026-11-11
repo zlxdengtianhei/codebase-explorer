@@ -25,7 +25,7 @@ TypeAdapter for java.lang.Number that converts JSON numbers according to an inje
 
 The class is private-constructed; newFactory(strategy) builds a factory whose create returns the single shared adapter when the requested raw type is exactly Number.class, else null. getFactory(strategy) returns a cached LAZILY_PARSED_NUMBER_FACTORY when the strategy is ToNumberPolicy.LAZILY_PARSED_NUMBER (Gson's default), otherwise builds a fresh factory — so callers get a shared instance for the default policy only.
 
-uses: [ToNumberPolicy.LAZILY_PARSED_NUMBER](../../catalog.json)
+uses: [ToNumberPolicy.LAZILY_PARSED_NUMBER](../../catalog.json.gz)
 
 <a id="u-ee6fafc57c86"></a>
 ### `NumberTypeAdapter.java-numbertypeadapter-read-write`
@@ -36,7 +36,7 @@ read peeks the token: NULL consumes it and returns null; NUMBER or STRING delega
 
 write simply calls out.value(value), passing null through to the writer.
 
-calls: [ToNumberStrategy.readNumber](../../catalog.json)
+calls: [ToNumberStrategy.readNumber](../../catalog.json.gz)
 
 <a id="u-5918ab461bc5"></a>
 ### `ObjectTypeAdapter.java-objecttypeadapter-class-and-factories`
@@ -47,7 +47,7 @@ TypeAdapter for statically-typed Object values: deserialization yields primitive
 
 newFactory(strategy) returns a factory whose create matches only raw type Object.class, producing a fresh ObjectTypeAdapter per call with the Gson instance and the number strategy. getFactory(strategy) returns the cached DOUBLE_FACTORY for ToNumberPolicy.DOUBLE (Gson's default) and otherwise a new factory. The adapter holds the Gson instance (for write delegation) and the strategy (for number terminals).
 
-uses: [ToNumberPolicy.DOUBLE](../../catalog.json)
+uses: [ToNumberPolicy.DOUBLE](../../catalog.json.gz)
 
 ## Look up code
 

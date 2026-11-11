@@ -43,7 +43,7 @@ Package-private factory that only handles enum types, excluding java.lang.Enum i
 
 If the raw type is not isEnum() (anonymous enum subclasses), it walks up to the superclass to get the real enum class, then builds an EnumTypeAdapter for it. The adapter construction performs the reflective scan described in the constructor unit, so factory failures there (AssertionError on IllegalAccessException) propagate to callers of create.
 
-calls: [TypeToken.getRawType](../../catalog.json)
+calls: [TypeToken.getRawType](../../catalog.json.gz)
 
 <a id="u-da7109b1f413"></a>
 ### `ObjectTypeAdapter.java-objecttypeadapter-nesting-terminal-helpers`
@@ -54,7 +54,7 @@ tryBeginNesting consumes BEGIN_ARRAY/BEGIN_OBJECT and returns a new ArrayList or
 
 readTerminal maps STRING→String, NUMBER→toNumberStrategy.readNumber(in) (so numbers become Double under the default policy), BOOLEAN→Boolean, NULL→null with the token consumed; any other token throws IllegalStateException("Unexpected token: ..."), reachable only with a reader in an invalid state.
 
-calls: [ToNumberStrategy.readNumber](../../catalog.json)
+calls: [ToNumberStrategy.readNumber](../../catalog.json.gz)
 
 <a id="u-32e175f2ca0e"></a>
 ### `SerializationDelegatingTypeAdapter.java-serializationdelegatingtypeadapter`
@@ -149,7 +149,7 @@ Serializes an Object by looking up an adapter for its runtime class via gson.get
 
 A null value writes nullValue. If the resolved adapter is itself an ObjectTypeAdapter (no more specific type exists), it writes an empty JSON object (beginObject/endObject) rather than failing — an Object with no fields serializes as {}. Otherwise the delegate adapter writes the value, so actual runtime types (String, Number, collections, beans) serialize with their specific adapters. getAdapter failures and delegate IOExceptions propagate.
 
-calls: [Gson.getAdapter](../../catalog.json)
+calls: [Gson.getAdapter](../../catalog.json.gz)
 
 <a id="u-1c46fb4e1917"></a>
 ### `TypeAdapterRuntimeTypeWrapper.read`

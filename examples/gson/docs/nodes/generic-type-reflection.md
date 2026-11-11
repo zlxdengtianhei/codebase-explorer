@@ -29,7 +29,7 @@ Factory producing adapters for array and generic-array types, and the adapter cl
 
 The factory's create returns null unless the type is a GenericArrayType or a Class that isArray; otherwise it resolves the component type, obtains its adapter from Gson, and constructs an ArrayTypeAdapter with the component's raw class. The adapter constructor wraps the component adapter in a TypeAdapterRuntimeTypeWrapper so serialization can pick a runtime subtype adapter; it also stores the component class. read returns null on JSON null; otherwise it collects elements via the component adapter into an ArrayList, then copies them into a new array: primitive component types are filled element-by-element with Array.set, other types use list.toArray over a newInstance array. write emits nullValue for a null array, else beginArray, each element via the wrapped component adapter, endArray.
 
-calls: [GsonTypes.getArrayComponentType](../../catalog.json), [Gson.getAdapter](../../catalog.json); uses: [TypeAdapterRuntimeTypeWrapper](../../catalog.json)
+calls: [GsonTypes.getArrayComponentType](../../catalog.json.gz), [Gson.getAdapter](../../catalog.json.gz); uses: [TypeAdapterRuntimeTypeWrapper](../../catalog.json.gz)
 
 <a id="u-6e6c3dd8fb5d"></a>
 ### `GsonTypes.java-element-and-key-value-type-extraction`
@@ -240,7 +240,7 @@ Deserializes a JSON array into a Java array of the component type.
 
 Returns null when the reader peeks NULL (consuming it via nextNull). Otherwise reads elements with the wrapped component adapter into an ArrayList, then builds the result array: for primitive component types it creates the array reflectively and sets each slot with Array.set (unboxing nulls would throw); for reference types it allocates an E[] and uses list.toArray. Malformed input (missing endArray, wrong tokens) propagates whatever IOException the reader raises.
 
-calls: [JsonReader](../../catalog.json)
+calls: [JsonReader](../../catalog.json.gz)
 
 <a id="u-d7de852306f0"></a>
 ### `ArrayTypeAdapter.write`
@@ -251,7 +251,7 @@ Serializes a Java array (of any component type, accessed reflectively) as a JSON
 
 A null array writes nullValue and returns. Otherwise it writes beginArray, iterates Array.getLength/Array.get to fetch each element, delegates each to the wrapped component adapter (which may choose a runtime-type adapter), and ends with endArray. No exception handling; reader/writer IOExceptions propagate.
 
-calls: [JsonWriter](../../catalog.json)
+calls: [JsonWriter](../../catalog.json.gz)
 
 <a id="u-cdb0eca53d60"></a>
 ### `gson/src/main/java/com/google/gson/reflect/TypeToken.java:TypeToken (2)`

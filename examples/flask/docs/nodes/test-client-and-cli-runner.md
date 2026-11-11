@@ -146,7 +146,7 @@ Context manager that lets a test read and modify the client's session, saving it
 
 Raises TypeError if cookies are disabled (client built without cookie support). A test request context is built from the passed arguments, the client's cookies are added to its environ, and the session is opened inside it using the app's session interface; if the backend returns None, RuntimeError is raised. The session is yielded. After the with-block (only on normal completion, since an exception in the body skips the save), if the session is a null session nothing is saved. Otherwise the session is saved into a new response and the Set-Cookie headers are fed back to the client's cookie jar for the request host (port removed) and path.
 
-calls: [Flask.test_request_context](../../catalog.json)
+calls: [Flask.test_request_context](../../catalog.json.gz)
 
 ## Look up code
 

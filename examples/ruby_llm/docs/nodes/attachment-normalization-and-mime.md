@@ -74,7 +74,7 @@ Thin wrappers over Marcel plus category predicates.
 
 for forwards everything to Marcel::MimeType.for. image?, video?, and audio? test the 'image/', 'video/', 'audio/' prefixes respectively; pdf? tests exact 'application/pdf'. text? is true for 'text/' prefixes, for types ending in one of the structured suffixes (+json, +xml, +html, +yaml, +csv, +plain, +javascript, +svg), or for an explicit allowlist of non-text-prefixed types (JSON, XML, JavaScript, shell, YAML, TOML, PGP, etc.). All predicates assume a String and would raise NoMethodError on nil.
 
-calls: [MimeType.for](../../catalog.json)
+calls: [MimeType.for](../../catalog.json.gz)
 
 <a id="u-ecbfe1c4291d"></a>
 ### `RubyLLM.Attachment.active_storage_content_type`

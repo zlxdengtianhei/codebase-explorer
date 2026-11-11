@@ -64,7 +64,7 @@ endpoint is url_rule.endpoint, or None if no rule matched or matching has not ru
 
 blueprint is the part of the endpoint before the last '.', or None if the endpoint is None or has no dot. blueprints is [] when blueprint is None, otherwise the list from _split_blueprint_path(name), covering the nested blueprint chain.
 
-calls: [_split_blueprint_path](../../catalog.json)
+calls: [_split_blueprint_path](../../catalog.json.gz)
 
 <a id="u-03a151e28072"></a>
 ### `wrappers.py-request-size-limit-properties`

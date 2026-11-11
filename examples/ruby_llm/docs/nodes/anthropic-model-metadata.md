@@ -58,7 +58,7 @@ Provides the Anthropic models list URL, converts the API's model list into Model
 
 models_url is '/v1/models'. parse_list_models_response maps response.body['data'] (Array() coerces nil to empty) to Model::Info using the passed capabilities object for family, context window, max tokens, modalities, capabilities, and pricing, with Time.parse of 'created_at'. extract_model_id digs 'message'.'model'. extract_input_tokens digs message.usage.input_tokens. extract_output_tokens and extract_cached_tokens each try message.usage first, then top-level usage. extract_cache_creation_tokens tries cache_creation_input_tokens at either location; failing that, if the cache_creation entry is a Hash it sums its compacted values, else returns nil.
 
-calls: [determine_context_window](../../catalog.json), [determine_max_tokens](../../catalog.json)
+calls: [determine_context_window](../../catalog.json.gz), [determine_max_tokens](../../catalog.json.gz)
 
 <a id="u-216602ceefeb"></a>
 ### `RubyLLM.Providers.Anthropic.Capabilities.pricing_for`

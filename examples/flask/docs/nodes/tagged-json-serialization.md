@@ -28,7 +28,7 @@ Base class for a type tag used by TaggedJSONSerializer; it holds the serializer 
 
 The constructor stores the serializer. check, to_json and to_python are abstract hooks raising NotImplementedError. tag wraps the to_json result in a one-item dict keyed by self.key. A tag with an empty key is not registered in the serializer's lookup table, only in the order list, and acts as an intermediate step.
 
-calls: [to_json](../../catalog.json)
+calls: [to_json](../../catalog.json.gz)
 
 <a id="u-9f2f0bd5c9d2"></a>
 ### `tag.py-passdict`
@@ -61,7 +61,7 @@ Tag with key ' b' for bytes.
 
 check is true for bytes instances. to_json base64-encodes and decodes to an ASCII string. to_python base64-decodes the string back to bytes; invalid base64 input would raise from b64decode and propagate.
 
-calls: [b64encode](../../catalog.json), [b64decode](../../catalog.json)
+calls: [b64encode](../../catalog.json.gz), [b64decode](../../catalog.json.gz)
 
 <a id="u-f4490fabecc4"></a>
 ### `tag.py-tagdatetime`
@@ -72,7 +72,7 @@ Tag with key ' d' for datetime values.
 
 check uses isinstance datetime. to_json formats with werkzeug http_date (an RFC 822 style string with whole-second precision, so microseconds are lost). to_python uses werkzeug parse_date, which returns None for unparsable input rather than raising (per werkzeug's usual behavior, not shown here).
 
-calls: [http_date](../../catalog.json), [parse_date](../../catalog.json)
+calls: [http_date](../../catalog.json.gz), [parse_date](../../catalog.json.gz)
 
 **Uncertainties.**
 
@@ -98,7 +98,7 @@ Tag with key ' m' for markup-like objects.
 
 check is true for any value whose __html__ attribute exists and is callable (duck typing, not only Markup). to_json stores str(value.__html__()). to_python always returns a markupsafe.Markup built from the string, so the original type is not preserved.
 
-calls: [Markup](../../catalog.json)
+calls: [Markup](../../catalog.json.gz)
 
 <a id="u-ddb128655f4f"></a>
 ### `tag.py-tagtuple`
@@ -120,7 +120,7 @@ Tag with key ' u' for uuid.UUID.
 
 check uses isinstance UUID. to_json emits the 32-character hex string (no dashes). to_python rebuilds with UUID(value); malformed strings raise ValueError from UUID that propagates.
 
-calls: [UUID](../../catalog.json)
+calls: [UUID](../../catalog.json.gz)
 
 <a id="u-2c3d7e9eaea1"></a>
 ### `TaggedJSONSerializer`
@@ -162,7 +162,7 @@ Registers a tag class on the serializer, instantiating it with the serializer.
 
 If the tag's key is non-empty and already in tags, it raises KeyError unless force is true, in which case it overwrites that entry. Tags with an empty key skip the lookup table entirely. Then the tag instance is appended to order if index is None, else inserted at that index (list.insert semantics, out-of-range indexes clamp). Mutates tags and order. Note that with force=True an existing instance with the same key remains in order alongside the new one. The KeyError is raised after instantiation but before any mutation.
 
-raises: [KeyError](../../catalog.json)
+raises: [KeyError](../../catalog.json.gz)
 
 <a id="u-828f6c0b004f"></a>
 ### `TaggedJSONSerializer.tag`
@@ -173,7 +173,7 @@ Converts a value to its tagged form by scanning the order list and applying the 
 
 If no tag matches, the value is returned unchanged. Because the PassDict and PassList entries recurse through this method, nested values are tagged too. Exceptions from check or tag propagate.
 
-calls: [tag](../../catalog.json)
+calls: [tag](../../catalog.json.gz)
 
 <a id="u-78ebfdcde1d6"></a>
 ### `TaggedJSONSerializer.untag`
@@ -184,7 +184,7 @@ Reverses tagging for a single dict.
 
 If the dict does not have exactly one key, it is returned unchanged. If its sole key is not in tags, it is returned unchanged. Otherwise it returns tags[key].to_python(value[key]). It does not recurse; the caller is expected to have untagged the nested contents already.
 
-calls: [to_python](../../catalog.json)
+calls: [to_python](../../catalog.json.gz)
 
 ## Look up code
 
