@@ -128,18 +128,37 @@ def _joern_dir_ok(path: Path) -> bool:
     return (path / "joern").is_file() and (path / "joern-parse").is_file()
 
 
+class ToolchainError(ValueError):
+    """A tool location the user named does not hold the tool."""
+
+
+def _joern_in(base: Path) -> Path | None:
+    return next((c for c in (base, base / "joern-cli", base / "bin") if _joern_dir_ok(c)), None)
+
+
 def find_joern(joern_home: Path | str | None = None, cache: Path | None = None) -> Path | None:
-    """Locate the Joern CLI directory that holds ``joern`` and ``joern-parse``."""
-    candidates: list[Path] = []
-    for base in (joern_home, os.environ.get("CBE_JOERN_HOME")):
-        if base:
-            base = Path(base).expanduser()
-            candidates += [base, base / "joern-cli", base / "bin"]
-    candidates.append((cache or cache_dir()) / f"joern-{JOERN_VERSION}" / "joern-cli")
+    """Locate the Joern CLI directory that holds ``joern`` and ``joern-parse``.
+
+    A location the user named (``joern_home`` or ``CBE_JOERN_HOME``) must be valid:
+    it raises :class:`ToolchainError` instead of falling through to the next place.
+    """
+    for label, base in (("--joern-home", joern_home), ("CBE_JOERN_HOME", os.environ.get("CBE_JOERN_HOME"))):
+        if not base:
+            continue
+        base = Path(base).expanduser()
+        found = _joern_in(base)
+        if found is None:
+            raise ToolchainError(
+                f"{label} {base} does not hold joern-parse: looked for joern and joern-parse in {base}, "
+                f"{base / 'joern-cli'} and {base / 'bin'}. Fix the path, or {setup_hint()}")
+        return found
+    cached = (cache or cache_dir()) / f"joern-{JOERN_VERSION}" / "joern-cli"
+    if _joern_dir_ok(cached):
+        return cached
     which = shutil.which("joern-parse")
-    if which:
-        candidates.append(Path(which).resolve().parent)
-    return next((c for c in candidates if _joern_dir_ok(c)), None)
+    if which and _joern_dir_ok(Path(which).resolve().parent):
+        return Path(which).resolve().parent
+    return None
 
 
 @dataclass(frozen=True)
@@ -222,7 +241,11 @@ def check(cache: Path | None = None) -> dict:
     from .joern import joern_version  # noqa: PLC0415
 
     key = platform_key()
-    joern_dir = find_joern(cache=cache)
+    joern_error = None
+    try:
+        joern_dir = find_joern(cache=cache)
+    except ToolchainError as exc:
+        joern_dir, joern_error = None, str(exc)
     rejected: list = []
     java = find_java(cache, rejected=rejected)
     joern = None
@@ -243,6 +266,8 @@ def check(cache: Path | None = None) -> dict:
         "cache_dir": str(cache or cache_dir()),
         "pinned_joern": JOERN_VERSION,
     }
+    if joern_error:
+        report["joern_error"] = joern_error
     if missing:
         report["next"] = setup_hint(key)
     return report

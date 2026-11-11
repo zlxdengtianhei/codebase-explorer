@@ -22,7 +22,7 @@ from .joern import (
     build_with_joern,
     joern_version,
 )
-from .toolchain import find_java, find_joern, setup_hint
+from .toolchain import ToolchainError, find_java, find_joern, setup_hint
 
 __all__ = [
     "DEPCRUISE_LANGUAGES",
@@ -30,6 +30,7 @@ __all__ = [
     "JOERN_BYTECODE_FRONTENDS",
     "JOERN_LANGUAGE_FLAGS",
     "JoernError",
+    "ToolchainError",
     "build_with_depcruise",
     "build_with_grimp",
     "build_with_joern",

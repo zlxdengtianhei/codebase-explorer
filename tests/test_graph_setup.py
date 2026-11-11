@@ -270,3 +270,40 @@ def test_build_runs_joern_with_the_found_java_and_hints_when_none(tmp_path, monk
     assert "no Java" not in fragment["diagnostics"][0]["message"]
     fragment = joern.build_with_joern(repo, tmp_path / "r2", ["python"], home, 5)
     assert "no Java 21+ was found, run `cbe graph setup`" in fragment["diagnostics"][0]["message"]
+
+
+def test_invalid_joern_home_is_an_error_not_a_fall_through(tmp_path, monkeypatch, capsys):
+    good = tmp_path / "good"
+    good.mkdir()
+    for name in ("joern", "joern-parse"):
+        (good / name).touch()
+        (good / name).chmod(0o755)
+    monkeypatch.setenv("PATH", str(tmp_path / "nowhere"))
+    monkeypatch.setenv("CBE_JOERN_HOME", str(good))
+    bad = tmp_path / "bad"
+    bad.mkdir()
+    with pytest.raises(toolchain.ToolchainError, match=r"--joern-home .*bad does not hold joern-parse"):
+        toolchain.find_joern(bad)  # a valid CBE_JOERN_HOME must not rescue it
+    assert toolchain.find_joern(good) == good
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "a.py").write_text("x = 1\n")
+    assert cli.main(["graph", "build", str(repo), "--backend", "joern", "--joern-home", str(bad),
+                     "--output", str(tmp_path / "g.json")]) == 2
+    err = capsys.readouterr().err
+    assert str(bad) in err and "joern-parse" in err and "cbe graph setup" in err
+
+
+def test_invalid_cbe_joern_home_env_is_an_error(tmp_path, monkeypatch):
+    cache = tmp_path / "cache"
+    cached = cache / f"joern-{toolchain.JOERN_VERSION}" / "joern-cli"
+    cached.mkdir(parents=True)
+    for name in ("joern", "joern-parse"):
+        (cached / name).touch()
+    monkeypatch.setenv("CBE_JOERN_HOME", str(tmp_path / "missing"))
+    with pytest.raises(toolchain.ToolchainError, match=r"CBE_JOERN_HOME .*missing does not hold joern-parse"):
+        toolchain.find_joern(cache=cache)  # the cache copy must not rescue it
+    monkeypatch.delenv("CBE_JOERN_HOME")
+    assert toolchain.find_joern(cache=cache) == cached
+    monkeypatch.setenv("CBE_JOERN_HOME", str(tmp_path / "missing"))
+    assert toolchain.check(cache)["joern_error"].startswith("CBE_JOERN_HOME")
