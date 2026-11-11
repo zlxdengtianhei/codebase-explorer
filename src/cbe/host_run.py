@@ -744,7 +744,7 @@ def _tree_body(run_dir: Path, state: dict[str, Any], task: dict[str, Any]) -> st
         batch = state["skeleton"]["batches"][task["batch"]]
         return prompts.tree_name_prompt(treename.name_blocks(batch, tree, records, edges))
     names = _tree_names_for_top(run_dir, state, tree, records)
-    return prompts.tree_top_prompt(Path(state["repo"]).name, treename.top_blocks(tree, names, records, edges))
+    return prompts.tree_top_prompt(Path(state["repo"]).name, treename.top_blocks(tree, names, edges))
 
 
 def _previous_error(task: dict[str, Any]) -> str:

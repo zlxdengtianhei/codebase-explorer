@@ -247,7 +247,7 @@ def generate(repo: Path, run_dir: Path, *, model: str, config: Path | None = Non
                         break
                     future = pool.submit(invoke, task=csv_task, attempt=item["attempt"],
                                          prompt=prompt,
-                                         repo=repo, run_dir=run_dir, model=model, config=config,
+                                         run_dir=run_dir, model=model, config=config,
                                          timeout=timeout, csv_path=csv_path,
                                          overrides=api_overrides or None)
                     active[future] = (item, csv_task)

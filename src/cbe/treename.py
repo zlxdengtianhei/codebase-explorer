@@ -236,7 +236,7 @@ def top_context(tree: Tree) -> dict[str, str]:
     return {f"G{i + 1}": node for i, node in enumerate(tree.internals())}
 
 
-def top_blocks(tree: Tree, names: dict[str, dict], units: dict[str, dict], edges: list[dict]) -> list[str]:
+def top_blocks(tree: Tree, names: dict[str, dict], edges: list[dict]) -> list[str]:
     """One block per internal node: its children (named leaves, or the group that names them) and their ties."""
     label_of = {node: label for label, node in top_context(tree).items()}
 

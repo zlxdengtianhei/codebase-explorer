@@ -83,7 +83,7 @@ def _call(tmp_path: Path, base_url: str, monkeypatch, *, model: str = "test-mode
     config.write_text(json.dumps({"base_url": base_url, "api_key_env": "CBE_TEST_KEY"}), encoding="utf-8")
     monkeypatch.setenv("CBE_TEST_KEY", "secret-key-value")
     return api_completion.invoke(task="module_1", attempt=1, prompt="document this",
-                                 repo=tmp_path, run_dir=run_dir, model=model, config=config,
+                                 run_dir=run_dir, model=model, config=config,
                                  timeout=10, csv_path=run_dir / "calls.csv")
 
 
@@ -173,7 +173,7 @@ def test_missing_key_omits_authorization_and_uses_the_server_response(tmp_path, 
     run_dir.mkdir()
     config = run_dir / "api.json"
     config.write_text(json.dumps({"base_url": server, "api_key_env": "CBE_TEST_KEY"}), encoding="utf-8")
-    result = api_completion.invoke(task="module_1", attempt=1, prompt="x", repo=tmp_path,
+    result = api_completion.invoke(task="module_1", attempt=1, prompt="x",
                                    run_dir=run_dir, model="m", config=config, timeout=5,
                                    csv_path=run_dir / "calls.csv")
     assert result.error is None and result.value == {}
@@ -196,7 +196,7 @@ def test_no_key_server_401_is_provider_auth(tmp_path, server, monkeypatch) -> No
     run_dir.mkdir()
     config = run_dir / "api.json"
     config.write_text(json.dumps({"base_url": server, "api_key_env": "CBE_TEST_KEY"}), encoding="utf-8")
-    result = api_completion.invoke(task="module_1", attempt=1, prompt="x", repo=tmp_path,
+    result = api_completion.invoke(task="module_1", attempt=1, prompt="x",
                                    run_dir=run_dir, model="m", config=config, timeout=5,
                                    csv_path=run_dir / "calls.csv")
     assert result.error == "provider_auth"
@@ -210,7 +210,7 @@ def test_no_key_server_429_is_provider_limit(tmp_path, server, monkeypatch) -> N
     run_dir.mkdir()
     config = run_dir / "api.json"
     config.write_text(json.dumps({"base_url": server, "api_key_env": "CBE_TEST_KEY"}), encoding="utf-8")
-    result = api_completion.invoke(task="module_1", attempt=1, prompt="x", repo=tmp_path,
+    result = api_completion.invoke(task="module_1", attempt=1, prompt="x",
                                    run_dir=run_dir, model="m", config=config, timeout=5,
                                    csv_path=run_dir / "calls.csv")
     assert result.error == "provider_limit"
@@ -240,7 +240,7 @@ def test_endpoint_log_strips_userinfo_and_query(tmp_path, server, monkeypatch) -
     config = run_dir / "api.json"
     config.write_text(json.dumps({"base_url": dirty, "api_key_env": "CBE_TEST_KEY"}), encoding="utf-8")
     monkeypatch.setenv("CBE_TEST_KEY", "secret-key-value")
-    api_completion.invoke(task="module_1", attempt=1, prompt="x", repo=tmp_path, run_dir=run_dir,
+    api_completion.invoke(task="module_1", attempt=1, prompt="x", run_dir=run_dir,
                           model="m", config=config, timeout=10, csv_path=run_dir / "calls.csv")
     recorded = json.loads((run_dir / "raw" / "module_1-1.api.json").read_text())
     assert recorded["endpoint"].startswith("http://127.0.0.1:") and "/v1" in recorded["endpoint"]
@@ -342,7 +342,7 @@ def test_flash_request_defaults_and_explicit_config_override(tmp_path, server, m
     assert _Handler.captured["body"]["reasoning_effort"] == "low"
     config = tmp_path / "run/api.json"
     config.write_text(json.dumps({"base_url": server, "output_max_tokens": 60000, "reasoning_effort": "high"}))
-    result = api_completion.invoke(task="x", attempt=1, prompt="x", repo=tmp_path,
+    result = api_completion.invoke(task="x", attempt=1, prompt="x",
         run_dir=tmp_path / "run", model="zai/glm-5.3-flash", config=config,
         timeout=10, csv_path=tmp_path / "run/calls.csv")
     assert result.error is None
@@ -362,7 +362,7 @@ def test_output_budget_config_is_separate_from_source_batch_budget(tmp_path, ser
     config = tmp_path / "api.json"
     config.write_text(json.dumps({"base_url": server,
                                   "output_max_tokens": 62000, "batch_max_tokens": 15000}))
-    result = api_completion.invoke(task="x", attempt=1, prompt="x", repo=tmp_path,
+    result = api_completion.invoke(task="x", attempt=1, prompt="x",
         run_dir=tmp_path / "run", model="other/model", config=config,
         timeout=10, csv_path=tmp_path / "run/calls.csv")
     assert result.error is None
@@ -379,7 +379,7 @@ def test_top_p_in_config_loads_and_reaches_the_request_body(tmp_path, server):
     _Handler.body = {"choices": [{"message": {"content": "{}"}}]}
     config = tmp_path / "api.json"
     config.write_text(json.dumps({"base_url": server, "top_p": 0.5}))
-    result = api_completion.invoke(task="x", attempt=1, prompt="x", repo=tmp_path,
+    result = api_completion.invoke(task="x", attempt=1, prompt="x",
         run_dir=tmp_path / "run", model="other/model", config=config,
         timeout=10, csv_path=tmp_path / "run/calls.csv")
     assert result.error is None
@@ -440,7 +440,7 @@ def test_allowed_api_config_keys_are_exactly_the_keys_the_code_reads(tmp_path, s
 
     # A branch the run above does not take: no usable base_url.
     config.write_text(json.dumps({"base_url": ""}))
-    refused = api_completion.invoke(task="x", attempt=1, prompt="x", repo=tmp_path, run_dir=tmp_path / "run2",
+    refused = api_completion.invoke(task="x", attempt=1, prompt="x", run_dir=tmp_path / "run2",
                                     model="m", config=config, timeout=10, csv_path=tmp_path / "run2/calls.csv")
     assert refused.error.startswith("api_config:")
 

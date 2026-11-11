@@ -87,7 +87,7 @@ def _file_link(label: str, path: str, source_links: dict[str, str]) -> str:
 
 
 def _relation_link(target: str, units: dict, dispositions: dict, owner: dict,
-                   nodes: dict, source_root: Path, page_dir: Path,
+                   nodes: dict, source_root: Path,
                    name_of: Callable[[str], str], source_links: dict[str, str]) -> str:
     resolved = target if target in units else None
     if resolved is None:
@@ -102,8 +102,8 @@ def _relation_link(target: str, units: dict, dispositions: dict, owner: dict,
     return f"[{name_of(target)}](../../catalog.json)"
 
 
-def _build_unit_block(uid: str, units: dict, ranges_map: dict, owner: dict,
-                      dispositions: dict, nodes: dict, source_root: Path, page_dir: Path,
+def _build_unit_block(uid: str, units: dict, owner: dict,
+                      dispositions: dict, nodes: dict, source_root: Path,
                       name_of: Callable[[str], str], source_links: dict[str, str]) -> str:
     unit = units[uid]
     lines = [f"### `{name_of(uid)}`", ""]
@@ -145,7 +145,7 @@ def _build_unit_block(uid: str, units: dict, ranges_map: dict, owner: dict,
         for rel in relations:
             label = labels.get(rel.get("kind"), rel.get("kind") or "uses")
             link = _relation_link(rel["target"], units, dispositions, owner, nodes,
-                                  source_root, page_dir, name_of, source_links)
+                                  source_root, name_of, source_links)
             if link not in grouped.setdefault(label, []):
                 grouped[label].append(link)
         lines += ["; ".join(f"{label}: {', '.join(links)}" for label, links in grouped.items()), ""]
@@ -456,8 +456,8 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
         for uid in own:
             if uid not in units:
                 continue
-            block = _build_unit_block(uid, units, ranges_map, owner, dispositions,
-                                      nodes, source_root, nodes_dir, name_of, source_links)
+            block = _build_unit_block(uid, units, owner, dispositions,
+                                      nodes, source_root, name_of, source_links)
             lines += [f'<a id="{anchor(uid)}"></a>'] + block.splitlines() + [""]
         lines += ["## Look up code", "", '`RUN` is the run directory. Find `ID` by a unit title on this page (exact names first):',
                   '`cbe find --run-dir "$RUN" --term "UNIT_TITLE"`. Then use an `ID` from the results:',

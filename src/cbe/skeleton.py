@@ -260,7 +260,7 @@ def _split(G, members: list[str], anchors_of, grain, seed) -> list[tuple[list[st
     return out
 
 
-def _leaf_ties(G, members: set[str], owner: dict, dep_text: nx.Graph, profile: dict) -> dict[int, float]:
+def _leaf_ties(members: set[str], owner: dict, dep_text: nx.Graph) -> dict[int, float]:
     """Tie strength from a module to every other module (unit edges + shared files and directories)."""
     ties: dict[int, float] = defaultdict(float)
     for u in sorted(members):
@@ -280,7 +280,7 @@ def _profile_of(members, profile) -> dict[str, float]:
     return total
 
 
-def _shape_leaves(parts, G, dep_text, anchors_of, profile, units, grain):
+def _shape_leaves(parts, dep_text, profile, units, grain):
     """Merge small leaves into their tightest neighbour; pack unrelated stragglers in path order."""
     leaves: dict[int, dict] = {}
     for i, (members, flag) in enumerate(parts):
@@ -291,7 +291,7 @@ def _shape_leaves(parts, G, dep_text, anchors_of, profile, units, grain):
         return {u: k for k, leaf in leaves.items() for u in leaf["m"]}
 
     def ties_for(k, owner, profs):
-        t = _leaf_ties(G, leaves[k]["m"], owner, dep_text, profile)
+        t = _leaf_ties(leaves[k]["m"], owner, dep_text)
         mine = profs[k]
         if mine:
             for j in leaves:
@@ -414,7 +414,7 @@ def build(units: dict[str, dict], edges: list[dict], *, seed: int = 20261111,
         dep_text.add_edge(a, b, weight=dep_text[a][b]["weight"] + x if dep_text.has_edge(a, b) else x)
 
     parts = _split(G, uids, anchors_of, grain, seed)
-    leaves = _shape_leaves(parts, G, dep_text, anchors_of, profile, units, grain)
+    leaves = _shape_leaves(parts, dep_text, profile, units, grain)
 
     # tree under construction: temp name -> {"units", "children", "flag"}
     tree: dict[str, dict] = {}

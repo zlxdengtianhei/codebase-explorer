@@ -459,10 +459,7 @@ def _ensure_plugins() -> None:
     try:
         from importlib.metadata import entry_points
 
-        try:
-            selected = entry_points(group="cbe.languages")
-        except TypeError:  # pragma: no cover - old importlib API
-            selected = entry_points().get("cbe.languages", [])  # type: ignore[attr-defined]
+        selected = entry_points(group="cbe.languages")
     except Exception:
         return
     for entry in selected:
@@ -540,10 +537,7 @@ def _load_language(spec: GrammarSpec) -> Any:
     module = importlib.import_module(spec.module)
     capsule = getattr(module, spec.attr)
     payload = capsule() if callable(capsule) else capsule
-    try:
-        language = Language(payload)
-    except TypeError:  # tree-sitter < 0.25 needs the name as a second argument
-        language = Language(payload, spec.name)
+    language = Language(payload)
     _LOADED_LANGUAGES[key] = language
     return language
 
@@ -551,16 +545,7 @@ def _load_language(spec: GrammarSpec) -> Any:
 def _make_parser(spec: GrammarSpec) -> Any:
     from tree_sitter import Parser
 
-    language = _load_language(spec)
-    try:
-        return Parser(language)
-    except TypeError:
-        parser = Parser()
-        setter = getattr(parser, "set_language", None)
-        if setter is None:
-            raise
-        setter(language)
-        return parser
+    return Parser(_load_language(spec))
 
 
 def _grammar_version(spec: GrammarSpec) -> str:
@@ -773,12 +758,12 @@ def _text(offsets: OffsetMap, start_byte: int, end_byte: int) -> str:
 
 def _node_name(offsets: OffsetMap, node: Any) -> str:
     # Field lookup first: most grammars expose the declared name as ``name``.
-    name_node = node.child_by_field_name("name") if hasattr(node, "child_by_field_name") else None
+    name_node = node.child_by_field_name("name")
     if name_node is not None:
         return _text(offsets, name_node.start_byte, name_node.end_byte)
     # C/C++ function declarators carry the name, not a ``name`` field.  This
     # must run before scanning children, otherwise the return type is picked.
-    declarator = node.child_by_field_name("declarator") if hasattr(node, "child_by_field_name") else None
+    declarator = node.child_by_field_name("declarator")
     if declarator is not None:
         found = _first_identifier(offsets, declarator)
         if found:
@@ -805,12 +790,9 @@ def _first_identifier(offsets: OffsetMap, node: Any) -> str:
     return ""
 
 
-def _body_start(offsets: OffsetMap, node: Any) -> int:
-    if hasattr(node, "child_by_field_name"):
-        body = node.child_by_field_name("body")
-        if body is not None:
-            return body.start_byte
-    return -1
+def _body_start(node: Any) -> int:
+    body = node.child_by_field_name("body")
+    return body.start_byte if body is not None else -1
 
 
 # Ordinary declarations share the existing module-region publication path.
@@ -1020,7 +1002,7 @@ def _extract_declarations(spec: GrammarSpec, offsets: OffsetMap, root: Any, path
 
         if spec.name == "go" and ntype == "type_declaration" and scope != "function":
             specs = [child for child in node.named_children if child.type in {"type_spec", "type_alias"}]
-            legacy = _make_declaration(spec, offsets, node, path, parent, "type", prefix[0])
+            legacy = _make_declaration(offsets, node, path, parent, "type", prefix[0])
             prefix[0] = None
             for index, child in enumerate(specs):
                 if index == 0:
@@ -1035,7 +1017,7 @@ def _extract_declarations(spec: GrammarSpec, offsets: OffsetMap, root: Any, path
                         parent.children.append(legacy)
                     if owns_first:
                         continue
-                decl = _make_declaration(spec, offsets, child, path, parent, "module_region", None)
+                decl = _make_declaration(offsets, child, path, parent, "module_region", None)
                 declarations.append(decl)
                 if parent is not None:
                     parent.children.append(decl)
@@ -1048,7 +1030,7 @@ def _extract_declarations(spec: GrammarSpec, offsets: OffsetMap, root: Any, path
                 for child in node.named_children:
                     visit(child, parent, scope, prefix)
                 return
-            decl = _make_declaration(spec, offsets, node, path, parent, spec.class_kinds[ntype], prefix[0])
+            decl = _make_declaration(offsets, node, path, parent, spec.class_kinds[ntype], prefix[0])
             prefix[0] = None
             declarations.append(decl)
             if parent is not None:
@@ -1061,7 +1043,7 @@ def _extract_declarations(spec: GrammarSpec, offsets: OffsetMap, root: Any, path
         if ntype in spec.function_kinds:
             declared = spec.function_kinds[ntype]
             kind = "method" if declared == "function" and scope == "class" else declared
-            decl = _make_declaration(spec, offsets, node, path, parent, kind, prefix[0])
+            decl = _make_declaration(offsets, node, path, parent, kind, prefix[0])
             prefix[0] = None
             declarations.append(decl)
             if parent is not None:
@@ -1071,10 +1053,10 @@ def _extract_declarations(spec: GrammarSpec, offsets: OffsetMap, root: Any, path
             return
 
         if ntype in spec.binding_kinds:
-            value = node.child_by_field_name("value") if hasattr(node, "child_by_field_name") else None
+            value = node.child_by_field_name("value")
             if value is not None and value.type in spec.value_function_kinds:
                 kind = "method" if scope == "class" else "function"
-                decl = _make_declaration(spec, offsets, node, path, parent, kind, prefix[0])
+                decl = _make_declaration(offsets, node, path, parent, kind, prefix[0])
                 prefix[0] = None
                 declarations.append(decl)
                 if parent is not None:
@@ -1119,7 +1101,7 @@ def _extract_declarations(spec: GrammarSpec, offsets: OffsetMap, root: Any, path
             if len(declarations) != first:
                 prefix[0] = holder[0]
                 return
-            decl = _make_declaration(spec, offsets, node, path, parent, "module_region", prefix[0],
+            decl = _make_declaration(offsets, node, path, parent, "module_region", prefix[0],
                                      name=name.split(", ", 1)[0])
             # Search metadata holds every name, without duplicating the list in
             # inventory names and canonical ids. Do not truncate long runs.
@@ -1139,10 +1121,10 @@ def _extract_declarations(spec: GrammarSpec, offsets: OffsetMap, root: Any, path
                     if decl.kind != "module_region" or not any(
                         other is not decl and decl.start_byte <= other.start_byte
                         and other.end_byte <= decl.end_byte for other in declarations)]
-    return _coalesce_declarations(offsets, declarations, path)
+    return _coalesce_declarations(offsets, declarations)
 
 
-def _coalesce_declarations(offsets: OffsetMap, declarations: list[_Declaration], path: str) -> list[_Declaration]:
+def _coalesce_declarations(offsets: OffsetMap, declarations: list[_Declaration]) -> list[_Declaration]:
     """Combine adjacent value declarations without crossing syntax or scope boundaries."""
     def category(decl: _Declaration) -> str:
         if decl.kind != "module_region":
@@ -1190,13 +1172,10 @@ def _is_type_definition(spec: GrammarSpec, node: Any) -> bool:
 
     if spec.name not in {"c", "cpp"}:
         return True
-    if hasattr(node, "child_by_field_name") and node.child_by_field_name("body") is not None:
-        return True
-    return False
+    return node.child_by_field_name("body") is not None
 
 
 def _make_declaration(
-    spec: GrammarSpec,
     offsets: OffsetMap,
     node: Any,
     path: str,
@@ -1215,7 +1194,7 @@ def _make_declaration(
     qualified = f"{parent.qualified_name}.{name}" if parent is not None and name else (name or scope)
     symbol_id = canonical_symbol_id(path, kind, qualified or name, start_byte)
     ancestors = (parent.ancestors + (parent.qualified_name,)) if parent is not None else ()
-    body_start = _body_start(offsets, node)
+    body_start = _body_start(node)
     if body_start < 0:
         body_start = start_byte
     signature = offsets.raw[start_byte:body_start].decode("utf-8", errors="replace").strip()
@@ -1388,7 +1367,6 @@ class _ChunkPlan:
 
 
 def _plan_chunks(
-    spec: GrammarSpec,
     offsets: OffsetMap,
     declarations: list[_Declaration],
     root: Any,
@@ -1516,11 +1494,11 @@ def source_signatures(path: str, source: str, language: str) -> tuple[dict[str, 
     by_id, by_location = {}, {}
     starts = line_starts(offsets.text)
     for declaration in declarations:
-        end = _body_start(offsets, declaration.node)
+        end = _body_start(declaration.node)
         if end < 0:
             value = declaration.node.child_by_field_name("value")
             if value is not None:
-                end = _body_start(offsets, value)
+                end = _body_start(value)
         if end < 0:
             end = declaration.end_byte
         signature = raw[declaration.start_byte:end].decode("utf-8").strip()
@@ -1769,7 +1747,7 @@ def build_context(
 
         declarations = _extract_declarations(spec, offsets, root, relative)
         plans, plan_diagnostics = _plan_chunks(
-            spec, offsets, declarations, root, relative, spec.name, max_segment_bytes
+            offsets, declarations, root, relative, spec.name, max_segment_bytes
         )
         diagnostics.extend(plan_diagnostics)
         starts = line_starts(offsets.text)

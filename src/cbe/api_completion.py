@@ -282,7 +282,7 @@ def _provider_evidence(payload: Any, raw_body: str, secrets: list[str],
             "text": redacted[:MAX_PRESERVED_RESPONSE_CHARS]}
 
 
-def invoke(*, task: str, attempt: int, prompt: str, repo: Path, run_dir: Path,
+def invoke(*, task: str, attempt: int, prompt: str, run_dir: Path,
            model: str, config: Path, timeout: int, csv_path: Path,
            overrides: dict[str, Any] | None = None) -> Completion:
     safe_task = re.sub(r"[^a-zA-Z0-9_.-]", "_", task)
