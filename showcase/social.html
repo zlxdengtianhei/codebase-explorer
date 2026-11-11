@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Codebase Explorer social preview</title>
+<style>
+  @font-face {
+    font-family: "IBM Plex Sans";
+    src: url("fonts/IBMPlexSans-Regular.woff2") format("woff2");
+    font-weight: 400;
+  }
+  @font-face {
+    font-family: "IBM Plex Sans";
+    src: url("fonts/IBMPlexSans-SemiBold.woff2") format("woff2");
+    font-weight: 600;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; width: 1280px; height: 640px; overflow: hidden; }
+  body { font-family: "IBM Plex Sans", system-ui, sans-serif; background: #06101b; }
+  .preview {
+    position: relative;
+    width: 1280px;
+    height: 640px;
+    overflow: hidden;
+    color: #e8f1ff;
+    background:
+      radial-gradient(circle at 88% 4%, rgba(60, 150, 170, .25), transparent 46%),
+      linear-gradient(18deg, #050d17 0%, #0a1b2c 55%, #16384d 115%);
+  }
+  .preview::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-image: radial-gradient(rgba(159, 182, 204, .13) .8px, transparent .8px);
+    background-size: 26px 26px;
+    mask-image: linear-gradient(90deg, transparent, #000 75%);
+  }
+  .copy { position: absolute; left: 336px; top: 68px; z-index: 2; width: 500px; }
+  .logo { display: block; width: 96px; height: 96px; margin-bottom: 30px; }
+  h1 {
+    margin: 0 0 28px;
+    width: max-content;
+    font-size: 64px;
+    font-weight: 600;
+    line-height: 1.08;
+    letter-spacing: -2.2px;
+    white-space: nowrap;
+  }
+  p { margin: 0; color: #b7c9db; font-size: 26px; line-height: 1.42; white-space: nowrap; }
+  .frame {
+    position: absolute;
+    z-index: 1;
+    left: 840px;
+    top: 270px;
+    width: 560px;
+    height: 315px;
+    object-fit: cover;
+    border: 1px solid rgba(159, 182, 204, .42);
+    border-radius: 12px;
+    box-shadow: 0 22px 70px rgba(0, 0, 0, .38);
+  }
+</style>
+</head>
+<body>
+<main class="preview">
+  <section class="copy" aria-label="Codebase Explorer">
+    <img class="logo" src="../docs/media/logo.svg" alt="">
+    <h1>Codebase Explorer</h1>
+    <p>A one-page module map and per-module<br>explanations of any repository, for people<br>and coding agents.</p>
+  </section>
+  <img class="frame" src="social-frame.jpg" alt="A module map of a repository">
+</main>
+</body>
+</html>
