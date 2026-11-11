@@ -22,6 +22,9 @@ class _Handler(http.server.BaseHTTPRequestHandler):
     # "match": accept only the exact expected Authorization header.
     auth_mode = "open"
     expected_auth = ""
+    # Statuses to answer first, one per request, as (status, headers); then ``status``.
+    script: list = []
+    requests = 0
 
     def do_POST(self) -> None:  # noqa: N802 - http.server API
         length = int(self.headers.get("Content-Length", 0))
@@ -29,7 +32,8 @@ class _Handler(http.server.BaseHTTPRequestHandler):
         authorization = self.headers.get("Authorization")
         type(self).captured = {"path": self.path, "auth": authorization,
                                "body": json.loads(raw.decode("utf-8"))}
-        status = type(self).status
+        type(self).requests += 1
+        status, headers = type(self).script.pop(0) if type(self).script else (type(self).status, {})
         if status == 200 and type(self).auth_mode == "reject_any" and authorization is not None:
             status = 401
         elif status == 200 and type(self).auth_mode == "match" and authorization != type(self).expected_auth:
@@ -38,6 +42,8 @@ class _Handler(http.server.BaseHTTPRequestHandler):
         self.send_response(status)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(payload)))
+        for name, value in headers.items():
+            self.send_header(name, value)
         self.end_headers()
         self.wfile.write(payload)
 
@@ -52,12 +58,22 @@ def server():
     _Handler.captured = {}
     _Handler.auth_mode = "open"
     _Handler.expected_auth = ""
+    _Handler.script = []
+    _Handler.requests = 0
     httpd = http.server.ThreadingHTTPServer(("127.0.0.1", 0), _Handler)
     thread = threading.Thread(target=httpd.serve_forever, daemon=True)
     thread.start()
     yield f"http://127.0.0.1:{httpd.server_address[1]}/v1"
     httpd.shutdown()
     thread.join(timeout=5)
+
+
+@pytest.fixture(autouse=True)
+def waits(monkeypatch):
+    """Record the waits instead of sleeping them."""
+    recorded: list[float] = []
+    monkeypatch.setattr(api_completion, "_sleep", recorded.append)
+    return recorded
 
 
 def _call(tmp_path: Path, base_url: str, monkeypatch, *, model: str = "test-model") -> Completion:
@@ -96,11 +112,53 @@ def test_http_401_is_provider_auth_not_a_retryable_shape_error(tmp_path, server,
     assert result.error == "provider_auth" and result.value is None
 
 
-def test_http_429_is_provider_limit(tmp_path, server, monkeypatch) -> None:
+def _rows(tmp_path: Path) -> list[dict]:
+    import csv
+    with (tmp_path / "run" / "calls.csv").open(newline="", encoding="utf-8") as stream:
+        return list(csv.DictReader(stream))
+
+
+def test_rate_limit_is_waited_out_in_place_and_uses_no_attempt(tmp_path, server, monkeypatch, waits) -> None:
+    """A 429 with Retry-After is repeated inside the call: the answer comes back, one
+    ``rate_limited`` row is logged, and the caller sees a single successful attempt."""
+    _Handler.script = [(429, {"Retry-After": "10"})]
+    _Handler.body = {"choices": [{"message": {"content": '{"units": []}'}}]}
+    result = _call(tmp_path, server, monkeypatch)
+    assert result.error is None and result.value == {"units": []}
+    assert _Handler.requests == 2
+    assert len(waits) == 1 and 10 <= waits[0] <= 12  # Retry-After plus a little jitter
+    assert [row["result"] for row in _rows(tmp_path)] == ["rate_limited", "ok"]
+    assert {row["attempt"] for row in _rows(tmp_path)} == {"1"}
+
+
+def test_503_is_treated_like_429(tmp_path, server, monkeypatch, waits) -> None:
+    _Handler.script = [(503, {}), (503, {})]
+    _Handler.body = {"choices": [{"message": {"content": "{}"}}]}
+    result = _call(tmp_path, server, monkeypatch)
+    assert result.error is None and len(waits) == 2
+    assert 5 <= waits[0] <= 6 and 10 <= waits[1] <= 12  # no Retry-After: 5 s, then 10 s, plus jitter
+
+
+def test_http_429_is_provider_limit_only_after_all_repeats(tmp_path, server, monkeypatch, waits) -> None:
     _Handler.status = 429
-    _Handler.body = {"error": {"message": "slow down"}}
+    _Handler.body = {"error": {"message": "slow down " + "x" * 400}}
     result = _call(tmp_path, server, monkeypatch)
     assert result.error == "provider_limit"
+    assert _Handler.requests == api_completion.RATE_LIMIT_RETRIES + 1
+    assert len(waits) == api_completion.RATE_LIMIT_RETRIES and max(waits) <= api_completion.BACKOFF_MAX_SECONDS
+    assert [row["result"] for row in _rows(tmp_path)] == (
+        ["rate_limited"] * api_completion.RATE_LIMIT_RETRIES + ["provider_limit"])
+    recorded = json.loads((tmp_path / "run" / "raw" / "module_1-1.api.json").read_text())
+    assert len(recorded["rate_limited"]) == api_completion.RATE_LIMIT_RETRIES + 1
+    body = recorded["rate_limited"][0]["body"]
+    assert body.startswith('{"error"') and len(body) == api_completion.RATE_LIMIT_BODY_CHARS
+
+
+def test_backoff_doubles_from_five_seconds_and_stops_at_the_cap() -> None:
+    delays = [api_completion._retry_delay(None, retry) for retry in range(6)]
+    assert all(base <= d <= base * 1.2 + 1 for base, d in zip((5, 10, 20), delays))
+    assert delays[5] == api_completion.BACKOFF_MAX_SECONDS
+    assert api_completion._retry_delay("9999", 0) == api_completion.BACKOFF_MAX_SECONDS
 
 
 def test_missing_key_omits_authorization_and_uses_the_server_response(tmp_path, server, monkeypatch) -> None:

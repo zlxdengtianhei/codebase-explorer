@@ -15,10 +15,14 @@ frozen plan and every task's state, attempts, timings, and output path;
 re-reads the state under a lock, so any host continues with ``resume``.
 
 No single task failure voids a run. Detail tasks have three answer attempts;
-other tasks have two. Each strict-check failure is re-asked with the exact error
-until the final attempt, when a usable answer may be normalized and flagged.
-Only an unusable final answer marks the task failed. Finished batches always render; failed parts stay pending until
-retried, and the overview task can be retried on its own.
+other tasks have two. A detail answer is decoded unit by unit: what is usable is
+kept, and a re-ask lists only the gaps (symbols with logic that no unit explains,
+units that were rejected). After the last attempt the remaining gaps are indexed
+without prose and flagged ``unexplained``; the task still completes. Other tasks
+are re-asked with the exact error, and a usable final answer is normalized and
+flagged. Only an unusable final answer marks a task failed. Finished batches always
+render; failed parts stay pending until retried, and the overview task can be
+retried on its own.
 """
 
 from __future__ import annotations
@@ -38,9 +42,10 @@ from typing import Any, Iterator
 from cbe import aggregation, batching, checks, docs, projection, prompts, symbols
 from cbe import __version__
 from cbe import source_context
+from cbe.token_budget import count_text_tokens
 
 
-SCHEMA = "cbe-host-run/2"
+SCHEMA = "cbe-host-run/3"
 MAX_ATTEMPTS = 2
 DETAIL_MAX_ATTEMPTS = 3
 REVIEW_MODES = ("none", "sample", "all")
@@ -394,7 +399,10 @@ def locked_state(run_dir: Path) -> Iterator[dict[str, Any]]:
             found = state.get("schema")
             hint = ("; this run uses the older free-text module layout, which is not "
                     "readable by this build. Start a new run instead of resuming it."
-                    if found == "cbe-host-run/1" else ".")
+                    if found == "cbe-host-run/1" else
+                    "; this run was planned for the older answer format (full inventory ids and "
+                    "dispositions), which this build no longer accepts. Run `plan` again for a fresh run."
+                    if found == "cbe-host-run/2" else ".")
             raise HostRunError(f"unsupported run schema {found!r}{hint}")
         if not state.get("semantic"):
             raise HostRunError("this run uses the module-page layout of CBE before 2.2, which this build "
@@ -718,7 +726,6 @@ def _body(run_dir: Path, state: dict[str, Any], task: dict[str, Any], *, embed: 
         body = prompts.tree_prompt(units, all_paths, edges,
                                    merge=bool(regions and not task.get("region")))
         if regions and not task.get("region"):
-            from cbe.token_budget import count_text_tokens
             size = count_text_tokens(prompts.TOOL_FREE_RULES + "\n\n" + body)
             budget = state["aggregation"]["limits"]["max_tokens"]
             state["aggregation"]["merge_input_tokens"] = size
@@ -747,7 +754,7 @@ def _prompt(run_dir: Path, state: dict[str, Any], task: dict[str, Any]) -> str:
     return (f"# Codebase Explorer task `{task['id']}` (run {state['run_tag']})\n\n{rules}\n\n"
             f"When you are done, write exactly one JSON object (no Markdown fences, no commentary) to this "
             f"file, creating or replacing it:\n{outbox}\n\nThen reply with the single line: DONE {task['id']}\n"
-            f"{_previous_error(task)}\n---\n\n{body}")
+            f"{_retry_note(run_dir, state, task) or _previous_error(task)}\n---\n\n{body}")
 
 
 def completion_prompt(run_dir: Path, task_id: str) -> str:
@@ -756,7 +763,10 @@ def completion_prompt(run_dir: Path, task_id: str) -> str:
         task = state["tasks"][task_id]
         _, body = _body(run_dir, state, task, embed=True)
         prompt = prompts.TOOL_FREE_RULES + "\n\n" + body
-        if task["errors"]:
+        note = _retry_note(run_dir, state, task)
+        if note is not None:
+            prompt += note  # the first-ask text stays byte-identical, so the provider's prefix cache can serve it
+        elif task["errors"]:
             prompt += "\n\nPrevious completion failed. Correct it now. Original error: " + task["errors"][-1][:2000]
             previous = state_dir(run_dir) / "raw" / f"{task_id}.attempt-{task['attempts']}.txt"
             if previous.is_file():
@@ -837,21 +847,8 @@ def _raise_problems(problems: list[str]) -> None:
 
 
 def _checks(run_dir: Path, state: dict[str, Any], task: dict[str, Any]) -> tuple[Any, Any]:
-    """(strict check, normalizer) for a task; both mutate the value they accept."""
+    """(strict check, normalizer) for a non-detail task; both mutate the value they accept."""
     modules = _modules(state)
-    if task["kind"] in {"module", "repair"}:
-        paths = list(state["modules"][task["module"]]["files"])
-        subset = symbols.inventory_for_paths(state["inventory"], paths)
-        known = _known_unit_ids(run_dir, state, exclude=task["module"])
-        def validate_detail(value):
-            problems = checks.validate_details(value, paths, subset, known)
-            # The retry prompt has a bounded error excerpt. Put actionable
-            # identity diagnostics before secondary shape/coverage errors.
-            problems.sort(key=lambda problem: ("not in this batch's inventory" not in problem,
-                                               "dispositions missing inventory ids" not in problem))
-            _raise_problems(problems)
-        return (validate_detail,
-                lambda value: checks.normalize_details(value, paths, subset, known))
     if task["kind"] == "tree":
         universe = set(_semantic_units(run_dir, state)[0])
         regions = state.get("aggregation", {}).get("regions") or []
@@ -902,6 +899,87 @@ def _checks(run_dir: Path, state: dict[str, Any], task: dict[str, Any]) -> tuple
     return strict, normalize
 
 
+DETAIL_KINDS = {"module", "repair"}
+
+
+def _partial_path(run_dir: Path, task_id: str) -> Path:
+    return state_dir(run_dir) / "partial" / f"{task_id}.json"
+
+
+def _load_partial(run_dir: Path, task_id: str) -> dict[str, Any]:
+    """Units already accepted from earlier answers of one detail task."""
+    path = _partial_path(run_dir, task_id)
+    if path.is_file():
+        return json.loads(path.read_text(encoding="utf-8"))
+    return {"units": [], "flags": [], "invalid": [], "notes": "", "decoded": False}
+
+
+def _detail_table(state: dict[str, Any], task: dict[str, Any]) -> list[dict]:
+    return symbols.batch_table(state["modules"][task["module"]]["files"], state["inventory"])
+
+
+def _gaps(run_dir: Path, state: dict[str, Any], table: list[dict], units: list[dict]) -> list[dict]:
+    """Symbols with logic that no unit explains yet (see ``checks.find_gaps``)."""
+    wanted = {row["id"] for row in table
+              if row["kind"] in checks.GAP_KINDS and not batching.is_test_path(row["path"])}
+    tokens = {chunk["id"]: count_text_tokens(chunk.get("text") or "")
+              for chunk in _verified_context(run_dir, state).get("chunks") or [] if chunk["id"] in wanted}
+    return checks.find_gaps(table, units, tokens)
+
+
+def _retry_note(run_dir: Path, state: dict[str, Any], task: dict[str, Any]) -> str | None:
+    """The follow-up that a re-ask of a detail task appends: only the gaps."""
+    if task["kind"] not in DETAIL_KINDS or not _partial_path(run_dir, task["id"]).is_file():
+        return None
+    partial = _load_partial(run_dir, task["id"])
+    table = _detail_table(state, task)
+    problem = task["errors"][-1][:300] if task["errors"] and task["errors"][-1].startswith("schema_error") else None
+    return prompts.gap_note(_gaps(run_dir, state, table, partial["units"]), partial["invalid"], problem)
+
+
+def _settle_detail(run_dir: Path, state: dict[str, Any], task: dict[str, Any], value: dict[str, Any] | None,
+                   error: str | None, final: bool) -> tuple[str | None, dict[str, Any] | None, list[str]]:
+    """Decode one detail answer and fold it into the task's accepted units.
+
+    Returns ``(error, payload, flags)``: ``payload`` is the internal result when the
+    batch is complete, or when this was the last answer (remaining gaps are indexed
+    without prose and flagged ``unexplained``). Otherwise ``error`` names what is
+    still missing and the decoded units stay saved for the re-ask."""
+    if value is None and not (error or "").startswith("schema_error"):
+        return error, None, []  # a provider-side failure: no answer to decode; saved units wait
+    table = _detail_table(state, task)
+    partial = _load_partial(run_dir, task["id"])
+    decoded = None
+    if value is not None:
+        try:
+            decoded = checks.decode_details(value, table, have=partial["units"],
+                                            known_ids=_known_unit_ids(run_dir, state, exclude=task["module"]))
+        except ValueError as exc:
+            error = f"schema_error:{exc}"
+    if decoded is not None:
+        partial["units"] += decoded.units
+        partial["flags"] += decoded.flags
+        partial["invalid"] = decoded.invalid
+        partial["notes"] = decoded.notes or partial["notes"]
+        partial["decoded"] = True
+    gaps = _gaps(run_dir, state, table, partial["units"])
+    if decoded is not None and not gaps and not decoded.invalid:
+        error = None
+    elif not final or not partial["decoded"]:
+        if decoded is not None:
+            _partial_path(run_dir, task["id"]).parent.mkdir(exist_ok=True)
+            write_json(_partial_path(run_dir, task["id"]), partial)
+            error = (f"incomplete: {len(gaps)} symbol(s) with logic still without a unit "
+                     f"{[row['n'] for row in gaps][:20]}; {len(decoded.invalid)} unit(s) rejected")
+        return error, None, []
+    else:
+        error = None
+        partial["flags"] += [f"invalid unit h={row['h']}: {row['why']}" for row in partial["invalid"]]
+        partial["flags"] += [f"unexplained: {row['id']}" for row in gaps]
+    _partial_path(run_dir, task["id"]).unlink(missing_ok=True)
+    return None, checks.assemble_details(table, partial["units"], notes=partial["notes"]), partial["flags"]
+
+
 def _usage_entry(usage: dict[str, Any] | None, attempt: int) -> dict[str, Any] | None:
     if not usage or not any(value is not None for value in usage.values()):
         return None
@@ -928,16 +1006,21 @@ def _apply_submit(run_dir: Path, state: dict[str, Any], task: dict[str, Any], re
     archive = state_dir(run_dir) / "raw"
     if raw is not None:
         (archive / f"{task['id']}.attempt-{attempt}.txt").write_text(raw, encoding="utf-8")
-    strict, normalize = _checks(run_dir, state, task)
     value: dict[str, Any] | None = None
     flags: list[str] = []
+    detail = task["kind"] in DETAIL_KINDS
+    if not detail:
+        strict, normalize = _checks(run_dir, state, task)
     if error is None:
         try:
             value = checks.json_object(raw or "")
-            strict(value)
+            if not detail:
+                strict(value)
         except (ValueError, TypeError) as exc:
             error, value = f"schema_error:{exc}", None
-    if error is not None and final:
+    if detail:
+        error, value, flags = _settle_detail(run_dir, state, task, value, error, final)
+    elif error is not None and final:
         # Answers without delivered source or with provider truncation must
         # never be resurrected by the final-attempt normalizer.
         undelivered = set(task.get("undelivered_attempts") or []) | set(task.get("unsafe_attempts") or [])
@@ -953,17 +1036,9 @@ def _apply_submit(run_dir: Path, state: dict[str, Any], task: dict[str, Any], re
                 parsed = checks.json_object(candidate.read_text(encoding="utf-8"))
                 flags = normalize(parsed)
                 strict(parsed)
-            except checks.MissingDispositionsError as exc:
-                if number == attempt:
-                    error = f"schema_error:{exc}"
-                if task["kind"] not in {"module", "repair"}:
-                    break
-                continue
             except (ValueError, TypeError):
                 continue
             value = parsed
-            if number < attempt and task["kind"] in {"module", "repair"}:
-                flags.append(f"answer_fallback: attempt {number} (final attempt {attempt})")
             task["normalized_from"] = error
             error = None
             break
@@ -1258,40 +1333,11 @@ def _semantic_review_summary(run_dir: Path, state: dict[str, Any]) -> dict[str, 
                     "this is not a whole-map proof"}
 
 
-def _identity_corrections(state: dict[str, Any]) -> list[dict[str, str]]:
-    """Read durable S5d flags too, so old runs gain the same visibility on render."""
-    rows = []
-    for task in sorted(state["tasks"].values(), key=lambda row: row["id"]):
-        for flag in task.get("flags") or []:
-            match = re.fullmatch(r"id_corrected: (.*?) -> (.*?) \((.*)\)", flag)
-            if match:
-                original, corrected, location = match.groups()
-                rows.append({"task": task["id"], "original": original,
-                             "corrected": corrected, "location": location})
-    return rows
-
-
-def _answer_fallbacks(state: dict[str, Any]) -> list[dict[str, Any]]:
-    rows = []
-    for task in sorted(state["tasks"].values(), key=lambda row: row["id"]):
-        for flag in task.get("flags") or []:
-            match = re.fullmatch(r"answer_fallback: attempt (\d+) \(final attempt (\d+)\)", flag)
-            if match:
-                rows.append({"task": task["id"], "attempt": int(match[1]), "final_attempt": int(match[2])})
-    return rows
-
-
-def _index_only_fills(state: dict[str, Any]) -> list[dict[str, str]]:
-    """Count program-created entries, including flags preserved in older runs."""
-    rows = []
-    for task in sorted(state["tasks"].values(), key=lambda row: row["id"]):
-        for flag in task.get("flags") or []:
-            for suffix, reason in ((": disposition missing; treated as index_only", "missing"),
-                                   (": invalid disposition; treated as index_only", "invalid")):
-                if flag.endswith(suffix):
-                    rows.append({"task": task["id"], "symbol": flag.removesuffix(suffix),
-                                 "reason": reason})
-    return rows
+def _unexplained(state: dict[str, Any]) -> list[dict[str, str]]:
+    """Symbols that kept no prose because no answer explained them (flag ``unexplained: <id>``)."""
+    return [{"task": task["id"], "symbol": flag.removeprefix("unexplained: ")}
+            for task in sorted(state["tasks"].values(), key=lambda row: row["id"])
+            for flag in task.get("flags") or [] if flag.startswith("unexplained: ")]
 
 
 def _render(run_dir: Path, state: dict[str, Any]) -> None:
@@ -1342,36 +1388,23 @@ def _render(run_dir: Path, state: dict[str, Any]) -> None:
     normalized = sorted(task["id"] for task in state["tasks"].values()
                         if task["flags"] and "known_empty" not in task["flags"])
     if normalized:
-        index_notes.append("Normalized after the final invalid answer (facts kept, shape fixed): "
+        index_notes.append("Accepted with repairs or gaps (see each task's flags in host/state.json): "
                            + ", ".join(normalized) + ".")
-    for row in _answer_fallbacks(state):
-        index_notes.append(f"answer_fallback: {row['task']}: accepted attempt {row['attempt']} "
-                           f"after final attempt {row['final_attempt']} failed validation.")
-    fill_counts: dict[str, int] = {}
-    for row in _index_only_fills(state):
+    unexplained: dict[str, int] = {}
+    for row in _unexplained(state):
         task = state["tasks"][row["task"]]
-        repair = (state["tasks"].get(f"repair_{task['module'] + 1}")
-                  if task["kind"] == "module" else None)
+        repair = (state["tasks"].get(f"repair_{task['module'] + 1}") if task["kind"] == "module" else None)
         if task["status"] == "done" and not (repair and repair["status"] == "done"):
-            fill_counts[row["task"]] = fill_counts.get(row["task"], 0) + 1
-    for tid, count in sorted(fill_counts.items()):
-        index_notes.append(f"{tid}: CBE assigned {count} inventory symbol(s) to index_only "
-                           "because the model answer omitted or supplied invalid dispositions.")
-    page_corrections = []
-    for row in _identity_corrections(state):
-        task = state["tasks"][row["task"]]
-        if task["kind"] == "module":
-            repair = state["tasks"].get(f"repair_{task['module'] + 1}")
-            if repair and repair["status"] == "done":
-                continue  # The repair's prose supersedes this corrected module answer.
-        page_corrections.append(row)
+            unexplained[row["task"]] = unexplained.get(row["task"], 0) + 1
+    for tid, count in sorted(unexplained.items()):
+        index_notes.append(f"{tid}: {count} function/method/class symbol(s) were left without prose "
+                           "because no model answer explained them.")
     try:
         meta = docs.render(run_dir=run_dir, source_root=Path(state["repo"]),
                                inventory=state.get("inventory") or {}, units=units,
                                dispositions=dispositions, tree=tree, index_notes=index_notes,
                                system=system or _mechanical_semantic_overview(state, tree),
                                graph=context.get("graph"), context=context,
-                               id_corrections=page_corrections,
                                languages={row["path"]: row.get("language") or "unknown" for row in context["files"]})
     except symbols.SemanticError as exc:
         state["render_error"] = str(exc)
@@ -1396,10 +1429,8 @@ def _render(run_dir: Path, state: dict[str, Any]) -> None:
                           + (["system"] if system_task["status"] != "done" else []),
                "normalized": sorted(task["id"] for task in state["tasks"].values()
                                    if task["flags"] and "known_empty" not in task["flags"]),
-               "id_corrected_count": len(_identity_corrections(state)),
-               "id_corrected": _identity_corrections(state),
-               "index_only_filled_count": len(_index_only_fills(state)),
-               "index_only_filled": _index_only_fills(state),
+               "unexplained_count": len(_unexplained(state)),
+               "unexplained": _unexplained(state),
                "known_empty": sorted(task["id"] for task in state["tasks"].values()
                                     if "known_empty" in task["flags"]),
                "wall_seconds": round(time.time() - epoch(state["created_at"]), 3),
@@ -1408,9 +1439,6 @@ def _render(run_dir: Path, state: dict[str, Any]) -> None:
     for code in ("source_reassembly_fallback", "context_fallback"):
         if rows := state.get(code, []):
             summary.update({code + "_count": len(rows), code: rows})
-    fallbacks = _answer_fallbacks(state)
-    if fallbacks:
-        summary.update(answer_fallback_count=len(fallbacks), answer_fallback=fallbacks)
     if reason:
         summary["partial_reason"], summary["partial_detail"] = reason, state.get("partial_detail", "")
     state["verify"] = verify_state(run_dir, state)
@@ -1545,20 +1573,9 @@ def _status_markdown(state: dict[str, Any]) -> str:
                     "reviewed by a separate reader of the source. This is independent of the "
                     "deterministic structure/coverage checks and does not prove whole-map truth.", ""]
                    if review_tasks else [])
-    corrections = _identity_corrections(state)
-    correction_lines = [f"id_corrected {len(corrections)}", ""]
-    correction_lines += [f"- {row['task']}: {docs.code_text(row['original'])} → "
-                         f"{docs.code_text(row['corrected'])} ({row['location']})"
-                         for row in corrections]
-    fills = _index_only_fills(state)
-    correction_lines += ["", f"index_only_filled {len(fills)}", ""]
-    correction_lines += [f"- {row['task']}: {docs.code_text(row['symbol'])} ({row['reason']})"
-                         for row in fills]
-    fallbacks = _answer_fallbacks(state)
-    if fallbacks:
-        correction_lines += ["", f"answer_fallback {len(fallbacks)}", ""]
-        correction_lines += [f"- {row['task']}: accepted attempt {row['attempt']} "
-                             f"(final attempt {row['final_attempt']})" for row in fallbacks]
+    unexplained = _unexplained(state)
+    correction_lines = [f"unexplained {len(unexplained)}", ""]
+    correction_lines += [f"- {row['task']}: {docs.code_text(row['symbol'])}" for row in unexplained]
     for code in ("source_reassembly_fallback", "context_fallback"):
         if rows := state.get(code, []):
             correction_lines += ["", f"{code} {len(rows)}", ""]
@@ -1582,21 +1599,12 @@ def _status_markdown(state: dict[str, Any]) -> str:
         output = task["output"] or ""
         if task["module"] is not None and state["modules"][task["module"]].get("page") and task["kind"] == "module":
             output = state["modules"][task["module"]]["page"]
-        task_fills = sum(row["task"] == task["id"] for row in fills)
-        shape_flags = [flag for flag in task["flags"] if not flag.startswith("id_corrected:")
-                       and not flag.startswith("answer_fallback:")
-                       and not flag.endswith((": disposition missing; treated as index_only",
-                                              ": invalid disposition; treated as index_only"))]
-        identity_count = sum(flag.startswith("id_corrected:") for flag in task["flags"])
+        task_unexplained = sum(row["task"] == task["id"] for row in unexplained)
+        shape_flags = [flag for flag in task["flags"] if not flag.startswith("unexplained: ")]
         note = (task["errors"][-1][:120] if task["status"] in {"failed", "pending"} and task["errors"]
                 else f"normalized ({len(shape_flags)})" if shape_flags else "")
-        if identity_count:
-            note += ("; " if note else "") + f"id_corrected {identity_count}"
-        for row in fallbacks:
-            if row["task"] == task["id"]:
-                note += ("; " if note else "") + f"answer_fallback attempt {row['attempt']}"
-        if task_fills:
-            note += ("; " if note else "") + f"index_only_filled {task_fills}"
+        if task_unexplained:
+            note += ("; " if note else "") + f"unexplained {task_unexplained}"
         lines.append(f"| {task['id']} | {_title(state, task) if task['module'] is not None else ''} | "
                      f"{task['status']} | {task['attempts']} | {task['seconds'] if task['seconds'] is not None else ''} | "
                      f"{output} | {note.replace('|', '/')} |")

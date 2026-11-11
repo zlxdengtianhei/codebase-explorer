@@ -125,3 +125,17 @@ def ensure_chunk_coverage(context: dict, repo: Path, paths: list[str]) -> dict:
 def inventory_for_paths(inventory: dict[str, dict], paths: Iterable[str]) -> dict[str, dict]:
     chosen = set(paths)
     return {path: inventory[path] for path in sorted(inventory) if path in chosen}
+
+
+def batch_table(paths: Iterable[str], inventory: dict[str, dict]) -> list[dict]:
+    """The short-number table of one detail batch.
+
+    Rows are ``{n, id, path, kind, name, lines}``; ``n`` counts from 1 in
+    prompt order (files as given, symbols as inventoried), so the prompt and the
+    answer decoder derive the same numbers from the frozen inventory."""
+    rows: list[dict] = []
+    for path in paths:
+        for symbol in inventory[path]["symbols"]:
+            rows.append({"n": len(rows) + 1, "id": symbol["id"], "path": path, "kind": symbol["kind"],
+                         "name": symbol["name"], "lines": symbol["lines"]})
+    return rows

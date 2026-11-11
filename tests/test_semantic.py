@@ -60,44 +60,6 @@ def _good_payload(inventory: dict) -> dict:
     return {"units": units, "dispositions": dispositions, "batch_notes": "ok"}
 
 
-def test_validate_details_accepts_a_complete_payload() -> None:
-    inventory = _inventory()
-    assert checks.validate_details(_good_payload(inventory), ["pkg/jobs.py"], inventory, set()) == []
-
-
-def test_validate_details_flags_missing_disposition_unknown_kind_and_bad_relation() -> None:
-    inventory = _inventory()
-    payload = _good_payload(inventory)
-    dropped = "pkg/jobs.py::<module top-level>"
-    payload["dispositions"].pop(dropped)
-    payload["units"][0]["kind"] = "macro"
-    payload["units"][0]["relations"] = [{"target": "pkg/jobs.py::reserve", "kind": "likes"}]
-    problems = checks.validate_details(payload, ["pkg/jobs.py"], inventory, set())
-    joined = "\n".join(problems)
-    assert dropped in joined
-    assert "kind must be one of" in joined and "got 'macro'" in joined
-    assert "relation kind" in joined and "got 'likes'" in joined
-
-
-def test_length_is_not_a_hard_failure() -> None:
-    inventory = _inventory()
-    payload = _good_payload(inventory)
-    payload["units"][0]["explain"] = "This is a very long explanation. " * 100
-    assert checks.validate_details(payload, ["pkg/jobs.py"], inventory, set()) == []
-
-
-def test_normalize_details_keeps_facts_and_repairs_shape() -> None:
-    inventory = _inventory()
-    payload = _good_payload(inventory)
-    payload["units"][0]["kind"] = "not-a-kind"
-    original_explain = payload["units"][1]["explain"]
-    payload["dispositions"].pop("pkg/jobs.py::Pool.submit")
-    flags = checks.normalize_details(payload, ["pkg/jobs.py"], inventory, set())
-    assert any("module_region" in flag for flag in flags)
-    assert payload["units"][1]["explain"] == original_explain  # facts are never dropped
-    assert payload["dispositions"]["pkg/jobs.py::Pool.submit"]["how"] == "index_only"
-
-
 def test_unit_ranges_come_from_the_inventory_not_the_model() -> None:
     inventory = _inventory()
     unit = {"id": "pkg/jobs.py::Pool", "kind": "class",
@@ -341,57 +303,6 @@ def test_ensure_chunk_coverage_digests_the_file_bytes_of_a_crlf_file(tmp_path) -
     assert context["files"] == [{"path": "crlf.py", "language": "python",
                                  "sha256": hashlib.sha256(raw).hexdigest(),
                                  "source": raw.decode("utf-8")}]
-
-
-def test_validate_details_allows_empty_units_only_when_no_inventory_ids() -> None:
-    empty_inventory = {"a.py": {"tokens": 0, "sha256": "x", "nlines": 1, "symbols": [],
-                                "known_empty": True}}
-    payload = {"units": [], "dispositions": {}, "batch_notes": "known-empty batch"}
-    assert checks.validate_details(payload, ["a.py"], empty_inventory, set()) == []
-    assert checks.normalize_details(dict(payload), ["a.py"], empty_inventory, set()) == []
-
-    full = {"a.py": {"tokens": 5, "sha256": "d", "nlines": 2, "known_empty": False,
-                     "symbols": [{"id": "a.py::f", "name": "f", "kind": "function",
-                                  "parent": None, "lines": [[1, 2]]}]}}
-    problems = checks.validate_details({"units": [], "dispositions": {}, "batch_notes": "x"},
-                                         ["a.py"], full, set())
-    assert any("nonempty" in problem for problem in problems)
-
-
-def test_validate_details_reports_a_list_relation_kind_instead_of_crashing() -> None:
-    """The real Flask module_6 counterexample: relations[].kind == ["use"]."""
-    inventory = _inventory()
-    payload = _good_payload(inventory)
-    target = payload["units"][0]["id"]
-    payload["units"][0]["relations"] = [{"target": target, "kind": ["use"]}]
-    problems = checks.validate_details(payload, ["pkg/jobs.py"], inventory, set())
-    assert any("relation kind must be one of" in problem and "['use']" in problem for problem in problems)
-    flags = checks.normalize_details(payload, ["pkg/jobs.py"], inventory, set())
-    assert payload["units"][0]["relations"][0]["kind"] == "use"
-    assert any("use" in flag for flag in flags)
-
-
-def test_validate_details_reports_list_unit_kind_and_extra_topic_instead_of_crashing() -> None:
-    inventory = _inventory()
-    payload = _good_payload(inventory)
-    payload["units"][0]["kind"] = ["function"]
-    payload["units"][0]["extras"] = [{"topic": ["failure"], "note": "a real note"}]
-    joined = "\n".join(checks.validate_details(payload, ["pkg/jobs.py"], inventory, set()))
-    assert "kind must be one of" in joined and "extra topic must be one of" in joined
-    checks.normalize_details(payload, ["pkg/jobs.py"], inventory, set())
-    assert payload["units"][0]["kind"] == "function"
-    assert payload["units"][0]["extras"][0]["topic"] == "failure"
-
-
-def test_validate_details_reports_list_disposition_how_instead_of_crashing() -> None:
-    inventory = _inventory()
-    payload = _good_payload(inventory)
-    key = next(iter(payload["dispositions"]))
-    payload["dispositions"][key] = {"how": ["unit"], "unit": key, "reason": "x"}
-    joined = "\n".join(checks.validate_details(payload, ["pkg/jobs.py"], inventory, set()))
-    assert "how must be one of" in joined
-    checks.normalize_details(payload, ["pkg/jobs.py"], inventory, set())
-    assert payload["dispositions"][key]["how"] == "index_only"
 
 
 def test_validate_tree_survives_list_valued_fields() -> None:

@@ -18,24 +18,15 @@ generator = importlib.import_module("cbe.generate")
 
 def _semantic_answer(prompt: str) -> dict:
     """One valid semantic-stage answer, chosen from the prompt's own content."""
-    if "Modules:\n" in prompt and "INVENTORY (" not in prompt:
+    if "Modules:\n" in prompt and "SYMBOLS (" not in prompt:
         rows = json.loads(prompt.split("Modules:\n", 1)[1])
         return {"names": [{"module": row["module"], "title": f"Area {row['module']}"}
                            for row in rows]}
     if "DOCUMENTATION (structured units)" in prompt:
         return {"decision": "accepted", "issues": []}
-    if "INVENTORY (this batch" in prompt:
-        inv = json.loads(prompt.split("INVENTORY (this batch, authoritative ids):\n", 1)[1]
-                         .split("\n\n", 1)[0])
-        units, dispositions = [], {}
-        for file_row in inv:
-            for symbol in file_row["symbols"]:
-                units.append({"id": symbol["id"], "kind": symbol["kind"],
-                              "explain": f"Unit {symbol['name']} does its job.",
-                              "extras": [], "relations": [], "uncertainties": []})
-                dispositions[symbol["id"]] = {"how": "unit", "unit": symbol["id"],
-                                               "reason": "real behavior"}
-        return {"units": units, "dispositions": dispositions, "batch_notes": "batch ok"}
+    if "SYMBOLS (this batch" in prompt:
+        from test_host_run import _detail_from_prompt
+        return _detail_from_prompt(prompt)
     if "UNITS:\n" in prompt:
         units = json.loads(prompt.split("UNITS:\n", 1)[1])
         ids = [unit["id"] for unit in units]

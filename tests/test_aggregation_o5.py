@@ -119,10 +119,11 @@ def test_single_tree_waits_for_review_and_repair(tmp_path, failed_module):
     repaired_ids = []
     for item in repairs:
         answer = _answer(item, Path(item["prompt_file"]).read_text())
-        for unit in answer["units"]:
-            unit["summary"] = "Repaired capability ready for aggregation."
-            repaired_ids.append(unit["id"])
+        for unit in answer["units"]:  # the first explain sentence is the published summary
+            unit["explain"] = "Repaired capability ready for aggregation. " + unit["explain"]
         assert submit(item, answer)["accepted"]
+        accepted = json.loads((run / "host" / "accepted" / f"{item['task']}.json").read_text())
+        repaired_ids += [unit["id"] for unit in accepted["units"]]
     tree = host_run.next_tasks(run)["tasks"]
     assert [item["task"] for item in tree] == ["tree"]
     prompt = Path(tree[0]["prompt_file"]).read_text()

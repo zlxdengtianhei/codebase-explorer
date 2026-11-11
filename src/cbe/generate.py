@@ -31,9 +31,14 @@ class SourceNotEmbedded(GenerateError):
     """
 
 
-# Repair-first validation: module and repair detail tasks allow 3 answers;
-# other tasks allow 2. Each rejection includes the exact error. On the final
-# invalid answer, normalize usable content with flags or fail the task.
+# Module and repair detail tasks allow 3 answers; other tasks allow 2 (see
+# host_run). The provider's own pushback (HTTP 429/503) is waited out inside the
+# call and never uses an answer attempt. A task whose call still ends in
+# ``provider_limit`` goes back to the queue and the whole run pauses; the run
+# stops only after this many such calls in a row with no response in between.
+LIMIT_STREAK_STOP = 3
+LIMIT_PAUSE_SECONDS = 60
+_sleep = time.sleep
 
 
 def _mark_result(csv_path: Path, task: str, attempt: int, result: str) -> None:
@@ -214,11 +219,13 @@ def generate(repo: Path, run_dir: Path, *, model: str, config: Path | None = Non
     review = json.loads((run_dir / "host" / "state.json").read_text(encoding="utf-8"))["review"]
     csv_path = run_dir / "calls.csv"
     stopped: str | None = None
+    limit_streak, pause_until = 0, 0.0
     active: dict[Any, tuple[dict[str, Any], str]] = {}
     preflight: SourceNotEmbedded | None = None
     with ThreadPoolExecutor(max_workers=jobs) as pool:
         while True:
-            if stopped is None and preflight is None and len(active) < jobs:
+            paused = bool(pause_until) and time.monotonic() < pause_until
+            if stopped is None and preflight is None and len(active) < jobs and not paused:
                 try:
                     batch = host_run.next_tasks(run_dir, limit=jobs - len(active), owner=host)["tasks"]
                 except host_run.HostRunError as exc:
@@ -247,6 +254,9 @@ def generate(repo: Path, run_dir: Path, *, model: str, config: Path | None = Non
                                          overrides=api_overrides or None)
                     active[future] = (item, csv_task)
             if not active:
+                if stopped is None and preflight is None and paused:
+                    _sleep(max(pause_until - time.monotonic(), 0.0))
+                    continue
                 break
             done, _ = wait(active, return_when=FIRST_COMPLETED)
             for future in done:
@@ -256,10 +266,20 @@ def generate(repo: Path, run_dir: Path, *, model: str, config: Path | None = Non
                 except Exception as exc:  # noqa: BLE001 - one broken call must not void the run
                     outcome = host_run.submit(run_dir, item["task"], error=f"driver_error:{exc}")
                     continue
+                if completion.error == "provider_limit":
+                    # Not an answer: back to the queue without using an attempt.
+                    host_run.release(run_dir, item["task"])
+                    limit_streak += 1
+                    if limit_streak >= LIMIT_STREAK_STOP:
+                        stopped = "provider_limit"
+                    else:
+                        pause_until = max(pause_until, time.monotonic() + LIMIT_PAUSE_SECONDS)
+                    continue
+                limit_streak = 0
                 if completion.error:
                     outcome = host_run.submit(run_dir, item["task"], error=completion.error,
                                               raw_text=completion.raw_text or None)
-                    if completion.error in {"provider_limit", "provider_auth"}:
+                    if completion.error == "provider_auth":
                         stopped = completion.error
                     continue
                 delivery = _call_delivery_problem(run_dir, item["task"], completion.usage)
@@ -274,9 +294,9 @@ def generate(repo: Path, run_dir: Path, *, model: str, config: Path | None = Non
                     host_run.note_usage_unknown(run_dir, item["task"], item["attempt"])
                 Path(item["output_file"]).write_text(completion.raw_text, encoding="utf-8")
                 outcome = host_run.submit(run_dir, item["task"])
-                if not outcome["accepted"] and outcome["error"].startswith("schema_error"):
+                if not outcome["accepted"] and outcome["error"].startswith(("schema_error", "incomplete")):
                     # The host call completed; its CSV row must still show the check failure.
-                    _mark_result(csv_path, csv_task, item["attempt"], "schema_error")
+                    _mark_result(csv_path, csv_task, item["attempt"], outcome["error"].split(":", 1)[0])
                 elif outcome.get("normalized"):
                     _mark_result(csv_path, csv_task, item["attempt"], "normalized")
     if stopped or preflight is not None:

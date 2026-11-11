@@ -50,7 +50,7 @@ def test_claims_stay_within_source_evidence_and_unit_scope(model_instructions):
 
 
 def test_nonbehavioral_regions_are_indexed_without_prose(model_instructions):
-    assert "A module region containing only imports or constants must be index_only" in model_instructions
+    assert "A module region containing only imports or constants gets no unit" in model_instructions
 
 
 def test_uncertainties_need_source_evidence(model_instructions):
