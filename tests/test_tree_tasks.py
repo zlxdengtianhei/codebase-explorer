@@ -305,6 +305,14 @@ def test_representative_files_are_the_ones_with_most_unit_lines():
     assert docs._rank_files({}, ranges, ["a", "b", "c"]) == ["x/big.py", "y/mid.py", "x/small.py"]
 
 
+def test_short_file_names_gain_a_directory_only_where_the_name_is_not_unique():
+    names = docs._short_names(["a/x/capabilities.rb", "a/y/capabilities.rb", "a/models.rb", "b/models.rb",
+                               "lib/only.rb", "top.rb"])
+    assert names["a/x/capabilities.rb"] == "x/capabilities.rb" and names["a/y/capabilities.rb"] == "y/capabilities.rb"
+    assert names["a/models.rb"] == "a/models.rb" and names["b/models.rb"] == "b/models.rb"
+    assert names["lib/only.rb"] == "only.rb" and names["top.rb"] == "top.rb"
+
+
 def test_entry_page_over_budget_folds_the_deepest_level_first_then_shows_one_file_per_node(tmp_path):
     units = _units(12)
     long = "Owns a long capability sentence that needs many tokens to say. " * 3

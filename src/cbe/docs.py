@@ -230,6 +230,23 @@ def _rank_files(units: dict, ranges_map: dict, members: list[str]) -> list[str]:
     return [path for path, _ in sorted(lines.items(), key=lambda item: (-item[1], item[0]))]
 
 
+def _short_names(paths) -> dict[str, str]:
+    """The shortest trailing part of each path that no other path shares (``a/b.py``, ``b.py`` ...)."""
+    split = {path: path.split("/") for path in set(paths)}
+    depth = max((len(parts) for parts in split.values()), default=1)
+    names: dict[str, str] = {}
+    for width in range(1, depth + 1):
+        count: dict[str, int] = {}
+        for parts in split.values():
+            key = "/".join(parts[-width:])
+            count[key] = count.get(key, 0) + 1
+        for path, parts in split.items():
+            key = "/".join(parts[-width:])
+            if path not in names and (count[key] == 1 or width >= len(parts)):
+                names[path] = key
+    return names
+
+
 def _entry_page(*, repo: str, nodes: dict, children: dict, roots: list[str], units: dict, ranges_map: dict,
                 overview: str | None, flows: list[dict], candidates: list[list[str]], graph_state: str,
                 graph_reason: str, owner: dict, name_of: Callable[[str], str], budget: int) -> tuple[str, dict]:
@@ -255,11 +272,11 @@ def _entry_page(*, repo: str, nodes: dict, children: dict, roots: list[str], uni
 
     levels = max((depth(nid) for nid in top), default=1)
     ranked = {nid: _rank_files(units, ranges_map, subtree(nid)) for nid in nodes}
+    short = _short_names(path for row in ranked.values() for path in row)
 
     def module_lines(nid: str, level: int, shown: int, files: int) -> list[str]:
         node = nodes[nid]
-        paths = ranked[nid][:files]
-        names = [path if [Path(p).name for p in paths].count(Path(path).name) > 1 else Path(path).name for path in paths]
+        names = [short[path] for path in ranked[nid][:files]]
         capability = literal_links((node.get("capability") or "").strip())
         rows = ["  " * level + f"- **{link_text(node.get('title') or nid)}**{' — ' + capability if capability else ''} "
                 f"({len(subtree(nid))} units{'; ' if names else ''}{', '.join(inline_code(n) for n in names)}) "
