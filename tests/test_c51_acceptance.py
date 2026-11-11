@@ -98,7 +98,7 @@ def _complete_run(tmp_path, monkeypatch):
                  "result": "ok", "seconds": .01})
         return Completion(value, None, json.dumps(value), {"input": 50000, "output": 2, "cache": 0}, .01)
     monkeypatch.setattr(generator, "invoke", fake)
-    result = generator.generate(repo, run, host="api", model="test/model", review="none", jobs=1)
+    result = generator.generate(repo, run, model="test/model", review="none", jobs=1)
     assert result["status"] == "complete"
     return repo, run
 

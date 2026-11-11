@@ -312,10 +312,10 @@ This is the step-by-step run that the README's earlier Quickstart documented. It
 5. Generate the documents. This needs one of the following:
 
    - **A host agent with subagents (Claude Code or Codex).** The subagents run on your own subscription. Run `cbe-install install --host claude-code` (or `--host codex`) in `$HOME/cbe-demo/cjson`, start the agent there, and ask: "Use the codebase-explorer skill to generate documentation for this repository." The agent plans the run first; for these four files `cbe host plan` prints `"modules": 4` and `"tasks": 8`, and each review finding adds one repair task later. See [Generate through a host agent](running.md#generate-through-a-host-agent).
-   - **An OpenAI-compatible endpoint, an API key and a model ID.** `cbe generate` talks only to such an endpoint (`--host api`, the default, is still accepted).
+   - **An OpenAI-compatible endpoint, an API key and a model ID.** `cbe generate` talks only to such an endpoint.
 
      ```sh
-     cbe generate "$HOME/cbe-demo/cjson" --host api \
+     cbe generate "$HOME/cbe-demo/cjson" \
        --base-url https://your-endpoint.example/v1 --api-key-env CBE_API_KEY \
        --model your-model-id --graph "$HOME/cbe-demo/graph.json" \
        --run-dir "$HOME/cbe-demo/run" --review sample

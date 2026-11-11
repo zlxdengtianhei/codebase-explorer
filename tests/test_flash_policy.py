@@ -109,7 +109,7 @@ def test_generate_consumes_model_policy_and_precedence(tmp_path, monkeypatch, mo
         return Completion(value, None, json.dumps(value), {"input": 50000, "output": 2, "cache": 0}, .01)
 
     monkeypatch.setattr(generator, "invoke", fake)
-    result = generator.generate(repo, tmp_path / "run", host="api", model=model,
+    result = generator.generate(repo, tmp_path / "run", model=model,
                                 config=config_path, timeout=timeout, review="none", jobs=1)
     assert result["status"] == "complete"
     assert result["modules"] == expected_modules
@@ -130,7 +130,7 @@ def test_cli_unknown_api_model_keeps_historical_420_second_timeout(tmp_path, mon
         return Completion(value, None, json.dumps(value), {"input": 200, "output": 2, "cache": 0}, .01)
 
     monkeypatch.setattr(generator, "invoke", fake)
-    assert cli.main(["generate", str(repo), "--host", "api", "--model", "other/model",
+    assert cli.main(["generate", str(repo), "--model", "other/model",
                      "--run-dir", str(tmp_path / "run")]) == 0
     assert json.loads(capsys.readouterr().out)["status"] == "complete"
     assert set(seen) == {420}

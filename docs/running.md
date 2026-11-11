@@ -88,7 +88,7 @@ Use any configured OpenAI-compatible chat-completions endpoint:
 
 ```sh
 # Supply the credential through the named environment variable using your normal secret setup.
-cbe generate /absolute/path/to/repo --host api \
+cbe generate /absolute/path/to/repo \
   --base-url https://your-endpoint.example/v1 --api-key-env CBE_API_KEY \
   --model your-model-id --graph /absolute/path/to/graph.json \
   --run-dir /absolute/path/to/run --review sample
@@ -96,7 +96,7 @@ cbe generate /absolute/path/to/repo --host api \
 
 `--config /absolute/path/to/config.json` provides host configuration. API credentials stay in environment variables or the supported credential-file reference. If no credential is configured, CBE omits the Authorization header for endpoints that allow unauthenticated requests. Do not put credentials in a URL. The API client records returned usage and preserves unknown values when usage is absent. Failed completions retain a bounded, redacted provider response, available usage, and finish reason before text extraction; truncation is explicit. A response with only reasoning and no answer remains a failed attempt. Reported token counts are transport/accounting evidence; they do not prove that a model understood the code.
 
-For `--host api`, the model `glm-5.3-flash` (under any gateway prefix, for example `zai/glm-5.3-flash` or `group/glm-5.3-flash`) selects resource defaults from
+For the model `glm-5.3-flash` (under any gateway prefix, for example `zai/glm-5.3-flash` or `group/glm-5.3-flash`) selects resource defaults from
 `cbe/model_settings.py`: 1,800 seconds per call, `output_max_tokens: 49152` (including
 reasoning), `reasoning_effort: "low"`, JSON object response mode, and reading-batch target/max of
 8,000/10,000 source tokens. Whole files stay intact; a single file may exceed
@@ -181,7 +181,7 @@ Choose a model that your own account can use. CBE does not promise that a provid
 
 This table was measured before the answer-format and module-tree changes of 2.2.0.dev0: the `Generation runs` rows of the evaluation ran at CBE commits `9c6499e` and `a87674d`, when the model also built the module tree. The current cost readings are in the README, section "What it costs". The table stays here because it covers repositories up to 1.7 million tokens, and the current readings cover one repository (flask). Do not compare the two directly.
 
-The rows below are copied from the [Generation runs](../evaluation/README.md#generation-runs) table of the evaluation. All runs used `zai/glm-5.3-flash` through `--host api` and the Magpie gateway. `cost_usd` comes from the gateway's own price table, not from a provider's public price list; re-price with a dated public price list before you compare it with other reports. Request and token counts do not depend on prices.
+The rows below are copied from the [Generation runs](../evaluation/README.md#generation-runs) table of the evaluation. All runs used `zai/glm-5.3-flash` through the Magpie gateway. `cost_usd` comes from the gateway's own price table, not from a provider's public price list; re-price with a dated public price list before you compare it with other reports. Request and token counts do not depend on prices.
 
 | Repository | Source tokens (o200k) | Gateway requests | `cost_usd` (gateway price table) | First pass complete | Resumes |
 |---|---:|---:|---:|---|---:|
@@ -230,7 +230,7 @@ Run state, task leases, attempts, accepted results, and the frozen context live 
 ```sh
 cbe host resume --run-dir /absolute/path/to/run
 # Or use the same script driver and configuration:
-cbe generate /absolute/path/to/repo --host api --model your-model-id \
+cbe generate /absolute/path/to/repo --model your-model-id \
   --base-url https://your-endpoint.example/v1 --api-key-env CBE_API_KEY \
   --run-dir /absolute/path/to/run --resume
 ```

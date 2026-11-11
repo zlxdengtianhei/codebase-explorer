@@ -153,7 +153,7 @@ def _csv_task(task_id: str, review: str) -> str:
 
 def generate(repo: Path, run_dir: Path, *, model: str, config: Path | None = None,
              jobs: int = 4, review: str | None = None, timeout: int | None = None,
-             host: str = "api", resume: bool = False,
+             resume: bool = False,
              graph_path: Path | None = None, api_base_url: str | None = None,
              api_key_env: str | None = None, default_timeout: int = 360) -> dict[str, Any]:
     """Script driver: the shared run state, with each task as one tool-free completion.
@@ -174,8 +174,6 @@ def generate(repo: Path, run_dir: Path, *, model: str, config: Path | None = Non
         raise GenerateError("repository root is not a directory")
     if jobs < 1 or default_timeout < 1 or review not in host_run.REVIEW_MODES or (timeout is not None and timeout < 1):
         raise GenerateError("jobs and timeout must be positive; review must be none, sample, or all")
-    if host != "api":
-        raise GenerateError("host must be api")
     if not model:
         raise GenerateError("generate needs a model name (--model)")
     has_state = (run_dir / "host" / "state.json").is_file()
@@ -208,9 +206,9 @@ def generate(repo: Path, run_dir: Path, *, model: str, config: Path | None = Non
         previous_wall = json.loads((run_dir / "summary.json").read_text(encoding="utf-8")).get("wall_seconds", 0)
     started = time.monotonic()
     if resume:
-        host_run.resume(run_dir, owner=host, graph_path=graph_path)
+        host_run.resume(run_dir, owner="api", graph_path=graph_path)
     else:
-        host_run.plan(repo, run_dir, review=review, jobs=jobs, host=host, driver="script",
+        host_run.plan(repo, run_dir, review=review, jobs=jobs, host="api", driver="script",
                       graph_path=graph_path,
                       batch_target_tokens=settings.get("batch_target_tokens", batching.TARGET_TOKENS),
                       batch_max_tokens=settings.get("batch_max_tokens", batching.MAX_TOKENS))
@@ -225,7 +223,7 @@ def generate(repo: Path, run_dir: Path, *, model: str, config: Path | None = Non
             paused = bool(pause_until) and time.monotonic() < pause_until
             if stopped is None and preflight is None and len(active) < jobs and not paused:
                 try:
-                    batch = host_run.next_tasks(run_dir, limit=jobs - len(active), owner=host)["tasks"]
+                    batch = host_run.next_tasks(run_dir, limit=jobs - len(active), owner="api")["tasks"]
                 except host_run.HostRunError as exc:
                     # Dispatch itself refused the task (a listed source is
                     # missing, unreadable, or drifted); stop the same way.
@@ -307,7 +305,7 @@ def generate(repo: Path, run_dir: Path, *, model: str, config: Path | None = Non
     summary = {**result, "status": result.get("status", "partial"),
                "stopped": stopped, "wall_seconds": round(previous_wall + time.monotonic() - started, 3),
                "run_dir": str(run_dir), "index": str(run_dir / "docs" / "INDEX.md"),
-               "progress_log": str(run_dir / "progress.log"), "host": host, "model": model,
+               "progress_log": str(run_dir / "progress.log"), "host": "api", "model": model,
                "input_token_basis": "provider prompt_tokens minus cached_tokens; cache reported separately",
                **cost}
     (run_dir / "summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")

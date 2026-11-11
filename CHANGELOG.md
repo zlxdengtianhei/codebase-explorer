@@ -66,8 +66,8 @@
   rows. A call still refused returns its task to the queue and pauses the run; the
   run stops only after 3 such calls in a row.
 - Remove the OpenCode and Devin completion paths. `cbe generate` now talks only
-  to an OpenAI-compatible endpoint and requires `--model`; `--host api` is still
-  accepted, other `--host` values are rejected. The built-in Z.AI and Devin
+  to an OpenAI-compatible endpoint and requires `--model`; the compatibility-only
+  `--host api` option is removed. The built-in Z.AI and Devin
   default models are gone.
   Rename the hidden plugin directory to `plugin/` so the skill is easy to find.
 - Remove the Python-only concrete-facts layer: `catalog.json` no longer carries

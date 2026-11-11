@@ -51,7 +51,6 @@ def build_parser() -> argparse.ArgumentParser:
     generate_p = sub.add_parser("generate", help="Generate documentation through an OpenAI-compatible API")
     generate_p.add_argument("repo", type=lambda value: Path(value).expanduser().resolve())
     generate_p.add_argument("--run-dir", type=_abs, default=None)
-    generate_p.add_argument("--host", choices=("api",), default="api", help="the only completion path; kept so old commands still parse")
     generate_p.add_argument("--model", default=None)
     generate_p.add_argument("--config", type=_abs, default=None,
                             help="optional API configuration file")
@@ -386,7 +385,7 @@ def main(argv: list[str] | None = None) -> int:
                     raise ValueError("header language differs from the frozen context; start a new plan")
             value = generate(repo, run_dir, model=args.model, config=args.config,
                              jobs=args.jobs, review=args.review, timeout=args.timeout, default_timeout=420,
-                             host=args.host, resume=args.resume, graph_path=args.graph,
+                             resume=args.resume, graph_path=args.graph,
                              api_base_url=args.base_url, api_key_env=args.api_key_env)
             print(json.dumps(value, ensure_ascii=False, indent=2))
             # 3 means docs were rendered but some tasks are still pending.

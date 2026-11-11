@@ -262,7 +262,7 @@ def test_generate_api_host_applies_overrides_in_memory_without_copying_the_confi
     _Handler.status = 200
     _Handler.body = {"choices": [{"message": {"content": "{}"}}]}
     _Handler.captured = {}
-    result = generate(repo, tmp_path / "run", model="test-model", host="api", config=config,
+    result = generate(repo, tmp_path / "run", model="test-model", config=config,
                       jobs=1, api_base_url=server, api_key_env="CBE_TEST_KEY")
     # The override reached the endpoint in memory; the user config was not copied.
     assert _Handler.captured["body"]["model"] == "test-model"
@@ -436,7 +436,7 @@ def test_allowed_api_config_keys_are_exactly_the_keys_the_code_reads(tmp_path, s
     config = tmp_path / "api.json"
     config.write_text(json.dumps(full))
     importlib.import_module("cbe.generate").generate(
-        _tiny_repo(tmp_path), tmp_path / "run", model="m", host="api", config=config, jobs=1)
+        _tiny_repo(tmp_path), tmp_path / "run", model="m", config=config, jobs=1)
     sent = _Handler.captured["body"]
     assert {"temperature", "max_tokens", "response_format", "top_p", "reasoning_effort"} <= sent.keys()
 
