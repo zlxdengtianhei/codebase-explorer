@@ -104,7 +104,7 @@ def build_records(units: dict, dispositions: dict, inventory: dict, ranges: dict
                   edge_table: dict | None = None) -> tuple[dict, dict]:
     """Return unit and inventory-symbol records, keeping original evidence verbatim."""
     from cbe.source_context import source_signatures
-    from cbe.graph import graph_state
+    from cbe.graph import built_without_dataflow, graph_state
 
     chunks = {c["id"]: c for c in (context or {}).get("chunks") or []}
     signatures = {path: source_signatures(path, text, languages.get(path, "unknown"))
@@ -162,6 +162,7 @@ def build_records(units: dict, dispositions: dict, inventory: dict, ranges: dict
         if callee:
             incoming[callee].append(edge["id"])
     availability = graph_state(graph)[0]
+    no_dataflow = built_without_dataflow(graph)  # then a count of 0 would be a false statement
     for sid, symbol in symbols.items():
         symbol.update(graph_state=availability, outgoing=outgoing[sid], incoming=incoming[sid],
                       internal_edge_counts=dict(internal[sid]))
@@ -192,7 +193,7 @@ def build_records(units: dict, dispositions: dict, inventory: dict, ranges: dict
             record[direction] = list(dict.fromkeys(eid for sid in members for eid in edges[sid]))
         record["internal_edge_counts"] = {
             kind: sum(internal[sid].get(kind, 0) for sid in members)
-            for kind in ("cfg", "dataflow")}
+            for kind in (("cfg",) if no_dataflow else ("cfg", "dataflow"))}
         for field in ("extras", "relations", "uncertainties"):
             record.setdefault(field, [])
         records[uid] = record

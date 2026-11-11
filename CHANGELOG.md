@@ -2,6 +2,15 @@
 
 ## 2.2.0.dev0 (unreleased)
 
+- `cbe graph setup` installs Joern 4.0.654 and a Temurin 21 JRE into the user cache directory
+  (`--check`, `--force`, `--with-java`). `graph build` finds Joern through `--joern-home`,
+  `CBE_JOERN_HOME`, the cache, then `PATH`; a `--joern-home` or `CBE_JOERN_HOME` that is not a
+  Joern directory is now an error instead of a silent fall-through. `cbe languages` reports
+  `call_graph` per language.
+- Dataflow is exported only with `--with-dataflow` (or `--max-reaching-defs`,
+  `--dataflow-path-method`). Otherwise its capability is `not_requested`, `internal_edge_counts`
+  has no `dataflow` entry, and `query --edges dataflow` / `graph query --kind dataflow` say to rebuild.
+
 - The program builds the module tree; the model only names it. After all detail and
   review has settled, `skeleton.build` freezes the structure in the run state and
   `tree_name_<k>` tasks (leaf modules, in batches of about 12,000 prompt tokens, in

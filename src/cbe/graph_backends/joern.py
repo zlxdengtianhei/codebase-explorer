@@ -85,7 +85,7 @@ import java.nio.file.{Files, Paths}
 import scala.util.{Try, Success, Failure}
 
 @main def main(cpgFile: String, outFile: String, maxReachingDefs: Int,
-               pathMethods: String, maxPathsPerMethod: Int, maxMethods: Int): Unit = {
+               pathMethods: String, maxPathsPerMethod: Int, maxMethods: Int, withDataflow: Int): Unit = {
   val cpg = importCpg(cpgFile).get
   implicit val engineConfig: EngineConfig = EngineConfig()
 
@@ -188,7 +188,7 @@ import scala.util.{Try, Success, Failure}
   val rdSeen = scala.collection.mutable.Set[(Long, Long)]()
   val rdBuf = scala.collection.mutable.ArrayBuffer[ujson.Obj]()
   var rdOmitted = 0
-  realMethods.foreach { m =>
+  (if (withDataflow != 0) realMethods else List[Method]()).foreach { m =>
     m.ast.foreach { n =>
       if (n.label != "METHOD") {
         n.out("REACHING_DEF").foreach { o =>
@@ -206,7 +206,7 @@ import scala.util.{Try, Success, Failure}
 
   // Optional, explicitly requested value-flow paths.  Separate scope; sampled;
   // the full path set is counted so the sample is visible.
-  val requested = pathMethods.split(",").map(_.trim).filter(_.nonEmpty).toList
+  val requested = if (withDataflow != 0) pathMethods.split(",").map(_.trim).filter(_.nonEmpty).toList else List[String]()
   val pathBuf = scala.collection.mutable.ArrayBuffer[ujson.Obj]()
   val errBuf = scala.collection.mutable.ArrayBuffer[ujson.Obj]()
   requested.foreach { name =>
@@ -241,6 +241,7 @@ import scala.util.{Try, Success, Failure}
     "cfg" -> cfg,
     "cfgMethodsOmitted" -> (realMethods.size - cfgMethods.size),
     "imports" -> imports,
+    "dataflowRequested" -> (withDataflow != 0),
     "reachingDefs" -> rdBuf.toList,
     "reachingDefsTruncated" -> (rdOmitted > 0),
     "reachingDefsOmitted" -> rdOmitted,
@@ -288,6 +289,7 @@ def build_with_joern(
     max_methods: int | None = None,
     joern_heap: str | None = None,
     java: JavaInstall | None = None,
+    with_dataflow: bool = False,
 ) -> dict:
     """Parse each frontend's languages with Joern and return a normalized fragment.
 
@@ -316,7 +318,7 @@ def build_with_joern(
     edges: list[dict] = []
     raw: list[dict] = []
     non_call_sites = Counter()
-    path_methods = ",".join(dataflow_path_methods or [])
+    path_methods = ",".join(dataflow_path_methods or []) if with_dataflow else ""
     files = repository_files(repo)
 
     by_language: dict[str, list[str]] = {}
@@ -366,6 +368,7 @@ def build_with_joern(
                 [str(joern_bin), "--script", str(script),
                  "--param", f"cpgFile={cpg}", "--param", f"outFile={export}",
                  "--param", f"maxMethods={max_methods if max_methods is not None else -1}",
+                 "--param", f"withDataflow={int(with_dataflow)}",
                  "--param", f"maxReachingDefs={max_reaching_defs}",
                  "--param", f"pathMethods={path_methods}",
                  "--param", f"maxPathsPerMethod={max_paths_per_method}", "--nocolors"],
@@ -906,7 +909,9 @@ def _capabilities_for(language: str, payload: dict, version: str,
     cfg_methods = sum(1 for cfg in payload.get("cfg", []) if cfg.get("edges"))
     rd_edges = len(payload.get("reachingDefs", []))
     has_methods = bool(payload.get("methods"))
-    if payload.get("reachingDefsTruncated"):
+    if not payload.get("dataflowRequested", True):
+        df_status = "not_requested"
+    elif payload.get("reachingDefsTruncated"):
         df_status = "partial"
     elif rd_edges:
         df_status = "resolved"
@@ -962,7 +967,9 @@ def _capabilities_for(language: str, payload: dict, version: str,
                     scope="reaching_def", reaching_def_edges=rd_edges,
                     reaching_defs_truncated=bool(payload.get("reachingDefsTruncated")),
                     edges_omitted=payload.get("reachingDefsOmitted", None if payload.get("reachingDefsTruncated") else 0),
-                    limitations=(f"REACHING_DEF export truncated; {payload.get('reachingDefsOmitted', 'unknown')} edges omitted"
+                    limitations=("dataflow was not exported; rebuild with `cbe graph build --with-dataflow`"
+                                 if df_status == "not_requested" else
+                                 f"REACHING_DEF export truncated; {payload.get('reachingDefsOmitted', 'unknown')} edges omitted"
                                  if payload.get("reachingDefsTruncated") else
                                  (None if rd_edges else "analyzer ran but produced no REACHING_DEF edges")),
                     condition="local reaching definitions; inter-procedural value-flow paths are a separate opt-in query"),

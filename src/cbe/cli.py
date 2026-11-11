@@ -138,7 +138,11 @@ def build_parser() -> argparse.ArgumentParser:
     graph_build.add_argument("--timeout", type=int, default=300)
     graph_build.add_argument("--max-methods", type=int, default=None,
                              help="maximum methods for CFG export per frontend; default: unlimited; omitted methods are reported")
-    graph_build.add_argument("--max-reaching-defs", type=int, default=50000)
+    graph_build.add_argument("--with-dataflow", action="store_true",
+                             help="also export dataflow (reaching definitions); off by default. "
+                                  "--max-reaching-defs and --dataflow-path-method imply it")
+    graph_build.add_argument("--max-reaching-defs", type=int, default=None,
+                             help="cap on reaching-definition edges (default 50000 when dataflow is exported)")
     graph_build.add_argument("--dataflow-path-method", action="append", dest="dataflow_path_methods",
                              help="opt in to sampled value-flow paths for a named method")
     graph_build.add_argument("--max-paths-per-method", type=int, default=5)
@@ -282,7 +286,8 @@ def main(argv: list[str] | None = None) -> int:
                                           depcruise_bin=args.depcruise_bin, timeout=args.timeout,
                                           max_methods=args.max_methods, max_reaching_defs=args.max_reaching_defs,
                                           dataflow_path_methods=args.dataflow_path_methods,
-                                          max_paths_per_method=args.max_paths_per_method)
+                                          max_paths_per_method=args.max_paths_per_method,
+                                          with_dataflow=args.with_dataflow)
                 except GraphError as exc:
                     if exc.graph is None:
                         raise
