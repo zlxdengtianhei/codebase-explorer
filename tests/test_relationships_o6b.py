@@ -149,7 +149,8 @@ def test_three_mermaid_line_styles_and_full_legend(tmp_path):
 def test_dependency_list_keeps_all_source_labels_and_separates_footnotes(tmp_path):
     run, _, _ = render_example(tmp_path)
     listing = (run / "docs/DEPENDENCIES.md").read_text().split("## Dependency list\n", 1)[1]
-    assert all(f"· {label} ·" in listing for label in ("graph-confirmed", "model-inferred", "graph-only"))
+    assert all(f"· {label}" in listing for label in ("graph-confirmed", "model-inferred", "graph-only"))
+    assert "edge(s)" in listing and "0 edge(s)" not in listing and "model-inferred\n" in listing
     assert "\n\nGraph-only pairs are ranked by edge count" in listing
     assert "\n\nThe system response provided no key dependency descriptions." in listing
 

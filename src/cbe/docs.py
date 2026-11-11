@@ -252,8 +252,9 @@ def _entry_page(*, repo: str, nodes: dict, children: dict, roots: list[str], uni
                 graph_reason: str, owner: dict, name_of: Callable[[str], str], budget: int) -> tuple[str, dict]:
     """INDEX.md: the module tree with one capability line per node, key flows, the three commands.
 
-    The tree is drawn to its full depth. Over the token budget, the deepest level is folded away first
-    (it stays on the node pages), then every node shows one file instead of three, then more levels fold."""
+    The tree is drawn to its full depth. Over the token budget, every node first shows one file instead of
+    three, then no file, and only then does the deepest level fold away (it stays on the node pages): the
+    leaf modules are what a reader looks for, a representative file is only a hint."""
     from cbe.token_budget import count_text_tokens
 
     members: dict[str, list[str]] = {}
@@ -278,9 +279,9 @@ def _entry_page(*, repo: str, nodes: dict, children: dict, roots: list[str], uni
         node = nodes[nid]
         names = [short[path] for path in ranked[nid][:files]]
         capability = literal_links((node.get("capability") or "").strip())
-        rows = ["  " * level + f"- **{link_text(node.get('title') or nid)}**{' — ' + capability if capability else ''} "
-                f"({len(subtree(nid))} units{'; ' if names else ''}{', '.join(inline_code(n) for n in names)}) "
-                f"→ [nodes/{nid}.md](nodes/{nid}.md)"]
+        rows = ["  " * level + f"- [**{link_text(node.get('title') or nid)}**](nodes/{nid}.md)"
+                f"{' — ' + capability if capability else ''} "
+                f"({len(subtree(nid))} units{'; ' if names else ''}{', '.join(inline_code(n) for n in names)})"]
         if level + 1 < shown:
             for kid in children.get(nid) or []:
                 rows += module_lines(kid, level + 1, shown, files)
@@ -320,11 +321,7 @@ def _entry_page(*, repo: str, nodes: dict, children: dict, roots: list[str], uni
                   "", "More: [DEPENDENCIES.md](DEPENDENCIES.md) · [RUN.md](RUN.md)"]
         return "\n".join(lines) + "\n"
 
-    ladder = [(levels, FILES_SHOWN)]
-    if levels > 1:
-        ladder += [(levels - 1, FILES_SHOWN)] + [(n, 1) for n in range(levels - 1, 0, -1)]
-    else:
-        ladder += [(1, 1)]
+    ladder = [(levels, FILES_SHOWN), (levels, 1), (levels, 0)] + [(n, 0) for n in range(levels - 1, 0, -1)]
     for shown, files in ladder:
         text = page(shown, files)
         tokens = count_text_tokens(text)
@@ -358,6 +355,12 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
             children[node["parent"]].append(nid)
         for uid in node.get("unit_ids") or []:
             owner[uid] = nid
+    subtree_sizes: dict[str, int] = {}
+
+    def subtree_units(nid: str) -> int:
+        if nid not in subtree_sizes:
+            subtree_sizes[nid] = len(nodes[nid].get("unit_ids") or []) + sum(subtree_units(k) for k in children[nid])
+        return subtree_sizes[nid]
 
     anchors: dict[str, str] = {}
     for uid in sorted(units):
@@ -415,7 +418,10 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
                 + (f"containment · → {edge['count']} / ← {edge['reverse_count']} edge(s) "
                    f"(ancestor direct units and descendant subtree; → follows {code_text(edge['from'])} → {code_text(edge['to'])})"
                    if edge["source"] == "containment" else
-                   f"{labels[edge['source']]} · {edge['count']} edge(s)")
+                   labels[edge["source"]]
+                   + "".join(f" · {text}" for text in (
+                       f"{edge['count']} edge(s)" if edge["count"] else "",
+                       f"{edge.get('inferred_count', 0)} inferred relation(s)" if edge.get("inferred_count") else "") if text))
                 + (" · " + literal_links(edge["description"]) if edge["description"] else ""))
 
     for nid, node in nodes.items():
@@ -430,7 +436,7 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
             for kid in children[nid]:
                 kid_node = nodes[kid]
                 lines.append(f"- [{link_text(kid_node.get('title') or kid)}]({kid}.md) `{kid}` · "
-                             f"{len(kid_node.get('unit_ids') or [])} unit(s)")
+                             f"{subtree_units(kid)} unit(s)")
             lines.append("")
         if edges_by_from.get(nid):
             lines += ["**Depends on.**", ""]

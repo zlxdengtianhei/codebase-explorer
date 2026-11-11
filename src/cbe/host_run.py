@@ -214,8 +214,8 @@ def _semantic_tree(run_dir: Path, state: dict[str, Any]) -> dict[str, Any]:
     if _legacy_state(state):
         if state.get("aggregation", {}).get("regions"):
             raise HostRunError("this run was built with region trees, which this build no longer composes; "
-                               "its docs and catalog stay readable; run `plan` again to render with the "
-                               "current tree")
+                               "`find`, `query` and `source` still work on its docs and catalog; for the "
+                               "new entry page run `plan` again and generate")
         tree = _accepted(run_dir, "tree")
         if tree is None:
             raise HostRunError("this run has no accepted tree; run `plan` again")

@@ -3,6 +3,7 @@ node-by-node answers with program-made titles, old-run handling, and the entry p
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -58,8 +59,16 @@ def test_skeleton_is_frozen_once_and_the_naming_batches_run_in_parallel_before_t
     state = _state(run)
     assert state["status"] == "complete" and state["verify"]["ok"]
     tree = json.loads((run / "host/accepted/tree.json").read_text())
-    ids = [n["id"] for n in tree["nodes"]]
-    assert ids == [n["id"] for n in frozen["nodes"]]       # the structure is the skeleton's, nothing else
+    def shape(nodes):
+        by_id = {n["id"]: n for n in nodes}
+        kids = {n["id"]: [m["id"] for m in nodes if m["parent"] == n["id"]] for n in nodes}
+
+        def members(i):
+            return set(by_id[i]["unit_ids"]).union(*[members(k) for k in kids[i]])
+        return sorted((sorted(members(n["id"])), sorted(members(n["parent"])) if n["parent"] else None)
+                      for n in nodes)
+    assert shape(tree["nodes"]) == shape(frozen["nodes"])   # the structure is the skeleton's, nothing else
+    assert all(re.fullmatch(r"[a-z0-9]+(-[a-z0-9]+)*", n["id"]) for n in tree["nodes"])   # ids come from titles
     assert checks.validate_tree(tree, set(json.loads((run / "catalog.json").read_text())["units"])) == []
 
 
@@ -132,7 +141,7 @@ def test_a_failed_naming_task_leaves_a_renderable_program_titled_tree(tmp_path, 
     notes = (run / "docs/RUN.md").read_text()
     assert "program" in notes and "tree_name_1" in notes
     assert host_run.verify(run)["ok"] is False                      # the task is not done, the docs still stand
-    assert (run / "docs/INDEX.md").read_text().count("→ [nodes/") == 3
+    assert (run / "docs/INDEX.md").read_text().count("\n- [**") == 3
 
 
 def test_an_empty_run_completes_without_a_tree_task(tmp_path):
@@ -180,8 +189,9 @@ def test_a_finished_old_run_still_renders_and_searches(tmp_path):
     # A tree that used region subtrees cannot be composed any more; the error says what to do.
     state["aggregation"] = {"regions": [{"id": "region-0001", "unit_ids": []}]}
     (run / "host/state.json").write_text(json.dumps(state))
-    with pytest.raises(host_run.HostRunError, match="region trees"):
+    with pytest.raises(host_run.HostRunError, match="region trees") as error:
         host_run.render(run)
+    assert "`find`, `query` and `source` still work" in str(error.value) and "`plan` again" in str(error.value)
     assert tree["nodes"]
 
 
@@ -248,11 +258,27 @@ def test_assemble_replaces_a_title_that_a_sibling_already_uses_and_derives_depen
     edges = [{"from": ids[0], "to": ids[4], "kind": "call", "count": 3},
              {"from": ids[1], "to": ids[5], "kind": "relation", "count": 2, "provenance": "model_inferred"}]
     tree_json = treename.assemble(tree, records, units, edges, "repo")
-    nodes = {n["id"]: n for n in tree_json["nodes"]}
-    assert nodes["l1"]["title"] == "Same" and "program-made" in nodes["l2"]["note"]
-    assert nodes["l2"]["evidence_units"] == []     # evidence that is not in the node is dropped
-    assert tree_json["depends_on"] == [{"from": "l1", "to": "l2", "basis": "3 resolved call/import edge(s)"}]
+    nodes = {n["title"]: n for n in tree_json["nodes"]}
+    assert nodes["Same"]["id"] == "same" and nodes["System"]["id"] == "system"
+    other = next(n for n in tree_json["nodes"] if "program-made" in n.get("note", ""))
+    assert other["id"] != "same" and other["evidence_units"] == []   # evidence that is not in the node is dropped
+    assert tree_json["depends_on"] == [{"from": "same", "to": other["id"], "basis": "3 resolved call/import edge(s)"}]
     assert checks.validate_tree(tree_json, set(units)) == []
+
+
+def test_node_ids_are_readable_slugs_that_stay_unique():
+    nodes = [{"id": "root", "parent": None, "unit_ids": [], "level": 0},
+             {"id": "k1", "parent": "root", "unit_ids": ["a"], "level": 1},
+             {"id": "k2", "parent": "root", "unit_ids": ["b"], "level": 1},
+             {"id": "k3", "parent": "root", "unit_ids": ["c"], "level": 1},
+             {"id": "k4", "parent": "root", "unit_ids": ["d"], "level": 1}]
+    tree = treename.Tree(nodes)
+    titles = {"root": "Streaming Response Processing", "k1": "Same", "k2": "same!", "k3": "日本語", "k4": "x" * 90}
+    ids = treename.slugs(tree, titles)
+    assert ids["root"] == "streaming-response-processing" and ids["k1"] == "same"
+    assert re.fullmatch(r"same-[0-9a-f]{5}", ids["k2"]) and re.fullmatch(r"node-[0-9a-f]{5}", ids["k3"])
+    assert ids["k4"] == "x" * 48 and len(set(ids.values())) == 5
+    assert ids == treename.slugs(tree, titles)                      # the same input gives the same ids
 
 
 # --------------------------------------------------------------- entry page
@@ -286,9 +312,9 @@ def test_entry_page_draws_the_whole_tree_with_capability_lines_and_moves_the_res
     meta = _render_tree(tmp_path, _nodes(units, "Owns the capability of this part."), units, source_tokens=1_000_000)
     index = (tmp_path / "docs/INDEX.md").read_text()
     assert index.startswith("# myrepo: code map\n\nTwo sentences. About the repo.\n\n## Modules\n")
-    assert "- **Top 0** — Owns the capability of this part. (6 units" in index
-    assert "  - **Leaf 01** — Owns the capability of this part. (3 units" in index
-    assert "](nodes/t0c1.md)" in index
+    assert "- [**Top 0**](nodes/t0.md) — Owns the capability of this part. (6 units" in index
+    assert "  - [**Leaf 01**](nodes/t0c1.md) — Owns the capability of this part. (3 units" in index
+    assert "→ [nodes/" not in index                    # the title is the link, the path is not repeated
     assert "Maintenance navigation" not in index and "How to read this report" not in index
     assert "DEPENDENCIES.md" in index and "RUN.md" in index and "## Read further" in index
     assert "flowchart" not in index and "## Graph coverage" not in index
@@ -297,6 +323,27 @@ def test_entry_page_draws_the_whole_tree_with_capability_lines_and_moves_the_res
     assert "## Graph coverage" in run_page and "## Reading stats" in run_page
     assert meta["index"]["levels"] == meta["index"]["levels_shown"] == 2 and not meta["index"]["over_budget"]
     assert meta["index"]["budget"] == 30_000 and meta["index"]["files_per_node"] == 3
+
+
+def test_node_page_children_show_subtree_units_and_dependencies_never_print_zero_edges(tmp_path):
+    units = _units(6)
+    ids = sorted(units)
+    units[ids[0]]["relations"] = [{"target": ids[3], "kind": "use"}, {"target": ids[4], "kind": "use"}]
+    cap = "A capability sentence that is long enough to count."
+    nodes = [{"id": "root", "parent": None, "title": "Root", "capability": cap, "summary": "s", "unit_ids": []},
+             {"id": "mid", "parent": "root", "title": "Mid", "capability": cap, "summary": "s", "unit_ids": []},
+             {"id": "a", "parent": "mid", "title": "A", "capability": cap, "summary": "s", "unit_ids": ids[:3]},
+             {"id": "b", "parent": "mid", "title": "B", "capability": cap, "summary": "s", "unit_ids": ids[3:]}]
+    docs.render(run_dir=tmp_path, source_root=tmp_path, inventory={}, units=units, dispositions={}, languages={},
+                tree={"nodes": nodes, "depends_on": [{"from": "a", "to": "b", "basis": "x"},
+                                                     {"from": "b", "to": "a", "basis": "x"}]})
+    root_page = (tmp_path / "docs/nodes/root.md").read_text()
+    assert "[Mid](mid.md) `mid` · 6 unit(s)" in root_page and "0 unit(s)" not in root_page
+    a_page = (tmp_path / "docs/nodes/a.md").read_text()
+    assert "model-inferred · 2 inferred relation(s)" in a_page
+    b_page = (tmp_path / "docs/nodes/b.md").read_text()
+    assert "edge(s)" not in a_page + b_page
+    assert "[A](a.md) · model-inferred\n" in b_page.split("**Depends on.**")[1].split("\n\n")[1] + "\n"
 
 
 def test_representative_files_are_the_ones_with_most_unit_lines():
@@ -313,26 +360,28 @@ def test_short_file_names_gain_a_directory_only_where_the_name_is_not_unique():
     assert names["lib/only.rb"] == "only.rb" and names["top.rb"] == "top.rb"
 
 
-def test_entry_page_over_budget_folds_the_deepest_level_first_then_shows_one_file_per_node(tmp_path):
+def _entry(nodes, units, budget):
+    by_id = {n["id"]: dict(n) for n in nodes}
+    children = {i: [n["id"] for n in nodes if n["parent"] == i] for i in by_id}
+    ranges = {u: row["ranges"] for u, row in units.items()}
+    owner = {u: n["id"] for n in nodes for u in n["unit_ids"]}
+    return docs._entry_page(repo="r", nodes=by_id, children=children, roots=["root"], units=units, ranges_map=ranges,
+                            overview="Overview.", flows=[], candidates=[], graph_state="provided", graph_reason="",
+                            owner=owner, name_of=lambda u: u, budget=budget)
+
+
+def test_entry_page_over_budget_shows_fewer_files_first_and_folds_the_leaf_level_last():
     units = _units(12)
-    long = "Owns a long capability sentence that needs many tokens to say. " * 3
-    nodes = _nodes(units, long)
-    full = _render_tree(tmp_path, nodes, units, source_tokens=1_000_000)["index"]
-    # a budget just under the full page: the leaf level folds away, files stay at three
-    import cbe.docs as d
-    monkey_budget = full["tokens"] - 20
-    d.INDEX_MIN_TOKENS, saved = monkey_budget, d.INDEX_MIN_TOKENS
-    try:
-        folded = _render_tree(tmp_path, nodes, units)["index"]
-        assert folded["levels_shown"] == 1 and folded["files_per_node"] == 3 and not folded["over_budget"]
-        text = (tmp_path / "docs/INDEX.md").read_text()
-        assert "Top 0" in text and "Leaf 00" not in text
-        d.INDEX_MIN_TOKENS = folded["tokens"] - 20
-        smaller = _render_tree(tmp_path, nodes, units)["index"]
-        assert smaller["files_per_node"] == 1 and smaller["levels_shown"] == 1
-        d.INDEX_MIN_TOKENS = 10
-        floor = _render_tree(tmp_path, nodes, units)["index"]
-        assert floor["over_budget"] and floor["levels_shown"] == 1 and floor["files_per_node"] == 1
-    finally:
-        d.INDEX_MIN_TOKENS = saved
-    assert (tmp_path / "docs/nodes/t0c0.md").is_file()          # folded nodes keep their pages
+    nodes = _nodes(units, "Owns a long capability sentence that needs many tokens to say. " * 3)
+    full_text, full = _entry(nodes, units, 10 ** 6)
+    assert (full["levels_shown"], full["files_per_node"]) == (2, 3) and "`f1.py`" in full_text
+    one_text, one = _entry(nodes, units, full["tokens"] - 5)             # just under: one file per node
+    assert (one["levels_shown"], one["files_per_node"]) == (2, 1) and not one["over_budget"]
+    assert "Leaf 00" in one_text and one_text.count("`f") < full_text.count("`f")
+    none_text, none = _entry(nodes, units, one["tokens"] - 5)            # then no file at all, all leaves still drawn
+    assert (none["levels_shown"], none["files_per_node"]) == (2, 0) and "`f" not in none_text
+    folded_text, folded = _entry(nodes, units, none["tokens"] - 5)       # only now the leaf level folds away
+    assert (folded["levels_shown"], folded["files_per_node"]) == (1, 0) and "Leaf 00" not in folded_text
+    assert "Top 0" in folded_text
+    floor = _entry(nodes, units, 10)[1]
+    assert floor["over_budget"] and (floor["levels_shown"], floor["files_per_node"]) == (1, 0)

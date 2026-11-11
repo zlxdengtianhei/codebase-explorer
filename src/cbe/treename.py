@@ -14,9 +14,11 @@ directory), so the run always ends with a valid tree.
 """
 from __future__ import annotations
 
+import hashlib
 import math
 import posixpath
 import re
+import unicodedata
 from collections import Counter, defaultdict
 
 from cbe import skeleton
@@ -347,6 +349,25 @@ def dependencies(tree: Tree, edges: list[dict]) -> list[dict]:
             for (a, b), (r, m) in sorted(counts.items()) if r or m]
 
 
+def slugs(tree: Tree, titles: dict[str, str]) -> dict[str, str]:
+    """Node ids people can read and type: the title as lower-case ASCII words joined by hyphens.
+
+    The first node to use a slug keeps it; a later node, or one whose title has no ASCII letter, gets a
+    short hash of its skeleton id (the same input always gives the same ids)."""
+    out: dict[str, str] = {}
+    taken: set[str] = set()
+    for node in tree.order:
+        ascii_title = unicodedata.normalize("NFKD", titles[node]).encode("ascii", "ignore").decode()
+        base = re.sub(r"[^a-z0-9]+", "-", ascii_title.lower()).strip("-")[:48].strip("-")
+        slug, extra = base, 0
+        while not slug or slug in taken:
+            digest = hashlib.sha1(f"{node}{extra}".encode()).hexdigest()[:5]
+            slug, extra = f"{base}-{digest}" if base else f"node-{digest}", extra + 1
+        taken.add(slug)
+        out[node] = slug
+    return out
+
+
 def assemble(tree: Tree, records: dict[str, dict], units: dict[str, dict], edges: list[dict], repo: str) -> dict:
     """The tree in the published shape. A node without a record gets a program-made one, and so does a
     node whose title a sibling already uses; both carry a ``note``."""
@@ -368,11 +389,13 @@ def assemble(tree: Tree, records: dict[str, dict], units: dict[str, dict], edges
                                            siblings=others)
                 made[kid]["note"] = "program-made title (a sibling had the same title)"
             used.add(normalize_title(made[kid]["title"]))
+    ids = slugs(tree, {node: made[node]["title"] for node in tree.order})
     nodes = []
     for node in tree.order:
         record = made[node]
         inside = set(tree.members(node))
-        row = {"id": node, "parent": tree.nodes[node]["parent"], "title": record["title"],
+        parent = tree.nodes[node]["parent"]
+        row = {"id": ids[node], "parent": ids[parent] if parent else None, "title": record["title"],
                "capability": record["capability"], "summary": record["summary"],
                "unit_ids": sorted(tree.nodes[node]["unit_ids"]),
                "evidence_units": [u for u in record.get("evidence_units") or [] if u in inside]}
@@ -380,4 +403,5 @@ def assemble(tree: Tree, records: dict[str, dict], units: dict[str, dict], edges
         if note:
             row["note"] = note
         nodes.append(row)
-    return {"nodes": nodes, "depends_on": dependencies(tree, edges)}
+    return {"nodes": nodes, "depends_on": [{**dep, "from": ids[dep["from"]], "to": ids[dep["to"]]}
+                                           for dep in dependencies(tree, edges)]}

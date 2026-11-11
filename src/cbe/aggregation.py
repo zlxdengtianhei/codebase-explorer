@@ -92,6 +92,8 @@ def relationship_view(tree: dict, edges: list[dict], graph: dict | None, *, grap
     graph_only = sorted((p for p in unmentioned if not contains(*p)), key=lambda p: (-counts[p], p))
     within_containment = sorted((p for p in unmentioned if contains(*p)), key=lambda p: (-counts[p], p))
     reverse_counts = {}
+    inferred_counts = {}
+    relations = [e for e in edges if e["kind"] == "relation"]
     for a, b in model:
         if contains(a, b):
             ancestor, descendant = (a, b) if a in ancestors[b] else (b, a)
@@ -108,6 +110,8 @@ def relationship_view(tree: dict, edges: list[dict], graph: dict | None, *, grap
                 pair_kinds[edge["kind"]] += edge["count"]
         counts[a, b] = sum(pair_kinds.values())
         kinds[a, b] = pair_kinds
+        inferred_counts[a, b] = sum(edge["count"] for edge in roll_up_edges(relations, pair_membership)
+                                    if (edge["from"], edge["to"]) == (a, b))
     pairs = sorted(model) + graph_only[:graph_only_limit] + within_containment[:within_containment_limit]
     dependencies = [{"from": a, "to": b,
                      "source": "containment" if contains(a, b) and (a, b) in model else
@@ -116,6 +120,7 @@ def relationship_view(tree: dict, edges: list[dict], graph: dict | None, *, grap
                                "within_containment" if contains(a, b) else "graph_only",
                      "count": counts[a, b],
                      **({"reverse_count": reverse_counts[a, b]} if contains(a, b) and (a, b) in model else {}),
+                     "inferred_count": inferred_counts.get((a, b), 0),
                      "containment": contains(a, b), "kinds": dict(sorted(kinds[a, b].items())),
                      "basis": model.get((a, b), ""), "description": ""} for a, b in pairs]
     totals = {source: sum(e["source"] == source for e in dependencies)
