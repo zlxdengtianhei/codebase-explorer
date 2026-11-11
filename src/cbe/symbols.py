@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import hashlib
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Iterable
 
 from cbe import source_context
 from cbe.checks import UNIT_KINDS
