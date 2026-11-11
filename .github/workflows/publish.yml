@@ -23,6 +23,12 @@ jobs:
         run: uv build --sdist --wheel --out-dir dist
       - name: Check the metadata and the long description
         run: uvx twine check --strict dist/*
+      - name: Check that the long description has no repository-relative link or image left
+        run: |
+          unzip -p dist/*.whl '*/METADATA' > "$RUNNER_TEMP/METADATA"
+          if grep -nE '\]\((docs|examples|evaluation)/|\]\((LICENSE|CHANGELOG\.md)\)|(src|href)="(docs/|README|LICENSE|pyproject)' "$RUNNER_TEMP/METADATA"; then
+            echo "relative link left in the PyPI long description"; exit 1
+          fi
       - name: Install the wheel in a clean environment and run it
         run: |
           uv venv --python 3.12 "$RUNNER_TEMP/venv"

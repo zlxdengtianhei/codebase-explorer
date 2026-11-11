@@ -2,7 +2,7 @@
 name = "codebase-explorer"
 version = "2.2.0.dev0"
 description = "Source-grounded, navigable documentation for software repositories"
-readme = "README.md"
+dynamic = ["readme"]
 license = "MIT"
 license-files = ["LICENSE"]
 requires-python = ">=3.12,<3.14"
@@ -58,8 +58,28 @@ cbe = "cbe.cli:main"
 cbe-install = "cbe_install.cli:main"
 
 [build-system]
-requires = ["hatchling>=1.27,<2"]
+requires = ["hatchling>=1.27,<2", "hatch-fancy-pypi-readme>=24.1"]
 build-backend = "hatchling.build"
+
+# The README on PyPI is README.md with its repository-relative links and images made absolute
+# and pinned to the release tag, so they work outside GitHub.
+[tool.hatch.metadata.hooks.fancy-pypi-readme]
+content-type = "text/markdown"
+
+[[tool.hatch.metadata.hooks.fancy-pypi-readme.fragments]]
+path = "README.md"
+
+[[tool.hatch.metadata.hooks.fancy-pypi-readme.substitutions]]
+pattern = '\]\(((?:docs|examples|evaluation)/[^)]*|LICENSE|CHANGELOG\.md)\)'
+replacement = '](https://github.com/zlxdengtianhei/codebase-explorer/blob/v$HFPR_VERSION/\1)'
+
+[[tool.hatch.metadata.hooks.fancy-pypi-readme.substitutions]]
+pattern = 'href="(README\.zh-CN\.md|LICENSE|pyproject\.toml)"'
+replacement = 'href="https://github.com/zlxdengtianhei/codebase-explorer/blob/v$HFPR_VERSION/\1"'
+
+[[tool.hatch.metadata.hooks.fancy-pypi-readme.substitutions]]
+pattern = 'src="(docs/media/[^"]+)"'
+replacement = 'src="https://raw.githubusercontent.com/zlxdengtianhei/codebase-explorer/v$HFPR_VERSION/\1"'
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/cbe", "src/cbe_install"]
