@@ -234,24 +234,29 @@ def _ordinary_name(spec: GrammarSpec, offsets: OffsetMap, node: Any, scope: str 
     return ", ".join(_text(offsets, child.start_byte, child.end_byte) for child in names)
 
 
-def _extract_declarations(spec: GrammarSpec, offsets: OffsetMap, root: Any, path: str) -> list[_Declaration]:
-    declarations: list[_Declaration] = []
-    # C recovery may flatten C++ locals and fields directly into a header's
-    # translation unit. A second tree only vetoes uncertain ordinary regions;
-    # existing functions/types continue to use the original tree and identities.
-    check_header_scope = spec.name == "c" and PurePosixPath(path).suffix.lower() == ".h" and root.has_error
-    header_root = None
-    cpp_spec = next((item for item in _all_specs() if item.name == "cpp"), None)
-    if check_header_scope and cpp_spec is not None:
-        try:
-            header_root = _make_parser(cpp_spec).parse(offsets.raw).root_node
-        except (ImportError, AttributeError):
-            pass  # Without scope evidence, leave uncertain declarations residual.
+class _DeclarationExtractor:
+    def __init__(self, spec: GrammarSpec, offsets: OffsetMap, root: Any, path: str) -> None:
+        self.spec = spec
+        self.offsets = offsets
+        self.root = root
+        self.path = path
+        self.declarations: list[_Declaration] = []
+        # C recovery may flatten C++ locals and fields directly into a header's
+        # translation unit. A second tree only vetoes uncertain ordinary regions;
+        # existing functions/types continue to use the original tree and identities.
+        self.check_header_scope = spec.name == "c" and PurePosixPath(path).suffix.lower() == ".h" and root.has_error
+        self.header_root = None
+        self.cpp_spec = next((item for item in _all_specs() if item.name == "cpp"), None)
+        if self.check_header_scope and self.cpp_spec is not None:
+            try:
+                self.header_root = _make_parser(self.cpp_spec).parse(offsets.raw).root_node
+            except (ImportError, AttributeError):
+                pass  # Without scope evidence, leave uncertain declarations residual.
 
-    def header_scope_matches(node: Any, name: str) -> bool:
-        if not check_header_scope or node.type in {"preproc_def", "preproc_function_def"}:
+    def header_scope_matches(self, node: Any, name: str) -> bool:
+        if not self.check_header_scope or node.type in {"preproc_def", "preproc_function_def"}:
             return True
-        if header_root is None:
+        if self.header_root is None:
             return False
         # Anchor each declared identifier, rather than the whole declaration:
         # C recovery can give namespace declarations different spans/scopes.
@@ -263,27 +268,37 @@ def _extract_declarations(spec: GrammarSpec, offsets: OffsetMap, root: Any, path
         anchors = identifiers(node)
         for declared_name in name.split(", "):
             anchor = next((item for item in anchors
-                           if _text(offsets, item.start_byte, item.end_byte) == declared_name), None)
+                           if _text(self.offsets, item.start_byte, item.end_byte) == declared_name), None)
             if anchor is None:
                 return False
-            counterpart = header_root.descendant_for_byte_range(anchor.start_byte, anchor.end_byte - 1)
+            counterpart = self.header_root.descendant_for_byte_range(anchor.start_byte, anchor.end_byte - 1)
             while counterpart is not None and counterpart.type not in {"declaration", "alias_declaration", "type_definition"}:
                 if counterpart.type in {"parameter_list", "compound_statement", "field_declaration_list", "ERROR"}:
                     return False
                 counterpart = counterpart.parent
             if (counterpart is None
-                    or declared_name not in _ordinary_name(cpp_spec, offsets, counterpart, None).split(", ")):
+                    or declared_name not in _ordinary_name(
+                        self.cpp_spec, self.offsets, counterpart, None).split(", ")):
                 return False
         return True
 
+    def extract(self) -> list[_Declaration]:
+        self.visit(self.root, None, None, [None])
+        declarations = [decl for decl in self.declarations
+                        if decl.kind != "module_region" or not any(
+                            other is not decl and decl.start_byte <= other.start_byte
+                            and other.end_byte <= decl.end_byte for other in self.declarations)]
+        return _coalesce_declarations(self.offsets, declarations)
+
     def visit(
+        self,
         node: Any,
         parent: _Declaration | None,
         scope: str | None,
         prefix: list[int | None],
     ) -> None:
         ntype = node.type
-        if ntype in spec.wrappers:
+        if ntype in self.spec.wrappers:
             # A wrapper prefix (decorators, ``export``, ``template`` ...) belongs
             # to the first declaration the wrapper contains.  Only that first
             # declaration consumes it, so sibling declarators in a multi-binding
@@ -291,7 +306,7 @@ def _extract_declarations(spec: GrammarSpec, offsets: OffsetMap, root: Any, path
             start = prefix[0] if prefix[0] is not None else node.start_byte
             holder: list[int | None] = [start]
             for child in node.named_children:
-                visit(child, parent, scope, holder)
+                self.visit(child, parent, scope, holder)
             # Nested wrappers share ownership of the prefix. Once any inner
             # declaration consumes it, later siblings of every outer wrapper
             # must start at their own node, not at that outer wrapper's start.
@@ -299,108 +314,119 @@ def _extract_declarations(spec: GrammarSpec, offsets: OffsetMap, root: Any, path
                 prefix[0] = None
             return
 
-        if spec.name == "go" and ntype == "type_declaration" and scope != "function":
-            specs = [child for child in node.named_children if child.type in {"type_spec", "type_alias"}]
-            legacy = _make_declaration(offsets, node, path, parent, "type", prefix[0])
-            prefix[0] = None
-            for index, child in enumerate(specs):
-                if index == 0:
-                    # Keep the existing group's canonical identity and full span.
-                    # Old grammars' alias-only groups may have no discovered name.
-                    owns_first = legacy.name == _node_name(offsets, child)
-                    legacy.exclusive_end_byte = (child.end_byte if owns_first else child.start_byte)
-                    if len(specs) == 1 and owns_first:
-                        legacy.exclusive_end_byte = None
-                    declarations.append(legacy)
-                    if parent is not None:
-                        parent.children.append(legacy)
-                    if owns_first:
-                        continue
-                decl = _make_declaration(offsets, child, path, parent, "module_region", None)
-                declarations.append(decl)
-                if parent is not None:
-                    parent.children.append(decl)
+        if self.spec.name == "go" and ntype == "type_declaration" and scope != "function":
+            self.visit_go_type(node, parent, prefix)
             return
 
-        if ntype in spec.class_kinds:
-            if not _is_type_definition(spec, node):
+        if ntype in self.spec.class_kinds:
+            if not _is_type_definition(self.spec, node):
                 # C/C++ type reference or forward declaration: not a chunk
                 # boundary, but still descend in case of nested definitions.
                 for child in node.named_children:
-                    visit(child, parent, scope, prefix)
+                    self.visit(child, parent, scope, prefix)
                 return
-            decl = _make_declaration(offsets, node, path, parent, spec.class_kinds[ntype], prefix[0])
+            decl = _make_declaration(
+                self.offsets, node, self.path, parent, self.spec.class_kinds[ntype], prefix[0])
             prefix[0] = None
-            declarations.append(decl)
+            self.declarations.append(decl)
             if parent is not None:
                 parent.children.append(decl)
-            child_scope = scope if decl.kind in {"namespace", "module"} or spec.name == "go" else "class"
+            child_scope = scope if decl.kind in {"namespace", "module"} or self.spec.name == "go" else "class"
             for child in node.named_children:
-                visit(child, decl, child_scope, [None])
+                self.visit(child, decl, child_scope, [None])
             return
 
-        if ntype in spec.function_kinds:
-            declared = spec.function_kinds[ntype]
+        if ntype in self.spec.function_kinds:
+            declared = self.spec.function_kinds[ntype]
             kind = "method" if declared == "function" and scope == "class" else declared
-            decl = _make_declaration(offsets, node, path, parent, kind, prefix[0])
+            decl = _make_declaration(self.offsets, node, self.path, parent, kind, prefix[0])
             prefix[0] = None
-            declarations.append(decl)
+            self.declarations.append(decl)
             if parent is not None:
                 parent.children.append(decl)
             for child in node.named_children:
-                visit(child, decl, "function", [None])
+                self.visit(child, decl, "function", [None])
             return
 
-        if ntype in spec.binding_kinds:
+        if ntype in self.spec.binding_kinds:
             value = node.child_by_field_name("value")
-            if value is not None and value.type in spec.value_function_kinds:
+            if value is not None and value.type in self.spec.value_function_kinds:
                 kind = "method" if scope == "class" else "function"
-                decl = _make_declaration(offsets, node, path, parent, kind, prefix[0])
+                decl = _make_declaration(self.offsets, node, self.path, parent, kind, prefix[0])
                 prefix[0] = None
-                declarations.append(decl)
+                self.declarations.append(decl)
                 if parent is not None:
                     parent.children.append(decl)
-                visit(value, decl, "function", [None])
+                self.visit(value, decl, "function", [None])
                 return
             # Function bindings retain their established extraction path.
-        name = _ordinary_name(spec, offsets, node, scope)
-        if check_header_scope and not name and ntype in {"declaration", "type_definition"}:
+        self.visit_ordinary(node, parent, scope, prefix)
+
+    def visit_go_type(self, node: Any, parent: _Declaration | None, prefix: list[int | None]) -> None:
+        specs = [child for child in node.named_children if child.type in {"type_spec", "type_alias"}]
+        legacy = _make_declaration(self.offsets, node, self.path, parent, "type", prefix[0])
+        prefix[0] = None
+        for index, child in enumerate(specs):
+            if index == 0:
+                # Keep the existing group's canonical identity and full span.
+                # Old grammars' alias-only groups may have no discovered name.
+                owns_first = legacy.name == _node_name(self.offsets, child)
+                legacy.exclusive_end_byte = (child.end_byte if owns_first else child.start_byte)
+                if len(specs) == 1 and owns_first:
+                    legacy.exclusive_end_byte = None
+                self.declarations.append(legacy)
+                if parent is not None:
+                    parent.children.append(legacy)
+                if owns_first:
+                    continue
+            decl = _make_declaration(self.offsets, child, self.path, parent, "module_region", None)
+            self.declarations.append(decl)
+            if parent is not None:
+                parent.children.append(decl)
+
+    def visit_ordinary(
+        self, node: Any, parent: _Declaration | None, scope: str | None, prefix: list[int | None]
+    ) -> None:
+        ntype = node.type
+        name = _ordinary_name(self.spec, self.offsets, node, scope)
+        if self.check_header_scope and not name and ntype in {"declaration", "type_definition"}:
             ancestor = node.parent
             while ancestor is not None and ancestor.type != "function_definition":
                 ancestor = ancestor.parent
             declared_type = ancestor.child_by_field_name("type") if ancestor is not None else None
-            if declared_type is not None and _text(offsets, declared_type.start_byte, declared_type.end_byte) == "namespace":
+            if declared_type is not None and _text(
+                    self.offsets, declared_type.start_byte, declared_type.end_byte) == "namespace":
                 # C calls a namespace a function and can put ERROR in its using
                 # aliases. Confirm these candidates in C++, retaining C vetoes elsewhere.
-                names = [_declarator_name(offsets, child, type_alias=ntype == "type_definition")
+                names = [_declarator_name(self.offsets, child, type_alias=ntype == "type_definition")
                          for child in node.children_by_field_name("declarator")]
                 name = ", ".join(names) if names and all(names) else ""
-        if name and not header_scope_matches(node, name):
+        if name and not self.header_scope_matches(node, name):
             name = ""
         if name and ntype == "type_definition":
             defined_type = node.child_by_field_name("type")
-            if (defined_type is not None and defined_type.type in spec.class_kinds
-                    and _is_type_definition(spec, defined_type)):
+            if (defined_type is not None and defined_type.type in self.spec.class_kinds
+                    and _is_type_definition(self.spec, defined_type)):
                 # The existing type owns the definition, with its original id
                 # and full span. The typedef adds searchable aliases, no unit.
-                first = len(declarations)
+                first = len(self.declarations)
                 for child in node.named_children:
-                    visit(child, parent, scope, [None])
-                for declaration in declarations[first:]:
+                    self.visit(child, parent, scope, [None])
+                for declaration in self.declarations[first:]:
                     if declaration.node == defined_type:
                         declaration.signature += "\n" + name
                 return
         if name:
             # Discover children before committing the ordinary region. A value
             # must not wrap another unit or consume its wrapper prefix.
-            first = len(declarations)
+            first = len(self.declarations)
             holder = [prefix[0]]
             for child in node.named_children:
-                visit(child, parent, scope, holder)
-            if len(declarations) != first:
+                self.visit(child, parent, scope, holder)
+            if len(self.declarations) != first:
                 prefix[0] = holder[0]
                 return
-            decl = _make_declaration(offsets, node, path, parent, "module_region", prefix[0],
+            decl = _make_declaration(self.offsets, node, self.path, parent, "module_region", prefix[0],
                                      name=name.split(", ", 1)[0])
             # Search metadata holds every name, without duplicating the list in
             # inventory names and canonical ids. Do not truncate long runs.
@@ -408,19 +434,16 @@ def _extract_declarations(spec: GrammarSpec, offsets: OffsetMap, root: Any, path
             prefix[0] = None
             if node.type == "variable_declarator" and node == node.parent.named_children[-1]:
                 decl.end_byte = node.parent.end_byte
-            declarations.append(decl)
+            self.declarations.append(decl)
             if parent is not None:
                 parent.children.append(decl)
             return
         for child in node.named_children:
-            visit(child, parent, scope, prefix)
+            self.visit(child, parent, scope, prefix)
 
-    visit(root, None, None, [None])
-    declarations = [decl for decl in declarations
-                    if decl.kind != "module_region" or not any(
-                        other is not decl and decl.start_byte <= other.start_byte
-                        and other.end_byte <= decl.end_byte for other in declarations)]
-    return _coalesce_declarations(offsets, declarations)
+
+def _extract_declarations(spec: GrammarSpec, offsets: OffsetMap, root: Any, path: str) -> list[_Declaration]:
+    return _DeclarationExtractor(spec, offsets, root, path).extract()
 
 
 def _coalesce_declarations(offsets: OffsetMap, declarations: list[_Declaration]) -> list[_Declaration]:

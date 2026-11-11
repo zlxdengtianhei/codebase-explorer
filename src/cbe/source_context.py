@@ -499,6 +499,110 @@ def _checked_chunks(
     return [fallback]
 
 
+def _process_source_file(
+    relative: str,
+    raw: bytes,
+    digest: str,
+    files: list[dict[str, Any]],
+    chunks: list[dict[str, Any]],
+    diagnostics: list[dict[str, Any]],
+    max_segment_bytes: int,
+) -> None:
+    spec = _grammar_for_suffix(PurePosixPath(relative).suffix)
+    language = language_name(relative)
+
+    if spec is None:
+        diagnostics.append(
+            {
+                "path": relative,
+                "code": "unsupported_language",
+                "message": f"no grammar registered for suffix {PurePosixPath(relative).suffix!r}",
+            }
+        )
+        files.append({"path": relative, "language": language, "sha256": digest})
+        return
+
+    if PurePosixPath(relative).suffix.lower() in AMBIGUOUS_SUFFIXES:
+        candidates = AMBIGUOUS_SUFFIXES[PurePosixPath(relative).suffix.lower()]
+        explicitly_mapped = any(".h" in extra.suffixes for extra in _EXTRA_SPECS.values())
+        if spec.name == candidates[0] and not explicitly_mapped:
+            diagnostics.append(
+                {
+                    "path": relative,
+                    "code": "ambiguous_language",
+                    "message": (
+                        f"{PurePosixPath(relative).suffix!r} is valid in {', '.join(candidates)}; "
+                        f"parsed with {spec.name}. Register a mapping or use a unique extension "
+                        "to remove the ambiguity."
+                    ),
+                }
+            )
+
+    if len(raw) > MAX_FILE_BYTES:
+        diagnostics.append(
+            {
+                "path": relative,
+                "code": "file_too_large",
+                "message": f"{len(raw)} bytes exceeds MAX_FILE_BYTES={MAX_FILE_BYTES}",
+            }
+        )
+        files.append({"path": relative, "language": language, "sha256": digest})
+        return
+
+    files.append({"path": relative, "language": language, "sha256": digest})
+
+    try:
+        offsets = OffsetMap.from_bytes(raw)
+    except UnicodeDecodeError as exc:
+        diagnostics.append(
+            {
+                "path": relative,
+                "code": "decode_error",
+                "message": f"UTF-8 decode failed: {exc}",
+            }
+        )
+        return
+
+    try:
+        parser = _make_parser(spec)
+    except Exception as exc:
+        diagnostics.append(
+            {
+                "path": relative,
+                "code": "grammar_unavailable",
+                "message": f"grammar {spec.module} is not importable: {exc}",
+            }
+        )
+        return
+
+    try:
+        tree = parser.parse(raw)
+    except Exception as exc:  # pragma: no cover - grammar-level failure
+        diagnostics.append(
+            {"path": relative, "code": "parse_error", "message": f"{type(exc).__name__}: {exc}"}
+        )
+        return
+
+    root = tree.root_node
+    if getattr(root, "has_error", False):
+        line = root.start_point[0] + 1
+        diagnostics.append(
+            {
+                "path": relative,
+                "code": "syntax_error",
+                "message": f"tree contains an ERROR node near line {line}; chunk coverage is preserved",
+            }
+        )
+
+    declarations = _extract_declarations(spec, offsets, root, relative)
+    plans, plan_diagnostics = _plan_chunks(
+        offsets, declarations, root, relative, spec.name, max_segment_bytes
+    )
+    diagnostics.extend(plan_diagnostics)
+    starts = line_starts(offsets.text)
+    chunks.extend(_chunk_from_plan(plan, offsets, starts) for plan in plans)
+
+
 def build_context(
     repo: Path | str,
     paths: list[str] | None = None,
@@ -536,99 +640,9 @@ def build_context(
         digest = sha256_bytes(raw)
         raw_sources[relative] = raw
         source_hashes[relative] = digest
-        spec = _grammar_for_suffix(PurePosixPath(relative).suffix)
-        language = language_name(relative)
-
-        if spec is None:
-            diagnostics.append(
-                {
-                    "path": relative,
-                    "code": "unsupported_language",
-                    "message": f"no grammar registered for suffix {PurePosixPath(relative).suffix!r}",
-                }
-            )
-            files.append({"path": relative, "language": language, "sha256": digest})
-            continue
-
-        if PurePosixPath(relative).suffix.lower() in AMBIGUOUS_SUFFIXES:
-            candidates = AMBIGUOUS_SUFFIXES[PurePosixPath(relative).suffix.lower()]
-            explicitly_mapped = any(".h" in extra.suffixes for extra in _EXTRA_SPECS.values())
-            if spec.name == candidates[0] and not explicitly_mapped:
-                diagnostics.append(
-                    {
-                        "path": relative,
-                        "code": "ambiguous_language",
-                        "message": (
-                            f"{PurePosixPath(relative).suffix!r} is valid in {', '.join(candidates)}; "
-                            f"parsed with {spec.name}. Register a mapping or use a unique extension "
-                            "to remove the ambiguity."
-                        ),
-                    }
-                )
-
-        if len(raw) > MAX_FILE_BYTES:
-            diagnostics.append(
-                {
-                    "path": relative,
-                    "code": "file_too_large",
-                    "message": f"{len(raw)} bytes exceeds MAX_FILE_BYTES={MAX_FILE_BYTES}",
-                }
-            )
-            files.append({"path": relative, "language": language, "sha256": digest})
-            continue
-
-        files.append({"path": relative, "language": language, "sha256": digest})
-
-        try:
-            offsets = OffsetMap.from_bytes(raw)
-        except UnicodeDecodeError as exc:
-            diagnostics.append(
-                {
-                    "path": relative,
-                    "code": "decode_error",
-                    "message": f"UTF-8 decode failed: {exc}",
-                }
-            )
-            continue
-
-        try:
-            parser = _make_parser(spec)
-        except Exception as exc:
-            diagnostics.append(
-                {
-                    "path": relative,
-                    "code": "grammar_unavailable",
-                    "message": f"grammar {spec.module} is not importable: {exc}",
-                }
-            )
-            continue
-
-        try:
-            tree = parser.parse(raw)
-        except Exception as exc:  # pragma: no cover - grammar-level failure
-            diagnostics.append(
-                {"path": relative, "code": "parse_error", "message": f"{type(exc).__name__}: {exc}"}
-            )
-            continue
-
-        root = tree.root_node
-        if getattr(root, "has_error", False):
-            line = root.start_point[0] + 1
-            diagnostics.append(
-                {
-                    "path": relative,
-                    "code": "syntax_error",
-                    "message": f"tree contains an ERROR node near line {line}; chunk coverage is preserved",
-                }
-            )
-
-        declarations = _extract_declarations(spec, offsets, root, relative)
-        plans, plan_diagnostics = _plan_chunks(
-            offsets, declarations, root, relative, spec.name, max_segment_bytes
+        _process_source_file(
+            relative, raw, digest, files, chunks, diagnostics, max_segment_bytes
         )
-        diagnostics.extend(plan_diagnostics)
-        starts = line_starts(offsets.text)
-        chunks.extend(_chunk_from_plan(plan, offsets, starts) for plan in plans)
 
     by_path: dict[str, list[dict[str, Any]]] = {}
     for chunk in chunks:
