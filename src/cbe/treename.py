@@ -172,16 +172,17 @@ def _text_problem(record: dict, label: str) -> list[str]:
     return problems
 
 
-def decode_names(answer: object, batch: list[str], tree: Tree, pending: set[str], taken: set[str]) -> tuple[dict, dict]:
-    """Decode one ``tree_name`` answer for the leaves in ``pending``.
+def _decode(answer: object, key: str, noun: str, labels: dict[str, str], pending: set[str], taken: set[str],
+            judge) -> tuple[dict, dict]:
+    """The shared decoding of a ``tree_name`` or ``tree_top`` answer for the nodes in ``pending``.
 
-    Returns ``(good, errors)``: ``good`` maps a leaf to its record, ``errors`` maps a leaf to what
-    is wrong. ``taken`` holds the normalized titles accepted from earlier answers of this batch."""
-    labels, codes = name_context(batch, tree)
-    by_code = {code: unit for unit, code in codes.items()}
-    rows = answer.get("modules") if isinstance(answer, dict) else None
+    Returns ``(good, errors)``: ``good`` maps a node to its record, ``errors`` maps a node to what is wrong.
+    ``taken`` holds the normalized titles accepted from earlier answers of this task. ``judge(label, node, row,
+    title, used, problems)`` adds the problems that are specific to the kind of task to ``problems`` and returns
+    the fields of the record that are specific to it (``evidence_units``)."""
+    rows = answer.get(key) if isinstance(answer, dict) else None
     if not isinstance(rows, list):
-        raise ValueError('answer needs {"modules": [...]}')
+        raise ValueError(f'answer needs {{"{key}": [...]}}')
     seen: dict[str, dict] = {}
     for row in rows:
         if isinstance(row, dict) and row.get("id") in labels and row["id"] not in seen:
@@ -189,15 +190,31 @@ def decode_names(answer: object, batch: list[str], tree: Tree, pending: set[str]
     used = set(taken)       # titles kept so far: the first of two equal titles stays, the later one is asked again
     good: dict[str, dict] = {}
     errors: dict[str, list[str]] = {}
-    for label, leaf in labels.items():
-        if leaf not in pending:
+    for label, node in labels.items():
+        if node not in pending:
             continue
         row = seen.get(label)
         if row is None:
-            errors[leaf] = [f"module {label} is missing from the answer"]
+            errors[node] = [f"{noun} {label} is missing from the answer"]
             continue
-        problems = _text_problem(row, label)
         title = str(row.get("title", "")).strip()
+        problems = _text_problem(row, label)
+        extra = judge(label, node, row, title, used, problems)
+        if problems:
+            errors[node] = problems
+            continue
+        used.add(normalize_title(title))
+        good[node] = {"title": title, "capability": row["capability"].strip(), "summary": row["summary"].strip(),
+                      **extra}
+    return good, errors
+
+
+def decode_names(answer: object, batch: list[str], tree: Tree, pending: set[str], taken: set[str]) -> tuple[dict, dict]:
+    """Decode one ``tree_name`` answer for the leaves in ``pending`` (see ``_decode``)."""
+    labels, codes = name_context(batch, tree)
+    by_code = {code: unit for unit, code in codes.items()}
+
+    def judge(label, leaf, row, title, used, problems):
         if title and normalize_title(title) in used:
             problems.append(f"{label}: title {title!r} is used by another module of this batch")
         members = set(tree.nodes[leaf]["unit_ids"])
@@ -206,13 +223,10 @@ def decode_names(answer: object, batch: list[str], tree: Tree, pending: set[str]
         if (not isinstance(evidence, list) or any(not isinstance(e, str) or by_code.get(e) not in members for e in evidence)
                 or len(set(evidence)) < want):
             problems.append(f"{label}: evidence_units needs {want} to 4 unit numbers that belong to {label}")
-        if problems:
-            errors[leaf] = problems
-            continue
-        used.add(normalize_title(title))
-        good[leaf] = {"title": title, "capability": row["capability"].strip(), "summary": row["summary"].strip(),
-                      "evidence_units": [by_code[e] for e in dict.fromkeys(evidence)][:4]}
-    return good, errors
+            return {}
+        return {"evidence_units": [by_code[e] for e in dict.fromkeys(evidence)][:4]}
+
+    return _decode(answer, "modules", "module", labels, pending, taken, judge)
 
 
 # ------------------------------------------------------------- tree_top ----
@@ -248,38 +262,15 @@ def top_blocks(tree: Tree, names: dict[str, dict], units: dict[str, dict], edges
 
 def decode_top(answer: object, tree: Tree, names: dict[str, dict], pending: set[str], taken: set[str]) -> tuple[dict, dict]:
     """Decode one ``tree_top`` answer for the internal nodes in ``pending`` (same return as ``decode_names``)."""
-    groups = top_context(tree)
-    rows = answer.get("groups") if isinstance(answer, dict) else None
-    if not isinstance(rows, list):
-        raise ValueError('answer needs {"groups": [...]}')
-    seen: dict[str, dict] = {}
-    for row in rows:
-        if isinstance(row, dict) and row.get("id") in groups and row["id"] not in seen:
-            seen[row["id"]] = row
-    used = set(taken)
-    good: dict[str, dict] = {}
-    errors: dict[str, list[str]] = {}
-    for label, node in groups.items():
-        if node not in pending:
-            continue
-        row = seen.get(label)
-        if row is None:
-            errors[node] = [f"group {label} is missing from the answer"]
-            continue
-        problems = _text_problem(row, label)
-        title = str(row.get("title", "")).strip()
+    def judge(label, node, row, title, used, problems):
         kid_titles = {normalize_title(names[k]["title"]) for k in tree.kids[node] if k in names}
         if title and (normalize_title(title) in used or normalize_title(title) in kid_titles):
             problems.append(f"{label}: title {title!r} repeats the title of another group or of one of its children")
         if not problems and len(row["capability"].strip()) < MIN_GROUP_CAPABILITY:
             problems.append(f"{label}: capability must be a full sentence")
-        if problems:
-            errors[node] = problems
-            continue
-        used.add(normalize_title(title))
-        good[node] = {"title": title, "capability": row["capability"].strip(), "summary": row["summary"].strip(),
-                      "evidence_units": []}
-    return good, errors
+        return {"evidence_units": []}
+
+    return _decode(answer, "groups", "group", top_context(tree), pending, taken, judge)
 
 
 # ------------------------------------------------- program-made titles ----
