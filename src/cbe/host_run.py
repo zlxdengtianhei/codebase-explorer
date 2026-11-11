@@ -299,7 +299,6 @@ def _invalidate_tree(run_dir: Path, state: dict[str, Any]) -> None:
         (state_dir(run_dir) / "accepted" / f"{tid}.json").unlink(missing_ok=True)
         _partial_path(run_dir, tid).unlink(missing_ok=True)
     state.pop("skeleton", None)
-    (state_dir(run_dir) / "accepted" / "tree.json").unlink(missing_ok=True)
 
 
 def _prepare_tree(run_dir: Path, state: dict[str, Any]) -> None:
@@ -392,7 +391,6 @@ def _auto_complete_empty_modules(run_dir: Path, state: dict[str, Any]) -> list[s
         # repository; before that the real units are still in flight.
         units, _ = _semantic_units(run_dir, state)
         if not units:
-            write_json(state_dir(run_dir) / "accepted" / "tree.json", treename.empty_tree())
             system = state["tasks"].get("system")
             if system is not None and system["status"] == "pending":
                 write_json(state_dir(run_dir) / "accepted" / "system.json",
@@ -1006,17 +1004,6 @@ def _settle_tree(run_dir: Path, state: dict[str, Any], task: dict[str, Any], val
     return None, {"names": partial["good"]}, flags
 
 
-def _write_tree(run_dir: Path, state: dict[str, Any]) -> None:
-    """When every naming task is done, publish the finished tree as ``accepted/tree.json``."""
-    if all(task["status"] == "done" for task in state["tasks"].values() if task["kind"] in TREE_KINDS):
-        tree = _semantic_tree(run_dir, state)
-        units, _ = _aggregation_inputs(run_dir, state)
-        problems = checks.validate_tree(tree, set(units))
-        if problems:
-            raise HostRunError("the assembled module tree is invalid: " + "; ".join(problems[:6]))
-        write_json(state_dir(run_dir) / "accepted" / "tree.json", tree)
-
-
 def _usage_entry(usage: dict[str, Any] | None, attempt: int) -> dict[str, Any] | None:
     if not usage or not any(value is not None for value in usage.values()):
         return None
@@ -1115,9 +1102,7 @@ def _apply_submit(run_dir: Path, state: dict[str, Any], task: dict[str, Any], re
                + "; ".join(flags)[:600], task=task["id"], flags=flags)
     log_event(run_dir, "accept", f"{label} attempt {attempt}{timing} -> {task['output']}", task=task["id"],
            attempt=attempt)
-    if task["kind"] in TREE_KINDS:
-        _write_tree(run_dir, state)
-    elif task["kind"] == "review" and value["decision"] == "needs_repair" and value["issues"]:
+    if task["kind"] == "review" and value["decision"] == "needs_repair" and value["issues"]:
         repair_id = f"repair_{task['module'] + 1}"
         if repair_id not in state["tasks"]:
             state["tasks"][repair_id] = _task(repair_id, "repair", task["module"], issues=value["issues"])

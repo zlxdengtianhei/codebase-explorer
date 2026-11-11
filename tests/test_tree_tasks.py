@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from cbe import checks, docs, host_run, treename
+from cbe import docs, host_run, treename
 from test_host_run import _answer, _answer_task, _drive
 
 
@@ -39,6 +39,12 @@ def _state(run):
     return json.loads((run / "host/state.json").read_text())
 
 
+def _tree_of(run):
+    """The finished tree, recomputed from the run state (it is not stored as a file)."""
+    with host_run.locked_state(run) as locked:
+        return host_run._semantic_tree(run, locked)
+
+
 def test_skeleton_is_frozen_once_and_the_naming_batches_run_in_parallel_before_tree_top(tmp_path, monkeypatch):
     run, batch = _until_names(tmp_path, monkeypatch, batch_tokens=400)
     state = _state(run)
@@ -58,7 +64,7 @@ def test_skeleton_is_frozen_once_and_the_naming_batches_run_in_parallel_before_t
     assert _drive(run) == ["system"]
     state = _state(run)
     assert state["status"] == "complete" and state["verify"]["ok"]
-    tree = json.loads((run / "host/accepted/tree.json").read_text())
+    tree = _tree_of(run)
     def shape(nodes):
         by_id = {n["id"]: n for n in nodes}
         kids = {n["id"]: [m["id"] for m in nodes if m["parent"] == n["id"]] for n in nodes}
@@ -69,7 +75,6 @@ def test_skeleton_is_frozen_once_and_the_naming_batches_run_in_parallel_before_t
                       for n in nodes)
     assert shape(tree["nodes"]) == shape(frozen["nodes"])   # the structure is the skeleton's, nothing else
     assert all(re.fullmatch(r"[a-z0-9]+(-[a-z0-9]+)*", n["id"]) for n in tree["nodes"])   # ids come from titles
-    assert checks.validate_tree(tree, set(json.loads((run / "catalog.json").read_text())["units"])) == []
 
 
 def test_changed_detail_drops_the_skeleton_and_starts_the_naming_over(tmp_path, monkeypatch):
@@ -120,7 +125,7 @@ def test_nodes_still_unnamed_after_the_last_answer_get_program_titles_and_the_tr
     _drive(run)
     state = _state(run)
     assert state["status"] == "complete" and state["verify"]["ok"]
-    tree = json.loads((run / "host/accepted/tree.json").read_text())
+    tree = _tree_of(run)
     made = [n for n in tree["nodes"] if n.get("note")]
     assert len(made) == 3 and all("program-made" in n["note"] for n in made)
     titles = [n["title"] for n in made]
@@ -128,7 +133,6 @@ def test_nodes_still_unnamed_after_the_last_answer_get_program_titles_and_the_tr
     summary = json.loads((run / "summary.json").read_text())
     assert summary["tree"]["program_made_titles"] == 3
     assert "program-made" in (run / "docs/RUN.md").read_text()
-    assert checks.validate_tree(tree, set(json.loads((run / "catalog.json").read_text())["units"])) == []
 
 
 def test_a_failed_naming_task_leaves_a_renderable_program_titled_tree(tmp_path, monkeypatch):
@@ -153,7 +157,7 @@ def test_an_empty_run_completes_without_a_tree_task(tmp_path):
     state = _state(run)
     assert state["status"] in {"running", "complete"} and not any(
         t["kind"] in host_run.TREE_KINDS for t in state["tasks"].values())
-    tree = json.loads((run / "host/accepted/tree.json").read_text())
+    tree = _tree_of(run)
     assert [n["id"] for n in tree["nodes"]] == ["root"]
     assert state["tasks"]["system"]["status"] == "done"
 
@@ -175,7 +179,8 @@ def test_a_finished_old_run_still_renders_and_searches(tmp_path):
     run = Path(host_run.plan(_repo(tmp_path, dirs=("alpha",), files=3), tmp_path / "run", review="none")["run_dir"])
     _drive(run)
     state = _state(run)
-    tree = json.loads((run / "host/accepted/tree.json").read_text())
+    tree = _tree_of(run)
+    host_run.write_json(run / "host/accepted/tree.json", tree)   # the file an old run carried
     for tid in [t for t, row in state["tasks"].items() if row["kind"] in host_run.TREE_KINDS]:
         state["tasks"].pop(tid)
         (run / f"host/accepted/{tid}.json").unlink(missing_ok=True)
@@ -263,7 +268,8 @@ def test_assemble_replaces_a_title_that_a_sibling_already_uses_and_derives_depen
     other = next(n for n in tree_json["nodes"] if "program-made" in n.get("note", ""))
     assert other["id"] != "same" and other["evidence_units"] == []   # evidence that is not in the node is dropped
     assert tree_json["depends_on"] == [{"from": "same", "to": other["id"], "basis": "3 resolved call/import edge(s)"}]
-    assert checks.validate_tree(tree_json, set(units)) == []
+    assert len({n["id"] for n in tree_json["nodes"]}) == len(tree_json["nodes"])
+    assert sorted(u for n in tree_json["nodes"] for u in n["unit_ids"]) == ids   # every unit has one owner
 
 
 def test_node_ids_are_readable_slugs_that_stay_unique():

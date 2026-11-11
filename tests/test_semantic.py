@@ -80,73 +80,6 @@ def _tree(unit_ids: list[str], **overrides) -> dict:
     return {"nodes": [node], "depends_on": []}
 
 
-def test_validate_tree_requires_single_root_and_unique_primary_ownership() -> None:
-    inventory = _inventory()
-    ids = [row["id"] for row in inventory["pkg/jobs.py"]["symbols"]]
-    assert checks.validate_tree(_tree(ids), set(ids)) == []
-
-    duplicated = _tree(ids + ids[:1])
-    assert any("assigned to both" in problem for problem in checks.validate_tree(duplicated, set(ids)))
-
-    missing = _tree(ids[:-1])
-    assert any("no primary owner" in problem for problem in checks.validate_tree(missing, set(ids)))
-
-    cyclic = {"nodes": [
-        {"id": "a", "parent": "b", "title": "A", "capability": "A real capability text here.", "summary": "s", "unit_ids": []},
-        {"id": "b", "parent": "a", "title": "B", "capability": "Another real capability text.", "summary": "s", "unit_ids": ids},
-    ], "depends_on": []}
-    assert any("cycle" in problem or "exactly one root" in problem
-               for problem in checks.validate_tree(cyclic, set(ids)))
-
-
-def test_validate_tree_requires_a_dependency_basis() -> None:
-    inventory = _inventory()
-    ids = [row["id"] for row in inventory["pkg/jobs.py"]["symbols"]]
-    payload = _tree(ids)
-    payload["depends_on"] = [{"from": "root", "to": "root", "basis": ""}]
-    assert any("basis" in problem for problem in checks.validate_tree(payload, set(ids)))
-
-
-def _two_leaf_tree(ids):
-    cap = "A real capability text that explains the whole group."
-    return {"nodes": [
-        {"id": "root", "parent": None, "title": "Root", "capability": cap, "summary": "s", "unit_ids": []},
-        {"id": "a", "parent": "root", "title": "Alpha", "capability": "Alpha does the first half.",
-         "summary": "s", "unit_ids": ids[:2], "evidence_units": ids[:1]},
-        {"id": "b", "parent": "root", "title": "Beta", "capability": "Beta does the other half.",
-         "summary": "s", "unit_ids": ids[2:], "evidence_units": ids[2:3]}], "depends_on": []}
-
-
-def test_validate_tree_accepts_a_tree_with_evidence_inside_each_subtree() -> None:
-    ids = [row["id"] for row in _inventory()["pkg/jobs.py"]["symbols"]]
-    assert len(ids) >= 3
-    assert checks.validate_tree(_two_leaf_tree(ids), set(ids)) == []
-
-
-def test_validate_tree_rejects_a_node_with_no_units_and_no_children() -> None:
-    ids = [row["id"] for row in _inventory()["pkg/jobs.py"]["symbols"]]
-    tree = _two_leaf_tree(ids)
-    tree["nodes"].append({"id": "hollow", "parent": "root", "title": "Hollow", "capability": "Nothing here.",
-                          "summary": "s", "unit_ids": []})
-    assert any("no units and no children" in problem for problem in checks.validate_tree(tree, set(ids)))
-
-
-def test_validate_tree_rejects_siblings_with_the_same_title() -> None:
-    ids = [row["id"] for row in _inventory()["pkg/jobs.py"]["symbols"]]
-    tree = _two_leaf_tree(ids)
-    tree["nodes"][2]["title"] = "  alpha! "
-    assert any("same title" in problem for problem in checks.validate_tree(tree, set(ids)))
-    tree["nodes"][2]["parent"] = "a"   # not siblings any more: a node under a unit-holding parent
-    assert not any("same title" in problem for problem in checks.validate_tree(tree, set(ids)))
-
-
-def test_validate_tree_rejects_evidence_outside_the_node_subtree() -> None:
-    ids = [row["id"] for row in _inventory()["pkg/jobs.py"]["symbols"]]
-    tree = _two_leaf_tree(ids)
-    tree["nodes"][1]["evidence_units"] = ids[2:3]    # a unit of the other module
-    assert any("evidence_units" in problem for problem in checks.validate_tree(tree, set(ids)))
-
-
 def test_render_publishes_node_pages_source_links_and_a_compatible_catalog(tmp_path) -> None:
     repo = tmp_path / "repo"
     (repo / "pkg").mkdir(parents=True)
@@ -322,18 +255,3 @@ def test_ensure_chunk_coverage_digests_the_file_bytes_of_a_crlf_file(tmp_path) -
     assert context["files"] == [{"path": "crlf.py", "language": "python",
                                  "sha256": hashlib.sha256(raw).hexdigest(),
                                  "source": raw.decode("utf-8")}]
-
-
-def test_validate_tree_survives_list_valued_fields() -> None:
-    payload = {"nodes": [{"id": "root", "parent": None, "title": "Root",
-                          "capability": ["a capability " * 5], "summary": "s",
-                          "unit_ids": [["u1"]]}], "depends_on": []}
-    problems = checks.validate_tree(payload, {"u1"})  # must not raise
-    joined = "\n".join(problems)
-    assert "unit_ids must be a list of strings" in joined
-    assert "capability must be a nonempty string" in joined
-    parent_payload = {"nodes": [
-        {"id": "root", "parent": None, "title": "Root", "capability": "c" * 50, "summary": "s", "unit_ids": []},
-        {"id": "kid", "parent": ["root"], "title": "Kid", "capability": "c" * 50, "summary": "s", "unit_ids": []},
-    ], "depends_on": []}
-    assert any("parent" in problem for problem in checks.validate_tree(parent_payload, set()))

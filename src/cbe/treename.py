@@ -29,7 +29,7 @@ BATCH_TOKENS = 12_000     # about this many prompt tokens of member lines per tr
 SUMMARY_CHARS = 200
 TITLE_WORDS = 9
 CAPABILITY_WORDS = 45     # the prompt asks for about 25; an answer above this is sent back
-MIN_GROUP_CAPABILITY = 40 # checks.validate_tree: a node with children needs a real sentence
+MIN_GROUP_CAPABILITY = 40 # a node with children needs a real sentence, not a fragment
 _STOP_PATH = {"lib", "src", "main", "java", "com", "test", "tests", "include", "rb", "py", "js", "ts", "org"}
 
 

@@ -823,7 +823,8 @@ def test_tree_waits_for_repairs_so_new_group_units_get_an_owner(tmp_path: Path) 
                for task in handed if task.startswith(("review_", "repair_")))
     state = json.loads((run_dir / "host" / "state.json").read_text())
     assert state["status"] == "complete" and state["verify"]["ok"], state["verify"]["checks"]
-    tree = json.loads((run_dir / "host" / "accepted" / "tree.json").read_text())
+    with host_run.locked_state(run_dir) as locked:
+        tree = host_run._semantic_tree(run_dir, locked)
     owned = {uid for node in tree["nodes"] for uid in node.get("unit_ids") or []}
     assert {"grp:cli.py-extra-repair-1", "grp:test_jobs.py-extra-repair-2"} <= owned
 
