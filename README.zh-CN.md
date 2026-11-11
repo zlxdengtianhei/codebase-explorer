@@ -39,9 +39,9 @@
 
 ## 快速上手
 
-CBE 没有发布到 PyPI，需要 Python 3.12 或 3.13。有两种用法，最后都得到同一个 `docs/` 目录。
+CBE 没有发布到 PyPI，需要 Python 3.12 或 3.13。有两种用法，最后都得到同一个 `docs/` 目录。常用的是 A：让你的编码 agent 加载 Skill 来做，花你自己的订阅额度。B 用于脚本和批量运行。
 
-**A. 在 Claude Code 里用，花你自己的订阅额度。** 装上 Skill 后，由 Claude Code 的子代理（subagent）写讲解。
+**A. 常用方式：在你的编码 agent 里用，花你自己的订阅额度。** 下面的步骤以 Claude Code 为例；装上 Skill 后，由它的子代理（subagent）写讲解。
 
 1. 安装 CBE：`uv tool install git+https://github.com/zlxdengtianhei/codebase-explorer`（或 `pipx install git+https://github.com/zlxdengtianhei/codebase-explorer`）。
 2. 可选，要调用图（call graph）时：`cbe graph setup` 会把 Joern 和 Java 运行时下载到你的用户缓存目录（约 1.9 GB；支持 Linux x86_64 和 macOS）。
@@ -50,9 +50,9 @@ CBE 没有发布到 PyPI，需要 Python 3.12 或 3.13。有两种用法，最�
 5. agent 会先报出计划的文件数、token 数、模块数和任务数，再跑子代理，最后校验结果。
 6. 打开 `<run_dir>/docs/INDEX.md`，`run_dir` 由 agent 告诉你。
 
-Claude Code 这条路径已经完整跑通过（见[成本](#成本)）。OpenCode 这条路径（`--host opencode`）完整跑通过 1 次，用的是一个 22 个文件的示例小仓。`cbe-install install --host` 还支持 `codex` 和 `dsh`：它们会装上 Skill，但我们没有完整跑过。详见 [docs/running.md](docs/running.md#generate-through-a-host-agent)。
+别的 agent 加载的是同一个 Skill：`cbe-install install --host` 支持 `claude-code`、`opencode`、`pi`、`codex` 和 `dsh`。完整跑通过的有：Claude Code（见[成本](#成本)）；OpenCode 与 Pi，各 1 次，用的是一个 22 个文件的示例小仓（Pi 那次，各个任务是靠我们机器上的一个派发 Skill 分给另外的 Pi 会话做的；Pi 自己没有子代理）。`codex` 和 `dsh` 会装上 Skill，但我们没有完整跑过。详见 [docs/running.md](docs/running.md#generate-through-a-host-agent)。
 
-**B. 在命令行里用，接任何兼容 OpenAI 的端点。** 没有缺省模型，必须给 `--model`。
+**B. 用于脚本和批量运行：在命令行里用，接任何兼容 OpenAI 的端点。** 没有缺省模型，必须给 `--model`。
 
 1. 按上面的第 1 步安装 CBE。
 2. 把密钥放进环境变量：`export CBE_API_KEY=...`

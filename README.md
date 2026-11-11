@@ -39,9 +39,9 @@ Full example: [flask](examples/flask/docs/INDEX.md). More in [Examples and docs]
 
 ## Quickstart
 
-CBE is not on PyPI. It needs Python 3.12 or 3.13. There are two ways to run it. Both end in the same `docs/` folder.
+CBE is not on PyPI. It needs Python 3.12 or 3.13. There are two ways to run it. Both end in the same `docs/` folder. The usual one is A: your coding agent loads the skill and does the work on your own subscription. B is for scripts and batch runs.
 
-**A. Inside Claude Code, on your own subscription.** The skill makes Claude Code's subagents write the explanations.
+**A. The usual way: inside your coding agent, on your own subscription.** The steps below use Claude Code; the skill makes its subagents write the explanations.
 
 1. Install CBE: `uv tool install git+https://github.com/zlxdengtianhei/codebase-explorer` (or `pipx install git+https://github.com/zlxdengtianhei/codebase-explorer`).
 2. Optional, for the call graph: `cbe graph setup` downloads Joern and a Java runtime into your user cache directory (about 1.9 GB; Linux x86_64 and macOS).
@@ -50,9 +50,9 @@ CBE is not on PyPI. It needs Python 3.12 or 3.13. There are two ways to run it. 
 5. The agent prints the planned file, token, module and task counts, runs the subagents, and verifies the result.
 6. Open `<run_dir>/docs/INDEX.md`. The agent reports `run_dir`.
 
-The Claude Code path has run end to end (see [What it costs](#what-it-costs)). The OpenCode path (`--host opencode`) has run end to end once, on a 22-file sample repository. `cbe-install install --host` also takes `codex` and `dsh`: they install the skill, and we have not run them end to end. Details: [docs/running.md](docs/running.md#generate-through-a-host-agent).
+Other agents load the same skill: `cbe-install install --host` takes `claude-code`, `opencode`, `pi`, `codex` and `dsh`. What has run end to end: Claude Code (see [What it costs](#what-it-costs)); OpenCode and Pi, once each on a 22-file sample repository (in the Pi run the tasks were handed to separate Pi sessions by a dispatch skill on our machine; Pi has no subagents of its own). `codex` and `dsh` install the skill, and we have not run them end to end. Details: [docs/running.md](docs/running.md#generate-through-a-host-agent).
 
-**B. From the command line, with any OpenAI-compatible endpoint.** There is no default model: you must pass `--model`.
+**B. For scripts and batch runs: from the command line, with any OpenAI-compatible endpoint.** There is no default model: you must pass `--model`.
 
 1. Install CBE as in step 1 above.
 2. Put the key in an environment variable: `export CBE_API_KEY=...`
