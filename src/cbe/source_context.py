@@ -660,15 +660,6 @@ def build_context(
 # ---------------------------------------------------------------------------
 
 
-def _graph_source_anchors(payload: dict[str, Any]):
-    """Yield every node/edge object that could anchor repo source."""
-
-    for key in ("nodes", "edges"):
-        for item in payload.get(key) or []:
-            if isinstance(item, dict):
-                yield item
-
-
 def _load_graph(graph_path: Path, repo: Path, frozen_hashes: dict[str, str]) -> dict[str, Any]:
     if not graph_path.exists():
         raise ContextError("graph_missing", f"graph file does not exist: {graph_path}", path=str(graph_path))
@@ -696,118 +687,15 @@ def _load_graph(graph_path: Path, repo: Path, frozen_hashes: dict[str, str]) -> 
 
 
 def check_graph_source(repo: Path, graph: dict[str, Any], frozen_hashes: dict[str, str]) -> None:
-    """Raise :class:`ContextError` unless ``graph`` can be evidence for the frozen source.
+    from cbe.graph import check_graph_source as check
 
-    Provenance must be stable and current. Every manifest entry must name a
-    repository file whose bytes match: ``frozen_hashes`` (path to sha256) is the
-    authority for frozen files, so a file changed between two reads cannot make
-    a stale chunk set look consistent; other (boundary) files are read from
-    disk. Every node or edge that anchors existing repository source must be in
-    the manifest, so a graph cannot mix snapshots. Nodes without a repository
-    path stay external and a valid empty graph stays valid.
-    """
-
-    from cbe.graph import GraphError, validate_graph_provenance
-
-    try:
-        validate_graph_provenance(repo, graph)
-    except (GraphError, OSError) as exc:
-        raise ContextError("graph_provenance_mismatch", str(exc)) from exc
-    manifest = graph.get("source_manifest")
-    if not isinstance(manifest, list):
-        raise ContextError("graph_manifest_missing",
-                           "graph has no source_manifest; cannot prove it matches the source")
-    manifested: set[str] = set()
-    for entry in manifest:
-        if not isinstance(entry, dict) or "path" not in entry or "sha256" not in entry:
-            raise ContextError("graph_manifest_missing", f"malformed source_manifest entry: {entry!r}")
-        raw_rel, expected = str(entry["path"]), str(entry["sha256"])
-        try:
-            rel = _validate_relative(repo, raw_rel)
-        except ContextError as exc:
-            raise ContextError(
-                "graph_source_mismatch",
-                f"graph manifest path is not a valid repo path: {raw_rel}: {exc.message}",
-                path=raw_rel,
-                reason="invalid_path",
-            ) from exc
-        manifested.add(rel)
-        if rel in frozen_hashes:
-            if frozen_hashes[rel] != expected:
-                raise GraphSourceMismatch(rel, expected, frozen_hashes[rel],
-                                          "content hash differs from current source")
-            continue
-        try:
-            actual = sha256_bytes((repo / PurePosixPath(rel)).read_bytes())
-        except OSError:
-            raise GraphSourceMismatch(rel, expected, None,
-                                      "file present in graph manifest is missing on disk") from None
-        if actual != expected:
-            raise GraphSourceMismatch(rel, expected, actual,
-                                      "boundary source drifted: content hash differs from current source")
-    unmanifested: set[str] = set()
-    # A path that is not a non-empty string cannot name repository source; such
-    # anchors stay external, as an unknown path does.
-    anchored = {path for anchor in _graph_source_anchors(graph)
-                if isinstance(path := anchor.get("path"), str) and path}
-    for raw_path in anchored:
-        try:
-            rel = _validate_relative(repo, raw_path)
-        except ContextError:
-            continue
-        if rel not in manifested and (repo / rel).exists():
-            unmanifested.add(rel)
-    if unmanifested:
-        listed = ", ".join(sorted(unmanifested)[:10])
-        raise ContextError(
-            "graph_unmanifested_source",
-            f"graph anchors repo source not covered by source_manifest: {listed}",
-            paths=sorted(unmanifested),
-        )
+    check(repo, graph, frozen_hashes)
 
 
 def _prune_graph(graph: dict[str, Any] | None, selected: set[str]) -> dict[str, Any] | None:
-    if graph is None:
-        return None
-    nodes = [node for node in graph.get("nodes", []) if isinstance(node, dict)]
-    edges = [edge for edge in graph.get("edges", []) if isinstance(edge, dict)]
-    by_id = {node.get("id"): node for node in nodes}
+    from cbe.graph import _prune_graph as prune
 
-    kept_ids: set[str] = {node.get("id") for node in nodes if node.get("path") in selected}
-    kept_edges: list[dict[str, Any]] = []
-    for edge in edges:
-        source = edge.get("source")
-        target = edge.get("target")
-        source_node = by_id.get(source)
-        target_node = by_id.get(target)
-        touches = (
-            (source_node is not None and source_node.get("path") in selected)
-            or (target_node is not None and target_node.get("path") in selected)
-        )
-        if touches:
-            kept_edges.append(edge)
-            if source is not None:
-                kept_ids.add(source)
-            if target is not None:
-                kept_ids.add(target)
-
-    kept_nodes = [node for node in nodes if node.get("id") in kept_ids]
-    pruned: dict[str, Any] = {
-        key: value for key, value in graph.items() if key not in {"nodes", "edges", "source_manifest", "quality"}
-    }
-    pruned["nodes"] = kept_nodes
-    pruned["edges"] = kept_edges
-    # Keep the full analysis manifest.  A local slice may reference files
-    # outside the selection because their nodes are boundary endpoints; a
-    # trimmed manifest would misrepresent the provenance of the whole graph.
-    pruned["source_manifest"] = list(graph.get("source_manifest", []))
-    pruned["scope"] = {
-        "paths": sorted(selected),
-        "partial": True,
-        "edge_filter": "incident_to_selected",
-        "note": "Boundary/external nodes kept; relationships outside the selection are not shown.",
-    }
-    return pruned
+    return prune(graph, selected)
 
 
 # ---------------------------------------------------------------------------
