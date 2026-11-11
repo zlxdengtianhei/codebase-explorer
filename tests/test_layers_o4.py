@@ -148,18 +148,15 @@ def test_grouped_dispositions_supply_ranges_even_without_declared_members(tmp_pa
     assert "def reserve" in text and "def submit" in text
 
 
-def test_optional_summary_validation_is_compatible_and_does_not_truncate():
-    from cbe import checks
-    inventory = _inventory()
-    payload = _good_payload(inventory)
-    summary = "long sentence " * 40
-    payload["units"][0]["summary"] = summary
-    assert not checks.validate_details(payload, ["pkg/jobs.py"], inventory, set())
-    assert payload["units"][0]["summary"] == summary
-    payload["units"][0]["summary"] = ["a sentence"]
-    assert any("summary" in p for p in checks.validate_details(payload, ["pkg/jobs.py"], inventory, set()))
-    checks.normalize_details(payload, ["pkg/jobs.py"], inventory, set())
-    assert isinstance(payload["units"][0]["summary"], str)
+def test_a_summary_field_in_an_answer_is_ignored_not_rejected():
+    """Replaces the optional-summary validation test. The answer contract has no summary field (the
+    first sentence of ``explain`` is the summary), so an author that still sends one costs no re-ask."""
+    from cbe import checks, symbols
+    table = symbols.batch_table(["pkg/jobs.py"], _inventory())
+    answer = {"units": [{"h": [1], "explain": "First sentence. Second.", "summary": ["not", "a", "string"]}]}
+    decoded = checks.decode_details(answer, table)
+    assert not decoded.invalid and not decoded.flags
+    assert "summary" not in decoded.units[0] and summary_sentence(decoded.units[0]) == "First sentence."
 
 
 def test_fallback_snapshot_keeps_exact_unsupported_source_after_repo_is_gone(tmp_path, capsys):

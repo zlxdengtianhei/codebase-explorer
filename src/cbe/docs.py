@@ -100,8 +100,6 @@ def _build_unit_block(uid: str, units: dict, ranges_map: dict, owner: dict,
                       name_of: Callable[[str], str], source_links: dict[str, str]) -> str:
     unit = units[uid]
     lines = [f"### `{name_of(uid)}`", ""]
-    for row in unit.get("id_corrections") or []:
-        lines += [f"> **ID corrected by CBE.** {row['notice']}", ""]
     raw_signature = unit.get("signature") or unit.get("kind") or "unit"
     declaration = re.search(r"\b(?:async def|def|class)\s+\w", raw_signature)
     if declaration:
@@ -156,8 +154,7 @@ def _build_unit_block(uid: str, units: dict, ranges_map: dict, owner: dict,
 def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
            dispositions: dict, tree: dict, languages: dict[str, str],
            index_notes: list[str] | None = None, system: dict | None = None,
-           graph: dict | None = None, context: dict | None = None,
-           id_corrections: list[dict] | None = None) -> dict:
+           graph: dict | None = None, context: dict | None = None) -> dict:
     """Render node pages, INDEX.md and a catalog under ``run_dir/docs``.
 
     ``languages`` maps each path to the language frozen in the source context,
@@ -238,12 +235,6 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
                    f"{labels[edge['source']]} · {edge['count']} edge(s)")
                 + (" · " + literal_links(edge["description"]) if edge["description"] else ""))
 
-    from cbe.records import correction_notice
-
-    for row in id_corrections or []:
-        uid = row["corrected"]
-        if uid in units and re.fullmatch(r"units\[\d+\]\.id", row["location"]):
-            units[uid].setdefault("id_corrections", []).append({**row, "notice": correction_notice(row)})
     for nid, node in nodes.items():
         source_links: dict[str, str] = {}
         lines = [f"# {node.get('title') or nid}", ""]
@@ -790,8 +781,7 @@ def find(run_dir: Path, term: str, limit: int = 25) -> list[dict[str, Any]]:
         summary = " ".join(words[:25]) + ("…" if len(words) > 25 else "")
         results.append({"id": sid, "name": name, "kind": symbol.get("kind") or record.get("kind") or
                         "symbol", "location": format_ranges(ranges),
-                        "summary": summary, "matched_fields": matched,
-                        **({"id_corrected": True} if record.get("id_corrections") else {})})
+                        "summary": summary, "matched_fields": matched})
     results.sort(key=lambda row: (0 if needle in {row["id"].casefold(), row["name"].casefold(),
                                                   str(catalog["symbols"].get(row["id"], {}).get("display_name", "")).casefold()}
                                  else 1))
@@ -800,8 +790,7 @@ def find(run_dir: Path, term: str, limit: int = 25) -> list[dict[str, Any]]:
 
 def find_text(results: list[dict]) -> str:
     return "".join(f"{r['name']} | {r['id']} | {r['kind']} | {r['location']} | "
-                   f"{r['summary']} | match: {','.join(r['matched_fields'])}"
-                   f"{' | ID corrected; may be inaccurate (see query)' if r.get('id_corrected') else ''}\n"
+                   f"{r['summary']} | match: {','.join(r['matched_fields'])}\n"
                    for r in results)
 
 
@@ -867,7 +856,7 @@ def query_text(record: dict) -> str:
 
     summary, remainder = summary_and_remainder(record)
     lines = [f"{record.get('display_name', record['name'])}  {record['id']}"]
-    for field in ("dependencies", "depended_on_by", "id_corrections", "signature", "signatures", "ranges", "summary", "explain", "extras",
+    for field in ("dependencies", "depended_on_by", "signature", "signatures", "ranges", "summary", "explain", "extras",
                   "uncertainties", "relations", "reverse_relations", "folded_members",
                   "internal_edge_counts", "units", "symbols"):
         value = record.get(field)

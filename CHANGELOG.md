@@ -2,6 +2,20 @@
 
 ## 2.2.0.dev0 (unreleased)
 
+- Change the detail answer contract. Symbols are named by short numbers from a
+  numbered list in the prompt (`{"units":[{"h":[12],"explain":"..."}]}`); the
+  program derives ids, kinds, groups and the full `dispositions` map. Usable units
+  of an answer are kept; a re-ask repeats the first ask and lists only the gaps
+  (functions, methods and classes of 40 tokens or more that no unit explains,
+  and rejected units). After the last answer the rest is indexed without prose and
+  flagged `unexplained`. Removed: id correction (`id_corrected`, correction notices
+  in pages and `query`), the bounded `index_only` fill, and the `answer_fallback`
+  replay of earlier answers. Run schema is now `cbe-host-run/3`; a run planned
+  before this change must be planned again.
+- HTTP 429 and 503 are waited out inside the call (`Retry-After`, else 5 s doubling
+  to 120 s, up to 6 repeats), use no answer attempt and are logged as `rate_limited`
+  rows. A call still refused returns its task to the queue and pauses the run; the
+  run stops only after 3 such calls in a row.
 - Remove the OpenCode and Devin completion paths. `cbe generate` now talks only
   to an OpenAI-compatible endpoint and requires `--model`; `--host api` is still
   accepted, other `--host` values are rejected. The built-in Z.AI and Devin

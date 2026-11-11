@@ -4,12 +4,13 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from pathlib import Path
 
 import pytest
 
 from cbe import usage
-from cbe import cli, host_run, prompts
+from cbe import checks, cli, host_run, prompts, symbols
 from cbe.docs import find
 
 
@@ -30,18 +31,29 @@ def _repo(tmp_path: Path) -> Path:
     return repo
 
 
+def _prompt_symbols(prompt: str) -> list[tuple[int, str, str]]:
+    """(number, kind, name) of every symbol line in a detail prompt's numbered list."""
+    block = prompt.split("SYMBOLS (this batch; number, kind, name, source lines):\n", 1)[1].split("\n\n", 1)[0]
+    rows = []
+    for line in block.splitlines():
+        match = re.fullmatch(r"(\d+) (\w+) (.+) L[\d,-]+", line)
+        if match:
+            rows.append((int(match[1]), match[2], match[3]))
+    return rows
+
+
 def _detail_from_prompt(prompt: str) -> dict:
-    inv = json.loads(prompt.split("INVENTORY (this batch, authoritative ids):\n", 1)[1]
-                     .split("\n\n", 1)[0])
-    units, dispositions = [], {}
-    for file_row in inv:
-        for symbol in file_row["symbols"]:
-            units.append({"id": symbol["id"], "kind": symbol["kind"],
-                          "explain": f"Unit {symbol['name']} does its job.",
-                          "extras": [], "relations": [], "uncertainties": []})
-            dispositions[symbol["id"]] = {"how": "unit", "unit": symbol["id"],
-                                           "reason": "real behavior"}
-    return {"units": units, "dispositions": dispositions, "batch_notes": "batch ok"}
+    """Play the author: one unit per listed symbol, answering with short numbers."""
+    return {"units": [{"h": [number], "explain": f"Unit {name} does its job."}
+                      for number, _, name in _prompt_symbols(prompt)]}
+
+
+def _group_first(value: dict, title: str, count: int = 2) -> dict:
+    """Fold the first ``count`` answer units into one grouped unit (``h`` lists several numbers)."""
+    units = value["units"]
+    merged = {"h": [number for unit in units[:count] for number in unit["h"]], "title": title,
+              "explain": f"Helpers {title} work together."}
+    return {**value, "units": [merged, *units[count:]]}
 
 
 def _tree_from_prompt(prompt: str) -> dict:
@@ -336,7 +348,12 @@ def _good(item: dict, run_dir: Path) -> dict:
     return _answer({"kind": item["kind"]}, Path(item["prompt_file"]).read_text())
 
 
-def test_final_invalid_detail_answer_is_normalized_flagged_and_rendered(tmp_path: Path) -> None:
+def test_gaps_are_re_asked_alone_and_the_last_answer_indexes_what_stays_unexplained(
+        tmp_path: Path, monkeypatch) -> None:
+    """Replaces the final-answer normalizer test: an answer with a gap is not accepted whole or
+    thrown away. The re-ask lists only the gap, and after the last answer the symbol that nobody
+    explained is indexed without prose, flagged ``unexplained``, and the run still completes."""
+    monkeypatch.setattr(checks, "GAP_MIN_TOKENS", 1)  # the tiny test functions count as having logic
     repo = _repo(tmp_path)
     run_dir = Path(host_run.plan(repo, tmp_path / "run", review="none", jobs=8)["run_dir"])
     names = host_run.next_tasks(run_dir, limit=1)["tasks"][0]
@@ -345,24 +362,29 @@ def test_final_invalid_detail_answer_is_normalized_flagged_and_rendered(tmp_path
     target = batch[0]
     for item in batch[1:]:
         _answer_task(run_dir, item, _good(item, run_dir))
+    state = json.loads((run_dir / "host" / "state.json").read_text())
+    table = symbols.batch_table(state["modules"][int(target["task"].split("_")[1]) - 1]["files"], state["inventory"])
+    gap_row = next(row for row in table if row["kind"] == "function")  # no unit will mention this one
     bad = _good(target, run_dir)
-    bad["units"][0]["kind"] = "not-a-kind"
-    dropped = next(iter(bad["dispositions"]))
-    bad["dispositions"].pop(dropped)
+    bad["units"] = [unit for unit in bad["units"] if unit["h"] != [gap_row["n"]]]
+    bad["units"][0]["h"].append(99)  # an unknown number is dropped and noted, the unit is kept
     first = _answer_task(run_dir, target, bad)
     assert not first["accepted"] and first["task_status"] == "pending"
-    assert "kind" in first["error"].lower() or "disposition" in first["error"].lower()
+    assert first["error"].startswith("incomplete:")
     again = host_run.next_tasks(run_dir)["tasks"][0]
     assert again["task"] == target["task"]
-    second = _answer_task(run_dir, again, bad)
+    followup = Path(again["prompt_file"]).read_text().split("FOLLOW-UP:", 1)[1].split("\n---\n", 1)[0]
+    assert f"{gap_row['n']} function {gap_row['name']}" in followup  # the gap is listed ...
+    assert followup.count("\n") < 8  # ... and only the gap: no unit that was kept comes back
+    second = _answer_task(run_dir, again, {"units": []})  # a useless re-answer changes nothing
     assert not second["accepted"] and second["task_status"] == "pending"
-    third = _answer_task(run_dir, host_run.next_tasks(run_dir)["tasks"][0], bad)
+    third = _answer_task(run_dir, host_run.next_tasks(run_dir)["tasks"][0], {"units": []})
     assert third["accepted"] and third["normalized"]
-    assert any("module_region" in flag for flag in third["flags"])
+    assert third["flags"].count(f"unexplained: {gap_row['id']}") == 1
+    assert any("unknown symbol number 99" in flag for flag in third["flags"])
     accepted = json.loads((run_dir / "host" / "accepted" / f"{target['task']}.json").read_text())
-    assert all(unit["kind"] in {"class", "function", "method", "group", "module_region"}
-               for unit in accepted["units"])
-    assert dropped in accepted["dispositions"] and accepted["dispositions"][dropped]["how"] == "index_only"
+    assert accepted["dispositions"][gap_row["id"]]["how"] == "index_only"
+    assert gap_row["id"] not in {unit["id"] for unit in accepted["units"]}
     tree_item = host_run.next_tasks(run_dir)["tasks"][0]
     assert tree_item["kind"] == "tree"
     _answer_task(run_dir, tree_item, _good(tree_item, run_dir))
@@ -376,7 +398,9 @@ def test_final_invalid_detail_answer_is_normalized_flagged_and_rendered(tmp_path
     assert state["status"] == "complete" and state["verify"]["ok"]
     index = (run_dir / "docs" / "INDEX.md").read_text()
     assert "## Generation notes" in index and "maintenance_navigation truncated" in index
-    assert "Normalized after the final invalid answer" in index
+    assert "Accepted with repairs or gaps" in index and "left without prose" in index
+    summary = json.loads((run_dir / "summary.json").read_text())
+    assert summary["unexplained"] == [{"task": target["task"], "symbol": gap_row["id"]}]
     log = (run_dir / "progress.log").read_text()
     for word in ("plan ", "claim ", "reject ", "normalize ", "accept ", "render "):
         assert word in log, word
@@ -596,19 +620,11 @@ def test_script_driver_carries_the_graph_into_the_module_prompt(tmp_path: Path, 
     def fake_invoke(**kwargs):
         seen[kwargs["task"]] = kwargs["prompt"]
         prompt = kwargs["prompt"]
-        if "Modules:\n" in prompt and "INVENTORY (" not in prompt:
+        if "Modules:\n" in prompt and "SYMBOLS (" not in prompt:
             rows = json.loads(prompt.split("Modules:\n", 1)[1])
             value = {"names": [{"module": row["module"], "title": f"Area {row['module']}"} for row in rows]}
-        elif "INVENTORY (this batch" in prompt:
-            inv = json.loads(prompt.split("INVENTORY (this batch, authoritative ids):\n", 1)[1].split("\n\n", 1)[0])
-            units, dispositions = [], {}
-            for file_row in inv:
-                for symbol in file_row["symbols"]:
-                    units.append({"id": symbol["id"], "kind": symbol["kind"],
-                                  "explain": f"Unit {symbol['name']}.", "extras": [],
-                                  "relations": [], "uncertainties": []})
-                    dispositions[symbol["id"]] = {"how": "unit", "unit": symbol["id"], "reason": "behavior"}
-            value = {"units": units, "dispositions": dispositions, "batch_notes": "ok"}
+        elif "SYMBOLS (this batch" in prompt:
+            value = _detail_from_prompt(prompt)
         elif "UNITS:\n" in prompt:
             units = json.loads(prompt.split("UNITS:\n", 1)[1])
             value = {"nodes": [{"id": "root", "parent": None, "title": "Root",
@@ -815,9 +831,7 @@ def test_tree_waits_for_repairs_so_new_group_units_get_an_owner(tmp_path: Path) 
             elif kind in {"module", "repair"}:
                 value = _detail_from_prompt(prompt)
                 if kind == "repair":
-                    value["units"].append({"id": f"grp:extra-{item['task']}", "kind": "group",
-                                           "explain": "A helper grouped by the repair.",
-                                           "extras": [], "relations": [], "uncertainties": []})
+                    value = _group_first(value, f"extra-{item['task']}")
             elif kind == "tree":
                 value = _tree_from_prompt(prompt)
             elif kind == "review":
@@ -835,7 +849,7 @@ def test_tree_waits_for_repairs_so_new_group_units_get_an_owner(tmp_path: Path) 
     assert state["status"] == "complete" and state["verify"]["ok"], state["verify"]["checks"]
     tree = json.loads((run_dir / "host" / "accepted" / "tree.json").read_text())
     owned = {uid for node in tree["nodes"] for uid in node.get("unit_ids") or []}
-    assert {"grp:extra-repair_1", "grp:extra-repair_2"} <= owned
+    assert {"grp:cli.py-extra-repair-1", "grp:test_jobs.py-extra-repair-2"} <= owned
 
 
 def test_repair_may_reuse_its_own_module_group_ids(tmp_path: Path) -> None:
@@ -847,10 +861,11 @@ def test_repair_may_reuse_its_own_module_group_ids(tmp_path: Path) -> None:
     repo = tmp_path / "repo"
     (repo / "pkg").mkdir(parents=True)
     (repo / "pkg" / "jobs.py").write_text(
-        "def reserve_run(value):\n    if value < 0:\n        raise ValueError('negative')\n    return value\n",
+        "def reserve_run(value):\n    if value < 0:\n        raise ValueError('negative')\n    return value\n\n"
+        "def release_run(value):\n    return -value\n",
         encoding="utf-8")
     run_dir = Path(host_run.plan(repo, tmp_path / "run", review="all", jobs=4)["run_dir"])
-    group_id = "grp:jobs-helpers"
+    group_id = "grp:jobs.py-helpers"
     repair_seen = False
     for _ in range(40):
         batch = host_run.next_tasks(run_dir)
@@ -862,16 +877,11 @@ def test_repair_may_reuse_its_own_module_group_ids(tmp_path: Path) -> None:
             if kind == "names":
                 value = _answer({"kind": "names"}, prompt)
             elif kind == "module":
-                value = _detail_from_prompt(prompt)
-                value["units"].append({"id": group_id, "kind": "group",
-                                       "explain": "Grouped helpers.",
-                                       "extras": [], "relations": [], "uncertainties": []})
+                value = _group_first(_detail_from_prompt(prompt), "helpers")
             elif kind == "repair":
                 repair_seen = True
-                value = _detail_from_prompt(prompt)
-                value["units"].append({"id": group_id, "kind": "group",
-                                       "explain": "Grouped helpers, revised.",
-                                       "extras": [], "relations": [], "uncertainties": []})
+                value = _group_first(_detail_from_prompt(prompt), "helpers")
+                value["units"][0]["explain"] = "Grouped helpers, revised."
             elif kind == "tree":
                 value = _tree_from_prompt(prompt)
             elif kind == "review":
@@ -883,6 +893,8 @@ def test_repair_may_reuse_its_own_module_group_ids(tmp_path: Path) -> None:
             result = host_run.submit(run_dir, item["task"], usage={"total_tokens": 1000})
             assert result["accepted"], result
     assert repair_seen
+    repaired = json.loads((run_dir / "host" / "accepted" / "repair_1.json").read_text())
+    assert group_id in {unit["id"] for unit in repaired["units"]}  # the repair rebuilt its own module's group
     state = json.loads((run_dir / "host" / "state.json").read_text())
     assert state["status"] == "complete" and state["verify"]["ok"], state["verify"]["checks"]
 
@@ -1076,16 +1088,13 @@ def test_resume_new_group_preserves_last_accepted_system(tmp_path, accepted_syst
     task["status"] = "leased"
     state["tasks"]["system"]["covered"] = []
     state_path.write_text(json.dumps(state))
-    detail = json.loads((accepted / "module_1.json").read_text())
-    detail["units"].append({"id": "grp:new-helper", "kind": "group",
-                            "explain": "Newly resumed helper.", "extras": [],
-                            "relations": [], "uncertainties": []})
+    detail = _group_first(_detail_from_prompt(host_run.completion_prompt(run_dir, "module_1")), "new-helper")
     (run_dir / "host/outbox/module_1.json").write_text(json.dumps(detail))
     assert cli.main(["host", "resume", "--run-dir", str(run_dir)]) == 0
     state = json.loads(state_path.read_text())
     assert state["tasks"]["module_1"]["status"] == "done"
     assert state["tasks"]["system"]["status"] == "pending"
-    assert "grp:new-helper" in json.loads((run_dir / "catalog.json").read_text())["units"]
+    assert "grp:cli.py-new-helper" in json.loads((run_dir / "catalog.json").read_text())["units"]
     index = (run_dir / "docs/INDEX.md").read_text()
     pages = "\n".join(p.read_text() for p in (run_dir / "docs/nodes").glob("*.md"))
     if accepted_system:

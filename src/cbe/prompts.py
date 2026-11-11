@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from cbe import symbols
 from cbe.batching import Module
 from cbe.checks import RELATION_KINDS
 from cbe.projection import DEFAULT_GRAPH_MAX_TOKENS, graph_prompt_lines
@@ -43,6 +44,39 @@ NO_FILE_RULES = (
     "the repository. Do not invent details that the supplied material does not show.")
 
 
+def symbol_lines(paths: list[str], inventory: dict[str, dict], table: list[dict]) -> list[str]:
+    """The numbered symbol list: one line per symbol, grouped by file."""
+    rows_by_path: dict[str, list[dict]] = {}
+    for row in table:
+        rows_by_path.setdefault(row["path"], []).append(row)
+    lines = []
+    for path in paths:
+        entry = inventory[path]
+        lines.append(f"== {path} ({entry.get('tokens', 0)} tokens)"
+                     + (" [empty file: no symbols]" if entry.get("known_empty") else ""))
+        for row in rows_by_path.get(path, []):
+            spans = ",".join(f"{a}-{b}" for a, b in row["lines"])
+            lines.append(f"{row['n']} {row['kind']} {row['name']} L{spans}")
+    return lines
+
+
+def gap_note(gaps: list[dict], invalid: list[dict], problem: str | None = None) -> str:
+    """The text a detail re-ask appends to the unchanged first ask: only what is still missing."""
+    lines = ["", "", "FOLLOW-UP: the units you returned earlier for this batch were accepted and are kept. "
+             "Do not repeat them."]
+    if problem:
+        lines.append(f"Your last answer could not be used: {problem}")
+    if invalid:
+        lines.append("These units were rejected; return each again, corrected:")
+        lines += [f"- h={row['h']}: {row['why']}" for row in invalid]
+    if gaps:
+        lines.append("These functions, methods or classes with real logic still have no unit. Give each a "
+                     "unit, alone or grouped with related symbols:")
+        lines += [f"{row['n']} {row['kind']} {row['name']} ({row['path']})" for row in gaps]
+    lines.append("Return the same JSON shape with only the additional units, using the same symbol numbers.")
+    return "\n".join(lines)
+
+
 def detail_prompt(paths: list[str], inventory: dict[str, dict], *,
                   chunks: list[dict] | None = None,
                   source_root: Path | None = None,
@@ -60,21 +94,24 @@ def detail_prompt(paths: list[str], inventory: dict[str, dict], *,
     twice. Graph context, when present, is attached once at chunk granularity;
     a run without a graph says so instead of implying relations were analyzed.
     """
-    inv_rows = [{"file": path, "tokens": inventory[path].get("tokens", 0),
-                 "known_empty": bool(inventory[path].get("known_empty")),
-                 "symbols": inventory[path]["symbols"]} for path in paths]
+    table = symbols.batch_table(paths, inventory)
     header = [
         "You build compact structured detail units for a code-documentation pipeline. "
         "Use ONLY the supplied source; never invent runtime behavior; record real "
         "uncertainty in 'uncertainties' instead of guessing.",
         "",
         "OUTPUT: exactly one JSON object, no Markdown fences, no commentary:",
-        '{"units":[...],"dispositions":{...},"batch_notes":"..."}',
+        '{"units":[{"h":[12],"explain":"..."},{"h":[20,21,22],"title":"parse entrypoints","explain":"..."}],'
+        '"notes":"optional"}',
         "",
-        "units: objects with EXACTLY these fields",
-        "  id (string; for one symbol use its exact inventory id; for a merged group use "
-        "'grp:<kebab-slug-starting-with-the-file-name>'; ids unique here)",
-        "  kind: class | function | method | group | module_region",
+        "SYMBOLS below are numbered. Refer to a symbol only by its number; never write a name or "
+        "path where a number is asked for.",
+        "",
+        "units: objects with these fields",
+        "  h (list of symbol numbers): the symbols this unit explains. One number: the unit is that "
+        "symbol. Several numbers: one grouped unit that explains them together; give it a short "
+        "'title'. A number may appear in one unit only.",
+        "  title (string, grouped units only): a short name for the group.",
         "  explain (string): prose that lets a senior engineer understand this unit WITHOUT "
         "reading the code and predict its boundary behavior. Cover responsibility and "
         "boundary, key behavior, entry and input/output semantics, behavior-changing "
@@ -87,23 +124,18 @@ def detail_prompt(paths: list[str], inventory: dict[str, dict], *,
         "Keep the remaining explanation for behavior the reader needs to predict.",
         "  extras (list, optional): {\"topic\": condition|failure|side_effect|field|contract, "
         "\"note\": <one clear statement>} only for a necessity the explain does not cover.",
-        "  relations (list, optional): {\"target\": <inventory id or grp: id>, \"kind\": "
+        "  relations (list, optional): {\"to\": <symbol number in this batch, or a name string "
+        "for a target outside it>, \"kind\": "
         + str(sorted(RELATION_KINDS)) + ", \"basis\": <code evidence>}. kind=call only for an "
         "invocation visible in the code; use 'use' when unsure.",
-        "  uncertainties (list of strings): real unproven boundaries of this reading.",
-        "  members (optional): inventory ids fully explained inside this unit.",
-        "Do NOT emit 'source' or any line-range field: the program derives published ranges "
-        "from the inventory.",
+        "  uncertainties (list of strings, optional): real unproven boundaries of this reading.",
+        "Do NOT emit 'source', a kind, an id or any line-range field: the program derives them from "
+        "the numbered symbols.",
         "",
-        "dispositions: one entry for EVERY id in the INVENTORY below, no key missing, no "
-        "extra keys: \"<inventory id>\": {\"how\": unit|grouped|index_only, "
-        "\"unit\": \"<unit id>\", \"reason\": \"short code-evidence statement\"}. "
-        "how=unit means the symbol got its own unit (unit id == the inventory id); "
-        "how=grouped means it is explained inside another unit; how=index_only means pure "
-        "constants/imports/re-exports with no behavior worth prose ('unit' may be null; "
-        "'reason' required). Never drop an inventory id. Fold trivial getters and test cases; "
-        "give real units to anything with actual logic. A file whose symbol list is empty "
-        "(a known-empty file) needs no disposition and no unit; do not invent prose for it.",
+        "Symbols that no unit lists are indexed by position without prose. Leave out pure "
+        "constants, imports, re-exports, test cases and trivial accessors; give a unit to every "
+        "function, method or class with real logic. A file marked empty has no symbols and needs "
+        "no unit; do not invent prose for it.",
     ]
     header.append(
         "LENGTH GUIDANCE: Spend prose on behavior, not a fixed introduction for every unit. "
@@ -125,7 +157,7 @@ def detail_prompt(paths: list[str], inventory: dict[str, dict], *,
         "Keep the coordination needed to understand the class. Each unit must stand alone: "
         "never replace behavior with 'see the class unit' or 'see above'. "
         "A module region containing only imports or constants "
-        "must be index_only, because the inventory already locates that non-behavioral material. "
+        "gets no unit, because the symbol list already locates that non-behavioral material. "
         "Write uncertainties only for a real boundary supported by specific source evidence; "
         "omit boilerplate such as 'not visible in this file'. An empty uncertainties list is "
         "appropriate when no such boundary affects understanding.")
@@ -138,13 +170,12 @@ def detail_prompt(paths: list[str], inventory: dict[str, dict], *,
         "be established, put the specific boundary and its evidence in uncertainties. "
         "Describe only code within this unit's source scope. When a docstring conflicts with "
         "the implementation, follow the implementation and point out the discrepancy. "
-        "Keep generation metadata out of prose: no inventory ids or positions, graph-candidate "
+        "Keep generation metadata out of prose: no symbol numbers or positions, graph-candidate "
         "labels, or references to the generation process.")
     if issues:
         header.append("Correct these review findings without broadening claims: "
                       + json.dumps(issues, ensure_ascii=False))
-    body: list[str] = ["INVENTORY (this batch, authoritative ids):",
-                       json.dumps(inv_rows, ensure_ascii=False), ""]
+    body: list[str] = ["SYMBOLS (this batch; number, kind, name, source lines):", *symbol_lines(paths, inventory, table), ""]
     source_texts: dict[str, str] = {}
     for path in paths:
         text = ""
@@ -176,7 +207,7 @@ def detail_prompt(paths: list[str], inventory: dict[str, dict], *,
             elif inventory.get(path, {}).get("known_empty"):
                 note = "(this file is empty: it has no source text, no inventory id and needs no unit)"
             else:
-                note = "(source text was not available; describe only the inventory ids)"
+                note = "(source text was not available; describe only the listed symbols)"
             body += [f"==== FILE {path} ====", note]
     else:
         body.append("SOURCE FILES (read each listed file completely; read no other file):")
