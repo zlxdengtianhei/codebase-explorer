@@ -5,7 +5,7 @@ import json
 import pytest
 
 from cbe import batching, host_run, usage
-from cbe.headless_completion import Completion, _csv_row
+from cbe.api_completion import Completion, _csv_row
 from test_generate import _semantic_answer, _tiny_repo
 
 generator = importlib.import_module("cbe.generate")
@@ -53,7 +53,7 @@ def test_api_summary_retains_observed_totals_and_unknown_call_counts(tmp_path):
     (tmp_path / "calls.csv").write_text(
         "task,attempt,input_tokens,output_tokens,cache_tokens,result,seconds\n"
         "module_1,1,,,,timeout,1\nmodule_1,2,100,20,10,ok,2\n")
-    result = usage.script_cost(tmp_path, host="api")
+    result = usage.script_cost(tmp_path)
     assert result["input_tokens"] == 100 and result["output_tokens"] == 20
     assert not result["usage_complete"]
     assert result["calls_with_unknown_input"] == result["calls_with_unknown_output"] == 1
@@ -64,10 +64,10 @@ def test_api_complete_usage_and_explicit_price(tmp_path):
     (tmp_path / "calls.csv").write_text(
         "task,attempt,input_tokens,output_tokens,cache_tokens,result,seconds\n"
         "module_1,1,100,20,10,ok,1\nmodule_1,2,200,40,30,ok,2\n")
-    result = usage.script_cost(tmp_path, host="api")
+    result = usage.script_cost(tmp_path)
     assert (result["input_tokens"], result["output_tokens"], result["cache_tokens"]) == (300, 60, 40)
     assert result["usage_complete"] and result["priced_usd"] is None
-    assert usage.script_cost(tmp_path, host="api", price=[1, 2, .5])["priced_usd"] == .00044
+    assert usage.script_cost(tmp_path, price=[1, 2, .5])["priced_usd"] == .00044
 
 
 def test_custom_batch_limits_are_local_and_preserve_whole_files():
@@ -143,17 +143,8 @@ def test_incomplete_usage_is_not_priced_even_with_explicit_rates(tmp_path, missi
     (tmp_path / "calls.csv").write_text(
         "task,attempt,input_tokens,output_tokens,cache_tokens,result,seconds\n"
         f"module_1,1,{values['input_tokens']},{values['output_tokens']},{values['cache_tokens']},timeout,1\n")
-    result = usage.script_cost(tmp_path, host="api", price=[1, 2, .5])
+    result = usage.script_cost(tmp_path, price=[1, 2, .5])
     assert result["priced_usd"] is None and not result["usage_complete"]
-
-
-def test_devin_unknown_price_does_not_recommend_an_api_only_setting(tmp_path):
-    (tmp_path / "calls.csv").write_text(
-        "task,attempt,input_tokens,output_tokens,cache_tokens,result,seconds\n"
-        "module_1,1,100,20,10,ok,1\n")
-    result = usage.script_cost(tmp_path, host="devin")
-    assert result["priced_usd"] is None
-    assert "Devin" in result["price_basis"] and "configure API" not in result["price_basis"]
 
 
 def test_only_source_batch_max_uses_batching_constants_and_clamps_target(tmp_path, monkeypatch):

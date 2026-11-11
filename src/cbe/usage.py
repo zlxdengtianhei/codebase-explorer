@@ -277,8 +277,7 @@ def _cost_markdown(report: dict[str, Any]) -> str:
     return "\n".join(lines) + "\n"
 
 
-def script_cost(run_dir: Path, *, host: str = "opencode",
-                price: list[float] | None = None) -> dict[str, Any]:
+def script_cost(run_dir: Path, *, price: list[float] | None = None) -> dict[str, Any]:
     with (run_dir / "calls.csv").open(newline="", encoding="utf-8") as stream:
         rows = list(csv.DictReader(stream))
     fields = ("input_tokens", "output_tokens", "cache_tokens")
@@ -286,7 +285,7 @@ def script_cost(run_dir: Path, *, host: str = "opencode",
     totals = {field: sum(int(row[field]) for row in rows if row[field]) for field in fields}
     known = all(complete.values())
     input_tokens, output_tokens, cache_tokens = (totals[field] for field in fields)
-    rates = price if host == "api" else [5, 25, .5] if host == "opencode" else None
+    rates = price
     return {"calls": len(rows),
             **{field: totals[field] if complete[field] or field != "cache_tokens" else None for field in fields},
             "token_totals_basis": "observed calls; missing usage is excluded, never estimated",
@@ -296,8 +295,6 @@ def script_cost(run_dir: Path, *, host: str = "opencode",
             "calls_with_unknown_cache": sum(row["cache_tokens"] == "" for row in rows),
             "priced_usd": round((input_tokens * rates[0] + output_tokens * rates[1] + cache_tokens * rates[2]) / 1_000_000, 6)
             if known and rates is not None else None,
-            "price_basis": ("configured USD per million input,output,cache tokens" if host == "api" and price is not None
-                            else "historical OpenCode rates" if host == "opencode" else
-                            "unknown; configure API price_per_million: [input, output, cache]" if host == "api" else
-                            "unknown; Devin subscription usage has no configured API-equivalent price"),
+            "price_basis": ("configured USD per million input,output,cache tokens" if price is not None
+                            else "unknown; configure API price_per_million: [input, output, cache]"),
             "usage_complete": known, "seconds": round(sum(float(row["seconds"]) for row in rows), 3)}

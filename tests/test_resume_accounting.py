@@ -4,7 +4,7 @@ import importlib
 import json
 
 from cbe import host_run
-from cbe.headless_completion import _csv_row
+from cbe.api_completion import _csv_row
 
 generator = importlib.import_module("cbe.generate")
 

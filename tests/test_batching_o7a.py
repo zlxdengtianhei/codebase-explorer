@@ -68,3 +68,11 @@ def test_index_keeps_literal_paths_as_candidates():
              batching.SourceFile("./b.py", "", 10_000, "", [], set())]
     assert [[f.path for f in group] for group in batching._pack_directory(files, strict=True)] == [
         ["./b.py", "a.py"]]
+
+
+def test_whole_file_larger_than_group_target_stays_alone() -> None:
+    large = batching.SourceFile("tests/large.py", "", 31_732, "large", [])
+    small = batching.SourceFile("tests/small.py", "", 500, "small", [])
+    modules = batching.plan([small, large])
+    assert len(modules) == 2
+    assert any(module.files == [large] for module in modules)

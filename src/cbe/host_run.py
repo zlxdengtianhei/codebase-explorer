@@ -1,8 +1,8 @@
 """Durable run state shared by both generation drivers: plan, schedule, check, render, resume.
 
 ``cbe host`` lets a host agent (Claude Code, Codex, ...) dispatch one subagent
-per task; ``cbe generate`` runs the same tasks as tool-free API, OpenCode or
-Devin completions. Either way this state machine keeps every deterministic
+per task; ``cbe generate`` runs the same tasks as tool-free OpenAI-compatible
+API completions. Either way this state machine keeps every deterministic
 step: freezing the source context, reading batches (``batching``), the unit
 inventory (``symbols``), task order and leases, result checks (``checks``),
 rendering and structural verification (``docs``). Task bodies come from
@@ -754,7 +754,7 @@ def _prompt(run_dir: Path, state: dict[str, Any], task: dict[str, Any]) -> str:
 
 
 def completion_prompt(run_dir: Path, task_id: str) -> str:
-    """The same task as one tool-free completion (OpenCode or Devin): source is embedded."""
+    """The same task as one tool-free completion: source is embedded."""
     with locked_state(run_dir) as state:
         task = state["tasks"][task_id]
         _, body = _body(run_dir, state, task, embed=True)

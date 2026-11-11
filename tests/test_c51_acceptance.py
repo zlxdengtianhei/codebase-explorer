@@ -95,7 +95,7 @@ def test_model_link_shaped_text_is_literal_and_generated_links_still_checked(tmp
 
 def _complete_run(tmp_path, monkeypatch):
     import importlib
-    from cbe.headless_completion import Completion, _csv_row
+    from cbe.api_completion import Completion, _csv_row
     generator = importlib.import_module("cbe.generate")
     repo = _tiny_repo(tmp_path)
     run = tmp_path / "run"

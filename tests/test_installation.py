@@ -153,7 +153,7 @@ def test_runtime_note_command_runs_pasted_into_a_shell_and_warns_against_variabl
     assert "shell variable" in note and "shell function" in note
 
 
-SHIPPED_AGENT = Path(__file__).resolve().parents[1] / ".dsh/agents/cbe-writer.md"
+SHIPPED_AGENT = Path(__file__).resolve().parents[1] / "plugin/agents/cbe-writer.md"
 
 
 def test_shipped_writer_agent_has_only_the_read_and_write_tools() -> None:
