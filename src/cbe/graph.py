@@ -175,10 +175,6 @@ def graph_quality(graph: dict, *, existing_paths: Iterable[str] | None = None) -
     manifest = {row["path"]: row.get("language", "unknown")
                 for row in graph.get("source_manifest", [])}
     capabilities = graph.get("capabilities", [])
-    if isinstance(capabilities, dict):
-        capabilities = [{"language": language, "graph": kind, "status": status}
-                        for language, kinds in capabilities.items() if isinstance(kinds, dict)
-                        for kind, status in kinds.items()]
     languages = set(manifest.values()) | {c.get("language") or "unknown" for c in capabilities}
     statuses = ("resolved", "ambiguous", "unresolved", "external", "unsupported")
     counts = {(language, kind): dict.fromkeys(statuses, 0)

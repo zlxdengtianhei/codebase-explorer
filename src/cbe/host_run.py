@@ -528,12 +528,9 @@ def plan(repo: Path, run_dir: Path | None = None, *, review: str = DEFAULT_REVIE
         raise HostRunError("run directory already has a run; resume it or choose a fresh directory")
     files = batching.scan(repo)
     modules = batching.plan(files, target_tokens=batch_target_tokens, max_tokens=batch_max_tokens)
-    ast_inventory = symbols.build_inventory(
-        {item.path: {"source": item.source, "digest": item.digest, "tokens": item.tokens}
-         for item in files})
     selected = [item.path for item in files]
     context = _build_context(repo, selected, graph_path=graph_path)
-    symbols.ensure_chunk_coverage(context, repo, ast_inventory, selected)
+    symbols.ensure_chunk_coverage(context, repo, selected)
     inventory = symbols.inventory_from_context(context, selected)
     tasks: dict[str, dict[str, Any]] = {"names": _task("names", "names")}
     for module in modules:

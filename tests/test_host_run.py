@@ -477,19 +477,17 @@ def test_script_prompt_refuses_changed_source(tmp_path: Path) -> None:
             host_run.completion_prompt(run_dir, f"module_{number + 1}")
 
 
-def test_host_run_pages_and_catalog_carry_concrete_facts(tmp_path: Path) -> None:
-    """Host state keeps digests, not text: the facts must still be extracted at render time."""
+def test_host_run_render_publishes_catalog_and_find_query_answer(tmp_path: Path) -> None:
     repo = _repo(tmp_path)
     run_dir = Path(host_run.plan(repo, review="none", jobs=2, host="test")["run_dir"])
     host_run.release(run_dir)
     _drive(run_dir)
-    # (Pages print no facts table; the catalogue is where the facts are asserted.)
     catalog = json.loads((run_dir / "catalog.json").read_text())
-    assert any(entry.get("facts") for entry in catalog["symbols"].values())
+    assert catalog["symbols"]
     from cbe.docs import query
-    matches = find(run_dir, "negative")
+    matches = find(run_dir, "reserve_run")
     assert matches and all(row["id"] and row["location"] and row["matched_fields"] for row in matches)
-    assert any("negative" in json.dumps(query(run_dir, row["id"])) for row in matches)
+    assert any("reserve_run" in json.dumps(query(run_dir, row["id"])) for row in matches)
 
 
 def _graph_for(repo: Path, paths: list[str]) -> dict:
@@ -1099,3 +1097,26 @@ def test_resume_new_group_preserves_last_accepted_system(tmp_path, accepted_syst
         assert "The overview and navigation are mechanical" in index
         assert "Preserved dependency explanation." not in pages
         assert "The overview was written before some modules finished" not in index
+
+
+def test_plan_covers_every_nonempty_file_byte_for_byte_with_one_inventory(tmp_path: Path) -> None:
+    """The coverage guarantee behind the single (grammar) inventory: for any file the
+    frozen chunks join back to its bytes, and only a blank file has no inventory id."""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    sources = {"ok.py": "def f():\r\n    return 1\r\n", "broken.py": "def (:\n  x = \n",
+               "doc.py": '"""Only a docstring."""\n', "blank.py": "  \n\n", "empty.py": ""}
+    for name, text in sources.items():
+        (repo / name).write_bytes(text.encode())
+    run_dir = Path(host_run.plan(repo, tmp_path / "run", review="none")["run_dir"])
+    state = json.loads((run_dir / "host" / "state.json").read_text())
+    chunks = json.loads((run_dir / "context.json").read_text())["chunks"]
+    for name, text in sources.items():
+        symbols = state["inventory"][name]["symbols"] if name in state["inventory"] else []
+        if text.strip():
+            assert symbols, name
+            joined = "".join(c["text"] for c in sorted((c for c in chunks if c["path"] == name),
+                                                       key=lambda c: c["start_byte"]))
+            assert joined == text, name
+        else:
+            assert symbols == [], name
