@@ -127,7 +127,20 @@ import scala.util.{Try, Success, Failure}
     )
   }.l
 
-  val calls = cpg.call.filterNot(c => c.method.isExternal).map { c =>
+  var callsWithoutOwner = 0
+  val callsWithoutOwnerExamples = scala.collection.mutable.ArrayBuffer[ujson.Obj]()
+  val calls = cpg.call.filter { c =>
+    val owner = c.method
+    if (owner == null) {
+      callsWithoutOwner += 1
+      if (callsWithoutOwnerExamples.size < 5) {
+        callsWithoutOwnerExamples += ujson.Obj(
+          "file" -> fileOf(c), "line" -> c.lineNumber.getOrElse(-1),
+          "code" -> c.code, "nodeId" -> c.id)
+      }
+      false
+    } else !owner.isExternal
+  }.map { c =>
     val callees = c.callee.map(m => ujson.Obj(
       "nodeId" -> m.id,
       "fullName" -> m.fullName,
@@ -238,6 +251,8 @@ import scala.util.{Try, Success, Failure}
     "types" -> types,
     "methods" -> methods,
     "calls" -> calls,
+    "callsWithoutOwner" -> callsWithoutOwner,
+    "callsWithoutOwnerExamples" -> callsWithoutOwnerExamples.toList,
     "cfg" -> cfg,
     "cfgMethodsOmitted" -> (realMethods.size - cfgMethods.size),
     "imports" -> imports,
@@ -865,6 +880,14 @@ def _normalize(payload: dict, version: str, namespace: str = "cpg", *,
 
     if diagnostics is not None:
         diagnostics.extend(call_resolver.diagnostics)
+        calls_without_owner = payload.get("callsWithoutOwner", 0)
+        if calls_without_owner:
+            diagnostics.append({
+                "path": None, "code": "calls_without_owner_omitted",
+                "count": calls_without_owner,
+                "examples": payload.get("callsWithoutOwnerExamples", []),
+                "message": f"Joern export omitted {calls_without_owner} call nodes with no containing method",
+            })
         if payload.get("methods"):
             for language in payload.get("_languages", []):
                 absent = _absent_files(language, payload)

@@ -24,6 +24,7 @@ from cbe.graph_backends.joern import (
     JOERN_LANGUAGE_FLAGS,
     _capabilities_for,
     _first_error_line,
+    _normalize,
 )
 
 FIXTURES = Path(__file__).parent / "fixtures" / "graphs" / "extra"
@@ -83,6 +84,17 @@ def test_language_flags_cover_registry_languages() -> None:
     assert not missing, f"registry languages without a Joern frontend route: {sorted(missing)}"
     assert JOERN_LANGUAGE_FLAGS["c_sharp"] == "csharpsrc"
     assert JOERN_LANGUAGE_FLAGS["rust"] == "rust"
+
+
+def test_calls_without_owner_are_counted_in_diagnostics() -> None:
+    diagnostics = []
+    _normalize({
+        "callsWithoutOwner": 2,
+        "callsWithoutOwnerExamples": [{"nodeId": 42, "file": "Marker.cs"}],
+    }, "1", diagnostics=diagnostics)
+    omitted = next(d for d in diagnostics if d["code"] == "calls_without_owner_omitted")
+    assert omitted["count"] == 2
+    assert omitted["examples"] == [{"nodeId": 42, "file": "Marker.cs"}]
 
 
 def test_capabilities_failed_when_frontend_errored() -> None:
@@ -149,6 +161,30 @@ def test_c_sharp_extra_language(tmp_path: Path) -> None:
     calls = _resolved_calls(graph)
     assert any("Helper.Compute" in call["expression"] for call in calls)
     assert _capability(graph, "c_sharp", "call")["status"] == "resolved"
+
+
+@pytest.mark.skipif(not _JOERN_HOME, reason="CBE_JOERN_HOME is not set")
+def test_c_sharp_attribute_calls_without_owner_are_diagnosed(tmp_path: Path) -> None:
+    repo = tmp_path / "csharp_attribute"
+    repo.mkdir()
+    (repo / "Marker.cs").write_text(
+        "using System;\n"
+        "[AttributeUsage(AttributeTargets.Parameter)]\n"
+        "public sealed class MarkerAttribute : Attribute {\n"
+        "    public static int Twice(int value) => value * 2;\n"
+        "    public static int Run(int value) => Twice(value);\n"
+        "}\n",
+        encoding="utf-8",
+    )
+    graph = analyze_graph(repo, tmp_path / "cs_attribute.json", backend="joern", languages=["c_sharp"],
+                          joern_home=_JOERN_HOME, timeout=600)
+    method_names = {node.get("name", "") for node in graph["nodes"]
+                    if node["kind"] in ("function", "method")}
+    assert any(".Twice:" in name for name in method_names)
+    assert any(".Run:" in name for name in method_names)
+    omitted = next(d for d in graph["diagnostics"] if d["code"] == "calls_without_owner_omitted")
+    assert omitted["count"] > 0
+    assert omitted["examples"]
 
 
 @pytest.mark.skipif(not _JOERN_HOME, reason="CBE_JOERN_HOME is not set")
