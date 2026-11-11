@@ -233,7 +233,7 @@ Once all detail and review has settled, the program freezes the tree structure i
 
 The dependency view labels pairs as **graph-confirmed** (tree and resolved call/import edges), **model-inferred** (tree only), or **graph-only** (graph only). The first two count edges between subtrees; graph-only counts direct node owners. **Containment** rows show resolved edges between ancestor direct units and a descendant subtree as `→ N / ← M`, relative to the listed pair. **Within containment** rows list direct owner pairs separately. Both containment categories stay out of Mermaid and the three dependency totals. Graph-only and within containment each keep their own top 40 pairs by edge count and report their own omitted count. `summary.json` records the full within containment count in `within_containment`. Key flows link unit ids; when the model supplies none, the report labels the first five paths **Program candidates, not selected by the model**. Program labels and navigation use English; model prose keeps its original language.
 
-P1–P6 diagnostics appear in `summary.json`; RUN.md shows two of them, cohesion and granularity. They are advisory and never request a rewrite. P5 reports dependency signals even when a utility already has its own module.
+Two advisory diagnostics, cohesion (P2) and granularity (P3), appear in `summary.json`; RUN.md shows one line for each. They never request a rewrite.
 
 `--graph` is optional. Without it the context explicitly records that no analyzed graph was supplied. The model must not invent missing relations. `--review` selects `none`, `sample`, or `all`. Operational completion, structural validity, and semantic review are separate results.
 
