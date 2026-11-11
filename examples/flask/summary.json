@@ -18,193 +18,6 @@
   "index": "<RUN>/docs/INDEX.md",
   "subagent_tasks": 8,
   "deterministic_checks_ok": true,
-  "aggregation_principles": {
-    "advisory": true,
-    "checks": [
-      {
-        "principle": "P2",
-        "ok": false,
-        "modules": {
-          "flask-web-framework": {
-            "internal": 0,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "sansio-app-and-scaffold-foundations": {
-            "internal": 0,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "scaffold-and-blueprint-registration": {
-            "internal": 0,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "scaffold-base-and-setup-decorators": {
-            "internal": 35,
-            "external": 32,
-            "internal_external_ratio": 1.09375
-          },
-          "blueprint-deferred-registration": {
-            "internal": 25,
-            "external": 21,
-            "internal_external_ratio": 1.1904761904761905
-          },
-          "sansio-app-base-and-logging": {
-            "internal": 0,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "sansio-app-base-class": {
-            "internal": 12,
-            "external": 13,
-            "internal_external_ratio": 0.9230769230769231
-          },
-          "application-logging-setup": {
-            "internal": 3,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "runtime-app-contexts-and-testing": {
-            "internal": 0,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "flask-app-request-lifecycle": {
-            "internal": 0,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "flask-app-class-and-utilities": {
-            "internal": 1,
-            "external": 4,
-            "internal_external_ratio": 0.25
-          },
-          "response-finalization-and-error-fallback": {
-            "internal": 8,
-            "external": 11,
-            "internal_external_ratio": 0.7272727272727273
-          },
-          "request-dispatch-cycle": {
-            "internal": 4,
-            "external": 6,
-            "internal_external_ratio": 0.6666666666666666
-          },
-          "exception-handler-lookup-and-dispatch": {
-            "internal": 4,
-            "external": 5,
-            "internal_external_ratio": 0.8
-          },
-          "wsgi-entry-and-request-contexts": {
-            "internal": 3,
-            "external": 6,
-            "internal_external_ratio": 0.5
-          },
-          "test-client-and-cli-runner": {
-            "internal": 8,
-            "external": 4,
-            "internal_external_ratio": 2.0
-          },
-          "app-and-request-context-management": {
-            "internal": 5,
-            "external": 2,
-            "internal_external_ratio": 2.5
-          },
-          "command-line-and-public-helpers": {
-            "internal": 0,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "flask-cli-implementation": {
-            "internal": 0,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "cli-options-and-app-loading-info": {
-            "internal": 4,
-            "external": 6,
-            "internal_external_ratio": 0.6666666666666666
-          },
-          "cli-groups-and-built-in-commands": {
-            "internal": 8,
-            "external": 3,
-            "internal_external_ratio": 2.6666666666666665
-          },
-          "cli-run-command-and-command-discovery": {
-            "internal": 12,
-            "external": 9,
-            "internal_external_ratio": 1.3333333333333333
-          },
-          "cli-app-import-and-discovery": {
-            "internal": 8,
-            "external": 1,
-            "internal_external_ratio": 8.0
-          },
-          "helpers-flask-blueprint-and-run": {
-            "internal": 9,
-            "external": 13,
-            "internal_external_ratio": 0.6923076923076923
-          },
-          "templates-views-and-wrappers": {
-            "internal": 0,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "views-wrappers-signals-and-debug-aids": {
-            "internal": 3,
-            "external": 4,
-            "internal_external_ratio": 0.75
-          },
-          "template-rendering-and-loading": {
-            "internal": 13,
-            "external": 1,
-            "internal_external_ratio": 13.0
-          },
-          "tagged-json-serialization": {
-            "internal": 12,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "json-providers-and-helpers": {
-            "internal": 9,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "session-interface-and-cookies": {
-            "internal": 12,
-            "external": 1,
-            "internal_external_ratio": 12.0
-          },
-          "configuration-loading": {
-            "internal": 6,
-            "external": 0,
-            "internal_external_ratio": null
-          }
-        },
-        "scope": "direct primary ownership; incident cross-module edges counted at each endpoint"
-      },
-      {
-        "principle": "P3",
-        "ok": false,
-        "bounds": [
-          5,
-          30
-        ],
-        "out_of_bounds": {
-          "exception-handler-lookup-and-dispatch": 4,
-          "wsgi-entry-and-request-contexts": 4,
-          "cli-app-import-and-discovery": 4
-        },
-        "scope": "nodes with directly owned units; structural ancestors excluded"
-      }
-    ],
-    "introduction_length": {
-      "ok": true,
-      "overlong": {},
-      "max_ratio": 0.174,
-      "scope": "capability+summary characters versus the explain characters of the units under the node"
-    }
-  },
   "tree": {
     "leaves": 22,
     "nodes": 31,
@@ -231,24 +44,24 @@
   "layers": {
     "tokenizer": "o200k_base",
     "source_tokens": 74720,
-    "semantic_tokens": 59772,
+    "semantic_tokens": 59681,
     "semantic_breakdown": {
       "model_body": 25379,
       "signature_location": 10841,
       "heading_anchor": 6613,
       "relations": 2249,
       "footer": 2852,
-      "index": 4773,
+      "index": 4682,
       "node_text": 7065
     },
     "model_body_tokens": 25379,
     "model_body_source_ratio": 0.3396547109207709,
-    "published_markdown_source_ratio": 0.7999464668094218,
+    "published_markdown_source_ratio": 0.7987285867237688,
     "deterministic_tokens": 799629,
     "catalog_tokens": 799629,
     "frozen_graph_tokens": 0,
     "frozen_graph_bytes": 31245855,
-    "semantic_source_ratio": 0.7999464668094218,
+    "semantic_source_ratio": 0.7987285867237688,
     "deterministic_source_ratio": 10.701672912205568,
     "scope": "Breakdown partitions full Markdown BPE tokens by the first byte's line: model_body is published unit explain, summary, extras and uncertainties; signature_location includes shared source-file reference definitions (including ones used by relations); heading_anchor, relations, footer, INDEX and node_text (including labels/whitespace) partition the rest. model_body/source and published_markdown/source use complete frozen files. semantic: all published Markdown (node pages + INDEX, including navigation, signatures and commands); deterministic: catalog.json as serialized, including preserved prose copies and edge references, excluding the graph field; frozen graph is excluded from token ratios (frozen_graph_tokens=0), reported separately as frozen_graph_bytes using UTF-8 JSON with ensure_ascii=False and compact separators; complete graph evidence is expanded only with query --edges; source: complete frozen files counted once; context source chunks, host prompts, raw answers and summary.json excluded; layers are storage measures, not disjoint content classes"
   },

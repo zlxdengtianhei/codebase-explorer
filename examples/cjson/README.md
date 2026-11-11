@@ -23,7 +23,7 @@ explain: Replaces the global allocator hooks. A NULL argument resets to malloc/f
 internal_edge_counts: {'cfg': 76, 'dataflow': 119}
 ```
 
-**This run.** `complete`, `cbe host verify` pass. 4 model tasks, 15 tree nodes, 107 units. 11 requests, 2 answers refused and asked again. Prompt 134,094 tokens (cached included, 3.9x source), output 22,119 tokens (0.644x source). `docs/INDEX.md`: 1,281 tokens. Wall time 285 s in 1 command(s).
+**This run.** `complete`, `cbe host verify` pass. 4 model tasks, 15 tree nodes, 107 units. 11 requests, 2 answers refused and asked again. Prompt 134,094 tokens (cached included, 3.9x source), output 22,119 tokens (0.644x source). `docs/INDEX.md`: 1,281 tokens. Wall time 285 s in 1 command(s). `docs/RUN.md` and `summary.json` were rendered again by CBE `cdf731e` without a model call; the node pages, `docs/INDEX.md` and `catalog.json.gz` are the original ones, byte for byte.
 
 **Known gaps.**
 - Functions, methods and classes of at least 40 tokens that ended without an explanation (`unexplained`): 0. Indexed without prose and not asked for again (smaller symbols, declarations, leftover module-level code): 103 catalogue entries, 3 of them functions, methods or classes.

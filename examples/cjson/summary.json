@@ -18,103 +18,6 @@
   "index": "<RUN>/docs/INDEX.md",
   "subagent_tasks": 11,
   "deterministic_checks_ok": true,
-  "aggregation_principles": {
-    "advisory": true,
-    "checks": [
-      {
-        "principle": "P2",
-        "ok": false,
-        "modules": {
-          "cjson-json-library": {
-            "internal": 0,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "item-utility-toolkit": {
-            "internal": 0,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "core-item-manipulation-utilities": {
-            "internal": 5,
-            "external": 10,
-            "internal_external_ratio": 0.5
-          },
-          "comparison-and-lookup-helpers": {
-            "internal": 6,
-            "external": 8,
-            "internal_external_ratio": 0.75
-          },
-          "duplication-and-replacement": {
-            "internal": 5,
-            "external": 17,
-            "internal_external_ratio": 0.29411764705882354
-          },
-          "pointer-and-patch-engine": {
-            "internal": 0,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "json-pointer-resolution": {
-            "internal": 9,
-            "external": 16,
-            "internal_external_ratio": 0.5625
-          },
-          "sorting-and-deep-comparison": {
-            "internal": 9,
-            "external": 8,
-            "internal_external_ratio": 1.125
-          },
-          "json-patch-application": {
-            "internal": 18,
-            "external": 40,
-            "internal_external_ratio": 0.45
-          },
-          "node-construction-and-linking": {
-            "internal": 68,
-            "external": 38,
-            "internal_external_ratio": 1.7894736842105263
-          },
-          "public-header-declarations": {
-            "internal": 0,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "json-parser": {
-            "internal": 21,
-            "external": 8,
-            "internal_external_ratio": 2.625
-          },
-          "json-printing-and-serialization": {
-            "internal": 27,
-            "external": 4,
-            "internal_external_ratio": 6.75
-          },
-          "object-membership-and-merge-patch": {
-            "internal": 13,
-            "external": 35,
-            "internal_external_ratio": 0.37142857142857144
-          },
-          "json-patch-generation": {
-            "internal": 32,
-            "external": 28,
-            "internal_external_ratio": 1.1428571428571428
-          }
-        },
-        "scope": "direct primary ownership; incident cross-module edges counted at each endpoint"
-      },
-      {
-        "principle": "P3",
-        "ok": true,
-        "bounds": [
-          5,
-          30
-        ],
-        "out_of_bounds": {},
-        "scope": "nodes with directly owned units; structural ancestors excluded"
-      }
-    ]
-  },
   "tree": {
     "leaves": 12,
     "nodes": 15,
@@ -141,24 +44,24 @@
   "layers": {
     "tokenizer": "o200k_base",
     "source_tokens": 34364,
-    "semantic_tokens": 25386,
+    "semantic_tokens": 25323,
     "semantic_breakdown": {
       "model_body": 8920,
       "signature_location": 3803,
       "heading_anchor": 2482,
       "relations": 0,
       "footer": 1380,
-      "index": 4358,
+      "index": 4295,
       "node_text": 4443
     },
     "model_body_tokens": 8920,
     "model_body_source_ratio": 0.259573972762193,
-    "published_markdown_source_ratio": 0.7387382144104295,
+    "published_markdown_source_ratio": 0.7369049004772437,
     "deterministic_tokens": 299889,
     "catalog_tokens": 299889,
     "frozen_graph_tokens": 0,
     "frozen_graph_bytes": 11824246,
-    "semantic_source_ratio": 0.7387382144104295,
+    "semantic_source_ratio": 0.7369049004772437,
     "deterministic_source_ratio": 8.726836223955303,
     "scope": "Breakdown partitions full Markdown BPE tokens by the first byte's line: model_body is published unit explain, summary, extras and uncertainties; signature_location includes shared source-file reference definitions (including ones used by relations); heading_anchor, relations, footer, INDEX and node_text (including labels/whitespace) partition the rest. model_body/source and published_markdown/source use complete frozen files. semantic: all published Markdown (node pages + INDEX, including navigation, signatures and commands); deterministic: catalog.json as serialized, including preserved prose copies and edge references, excluding the graph field; frozen graph is excluded from token ratios (frozen_graph_tokens=0), reported separately as frozen_graph_bytes using UTF-8 JSON with ensure_ascii=False and compact separators; complete graph evidence is expanded only with query --edges; source: complete frozen files counted once; context source chunks, host prompts, raw answers and summary.json excluded; layers are storage measures, not disjoint content classes"
   },
@@ -180,31 +83,5 @@
     "pending": [],
     "note": "an independent reviewer read the source for each reviewed batch; this is not a whole-map proof"
   },
-  "truth": "deterministic structure/coverage checks and the separate semantic review are different states; neither one proves prose truth",
-  "counts": {
-    "done": 9
-  },
-  "leased": [],
-  "failed": [],
-  "ready": 0,
-  "next_action": "done; open <RUN>/docs/INDEX.md, then run `cbe host cost --run-dir <RUN>`",
-  "usage_unknown": [],
-  "render_error": null,
-  "stopped": null,
-  "progress_log": "<RUN>/progress.log",
-  "model": "group/glm-5.3-flash",
-  "input_token_basis": "provider prompt_tokens minus cached_tokens; cache reported separately",
-  "calls": 11,
-  "input_tokens": 125838,
-  "output_tokens": 22119,
-  "cache_tokens": 8256,
-  "token_totals_basis": "observed calls; missing usage is excluded, never estimated",
-  "calls_with_unknown_input": 0,
-  "calls_with_unknown_output": 0,
-  "observed_cache_tokens": 8256,
-  "calls_with_unknown_cache": 0,
-  "priced_usd": null,
-  "price_basis": "unknown; configure API price_per_million: [input, output, cache]",
-  "usage_complete": true,
-  "seconds": 315.758
+  "truth": "deterministic structure/coverage checks and the separate semantic review are different states; neither one proves prose truth"
 }

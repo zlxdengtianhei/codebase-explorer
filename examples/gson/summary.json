@@ -20,280 +20,6 @@
   "index": "<RUN>/docs/INDEX.md",
   "subagent_tasks": 36,
   "deterministic_checks_ok": true,
-  "aggregation_principles": {
-    "advisory": true,
-    "checks": [
-      {
-        "principle": "P2",
-        "ok": false,
-        "modules": {
-          "gson-json-serialization-library": {
-            "internal": 0,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "type-adapter-framework": {
-            "internal": 0,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "adapter-configuration-and-policies": {
-            "internal": 0,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "built-in-adapter-implementations": {
-            "internal": 0,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "built-in-jdk-type-adapters": {
-            "internal": 2,
-            "external": 12,
-            "internal_external_ratio": 0.16666666666666666
-          },
-          "gson-configuration-assembly": {
-            "internal": 11,
-            "external": 10,
-            "internal_external_ratio": 1.1
-          },
-          "lazy-number-handling": {
-            "internal": 4,
-            "external": 2,
-            "internal_external_ratio": 2.0
-          },
-          "floating-point-adapters": {
-            "internal": 2,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "number-and-object-adapters": {
-            "internal": 1,
-            "external": 5,
-            "internal_external_ratio": 0.2
-          },
-          "exclusion-strategies-and-builder": {
-            "internal": 13,
-            "external": 13,
-            "internal_external_ratio": 1.0
-          },
-          "adapter-abstractions-and-dates": {
-            "internal": 0,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "core-adapter-abstractions-and-time": {
-            "internal": 27,
-            "external": 14,
-            "internal_external_ratio": 1.9285714285714286
-          },
-          "date-formatting-and-parsing": {
-            "internal": 32,
-            "external": 3,
-            "internal_external_ratio": 10.666666666666666
-          },
-          "enum-number-policy-runtime-dispatch": {
-            "internal": 7,
-            "external": 5,
-            "internal_external_ratio": 1.4
-          },
-          "public-api-and-type-resolution": {
-            "internal": 0,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "core-gson-contracts-and-facade": {
-            "internal": 0,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "generic-type-reflection": {
-            "internal": 29,
-            "external": 16,
-            "internal_external_ratio": 1.8125
-          },
-          "public-api-and-tree-bridge": {
-            "internal": 15,
-            "external": 44,
-            "internal_external_ratio": 0.3409090909090909
-          },
-          "gson-entry-point-and-streaming": {
-            "internal": 56,
-            "external": 45,
-            "internal_external_ratio": 1.2444444444444445
-          },
-          "annotations-and-module-declaration": {
-            "internal": 7,
-            "external": 9,
-            "internal_external_ratio": 0.7777777777777778
-          },
-          "json-parsing-facades": {
-            "internal": 4,
-            "external": 6,
-            "internal_external_ratio": 0.6666666666666666
-          },
-          "json-element-tree-model": {
-            "internal": 0,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "element-types-and-tree-adapters": {
-            "internal": 0,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "arrays-and-stream-bridge": {
-            "internal": 0,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "json-array-model": {
-            "internal": 13,
-            "external": 5,
-            "internal_external_ratio": 2.6
-          },
-          "tree-element-bridge": {
-            "internal": 14,
-            "external": 25,
-            "internal_external_ratio": 0.56
-          },
-          "element-tree-adapter": {
-            "internal": 4,
-            "external": 4,
-            "internal_external_ratio": 1.0
-          },
-          "primitives-and-map-adapters": {
-            "internal": 0,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "json-primitive-values": {
-            "internal": 12,
-            "external": 10,
-            "internal_external_ratio": 1.2
-          },
-          "map-serialization": {
-            "internal": 1,
-            "external": 19,
-            "internal_external_ratio": 0.05263157894736842
-          },
-          "internal-reflection-utilities": {
-            "internal": 0,
-            "external": 3,
-            "internal_external_ratio": 0.0
-          },
-          "json-object-and-ordered-map": {
-            "internal": 49,
-            "external": 5,
-            "internal_external_ratio": 9.8
-          },
-          "json-reading-infrastructure": {
-            "internal": 0,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "streaming-jsonreader": {
-            "internal": 0,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "jsonreader-public-api-and-docs": {
-            "internal": 0,
-            "external": 5,
-            "internal_external_ratio": 0.0
-          },
-          "token-consumption-and-value-decoding": {
-            "internal": 38,
-            "external": 33,
-            "internal_external_ratio": 1.1515151515151516
-          },
-          "lexing-and-buffer-lookahead": {
-            "internal": 38,
-            "external": 32,
-            "internal_external_ratio": 1.1875
-          },
-          "structural-navigation-and-skipping": {
-            "internal": 10,
-            "external": 15,
-            "internal_external_ratio": 0.6666666666666666
-          },
-          "in-memory-tree-reader": {
-            "internal": 39,
-            "external": 8,
-            "internal_external_ratio": 4.875
-          },
-          "reflective-object-binding": {
-            "internal": 0,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "field-binding-and-introspection": {
-            "internal": 0,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "reflective-type-adapter-factory": {
-            "internal": 14,
-            "external": 34,
-            "internal_external_ratio": 0.4117647058823529
-          },
-          "reflection-and-record-support": {
-            "internal": 15,
-            "external": 22,
-            "internal_external_ratio": 0.6818181818181818
-          },
-          "instance-creation-and-access-control": {
-            "internal": 0,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "instance-construction-utilities": {
-            "internal": 11,
-            "external": 17,
-            "internal_external_ratio": 0.6470588235294118
-          },
-          "reflection-access-filtering": {
-            "internal": 5,
-            "external": 5,
-            "internal_external_ratio": 1.0
-          },
-          "json-writing-infrastructure": {
-            "internal": 0,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "streaming-json-writer": {
-            "internal": 45,
-            "external": 1,
-            "internal_external_ratio": 45.0
-          },
-          "in-memory-tree-writer": {
-            "internal": 10,
-            "external": 9,
-            "internal_external_ratio": 1.1111111111111112
-          }
-        },
-        "scope": "direct primary ownership; incident cross-module edges counted at each endpoint"
-      },
-      {
-        "principle": "P3",
-        "ok": false,
-        "bounds": [
-          5,
-          30
-        ],
-        "out_of_bounds": {
-          "floating-point-adapters": 3,
-          "number-and-object-adapters": 3,
-          "element-tree-adapter": 3,
-          "map-serialization": 4,
-          "internal-reflection-utilities": 3,
-          "structural-navigation-and-skipping": 4
-        },
-        "scope": "nodes with directly owned units; structural ancestors excluded"
-      }
-    ]
-  },
   "tree": {
     "leaves": 32,
     "nodes": 49,
@@ -320,24 +46,24 @@
   "layers": {
     "tokenizer": "o200k_base",
     "source_tokens": 159691,
-    "semantic_tokens": 92265,
+    "semantic_tokens": 92202,
     "semantic_breakdown": {
       "model_body": 35056,
       "signature_location": 19319,
       "heading_anchor": 12266,
       "relations": 557,
       "footer": 4508,
-      "index": 8953,
+      "index": 8890,
       "node_text": 11606
     },
     "model_body_tokens": 35056,
     "model_body_source_ratio": 0.21952395563932844,
-    "published_markdown_source_ratio": 0.5777720723146577,
+    "published_markdown_source_ratio": 0.5773775604135487,
     "deterministic_tokens": 2410434,
     "catalog_tokens": 2410434,
     "frozen_graph_tokens": 0,
     "frozen_graph_bytes": 43510266,
-    "semantic_source_ratio": 0.5777720723146577,
+    "semantic_source_ratio": 0.5773775604135487,
     "deterministic_source_ratio": 15.094363489489076,
     "scope": "Breakdown partitions full Markdown BPE tokens by the first byte's line: model_body is published unit explain, summary, extras and uncertainties; signature_location includes shared source-file reference definitions (including ones used by relations); heading_anchor, relations, footer, INDEX and node_text (including labels/whitespace) partition the rest. model_body/source and published_markdown/source use complete frozen files. semantic: all published Markdown (node pages + INDEX, including navigation, signatures and commands); deterministic: catalog.json as serialized, including preserved prose copies and edge references, excluding the graph field; frozen graph is excluded from token ratios (frozen_graph_tokens=0), reported separately as frozen_graph_bytes using UTF-8 JSON with ensure_ascii=False and compact separators; complete graph evidence is expanded only with query --edges; source: complete frozen files counted once; context source chunks, host prompts, raw answers and summary.json excluded; layers are storage measures, not disjoint content classes"
   },
@@ -359,31 +85,5 @@
     "pending": [],
     "note": "an independent reviewer read the source for each reviewed batch; this is not a whole-map proof"
   },
-  "truth": "deterministic structure/coverage checks and the separate semantic review are different states; neither one proves prose truth",
-  "counts": {
-    "done": 24
-  },
-  "leased": [],
-  "failed": [],
-  "ready": 0,
-  "next_action": "done; open <RUN>/docs/INDEX.md, then run `cbe host cost --run-dir <RUN>`",
-  "usage_unknown": [],
-  "render_error": null,
-  "stopped": null,
-  "progress_log": "<RUN>/progress.log",
-  "model": "group/glm-5.3-flash",
-  "input_token_basis": "provider prompt_tokens minus cached_tokens; cache reported separately",
-  "calls": 36,
-  "input_tokens": 320751,
-  "output_tokens": 72629,
-  "cache_tokens": 208832,
-  "token_totals_basis": "observed calls; missing usage is excluded, never estimated",
-  "calls_with_unknown_input": 0,
-  "calls_with_unknown_output": 0,
-  "observed_cache_tokens": 208832,
-  "calls_with_unknown_cache": 0,
-  "priced_usd": null,
-  "price_basis": "unknown; configure API price_per_million: [input, output, cache]",
-  "usage_complete": true,
-  "seconds": 638.371
+  "truth": "deterministic structure/coverage checks and the separate semantic review are different states; neither one proves prose truth"
 }

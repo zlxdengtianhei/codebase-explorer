@@ -27,111 +27,6 @@
     }
   ],
   "deterministic_checks_ok": true,
-  "aggregation_principles": {
-    "advisory": true,
-    "checks": [
-      {
-        "principle": "P2",
-        "ok": true,
-        "modules": {
-          "polyglot-language-samples-repository": {
-            "internal": 0,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "scripting-language-greeting-demos": {
-            "internal": 0,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "php-and-swift-greeting-samples": {
-            "internal": 0,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "ruby-greeting-and-utilities": {
-            "internal": 1,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "python-greeting-and-math-helpers": {
-            "internal": 2,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "kotlin-greeter-and-utilities": {
-            "internal": 0,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "parser-fixtures-and-type-samples": {
-            "internal": 0,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "edge-case-parsing-fixtures": {
-            "internal": 1,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "generics-and-interfaces-samples": {
-            "internal": 0,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "javascript-closures-and-async": {
-            "internal": 0,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "go-and-rust-point-samples": {
-            "internal": 0,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "worker-and-queue-case-study": {
-            "internal": 2,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "c-greeter-console-program": {
-            "internal": 0,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "java-counter-main-class": {
-            "internal": 0,
-            "external": 0,
-            "internal_external_ratio": null
-          }
-        },
-        "scope": "direct primary ownership; incident cross-module edges counted at each endpoint"
-      },
-      {
-        "principle": "P3",
-        "ok": false,
-        "bounds": [
-          5,
-          30
-        ],
-        "out_of_bounds": {
-          "ruby-greeting-and-utilities": 4,
-          "python-greeting-and-math-helpers": 4,
-          "kotlin-greeter-and-utilities": 3,
-          "generics-and-interfaces-samples": 4,
-          "c-greeter-console-program": 4,
-          "java-counter-main-class": 3
-        },
-        "scope": "nodes with directly owned units; structural ancestors excluded"
-      }
-    ],
-    "introduction_length": {
-      "ok": true,
-      "overlong": {},
-      "max_ratio": 0.908,
-      "scope": "capability+summary characters versus the explain characters of the units under the node"
-    }
-  },
   "tree": {
     "leaves": 11,
     "nodes": 14,
@@ -158,24 +53,24 @@
   "layers": {
     "tokenizer": "o200k_base",
     "source_tokens": 1708,
-    "semantic_tokens": 10029,
+    "semantic_tokens": 9812,
     "semantic_breakdown": {
       "model_body": 1886,
-      "signature_location": 1552,
+      "signature_location": 1426,
       "heading_anchor": 1216,
       "relations": 49,
       "footer": 1288,
-      "index": 2221,
+      "index": 2130,
       "node_text": 1817
     },
     "model_body_tokens": 1886,
     "model_body_source_ratio": 1.104215456674473,
-    "published_markdown_source_ratio": 5.871779859484778,
+    "published_markdown_source_ratio": 5.744730679156909,
     "deterministic_tokens": 109396,
     "catalog_tokens": 109396,
     "frozen_graph_tokens": 0,
     "frozen_graph_bytes": 1030054,
-    "semantic_source_ratio": 5.871779859484778,
+    "semantic_source_ratio": 5.744730679156909,
     "deterministic_source_ratio": 64.04918032786885,
     "scope": "Breakdown partitions full Markdown BPE tokens by the first byte's line: model_body is published unit explain, summary, extras and uncertainties; signature_location includes shared source-file reference definitions (including ones used by relations); heading_anchor, relations, footer, INDEX and node_text (including labels/whitespace) partition the rest. model_body/source and published_markdown/source use complete frozen files. semantic: all published Markdown (node pages + INDEX, including navigation, signatures and commands); deterministic: catalog.json as serialized, including preserved prose copies and edge references, excluding the graph field; frozen graph is excluded from token ratios (frozen_graph_tokens=0), reported separately as frozen_graph_bytes using UTF-8 JSON with ensure_ascii=False and compact separators; complete graph evidence is expanded only with query --edges; source: complete frozen files counted once; context source chunks, host prompts, raw answers and summary.json excluded; layers are storage measures, not disjoint content classes"
   },

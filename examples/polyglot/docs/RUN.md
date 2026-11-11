@@ -43,10 +43,3 @@ Program checks: dangling edges 0; nodes outside manifest 0; nodes with missing f
 ## Generation notes
 
 - Known-empty files (no source text, no inventory id, no unit, no model call): src/empty.py.
-
-## Checks
-
-- Cohesion: 4 of 4 modules with edges have at least as many resolved edges inside as outside.
-- Granularity: 5 of 11 modules hold 5 to 30 units.
-- Introduction length: the longest module introduction is 0.91 times the explanations under it; 0 module(s) above 1.
-- Program diagnostics only; they do not prove semantic correctness. All readings: `summary.json`.

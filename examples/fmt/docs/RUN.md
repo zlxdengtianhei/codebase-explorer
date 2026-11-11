@@ -20,9 +20,3 @@ Program checks: dangling edges 0; nodes outside manifest 0; nodes with missing f
 
 - 1 module title(s) are program-made (frequent words and main directory) because no usable model name was accepted for them.
 - Accepted with repairs or gaps (see each task's flags in host/state.json): module_1, tree_top.
-
-## Checks
-
-- Cohesion: 11 of 29 modules with edges have at least as many resolved edges inside as outside.
-- Granularity: 32 of 41 modules hold 5 to 30 units.
-- Program diagnostics only; they do not prove semantic correctness. All readings: `summary.json`.

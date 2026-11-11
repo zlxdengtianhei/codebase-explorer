@@ -21,303 +21,6 @@
   "index": "<RUN>/docs/INDEX.md",
   "subagent_tasks": 27,
   "deterministic_checks_ok": true,
-  "aggregation_principles": {
-    "advisory": true,
-    "checks": [
-      {
-        "principle": "P2",
-        "ok": false,
-        "modules": {
-          "fmt-formatting-library": {
-            "internal": 0,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "core-formatting-implementation": {
-            "internal": 0,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "value-writing-and-drivers": {
-            "internal": 0,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "core-formatting-utilities": {
-            "internal": 0,
-            "external": 1,
-            "internal_external_ratio": 0.0
-          },
-          "value-writing-engine": {
-            "internal": 13,
-            "external": 32,
-            "internal_external_ratio": 0.40625
-          },
-          "integer-decimal-formatting": {
-            "internal": 3,
-            "external": 6,
-            "internal_external_ratio": 0.5
-          },
-          "locale-and-dynamic-specs": {
-            "internal": 0,
-            "external": 3,
-            "internal_external_ratio": 0.0
-          },
-          "string-and-stream-output": {
-            "internal": 0,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "character-and-pointer-writers": {
-            "internal": 0,
-            "external": 2,
-            "internal_external_ratio": 0.0
-          },
-          "formatting-driver-and-contexts": {
-            "internal": 0,
-            "external": 6,
-            "internal_external_ratio": 0.0
-          },
-          "inline-implementation-and-stdio": {
-            "internal": 0,
-            "external": 11,
-            "internal_external_ratio": 0.0
-          },
-          "float-to-decimal-conversion": {
-            "internal": 0,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "numeric-core-and-assertions": {
-            "internal": 24,
-            "external": 49,
-            "internal_external_ratio": 0.4897959183673469
-          },
-          "float-conversion-entry-points": {
-            "internal": 6,
-            "external": 18,
-            "internal_external_ratio": 0.3333333333333333
-          },
-          "bigint-fallback-algorithm": {
-            "internal": 13,
-            "external": 11,
-            "internal_external_ratio": 1.1818181818181819
-          },
-          "float-presentation-rendering": {
-            "internal": 0,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "binary-and-float-primitives": {
-            "internal": 17,
-            "external": 14,
-            "internal_external_ratio": 1.2142857142857142
-          },
-          "float-presentation-writers": {
-            "internal": 5,
-            "external": 6,
-            "internal_external_ratio": 0.8333333333333334
-          },
-          "format-argument-infrastructure": {
-            "internal": 0,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "parsing-and-buffer-foundations": {
-            "internal": 0,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "core-argument-and-buffer-base": {
-            "internal": 0,
-            "external": 10,
-            "internal_external_ratio": 0.0
-          },
-          "spec-parsing-and-printf-mapping": {
-            "internal": 19,
-            "external": 17,
-            "internal_external_ratio": 1.1176470588235294
-          },
-          "iterator-buffer-adapters": {
-            "internal": 0,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "truncated-formatting": {
-            "internal": 0,
-            "external": 1,
-            "internal_external_ratio": 0.0
-          },
-          "format-as-type-mapping": {
-            "internal": 0,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "packed-format-specs": {
-            "internal": 1,
-            "external": 2,
-            "internal_external_ratio": 0.5
-          },
-          "raw-pointer-buffers": {
-            "internal": 2,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "fmt-compile-format": {
-            "internal": 0,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "compile-time-format-compilation": {
-            "internal": 0,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "compiled-field-nodes": {
-            "internal": 0,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "compiled-text-nodes": {
-            "internal": 0,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "argument-storage-and-checking": {
-            "internal": 3,
-            "external": 8,
-            "internal_external_ratio": 0.375
-          },
-          "chrono-and-time-formatting": {
-            "internal": 0,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "chrono-formatting-internals": {
-            "internal": 0,
-            "external": 12,
-            "internal_external_ratio": 0.0
-          },
-          "chrono-formatters-and-validation": {
-            "internal": 20,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "localized-tm-writer": {
-            "internal": 5,
-            "external": 3,
-            "internal_external_ratio": 1.6666666666666667
-          },
-          "duration-unit-suffixes": {
-            "internal": 4,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "primitive-tm-emitters": {
-            "internal": 50,
-            "external": 1,
-            "internal_external_ratio": 50.0
-          },
-          "wide-text-and-styling": {
-            "internal": 0,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "wide-character-formatting": {
-            "internal": 0,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "wide-character-formatting-core": {
-            "internal": 0,
-            "external": 1,
-            "internal_external_ratio": 0.0
-          },
-          "wide-convenience-formatting-api": {
-            "internal": 0,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "exotic-character-formatting": {
-            "internal": 0,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "text-styling-and-colors": {
-            "internal": 9,
-            "external": 4,
-            "internal_external_ratio": 2.25
-          },
-          "standard-library-type-formatters": {
-            "internal": 0,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "standard-type-formatters": {
-            "internal": 0,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "wrapper-type-formatters": {
-            "internal": 0,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "miscellaneous-small-formatters": {
-            "internal": 0,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "bitint-support": {
-            "internal": 0,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "os-file-and-c-api": {
-            "internal": 5,
-            "external": 1,
-            "internal_external_ratio": 5.0
-          },
-          "ranges-and-tuples-formatting": {
-            "internal": 0,
-            "external": 5,
-            "internal_external_ratio": 0.0
-          },
-          "printf-implementation": {
-            "internal": 14,
-            "external": 37,
-            "internal_external_ratio": 0.3783783783783784
-          },
-          "dynamic-args-enums-ostream": {
-            "internal": 1,
-            "external": 1,
-            "internal_external_ratio": 1.0
-          }
-        },
-        "scope": "direct primary ownership; incident cross-module edges counted at each endpoint"
-      },
-      {
-        "principle": "P3",
-        "ok": false,
-        "bounds": [
-          5,
-          30
-        ],
-        "out_of_bounds": {
-          "bigint-fallback-algorithm": 3,
-          "format-as-type-mapping": 4,
-          "packed-format-specs": 3,
-          "raw-pointer-buffers": 3,
-          "compiled-text-nodes": 4,
-          "duration-unit-suffixes": 4,
-          "primitive-tm-emitters": 3,
-          "miscellaneous-small-formatters": 4,
-          "bitint-support": 3
-        },
-        "scope": "nodes with directly owned units; structural ancestors excluded"
-      }
-    ]
-  },
   "tree": {
     "leaves": 41,
     "nodes": 53,
@@ -344,24 +47,24 @@
   "layers": {
     "tokenizer": "o200k_base",
     "source_tokens": 185053,
-    "semantic_tokens": 88046,
+    "semantic_tokens": 87983,
     "semantic_breakdown": {
       "model_body": 36826,
       "signature_location": 17148,
       "heading_anchor": 11441,
       "relations": 242,
       "footer": 4876,
-      "index": 7311,
+      "index": 7248,
       "node_text": 10202
     },
     "model_body_tokens": 36826,
     "model_body_source_ratio": 0.1990024479473448,
-    "published_markdown_source_ratio": 0.47578801748688215,
+    "published_markdown_source_ratio": 0.47544757447866287,
     "deterministic_tokens": 2990150,
     "catalog_tokens": 2990150,
     "frozen_graph_tokens": 0,
     "frozen_graph_bytes": 36024564,
-    "semantic_source_ratio": 0.47578801748688215,
+    "semantic_source_ratio": 0.47544757447866287,
     "deterministic_source_ratio": 16.15834382582287,
     "scope": "Breakdown partitions full Markdown BPE tokens by the first byte's line: model_body is published unit explain, summary, extras and uncertainties; signature_location includes shared source-file reference definitions (including ones used by relations); heading_anchor, relations, footer, INDEX and node_text (including labels/whitespace) partition the rest. model_body/source and published_markdown/source use complete frozen files. semantic: all published Markdown (node pages + INDEX, including navigation, signatures and commands); deterministic: catalog.json as serialized, including preserved prose copies and edge references, excluding the graph field; frozen graph is excluded from token ratios (frozen_graph_tokens=0), reported separately as frozen_graph_bytes using UTF-8 JSON with ensure_ascii=False and compact separators; complete graph evidence is expanded only with query --edges; source: complete frozen files counted once; context source chunks, host prompts, raw answers and summary.json excluded; layers are storage measures, not disjoint content classes"
   },
@@ -384,31 +87,5 @@
     "pending": [],
     "note": "an independent reviewer read the source for each reviewed batch; this is not a whole-map proof"
   },
-  "truth": "deterministic structure/coverage checks and the separate semantic review are different states; neither one proves prose truth",
-  "counts": {
-    "done": 17
-  },
-  "leased": [],
-  "failed": [],
-  "ready": 0,
-  "next_action": "done; open <RUN>/docs/INDEX.md, then run `cbe host cost --run-dir <RUN>`",
-  "usage_unknown": [],
-  "render_error": null,
-  "stopped": null,
-  "progress_log": "<RUN>/progress.log",
-  "model": "group/glm-5.3-flash",
-  "input_token_basis": "provider prompt_tokens minus cached_tokens; cache reported separately",
-  "calls": 27,
-  "input_tokens": 457533,
-  "output_tokens": 87890,
-  "cache_tokens": 275200,
-  "token_totals_basis": "observed calls; missing usage is excluded, never estimated",
-  "calls_with_unknown_input": 0,
-  "calls_with_unknown_output": 0,
-  "observed_cache_tokens": 275200,
-  "calls_with_unknown_cache": 0,
-  "priced_usd": null,
-  "price_basis": "unknown; configure API price_per_million: [input, output, cache]",
-  "usage_complete": true,
-  "seconds": 406.534
+  "truth": "deterministic structure/coverage checks and the separate semantic review are different states; neither one proves prose truth"
 }

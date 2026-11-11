@@ -14,9 +14,3 @@ Import and call status ratios use the edge count of each kind. CFG and dataflow 
 c import: resolved 3/20 (15%), external 17/20 (85%) · c call: resolved 350/431 (81%), external 81/431 (19%).
 c structural edges: cfg=10630, dataflow=21773.
 Program checks: dangling edges 0; nodes outside manifest 0; nodes with missing files 0.
-
-## Checks
-
-- Cohesion: 5 of 11 modules with edges have at least as many resolved edges inside as outside.
-- Granularity: 12 of 12 modules hold 5 to 30 units.
-- Program diagnostics only; they do not prove semantic correctness. All readings: `summary.json`.

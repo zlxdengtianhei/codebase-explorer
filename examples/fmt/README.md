@@ -25,7 +25,7 @@ ranges: include/fmt/color.h:L567-L572
 explain: vformat styles into a memory_buffer via detail::vformat_to and converts it to a std::string with fmt::to_string; the variadic format builds args from the pack and calls vformat. Formatting e…
 ```
 
-**This run.** `complete`, `cbe host verify` pass. 11 model tasks, 53 tree nodes, 474 units. 27 requests, 12 answers refused and asked again. Prompt 732,733 tokens (cached included, 3.96x source), output 87,890 tokens (0.475x source). `docs/INDEX.md`: 3,473 tokens. Wall time 337 s in 1 command(s).
+**This run.** `complete`, `cbe host verify` pass. 11 model tasks, 53 tree nodes, 474 units. 27 requests, 12 answers refused and asked again. Prompt 732,733 tokens (cached included, 3.96x source), output 87,890 tokens (0.475x source). `docs/INDEX.md`: 3,473 tokens. Wall time 337 s in 1 command(s). `docs/RUN.md` and `summary.json` were rendered again by CBE `cdf731e` without a model call; the node pages, `docs/INDEX.md` and `catalog.json.gz` are the original ones, byte for byte.
 
 **Known gaps.**
 - Functions, methods and classes of at least 40 tokens that ended without an explanation (`unexplained`): 0. Indexed without prose and not asked for again (smaller symbols, declarations, leftover module-level code): 1,421 catalogue entries, 187 of them functions, methods or classes.

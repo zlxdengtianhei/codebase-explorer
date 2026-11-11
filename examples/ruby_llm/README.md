@@ -25,7 +25,7 @@ signatures: {"id": "lib/ruby_llm/tool.rb::method::RubyLLM.Tool.Halt.initialize::
 signatures: {"id": "lib/ruby_llm/tool.rb::method::RubyLLM.Tool.Halt.to_s::609", "signature": "def to_s"}
 ```
 
-**This run.** `complete`, `cbe host verify` pass. 12 model tasks, 35 tree nodes, 352 units. 21 requests, 3 answers refused and asked again. Prompt 273,118 tokens (cached included, 3.65x source), output 59,486 tokens (0.794x source). `docs/INDEX.md`: 1,904 tokens. Wall time 303 s in 1 command(s).
+**This run.** `complete`, `cbe host verify` pass. 12 model tasks, 35 tree nodes, 352 units. 21 requests, 3 answers refused and asked again. Prompt 273,118 tokens (cached included, 3.65x source), output 59,486 tokens (0.794x source). `docs/INDEX.md`: 1,904 tokens. Wall time 303 s in 1 command(s). `docs/RUN.md` and `summary.json` were rendered again by CBE `cdf731e` without a model call; the node pages, `docs/INDEX.md` and `catalog.json.gz` are the original ones, byte for byte.
 
 **Known gaps.**
 - Functions, methods and classes of at least 40 tokens that ended without an explanation (`unexplained`): 0. Indexed without prose and not asked for again (smaller symbols, declarations, leftover module-level code): 928 catalogue entries, 209 of them functions, methods or classes.

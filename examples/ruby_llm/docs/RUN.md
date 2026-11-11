@@ -15,9 +15,3 @@ ruby import: resolved 9/45 (20%), external 36/45 (80%) · ruby call: resolved 85
 ruby structural edges: cfg=53285, dataflow=50000.
 Incomplete capabilities: ruby/call partial; ruby/dataflow partial.
 Program checks: dangling edges 0; nodes outside manifest 0; nodes with missing files 0.
-
-## Checks
-
-- Cohesion: 22 of 25 modules with edges have at least as many resolved edges inside as outside.
-- Granularity: 25 of 26 modules hold 5 to 30 units.
-- Program diagnostics only; they do not prove semantic correctness. All readings: `summary.json`.

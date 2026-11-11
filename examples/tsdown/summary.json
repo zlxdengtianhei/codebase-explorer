@@ -18,103 +18,6 @@
   "index": "<RUN>/docs/INDEX.md",
   "subagent_tasks": 12,
   "deterministic_checks_ok": true,
-  "aggregation_principles": {
-    "advisory": true,
-    "checks": [
-      {
-        "principle": "P2",
-        "ok": false,
-        "modules": {
-          "tsdown-bundling-system": {
-            "internal": 0,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "build-execution-pipeline": {
-            "internal": 0,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "build-orchestration-and-lifecycle": {
-            "internal": 18,
-            "external": 20,
-            "internal_external_ratio": 0.9
-          },
-          "rolldown-option-assembly": {
-            "internal": 19,
-            "external": 18,
-            "internal_external_ratio": 1.0555555555555556
-          },
-          "package-metadata-and-utilities": {
-            "internal": 0,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "dependency-handling-and-general-utilities": {
-            "internal": 14,
-            "external": 34,
-            "internal_external_ratio": 0.4117647058823529
-          },
-          "package-exports-generation": {
-            "internal": 12,
-            "external": 11,
-            "internal_external_ratio": 1.0909090909090908
-          },
-          "package-lint-checks": {
-            "internal": 8,
-            "external": 8,
-            "internal_external_ratio": 1.0
-          },
-          "configuration-loading-and-resolution": {
-            "internal": 0,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "config-resolution-and-normalization": {
-            "internal": 28,
-            "external": 26,
-            "internal_external_ratio": 1.0769230769230769
-          },
-          "config-file-loading": {
-            "internal": 18,
-            "external": 8,
-            "internal_external_ratio": 2.25
-          },
-          "logging-and-size-reporting": {
-            "internal": 12,
-            "external": 10,
-            "internal_external_ratio": 1.2
-          },
-          "entry-resolution-and-filesystem-helpers": {
-            "internal": 10,
-            "external": 17,
-            "internal_external_ratio": 0.5882352941176471
-          },
-          "single-executable-builds": {
-            "internal": 6,
-            "external": 6,
-            "internal_external_ratio": 1.0
-          },
-          "cli-entry-and-debug": {
-            "internal": 1,
-            "external": 2,
-            "internal_external_ratio": 0.5
-          }
-        },
-        "scope": "direct primary ownership; incident cross-module edges counted at each endpoint"
-      },
-      {
-        "principle": "P3",
-        "ok": true,
-        "bounds": [
-          5,
-          30
-        ],
-        "out_of_bounds": {},
-        "scope": "nodes with directly owned units; structural ancestors excluded"
-      }
-    ]
-  },
   "tree": {
     "leaves": 11,
     "nodes": 15,
@@ -141,24 +44,24 @@
   "layers": {
     "tokenizer": "o200k_base",
     "source_tokens": 38670,
-    "semantic_tokens": 31052,
+    "semantic_tokens": 30989,
     "semantic_breakdown": {
       "model_body": 11505,
       "signature_location": 4443,
       "heading_anchor": 2503,
       "relations": 1119,
       "footer": 1380,
-      "index": 5033,
+      "index": 4970,
       "node_text": 5069
     },
     "model_body_tokens": 11505,
     "model_body_source_ratio": 0.2975174553917766,
-    "published_markdown_source_ratio": 0.8029997414016034,
+    "published_markdown_source_ratio": 0.8013705715024567,
     "deterministic_tokens": 510339,
     "catalog_tokens": 510339,
     "frozen_graph_tokens": 0,
     "frozen_graph_bytes": 26911496,
-    "semantic_source_ratio": 0.8029997414016034,
+    "semantic_source_ratio": 0.8013705715024567,
     "deterministic_source_ratio": 13.197284716834755,
     "scope": "Breakdown partitions full Markdown BPE tokens by the first byte's line: model_body is published unit explain, summary, extras and uncertainties; signature_location includes shared source-file reference definitions (including ones used by relations); heading_anchor, relations, footer, INDEX and node_text (including labels/whitespace) partition the rest. model_body/source and published_markdown/source use complete frozen files. semantic: all published Markdown (node pages + INDEX, including navigation, signatures and commands); deterministic: catalog.json as serialized, including preserved prose copies and edge references, excluding the graph field; frozen graph is excluded from token ratios (frozen_graph_tokens=0), reported separately as frozen_graph_bytes using UTF-8 JSON with ensure_ascii=False and compact separators; complete graph evidence is expanded only with query --edges; source: complete frozen files counted once; context source chunks, host prompts, raw answers and summary.json excluded; layers are storage measures, not disjoint content classes"
   },
@@ -181,31 +84,5 @@
     "pending": [],
     "note": "an independent reviewer read the source for each reviewed batch; this is not a whole-map proof"
   },
-  "truth": "deterministic structure/coverage checks and the separate semantic review are different states; neither one proves prose truth",
-  "counts": {
-    "done": 12
-  },
-  "leased": [],
-  "failed": [],
-  "ready": 0,
-  "next_action": "done; open <RUN>/docs/INDEX.md, then run `cbe host cost --run-dir <RUN>`",
-  "usage_unknown": [],
-  "render_error": null,
-  "stopped": null,
-  "progress_log": "<RUN>/progress.log",
-  "model": "group/glm-5.3-flash",
-  "input_token_basis": "provider prompt_tokens minus cached_tokens; cache reported separately",
-  "calls": 12,
-  "input_tokens": 108411,
-  "output_tokens": 26229,
-  "cache_tokens": 8640,
-  "token_totals_basis": "observed calls; missing usage is excluded, never estimated",
-  "calls_with_unknown_input": 0,
-  "calls_with_unknown_output": 0,
-  "observed_cache_tokens": 8640,
-  "calls_with_unknown_cache": 0,
-  "priced_usd": null,
-  "price_basis": "unknown; configure API price_per_million: [input, output, cache]",
-  "usage_complete": true,
-  "seconds": 239.356
+  "truth": "deterministic structure/coverage checks and the separate semantic review are different states; neither one proves prose truth"
 }

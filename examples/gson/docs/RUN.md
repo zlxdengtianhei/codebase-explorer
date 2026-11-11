@@ -20,9 +20,3 @@ Program checks: dangling edges 0; nodes outside manifest 0; nodes with missing f
 ## Generation notes
 
 - Accepted with repairs or gaps (see each task's flags in host/state.json): module_5.
-
-## Checks
-
-- Cohesion: 19 of 32 modules with edges have at least as many resolved edges inside as outside.
-- Granularity: 26 of 32 modules hold 5 to 30 units.
-- Program diagnostics only; they do not prove semantic correctness. All readings: `summary.json`.

@@ -15,9 +15,3 @@ typescript import: resolved 142/532 (27%), unresolved 158/532 (30%), external 23
 typescript structural edges: cfg=21516, dataflow=39253.
 Incomplete capabilities: typescript/call partial.
 Program checks: dangling edges 0; nodes outside manifest 0; nodes with missing files 0.
-
-## Checks
-
-- Cohesion: 7 of 11 modules with edges have at least as many resolved edges inside as outside.
-- Granularity: 11 of 11 modules hold 5 to 30 units.
-- Program diagnostics only; they do not prove semantic correctness. All readings: `summary.json`.

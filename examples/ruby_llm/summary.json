@@ -18,205 +18,6 @@
   "index": "<RUN>/docs/INDEX.md",
   "subagent_tasks": 21,
   "deterministic_checks_ok": true,
-  "aggregation_principles": {
-    "advisory": true,
-    "checks": [
-      {
-        "principle": "P2",
-        "ok": false,
-        "modules": {
-          "rubyllm-llm-integration-gem": {
-            "internal": 0,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "provider-adapters-and-tools": {
-            "internal": 0,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "chat-wire-and-media-formats": {
-            "internal": 0,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "provider-chat-wire-formatting": {
-            "internal": 16,
-            "external": 8,
-            "internal_external_ratio": 2.0
-          },
-          "gemini-and-media-integrations": {
-            "internal": 19,
-            "external": 17,
-            "internal_external_ratio": 1.1176470588235294
-          },
-          "provider-class-composition": {
-            "internal": 8,
-            "external": 2,
-            "internal_external_ratio": 4.0
-          },
-          "tool-definition-and-execution": {
-            "internal": 15,
-            "external": 5,
-            "internal_external_ratio": 3.0
-          },
-          "model-metadata-and-embeddings": {
-            "internal": 0,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "per-provider-capability-lookups": {
-            "internal": 0,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "openai-model-capabilities": {
-            "internal": 16,
-            "external": 1,
-            "internal_external_ratio": 16.0
-          },
-          "perplexity-provider-adapter": {
-            "internal": 4,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "deepseek-provider-adapter": {
-            "internal": 6,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "anthropic-model-metadata": {
-            "internal": 7,
-            "external": 1,
-            "internal_external_ratio": 7.0
-          },
-          "gemini-model-capabilities": {
-            "internal": 13,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "bedrock-model-capabilities": {
-            "internal": 10,
-            "external": 1,
-            "internal_external_ratio": 10.0
-          },
-          "embeddings-and-mistral-support": {
-            "internal": 13,
-            "external": 1,
-            "internal_external_ratio": 13.0
-          },
-          "model-info-value-objects": {
-            "internal": 25,
-            "external": 2,
-            "internal_external_ratio": 12.5
-          },
-          "streaming-and-provider-core": {
-            "internal": 0,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "streaming-and-result-objects": {
-            "internal": 38,
-            "external": 12,
-            "internal_external_ratio": 3.1666666666666665
-          },
-          "core-provider-infrastructure": {
-            "internal": 58,
-            "external": 11,
-            "internal_external_ratio": 5.2727272727272725
-          },
-          "bedrock-aws-integration": {
-            "internal": 13,
-            "external": 4,
-            "internal_external_ratio": 3.25
-          },
-          "persistence-and-conversation-layer": {
-            "internal": 0,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "activerecord-persistence-bridge": {
-            "internal": 57,
-            "external": 8,
-            "internal_external_ratio": 7.125
-          },
-          "chat-orchestration-and-gem-facade": {
-            "internal": 0,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "chat-conversation-orchestration": {
-            "internal": 16,
-            "external": 5,
-            "internal_external_ratio": 3.2
-          },
-          "gem-entry-and-configuration": {
-            "internal": 7,
-            "external": 3,
-            "internal_external_ratio": 2.3333333333333335
-          },
-          "rails-generator-tooling": {
-            "internal": 0,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "generator-shared-helpers": {
-            "internal": 18,
-            "external": 10,
-            "internal_external_ratio": 1.8
-          },
-          "v1-7-upgrade-generator": {
-            "internal": 4,
-            "external": 4,
-            "internal_external_ratio": 1.0
-          },
-          "chat-ui-scaffolding-generator": {
-            "internal": 0,
-            "external": 3,
-            "internal_external_ratio": 0.0
-          },
-          "install-generator": {
-            "internal": 0,
-            "external": 1,
-            "internal_external_ratio": 0.0
-          },
-          "migration-numbering-and-v1-9": {
-            "internal": 0,
-            "external": 2,
-            "internal_external_ratio": 0.0
-          },
-          "aws-sigv4-request-signing": {
-            "internal": 44,
-            "external": 1,
-            "internal_external_ratio": 44.0
-          },
-          "model-registry-rake-tooling": {
-            "internal": 0,
-            "external": 0,
-            "internal_external_ratio": null
-          },
-          "attachment-normalization-and-mime": {
-            "internal": 34,
-            "external": 4,
-            "internal_external_ratio": 8.5
-          }
-        },
-        "scope": "direct primary ownership; incident cross-module edges counted at each endpoint"
-      },
-      {
-        "principle": "P3",
-        "ok": false,
-        "bounds": [
-          5,
-          30
-        ],
-        "out_of_bounds": {
-          "migration-numbering-and-v1-9": 4
-        },
-        "scope": "nodes with directly owned units; structural ancestors excluded"
-      }
-    ]
-  },
   "tree": {
     "leaves": 26,
     "nodes": 35,
@@ -243,24 +44,24 @@
   "layers": {
     "tokenizer": "o200k_base",
     "source_tokens": 74885,
-    "semantic_tokens": 67400,
+    "semantic_tokens": 67337,
     "semantic_breakdown": {
       "model_body": 29419,
       "signature_location": 12599,
       "heading_anchor": 9134,
       "relations": 453,
       "footer": 3220,
-      "index": 4873,
+      "index": 4810,
       "node_text": 7702
     },
     "model_body_tokens": 29419,
     "model_body_source_ratio": 0.3928557120918742,
-    "published_markdown_source_ratio": 0.9000467383321092,
+    "published_markdown_source_ratio": 0.8992054483541431,
     "deterministic_tokens": 2142904,
     "catalog_tokens": 2142904,
     "frozen_graph_tokens": 0,
     "frozen_graph_bytes": 52564448,
-    "semantic_source_ratio": 0.9000467383321092,
+    "semantic_source_ratio": 0.8992054483541431,
     "deterministic_source_ratio": 28.615931094344663,
     "scope": "Breakdown partitions full Markdown BPE tokens by the first byte's line: model_body is published unit explain, summary, extras and uncertainties; signature_location includes shared source-file reference definitions (including ones used by relations); heading_anchor, relations, footer, INDEX and node_text (including labels/whitespace) partition the rest. model_body/source and published_markdown/source use complete frozen files. semantic: all published Markdown (node pages + INDEX, including navigation, signatures and commands); deterministic: catalog.json as serialized, including preserved prose copies and edge references, excluding the graph field; frozen graph is excluded from token ratios (frozen_graph_tokens=0), reported separately as frozen_graph_bytes using UTF-8 JSON with ensure_ascii=False and compact separators; complete graph evidence is expanded only with query --edges; source: complete frozen files counted once; context source chunks, host prompts, raw answers and summary.json excluded; layers are storage measures, not disjoint content classes"
   },
@@ -282,31 +83,5 @@
     "pending": [],
     "note": "an independent reviewer read the source for each reviewed batch; this is not a whole-map proof"
   },
-  "truth": "deterministic structure/coverage checks and the separate semantic review are different states; neither one proves prose truth",
-  "counts": {
-    "done": 18
-  },
-  "leased": [],
-  "failed": [],
-  "ready": 0,
-  "next_action": "done; open <RUN>/docs/INDEX.md, then run `cbe host cost --run-dir <RUN>`",
-  "usage_unknown": [],
-  "render_error": null,
-  "stopped": null,
-  "progress_log": "<RUN>/progress.log",
-  "model": "group/glm-5.3-flash",
-  "input_token_basis": "provider prompt_tokens minus cached_tokens; cache reported separately",
-  "calls": 21,
-  "input_tokens": 215774,
-  "output_tokens": 59486,
-  "cache_tokens": 57344,
-  "token_totals_basis": "observed calls; missing usage is excluded, never estimated",
-  "calls_with_unknown_input": 0,
-  "calls_with_unknown_output": 0,
-  "observed_cache_tokens": 57344,
-  "calls_with_unknown_cache": 0,
-  "priced_usd": null,
-  "price_basis": "unknown; configure API price_per_million: [input, output, cache]",
-  "usage_complete": true,
-  "seconds": 376.493
+  "truth": "deterministic structure/coverage checks and the separate semantic review are different states; neither one proves prose truth"
 }
