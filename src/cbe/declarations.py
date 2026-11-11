@@ -7,8 +7,10 @@ from pathlib import PurePosixPath
 from typing import Any
 
 from cbe.grammars import (
+    GRAMMARS,
     GrammarSpec,
     OffsetMap,
+    _TSX_SPEC,
     _all_specs,
     _make_parser,
     canonical_symbol_id,
@@ -94,16 +96,9 @@ def _body_start(node: Any) -> int:
     return body.start_byte if body is not None else -1
 
 
-# Ordinary declarations share the existing module-region publication path.
+# Kept as a compatibility view; the grammar specs own the declaration kinds.
 _ORDINARY_DECLARATIONS = {
-    "c": {"preproc_def", "preproc_function_def", "declaration", "type_definition"},
-    "cpp": {"preproc_def", "preproc_function_def", "declaration", "type_definition", "alias_declaration"},
-    "go": {"var_declaration", "const_declaration"},
-    "javascript": {"variable_declarator"},
-    "typescript": {"variable_declarator"},
-    "tsx": {"variable_declarator"},
-    "java": {"field_declaration", "constant_declaration"},
-    "ruby": {"assignment"},
+    spec.name: spec.ordinary_declaration_kinds for spec in (*GRAMMARS, _TSX_SPEC)
 }
 
 
@@ -168,23 +163,23 @@ def _c_declaration_scope(node: Any) -> bool:
 
 
 def _ordinary_name(spec: GrammarSpec, offsets: OffsetMap, node: Any, scope: str | None) -> str:
-    if node.type not in _ORDINARY_DECLARATIONS.get(spec.name, ()):
+    if node.type not in spec.ordinary_declaration_kinds:
         return ""
-    if spec.name in {"c", "cpp"} and node.type in {"preproc_def", "preproc_function_def"}:
+    if spec.c_declaration_rules and node.type in {"preproc_def", "preproc_function_def"}:
         name = node.child_by_field_name("name")
         return _text(offsets, name.start_byte, name.end_byte) if name is not None and not node.has_error else ""
-    if (scope == "function" or (scope == "class" and spec.name not in {"java", "ruby"})):
+    if scope == "function" or (scope == "class" and not spec.ordinary_in_class_scope):
         return ""
-    if spec.name in {"c", "cpp"} and not _c_declaration_scope(node):
+    if spec.c_declaration_rules and not _c_declaration_scope(node):
         return ""
-    if spec.name in {"c", "cpp"} and node.has_error:
+    if spec.c_declaration_rules and node.has_error:
         # Recovery can split a macro-prefixed function into a fake variable
         # followed by its prototype, or even misidentify a macro's own name.
         return ""
-    if spec.name == "java":
+    if spec.ordinary_name_style == "fields":
         return ", ".join(_node_name(offsets, child) for child in node.named_children
                          if child.type == "variable_declarator")
-    if spec.name == "ruby":
+    if spec.ordinary_name_style == "constants":
         left = node.child_by_field_name("left")
         if left is not None and left.type in {"constant", "scope_resolution"}:
             return _text(offsets, left.start_byte, left.end_byte)
@@ -194,7 +189,7 @@ def _ordinary_name(spec: GrammarSpec, offsets: OffsetMap, node: Any, scope: str 
         if ancestor.type in {"statement_block", "compound_statement", "block", "for_statement", "if_statement"}:
             return ""
         ancestor = ancestor.parent
-    if spec.name in {"javascript", "typescript", "tsx"}:
+    if spec.ordinary_name_style == "bindings":
         ancestor = node.parent
         while ancestor is not None:
             if ancestor.type not in {"lexical_declaration", "variable_declaration", "export_statement",
@@ -209,17 +204,17 @@ def _ordinary_name(spec: GrammarSpec, offsets: OffsetMap, node: Any, scope: str 
             return ""  # Preserve the prefix owned by the existing first function binding.
         binding = node.child_by_field_name("name")
         return ", ".join(_binding_names(offsets, binding)) if binding is not None else ""
-    if spec.name == "go":
+    if spec.ordinary_name_style == "grouped_names":
         def names_in(part: Any) -> list[str]:
             if part.type in {"var_spec", "const_spec"}:
                 return [_text(offsets, child.start_byte, child.end_byte)
                         for child in part.children_by_field_name("name")]
             return [name for child in part.named_children for name in names_in(child)]
         return ", ".join(names_in(node))
-    if spec.name in {"c", "cpp"} and node.type in {"declaration", "type_definition"}:
+    if spec.c_declaration_rules and node.type in {"declaration", "type_definition"}:
         declared_type = node.child_by_field_name("type")
         if (declared_type is not None and _text(offsets, declared_type.start_byte, declared_type.end_byte)
-                in ({"class"} if spec.name == "c" else {"import", "module"})):
+                in spec.recovery_type_keywords):
             return ""  # C++ keywords can look like C-style variable types during recovery.
         if node.type == "declaration" and _contains_node(node, {"function_definition", "compound_statement"}):
             return ""
@@ -314,7 +309,7 @@ class _DeclarationExtractor:
                 prefix[0] = None
             return
 
-        if self.spec.name == "go" and ntype == "type_declaration" and scope != "function":
+        if self.spec.grouped_type_declarations and ntype == "type_declaration" and scope != "function":
             self.visit_go_type(node, parent, prefix)
             return
 
@@ -331,7 +326,7 @@ class _DeclarationExtractor:
             self.declarations.append(decl)
             if parent is not None:
                 parent.children.append(decl)
-            child_scope = scope if decl.kind in {"namespace", "module"} or self.spec.name == "go" else "class"
+            child_scope = scope if decl.kind in {"namespace", "module"} or self.spec.preserve_type_scope else "class"
             for child in node.named_children:
                 self.visit(child, decl, child_scope, [None])
             return
@@ -492,7 +487,7 @@ def _is_type_definition(spec: GrammarSpec, node: Any) -> bool:
     Other grammars only emit type declaration nodes for real definitions.
     """
 
-    if spec.name not in {"c", "cpp"}:
+    if not spec.c_declaration_rules:
         return True
     return node.child_by_field_name("body") is not None
 

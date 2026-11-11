@@ -118,6 +118,20 @@ class GrammarSpec:
     #: Joern native frontends that already provide this language in the graph
     #: backend, so the source interface covers the same set without a plugin.
     joern_frontends: tuple[str, ...] = ()
+    #: node types published as ordinary module-region declarations
+    ordinary_declaration_kinds: frozenset[str] = frozenset()
+    #: name extraction strategy for ordinary declarations
+    ordinary_name_style: str = "node_names"
+    #: whether ordinary declarations may be owned by a class scope
+    ordinary_in_class_scope: bool = False
+    #: C-family scope, error recovery, and declarator rules
+    c_declaration_rules: bool = False
+    #: recovered declared types that must not become ordinary declarations
+    recovery_type_keywords: frozenset[str] = frozenset()
+    #: grouped type declarations need one declaration per type spec
+    grouped_type_declarations: bool = False
+    #: type declarations retain the surrounding scope for their children
+    preserve_type_scope: bool = False
 
 
 #: Frontend coverage for the languages already registered above.
@@ -166,6 +180,11 @@ GRAMMARS: tuple[GrammarSpec, ...] = (
         },
         wrappers=frozenset(),
         value_function_kinds=frozenset(),
+        ordinary_declaration_kinds=frozenset(
+            {"preproc_def", "preproc_function_def", "declaration", "type_definition"}
+        ),
+        c_declaration_rules=True,
+        recovery_type_keywords=frozenset({"class"}),
     ),
     GrammarSpec(
         name="cpp",
@@ -183,6 +202,11 @@ GRAMMARS: tuple[GrammarSpec, ...] = (
         wrappers=frozenset({"template_declaration"}),
         value_function_kinds=frozenset(),
         binding_kinds=frozenset(),
+        ordinary_declaration_kinds=frozenset(
+            {"preproc_def", "preproc_function_def", "declaration", "type_definition", "alias_declaration"}
+        ),
+        c_declaration_rules=True,
+        recovery_type_keywords=frozenset({"import", "module"}),
     ),
     GrammarSpec(
         name="python",
@@ -210,6 +234,8 @@ GRAMMARS: tuple[GrammarSpec, ...] = (
         ),
         value_function_kinds=_VARIABLE_FUNCTION_VALUES,
         binding_kinds=frozenset({"variable_declarator"}),
+        ordinary_declaration_kinds=frozenset({"variable_declarator"}),
+        ordinary_name_style="bindings",
     ),
     GrammarSpec(
         name="typescript",
@@ -235,6 +261,8 @@ GRAMMARS: tuple[GrammarSpec, ...] = (
         ),
         value_function_kinds=_VARIABLE_FUNCTION_VALUES,
         binding_kinds=frozenset({"variable_declarator"}),
+        ordinary_declaration_kinds=frozenset({"variable_declarator"}),
+        ordinary_name_style="bindings",
     ),
     GrammarSpec(
         name="java",
@@ -254,6 +282,9 @@ GRAMMARS: tuple[GrammarSpec, ...] = (
         },
         wrappers=frozenset(),
         value_function_kinds=frozenset(),
+        ordinary_declaration_kinds=frozenset({"field_declaration", "constant_declaration"}),
+        ordinary_name_style="fields",
+        ordinary_in_class_scope=True,
     ),
     GrammarSpec(
         name="go",
@@ -267,6 +298,10 @@ GRAMMARS: tuple[GrammarSpec, ...] = (
         class_kinds={"type_declaration": "type"},
         wrappers=frozenset(),
         value_function_kinds=frozenset(),
+        ordinary_declaration_kinds=frozenset({"var_declaration", "const_declaration"}),
+        ordinary_name_style="grouped_names",
+        grouped_type_declarations=True,
+        preserve_type_scope=True,
     ),
     # --- Joern extra native frontends, wired with mature tree-sitter grammars ---
     GrammarSpec(
@@ -279,6 +314,9 @@ GRAMMARS: tuple[GrammarSpec, ...] = (
         wrappers=frozenset(),
         value_function_kinds=frozenset(),
         joern_frontends=("rubysrc2cpg",),
+        ordinary_declaration_kinds=frozenset({"assignment"}),
+        ordinary_name_style="constants",
+        ordinary_in_class_scope=True,
     ),
     GrammarSpec(
         name="rust",
@@ -385,6 +423,8 @@ _TSX_SPEC = GrammarSpec(
     wrappers=GRAMMARS[4].wrappers,
     value_function_kinds=_VARIABLE_FUNCTION_VALUES,
     binding_kinds=frozenset({"variable_declarator"}),
+    ordinary_declaration_kinds=GRAMMARS[4].ordinary_declaration_kinds,
+    ordinary_name_style=GRAMMARS[4].ordinary_name_style,
 )
 
 #: Extra specs added at runtime by ``register_language`` or a ``cbe.languages``
