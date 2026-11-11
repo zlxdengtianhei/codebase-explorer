@@ -2,6 +2,10 @@
 
 ## 2.2.0.dev0 (unreleased)
 
+- In a directory without the frozen source (`context.json`), such as a published example,
+  `cbe source`, `cbe query --edges` and `cbe host verify/render/status/cost` say so in one
+  sentence and exit with code 2. `find` and `query` work there. Node pages of published
+  examples link to `catalog.json.gz`, the file that is in the repository.
 - Model defaults follow the model name across gateway prefixes: `group/glm-5.3-flash` now gets the
   same defaults as `zai/glm-5.3-flash`. Before, any other prefix silently ran without the low
   reasoning effort, JSON mode and batch sizes.
@@ -20,8 +24,9 @@
   parallel) and one `tree_top` task (all groups above them) name it. Answers are decoded
   node by node with short numbers; a re-ask lists only the rejected nodes; a node still
   unnamed after the last answer gets a program-made title (no numbering) and a `note`.
-  `validate_tree` adds three hard checks: no node without units and children, distinct
-  sibling titles, evidence units inside the node. Removed: the region tasks and merge
+  Three hard rules hold for every tree: no node without units and children and distinct
+  sibling titles (both checked by `cbe host verify`), and evidence units inside the node
+  (enforced when the names are decoded). Removed: the region tasks and merge
   (`partition`, `compose`, `merge_inputs`, `Limits`, `CBE_TREE_*` variables), the
   `names` task and the mechanical batch tree; the model can no longer add, drop or move
   nodes or units. A run planned with the old `names` or `tree` tasks must be planned
