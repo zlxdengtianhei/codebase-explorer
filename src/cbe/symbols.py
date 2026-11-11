@@ -11,7 +11,7 @@ import hashlib
 from pathlib import Path
 from typing import Iterable
 
-from cbe import source_context
+from cbe import grammars, source_context
 from cbe.checks import UNIT_KINDS
 from cbe.token_budget import count_text_tokens
 
@@ -99,7 +99,7 @@ def ensure_chunk_coverage(context: dict, repo: Path, paths: list[str]) -> dict:
             continue
         digest = hashlib.sha256(raw).hexdigest()
         if path not in listed:
-            files.append({"path": path, "language": source_context.language_name(path), "sha256": digest})
+            files.append({"path": path, "language": grammars.language_name(path), "sha256": digest})
         # Fallback symbol chunks historically omitted line endings and gaps.
         # Preserve exact bytes as decoded text so frozen source retrieval does
         # not need a live repository (and can verify the whole-file digest).
@@ -111,7 +111,7 @@ def ensure_chunk_coverage(context: dict, repo: Path, paths: list[str]) -> dict:
                                            "and needs no detail unit"})
             continue
         nlines = max(len(text.splitlines()), 1)
-        chunks.append({"id": f"{path}::<file>", "path": path, "language": source_context.language_name(path),
+        chunks.append({"id": f"{path}::<file>", "path": path, "language": grammars.language_name(path),
                        "kind": "module_region", "name": "<file>",
                        "start_line": 1, "end_line": nlines,
                        "start_byte": 0, "end_byte": 0, "text": text,

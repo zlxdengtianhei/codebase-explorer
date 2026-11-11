@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 from cbe import aggregation, checks, docs, host_run, prompts
+from cbe.graph import graph_quality
 from test_relationships_o6 import edge, graph, answer
 from test_host_run import _repo, _good, _answer_task, _graph_for
 
@@ -119,6 +120,7 @@ def render_example(tmp_path, *, evidence=True, flows=True, many=False):
         "edges": [dict(id=str(i), kind="call", status="resolved", source=s, target=t,
                        path="pkg/jobs.py", line=12 if i == 0 else 6, column=16)
                   for i, (s, t) in enumerate([("submit", "reserve"), ("reserve", "submit")])]}
+    gp["quality"] = graph_quality(gp)
     # Add an entry outside the cycle for a real program-candidate fallback.
     if not flows:
         gp["edges"] = gp["edges"][:1]

@@ -9,7 +9,7 @@ import os
 import re
 from pathlib import Path
 
-from cbe.source_context import DEFAULT_EXCLUDE_DIR_NAMES
+from cbe.grammars import DEFAULT_EXCLUDE_DIR_NAMES
 from ._paths import canonical_repo_path
 
 

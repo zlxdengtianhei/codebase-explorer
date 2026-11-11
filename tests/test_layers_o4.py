@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from cbe import cli, docs, host_run, source_context
+from cbe import cli, docs, host_run, source_context, catalog_query
 from cbe.records import frozen_sources, summary_sentence
 from test_host_run import _drive, _repo
 from test_semantic import SRC, _good_payload, _inventory, _tree, _grouped_run
@@ -49,19 +49,19 @@ def test_page_and_catalog_share_complete_records(tmp_path):
             assert record[field] == original.get(field, [])
         assert record["ranges"] == docs.unit_ranges(uid, original, inventory)
         assert {"signatures", "outgoing", "incoming", "graph_state", "reverse_relations"} <= record.keys()
-        assert docs.query(run, uid)["explain"] == original["explain"]
-        assert docs.query(run, uid)["ranges"] == record["ranges"]
+        assert catalog_query.query(run, uid)["explain"] == original["explain"]
+        assert catalog_query.query(run, uid)["ranges"] == record["ranges"]
     assert catalog["units"][ids[-1]]["reverse_relations"][0]["basis"] == "KEEP THIS EVIDENCE"
 
 
 def test_file_query_is_a_drill_down_listing(tmp_path):
     run, ids, units, _, _ = _run(tmp_path)
-    record = docs.query(run, "pkg/jobs.py")
+    record = catalog_query.query(run, "pkg/jobs.py")
     assert len(record["units"]) == len(units)
     assert record["ranges"][0]["lines"] == [[1, len(SRC.splitlines())]]
     assert "explain" not in record and "KEEP THIS EVIDENCE" not in json.dumps(record)
     assert all(set(row) == {"id", "name", "ranges", "summary"} for row in record["units"])
-    symbol = docs.query(run, next(uid for uid in ids if units[uid]["kind"] == "function"))
+    symbol = catalog_query.query(run, next(uid for uid in ids if units[uid]["kind"] == "function"))
     assert symbol["signature"] and symbol["ranges"]
 
 
@@ -71,7 +71,7 @@ def test_source_uses_frozen_bytes_and_rejects_corruption_without_stdout(tmp_path
     assert cli.main(["source", "--run-dir", str(run), "--id", "pkg/jobs.py"]) == 0
     printed = capsys.readouterr().out
     assert "negative" in printed and "LIVE FILE" not in printed
-    assert "def submit" in docs.source(run, ids[0])
+    assert "def submit" in catalog_query.source(run, ids[0])
     for uid in ids:
         assert cli.main(["source", "--run-dir", str(run), "--id", uid, "--context", "1"]) == 0
         assert "pkg/jobs.py:L" in capsys.readouterr().out
@@ -121,14 +121,14 @@ def test_summary_optional_and_fallback_preserves_full_explanation():
 def test_grouped_and_index_only_queries_keep_scope_and_explanation(tmp_path):
     run, inventory, units, dispositions, tree, members, group, index_only = _grouped_run(tmp_path)
     for sid in members:
-        record = docs.query(run, sid)
+        record = catalog_query.query(run, sid)
         assert record["explain"] == units[group]["explain"]
         assert record["ranges"] == next(s["ranges"] for s in json.loads(
             (run / "catalog.json").read_text())["symbols"].values() if s["id"] == sid)
         assert "unit_detail" not in record
         assert record["unit_id"] == group
         assert record["unit_ranges"] == docs.unit_ranges(group, units[group], inventory)
-    record = docs.query(run, index_only)
+    record = catalog_query.query(run, index_only)
     assert record["explain"] == dispositions[index_only]["reason"]
     assert record["ranges"] and record["how"] == "index_only"
 
@@ -141,10 +141,10 @@ def test_grouped_dispositions_supply_ranges_even_without_declared_members(tmp_pa
     (run / "context.json").write_text(json.dumps(context))
     docs.render(run_dir=run, source_root=repo, inventory=inventory, units=units,
                 dispositions=dispositions, tree=tree, languages={"pkg/jobs.py": "python"}, context=context)
-    record = docs.query(run, group)
+    record = catalog_query.query(run, group)
     assert record["members"] == [] and set(record["folded_members"]) == set(members)
     assert record["ranges"] and record["primary_range"]["path"] == "pkg/jobs.py"
-    text = docs.source(run, group)
+    text = catalog_query.source(run, group)
     assert "def reserve" in text and "def submit" in text
 
 
@@ -216,8 +216,8 @@ def test_full_signatures_are_not_limited_to_prompt_signature_budget(tmp_path):
 
 def test_legacy_overload_signatures_match_their_own_source_spans(tmp_path):
     run, _, _, _, _, _, _, _ = _grouped_run(tmp_path)
-    overloaded = docs.query(run, "pkg/jobs.py::reserve")
-    implementation = docs.query(run, "pkg/jobs.py::reserve@5")
+    overloaded = catalog_query.query(run, "pkg/jobs.py::reserve")
+    implementation = catalog_query.query(run, "pkg/jobs.py::reserve@5")
     assert "value: int" in overloaded["signature"]
     assert implementation["signature"] == "def reserve(value):"
     assert implementation["ranges"][0]["lines"] == [[5, 8]]
@@ -235,7 +235,7 @@ def test_summary_metrics_use_the_published_artifacts_and_frozen_source(tmp_path)
     run = Path(host_run.plan(repo, tmp_path / "run", review="none")["run_dir"])
     _drive(run)
     summary = json.loads((run / "summary.json").read_text())
-    expected = docs.layer_metrics(run)
+    expected = catalog_query.layer_metrics(run)
     assert summary["layers"] == expected
     assert expected["semantic_tokens"] > 0 and expected["deterministic_tokens"] > 0
     assert expected["source_tokens"] == sum(count_text_tokens(path.read_bytes().decode("utf-8"))
@@ -278,19 +278,19 @@ def test_graph_edges_and_statuses_remain_available_in_both_directions(tmp_path):
                for row in catalog[section].values() for d in ("outgoing", "incoming") for e in row[d])
     assert catalog["graph_ref"] == "context.json" and catalog["graph"] is None
     assert json.loads((run / "context.json").read_text())["graph"] == graph
-    queried = docs.query(run, caller["id"])
+    queried = catalog_query.query(run, caller["id"])
     assert queried["outgoing"][0]["target_name"] == "reserve_run"
     assert "graph_nodes" not in queried and "unit_detail" not in queried
-    assert docs.query(run, caller["id"], edges="all")["raw_edges"][0]["expression"] == "reserve_run(len(argv))"
-    assert docs.query(run, caller["id"], edges="cfg")["raw_edges"] == graph["edges"][1:]
+    assert catalog_query.query(run, caller["id"], edges="all")["raw_edges"][0]["expression"] == "reserve_run(len(argv))"
+    assert catalog_query.query(run, caller["id"], edges="cfg")["raw_edges"] == graph["edges"][1:]
     assert cli.main(["query", "--run-dir", str(run), "--id", caller["id"]]) == 0
     # Ordinary reads work with the large frozen context unavailable.
     (run / "context.json").rename(run / "context.saved")
-    assert docs.query(run, caller["id"])["outgoing"][0]["status"] == "resolved"
-    assert docs.find(run, "reserve")
+    assert catalog_query.query(run, caller["id"])["outgoing"][0]["status"] == "resolved"
+    assert catalog_query.find(run, "reserve")
     (run / "context.saved").rename(run / "context.json")
     assert "reserve_run(len(argv))" not in (run / "catalog.json").read_text()
-    metrics = docs.layer_metrics(run)
+    metrics = catalog_query.layer_metrics(run)
     assert metrics["frozen_graph_tokens"] == 0
     assert metrics["frozen_graph_bytes"] == len(json.dumps(graph, ensure_ascii=False, separators=(",", ":")).encode())
     assert metrics["deterministic_tokens"] == metrics["catalog_tokens"]

@@ -456,7 +456,7 @@ def build_with_joern(
 
 def _c_macro_names(repo: Path, files) -> set[str]:
     """Read real C/C++ #define nodes with the grammars already used by CBE."""
-    from cbe.source_context import _grammar_for_suffix, _make_parser  # noqa: PLC0415
+    from cbe.grammars import _grammar_for_suffix, _make_parser  # noqa: PLC0415
     names = set()
     parsers = {}
     for path in sorted(files):
@@ -659,7 +659,7 @@ def _visible_call(call: dict, imports=(), types=(), macro_names=()) -> bool:
 
 
 def _absent_files(language: str, payload: dict) -> list[str]:
-    from cbe.source_context import suffix_languages  # noqa: PLC0415
+    from cbe.grammars import suffix_languages  # noqa: PLC0415
     suffixes = {suffix for suffix, lang in suffix_languages().items() if lang == language}
     present = {_norm_path(method.get("file", "")) for method in payload.get("methods", [])}
     return sorted(path for path in payload.get("_files") or ()
@@ -697,7 +697,7 @@ def _normalize(payload: dict, version: str, namespace: str = "cpg", *,
     seen_nodes: set[str] = set()
     source_files = payload.get("_files")
     if source_files is not None:
-        from cbe.source_context import suffix_languages
+        from cbe.grammars import suffix_languages
         suffixes = suffix_languages()
         source_files = {p for p in source_files if Path(p).suffix.lower() in suffixes}
 

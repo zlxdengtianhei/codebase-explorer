@@ -228,7 +228,7 @@ def test_missing_joern_message_points_at_setup(tmp_path, monkeypatch):
 
 
 def test_languages_report_call_graph_status():
-    from cbe.source_context import available_languages
+    from cbe.grammars import available_languages
 
     rows = {row["name"]: row["call_graph"] for row in available_languages()["languages"]}
     for name in ("c", "cpp", "python", "javascript", "typescript", "java", "go", "ruby"):

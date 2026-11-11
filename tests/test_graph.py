@@ -30,7 +30,7 @@ from cbe.graph_backends._paths import canonical_repo_path
 from cbe.graph_backends import DEPCRUISE_LANGUAGES, JOERN_LANGUAGE_FLAGS
 from cbe.graph_backends.joern import _capabilities_for
 from cbe.graph_backends.joern import _normalize as _normalize_joern_payload
-from cbe.source_context import suffix_languages
+from cbe.grammars import suffix_languages
 
 FIXTURES = Path(__file__).parent / "fixtures" / "graphs"
 
@@ -83,7 +83,7 @@ def test_discover_sources_covers_registry_extensions(tmp_path: Path) -> None:
 
 
 def test_suffix_languages_match_the_published_language_list() -> None:
-    from cbe.source_context import available_languages
+    from cbe.grammars import available_languages
 
     registry = {}
     for entry in available_languages()["languages"]:

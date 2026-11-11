@@ -12,7 +12,7 @@ from pathlib import Path, PurePosixPath
 
 from ._paths import canonical_repo_path
 from .identity import repository_files, file_id, external_id
-from cbe.source_context import suffix_languages
+from cbe.grammars import suffix_languages
 
 
 # System header namespaces documented by POSIX Issue 8, <sys/...>,

@@ -1,6 +1,7 @@
 """Resolve a graph through real source coordinates and publish linked flows."""
 import json
 from cbe import docs
+from cbe.graph import graph_quality
 
 
 def test_render_resolved_calls_and_inferred_transitions(tmp_path):
@@ -22,6 +23,7 @@ def test_render_resolved_calls_and_inferred_transitions(tmp_path):
         dict(id="reserve", path="pkg/jobs.py", start_line=5, kind="method")],
         "edges": [dict(id="call", kind="call", status="resolved", source="submit", target="reserve",
                        path="pkg/jobs.py", line=12, column=16)]}
+    evidence["quality"] = graph_quality(evidence)
     system = dict(overview="Reserve submitted values.", maintenance_navigation="Open Submit.",
                   dependency_descriptions=[dict(**{"from": "root", "to": "helper"},
                                                description="Submission reserves a value.")],

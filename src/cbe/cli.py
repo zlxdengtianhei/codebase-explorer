@@ -254,7 +254,7 @@ def _host(args: argparse.Namespace):
 
 
 def main(argv: list[str] | None = None) -> int:
-    from cbe.source_context import ContextError
+    from cbe.grammars import ContextError
 
     parser = build_parser()
     argv = sys.argv[1:] if argv is None else argv
@@ -272,12 +272,12 @@ def main(argv: list[str] | None = None) -> int:
         header_language = getattr(args, "header_language", None)
         if header_language:
             from dataclasses import replace
-            from cbe.source_context import GRAMMARS, register_language
+            from cbe.grammars import GRAMMARS, register_language
 
             spec = next(spec for spec in GRAMMARS if spec.name == header_language)
             register_language(replace(spec, suffixes=tuple(dict.fromkeys((*spec.suffixes, ".h")))))
         if args.command == "languages":
-            from cbe.source_context import available_languages
+            from cbe.grammars import available_languages
 
             print(json.dumps(available_languages(), ensure_ascii=False, indent=2))
             return 0
@@ -394,7 +394,7 @@ def main(argv: list[str] | None = None) -> int:
             value = _host(args)
             print(json.dumps(value, ensure_ascii=False, indent=2))
             return 3 if args.host_command == "verify" and not value["ok"] else 0
-        from cbe.docs import find, find_text, query, query_text, source
+        from cbe.catalog_query import find, find_text, query, query_text, source
 
         if args.command == "source":
             _require_frozen_context(args.run_dir, "source lines cannot be printed")

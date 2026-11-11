@@ -5,12 +5,15 @@ from pathlib import Path
 import pytest
 
 from cbe import aggregation, checks, docs, host_run, prompts
+from cbe.graph import graph_quality
 from cbe.token_budget import count_text_tokens
 from test_host_run import _repo, _good, _answer_task, _graph_for
 
 
 def graph():
-    return {"schema": "cbe-graph/1", "nodes": [{"id": "n"}], "edges": []}
+    value = {"schema": "cbe-graph/1", "nodes": [{"id": "n"}], "edges": []}
+    value["quality"] = graph_quality(value)
+    return value
 
 
 def tree():
@@ -43,6 +46,8 @@ def test_rollup_containment_is_not_dependency_and_omission():
 @pytest.mark.parametrize("evidence", [None, {"schema": "cbe-graph/1", "nodes": [], "edges": [],
                                           "diagnostics": [{"code": "no_backend_completed"}]}])
 def test_without_usable_graph_only_model_dependencies(evidence):
+    if evidence is not None:
+        evidence["quality"] = graph_quality(evidence)
     result = aggregation.relationship_view(tree(), [edge("a", "c")], evidence)
     assert {r["source"] for r in result["dependencies"]} == {"model_inferred", "containment"}
     assert result["candidate_flows"] == []

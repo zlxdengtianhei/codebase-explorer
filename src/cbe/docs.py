@@ -16,24 +16,9 @@ from pathlib import Path
 from typing import Any, Callable
 
 from cbe import concrete_facts
-from cbe.catalog_query import (
-    catalog_symbols,
-    find,
-    find_text,
-    format_ranges,
-    layer_metrics,
-    query,
-    query_catalog,
-    query_text,
-    source,
-)
+from cbe.catalog_query import query_catalog
 from cbe.symbols import SemanticError, inventory_ids
 from cbe.treename import normalize_title
-
-# catalog_symbols, query_catalog, format_ranges, find, find_text, query,
-# query_text, source and layer_metrics moved to catalog_query.py; the import
-# above re-exports them so existing `from cbe.docs import find` callers work.
-
 
 # One repository file larger than this becomes its own inventory unit region set;
 # a chunk never has to fit a model context alone because batches group many.
@@ -183,7 +168,7 @@ def _graph_coverage(graph: dict | None, source_root: Path) -> list[str]:
         lines += ["No graph was provided. Relations are inferred by the model from source and may be inaccurate."]
     else:
         from cbe.graph import read_graph_quality, graph_state
-        quality = read_graph_quality(graph, repo=source_root)
+        quality = read_graph_quality(graph)
         state, _ = graph_state(graph, quality=quality)
         if state == "failed":
             lines += ["No graph backend succeeded. Relations are inferred by the model from source."]

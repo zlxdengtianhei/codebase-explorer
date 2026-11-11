@@ -6,8 +6,9 @@ import sys
 
 import pytest
 
-from cbe import docs
-from cbe.source_context import build_context, canonical_symbol_id
+from cbe import docs, catalog_query
+from cbe.grammars import canonical_symbol_id
+from cbe.source_context import build_context
 from cbe.symbols import inventory_from_context
 
 FIXTURES = Path(__file__).parent / "fixtures" / "declarations"
@@ -105,7 +106,7 @@ def test_macros_runs_comments_conditionals_and_multiline(tmp_path):
     run = tmp_path / 'run'
     render(tmp_path, run)
     for name in ['ONE', 'TWO', 'SINGLE', 'INSIDE', 'OTHER', 'AFTER']:
-        hits = docs.find(run, name, limit=200)
+        hits = catalog_query.find(run, name, limit=200)
         assert hits
 
 
@@ -165,7 +166,7 @@ def test_mixed_js_binding_keeps_function_identity_and_prefix(tmp_path):
     assert not [c for c in rows if c['kind'] == 'module_region']
     run = tmp_path / 'run'
     render(tmp_path, run)
-    assert any(h['id'] == helper['symbol_id'] for h in docs.find(run, 'value'))
+    assert any(h['id'] == helper['symbol_id'] for h in catalog_query.find(run, 'value'))
 
 
 @pytest.mark.parametrize(('definition', 'kind', 'type_name'), [
@@ -193,7 +194,7 @@ def test_typedef_definition_reuses_type_identity(tmp_path, definition, kind, typ
     assert original['text'] == definition
     assert definition in cli(run, 'source', '--id', original['id'])
     for name in ['Size', 'Foo']:
-        hits = docs.find(run, name)
+        hits = catalog_query.find(run, name)
         assert len(hits) == 1 and hits[0]['name'] == name
 
 
@@ -210,7 +211,7 @@ def test_long_value_run_keeps_first_id_and_every_name_searchable(tmp_path):
     run = tmp_path / 'run'
     render(tmp_path, run)
     for name in names:
-        assert [h['id'] for h in docs.find(run, name)] == [first['id']]
+        assert [h['id'] for h in catalog_query.find(run, name)] == [first['id']]
     # Appending adjacent declarations changes the span, not the run's identity.
     rows = chunks(tmp_path, 'a.c', text + 'int appended = 120;\n')
     assert next(c for c in rows if c['kind'] == 'module_region')['id'] == first['id']

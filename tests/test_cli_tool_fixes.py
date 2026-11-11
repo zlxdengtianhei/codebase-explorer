@@ -70,6 +70,8 @@ def published_run(tmp_path):
         "units": {"unit:1": {"id": "unit:1", "name": "thing", "kind": "function",
                               "ranges": [{"path": "a.py", "lines": [[1, 1]]}]}},
         "symbols": {}, "files": {"a.py": {}}, "nodes": {}, "edges": {},
+        "symbol_index": {"unit:1": {"how": "unit", "unit": "unit:1", "node": None,
+                                     "page": None, "anchor": None}},
     }), encoding="utf-8")
     return tmp_path
 

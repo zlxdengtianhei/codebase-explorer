@@ -38,64 +38,25 @@ from typing import Any
 
 from cbe.grammars import (
     AMBIGUOUS_SUFFIXES,
-    DEFAULT_EXCLUDE_DIR_NAMES,
     DEFAULT_MAX_SEGMENT_BYTES,
-    FALLBACK_SUFFIXES,
-    GRAMMARS,
     MAX_FILE_BYTES,
     SCHEMA_CONTEXT,
     SCHEMA_GRAPH,
     ContextError,
-    GrammarSpec,
-    GraphSourceMismatch,
     OffsetMap,
-    _CALL_GRAPH,
     _EXTRA_SPECS,
-    _JOERN_FRONTENDS,
-    _JOERN_TESTED,
-    _LOADED_LANGUAGES,
-    _PLUGIN_ERRORS,
-    _TSX_SPEC,
-    _VARIABLE_FUNCTION_VALUES,
     _all_specs,
-    _ensure_plugins,
     _grammar_for_suffix,
-    _grammar_version,
     _iter_source_files,
-    _language_from_suffix,
-    _load_language,
-    _lookup_specs,
     _make_parser,
-    _validate_relative,
-    available_languages,
     canonical_symbol_id,
     language_name,
     line_starts,
-    register_language,
-    registered_suffixes,
     sha256_bytes,
     sha256_text,
-    suffix_languages,
 )
-from cbe.declarations import (
-    _Declaration,
-    _IDENTIFIER_TYPES,
-    _ORDINARY_DECLARATIONS,
-    _SIGNATURE_LIMIT,
-    _binding_names,
-    _body_start,
-    _c_declaration_scope,
-    _coalesce_declarations,
-    _contains_node,
-    _declarator_name,
-    _extract_declarations,
-    _first_identifier,
-    _is_type_definition,
-    _make_declaration,
-    _node_name,
-    _ordinary_name,
-    _text,
-)
+from cbe.declarations import _Declaration, _body_start, _extract_declarations
+from cbe.graph import _prune_graph, check_graph_source
 
 
 # ---------------------------------------------------------------------------
@@ -681,12 +642,6 @@ def build_context(
 # ---------------------------------------------------------------------------
 
 
-def _graph_source_anchors(payload: dict[str, Any]):
-    from cbe.graph import _graph_source_anchors as anchors
-
-    yield from anchors(payload)
-
-
 def _load_graph(graph_path: Path, repo: Path, frozen_hashes: dict[str, str]) -> dict[str, Any]:
     if not graph_path.exists():
         raise ContextError("graph_missing", f"graph file does not exist: {graph_path}", path=str(graph_path))
@@ -711,18 +666,6 @@ def _load_graph(graph_path: Path, repo: Path, frozen_hashes: dict[str, str]) -> 
             exc.details["path"] = str(graph_path)
         raise
     return payload
-
-
-def check_graph_source(repo: Path, graph: dict[str, Any], frozen_hashes: dict[str, str]) -> None:
-    from cbe.graph import check_graph_source as check
-
-    check(repo, graph, frozen_hashes)
-
-
-def _prune_graph(graph: dict[str, Any] | None, selected: set[str]) -> dict[str, Any] | None:
-    from cbe.graph import _prune_graph as prune
-
-    return prune(graph, selected)
 
 
 # ---------------------------------------------------------------------------

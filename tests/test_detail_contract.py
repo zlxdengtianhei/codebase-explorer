@@ -174,16 +174,16 @@ def test_the_threshold_is_not_negligible() -> None:
 # ------------------------------------------------------------ run level
 
 
-def test_a_run_planned_for_the_old_answer_format_says_to_plan_again(tmp_path) -> None:
+def test_a_run_with_another_schema_says_to_start_a_new_plan(tmp_path) -> None:
     run = tmp_path / "run"
     host_run.plan(_tiny_repo(tmp_path), run, review="none", driver="script")
     state_path = run / "host" / "state.json"
     state = json.loads(state_path.read_text())
     state["schema"] = "cbe-host-run/2"
     state_path.write_text(json.dumps(state))
-    with pytest.raises(host_run.HostRunError, match="older answer format.*plan"):
+    with pytest.raises(host_run.HostRunError, match="^this run directory was made by a different version of cbe; start a new plan$"):
         host_run.next_tasks(run)
-    with pytest.raises(host_run.HostRunError, match="plan"):
+    with pytest.raises(host_run.HostRunError, match="^this run directory was made by a different version of cbe; start a new plan$"):
         host_run.resume(run)
 
 

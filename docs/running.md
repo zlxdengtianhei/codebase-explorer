@@ -268,8 +268,9 @@ model returns only additional units. After the last answer (3 for module and
 repair tasks) the symbols that are still unexplained are indexed without prose and
 flagged `unexplained`; the task still completes. `STATUS.md` and `summary.json`
 (`unexplained_count`, `unexplained`) list them, and the RUN.md notes name the
-affected modules. A run planned for the earlier answer format (full IDs and
-dispositions) is refused with a request to run `plan` again.
+affected modules. A run directory from a different CBE version is refused with
+`this run directory was made by a different version of cbe; start a new plan`.
+Catalog lookups require the current `symbol_index` format.
 
 Usage reports distinguish known counters, estimates, and missing values. Host-agent usage can be imported where the harness provides the corresponding session records. Unknown model prices remain `null` in JSON and `unknown` in the cost report, even when token counts are exact. `cbe host cost --price INPUT,OUTPUT,CACHE_WRITE,CACHE_READ` accepts supplied rates in USD per million tokens. `cbe host cost` prices exact rows by the model recorded in each transcript; `--model MODEL` prices only the rows that are still estimates, which `import-usage` lists as `tasks_without_exact_usage`. In Claude Code, subagents run in the background and their usage arrives only in a later notification, so the skill submits each task when its `DONE` hand-back arrives, without usage; `import-usage` then adds exact usage from the subagent transcripts. Price equivalents are not subscription invoices.
 

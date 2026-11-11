@@ -2,11 +2,11 @@
 
 ## 2.2.0.dev0 (unreleased)
 
-- Internal structure only, no change in behaviour or output: `docs.render` is one short function
-  that calls a shared preparation step and one writer per document; the catalogue lookups
-  (`find`, `query`, `source`, `layer_metrics`) live in `cbe.catalog_query`; `source_context` is split
-  into `grammars`, `declarations` and `source_context`, and the graph-versus-source check moved to
-  `graph`. Every name that was importable from `cbe.docs` and `cbe.source_context` still is.
+- `docs.render` is one short function that calls a shared preparation step and one writer per
+  document; the catalogue lookups (`find`, `query`, `source`, `layer_metrics`) live in
+  `cbe.catalog_query`; `source_context` is split into `grammars`, `declarations` and
+  `source_context`, and the graph-versus-source check moved to `graph`. Import these names from
+  their owning modules: the compatibility re-exports and `_ORDINARY_DECLARATIONS` are removed.
 - Rendering a complete host run again (`cbe host render`) keeps the `wall_seconds` it finished
   with. Before, every later render replaced it with the time since the plan.
 - Python concrete facts are back in `catalog.json`: parameter defaults, named constants,
@@ -42,8 +42,8 @@
   (enforced when the names are decoded). Removed: the region tasks and merge
   (`partition`, `compose`, `merge_inputs`, `Limits`, `CBE_TREE_*` variables), the
   `names` task and the mechanical batch tree; the model can no longer add, drop or move
-  nodes or units. A run planned with the old `names` or `tree` tasks must be planned
-  again to continue; its finished docs still render, except a run built from region trees.
+  nodes or units. Run directories from another CBE version are refused with one
+  version-mismatch error; catalog lookups no longer support catalogs without `symbol_index`.
 - Entry page. `docs/INDEX.md` is the overview, the module tree to its leaves with one
   capability line per node, key flows and the three lookup commands, within
   max(2,000 tokens, 3% of the source tokens): the deepest level folds first, then each
@@ -151,7 +151,8 @@
 - Graph output includes a `quality` audit: edge counts by status, dangling
   edges, nodes outside the manifest or with missing files, and incomplete
   capabilities. `graph capabilities --repo` recomputes it against the current
-  files, and INDEX shows it under "Graph coverage".
+  files, and INDEX shows it under "Graph coverage". Graphs without the audit are
+  rejected with a request to rebuild them; the legacy audit-computation path is removed.
 - Import and call targets are `resolved` only with repository evidence. Joern
   include declarations resolve per language to repository files; an angle
   include that matches several files stays `unresolved` with its candidates;

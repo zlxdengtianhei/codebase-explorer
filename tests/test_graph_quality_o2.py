@@ -1,4 +1,4 @@
-"""Quality contract: deterministic audit, persisted build, legacy readers, INDEX."""
+"""Quality contract: deterministic audit, persisted build, and INDEX."""
 import copy
 import json
 from pathlib import Path
@@ -6,13 +6,11 @@ from pathlib import Path
 import pytest
 
 from cbe import cli, docs, graph
-from cbe.source_context import build_context, context_for_paths
-from test_host_run import _repo, _drive, _graph_for
-from cbe import host_run
+from cbe.source_context import context_for_paths
 
 
 def bad_graph():
-    return {"schema": "cbe-graph/1", "backend": {"name": "test", "components": [{"name": "test"}]},
+    value = {"schema": "cbe-graph/1", "backend": {"name": "test", "components": [{"name": "test"}]},
             "source_manifest": [{"path": "main.py", "language": "python"},
                                 {"path": "gone.py", "language": "python"}],
             "nodes": [{"id": "a", "path": "main.py"}, {"id": "b", "path": "gone.py"},
@@ -26,6 +24,8 @@ def bad_graph():
             "capabilities": [{"language": "python", "graph": "call", "status": "partial"},
                              {"language": "ruby", "graph": "cfg", "status": "failed"}],
             "diagnostics": [{"code": "frontend_error", "language": "ruby", "message": "ruby failed"}]}
+    value["quality"] = graph.graph_quality(value)
+    return value
 
 
 def test_quality_bad_graph_and_purity():
@@ -87,6 +87,7 @@ def test_cli_warns_failed_capability_without_failure_diagnostic(tmp_path, monkey
     value = bad_graph()
     value["diagnostics"] = []
     value["edges"] = []
+    value["quality"] = graph.graph_quality(value)
     monkeypatch.setattr(graph, "analyze_graph", lambda *a, **kw: value)
     assert cli.main(["graph", "build", str(tmp_path), "--output", str(tmp_path / "graph.json")]) == 0
     output = capsys.readouterr()
@@ -128,29 +129,13 @@ def test_failed_build_keeps_auditable_quality_and_nonzero_exit(tmp_path, monkeyp
     assert "frontend failed" in output.err and "no graph backend completed" in output.err
 
 
-def test_legacy_graph_readers(tmp_path, capsys):
-    value = bad_graph()
+def test_graph_without_an_audit_must_be_rebuilt(tmp_path, capsys):
     path = tmp_path / "graph.json"
+    value = bad_graph()
+    value.pop("quality")
     path.write_text(json.dumps(value))
-    assert cli.main(["graph", "capabilities", "--graph", str(path)]) == 0
-    assert json.loads(capsys.readouterr().out)["quality"] == graph.graph_quality(value)
-    assert "quality" not in graph.query_graph(value)
-    (tmp_path / "main.py").write_text("pass\n")
-    assert cli.main(["graph", "capabilities", "--graph", str(path), "--repo", str(tmp_path)]) == 0
-    assert json.loads(capsys.readouterr().out)["quality"]["nodes_missing_files"]["count"] == 2
-    repo = _repo(tmp_path)
-    path.write_text(json.dumps(_graph_for(repo, ["src/pkg/jobs.py"])))
-    original = json.loads(path.read_text())
-    context = build_context(repo, graph_path=path)
-    assert context["graph"] == original and "quality" not in context["graph"]
-    run = Path(host_run.plan(repo, tmp_path / "run", graph_path=path, review="none")["run_dir"])
-    frozen = json.loads((run / "host/state.json").read_text())["context"]
-    assert frozen["graph_digest"] == host_run.context_digest(original)
-    host_run.resume(run, graph_path=path)
-    _drive(run)
-    index = (run / "docs/RUN.md").read_text()
-    assert "## Graph coverage" in index and "python" in index and "resolved" in index
-    assert "rely on model inference" in index
+    assert cli.main(["graph", "capabilities", "--graph", str(path)]) == 2
+    assert "rebuild it with this version of cbe" in capsys.readouterr().err
 
 
 def test_query_slices_omit_whole_graph_quality(tmp_path, capsys):
@@ -177,6 +162,8 @@ def test_index_coverage_without_successful_graph(tmp_path, mode):
     value = None if mode == "missing" else bad_graph()
     if mode == "failed":
         value["diagnostics"].append({"code": "no_backend_completed"})
+    if value is not None:
+        value["quality"] = graph.graph_quality(value)
     docs.render(run_dir=tmp_path, source_root=tmp_path, inventory={}, units={}, dispositions={},
                 tree={"nodes": []}, languages={}, graph=value)
     index = (tmp_path / "docs/RUN.md").read_text()

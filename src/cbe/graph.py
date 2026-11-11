@@ -37,7 +37,14 @@ from typing import Any
 from collections.abc import Iterable
 from datetime import datetime, timezone
 
-from cbe import source_context
+from cbe.grammars import (
+    ContextError,
+    DEFAULT_EXCLUDE_DIR_NAMES,
+    GraphSourceMismatch,
+    _validate_relative,
+    sha256_bytes,
+    suffix_languages,
+)
 from cbe.graph_backends._paths import canonical_repo_path
 from cbe.graph_backends.identity import repository_files, validate_identities
 from cbe.graph_backends.resolution import resolve_declarations, import_token
@@ -77,7 +84,7 @@ class GraphError(ValueError):
 def discover_sources(repo, languages: list[str] | None = None, *, suffix_map=None) -> list[dict]:
     """Return ``[{path, language, sha256}]`` for source files under ``repo``."""
 
-    suffix_map = source_context.suffix_languages() if suffix_map is None else suffix_map
+    suffix_map = suffix_languages() if suffix_map is None else suffix_map
     wanted = set(languages) if languages else None
     manifest: list[dict] = []
     repo = repo.resolve()
@@ -95,7 +102,7 @@ def discover_sources(repo, languages: list[str] | None = None, *, suffix_map=Non
 def discover_config(repo) -> list[dict]:
     """Return ``[{path, sha256}]`` for build/module-resolution files."""
 
-    excluded = source_context.DEFAULT_EXCLUDE_DIR_NAMES
+    excluded = DEFAULT_EXCLUDE_DIR_NAMES
     repo = os.path.abspath(str(repo))
     found: list[dict] = []
     for dirpath, dirnames, filenames in os.walk(repo, topdown=True, followlinks=False):
@@ -189,20 +196,20 @@ def check_graph_source(repo: Path, graph: dict[str, Any], frozen_hashes: dict[st
     try:
         validate_graph_provenance(repo, graph)
     except (GraphError, OSError) as exc:
-        raise source_context.ContextError("graph_provenance_mismatch", str(exc)) from exc
+        raise ContextError("graph_provenance_mismatch", str(exc)) from exc
     manifest = graph.get("source_manifest")
     if not isinstance(manifest, list):
-        raise source_context.ContextError("graph_manifest_missing",
+        raise ContextError("graph_manifest_missing",
                            "graph has no source_manifest; cannot prove it matches the source")
     manifested: set[str] = set()
     for entry in manifest:
         if not isinstance(entry, dict) or "path" not in entry or "sha256" not in entry:
-            raise source_context.ContextError("graph_manifest_missing", f"malformed source_manifest entry: {entry!r}")
+            raise ContextError("graph_manifest_missing", f"malformed source_manifest entry: {entry!r}")
         raw_rel, expected = str(entry["path"]), str(entry["sha256"])
         try:
-            rel = source_context._validate_relative(repo, raw_rel)
-        except source_context.ContextError as exc:
-            raise source_context.ContextError(
+            rel = _validate_relative(repo, raw_rel)
+        except ContextError as exc:
+            raise ContextError(
                 "graph_source_mismatch",
                 f"graph manifest path is not a valid repo path: {raw_rel}: {exc.message}",
                 path=raw_rel,
@@ -211,16 +218,16 @@ def check_graph_source(repo: Path, graph: dict[str, Any], frozen_hashes: dict[st
         manifested.add(rel)
         if rel in frozen_hashes:
             if frozen_hashes[rel] != expected:
-                raise source_context.GraphSourceMismatch(rel, expected, frozen_hashes[rel],
+                raise GraphSourceMismatch(rel, expected, frozen_hashes[rel],
                                           "content hash differs from current source")
             continue
         try:
-            actual = source_context.sha256_bytes((repo / PurePosixPath(rel)).read_bytes())
+            actual = sha256_bytes((repo / PurePosixPath(rel)).read_bytes())
         except OSError:
-            raise source_context.GraphSourceMismatch(rel, expected, None,
+            raise GraphSourceMismatch(rel, expected, None,
                                       "file present in graph manifest is missing on disk") from None
         if actual != expected:
-            raise source_context.GraphSourceMismatch(rel, expected, actual,
+            raise GraphSourceMismatch(rel, expected, actual,
                                       "boundary source drifted: content hash differs from current source")
     unmanifested: set[str] = set()
     # A path that is not a non-empty string cannot name repository source; such
@@ -229,14 +236,14 @@ def check_graph_source(repo: Path, graph: dict[str, Any], frozen_hashes: dict[st
                 if isinstance(path := anchor.get("path"), str) and path}
     for raw_path in anchored:
         try:
-            rel = source_context._validate_relative(repo, raw_path)
-        except source_context.ContextError:
+            rel = _validate_relative(repo, raw_path)
+        except ContextError:
             continue
         if rel not in manifested and (repo / rel).exists():
             unmanifested.add(rel)
     if unmanifested:
         listed = ", ".join(sorted(unmanifested)[:10])
-        raise source_context.ContextError(
+        raise ContextError(
             "graph_unmanifested_source",
             f"graph anchors repo source not covered by source_manifest: {listed}",
             paths=sorted(unmanifested),
@@ -357,16 +364,12 @@ def graph_quality(graph: dict, *, existing_paths: Iterable[str] | None = None) -
     }
 
 
-def read_graph_quality(graph: dict, *, existing_paths: Iterable[str] | None = None,
-                       repo=None) -> dict:
-    """Read a persisted audit, or compute it; an explicit file snapshot refreshes it.
-
-    ``repo`` supplies a file snapshot only for a legacy graph without an audit.
-    """
-    if existing_paths is None and graph.get("quality"):
+def read_graph_quality(graph: dict, *, existing_paths: Iterable[str] | None = None) -> dict:
+    """Read the build's persisted audit; an explicit file snapshot refreshes it."""
+    if "quality" not in graph:
+        raise GraphError("this graph has no quality audit; rebuild it with this version of cbe")
+    if existing_paths is None:
         return graph["quality"]
-    if existing_paths is None and repo is not None:
-        existing_paths = repository_files(repo)
     return graph_quality(graph, existing_paths=existing_paths)
 
 
@@ -385,8 +388,7 @@ def graph_state(graph: object, *, quality: dict | None = None) -> tuple[str, str
     """Classify availability once for prompts and quality consumers.
 
     An explicit failed build takes precedence over unsupported capabilities.
-    A completed backend can produce an empty graph even if another capability
-    failed. Older graphs without completion evidence retain capability fallback.
+    A completed backend can produce an empty graph even if another capability failed.
     """
     if graph is None:
         return "absent", "no graph was provided for this run"
@@ -462,7 +464,7 @@ def analyze_graph(
     output = Path(output).expanduser()
     # Frontends can read sibling languages (for example C/C++ headers or
     # JS/TS imports). Bind every registered source even for a language filter.
-    suffix_map = source_context.suffix_languages()
+    suffix_map = suffix_languages()
     manifest = discover_sources(repo, suffix_map=suffix_map)
     config_manifest = discover_config(repo)
     detected = sorted({entry["language"] for entry in manifest})
@@ -758,7 +760,7 @@ def _prefer_resolved_imports(edges: list[dict], *, suffix_map=None) -> list[dict
     """Merge resolved file evidence by endpoints, retaining every expression."""
     from pathlib import PurePosixPath
 
-    suffix_map = source_context.suffix_languages() if suffix_map is None else suffix_map
+    suffix_map = suffix_languages() if suffix_map is None else suffix_map
 
     def specifier(edge):
         return import_token(edge.get("expression") or "", PurePosixPath(edge.get("path") or "").suffix, suffix_map)

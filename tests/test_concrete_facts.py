@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 
-from cbe import docs, symbols
+from cbe import docs, symbols, catalog_query
 from cbe.concrete_facts import file_facts
 from cbe.source_context import build_context
 
@@ -196,9 +196,9 @@ def test_render_keeps_facts_in_catalog_off_pages_and_points_to_find(tmp_path):
 
 def test_find_returns_a_fact_by_name_and_query_returns_the_entry(tmp_path):
     run_dir = _render_repo(tmp_path, FIXTURE, filler_sentences=2)
-    matches = docs.find(run_dir, "DEFAULT_TIMEOUT")
+    matches = catalog_query.find(run_dir, "DEFAULT_TIMEOUT")
     assert "pkg/defaults.py" in [match["id"] for match in matches]
-    record = docs.query(run_dir, "pkg/defaults.py")
+    record = catalog_query.query(run_dir, "pkg/defaults.py")
     assert record["id"] == "pkg/defaults.py" and record["facts"]
 
 

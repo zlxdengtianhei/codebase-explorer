@@ -12,7 +12,7 @@ import pytest
 
 from cbe import usage
 from cbe import checks, cli, host_run, prompts, symbols
-from cbe.docs import find
+from cbe.catalog_query import find
 
 
 def _repo(tmp_path: Path) -> Path:
@@ -498,7 +498,7 @@ def test_host_run_pages_and_catalog_carry_concrete_facts(tmp_path: Path) -> None
     # (Pages print no facts table; the catalogue is where the facts are asserted.)
     catalog = json.loads((run_dir / "catalog.json").read_text())
     assert any(entry.get("facts") for entry in catalog["symbols"].values())
-    from cbe.docs import query
+    from cbe.catalog_query import query
     matches = find(run_dir, "negative")
     assert matches and all(row["id"] and row["location"] and row["matched_fields"] for row in matches)
     assert any("negative" in json.dumps(query(run_dir, row["id"])) for row in matches)
@@ -506,14 +506,17 @@ def test_host_run_pages_and_catalog_carry_concrete_facts(tmp_path: Path) -> None
 
 def _graph_for(repo: Path, paths: list[str]) -> dict:
     import hashlib
+    from cbe.graph import graph_quality
     manifest = [{"path": path, "language": "python",
                  "sha256": hashlib.sha256((repo / path).read_bytes()).hexdigest()} for path in paths]
     nodes = [{"id": f"n-{index}", "kind": "function", "path": path,
               "start_line": 1, "end_line": 1, "name": Path(path).stem}
              for index, path in enumerate(paths)]
-    return {"schema": "cbe-graph/1", "source_manifest": manifest,
-            "backend": {"name": "test", "version": "1"},
-            "nodes": nodes, "edges": [], "capabilities": [], "diagnostics": []}
+    value = {"schema": "cbe-graph/1", "source_manifest": manifest,
+             "backend": {"name": "test", "version": "1"},
+             "nodes": nodes, "edges": [], "capabilities": [], "diagnostics": []}
+    value["quality"] = graph_quality(value)
+    return value
 
 
 def test_graph_query_accepts_frozen_context_json(tmp_path: Path, capsys):
@@ -642,6 +645,9 @@ def test_script_driver_carries_the_graph_into_the_module_prompt(tmp_path: Path, 
 @pytest.mark.parametrize("graph", [None, {"schema": "wrong"},
     {"schema": "cbe-graph/1", "nodes": [], "edges": [], "capabilities": []}])
 def test_graph_status_does_not_invite_file_reads(graph):
+    if graph and graph.get("schema") == "cbe-graph/1":
+        from cbe.graph import graph_quality
+        graph["quality"] = graph_quality(graph)
     prompt = prompts.detail_prompt(["a.py"], {"a.py": {"symbols": []}}, graph=graph,
                                    embed=False, graph_file="/missing.graph.txt")
     assert "Graph access:" not in prompt
@@ -706,16 +712,19 @@ def test_submit_refuses_evidence_against_a_tampered_context(tmp_path: Path) -> N
 
 def _boundary_graph(repo: Path) -> dict:
     import hashlib
+    from cbe.graph import graph_quality
     def digest(path: str) -> str:
         return hashlib.sha256((repo / path).read_bytes()).hexdigest()
-    return {"schema": "cbe-graph/1", "backend": {"name": "test", "version": "1"},
-            "source_manifest": [{"path": "data/config.json", "sha256": digest("data/config.json")},
-                                {"path": "src/pkg/jobs.py", "sha256": digest("src/pkg/jobs.py")}],
-            "nodes": [{"id": "n-jobs", "kind": "function", "path": "src/pkg/jobs.py",
-                       "start_line": 1, "end_line": 1, "name": "reserve_run"},
-                      {"id": "n-data", "kind": "external", "path": "data/config.json",
-                       "start_line": 1, "end_line": 1, "name": "config"}],
-            "edges": [], "capabilities": [], "diagnostics": []}
+    value = {"schema": "cbe-graph/1", "backend": {"name": "test", "version": "1"},
+             "source_manifest": [{"path": "data/config.json", "sha256": digest("data/config.json")},
+                                 {"path": "src/pkg/jobs.py", "sha256": digest("src/pkg/jobs.py")}],
+             "nodes": [{"id": "n-jobs", "kind": "function", "path": "src/pkg/jobs.py",
+                        "start_line": 1, "end_line": 1, "name": "reserve_run"},
+                       {"id": "n-data", "kind": "external", "path": "data/config.json",
+                        "start_line": 1, "end_line": 1, "name": "config"}],
+             "edges": [], "capabilities": [], "diagnostics": []}
+    value["quality"] = graph_quality(value)
+    return value
 
 
 def test_graph_boundary_file_drift_is_rejected(tmp_path: Path) -> None:

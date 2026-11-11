@@ -13,7 +13,7 @@ import json
 
 import pytest
 
-from cbe import checks, docs, symbols
+from cbe import checks, docs, symbols, catalog_query
 
 
 SRC = (
@@ -210,14 +210,14 @@ def test_find_and_query_resolve_grouped_symbols_units_and_index_only(tmp_path, o
         assert catalog["symbols"][members[0]]["how"] == "grouped"
     before = catalog_path.read_bytes()
     for sid in [*members, group]:
-        record = docs.query(run, sid)
+        record = catalog_query.query(run, sid)
         assert record["unit"] == group and record["node"] == "root"
         assert record["page"] == "nodes/root.md"
         assert record["anchor"] == f"#{docs.anchor(group)}"
-        found = next(row for row in docs.find(run, sid) if row["id"] == sid)
+        found = next(row for row in catalog_query.find(run, sid) if row["id"] == sid)
         assert found["id"] == sid and found["location"] and found["name"]
         assert not {"explain", "incoming", "outgoing", "signatures"} & found.keys()
-    record = docs.query(run, index_only)
+    record = catalog_query.query(run, index_only)
     assert record["how"] == "index_only" and record["reason"] == "import metadata"
     assert record["page"] is None and record["anchor"] is None
     checks = {row["check"]: row for row in docs.verify(run, inventory, units, dispositions, tree)}

@@ -1,5 +1,5 @@
 """Resumed detail can arrive before the responsibility tree is rebuilt."""
-from cbe import cli, docs
+from cbe import cli, docs, catalog_query
 
 
 def test_render_flow_with_new_group_not_owned_by_old_tree(tmp_path):
@@ -15,12 +15,12 @@ def test_render_flow_with_new_group_not_owned_by_old_tree(tmp_path):
     index = (tmp_path / "docs/INDEX.md").read_text()
     assert "Convert a floating point value." in index
     assert "`existing` → (model-inferred) → `format-h-dragon` (not assigned to a node)" in index
-    assert docs.query(tmp_path, "grp:format-h-dragon")["page"] is None
+    assert catalog_query.query(tmp_path, "grp:format-h-dragon")["page"] is None
 
 
 def test_cli_labels_unhandled_keyerror(tmp_path, capsys, monkeypatch):
     def missing(*args, **kwargs):
         raise KeyError("grp:format-h-dragon")
-    monkeypatch.setattr(docs, "query", missing)
+    monkeypatch.setattr(catalog_query, "query", missing)
     assert cli.main(["query", "--run-dir", str(tmp_path), "grp:format-h-dragon"]) == 2
     assert capsys.readouterr().err == "cbe: internal error: missing key grp:format-h-dragon\n"

@@ -47,13 +47,16 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterator
 
-from cbe import aggregation, batching, checks, docs, projection, prompts, skeleton, symbols, treename
+from cbe import aggregation, batching, catalog_query, checks, docs, projection, prompts, skeleton, symbols, treename
 from cbe import __version__
 from cbe import source_context
+from cbe.grammars import ContextError
+from cbe.graph import check_graph_source
 from cbe.token_budget import count_text_tokens
 
 
 SCHEMA = "cbe-host-run/3"
+RUN_VERSION_ERROR = "this run directory was made by a different version of cbe; start a new plan"
 MAX_ATTEMPTS = 2
 DETAIL_MAX_ATTEMPTS = 3
 REVIEW_MODES = ("none", "sample", "all")
@@ -111,8 +114,8 @@ def _verify_graph_manifest(repo: Path, state: dict[str, Any], context: dict[str,
     if not graph:
         return
     try:
-        source_context.check_graph_source(repo, graph, {row["path"]: row["digest"] for row in state["files"]})
-    except source_context.ContextError as exc:
+        check_graph_source(repo, graph, {row["path"]: row["digest"] for row in state["files"]})
+    except ContextError as exc:
         raise HostRunError(f"frozen graph does not match the planned source: {exc.message}; "
                            "start a new plan") from exc
 
@@ -130,8 +133,9 @@ def _verified_context(run_dir: Path, state: dict[str, Any]) -> dict[str, Any]:
     raw_digest = hashlib.sha256(raw).hexdigest()
     frozen = state.get("context") or {}
     if raw_digest != frozen.get("raw_digest"):
-        raise HostRunError("frozen source context was modified after planning (or has no byte digest because "
-                           "an older build planned it); start a new plan")
+        if frozen.get("raw_digest") is None:
+            raise HostRunError(RUN_VERSION_ERROR)
+        raise HostRunError("frozen source context was modified after planning; start a new plan")
     context = state.context if isinstance(state, _RunState) else None
     if context is None:
         context = json.loads(raw)
@@ -412,13 +416,9 @@ def locked_state(run_dir: Path) -> Iterator[dict[str, Any]]:
             pass
         state = _RunState(json.loads(state_path.read_text(encoding="utf-8")))
         if state.get("schema") != SCHEMA:
-            raise HostRunError(f"unsupported run schema {state.get('schema')!r}: this run was planned for an "
-                               f"older answer format or module layout, which this build no longer accepts. "
-                               "Run `plan` again for a fresh run")
+            raise HostRunError(RUN_VERSION_ERROR)
         if any(task["kind"] in {"names", "tree"} for task in state["tasks"].values()):
-            raise HostRunError("this run was made by an older build (it has the earlier tree tasks `names` and "
-                               "`tree`); `find`, `query` and `source` still work on it. For new documents run "
-                               "`plan` again and generate")
+            raise HostRunError(RUN_VERSION_ERROR)
         yield state
         state["updated_at"] = _now()
         write_json(state_path, state)
@@ -1433,7 +1433,7 @@ def _render(run_dir: Path, state: dict[str, Any]) -> None:
     summary["within_containment"] = meta["within_containment_count"]
     summary["key_flows"] = meta["key_flows"]
     summary["candidate_flows"] = meta["candidate_flows"]
-    summary["layers"] = docs.layer_metrics(run_dir)
+    summary["layers"] = catalog_query.layer_metrics(run_dir)
     summary["semantic_review"] = _semantic_review_summary(run_dir, state)
     summary["truth"] = ("deterministic structure/coverage checks and the separate semantic review are "
                         "different states; neither one proves prose truth")

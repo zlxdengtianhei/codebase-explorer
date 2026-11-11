@@ -8,7 +8,8 @@ import pytest
 
 from cbe import host_run
 from cbe.graph import discover_config, discover_sources
-from cbe.source_context import ContextError, build_context
+from cbe.grammars import ContextError
+from cbe.source_context import build_context
 
 
 def _planned_graph(tmp_path: Path):

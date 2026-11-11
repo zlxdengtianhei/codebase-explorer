@@ -14,7 +14,7 @@ import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from cbe import source_context
+from cbe import grammars
 from cbe.token_budget import count_text_tokens
 
 
@@ -82,12 +82,12 @@ def _imports(path: str, source: str) -> set[str]:
 
 def scan(repo: Path) -> list[SourceFile]:
     """Every regular source file outside the excluded directories; symlinks are never followed."""
-    suffixes = source_context.registered_suffixes() | source_context.FALLBACK_SUFFIXES
+    suffixes = grammars.registered_suffixes() | grammars.FALLBACK_SUFFIXES
     files: list[SourceFile] = []
     for path in sorted(repo.rglob("*")):
         if not path.is_file() or path.is_symlink() or path.suffix.lower() not in suffixes:
             continue
-        if any(part in source_context.DEFAULT_EXCLUDE_DIR_NAMES for part in path.relative_to(repo).parts):
+        if any(part in grammars.DEFAULT_EXCLUDE_DIR_NAMES for part in path.relative_to(repo).parts):
             continue
         raw = path.read_bytes()
         try:

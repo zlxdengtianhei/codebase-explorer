@@ -4,7 +4,8 @@ import re
 
 import pytest
 
-from cbe import cli, docs, source_context
+from cbe import cli, docs, source_context, catalog_query
+from cbe.graph import graph_quality
 from cbe.symbols import inventory_from_context
 from test_layers_o4 import _run
 
@@ -28,6 +29,7 @@ def test_edges_obey_exclusive_ownership_at_shared_boundary(tmp_path, capsys):
     graph = {"nodes": nodes, "edges": [
         {"id": f"{i}-{kind}", "kind": kind, "source": s["id"], "target": s["id"]}
         for i, s in enumerate((parent, child, other)) for kind in ("cfg", "dataflow")]}
+    graph["quality"] = graph_quality(graph)
     context["graph"] = graph
     run = tmp_path / "run"
     run.mkdir()
@@ -37,10 +39,10 @@ def test_edges_obey_exclusive_ownership_at_shared_boundary(tmp_path, capsys):
                 tree={"nodes": [{"id": "root", "unit_ids": list(units)}]},
                 languages={"views.py": "python"}, context=context, graph=graph)
     for uid in units:
-        record = docs.query(run, uid, edges="cfg,dataflow")
+        record = catalog_query.query(run, uid, edges="cfg,dataflow")
         for kind in ("cfg", "dataflow"):
             assert sum(e["kind"] == kind for e in record["raw_edges"]) == record["internal_edge_counts"][kind]
-    assert [e["id"] for e in docs.query(run, parent["id"], edges="cfg")["raw_edges"]] == ["0-cfg"]
+    assert [e["id"] for e in catalog_query.query(run, parent["id"], edges="cfg")["raw_edges"]] == ["0-cfg"]
     assert cli.main(["query", "--run-dir", str(run), "--id", parent["id"], "--edges", "cfgg"]) == 2
     assert "--edges" in capsys.readouterr().err
     # A folded symbol still selects its own edges; the owning unit selects both.
@@ -53,8 +55,8 @@ def test_edges_obey_exclusive_ownership_at_shared_boundary(tmp_path, capsys):
     docs.render(run_dir=run, source_root=repo, inventory=inventory, units=units,
                 dispositions=dispositions, tree={"nodes": [{"id": "root", "unit_ids": list(units)}]},
                 languages={"views.py": "python"}, context=context, graph=graph)
-    assert [e["id"] for e in docs.query(run, child["id"], edges="cfg")["raw_edges"]] == ["1-cfg"]
-    assert len(docs.query(run, parent["id"], edges="cfg")["raw_edges"]) == 3
+    assert [e["id"] for e in catalog_query.query(run, child["id"], edges="cfg")["raw_edges"]] == ["1-cfg"]
+    assert len(catalog_query.query(run, parent["id"], edges="cfg")["raw_edges"]) == 3
 
 
 @pytest.mark.parametrize("prefix", ["Prose with a stray ` backtick.\n\n", "Prose with `` unmatched.\n\n", ""])
@@ -90,8 +92,8 @@ def test_every_page_title_finds_its_id_despite_many_incidental_matches(tmp_path)
     path.write_text(json.dumps(catalog))
     for anchor, title in titles:
         uid = next(uid for uid, row in catalog["units"].items() if row["anchor"] == "#" + anchor)
-        assert uid in [row["id"] for row in docs.find(run, title)]
-        assert docs.find(run, uid, limit=1)[0]["id"] == uid
+        assert uid in [row["id"] for row in catalog_query.find(run, title)]
+        assert catalog_query.find(run, uid, limit=1)[0]["id"] == uid
     footer = (run / "docs/nodes/root.md").read_text().split("## Look up code")[1]
     assert 'cbe find --run-dir "$RUN" --term' in footer
     assert "按 [INDEX]" not in footer
@@ -116,7 +118,7 @@ def test_page_keeps_complete_explanation_with_or_without_summary(tmp_path, summa
         assert body.count(sentence) == 1
     if summary:
         assert summary in body
-    assert docs.query(run, uid)["explain"] == explain
+    assert catalog_query.query(run, uid)["explain"] == explain
 
 
 def test_product_read_query_instructions_use_available_commands(tmp_path, capsys):
@@ -166,7 +168,7 @@ def test_layer_metrics_count_footer_in_footer_category(tmp_path):
     footer, references = footer.split("[f1]:", 1)
     expected = count_section_tokens([("before", before), ("footer", "## Look up code" + footer),
                                      ("references", "[f1]:" + references)])["footer"]
-    metrics = docs.layer_metrics(run)
+    metrics = catalog_query.layer_metrics(run)
     assert expected > 0
     assert metrics["semantic_breakdown"]["footer"] == expected
     assert sum(metrics["semantic_breakdown"].values()) == metrics["semantic_tokens"]
@@ -181,7 +183,7 @@ def test_layer_metrics_keep_english_relation_links_in_relations(tmp_path):
                 for line in page.splitlines(keepends=True)]
     expected = count_section_tokens(sections).get("relations", 0)
     assert expected > 0
-    assert docs.layer_metrics(run)["semantic_breakdown"]["relations"] == expected
+    assert catalog_query.layer_metrics(run)["semantic_breakdown"]["relations"] == expected
 
 
 def test_method_titles_keep_their_declaring_class(tmp_path):

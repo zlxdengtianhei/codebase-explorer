@@ -1,8 +1,7 @@
 """Read-side queries over a rendered run's ``catalog.json``.
 
 ``find``, ``query`` and ``source`` back the CLI lookup commands;
-``layer_metrics`` measures the storage layers of a run. ``docs`` re-exports
-these names for callers that import them from ``cbe.docs``.
+``layer_metrics`` measures the storage layers of a run.
 """
 
 from __future__ import annotations
@@ -16,11 +15,11 @@ from cbe.symbols import SemanticError
 
 
 def catalog_symbols(catalog: dict) -> dict[str, dict]:
-    """Resolve the public search view, including catalogs from earlier runs.
+    """Resolve the current catalog's public search view.
 
     Inventory IDs retain their names/facts. The semantic index supplies their
     disposition and primary page; synthetic units are also first-class query
-    targets. Legacy catalogs without a semantic index retain their old view.
+    targets.
     """
     records = {key: dict(row) for key, row in (catalog.get("symbols") or {}).items()}
     for uid, unit in (catalog.get("units") or {}).items():
@@ -31,7 +30,7 @@ def catalog_symbols(catalog: dict) -> dict[str, dict]:
         if len(paths) == 1:
             record.setdefault("file", paths[0])
         records[uid] = record
-    for sid, resolution in (catalog.get("symbol_index") or {}).items():
+    for sid, resolution in catalog["symbol_index"].items():
         records[sid] = {**records.get(sid, {}),
                         **(catalog.get("dispositions") or {}).get(sid, {}),
                         **resolution}
@@ -65,7 +64,7 @@ def format_ranges(ranges: list[dict]) -> str:
 
 
 def find(run_dir: Path, term: str, limit: int = 25) -> list[dict[str, Any]]:
-    """Locate matches; detailed evidence stays behind query, including for old catalogs."""
+    """Locate matches; detailed evidence stays behind query."""
     from cbe.records import summary_sentence
 
     catalog = query_catalog(run_dir)
@@ -242,7 +241,7 @@ def source(run_dir: Path, object_id: str, context: int = 0) -> str:
 
 
 def layer_metrics(run_dir: Path) -> dict:
-    """One storage-based token measure, usable on old and new render outputs.
+    """One storage-based token measure.
 
     Markdown includes page metadata, navigation, signatures and usage examples.
     Catalog JSON includes its preserved copies of prose. Frozen graph evidence

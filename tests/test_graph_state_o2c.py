@@ -16,13 +16,19 @@ EMPTY_PARTIAL_FAILURE["capabilities"].append(
     {"language": "ruby", "graph": "call", "status": "failed"})
 
 
+def audited(value):
+    value = copy.deepcopy(value)
+    value["quality"] = graph.graph_quality(value)
+    return value
+
+
 @pytest.mark.parametrize("value,state,prompt_text,index_text", [
     (FAILED, "failed", "analysis failed or was unavailable", "No graph backend succeeded"),
-    (EMPTY, "empty", "provided and successfully empty", "The graph is empty. No relations are graph-confirmed"),
-    (EMPTY_PARTIAL_FAILURE, "empty", "provided and successfully empty", "The graph is empty. No relations are graph-confirmed"),
+    (audited(EMPTY), "empty", "provided and successfully empty", "The graph is empty. No relations are graph-confirmed"),
+    (audited(EMPTY_PARTIAL_FAILURE), "empty", "provided and successfully empty", "The graph is empty. No relations are graph-confirmed"),
     (None, "absent", "not provided", "No graph was provided"),
-    ({"schema": "cbe-graph/1", "nodes": [], "edges": [], "capabilities": [
-        {"language": "ruby", "graph": "call", "status": "unsupported"}]},
+    (audited({"schema": "cbe-graph/1", "nodes": [], "edges": [], "capabilities": [
+        {"language": "ruby", "graph": "call", "status": "unsupported"}]}),
      "unsupported", "unsupported for this run", "The graph does not support this analysis"),
 ])
 def test_prompt_and_index_share_availability(tmp_path, value, state, prompt_text, index_text):
@@ -41,7 +47,7 @@ def test_components_with_only_failed_capabilities_are_failed():
     value = {"schema": "cbe-graph/1", "nodes": [], "edges": [],
              "backend": {"name": "test", "components": [{"name": "joern"}]},
              "capabilities": [{"language": "go", "graph": "call", "status": "failed"}]}
-    assert graph.graph_state(value)[0] == "failed"
+    assert graph.graph_state(audited(value))[0] == "failed"
 
 
 @pytest.mark.parametrize("status", ["resolved", "partial", "empty"])
@@ -50,24 +56,27 @@ def test_one_successful_capability_keeps_empty_result(status):
              "backend": {"name": "test", "components": [{"name": "joern"}]},
              "capabilities": [{"language": "go", "graph": "call", "status": "failed"},
                               {"language": "go", "graph": "cfg", "status": status}]}
-    assert graph.graph_state(value)[0] == "empty"
+    assert graph.graph_state(audited(value))[0] == "empty"
 
 
 def test_explicit_successful_component_is_completion_evidence():
     value = {"schema": "cbe-graph/1", "nodes": [], "edges": [],
              "backend": {"name": "test", "components": [{"name": "joern", "status": "empty"}]},
              "capabilities": [{"language": "go", "graph": "call", "status": "failed"}]}
-    assert graph.graph_state(value)[0] == "empty"
+    assert graph.graph_state(audited(value))[0] == "empty"
 
 
 def test_read_quality_keeps_snapshot_and_refreshes_explicit_files(tmp_path):
     value = copy.deepcopy(EMPTY)
     value["source_manifest"] = [{"path": "main.py", "language": "python"}]
     value["nodes"] = [{"id": "a", "path": "main.py"}]
-    legacy = graph.read_graph_quality(value, repo=tmp_path)
-    assert legacy["nodes_missing_files"]["count"] == 1
-    value["quality"] = legacy
+    value["quality"] = graph.graph_quality(value, existing_paths=set())
+    assert value["quality"]["nodes_missing_files"]["count"] == 1
     (tmp_path / "main.py").write_text("pass\n")
-    assert graph.read_graph_quality(value, repo=tmp_path) is legacy
+    assert graph.read_graph_quality(value) is value["quality"]
     assert graph.read_graph_quality(value, existing_paths={"main.py"})["nodes_missing_files"]["count"] == 0
-    assert graph.read_graph_quality(value) is legacy
+
+
+def test_read_quality_rejects_a_graph_without_an_audit():
+    with pytest.raises(graph.GraphError, match="rebuild it with this version of cbe"):
+        graph.read_graph_quality(copy.deepcopy(EMPTY))

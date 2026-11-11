@@ -3,7 +3,7 @@ import json
 import re
 from pathlib import Path
 
-from cbe import cli, docs
+from cbe import cli, docs, catalog_query
 from test_layers_o4 import _run
 
 
@@ -25,23 +25,9 @@ def test_find_is_a_bounded_locator_in_text_and_json(tmp_path, capsys):
     assert set(results[0]) == {"id", "name", "kind", "location", "summary", "matched_fields"}
     assert len(results[0]["summary"].split()) <= 25
     assert results[0]["matched_fields"] == ["explain"]
-    assert full in docs.query(run, uid)["explain"]
-    assert docs.find(run, "needle", limit=0) == []
-    assert docs.find(run, "no such match") == []
-
-
-def test_legacy_catalog_find_has_the_same_locator_contract(tmp_path):
-    run, ids, _, _, _ = _run(tmp_path)
-    path = run / "catalog.json"
-    catalog = json.loads(path.read_text())
-    uid = ids[0]
-    # Simulate a legacy compatibility entry without ranges or kind.
-    catalog["symbols"][uid] = {"file": "pkg/jobs.py", "name": uid}
-    path.write_text(json.dumps(catalog))
-    row = next(r for r in docs.find(run, uid) if r["id"] == uid)
-    assert row["kind"] != "symbol" and row["location"].startswith("pkg/jobs.py:L")
-    assert "::" not in row["name"]
-    assert not {"explain", "incoming", "outgoing", "signatures"} & row.keys()
+    assert full in catalog_query.query(run, uid)["explain"]
+    assert catalog_query.find(run, "needle", limit=0) == []
+    assert catalog_query.find(run, "no such match") == []
 
 
 def test_each_unit_source_link_resolves_and_file_target_is_shared(tmp_path):

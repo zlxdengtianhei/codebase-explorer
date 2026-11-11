@@ -14,20 +14,23 @@ from pathlib import Path
 
 import pytest
 
-from cbe.source_context import (
+from cbe.grammars import (
     ContextError,
     GRAMMARS,
     GrammarSpec,
     GraphSourceMismatch,
-    _collect_named_boundaries,
     _grammar_for_suffix,
-    _load_graph,
     _make_parser,
     available_languages,
-    build_context,
-    context_for_paths,
     language_name,
     register_language,
+    suffix_languages,
+)
+from cbe.source_context import (
+    _collect_named_boundaries,
+    _load_graph,
+    build_context,
+    context_for_paths,
 )
 
 FIXTURES = Path(__file__).parent / "fixtures" / "source_context"
@@ -579,7 +582,7 @@ def test_a_registered_override_gives_context_and_graph_the_same_language(tmp_pat
     try:
         (tmp_path / "mapped.py").write_text("int f(void) { return 1; }\n")
         assert language_name("mapped.py") == "c"
-        assert sc.suffix_languages()[".py"] == "c"
+        assert suffix_languages()[".py"] == "c"
         assert build_context(tmp_path, paths=["mapped.py"])["files"][0]["language"] == "c"
         assert [row["language"] for row in discover_sources(tmp_path)] == ["c"]
     finally:
@@ -601,7 +604,7 @@ def test_a_narrower_override_keeps_the_built_in_suffixes_in_every_view(tmp_path)
         for name in ("mapped.py", "native.c"):
             (tmp_path / name).write_text("int entry(void) { return 0; }\n")
         assert [language_name(name) for name in ("mapped.py", "native.c")] == ["c", "c"]
-        assert (sc.suffix_languages()[".py"], sc.suffix_languages()[".c"]) == ("c", "c")
+        assert (suffix_languages()[".py"], suffix_languages()[".c"]) == ("c", "c")
         assert [row["path"] for row in discover_sources(tmp_path)] == ["mapped.py", "native.c"]
         assert [row.path for row in batching.scan(tmp_path)] == ["mapped.py", "native.c"]
     finally:
@@ -616,7 +619,7 @@ def test_a_suffix_declared_in_upper_case_is_matched_like_any_other(tmp_path):
     c_spec = next(spec for spec in GRAMMARS if spec.name == "c")
     register_language(dataclasses.replace(c_spec, name="c-upper", suffixes=(".UPX",)))
     try:
-        assert sc.suffix_languages()[".upx"] == "c-upper"
+        assert suffix_languages()[".upx"] == "c-upper"
         assert language_name("a.upx") == language_name("a.UPX") == "c-upper"
     finally:
         sc._EXTRA_SPECS.pop("c-upper", None)
@@ -823,7 +826,7 @@ def test_plugin_load_errors_surface_in_discovery(monkeypatch):
     monkeypatch.setattr(importlib.metadata, "entry_points", lambda group=None: [BrokenEntry()])
     monkeypatch.setattr(grammars, "_PLUGINS_LOADED", False)
     monkeypatch.setattr(grammars, "_PLUGIN_ERRORS", [])
-    result = sc.available_languages()
+    result = available_languages()
     assert any(e["entry_point"] == "broken-pack" for e in result["plugin_errors"])
 
 

@@ -19,7 +19,7 @@ from pathlib import Path
 import pytest
 
 from cbe.graph import analyze_graph
-from cbe.source_context import suffix_languages
+from cbe.grammars import suffix_languages
 from cbe.graph_backends.joern import (
     JOERN_LANGUAGE_FLAGS,
     _capabilities_for,

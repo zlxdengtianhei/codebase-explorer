@@ -9,8 +9,8 @@ from pathlib import Path
 
 import pytest
 
-from cbe import cli, docs, source_context
-from cbe.graph import NO_DATAFLOW_MESSAGE, built_without_dataflow, query_graph
+from cbe import cli, docs, source_context, catalog_query
+from cbe.graph import NO_DATAFLOW_MESSAGE, built_without_dataflow, graph_quality, query_graph
 from cbe.graph_backends import joern
 from cbe.graph_backends.joern import _normalize
 from cbe.symbols import inventory_from_context
@@ -122,6 +122,7 @@ def test_query_edges_and_edge_counts_without_dataflow(tmp_path, capsys):
     nodes = [{"id": s["id"], "path": "views.py", "start_line": s["lines"][0][0]} for s in symbols]
 
     def build(graph, name):
+        graph["quality"] = graph_quality(graph)
         context["graph"] = graph
         run = tmp_path / name
         run.mkdir()
@@ -138,13 +139,13 @@ def test_query_edges_and_edge_counts_without_dataflow(tmp_path, capsys):
     flow = build({"nodes": nodes, "edges": edges + [{"id": "d", "kind": "dataflow", "source": symbols[0]["id"],
                                                      "target": symbols[0]["id"]}]}, "flow")
     uid = symbols[0]["id"]
-    assert docs.query(plain, uid)["internal_edge_counts"] == {"cfg": 1}  # no "dataflow: 0"
-    assert docs.query(flow, uid)["internal_edge_counts"] == {"cfg": 1, "dataflow": 1}
+    assert catalog_query.query(plain, uid)["internal_edge_counts"] == {"cfg": 1}  # no "dataflow: 0"
+    assert catalog_query.query(flow, uid)["internal_edge_counts"] == {"cfg": 1, "dataflow": 1}
     with pytest.raises(docs.SemanticError, match="built without dataflow"):
-        docs.query(plain, uid, edges="dataflow")
+        catalog_query.query(plain, uid, edges="dataflow")
     assert cli.main(["query", "--run-dir", str(plain), "--id", uid, "--edges", "dataflow"]) == 2
     assert "cbe graph build --with-dataflow" in capsys.readouterr().err
-    mixed = docs.query(plain, uid, edges="cfg,dataflow")
+    mixed = catalog_query.query(plain, uid, edges="cfg,dataflow")
     assert [e["kind"] for e in mixed["raw_edges"]] == ["cfg"] and NO_DATAFLOW_MESSAGE in mixed["notice"]
-    assert "notice" not in docs.query(flow, uid, edges="cfg,dataflow")
-    assert "notice: " + NO_DATAFLOW_MESSAGE in docs.query_text(mixed)
+    assert "notice" not in catalog_query.query(flow, uid, edges="cfg,dataflow")
+    assert "notice: " + NO_DATAFLOW_MESSAGE in catalog_query.query_text(mixed)

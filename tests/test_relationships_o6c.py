@@ -5,6 +5,7 @@ import re
 import pytest
 
 from cbe import aggregation, checks, docs, prompts
+from cbe.graph import graph_quality
 from test_relationships_o6 import answer, edge, graph
 from test_relationships_o6b import render_example
 
@@ -119,6 +120,7 @@ def test_pages_and_catalog_show_containment_counts_but_mermaid_excludes_both_kin
                        path="pkg/jobs.py", line=12, column=16),
                   dict(id="reverse", kind="call", status="resolved", source="reserve", target="submit",
                        path="pkg/jobs.py", line=6, column=16)]}
+    gp["quality"] = graph_quality(gp)
     tree["depends_on"] = [{"from": "a", "to": "b"}, {"from": "a", "to": "empty0"},
                           {"from": "b", "to": "empty0"}]
     docs.render(run_dir=run, source_root=tmp_path / "repo", inventory=inventory,

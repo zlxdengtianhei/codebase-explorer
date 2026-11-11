@@ -9,7 +9,7 @@ import os
 
 import pytest
 
-from cbe import batching, checks, docs, usage
+from cbe import batching, checks, docs, usage, catalog_query
 from cbe.api_completion import Completion
 
 
@@ -72,8 +72,8 @@ def test_generate_renders_and_accounts_for_each_physical_call(tmp_path, monkeypa
                      for path in (run_dir / "docs" / "nodes").glob("*.md"))
     assert "src/pkg/jobs.py" in pages
     assert str(tmp_path) not in index
-    matches = docs.find(run_dir, "reserve_run")
-    assert matches and docs.query(run_dir, matches[0]["id"])["file"] == "src/pkg/jobs.py"
+    matches = catalog_query.find(run_dir, "reserve_run")
+    assert matches and catalog_query.query(run_dir, matches[0]["id"])["file"] == "src/pkg/jobs.py"
     with (run_dir / "calls.csv").open(newline="", encoding="utf-8") as stream:
         assert len(list(csv.DictReader(stream))) == 5
 

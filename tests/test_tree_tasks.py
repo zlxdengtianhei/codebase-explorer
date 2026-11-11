@@ -1,5 +1,5 @@
 """The module tree is made by the program and only named by the model: skeleton freeze, naming tasks,
-node-by-node answers with program-made titles, old-run handling, and the entry page."""
+node-by-node answers with program-made titles, run-version handling, and the entry page."""
 from __future__ import annotations
 
 import json
@@ -162,11 +162,8 @@ def test_an_empty_run_completes_without_a_tree_task(tmp_path):
     assert state["tasks"]["system"]["status"] == "done"
 
 
-def _old_run(tmp_path, kind, finished=False):
-    """A run as an older build left it: it carries an old ``names`` or ``tree`` task."""
+def _run_with_other_tree_tasks(tmp_path, kind):
     run = Path(host_run.plan(_repo(tmp_path, dirs=("alpha",), files=3), tmp_path / "run", review="none")["run_dir"])
-    if finished:
-        _drive(run)
     state = _state(run)
     state["tasks"][kind] = {**state["tasks"]["module_1"], "id": kind, "kind": kind, "module": None}
     (run / "host/state.json").write_text(json.dumps(state))
@@ -174,24 +171,15 @@ def _old_run(tmp_path, kind, finished=False):
 
 
 @pytest.mark.parametrize("kind", ["names", "tree"])
-def test_every_host_command_on_a_run_with_the_old_tree_tasks_asks_for_a_new_plan(tmp_path, kind):
-    run = _old_run(tmp_path, kind)
+def test_every_host_command_on_a_run_from_another_version_asks_for_a_new_plan(tmp_path, kind):
+    run = _run_with_other_tree_tasks(tmp_path, kind)
     for action in (lambda: host_run.next_tasks(run), lambda: host_run.resume(run),
                    lambda: host_run.completion_prompt(run, "module_1"),
                    lambda: host_run.submit(run, "module_1", error="x"),
                    lambda: host_run.status(run), lambda: host_run.render(run), lambda: host_run.verify(run),
                    lambda: host_run.retry(run, "all"), lambda: usage.cost(run)):
-        with pytest.raises(host_run.HostRunError, match="run `plan` again") as error:
+        with pytest.raises(host_run.HostRunError, match="^this run directory was made by a different version of cbe; start a new plan$"):
             action()
-        assert "`find`, `query` and `source` still work" in str(error.value)
-
-
-def test_find_query_and_source_still_work_on_a_finished_old_run(tmp_path):
-    run = _old_run(tmp_path, "tree", finished=True)
-    found = docs.find(run, "alpha_0_a")
-    assert found
-    assert docs.query(run, found[0]["id"])["id"] == found[0]["id"]
-    assert docs.source(run, found[0]["id"]).startswith("# ")
 
 
 # ----------------------------------------------------------------- treename

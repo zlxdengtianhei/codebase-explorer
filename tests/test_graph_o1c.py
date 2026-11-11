@@ -120,14 +120,14 @@ def test_cli_default_exports_all_cfg_methods(tmp_path, monkeypatch):
 
 def test_suffix_registry_is_built_once_per_graph(tmp_path, monkeypatch):
     pytest.importorskip("grimp")  # the Python import graph needs the `graphs` extra
-    from cbe import graph, source_context
+    from cbe import graph
     from cbe.graph_backends import resolution
-    original = source_context.suffix_languages
+    original = graph.suffix_languages
     calls = []
     def registry():
         calls.append(1)
         return original()
-    monkeypatch.setattr(source_context, "suffix_languages", registry)
+    monkeypatch.setattr(graph, "suffix_languages", registry)
     monkeypatch.setattr(resolution, "suffix_languages", registry)
     (tmp_path / "app").mkdir()
     (tmp_path / "app" / "__init__.py").write_text("import os\nimport sys\n")

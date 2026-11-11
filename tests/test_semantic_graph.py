@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from cbe import projection as graph_projection, prompts
+from cbe.graph import graph_quality
 import pytest
 from cbe.token_budget import count_text_tokens
 
@@ -17,8 +18,10 @@ def _edge(eid, source, target, kind="call", status="resolved", **extra):
 
 
 def _graph(nodes, edges, **extra):
-    return {"schema": "cbe-graph/1", "nodes": nodes, "edges": edges,
-            "capabilities": [], **extra}
+    value = {"schema": "cbe-graph/1", "nodes": nodes, "edges": edges,
+             "capabilities": [], **extra}
+    value["quality"] = graph_quality(value)
+    return value
 
 
 def _inputs():

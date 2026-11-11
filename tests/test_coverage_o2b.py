@@ -2,6 +2,7 @@
 import re
 
 from cbe import docs
+from cbe.graph import graph_quality
 
 
 def test_relation_percentages_exclude_structural_edges(tmp_path):
@@ -19,6 +20,7 @@ def test_relation_percentages_exclude_structural_edges(tmp_path):
                     for i, status in enumerate(["resolved", "external"])],
         "capabilities": [], "diagnostics": [],
     }
+    graph["quality"] = graph_quality(graph)
     docs.render(run_dir=tmp_path, source_root=tmp_path, inventory={}, units={}, dispositions={},
                 tree={"nodes": []}, languages={}, graph=graph)
     index = (tmp_path / "docs/RUN.md").read_text()

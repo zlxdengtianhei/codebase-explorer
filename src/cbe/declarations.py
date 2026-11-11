@@ -7,10 +7,8 @@ from pathlib import PurePosixPath
 from typing import Any
 
 from cbe.grammars import (
-    GRAMMARS,
     GrammarSpec,
     OffsetMap,
-    _TSX_SPEC,
     _all_specs,
     _make_parser,
     canonical_symbol_id,
@@ -94,12 +92,6 @@ def _first_identifier(offsets: OffsetMap, node: Any) -> str:
 def _body_start(node: Any) -> int:
     body = node.child_by_field_name("body")
     return body.start_byte if body is not None else -1
-
-
-# Kept as a compatibility view; the grammar specs own the declaration kinds.
-_ORDINARY_DECLARATIONS = {
-    spec.name: spec.ordinary_declaration_kinds for spec in (*GRAMMARS, _TSX_SPEC)
-}
 
 
 def _declarator_name(offsets: OffsetMap, node: Any, *, type_alias: bool = False) -> str:
