@@ -59,3 +59,44 @@ def test_version_uses_installed_command_name(capsys):
 def test_unknown_query_suggests_find(run, capsys):
     assert cli.main(["query", "--run-dir", str(run), "LIMIT"]) == 2
     assert "cbe find --run-dir" in capsys.readouterr().err
+
+
+@pytest.fixture
+def published_run(tmp_path):
+    """A published example has docs and a catalog, but no frozen source."""
+    (tmp_path / "docs").mkdir()
+    (tmp_path / "docs" / "INDEX.md").write_text("# Example\n", encoding="utf-8")
+    (tmp_path / "catalog.json").write_text(json.dumps({
+        "units": {"unit:1": {"id": "unit:1", "name": "thing", "kind": "function",
+                              "ranges": [{"path": "a.py", "lines": [[1, 1]]}]}},
+        "symbols": {}, "files": {"a.py": {}}, "nodes": {}, "edges": {},
+    }), encoding="utf-8")
+    return tmp_path
+
+
+@pytest.mark.parametrize("arguments,action", [
+    (["source", "--id", "unit:1"], "source lines cannot be printed"),
+    (["query", "--id", "unit:1", "--edges", "all"], "raw edges cannot be expanded"),
+    (["host", "verify"], "host verification cannot run"),
+    (["host", "render"], "host documents cannot be rendered"),
+    (["host", "status"], "host run status cannot be read"),
+    (["host", "cost"], "host run cost cannot be reported"),
+])
+def test_published_example_missing_context_has_actionable_error(published_run, capsys, arguments, action):
+    command = [*arguments, "--run-dir", str(published_run)]
+    assert cli.main(command) == 2
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert captured.err == (
+        f"this directory has no frozen source snapshot (context.json), so {action}; "
+        "published examples ship only docs and the catalog — run cbe on a checkout to get a full run directory\n"
+    )
+    assert "Errno" not in captured.err and "Traceback" not in captured.err
+
+
+def test_published_example_find_and_query_do_not_need_context(published_run, capsys):
+    for arguments in (["find", "thing"], ["query", "--id", "unit:1"]):
+        assert cli.main([*arguments, "--run-dir", str(published_run)]) == 0
+        captured = capsys.readouterr()
+        assert "unit:1" in captured.out
+        assert captured.err == ""

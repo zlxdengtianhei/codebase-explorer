@@ -15,6 +15,14 @@ def _abs(value: str) -> Path:
     return path
 
 
+def _require_frozen_context(run_dir: Path, action: str) -> None:
+    if not (run_dir / "context.json").is_file():
+        raise ValueError(
+            f"this directory has no frozen source snapshot (context.json), so {action}; "
+            "published examples ship only docs and the catalog — run cbe on a checkout to get a full run directory"
+        )
+
+
 class _UsageParser(argparse.ArgumentParser):
     def error(self, message: str) -> None:
         command = getattr(self, "example_command", self.prog.rsplit(" ", 1)[-1])
@@ -205,6 +213,14 @@ def _host(args: argparse.Namespace):
     run_dir = args.run_dir or (host_run.latest_run(args.repo) if args.repo else None)
     if run_dir is None:
         raise host_run.HostRunError("pass --run-dir, or --repo to use the repository's latest run")
+    context_actions = {
+        "verify": "host verification cannot run",
+        "render": "host documents cannot be rendered",
+        "status": "host run status cannot be read",
+        "cost": "host run cost cannot be reported",
+    }
+    if command in context_actions:
+        _require_frozen_context(run_dir, context_actions[command])
     if command == "next":
         return host_run.next_tasks(run_dir, limit=args.max, owner=args.owner, reclaim_after=args.reclaim_after)
     if command == "submit":
@@ -379,6 +395,7 @@ def main(argv: list[str] | None = None) -> int:
         from cbe.docs import find, find_text, query, query_text, source
 
         if args.command == "source":
+            _require_frozen_context(args.run_dir, "source lines cannot be printed")
             print(source(args.run_dir, args.id, context=args.context), end="")
             return 0
 
@@ -387,6 +404,8 @@ def main(argv: list[str] | None = None) -> int:
             print(json.dumps(results, ensure_ascii=False, indent=2) if args.json else find_text(results),
                   end="\n" if args.json else "")
             return 0
+        if args.edges:
+            _require_frozen_context(args.run_dir, "raw edges cannot be expanded")
         record = query(args.run_dir, args.id, edges=args.edges)
         print(json.dumps(record, ensure_ascii=False, indent=2) if args.json else query_text(record),
               end="\n" if args.json else "")
