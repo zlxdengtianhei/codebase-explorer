@@ -16,7 +16,7 @@ from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path, PurePosixPath
 
 from . import (AGENTS_RESOURCE, BUSINESS_MODULE, PRODUCT, RUNTIME_MODULES, RUNTIME_SKILLS, SKILLS,
-               SOURCE_AGENT_BASE, SOURCE_PARENT_LEVEL, SOURCE_SCRIPT, SOURCE_SKILL_BASE)
+               SOURCE_AGENT_BASE, SOURCE_PARENT_LEVEL, SOURCE_SKILL_BASE)
 
 MANIFEST = ".skill-install.json"
 HOSTS = ("codex", "claude-code", "dsh", "opencode")
@@ -108,13 +108,10 @@ def _agent_files() -> dict[str, bytes]:
 
 def _resource_files(skill: str) -> dict[str, bytes]:
     root = resources.files(__package__).joinpath("resources", skill)
-    source_root: Path | None = None
-    if not root.is_dir():
+    if not root.is_dir() and (checkout := _checkout_root()) is not None:
         # Development checkouts use the same canonical files as the wheel build.
         # A wheel without embedded resources never reaches into an author checkout.
-        source_root = _checkout_root()
-        if source_root is not None:
-            root = source_root / SOURCE_SKILL_BASE / skill
+        root = checkout / SOURCE_SKILL_BASE / skill
     if not root.is_dir():
         raise InstallError(f"wheel is missing skill resource {skill!r}; rebuild {PRODUCT} from its release source")
     found: dict[str, bytes] = {}
@@ -128,11 +125,6 @@ def _resource_files(skill: str) -> dict[str, bytes]:
                 found[rel.as_posix()] = child.read_bytes()
 
     collect(root, PurePosixPath())
-    if source_root is not None and SOURCE_SCRIPT is not None and skill == "design-doc-protocol":
-        helper = source_root / SOURCE_SCRIPT
-        if not helper.is_file():
-            raise InstallError(f"checkout is missing skill script {helper}; rebuild the release")
-        found["scripts/workflow.py"] = helper.read_bytes()
     if "SKILL.md" not in found:
         raise InstallError(f"wheel skill {skill!r} has no SKILL.md; rebuild the release")
     if skill in RUNTIME_SKILLS:
@@ -173,10 +165,15 @@ def _read_manifest(destination: Path, skill: str) -> dict | None:
     return manifest
 
 
-def _check_existing(destination: Path, tracked: dict[str, str], *, allow_missing: bool = False) -> None:
+def _check_existing(base: Path, tracked: dict[str, str], *, allow_missing: bool = False,
+                    guard_parents: bool = True) -> None:
+    """Every tracked file under ``base`` is the one this installer wrote.
+
+    A skill directory must not sit behind a symlink (``guard_parents``); the shared agents directory may."""
     for rel, expected in tracked.items():
-        path = destination / rel
-        if path.is_symlink() or any(parent.is_symlink() for parent in path.parents if parent != destination.parent):
+        path = base / rel
+        if path.is_symlink() or (guard_parents and any(
+                parent.is_symlink() for parent in path.parents if parent != base.parent)):
             raise InstallError(f"refusing symlinked installed path: {path}")
         if not path.exists():
             if allow_missing:
@@ -209,20 +206,6 @@ def _recover_backup(destination: Path) -> None:
 def _agents_dir(root: Path) -> Path | None:
     """Claude Code reads subagent definitions from the ``agents`` directory beside its ``skills`` directory."""
     return root.parent / "agents" if root.name == "skills" and root.parent.name == ".claude" else None
-
-
-def _check_agent_files(agents_dir: Path, tracked: dict[str, str], *, allow_missing: bool) -> None:
-    """Every tracked agent file is the one this installer wrote. The directory itself may be a symlink."""
-    for name, expected in tracked.items():
-        path = agents_dir / name
-        if path.is_symlink():
-            raise InstallError(f"refusing symlinked installed path: {path}")
-        if not path.exists():
-            if allow_missing:
-                continue
-            raise InstallError(f"installed file was removed: {path}; restore it or resolve ownership manually")
-        if not path.is_file() or _digest(path.read_bytes()) != expected:
-            raise InstallError(f"user-modified installed file: {path}; save your edits before upgrading or uninstalling")
 
 
 def _write_agent_files(agents_dir: Path, agents: dict[str, bytes]) -> list[str]:
@@ -259,7 +242,7 @@ def _install_one(root: Path, skill: str) -> str:
         if path.exists() and rel not in tracked:
             raise InstallError(f"unowned file conflicts with release: {path}; move it before installing")
     if agents_dir:
-        _check_agent_files(agents_dir, tracked_agents, allow_missing=True)
+        _check_existing(agents_dir, tracked_agents, allow_missing=True, guard_parents=False)
         for name in agents.keys() - tracked_agents.keys():
             path = agents_dir / name
             if path.exists() or path.is_symlink():
@@ -321,7 +304,7 @@ def _uninstall_one(root: Path, skill: str) -> str:
     agents_dir = _agents_dir(root)
     tracked_agents = prior.get("agents", {}) if agents_dir else {}
     if agents_dir:
-        _check_agent_files(agents_dir, tracked_agents, allow_missing=True)
+        _check_existing(agents_dir, tracked_agents, allow_missing=True, guard_parents=False)
     for rel in prior["files"]:
         path = destination / rel
         if path.exists():
@@ -428,7 +411,7 @@ def main(argv: list[str] | None = None) -> int:
                         tracked_agents = manifest.get("agents", {})
                         if tracked_agents.keys() != _agent_files().keys():
                             raise InstallError(f"agent files are not installed in {agents_dir}; run {PRODUCT}-install upgrade")
-                        _check_agent_files(agents_dir, tracked_agents, allow_missing=False)
+                        _check_existing(agents_dir, tracked_agents, guard_parents=False)
                         for name in tracked_agents:
                             print(f"OK {agents_dir / name}")
                 elif args.command == "uninstall":

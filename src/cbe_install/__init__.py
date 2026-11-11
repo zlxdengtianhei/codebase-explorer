@@ -7,6 +7,5 @@ SOURCE_PARENT_LEVEL = 2
 SOURCE_SKILL_BASE = "plugin/skills"
 SOURCE_AGENT_BASE = "plugin/agents"
 AGENTS_RESOURCE = "agents"
-SOURCE_SCRIPT = None
 RUNTIME_SKILLS = ("codebase-explorer",)
 RUNTIME_MODULES = ("cbe",)
