@@ -2,6 +2,10 @@
 
 ## 2.2.0.dev0 (unreleased)
 
+- Python concrete facts are back in `catalog.json`: parameter defaults, named constants,
+  option tables, format templates and literal raises, taken from the syntax tree at render
+  time. `cbe find` matches them (`match: facts`) and `cbe query` prints them. Node pages do
+  not show them. Other languages have no such table.
 - `summary.json` reports `introduction_length` again: for every module, the length of its
   capability and summary against the unit explanations under it (`overlong`, `max_ratio`).
   `RUN.md` shows one line. The reading had been dropped with the other advisory checks.

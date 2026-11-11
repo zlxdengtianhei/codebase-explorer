@@ -124,7 +124,7 @@ C/C++ include paths, macros, build configuration, and generated sources affect a
 
 `find` searches the catalogue and `query` returns one entry by exact ID. Both read only `catalog.json`, so they work on any rendered run, complete or partial, without a model call. Both need an absolute `--run-dir`.
 
-`cbe find --run-dir RUN --term TEXT [--limit N] [--json]` matches TEXT, ignoring case, against every catalogue field of each symbol: its ID, name, explanation, signatures, relations and graph edges. Exact name or ID matches come first; the other rows keep catalogue order. `--limit` defaults to 25. A search without a match prints nothing and exits 0. On the evaluation's cJSON run:
+`cbe find --run-dir RUN --term TEXT [--limit N] [--json]` matches TEXT, ignoring case, against every catalogue field of each symbol: its ID, name, explanation, signatures, relations and graph edges. Exact name or ID matches come first; the other rows keep catalogue order. `--limit` defaults to 25. A search without a match prints nothing and exits 0. For Python files it also matches the concrete facts the program reads from the syntax tree (parameter defaults, named constants, option tables, format templates, literal raises); a hit there shows `match: facts`, and `cbe query` prints the facts of a symbol. Other languages have no facts table. On the evaluation's cJSON run:
 
 ```text
 $ cbe find --run-dir /absolute/path/to/run --term cJSON_Parse --limit 3
