@@ -228,6 +228,13 @@ The flag forms and JSON output remain compatible. If both forms are supplied,
 their values must match; omitting both is an error. An unknown query ID suggests
 using `cbe find` first.
 
+`summary.json` has a `basis` object, also printed under `Generation basis` in `RUN.md`.
+It records the CBE version and the distinct model names found in task usage or API call records.
+The model list is empty when no actual model was recorded. `source` contains the file count and
+the SHA-256 of the canonical JSON list of ordered `path` and `digest` records from the plan.
+`graph` is null without a graph. Otherwise it contains the frozen graph digest, backend record,
+edge counts by kind, whether the graph was replaced, and the latest replacement time.
+
 For script generation, `summary.json` records `wall_seconds` as the cumulative
 running time of all process segments, excluding idle time between segments.
 Each plan and resume appends a record to `runtime_environments` in

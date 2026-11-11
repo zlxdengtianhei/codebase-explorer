@@ -594,6 +594,7 @@ def plan(repo: Path, run_dir: Path | None = None, *, review: str = DEFAULT_REVIE
 
 def update_graph(run_dir: Path, graph_path: Path) -> dict[str, Any]:
     """Replace only the dataflow layer of a completed run's frozen graph."""
+    render_error = None
     with locked_state(run_dir) as state:
         if state["status"] != "complete" or any(task["status"] != "done" for task in state["tasks"].values()):
             raise HostRunError("only a completed run with no pending or failed tasks can update its graph")
@@ -631,10 +632,12 @@ def update_graph(run_dir: Path, graph_path: Path) -> dict[str, Any]:
         log_event(run_dir, "graph", "replaced the frozen graph without rerunning tasks",
                   old_graph_digest=old_digest, new_graph_digest=new_digest)
         _render(run_dir, state)
-        if state.get("render_error"):
-            raise HostRunError(f"graph was written but rendering failed: {state['render_error']}")
-        return {"status": "updated", "old_graph_digest": old_digest,
-                "new_graph_digest": new_digest, "updated_at": stamp}
+        render_error = state.get("render_error")
+        result = {"status": "updated", "old_graph_digest": old_digest,
+                  "new_graph_digest": new_digest, "updated_at": stamp}
+    if render_error:
+        raise HostRunError(f"graph was updated but rendering failed: {render_error}")
+    return result
 
 
 def latest_run(repo: Path) -> Path:
@@ -1414,6 +1417,32 @@ def _unexplained(state: dict[str, Any]) -> list[dict[str, str]]:
             for flag in task.get("flags") or [] if flag.startswith("unexplained: ")]
 
 
+def _basis(run_dir: Path, state: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
+    """The recorded inputs behind this rendering; never infer an unrecorded model."""
+    records = [record for task in state["tasks"].values()
+               for record in [*(task.get("usage") or []), *(task.get("exact_usage") or [])]]
+    models = {part.strip() for record in records for part in str(record.get("model") or "").split(",")
+              if part.strip()}
+    for path in (state_dir(run_dir) / "raw").glob("*.api.json"):
+        try:
+            actual = json.loads(path.read_text(encoding="utf-8")).get("actual_model")
+        except (OSError, ValueError):
+            continue
+        if isinstance(actual, str) and actual:
+            models.add(actual)
+    source_rows = [{"path": row["path"], "digest": row["digest"]} for row in state["files"]]
+    source_digest = hashlib.sha256(json.dumps(
+        source_rows, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
+    graph = context.get("graph")
+    updates = state.get("graph_updates") or []
+    graph_basis = None if graph is None else {
+        "digest": state["context"]["graph_digest"], "backend": graph.get("backend"),
+        "edge_counts": dict(sorted(Counter(edge.get("kind") for edge in graph.get("edges") or []).items())),
+        "updated": bool(updates), "updated_at": updates[-1]["at"] if updates else None}
+    return {"cbe_version": state["cbe_version"], "models": sorted(models),
+            "source": {"files": len(source_rows), "sha256": source_digest}, "graph": graph_basis}
+
+
 def _render(run_dir: Path, state: dict[str, Any]) -> None:
     try:
         context = _verified_context(run_dir, state)
@@ -1473,12 +1502,13 @@ def _render(run_dir: Path, state: dict[str, Any]) -> None:
     for tid, count in sorted(unexplained.items()):
         index_notes.append(f"{tid}: {count} function/method/class symbol(s) were left without prose "
                            "because no model answer explained them.")
+    basis = _basis(run_dir, state, context)
     try:
         meta = docs.render(run_dir=run_dir, source_root=Path(state["repo"]),
                                inventory=state.get("inventory") or {}, units=units,
                                dispositions=dispositions, tree=tree, index_notes=index_notes,
                                system=system or _mechanical_semantic_overview(state, tree),
-                               graph=context.get("graph"), context=context,
+                               graph=context.get("graph"), context=context, basis=basis,
                                source_tokens=sum(row["tokens"] for row in state["files"]),
                                languages={row["path"]: row.get("language") or "unknown" for row in context["files"]})
     except symbols.SemanticError as exc:
@@ -1504,7 +1534,7 @@ def _render(run_dir: Path, state: dict[str, Any]) -> None:
                "unexplained": unexplained_rows,
                "known_empty": sorted(task["id"] for task in state["tasks"].values()
                                     if "known_empty" in task["flags"]),
-               "wall_seconds": _wall_seconds(run_dir, state),
+               "wall_seconds": _wall_seconds(run_dir, state), "basis": basis,
                "run_dir": str(run_dir), "index": str(run_dir / "docs" / "INDEX.md"),
                "subagent_tasks": sum(task["attempts"] for task in state["tasks"].values())}
     ungrounded_count = sum(bool(unit.get("ungrounded")) for unit in units.values())

@@ -353,6 +353,7 @@ class _RenderPrep:
     system: dict | None
     graph: dict | None
     context: dict | None
+    basis: dict | None
     source_tokens: int | None
     docs_dir: Path
     nodes_dir: Path
@@ -395,7 +396,7 @@ class _RenderPrep:
 def _prepare_render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
                     dispositions: dict, tree: dict, languages: dict[str, str],
                     index_notes: list[str] | None = None, system: dict | None = None,
-                    graph: dict | None = None, context: dict | None = None,
+                    graph: dict | None = None, context: dict | None = None, basis: dict | None = None,
                     source_tokens: int | None = None) -> _RenderPrep:
     """Build the tree views, records, display names and relations every writer needs."""
     docs_dir = run_dir / "docs"
@@ -464,7 +465,7 @@ def _prepare_render(*, run_dir: Path, source_root: Path, inventory: dict, units:
         edges_by_to[edge["to"]].append(edge)
     return _RenderPrep(run_dir=run_dir, source_root=source_root, inventory=inventory,
                        dispositions=dispositions, tree=tree, languages=languages,
-                       index_notes=index_notes, system=system, graph=graph, context=context,
+                       index_notes=index_notes, system=system, graph=graph, context=context, basis=basis,
                        source_tokens=source_tokens, docs_dir=docs_dir, nodes_dir=nodes_dir,
                        nodes=nodes, children=children, owner=owner, units=units,
                        symbol_records=symbol_records, sources=sources, ranges_map=ranges_map,
@@ -590,14 +591,30 @@ def _write_dependencies(prep: _RenderPrep) -> None:
     (prep.docs_dir / "DEPENDENCIES.md").write_text("\n".join(dep_lines) + "\n", encoding="utf-8")
 
 
+def _basis_lines(basis: dict) -> list[str]:
+    lines = [f"- CBE version: `{basis['cbe_version']}`",
+             "- Models: " + (", ".join(f"`{model}`" for model in basis["models"]) or "none recorded"),
+             f"- Source: {basis['source']['files']} files · SHA-256 `{basis['source']['sha256']}`"]
+    graph = basis["graph"]
+    if graph is None:
+        return lines + ["- Graph: none"]
+    backend = graph.get("backend") or {}
+    edges = ", ".join(f"{kind}={count}" for kind, count in graph["edge_counts"].items()) or "none"
+    replaced = f"yes, latest {graph['updated_at']}" if graph["updated"] else "no"
+    return lines + [f"- Graph: SHA-256 `{graph['digest']}` · backend `{backend.get('name') or 'unknown'}` "
+                    f"version `{backend.get('version') or 'unknown'}` · edges {edges} · replaced {replaced}"]
+
+
 def _write_run(prep: _RenderPrep) -> None:
     """RUN.md: where this run's facts come from and what was and was not checked."""
-    run_lines = ["# Run notes", "", "Where this run's facts come from and what was and was not checked.", "",
-                 "## Reading stats", "",
-                 f"- units: {len(prep.units)} · semantic nodes: {len(prep.nodes)} · "
-                 f"dispositioned inventory ids: {len(prep.dispositions)}",
-                 "- source ranges are program-derived from the inventory, never model-written",
-                 "", "## Graph coverage", ""] + _graph_coverage(prep.graph, prep.source_root)
+    run_lines = ["# Run notes", "", "Where this run's facts come from and what was and was not checked.", ""]
+    if prep.basis is not None:
+        run_lines += ["## Generation basis", "", *_basis_lines(prep.basis), ""]
+    run_lines += ["## Reading stats", "",
+                  f"- units: {len(prep.units)} · semantic nodes: {len(prep.nodes)} · "
+                  f"dispositioned inventory ids: {len(prep.dispositions)}",
+                  "- source ranges are program-derived from the inventory, never model-written",
+                  "", "## Graph coverage", ""] + _graph_coverage(prep.graph, prep.source_root)
     if prep.index_notes:
         run_lines += ["", "## Generation notes", ""] + [f"- {item}" for item in prep.index_notes]
     (prep.docs_dir / "RUN.md").write_text("\n".join(run_lines) + "\n", encoding="utf-8")
@@ -681,7 +698,8 @@ def _write_catalog(prep: _RenderPrep) -> dict:
 def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
            dispositions: dict, tree: dict, languages: dict[str, str],
            index_notes: list[str] | None = None, system: dict | None = None,
-           graph: dict | None = None, context: dict | None = None, source_tokens: int | None = None) -> dict:
+           graph: dict | None = None, context: dict | None = None, basis: dict | None = None,
+           source_tokens: int | None = None) -> dict:
     """Render node pages, INDEX.md, DEPENDENCIES.md, RUN.md and a catalog under ``run_dir/docs``.
 
     ``languages`` maps each path to the language frozen in the source context,
@@ -690,7 +708,7 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
     Returns metadata the caller stores in run state for verification."""
     prep = _prepare_render(run_dir=run_dir, source_root=source_root, inventory=inventory,
                            units=units, dispositions=dispositions, tree=tree, languages=languages,
-                           index_notes=index_notes, system=system, graph=graph, context=context,
+                           index_notes=index_notes, system=system, graph=graph, context=context, basis=basis,
                            source_tokens=source_tokens)
     _write_node_pages(prep)
     index_meta = _write_index(prep)

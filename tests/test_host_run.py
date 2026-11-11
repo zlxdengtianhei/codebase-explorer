@@ -284,6 +284,9 @@ def test_import_claude_and_codex_usage_and_cost_report(tmp_path: Path) -> None:
     assert rows["module_1"]["harness_reported_total_tokens"] == 1000
     assert rows["system"]["cache_read_tokens"] == 600 and rows["system"]["input_tokens"] == 300
     assert rows["system"]["models"] == ["gpt-6.1-sol"]
+    host_run.render(run_dir)
+    assert json.loads((run_dir / "summary.json").read_text())["basis"]["models"] == [
+        "claude-sonnet-5-5", "gpt-6.1-sol"]
     assert rows["module_1"]["usd_api_equivalent"] > 0
     assert rows["system"]["usd_api_equivalent"] is None
     assert report["totals"]["usd"] is None
@@ -663,6 +666,8 @@ def test_summary_reports_structure_and_semantic_review_separately(tmp_path: Path
     assert summary["semantic_review"]["mode"] == "sample"
     assert summary["semantic_review"]["outcomes"] == {"accepted": 1}
     assert "not a bill" not in summary.get("truth", "")  # the note names the review distinction
+    assert summary["basis"]["graph"] is None
+    assert "- Graph: none" in (run_dir / "docs/RUN.md").read_text()
     status = (run_dir / "STATUS.md").read_text()
     assert "Semantic review" in status and "separate reader" in status
 
@@ -794,6 +799,24 @@ def test_update_graph_adds_dataflow_without_rerunning_a_complete_run(tmp_path: P
     assert state["graph_updates"] == [{"at": result["updated_at"],
                                        "old_graph_digest": result["old_graph_digest"],
                                        "new_graph_digest": result["new_graph_digest"]}]
+    basis = json.loads((run_dir / "summary.json").read_text())["basis"]
+    assert basis["cbe_version"] == state["cbe_version"]
+    assert basis["models"] == []  # host tasks have no model records unless exact usage is imported
+    source_rows = [{"path": row["path"], "digest": row["digest"]} for row in state["files"]]
+    source_digest = hashlib.sha256(json.dumps(
+        source_rows, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    assert basis["source"] == {"files": len(state["files"]), "sha256": source_digest}
+    assert basis["graph"] == {"digest": result["new_graph_digest"],
+                              "backend": {"name": "test", "version": "1"},
+                              "edge_counts": {"dataflow": 1}, "updated": True,
+                              "updated_at": result["updated_at"]}
+    notes = (run_dir / "docs/RUN.md").read_text()
+    assert "## Generation basis" in notes
+    assert f"- CBE version: `{state['cbe_version']}`" in notes
+    assert "- Models: none recorded" in notes
+    assert f"- Source: {len(state['files'])} files · SHA-256 `{source_digest}`" in notes
+    assert (f"- Graph: SHA-256 `{result['new_graph_digest']}` · backend `test` version `1` · "
+            f"edges dataflow=1 · replaced yes, latest {result['updated_at']}") in notes
     verifier = host_run._RunState(state)
     host_run._verified_context(run_dir, verifier)  # the new raw fingerprint is accepted
     verifier["context"]["raw_digest"] = hashlib.sha256(old_raw).hexdigest()

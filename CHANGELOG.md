@@ -4,6 +4,8 @@
 
 - `cbe host update-graph` can add or remove dataflow in a completed run without rerunning model
   tasks. It requires the same source manifest and exactly the same non-dataflow nodes and edges.
+- `summary.json` and `RUN.md` record their generation basis: CBE version, recorded models, source
+  fingerprint, graph backend and digest, edge counts, and graph replacement time.
 
 - `cbe-install` has a `pi` target: `.pi/skills/` in a project, `~/.pi/agent/skills/` for the user.
 - `cbe find`, `cbe query` and `cbe source` on a catalogue from another CBE version exit with
