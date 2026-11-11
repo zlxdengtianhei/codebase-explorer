@@ -42,6 +42,7 @@ import os
 import re
 import secrets
 import time
+from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterator
@@ -59,6 +60,7 @@ REVIEW_MODES = ("none", "sample", "all")
 # One switch for both drivers: change to "all" to review every module by default.
 DEFAULT_REVIEW = "sample"
 TREE_KINDS = ("tree_name", "tree_top")
+FALLBACK_CODES = ("source_reassembly_fallback", "context_fallback")   # diagnostics kept in the run state
 ORDER = {"module": 1, "repair": 2, "tree_name": 3, "tree_top": 3, "review": 4, "system": 5}
 
 
@@ -555,7 +557,7 @@ def plan(repo: Path, run_dir: Path | None = None, *, review: str = DEFAULT_REVIE
         "tasks": tasks, "rendered": False, "verify": None,
         "runtime_environments": [_runtime_environment()],
     }
-    for code in ("source_reassembly_fallback", "context_fallback"):
+    for code in FALLBACK_CODES:
         fallbacks = [row for row in context.get("diagnostics", []) if row.get("code") == code]
         if fallbacks:
             state[code] = fallbacks
@@ -1120,11 +1122,15 @@ def note_usage_unknown(run_dir: Path, task_id: str, attempt: int) -> None:
 # ---------------------------------------------------------------- status / resume
 
 
+def _fallback_fields(state: dict[str, Any]) -> dict[str, Any]:
+    """``<code>`` and ``<code>_count`` for every source fallback the plan recorded."""
+    return {key: value for code in FALLBACK_CODES if (rows := state.get(code, []))
+            for key, value in ((code + "_count", len(rows)), (code, rows))}
+
+
 def _summary(state: dict[str, Any]) -> dict[str, Any]:
     tasks = list(state["tasks"].values())
-    counts: dict[str, int] = {}
-    for task in tasks:
-        counts[task["status"]] = counts.get(task["status"], 0) + 1
+    counts = dict(Counter(task["status"] for task in tasks))
     failed = [{"task": task["id"], "error": task["errors"][-1][:300]} for task in tasks
               if task["status"] == "failed"]
     leased = [task["id"] for task in tasks if task["status"] == "leased"]
@@ -1155,13 +1161,9 @@ def _summary(state: dict[str, Any]) -> dict[str, Any]:
     else:
         action = f"cbe host next --run-dir {run}"
     unknown = [f"{row['task']}#attempt-{row['attempt']}" for row in state.get("usage_unknown") or []]
-    source_fallbacks = {key: value
-                        for code in ("source_reassembly_fallback", "context_fallback")
-                        if (rows := state.get(code, []))
-                        for key, value in ((code + "_count", len(rows)), (code, rows))}
     return {"status": state["status"], "counts": counts, "leased": leased, "failed": failed,
             "ready": len(ready), "next_action": action, "usage_unknown": unknown,
-            **source_fallbacks}
+            **_fallback_fields(state)}
 
 
 def status(run_dir: Path) -> dict[str, Any]:
@@ -1360,8 +1362,9 @@ def _render(run_dir: Path, state: dict[str, Any]) -> None:
     if normalized:
         index_notes.append("Accepted with repairs or gaps (see each task's flags in host/state.json): "
                            + ", ".join(normalized) + ".")
+    unexplained_rows = _unexplained(state)
     unexplained: dict[str, int] = {}
-    for row in _unexplained(state):
+    for row in unexplained_rows:
         task = state["tasks"][row["task"]]
         repair = (state["tasks"].get(f"repair_{task['module'] + 1}") if task["kind"] == "module" else None)
         if task["status"] == "done" and not (repair and repair["status"] == "done"):
@@ -1395,18 +1398,15 @@ def _render(run_dir: Path, state: dict[str, Any]) -> None:
                "modules": len(state["modules"]), "units": meta["units_rendered"],
                "semantic_nodes": meta["nodes"], "published_pages": published_pages,
                "pending": pending + open_tree + (["system"] if system_task["status"] != "done" else []),
-               "normalized": sorted(task["id"] for task in state["tasks"].values()
-                                   if task["flags"] and "known_empty" not in task["flags"]),
-               "unexplained_count": len(_unexplained(state)),
-               "unexplained": _unexplained(state),
+               "normalized": normalized,
+               "unexplained_count": len(unexplained_rows),
+               "unexplained": unexplained_rows,
                "known_empty": sorted(task["id"] for task in state["tasks"].values()
                                     if "known_empty" in task["flags"]),
                "wall_seconds": round(time.time() - epoch(state["created_at"]), 3),
                "run_dir": str(run_dir), "index": str(run_dir / "docs" / "INDEX.md"),
                "subagent_tasks": sum(task["attempts"] for task in state["tasks"].values())}
-    for code in ("source_reassembly_fallback", "context_fallback"):
-        if rows := state.get(code, []):
-            summary.update({code + "_count": len(rows), code: rows})
+    summary.update(_fallback_fields(state))
     if reason:
         summary["partial_reason"], summary["partial_detail"] = reason, state.get("partial_detail", "")
     state["verify"] = verify_state(run_dir, state)
@@ -1529,9 +1529,7 @@ def finish(run_dir: Path) -> dict[str, Any]:
 
 
 def _status_markdown(state: dict[str, Any]) -> str:
-    counts: dict[str, int] = {}
-    for task in state["tasks"].values():
-        counts[task["status"]] = counts.get(task["status"], 0) + 1
+    counts = Counter(task["status"] for task in state["tasks"].values())
     unknown = [f"{row['task']} (attempt {row['attempt']})" for row in state.get("usage_unknown") or []]
     review_tasks = [task for task in state["tasks"].values() if task["kind"] == "review"]
     review_line = ([f"Semantic review: mode **{state['review']}**; "
@@ -1542,7 +1540,7 @@ def _status_markdown(state: dict[str, Any]) -> str:
     unexplained = _unexplained(state)
     correction_lines = [f"unexplained {len(unexplained)}", ""]
     correction_lines += [f"- {row['task']}: {docs.code_text(row['symbol'])}" for row in unexplained]
-    for code in ("source_reassembly_fallback", "context_fallback"):
+    for code in FALLBACK_CODES:
         if rows := state.get(code, []):
             correction_lines += ["", f"{code} {len(rows)}", ""]
             correction_lines += [f"- {docs.code_text(row['path'])}: {row['message']}" for row in rows]
