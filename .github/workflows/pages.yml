@@ -1,0 +1,63 @@
+name: Online example (GitHub Pages)
+# Publishes the interactive code map in showcase/ as a static site.
+# Repository setting needed once: Settings > Pages > Source: GitHub Actions.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "showcase/**"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: pages
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Collect the pages (no recording scripts, no package files)
+        run: |
+          set -eu
+          mkdir -p "$RUNNER_TEMP/site"
+          cd showcase
+          for page in *.html; do
+            [ "$page" = "social.html" ] || cp "$page" "$RUNNER_TEMP/site/"
+          done
+          cp app.js style.css "$RUNNER_TEMP/site/"
+          cp -r data fonts vendor subtitles "$RUNNER_TEMP/site/"
+          touch "$RUNNER_TEMP/site/.nojekyll"
+      - name: Check that every file a page refers to was collected
+        run: |
+          python3 - "$RUNNER_TEMP/site" <<'PY'
+          import re, sys
+          from pathlib import Path
+          site = Path(sys.argv[1])
+          missing = []
+          for page in site.glob("*.html"):
+              for ref in re.findall(r'(?:src|href)="([^"#?]+)"', page.read_text(encoding="utf-8")):
+                  if not re.match(r"[a-z]+:|//", ref) and not (site / ref).is_file():
+                      missing.append(f"{page.name}: {ref}")
+          data = sorted(p.stem for p in (site / "data").glob("*.json"))
+          print("pages:", sorted(p.name for p in site.glob("*.html")), "data:", data)
+          if missing or not data:
+              sys.exit("missing: " + ", ".join(missing or ["no data file"]))
+          PY
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: ${{ runner.temp }}/site
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5
