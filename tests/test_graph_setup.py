@@ -240,3 +240,33 @@ def test_languages_report_call_graph_status():
     assert rows["swift"] == {"status": "untested"}
     # Every language keeps its parsing support; only the note about graphs changes.
     assert all("call_graph" in row and "suffixes" in row for row in available_languages()["languages"])
+
+
+def test_build_runs_joern_with_the_found_java_and_hints_when_none(tmp_path, monkeypatch):
+    import subprocess
+
+    import cbe.graph_backends.joern as joern
+
+    home = tmp_path / "joern"
+    home.mkdir()
+    for name in ("joern", "joern-parse"):
+        (home / name).touch()
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "a.py").write_text("x = 1\n")
+    seen = []
+
+    def run(argv, timeout, cwd, *, env=None):
+        seen.append(env)
+        if "--version" in argv:
+            return subprocess.CompletedProcess(argv, 0, "Version: 1", "")
+        return subprocess.CompletedProcess(argv, 1, "", "java: not found")  # joern-parse fails
+
+    monkeypatch.setattr(joern, "_run", run)
+    java = toolchain.JavaInstall(tmp_path / "jdk", "21.0.1", 21, "cache")
+    fragment = joern.build_with_joern(repo, tmp_path / "r1", ["python"], home, 5, java=java)
+    assert all(env["JAVA_HOME"] == str(java.home) and env["PATH"].startswith(str(java.home / "bin"))
+               for env in seen)
+    assert "no Java" not in fragment["diagnostics"][0]["message"]
+    fragment = joern.build_with_joern(repo, tmp_path / "r2", ["python"], home, 5)
+    assert "no Java 21+ was found, run `cbe graph setup`" in fragment["diagnostics"][0]["message"]

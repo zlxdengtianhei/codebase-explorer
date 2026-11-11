@@ -231,6 +231,7 @@ def test_cli_heap_and_oom_cause_for_partial_and_total_failure(tmp_path, monkeypa
         return subprocess.CompletedProcess(argv, 1, "", 'java.lang.OutOfMemoryError: Java heap space')
 
     monkeypatch.setattr(subprocess, "run", run)
+    monkeypatch.setattr(graph_backends, "find_java", lambda *a, **kw: None)  # the host's Java must not matter
     args = ["graph", "build", str(repo), "--joern-home", str(home), "--joern-heap", "8g"]
     out = tmp_path / "failed.json"
     assert main(args + ["--backend", "joern", "--output", str(out)]) != 0

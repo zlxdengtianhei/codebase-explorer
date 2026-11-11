@@ -114,6 +114,7 @@ def test_ruby_extra_language(tmp_path: Path) -> None:
     assert _capability(graph, "ruby", "cfg")["status"] == "resolved"
 
 
+@pytest.mark.skipif(shutil.which("cargo") is None, reason="the Rust frontend needs cargo on PATH")
 @pytest.mark.skipif(not _JOERN_HOME, reason="CBE_JOERN_HOME is not set")
 def test_rust_extra_language(tmp_path: Path) -> None:
     repo = _copy_case(tmp_path, "rust")
