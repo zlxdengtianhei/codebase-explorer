@@ -164,11 +164,11 @@ The graph adapters use [Joern](https://joern.io/), [Grimp](https://grimp.readthe
 | Ruby | Joern declarations | works | CBE passes `--no-default-exclude` so `test`, `tests` and `spec` paths are analyzed. |
 | Rust | Joern declarations | needs `cargo` | The frontend runs `cargo` and needs a Cargo project layout; a flat source directory can fail. |
 | PHP | Joern declarations | needs `php` | An external PHP runtime (7 or later) must be on `PATH`. The local trial without it reported a failed analysis. |
-| C# | Joern declarations | known failure | Joern 4.0.654: the export script fails with a null pointer error, so the build records a failed capability. |
-| Kotlin | Joern declarations | known failure | Joern 4.0.654: `joern-parse` fails with `key not found: MethodRef`, so the build records a failed capability. |
+| C# | Joern declarations | known failure | Joern 4.0.654 failed on a real 55-file repository: the export script hit a null pointer error, and the build recorded a failed capability. A two-file test fixture works, so small inputs may succeed. |
+| Kotlin | Joern declarations | known failure | Joern 4.0.654 failed on a real 146-file repository: `joern-parse` stopped with `key not found: MethodRef`, and the build recorded a failed capability. A two-file test fixture works, so small inputs may succeed. |
 | Swift | Joern declarations | not tested | |
 
-"works" means a small tree of that language produced a call graph in a real run; resolution quality still depends on the code. `cbe languages` reports the same status as `call_graph` for each language. Source parsing and chunking support every language in the table whatever the call-graph column says.
+"works" means a real repository of that language produced a call graph with Joern 4.0.654; resolution quality still depends on the code. `cbe languages` reports the same status as `call_graph` for each language. Source parsing and chunking support every language in the table whatever the call-graph column says.
 
 Joern import declarations do not establish a resolved file dependency. Capabilities describe the actual run, including frontend failures; a registered source language alone does not establish semantic graph coverage. `graph build` finds the Joern and Java that `cbe graph setup` installed. Pass `--joern-home` to use another Joern, and `--depcruise-bin` for a local dependency-cruiser executable:
 

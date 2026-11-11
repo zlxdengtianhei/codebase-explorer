@@ -189,15 +189,17 @@ _JOERN_FRONTENDS: dict[str, tuple[str, ...]] = {
     "go": ("gosrc2cpg",),
 }
 
-#: What running Joern 4.0.654 on a small source tree of each language gave.
+#: What running Joern 4.0.654 on a real small repository of each language gave.
 #: A language that is not listed has not been tried.
 _JOERN_TESTED = "Joern 4.0.654"
 _CALL_GRAPH: dict[str, dict[str, str]] = {
     **{name: {"status": "works"} for name in ("c", "cpp", "python", "javascript", "typescript", "java", "go", "ruby")},
     "c_sharp": {"status": "known_failure",
-                "note": f"{_JOERN_TESTED}: the export script fails with a null pointer error"},
+                "note": f"{_JOERN_TESTED}: failed on a real 55-file repository (the export script hit a null "
+                        "pointer error); a two-file test fixture works"},
     "kotlin": {"status": "known_failure",
-               "note": f"{_JOERN_TESTED}: joern-parse fails with key not found: MethodRef"},
+               "note": f"{_JOERN_TESTED}: failed on a real 146-file repository (joern-parse: key not found: "
+                       "MethodRef); a two-file test fixture works"},
     "php": {"status": "needs_tool", "note": "needs `php` on PATH"},
     "rust": {"status": "needs_tool", "note": "needs `cargo` on PATH and a Cargo project layout"},
 }
