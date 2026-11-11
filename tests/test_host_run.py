@@ -1097,3 +1097,26 @@ def test_resume_new_group_preserves_last_accepted_system(tmp_path, accepted_syst
         assert "The overview and navigation are mechanical" in index
         assert "Preserved dependency explanation." not in pages
         assert "The overview was written before some modules finished" not in index
+
+
+def test_plan_covers_every_nonempty_file_byte_for_byte_with_one_inventory(tmp_path: Path) -> None:
+    """The coverage guarantee behind the single (grammar) inventory: for any file the
+    frozen chunks join back to its bytes, and only a blank file has no inventory id."""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    sources = {"ok.py": "def f():\r\n    return 1\r\n", "broken.py": "def (:\n  x = \n",
+               "doc.py": '"""Only a docstring."""\n', "blank.py": "  \n\n", "empty.py": ""}
+    for name, text in sources.items():
+        (repo / name).write_bytes(text.encode())
+    run_dir = Path(host_run.plan(repo, tmp_path / "run", review="none")["run_dir"])
+    state = json.loads((run_dir / "host" / "state.json").read_text())
+    chunks = json.loads((run_dir / "context.json").read_text())["chunks"]
+    for name, text in sources.items():
+        symbols = state["inventory"][name]["symbols"] if name in state["inventory"] else []
+        if text.strip():
+            assert symbols, name
+            joined = "".join(c["text"] for c in sorted((c for c in chunks if c["path"] == name),
+                                                       key=lambda c: c["start_byte"]))
+            assert joined == text, name
+        else:
+            assert symbols == [], name

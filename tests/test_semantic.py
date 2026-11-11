@@ -33,17 +33,21 @@ SRC = (
 
 
 def _inventory() -> dict:
-    return symbols.build_inventory({"pkg/jobs.py": {"source": SRC, "digest": "d", "tokens": 40}})
+    """Inventory of ``SRC`` from a hand-written chunk set with readable ids.
 
-
-def test_python_inventory_ids_are_unique_for_overloads_and_cover_the_module() -> None:
-    inventory = _inventory()
-    ids = [row["id"] for row in inventory["pkg/jobs.py"]["symbols"]]
-    assert len(ids) == len(set(ids)), ids
-    assert "pkg/jobs.py::reserve" in ids
-    assert sum(1 for uid in ids if uid.startswith("pkg/jobs.py::reserve")) == 2
-    assert "pkg/jobs.py::Pool" in ids and "pkg/jobs.py::Pool.submit" in ids
-    assert "pkg/jobs.py::<module top-level>" in ids
+    Ids are opaque strings to every consumer; a real run supplies grammar ids."""
+    lines = SRC.splitlines(keepends=True)
+    spans = [("pkg/jobs.py::reserve", "reserve", "function", 3, 4),
+             ("pkg/jobs.py::reserve@5", "reserve", "function", 5, 8),
+             ("pkg/jobs.py::Pool", "Pool", "class", 10, 12),
+             ("pkg/jobs.py::Pool.submit", "Pool.submit", "method", 11, 12),
+             ("pkg/jobs.py::<module top-level>", "<module top-level>", "module_region", 1, 3)]
+    context = {"schema": "cbe-context/1", "graph": None, "diagnostics": [],
+               "files": [{"path": "pkg/jobs.py", "language": "python", "sha256": "d"}],
+               "chunks": [{"id": uid, "path": "pkg/jobs.py", "kind": kind, "name": name,
+                           "start_line": start, "end_line": end, "text": "".join(lines[start - 1:end])}
+                          for uid, name, kind, start, end in spans]}
+    return symbols.inventory_from_context(context)
 
 
 def _good_payload(inventory: dict) -> dict:
@@ -312,15 +316,11 @@ def test_ensure_chunk_coverage_marks_empty_and_keeps_comment_only(tmp_path) -> N
     repo.mkdir()
     (repo / "empty.py").write_text("", encoding="utf-8")
     (repo / "doc.py").write_text('"""Only a docstring, no declaration."""\n', encoding="utf-8")
-    ast_inventory = symbols.build_inventory({
-        "empty.py": {"source": "", "digest": "e", "tokens": 0},
-        "doc.py": {"source": '"""Only a docstring, no declaration."""\n', "digest": "d", "tokens": 8},
-    })
     context = {"schema": "cbe-context/1",
                "files": [{"path": "empty.py", "language": "python", "sha256": "e"},
                          {"path": "doc.py", "language": "python", "sha256": "d"}],
                "chunks": [], "graph": None, "diagnostics": []}
-    symbols.ensure_chunk_coverage(context, repo, ast_inventory, ["empty.py", "doc.py"])
+    symbols.ensure_chunk_coverage(context, repo, ["empty.py", "doc.py"])
     codes = {(row["path"], row["code"]) for row in context["diagnostics"]}
     assert ("empty.py", "known_empty") in codes
     assert not any(chunk["path"] == "empty.py" for chunk in context["chunks"])
@@ -337,7 +337,7 @@ def test_ensure_chunk_coverage_digests_the_file_bytes_of_a_crlf_file(tmp_path) -
     raw = b"def f():\r\n    return 1\r\n"
     (repo / "crlf.py").write_bytes(raw)
     context = {"schema": "cbe-context/1", "files": [], "chunks": [], "graph": None, "diagnostics": []}
-    symbols.ensure_chunk_coverage(context, repo, {}, ["crlf.py"])
+    symbols.ensure_chunk_coverage(context, repo, ["crlf.py"])
     assert context["files"] == [{"path": "crlf.py", "language": "python",
                                  "sha256": hashlib.sha256(raw).hexdigest(),
                                  "source": raw.decode("utf-8")}]
@@ -350,8 +350,9 @@ def test_validate_details_allows_empty_units_only_when_no_inventory_ids() -> Non
     assert checks.validate_details(payload, ["a.py"], empty_inventory, set()) == []
     assert checks.normalize_details(dict(payload), ["a.py"], empty_inventory, set()) == []
 
-    full = symbols.build_inventory({"a.py": {"source": "def f():\n    return 1\n",
-                                              "digest": "d", "tokens": 5}})
+    full = {"a.py": {"tokens": 5, "sha256": "d", "nlines": 2, "known_empty": False,
+                     "symbols": [{"id": "a.py::f", "name": "f", "kind": "function",
+                                  "parent": None, "lines": [[1, 2]]}]}}
     problems = checks.validate_details({"units": [], "dispositions": {}, "batch_notes": "x"},
                                          ["a.py"], full, set())
     assert any("nonempty" in problem for problem in problems)
