@@ -629,6 +629,9 @@ def update_graph(run_dir: Path, graph_path: Path) -> dict[str, Any]:
         state.context = context
         state.setdefault("graph_updates", []).append(
             {"at": stamp, "old_graph_digest": old_digest, "new_graph_digest": new_digest})
+        # context.json and its digest in the state change together: save now, so that a failure
+        # while rendering cannot leave a new context beside the old digest.
+        write_json(state_dir(run_dir) / "state.json", state)
         log_event(run_dir, "graph", "replaced the frozen graph without rerunning tasks",
                   old_graph_digest=old_digest, new_graph_digest=new_digest)
         _render(run_dir, state)

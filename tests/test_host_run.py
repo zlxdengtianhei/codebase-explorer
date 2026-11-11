@@ -835,6 +835,27 @@ def _assert_update_refused(run_dir: Path, graph_path: Path, capsys, message: str
     assert before == files()
 
 
+def test_update_graph_leaves_a_usable_run_when_rendering_breaks(tmp_path: Path, monkeypatch) -> None:
+    repo = _repo(tmp_path)
+    graph = _graph_for(repo, ["src/pkg/jobs.py", "src/pkg/cli.py"])
+    graph_path = tmp_path / "graph.json"
+    graph_path.write_text(json.dumps(graph), encoding="utf-8")
+    run_dir = Path(host_run.plan(repo, tmp_path / "run", review="none", graph_path=graph_path)["run_dir"])
+    _drive(run_dir)
+    graph_path.write_text(json.dumps(_graph_with_dataflow(graph)), encoding="utf-8")
+
+    def broken(*_args, **_kwargs):
+        raise RuntimeError("disk full")
+
+    with monkeypatch.context() as patch:
+        patch.setattr(host_run, "_render", broken)
+        with pytest.raises(RuntimeError, match="disk full"):
+            host_run.update_graph(run_dir, graph_path)
+    # The new context and its digest were saved together: the run still verifies and renders.
+    assert host_run.verify(run_dir)["ok"]
+    assert host_run.update_graph(run_dir, graph_path)["status"] == "nothing to update"
+
+
 def test_update_graph_refuses_an_unfinished_run(tmp_path: Path, capsys) -> None:
     repo = _repo(tmp_path)
     graph = _graph_for(repo, ["src/pkg/jobs.py", "src/pkg/cli.py"])
