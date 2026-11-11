@@ -2,6 +2,9 @@
 
 ## 2.2.0.dev0 (unreleased)
 
+- `cbe host update-graph` can add or remove dataflow in a completed run without rerunning model
+  tasks. It requires the same source manifest and exactly the same non-dataflow nodes and edges.
+
 - `cbe-install` has a `pi` target: `.pi/skills/` in a project, `~/.pi/agent/skills/` for the user.
 - `cbe find`, `cbe query` and `cbe source` on a catalogue from another CBE version exit with
   the same one-sentence version error as `cbe host render`. Before, they still read catalogues

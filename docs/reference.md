@@ -210,6 +210,18 @@ $ cbe source --run-dir /absolute/path/to/run --id 'cJSON.c::function::cJSON_Pars
 
 ## Command details
 
+| Host command | Purpose |
+|---|---|
+| `cbe host update-graph --run-dir RUN --graph GRAPH` | Replace the frozen graph of a completed run without rerunning model tasks. |
+
+Use `update-graph` to add or remove dataflow after a run. The run must be complete, must have been
+planned with a graph, and must have an intact frozen context. The new graph must pass the usual
+source and quality checks. Its `source_manifest` must match. After removing dataflow nodes and
+edges, both graphs must have exactly the same nodes and edges in the same order. Otherwise the
+command exits 2 without changing the run; start a new plan for that graph. An identical graph
+prints `nothing to update`. A successful update refreshes the context fingerprints and renders
+the documents again.
+
 `cbe find --run-dir "$RUN" LIMIT` accepts the same search term as `--term LIMIT`.
 `cbe query --run-dir "$RUN" "$ID"` accepts the same ID as `--id "$ID"`.
 The flag forms and JSON output remain compatible. If both forms are supplied,

@@ -51,7 +51,7 @@ from cbe import aggregation, batching, catalog_query, checks, docs, grounding, p
 from cbe import __version__
 from cbe import source_context
 from cbe.grammars import ContextError
-from cbe.graph import check_graph_source
+from cbe.graph import check_graph_source, read_graph_quality
 from cbe.token_budget import count_text_tokens
 
 
@@ -590,6 +590,51 @@ def plan(repo: Path, run_dir: Path | None = None, *, review: str = DEFAULT_REVIE
             "tasks": len(tasks), "review": review, "jobs": jobs,
             "progress_log": str(run_dir / "progress.log"),
             "next_action": f"cbe host next --run-dir {run_dir}"}
+
+
+def update_graph(run_dir: Path, graph_path: Path) -> dict[str, Any]:
+    """Replace only the dataflow layer of a completed run's frozen graph."""
+    with locked_state(run_dir) as state:
+        if state["status"] != "complete" or any(task["status"] != "done" for task in state["tasks"].values()):
+            raise HostRunError("only a completed run with no pending or failed tasks can update its graph")
+        frozen = state["context"]
+        if not frozen.get("graph_present"):
+            raise HostRunError("this run was planned without a graph; start a new plan with --graph")
+        context = _verified_context(run_dir, state)
+        try:
+            graph = source_context._load_graph(
+                graph_path, Path(state["repo"]), {row["path"]: row["digest"] for row in state["files"]})
+            read_graph_quality(graph)
+        except (ContextError, ValueError, OSError) as exc:
+            raise HostRunError(f"cannot read the new graph: {exc}") from exc
+        old_graph = context["graph"]
+        old_digest = frozen["graph_digest"]
+        new_digest = context_digest(graph)
+        if new_digest == old_digest:
+            return {"status": "nothing to update", "graph_digest": old_digest}
+        if graph.get("source_manifest") != old_graph.get("source_manifest"):
+            raise HostRunError("the new graph has a different source_manifest; start a new plan")
+        old_structure = ([n for n in old_graph["nodes"] if n.get("kind") != "dataflow_node"],
+                         [e for e in old_graph["edges"] if e.get("kind") != "dataflow"])
+        new_structure = ([n for n in graph["nodes"] if n.get("kind") != "dataflow_node"],
+                         [e for e in graph["edges"] if e.get("kind") != "dataflow"])
+        if new_structure != old_structure:
+            raise HostRunError("the new graph differs from this run's graph in more than dataflow; start a new plan")
+        stamp = _now()
+        context["graph"] = graph
+        write_json(run_dir / "context.json", context)
+        frozen["raw_digest"] = hashlib.sha256((run_dir / "context.json").read_bytes()).hexdigest()
+        frozen["graph_digest"] = new_digest
+        state.context = context
+        state.setdefault("graph_updates", []).append(
+            {"at": stamp, "old_graph_digest": old_digest, "new_graph_digest": new_digest})
+        log_event(run_dir, "graph", "replaced the frozen graph without rerunning tasks",
+                  old_graph_digest=old_digest, new_graph_digest=new_digest)
+        _render(run_dir, state)
+        if state.get("render_error"):
+            raise HostRunError(f"graph was written but rendering failed: {state['render_error']}")
+        return {"status": "updated", "old_graph_digest": old_digest,
+                "new_graph_digest": new_digest, "updated_at": stamp}
 
 
 def latest_run(repo: Path) -> Path:

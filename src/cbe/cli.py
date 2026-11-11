@@ -125,6 +125,11 @@ def build_parser() -> argparse.ArgumentParser:
             part.add_argument("--overhead", type=int, default=None,
                               help="estimated harness tokens per subagent turn context")
 
+    update_graph = host_sub.add_parser(
+        "update-graph", help="Replace a completed run's graph when only its dataflow layer changed")
+    update_graph.add_argument("--run-dir", type=_abs, required=True)
+    update_graph.add_argument("--graph", type=_abs, required=True, help="rebuilt graph for the same source snapshot")
+
     sub.add_parser("languages", help="Show source grammars, extensions, and availability")
 
     graph_p = sub.add_parser("graph", help="Build and query source-linked code graphs")
@@ -212,6 +217,8 @@ def _host(args: argparse.Namespace):
     if command == "plan":
         return host_run.plan(args.repo, args.run_dir, review=args.review, jobs=args.jobs, host=args.host,
                              graph_path=args.graph)
+    if command == "update-graph":
+        return host_run.update_graph(args.run_dir, args.graph)
     run_dir = args.run_dir or (host_run.latest_run(args.repo) if args.repo else None)
     if run_dir is None:
         raise host_run.HostRunError("pass --run-dir, or --repo to use the repository's latest run")

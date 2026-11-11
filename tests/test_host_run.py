@@ -758,6 +758,104 @@ def test_resume_rejects_a_different_graph(tmp_path: Path) -> None:
         host_run.resume(other, graph_path=ga)
 
 
+def _graph_with_dataflow(graph: dict) -> dict:
+    from copy import deepcopy
+    from cbe.graph import graph_quality
+    value = deepcopy(graph)
+    value["nodes"].append({"id": "df-node", "kind": "dataflow_node", "path": "src/pkg/jobs.py",
+                           "start_line": 1, "end_line": 1, "name": "value"})
+    value["edges"].append({"id": "df-edge", "kind": "dataflow", "source": "df-node",
+                           "target": "df-node", "path": "src/pkg/jobs.py", "line": 1})
+    value["quality"] = graph_quality(value)
+    return value
+
+
+def test_update_graph_adds_dataflow_without_rerunning_a_complete_run(tmp_path: Path, capsys) -> None:
+    repo = _repo(tmp_path)
+    graph = _graph_for(repo, ["src/pkg/jobs.py", "src/pkg/cli.py"])
+    graph_path = tmp_path / "graph.json"
+    graph_path.write_text(json.dumps(graph), encoding="utf-8")
+    run_dir = Path(host_run.plan(repo, tmp_path / "run", review="none", graph_path=graph_path)["run_dir"])
+    _drive(run_dir)
+    old_raw = (run_dir / "context.json").read_bytes()
+    unchanged = [run_dir / "docs/INDEX.md", run_dir / "docs/DEPENDENCIES.md",
+                 *sorted((run_dir / "docs/nodes").glob("*.md"))]
+    before = {path: path.read_bytes() for path in unchanged}
+    graph_path.write_text(json.dumps(_graph_with_dataflow(graph)), encoding="utf-8")
+
+    assert cli.main(["host", "update-graph", "--run-dir", str(run_dir), "--graph", str(graph_path)]) == 0
+    result = json.loads(capsys.readouterr().out)
+    assert result["status"] == "updated" and result["old_graph_digest"] != result["new_graph_digest"]
+    assert all(path.read_bytes() == raw for path, raw in before.items())
+    from cbe.catalog_query import query
+    assert [edge["id"] for edge in query(run_dir, "src/pkg/jobs.py", edges="dataflow")["raw_edges"]] == ["df-edge"]
+    assert host_run.verify(run_dir)["ok"]
+    state = json.loads((run_dir / "host/state.json").read_text())
+    assert state["graph_updates"] == [{"at": result["updated_at"],
+                                       "old_graph_digest": result["old_graph_digest"],
+                                       "new_graph_digest": result["new_graph_digest"]}]
+    verifier = host_run._RunState(state)
+    host_run._verified_context(run_dir, verifier)  # the new raw fingerprint is accepted
+    verifier["context"]["raw_digest"] = hashlib.sha256(old_raw).hexdigest()
+    with pytest.raises(host_run.HostRunError, match="modified after planning"):
+        host_run._verified_context(run_dir, verifier)  # the old one no longer is
+    assert cli.main(["host", "update-graph", "--run-dir", str(run_dir), "--graph", str(graph_path)]) == 0
+    assert json.loads(capsys.readouterr().out)["status"] == "nothing to update"
+
+
+def _assert_update_refused(run_dir: Path, graph_path: Path, capsys, message: str) -> None:
+    files = lambda: {path: path.read_bytes() for path in run_dir.rglob("*")
+                     if path.is_file() and path.name != ".lock"}
+    before = files()
+    assert cli.main(["host", "update-graph", "--run-dir", str(run_dir), "--graph", str(graph_path)]) == 2
+    assert capsys.readouterr().err.strip() == message
+    assert before == files()
+
+
+def test_update_graph_refuses_an_unfinished_run(tmp_path: Path, capsys) -> None:
+    repo = _repo(tmp_path)
+    graph = _graph_for(repo, ["src/pkg/jobs.py", "src/pkg/cli.py"])
+    graph_path = tmp_path / "graph.json"
+    graph_path.write_text(json.dumps(_graph_with_dataflow(graph)), encoding="utf-8")
+    run_dir = Path(host_run.plan(repo, tmp_path / "run", review="none", graph_path=graph_path)["run_dir"])
+    _assert_update_refused(run_dir, graph_path, capsys,
+                           "only a completed run with no pending or failed tasks can update its graph")
+
+
+def test_update_graph_refuses_a_non_dataflow_edge_change(tmp_path: Path, capsys) -> None:
+    from copy import deepcopy
+    repo = _repo(tmp_path)
+    graph = _graph_for(repo, ["src/pkg/jobs.py", "src/pkg/cli.py"])
+    graph_path = tmp_path / "graph.json"
+    graph_path.write_text(json.dumps(graph), encoding="utf-8")
+    run_dir = Path(host_run.plan(repo, tmp_path / "run", review="none", graph_path=graph_path)["run_dir"])
+    _drive(run_dir)
+    changed = deepcopy(graph)
+    changed["edges"].append({"id": "extra-call", "kind": "call", "source": "n-0", "target": "n-1",
+                             "path": "src/pkg/jobs.py", "status": "resolved"})
+    graph_path.write_text(json.dumps(changed), encoding="utf-8")
+    _assert_update_refused(
+        run_dir, graph_path, capsys,
+        "the new graph differs from this run's graph in more than dataflow; start a new plan")
+
+
+def test_update_graph_refuses_a_different_source_manifest(tmp_path: Path, capsys) -> None:
+    from copy import deepcopy
+    repo = _repo(tmp_path)
+    graph = _graph_for(repo, ["src/pkg/jobs.py", "src/pkg/cli.py"])
+    graph_path = tmp_path / "graph.json"
+    graph_path.write_text(json.dumps(graph), encoding="utf-8")
+    run_dir = Path(host_run.plan(repo, tmp_path / "run", review="none", graph_path=graph_path)["run_dir"])
+    _drive(run_dir)
+    changed = deepcopy(graph)
+    changed["source_manifest"].append({
+        "path": "tests/test_jobs.py", "language": "python",
+        "sha256": hashlib.sha256((repo / "tests/test_jobs.py").read_bytes()).hexdigest()})
+    graph_path.write_text(json.dumps(changed), encoding="utf-8")
+    _assert_update_refused(run_dir, graph_path, capsys,
+                           "the new graph has a different source_manifest; start a new plan")
+
+
 def test_known_empty_file_is_indexed_without_a_model_call(tmp_path: Path) -> None:
     """A zero-byte file is known-empty: no chunk, no unit, no model call, but it
     stays in the manifest/catalogue and the run still completes."""
