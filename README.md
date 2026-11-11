@@ -13,12 +13,14 @@
 
 A file tree shows where files are, not what each part is for. CBE (Codebase Explorer) reads a repository and writes what the tree lacks: one page that lists the whole module tree with a line on what each module is responsible for, and a page per module that explains each function and class and links to the exact source lines. You read it. A coding agent can look things up in it with three commands.
 
+**To try it:** `uv tool install git+https://github.com/zlxdengtianhei/codebase-explorer` (Python 3.12 or 3.13). Then generate inside Claude Code on your own subscription, or from the command line with any OpenAI-compatible endpoint (you name the model with `--model`). The steps are in [Quickstart](#quickstart).
+
 ## What you get
 
-- **A one-page map.** `docs/INDEX.md` shows the whole module tree, one line per module. Its size is capped at the larger of 2,000 tokens and 3% of the source.
+- **A one-page map.** `docs/INDEX.md` shows the whole module tree, one line per module. Its size is capped at the larger of 2,000 tokens and 3% of the source's token count.
 - **A tree without gaps, the same every time.** A program builds it: units that call or import each other, sit close together and use similar words are grouped. The same input gives the same tree. There are no empty nodes and no duplicate modules.
 - **A page per module.** Each unit has its signature, a source link, and an explanation written by a model. The explanations are written for people to read.
-- **Facts from commands, not from the model.** Signatures, calls and source lines come from `cbe find`, `cbe query` and `cbe source`. `cbe source` checks the file's SHA-256 against the frozen snapshot before it prints a line.
+- **Facts from commands, not from the model.** Signatures, calls and source lines come from `cbe find`, `cbe query` and `cbe source`. `cbe source` prints from the frozen snapshot and checks each file's SHA-256 against the digest recorded at freeze time before printing anything.
 
 The start of a real `docs/INDEX.md`, generated for flask (unedited):
 
@@ -32,14 +34,6 @@ The start of a real `docs/INDEX.md`, generated for flask (unedited):
     - [**File and URL tests**](nodes/file-and-url-tests.md) — Tests custom URL converters, send_file family behavior with path-like objects, stream_with_context lifetime, and url_for inside request contexts. (5 units; `test_helpers.py`, `test_converters.py`)
   - [**WSGI Request Dispatch Core**](nodes/wsgi-request-dispatch-core.md) — Implements the WSGI-callable Flask class and its pipeline: request entry, URL-to-view matching, response finalization, error handler resolution, and test and async wiring. (35 units; `flask/app.py`, `test_async.py`, `sansio/app.py`)
 ```
-
-The page you read first got smaller. Size of that page in `o200k_base` tokens, on three full runs (the earlier version's tree is in the "before" column):
-
-| Repository | Before | Now | Empty tree nodes before / now |
-|---|---:|---:|---:|
-| flask | 16,076 | 3,078 | 22 / 0 |
-| ruby_llm | 15,938 | 2,074 | 8 / 0 |
-| gson | 12,643 | 2,514 | 16 / 0 |
 
 Full example: [flask](examples/flask/docs/INDEX.md). More in [Examples and docs](#examples-and-docs).
 
@@ -147,6 +141,14 @@ Each table is one repository and one run. A host-agent run uses your subscriptio
 ## How well does it work
 
 What we measured, and what it shows. Everything here has conditions; the files in [`evaluation/tree/results/`](evaluation/tree/results/) hold the tables.
+
+The page you read first got smaller. Size of that page in `o200k_base` tokens, on three full runs (the earlier version's tree is in the "before" column):
+
+| Repository | Before | Now | Empty tree nodes before / now |
+|---|---:|---:|---:|
+| flask | 16,076 | 3,078 | 22 / 0 |
+| ruby_llm | 15,938 | 2,074 | 8 / 0 |
+| gson | 12,643 | 2,514 | 16 / 0 |
 
 - **Tree structure.** The new trees have no empty nodes and no duplicate modules on the three repositories above. The earlier trees had 22, 8 and 16 empty nodes.
 - **Call labels.** In seven repositories we took 10 edges of each status and checked them back against the source. For example, all 307 "unresolved" calls in cJSON were macros; they are no longer counted as calls. In fmt, "external" calls fell from 2,748 to 22.

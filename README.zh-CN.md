@@ -13,14 +13,16 @@
 
 文件树只告诉你文件在哪，不告诉你每一块是干什么的。CBE（Codebase Explorer）读一个仓库，写出文件树缺的那部分：一页列出整棵模块树（module tree），每个模块一行，说明它负责什么；再给每个模块一页，讲清其中每个函数和类，并链接到准确的源码行。你可以直接读。编码 agent 用三条命令就能在里面查。
 
+**想试一下：** `uv tool install git+https://github.com/zlxdengtianhei/codebase-explorer`（需要 Python 3.12 或 3.13）。然后二选一：在 Claude Code 里用你自己的订阅生成；或在命令行接任意 OpenAI 兼容的端点生成（模型用 `--model` 指定）。步骤见[快速上手](#快速上手)。
+
 ## 能得到什么
 
-- **一页地图。** `docs/INDEX.md` 列出整棵模块树，每个模块一行。页面大小的上限，取 2,000 token 与源码 3% 中较大的那个。
-- **没有空洞、每次都一样的树。** 树由程序建：互相调用或导入、位置相近、用词相近的代码单元（code unit）聚在一起。同样的输入得到同一棵树，没有空节点，也没有重复的模块。
+- **一页地图。** `docs/INDEX.md` 列出整棵模块树，每个模块一行。页面大小的上限，取 2,000 token 与源码 token 数的 3% 中较大的那个。
+- **一棵完整、每次都一样的树。** 树由程序建：互相调用或导入、位置相近、用词相近的代码单元（code unit）聚在一起。同样的输入得到同一棵树，没有空节点，也没有重复的模块。
 - **每个模块一页。** 每个单元有签名、源码链接和模型写的讲解。讲解主要写给人读。
-- **确定的事实靠命令查，不靠模型。** 签名、调用和源码行，用 `cbe find`、`cbe query` 和 `cbe source` 现查。`cbe source` 在打印每一行之前，先用冻结快照核对文件的 SHA-256。
+- **确定的事实靠命令查，不靠模型。** 签名、调用和源码行，用 `cbe find`、`cbe query` 和 `cbe source` 现查。`cbe source` 打印的是冻结快照里的源码；打印之前先核对每个文件的 SHA-256 与冻结时记下的值。
 
-下面是 flask 生成的真实 `docs/INDEX.md` 开头（未改动，原文为英文）：
+下面是为 flask 生成的真实 `docs/INDEX.md` 开头（未改动，原文为英文）：
 
 ```markdown
 ## Modules
@@ -32,14 +34,6 @@
     - [**File and URL tests**](nodes/file-and-url-tests.md) — Tests custom URL converters, send_file family behavior with path-like objects, stream_with_context lifetime, and url_for inside request contexts. (5 units; `test_helpers.py`, `test_converters.py`)
   - [**WSGI Request Dispatch Core**](nodes/wsgi-request-dispatch-core.md) — Implements the WSGI-callable Flask class and its pipeline: request entry, URL-to-view matching, response finalization, error handler resolution, and test and async wiring. (35 units; `flask/app.py`, `test_async.py`, `sansio/app.py`)
 ```
-
-进门要读的那一页变小了。下表是这一页的大小（`o200k_base` token），在三个完整运行上量得；“之前”一列是上一版的树：
-
-| 仓库 | 之前 | 现在 | 空节点 之前 / 现在 |
-|---|---:|---:|---:|
-| flask | 16,076 | 3,078 | 22 / 0 |
-| ruby_llm | 15,938 | 2,074 | 8 / 0 |
-| gson | 12,643 | 2,514 | 16 / 0 |
 
 完整示例：[flask](examples/flask/docs/INDEX.md)。其余见[示例与文档](#示例与文档)。
 
@@ -147,6 +141,14 @@ flowchart LR
 ## 效果怎样
 
 我们量了什么，量出了什么。每条都有前提；表格在 [`evaluation/tree/results/`](evaluation/tree/results/)。
+
+最先读的那一页变小了。下表是这一页的大小（`o200k_base` token），在三个完整运行上量得；“之前”一列是上一版的树：
+
+| 仓库 | 之前 | 现在 | 空节点 之前 / 现在 |
+|---|---:|---:|---:|
+| flask | 16,076 | 3,078 | 22 / 0 |
+| ruby_llm | 15,938 | 2,074 | 8 / 0 |
+| gson | 12,643 | 2,514 | 16 / 0 |
 
 - **树的结构。** 在上面三个仓库里，新树没有空节点，也没有重复的模块。之前的树分别有 22、8、16 个空节点。
 - **调用的标签。** 在七个仓库里，每种状态各抽 10 条边，回源码核对。例如 cJSON 的 307 条“未解析”调用全是宏，现在不再算调用；fmt 里标成“仓外”的调用从 2,748 条降到 22 条。
