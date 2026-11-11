@@ -13,7 +13,7 @@ import pytest
 from cbe import cli, host_run, usage
 from test_host_run import _answer, _drive, _repo
 
-SKILL_DIR = Path(__file__).resolve().parents[1] / ".dsh/skills/codebase-explorer"
+SKILL_DIR = Path(__file__).resolve().parents[1] / "plugin/skills/codebase-explorer"
 PAGES = [SKILL_DIR / "SKILL.md", SKILL_DIR / "references/claude-code.md", SKILL_DIR / "references/codex.md"]
 PLACEHOLDERS = {"RUN": "/abs/run", "ID": "unit-id", "TASK": "module_1", "SEARCH_TERM": "needle"}
 

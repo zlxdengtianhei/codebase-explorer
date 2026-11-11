@@ -124,7 +124,7 @@ def test_product_read_query_instructions_use_available_commands(tmp_path, capsys
     from pathlib import Path
 
     run, ids, _, _, _ = _run(tmp_path)
-    skill = (Path(__file__).resolve().parents[1] / ".dsh/skills/codebase-explorer/SKILL.md").read_text()
+    skill = (Path(__file__).resolve().parents[1] / "plugin/skills/codebase-explorer/SKILL.md").read_text()
     section = skill.split("## Read and query the result")[1].split("## Script-driven")[0]
     assert "unit_detail" not in section and "unit_id" in section
     assert "--edges cfg,dataflow" in section and "--edges all --json" in section

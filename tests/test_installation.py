@@ -128,11 +128,10 @@ def test_bundled_markdown_links_resolve_without_author_checkout(tmp_path: Path) 
                 assert (document.parent / target).is_file(), (document, link)
 
 
-def test_user_scope_honors_host_config_roots(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("DSH_HOME", str(tmp_path / "dsh-home"))
-    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "xdg-config"))
-    args = cli._parser().parse_args(["install", "--scope", "user", "--host", "dsh", "--host", "opencode"])
-    assert cli._targets(args) == [tmp_path / "dsh-home/skills", tmp_path / "xdg-config/opencode/skills"]
+def test_user_scope_installs_under_the_home_directory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(Path, "home", classmethod(lambda cls: tmp_path))
+    args = cli._parser().parse_args(["install", "--scope", "user", "--host", "codex", "--host", "claude-code"])
+    assert cli._targets(args) == [tmp_path / ".agents/skills", tmp_path / ".claude/skills"]
 
 
 def test_runtime_note_command_runs_pasted_into_a_shell_and_warns_against_variables(
@@ -153,7 +152,7 @@ def test_runtime_note_command_runs_pasted_into_a_shell_and_warns_against_variabl
     assert "shell variable" in note and "shell function" in note
 
 
-SHIPPED_AGENT = Path(__file__).resolve().parents[1] / ".dsh/agents/cbe-writer.md"
+SHIPPED_AGENT = Path(__file__).resolve().parents[1] / "plugin/agents/cbe-writer.md"
 
 
 def test_shipped_writer_agent_has_only_the_read_and_write_tools() -> None:

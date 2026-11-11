@@ -121,13 +121,13 @@ def test_submit_help_explains_answer_limits(capsys):
 
 def test_shipped_guidance_matches_detail_protocol():
     root = Path(__file__).parents[1]
-    for path in [root / 'README.md', root / '.dsh/skills/codebase-explorer/SKILL.md']:
+    for path in [root / 'README.md', root / 'plugin/skills/codebase-explorer/SKILL.md']:
         text = path.read_text()
         assert 'detail tasks allow 3 answers; other tasks allow 2' in text
         assert 'final invalid answer' in text
         assert 'including historical flags' not in text
         assert 'accepted as an alias' not in text
-    skill = (root / '.dsh/skills/codebase-explorer/SKILL.md').read_text()
+    skill = (root / 'plugin/skills/codebase-explorer/SKILL.md').read_text()
     assert 'collapsed detail answer' in skill and 'requires resume' in skill
 
 
