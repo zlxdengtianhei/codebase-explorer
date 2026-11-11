@@ -1453,11 +1453,8 @@ def _render(run_dir: Path, state: dict[str, Any]) -> None:
     summary["deterministic_checks_ok"] = state["verify"]["ok"]
     from cbe import principles
     records, rolled_edges = _aggregation_inputs(run_dir, state)
-    previous_path = state_dir(run_dir) / "principles.json"
-    previous = json.loads(previous_path.read_text(encoding="utf-8")) if previous_path.is_file() else None
     principle_report = principles.report(tree, records, rolled_edges,
-        {f["path"]: f.get("language", "unknown") for f in context["files"]}, previous,
-        comparison_scope="same_run_rerender")
+        {f["path"]: f.get("language", "unknown") for f in context["files"]})
     summary["aggregation_principles"] = principle_report
     summary["tree"] = {"leaves": sum(1 for node in tree["nodes"] if node.get("unit_ids")),
                        "nodes": len(tree["nodes"]), "program_made_titles": made,
@@ -1467,7 +1464,6 @@ def _render(run_dir: Path, state: dict[str, Any]) -> None:
     summary["within_containment"] = meta["within_containment_count"]
     summary["key_flows"] = meta["key_flows"]
     summary["candidate_flows"] = meta["candidate_flows"]
-    write_json(previous_path, principle_report)
     with (run_dir / "docs" / "RUN.md").open("a", encoding="utf-8") as run_page:
         run_page.write(principles.run_lines(principle_report, tree))
     summary["layers"] = docs.layer_metrics(run_dir)

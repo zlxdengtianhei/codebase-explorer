@@ -48,7 +48,7 @@ def test_small_host_keeps_one_tree(tmp_path):
     handed = _drive(run)
     assert [t for t in handed if t.startswith("tree")] == ["tree_name_1"]
     report = json.loads((run / "summary.json").read_text())["aggregation_principles"]
-    assert len(report["checks"]) == 7
+    assert len(report["checks"]) == 6
 
 
 @pytest.mark.parametrize("failed_module", [False, True], ids=["repair", "failed-module"])
@@ -101,7 +101,7 @@ def test_single_tree_waits_for_review_and_repair(tmp_path, failed_module):
     assert state["status"] == ("partial" if failed_module else "complete")
 
 
-def test_principles_report_counterexamples_and_replay_identity():
+def test_principles_report_counterexamples():
     units = {"a": {"explain": "Detail " * 100, "ranges": [{"path": "a.py"}]},
              "b": {"explain": "Detail " * 100, "ranges": [{"path": "b.js"}]},
              "shared": {"explain": "Detail " * 100, "ranges": [{"path": "util.py"}]}}
@@ -120,15 +120,11 @@ def test_principles_report_counterexamples_and_replay_identity():
     assert rows["P3"]["out_of_bounds"] == {"one": 1, "two": 1, "infra": 1}
     assert rows["P5"]["shared_units"] == {"shared": {"one": 4, "two": 4}}
     assert rows["P6"]["modules"]["two"] == {"javascript": 1}
-    assert rows["P7"]["ok"] is None
-    assert principles.report(tree, units, edges, langs, first)["checks"][-1]["ok"]
-    changed_graph = principles.report(tree, units, [], langs, first)
-    assert changed_graph["checks"][-1]["status"] == "not_checked"
     tree["nodes"][1]["title"] = "Changed"
     tree["nodes"][1]["capability"] = "Second capability."
     tree["nodes"][1]["unit_ids"].append("b")
-    bad = principles.report(tree, units, edges, langs, first)
-    assert not bad["checks"][0]["ok"] and not bad["checks"][3]["ok"] and not bad["checks"][-1]["ok"]
+    bad = principles.report(tree, units, edges, langs)
+    assert not bad["checks"][0]["ok"] and not bad["checks"][3]["ok"]
     assert bad["hierarchy"]["ok"]
     assert principles.report({"nodes": tree["nodes"][:1]}, {}, [], {})["introduction_length"]["overlong"]
 

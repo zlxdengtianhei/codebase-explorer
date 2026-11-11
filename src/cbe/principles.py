@@ -1,15 +1,12 @@
 """One registry for aggregation guidance and its advisory program checks.
 
 These diagnostics never trigger rewrites. They measure structural proxies, not
-whether a capability is semantically true. P7 needs a prior run of the same detail
-input; absent comparison is explicitly 'not_checked', never a stability pass.
+whether a capability is semantically true.
 """
 from __future__ import annotations
 
 from collections import Counter, defaultdict
 from dataclasses import dataclass
-import hashlib
-import json
 
 from cbe.skeleton import GRAIN
 
@@ -80,19 +77,6 @@ def _p6(c):
             "scope": "unit counts by language; a multi-language unit contributes once per language"}
 
 
-def _p7(c):
-    previous = c["previous"]
-    if not previous or previous.get("input_digest") != c["input_digest"]:
-        return {"ok": None, "status": "not_checked", "reason": "no prior tree for the same detail input"}
-    before = previous["identity"]
-    after = c["identity"]
-    if c["comparison_scope"] == "same_run_rerender":
-        return {"ok": None, "status": "re-render identical" if before == after else "re-render changed",
-                "identical": before == after,
-                "scope": "same run, same detail answers; cross-run stability requires replay scripts"}
-    return {"ok": before == after, "status": "compared", "previous": before, "current": after}
-
-
 @dataclass(frozen=True)
 class Principle:
     id: str
@@ -106,20 +90,13 @@ PRINCIPLES = (
     Principle("P4", _p4),   # one primary home per unit
     Principle("P5", _p5),   # shared utilities apart from their consumers
     Principle("P6", _p6),   # language identity kept
-    Principle("P7", _p7),   # stable identity for identical inputs
 )
 
 
-def report(tree: dict, units: dict, edges: list[dict], languages: dict, previous: dict | None = None,
-           *, comparison_scope: str = "replay") -> dict:
+def report(tree: dict, units: dict, edges: list[dict], languages: dict) -> dict:
     nodes = tree.get("nodes") or []
-    identity = sorted([[n["id"], n["title"]] for n in nodes])
-    digest = hashlib.sha256(json.dumps({"units": units, "edges": edges, "languages": languages},
-                                      sort_keys=True, ensure_ascii=False).encode()).hexdigest()
     c = {"nodes": nodes, "units": units, "edges": edges, "languages": languages,
-         "owner": {uid: n["id"] for n in nodes for uid in n.get("unit_ids") or []},
-         "comparison_scope": comparison_scope,
-         "input_digest": digest, "identity": identity, "previous": previous}
+         "owner": {uid: n["id"] for n in nodes for uid in n.get("unit_ids") or []}}
     # R-20 and R-21 remain visible alongside principles, without inducing rewrites.
     children = defaultdict(list)
     for n in nodes:
@@ -138,7 +115,7 @@ def report(tree: dict, units: dict, edges: list[dict], languages: dict, previous
         detail = sum(len(units.get(uid, {}).get("explain", "")) for uid in descendants[n["id"]])
         if intro > detail:
             long[n["id"]] = {"introduction_chars": intro, "detail_chars": detail}
-    return {"advisory": True, "input_digest": digest, "identity": identity,
+    return {"advisory": True,
             "edge_counts_by_kind": {kind: sum(e["count"] for e in edges if e["kind"] == kind)
                                     for kind in sorted({e["kind"] for e in edges})},
             "checks": [{"principle": p.id, **p.check(c)} for p in PRINCIPLES],
