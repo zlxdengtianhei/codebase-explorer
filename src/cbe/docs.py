@@ -11,6 +11,7 @@ import hashlib
 import json
 import os
 import re
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable
 
@@ -333,16 +334,68 @@ def _entry_page(*, repo: str, nodes: dict, children: dict, roots: list[str], uni
                   "levels_shown": shown, "files_per_node": files}
 
 
-def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
-           dispositions: dict, tree: dict, languages: dict[str, str],
-           index_notes: list[str] | None = None, system: dict | None = None,
-           graph: dict | None = None, context: dict | None = None, source_tokens: int | None = None) -> dict:
-    """Render node pages, INDEX.md, DEPENDENCIES.md, RUN.md and a catalog under ``run_dir/docs``.
+@dataclass
+class _RenderPrep:
+    """Common preparation for the document writers ``render`` calls.
 
-    ``languages`` maps each path to the language frozen in the source context,
-    so the catalog agrees with the plan even when it remapped a suffix.
+    Holds the node tree views, the rebuilt unit records, display names and the
+    annotated relationship view, so each writer takes one object instead of
+    sharing state through module globals."""
+    run_dir: Path
+    source_root: Path
+    inventory: dict
+    dispositions: dict
+    tree: dict
+    languages: dict[str, str]
+    index_notes: list[str] | None
+    system: dict | None
+    graph: dict | None
+    context: dict | None
+    source_tokens: int | None
+    docs_dir: Path
+    nodes_dir: Path
+    nodes: dict
+    children: dict[str, list[str]]
+    owner: dict[str, str]
+    units: dict
+    symbol_records: dict
+    sources: dict[str, str]
+    ranges_map: dict
+    edge_table: dict
+    names: dict
+    relationships: dict
+    labels: dict[str, str]
+    edges_by_from: dict[str, list[dict]]
+    edges_by_to: dict[str, list[dict]]
+    _subtree_sizes: dict[str, int] = field(default_factory=dict)
 
-    Returns metadata the caller stores in run state for verification."""
+    def subtree_units(self, nid: str) -> int:
+        if nid not in self._subtree_sizes:
+            self._subtree_sizes[nid] = len(self.nodes[nid].get("unit_ids") or []) \
+                + sum(self.subtree_units(k) for k in self.children[nid])
+        return self._subtree_sizes[nid]
+
+    def name_of(self, uid: str) -> str:
+        return self.names.get(uid, short_name(uid))
+
+    def dependency_line(self, edge, target, prefix=""):
+        return (f"- [{link_text(self.nodes[target].get('title') or target)}]({prefix}{target}.md) · "
+                + (f"containment · → {edge['count']} / ← {edge['reverse_count']} edge(s) "
+                   f"(ancestor direct units and descendant subtree; → follows {code_text(edge['from'])} → {code_text(edge['to'])})"
+                   if edge["source"] == "containment" else
+                   self.labels[edge["source"]]
+                   + "".join(f" · {text}" for text in (
+                       f"{edge['count']} edge(s)" if edge["count"] else "",
+                       f"{edge.get('inferred_count', 0)} inferred relation(s)" if edge.get("inferred_count") else "") if text))
+                + (" · " + literal_links(edge["description"]) if edge["description"] else ""))
+
+
+def _prepare_render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
+                    dispositions: dict, tree: dict, languages: dict[str, str],
+                    index_notes: list[str] | None = None, system: dict | None = None,
+                    graph: dict | None = None, context: dict | None = None,
+                    source_tokens: int | None = None) -> _RenderPrep:
+    """Build the tree views, records, display names and relations every writer needs."""
     docs_dir = run_dir / "docs"
     nodes_dir = docs_dir / "nodes"
     nodes_dir.mkdir(parents=True, exist_ok=True)
@@ -357,12 +410,6 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
             children[node["parent"]].append(nid)
         for uid in node.get("unit_ids") or []:
             owner[uid] = nid
-    subtree_sizes: dict[str, int] = {}
-
-    def subtree_units(nid: str) -> int:
-        if nid not in subtree_sizes:
-            subtree_sizes[nid] = len(nodes[nid].get("unit_ids") or []) + sum(subtree_units(k) for k in children[nid])
-        return subtree_sizes[nid]
 
     anchors: dict[str, str] = {}
     for uid in sorted(units):
@@ -402,7 +449,6 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
             suffix += 1
         taken.add(name)
         names[uid] = name
-    name_of = lambda uid: names.get(uid, short_name(uid))
     from cbe import aggregation
     unit_edges = aggregation.unit_edges(units, edge_table)
     relationships = aggregation.annotate_relationships(
@@ -414,70 +460,81 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
     for edge in relationships["dependencies"]:
         edges_by_from[edge["from"]].append(edge)
         edges_by_to[edge["to"]].append(edge)
+    return _RenderPrep(run_dir=run_dir, source_root=source_root, inventory=inventory,
+                       dispositions=dispositions, tree=tree, languages=languages,
+                       index_notes=index_notes, system=system, graph=graph, context=context,
+                       source_tokens=source_tokens, docs_dir=docs_dir, nodes_dir=nodes_dir,
+                       nodes=nodes, children=children, owner=owner, units=units,
+                       symbol_records=symbol_records, sources=sources, ranges_map=ranges_map,
+                       edge_table=edge_table, names=names, relationships=relationships,
+                       labels=labels, edges_by_from=edges_by_from, edges_by_to=edges_by_to)
 
-    def dependency_line(edge, target, prefix=""):
-        return (f"- [{link_text(nodes[target].get('title') or target)}]({prefix}{target}.md) · "
-                + (f"containment · → {edge['count']} / ← {edge['reverse_count']} edge(s) "
-                   f"(ancestor direct units and descendant subtree; → follows {code_text(edge['from'])} → {code_text(edge['to'])})"
-                   if edge["source"] == "containment" else
-                   labels[edge["source"]]
-                   + "".join(f" · {text}" for text in (
-                       f"{edge['count']} edge(s)" if edge["count"] else "",
-                       f"{edge.get('inferred_count', 0)} inferred relation(s)" if edge.get("inferred_count") else "") if text))
-                + (" · " + literal_links(edge["description"]) if edge["description"] else ""))
 
-    for nid, node in nodes.items():
+def _write_node_pages(prep: _RenderPrep) -> None:
+    """One Markdown page per semantic node under ``docs/nodes``."""
+    for nid, node in prep.nodes.items():
         source_links: dict[str, str] = {}
         lines = [f"# {node.get('title') or nid}", ""]
         if (node.get("capability") or "").strip():
             lines += [f"**Capability.** {literal_links(node['capability'].strip())}", ""]
         if (node.get("summary") or "").strip():
             lines += [literal_links(node['summary'].strip()), ""]
-        if children.get(nid):
+        if prep.children.get(nid):
             lines += ["**Children.**", ""]
-            for kid in children[nid]:
-                kid_node = nodes[kid]
+            for kid in prep.children[nid]:
+                kid_node = prep.nodes[kid]
                 lines.append(f"- [{link_text(kid_node.get('title') or kid)}]({kid}.md) `{kid}` · "
-                             f"{subtree_units(kid)} unit(s)")
+                             f"{prep.subtree_units(kid)} unit(s)")
             lines.append("")
-        if edges_by_from.get(nid):
+        if prep.edges_by_from.get(nid):
             lines += ["**Depends on.**", ""]
-            for edge in edges_by_from[nid]:
-                lines.append(dependency_line(edge, edge["to"]))
+            for edge in prep.edges_by_from[nid]:
+                lines.append(prep.dependency_line(edge, edge["to"]))
             lines.append("")
-        if edges_by_to.get(nid):
+        if prep.edges_by_to.get(nid):
             lines += ["**Depended on by.**", ""]
-            lines += [dependency_line(edge, edge["from"]) for edge in edges_by_to[nid]]
+            lines += [prep.dependency_line(edge, edge["from"]) for edge in prep.edges_by_to[nid]]
             lines.append("")
         parent = node.get("parent")
-        if parent in nodes:
-            lines += [f"Parent: [{link_text(nodes[parent].get('title') or parent)}]({parent}.md)", ""]
+        if parent in prep.nodes:
+            lines += [f"Parent: [{link_text(prep.nodes[parent].get('title') or parent)}]({parent}.md)", ""]
         own = node.get("unit_ids") or []
         if own:
             lines += [f"## Units ({len(own)})", ""]
         for uid in own:
-            if uid not in units:
+            if uid not in prep.units:
                 continue
-            block = _build_unit_block(uid, units, owner, dispositions,
-                                      nodes, source_root, name_of, source_links)
+            block = _build_unit_block(uid, prep.units, prep.owner, prep.dispositions,
+                                     prep.nodes, prep.source_root, prep.name_of, source_links)
             lines += [f'<a id="{anchor(uid)}"></a>'] + block.splitlines() + [""]
         lines += ["## Look up code", "", '`RUN` is the run directory. Find `ID` by a unit title on this page (exact names first):',
                   '`cbe find --run-dir "$RUN" --term "UNIT_TITLE"`. Then use an `ID` from the results:',
                   '`cbe query --run-dir "$RUN" --id "$ID"`; '
                   '`cbe source --run-dir "$RUN" --id "$ID" --context 2`.', ""]
-        lines += [f"[{ref}]: {os.path.relpath(source_root / path, nodes_dir)}"
+        lines += [f"[{ref}]: {os.path.relpath(prep.source_root / path, prep.nodes_dir)}"
                   for path, ref in source_links.items()]
-        (nodes_dir / f"{nid}.md").write_text("\n".join(lines).strip() + "\n", encoding="utf-8")
+        (prep.nodes_dir / f"{nid}.md").write_text("\n".join(lines).strip() + "\n", encoding="utf-8")
 
-    roots = [nid for nid, node in nodes.items() if not node.get("parent")]
+
+def _write_index(prep: _RenderPrep) -> dict:
+    """INDEX.md, the module tree entry page (see ``_entry_page``)."""
+    roots = [nid for nid, node in prep.nodes.items() if not node.get("parent")]
     index_text, index_meta = _entry_page(
-        repo=source_root.name, nodes=nodes, children=children, roots=roots, units=units, ranges_map=ranges_map,
-        overview=(system or {}).get("overview"), flows=relationships["key_flows"],
-        candidates=relationships["candidate_flows"], graph_state=relationships["graph_state"],
-        graph_reason=relationships["graph_reason"], owner=owner, name_of=name_of,
-        budget=max(INDEX_MIN_TOKENS, int(INDEX_SHARE * (source_tokens or 0))))
-    (docs_dir / "INDEX.md").write_text(index_text, encoding="utf-8")
+        repo=prep.source_root.name, nodes=prep.nodes, children=prep.children, roots=roots,
+        units=prep.units, ranges_map=prep.ranges_map,
+        overview=(prep.system or {}).get("overview"), flows=prep.relationships["key_flows"],
+        candidates=prep.relationships["candidate_flows"], graph_state=prep.relationships["graph_state"],
+        graph_reason=prep.relationships["graph_reason"], owner=prep.owner, name_of=prep.name_of,
+        budget=max(INDEX_MIN_TOKENS, int(INDEX_SHARE * (prep.source_tokens or 0))))
+    (prep.docs_dir / "INDEX.md").write_text(index_text, encoding="utf-8")
+    return index_meta
 
+
+def _write_dependencies(prep: _RenderPrep) -> None:
+    """DEPENDENCIES.md: the cross-node dependency list with a Mermaid diagram."""
+    relationships = prep.relationships
+    nodes = prep.nodes
+    dependency_line = prep.dependency_line
     dep_lines = ["# Dependencies", "",
                  "Arrows point from a user to its dependency. Containment is structural, not a dependency. "
                  "Graph-confirmed pairs appear in both the tree and resolved call/import edges. "
@@ -526,31 +583,37 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
                           f"(nodes/{edge['from']}.md) → " + dependency_line(edge, edge["to"], "nodes/")[2:]]
     dep_lines += ["", f"Within containment: {relationships['within_containment_count']} pairs, ranked by edge count; "
                   f"{relationships['within_containment_omitted']} omitted. Each graph list keeps at most 40 pairs independently."]
-    if not (system or {}).get("dependency_descriptions"):
+    if not (prep.system or {}).get("dependency_descriptions"):
         dep_lines += ["", "The system response provided no key dependency descriptions."]
-    (docs_dir / "DEPENDENCIES.md").write_text("\n".join(dep_lines) + "\n", encoding="utf-8")
+    (prep.docs_dir / "DEPENDENCIES.md").write_text("\n".join(dep_lines) + "\n", encoding="utf-8")
 
+
+def _write_run(prep: _RenderPrep) -> None:
+    """RUN.md: where this run's facts come from and what was and was not checked."""
     run_lines = ["# Run notes", "", "Where this run's facts come from and what was and was not checked.", "",
                  "## Reading stats", "",
-                 f"- units: {len(units)} · semantic nodes: {len(nodes)} · "
-                 f"dispositioned inventory ids: {len(dispositions)}",
+                 f"- units: {len(prep.units)} · semantic nodes: {len(prep.nodes)} · "
+                 f"dispositioned inventory ids: {len(prep.dispositions)}",
                  "- source ranges are program-derived from the inventory, never model-written",
-                 "", "## Graph coverage", ""] + _graph_coverage(graph, source_root)
-    if index_notes:
-        run_lines += ["", "## Generation notes", ""] + [f"- {item}" for item in index_notes]
-    (docs_dir / "RUN.md").write_text("\n".join(run_lines) + "\n", encoding="utf-8")
+                 "", "## Graph coverage", ""] + _graph_coverage(prep.graph, prep.source_root)
+    if prep.index_notes:
+        run_lines += ["", "## Generation notes", ""] + [f"- {item}" for item in prep.index_notes]
+    (prep.docs_dir / "RUN.md").write_text("\n".join(run_lines) + "\n", encoding="utf-8")
 
-    # catalog: semantic index plus the per-inventory-id `symbols` and per-file `files` maps
+
+def _write_catalog(prep: _RenderPrep) -> dict:
+    """``catalog.json``: semantic index plus the per-id ``symbols`` and per-file ``files`` maps."""
+    units, owner, nodes = prep.units, prep.owner, prep.nodes
     symbol_index: dict[str, dict] = {}
     for uid in sorted(units):
         node = owner.get(uid)
         symbol_index[uid] = {"how": "unit", "unit": uid, "node": node,
                              "page": f"nodes/{node}.md" if node in nodes else None,
                              "anchor": f"#{anchor(uid)}"}
-    for key in sorted(dispositions):
+    for key in sorted(prep.dispositions):
         if key in symbol_index:
             continue
-        entry = dispositions[key]
+        entry = prep.dispositions[key]
         target = entry.get("unit")
         if entry.get("how") in {"unit", "grouped"} and target in units:
             node = owner.get(target)
@@ -562,22 +625,21 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
                                  "node": None, "page": None, "anchor": None,
                                  "reason": entry.get("reason", "")}
 
-
     catalog_symbol_rows: dict[str, dict] = {}
     catalog_file_rows: dict[str, dict] = {}
-    for path, entry in inventory.items():
-        facts = concrete_facts.file_facts(path, sources.get(path, "")) \
+    for path, entry in prep.inventory.items():
+        facts = concrete_facts.file_facts(path, prep.sources.get(path, "")) \
             if path.endswith(".py") else None
         catalog_file_rows[path] = {"tokens": entry.get("tokens", 0),
-                                   "language": languages.get(path, "unknown"),
+                                   "language": prep.languages.get(path, "unknown"),
                                    "known_empty": bool(entry.get("known_empty")),
-                                   "ranges": [{"path": path, "lines": [[1, max(1, len(sources.get(path, '').splitlines()))]]}],
+                                   "ranges": [{"path": path, "lines": [[1, max(1, len(prep.sources.get(path, '').splitlines()))]]}],
                                    "signatures": [{"id": sid, "signature": row["signature"]}
-                                                  for sid, row in symbol_records.items() if row["file"] == path]}
+                                                  for sid, row in prep.symbol_records.items() if row["file"] == path]}
         if facts and facts.get("file"):
             catalog_file_rows[path]["facts"] = facts["file"]
         for symbol in entry["symbols"]:
-            record: dict[str, Any] = {**symbol_records[symbol["id"]], "file": path, "name": symbol["name"],
+            record: dict[str, Any] = {**prep.symbol_records[symbol["id"]], "file": path, "name": symbol["name"],
                                       **symbol_index.get(symbol["id"], {"node": None, "page": None})}
             parts = symbol["id"].split("::")
             fact_name = parts[2] if symbol.get("kind") == "method" and len(parts) > 2 else symbol["name"]
@@ -585,38 +647,61 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
                 record["facts"] = facts["symbols"][fact_name]
             catalog_symbol_rows[symbol["id"]] = record
 
+    relationships = prep.relationships
     catalog = {
         "schema": SCHEMA, "project": "Codebase Explorer", "version": "",
         "units": {uid: {**units[uid], "node": owner.get(uid),
                         "page": f"nodes/{owner[uid]}.md" if owner.get(uid) in nodes else None,
                         "anchor": f"#{anchor(uid)}"} for uid in sorted(units)},
-        "edges": edge_table,
-        "graph": None if (context or {}).get("graph") is not None else graph,
-        "graph_ref": "context.json" if (context or {}).get("graph") is not None else None,
-        "nodes": {nid: {"parent": node.get("parent"), "children": children.get(nid) or [],
+        "edges": prep.edge_table,
+        "graph": None if (prep.context or {}).get("graph") is not None else prep.graph,
+        "graph_ref": "context.json" if (prep.context or {}).get("graph") is not None else None,
+        "nodes": {nid: {"parent": node.get("parent"), "children": prep.children.get(nid) or [],
                         "unit_ids": node.get("unit_ids") or [], "title": node.get("title"),
                         "capability": node.get("capability"), "summary": node.get("summary")}
                   for nid, node in sorted(nodes.items())},
-        "depends_on": tree.get("depends_on") or [],
+        "depends_on": prep.tree.get("depends_on") or [],
         "node_dependencies": relationships["dependencies"],
         "relationships": {k: v for k, v in relationships.items() if k not in {"dependencies", "key_flows"}},
         "key_flows": relationships["key_flows"],
-        "dispositions": dispositions,
+        "dispositions": prep.dispositions,
         "symbol_index": symbol_index,
-        "inventory": inventory,
-        "short_names": names,
+        "inventory": prep.inventory,
+        "short_names": prep.names,
         "symbols": catalog_symbol_rows,
         "files": catalog_file_rows,
     }
-    (run_dir / "catalog.json").write_text(json.dumps(catalog, ensure_ascii=False, indent=2) + "\n",
-                                          encoding="utf-8")
-    return {"units_rendered": len(units), "nodes": len(nodes), "owner": owner,
-            "relationship_counts": relationships["counts"],
-            "within_containment_count": relationships["within_containment_count"],
-            "key_flows": len(relationships["key_flows"]),
-            "candidate_flows": len(relationships["candidate_flows"]),
-            "ranges_map": ranges_map, "symbol_index": symbol_index,
-            "index": {**index_meta, "path": str(docs_dir / "INDEX.md")}}
+    (prep.run_dir / "catalog.json").write_text(json.dumps(catalog, ensure_ascii=False, indent=2) + "\n",
+                                               encoding="utf-8")
+    return symbol_index
+
+
+def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
+           dispositions: dict, tree: dict, languages: dict[str, str],
+           index_notes: list[str] | None = None, system: dict | None = None,
+           graph: dict | None = None, context: dict | None = None, source_tokens: int | None = None) -> dict:
+    """Render node pages, INDEX.md, DEPENDENCIES.md, RUN.md and a catalog under ``run_dir/docs``.
+
+    ``languages`` maps each path to the language frozen in the source context,
+    so the catalog agrees with the plan even when it remapped a suffix.
+
+    Returns metadata the caller stores in run state for verification."""
+    prep = _prepare_render(run_dir=run_dir, source_root=source_root, inventory=inventory,
+                           units=units, dispositions=dispositions, tree=tree, languages=languages,
+                           index_notes=index_notes, system=system, graph=graph, context=context,
+                           source_tokens=source_tokens)
+    _write_node_pages(prep)
+    index_meta = _write_index(prep)
+    _write_dependencies(prep)
+    _write_run(prep)
+    symbol_index = _write_catalog(prep)
+    return {"units_rendered": len(prep.units), "nodes": len(prep.nodes), "owner": prep.owner,
+            "relationship_counts": prep.relationships["counts"],
+            "within_containment_count": prep.relationships["within_containment_count"],
+            "key_flows": len(prep.relationships["key_flows"]),
+            "candidate_flows": len(prep.relationships["candidate_flows"]),
+            "ranges_map": prep.ranges_map, "symbol_index": symbol_index,
+            "index": {**index_meta, "path": str(prep.docs_dir / "INDEX.md")}}
 
 
 def catalog_symbols(catalog: dict) -> dict[str, dict]:
