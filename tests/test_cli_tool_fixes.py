@@ -100,3 +100,10 @@ def test_published_example_find_and_query_do_not_need_context(published_run, cap
         captured = capsys.readouterr()
         assert "unit:1" in captured.out
         assert captured.err == ""
+
+
+def test_host_commands_on_a_directory_that_is_not_a_run_keep_their_own_error(tmp_path, capsys):
+    for command in ("status", "verify"):
+        assert cli.main(["host", command, "--run-dir", str(tmp_path)]) != 0
+        err = capsys.readouterr().err
+        assert "published examples" not in err and "host plan" in err

@@ -15,8 +15,11 @@ def _abs(value: str) -> Path:
     return path
 
 
-def _require_frozen_context(run_dir: Path, action: str) -> None:
-    if not (run_dir / "context.json").is_file():
+def _require_frozen_context(run_dir: Path, action: str, *, published_only: bool = False) -> None:
+    """Say why a published example cannot do this. With ``published_only`` a directory that holds
+    no catalog either (empty, mistyped) keeps the command's own error."""
+    published = (run_dir / "catalog.json").is_file() or (run_dir / "catalog.json.gz").is_file()
+    if not (run_dir / "context.json").is_file() and (published or not published_only):
         raise ValueError(
             f"this directory has no frozen source snapshot (context.json), so {action}; "
             "published examples ship only docs and the catalog — run cbe on a checkout to get a full run directory"
@@ -220,7 +223,7 @@ def _host(args: argparse.Namespace):
         "cost": "host run cost cannot be reported",
     }
     if command in context_actions:
-        _require_frozen_context(run_dir, context_actions[command])
+        _require_frozen_context(run_dir, context_actions[command], published_only=True)
     if command == "next":
         return host_run.next_tasks(run_dir, limit=args.max, owner=args.owner, reclaim_after=args.reclaim_after)
     if command == "submit":
