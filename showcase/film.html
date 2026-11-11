@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Codebase Explorer: narrated walkthrough</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="A two-minute narrated walkthrough of what Codebase Explorer generates, module by module, on the Flask repository.">
+<style>
+  @font-face { font-family: "IBM Plex Sans"; src: url("fonts/IBMPlexSans-Regular.woff2") format("woff2"); font-weight: 400; }
+  @font-face { font-family: "IBM Plex Sans"; src: url("fonts/IBMPlexSans-SemiBold.woff2") format("woff2"); font-weight: 600; }
+  @font-face { font-family: "IBM Plex Mono"; src: url("fonts/IBMPlexMono-Regular.woff2") format("woff2"); font-weight: 400; }
+  * { box-sizing: border-box; }
+  html { background: #040a12; }
+  body { margin: 0 auto; max-width: 960px; padding: 0 16px 48px; font-family: "IBM Plex Sans", system-ui, sans-serif; color: #c9d6e6; line-height: 1.6; }
+  a { color: #8fe3d6; text-decoration: none; }
+  a:hover, a:focus-visible { text-decoration: underline; }
+  header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 18px; padding: 12px 0 10px; font-size: 15px; }
+  header .brand { color: #f2f7ff; font-weight: 600; font-size: 17px; }
+  header nav { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-left: auto; }
+  h1 { margin: 18px 0 4px; font-size: 26px; line-height: 1.25; color: #f2f7ff; font-weight: 600; }
+  .lede { margin: 0 0 16px; color: #9fb2c8; }
+  video { display: block; width: 100%; aspect-ratio: 16 / 9; background: #06101b; border: 1px solid #1b2c3f; border-radius: 10px; }
+  .note { margin: 10px 0 0; font-size: 13px; color: #7f93aa; }
+  h2 { margin: 36px 0 8px; font-size: 18px; color: #f2f7ff; font-weight: 600; }
+  ol { margin: 0; padding-left: 22px; }
+  li { margin: 0 0 8px; }
+  li ul { margin: 6px 0 0; padding-left: 18px; color: #b4c3d6; }
+  li ul li { margin: 0 0 4px; }
+  code { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 0.93em; color: #e3ecf7; }
+  @media (max-width: 700px) { header nav { margin-left: 0; width: 100%; } h1 { font-size: 22px; } }
+</style>
+</head>
+<body>
+<header>
+  <a class="brand" href="https://github.com/zlxdengtianhei/codebase-explorer">Codebase Explorer</a>
+  <nav>
+    <a href="./?data=flask">Interactive map</a>
+    <a href="https://github.com/zlxdengtianhei/codebase-explorer/blob/main/examples/flask/docs/INDEX.md">Module pages</a>
+    <a href="https://github.com/zlxdengtianhei/codebase-explorer#quickstart">Map your own repository</a>
+  </nav>
+</header>
+
+<h1>What Codebase Explorer makes, in two minutes</h1>
+<p class="lede">The Flask repository, module by module: how the code becomes a map, what each part of the map says, and how to ask for exact facts.</p>
+
+<video controls playsinline preload="metadata" src="https://github.com/zlxdengtianhei/codebase-explorer/releases/download/walkthrough-v2.2.0.dev0/walkthrough-flask-1.mp4"></video>
+<p class="note">English narration with captions. The voice is synthetic (Kokoro-82M, Apache-2.0). Every number, module name and command output on screen comes from the catalog that <code>cbe</code> generated for Flask; nothing is typed in by hand. <a href="https://github.com/zlxdengtianhei/codebase-explorer/releases/download/walkthrough-v2.2.0.dev0/walkthrough-flask-1.mp4">Download the video</a>.</p>
+
+<h2>Transcript</h2>
+<ol>
+  <li>This is Flask. Twenty-four source files, about seventy-five thousand tokens. Opening a repository like this for the first time, where do you start reading?</li>
+  <li>Codebase Explorer cuts every file at its functions, classes and methods: four hundred and forty-seven of them here. Then it traces the calls between them. This step is ordinary code. No model is involved.</li>
+  <li>A language model writes what each one does, explaining small related ones together. That gives two hundred and ninety-three units. A program then groups units that call each other, sit close together and are described in similar words.</li>
+  <li>The same explanations and calls always give the same tree. The model only names the modules. It cannot move anything. The result is a map of the system. For Flask, it has eight parts.
+    <ul>
+      <li>The foundations: the scaffold and blueprint base that the app and blueprints build on.</li>
+      <li>The running app: the request lifecycle, the contexts that hold per-request state, and the testing tools.</li>
+      <li>Templates, views and wrappers: the view layer.</li>
+      <li>Sessions, kept in signed cookies.</li>
+      <li>Configuration, loaded from files, objects and environment variables.</li>
+      <li>JSON providers, and a tagged serializer for types JSON does not have.</li>
+      <li>And the command line, with the public helper functions.</li>
+    </ul>
+  </li>
+  <li>Open one module. Each unit has its signature, a short explanation written for people, and a link to the exact source lines.</li>
+  <li>Explanations are summaries. Exact facts stay in the code. So you, or your coding agent, can ask. <code>cbe find</code> locates a symbol. <code>cbe source</code> prints it from the frozen snapshot, after checking the file's hash.</li>
+  <li>To map your own repository, install it with one command, then generate inside Claude Code, or with any OpenAI-compatible endpoint. The steps are in the README.</li>
+</ol>
+
+<h2 lang="zh-CN">中文文字稿</h2>
+<ol lang="zh-CN">
+  <li>这是 Flask：24 个源文件，约 7.5 万 token。第一次打开这样一个仓库，从哪儿读起？</li>
+  <li>Codebase Explorer 先把每个文件按函数、类、方法切开，这里一共 447 个；再找出它们之间的调用关系。这一步是普通程序，不调用模型。</li>
+  <li>接着由语言模型写出每一个是做什么的，相关的小符号合在一起讲，得到 293 个单元。然后程序把互相调用、位置相近、讲解用词相近的单元归到一组。</li>
+  <li>同样的讲解和调用，总是得到同一棵树。模型只给模块起名，不能挪动任何东西。结果是一张系统地图。Flask 的这张图有八个部分。
+    <ul>
+      <li>基础层：应用与蓝图共同依赖的脚手架和蓝图基类。</li>
+      <li>运行中的应用：请求的生命周期、保存每次请求状态的上下文，以及测试工具。</li>
+      <li>模板、视图与包装类：视图层。</li>
+      <li>会话，存在签名的 cookie 里。</li>
+      <li>配置，从文件、对象和环境变量加载。</li>
+      <li>JSON 提供器，以及给 JSON 没有的类型用的带标签序列化器。</li>
+      <li>还有命令行和公开的辅助函数。</li>
+    </ul>
+  </li>
+  <li>打开一个模块。每个单元都有签名、一段写给人看的简短讲解，以及指向确切源码行的链接。</li>
+  <li>讲解是概括，确切的事实仍在代码里。所以你或你的编码 agent 可以直接问：<code>cbe find</code> 找到一个符号；<code>cbe source</code> 先核对文件的哈希，再从冻结的快照里把它打印出来。</li>
+  <li>要给自己的仓库画这张图：一条命令安装，然后在 Claude Code 里生成，或用任何兼容 OpenAI 接口的端点生成。步骤在 README 里。</li>
+</ol>
+</body>
+</html>
