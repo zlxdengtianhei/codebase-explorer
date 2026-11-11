@@ -796,6 +796,56 @@ def prose_for_links(text: str) -> str:
     return _map_prose(text, lambda part: part, lambda part: "")
 
 
+def _add_check(checks: list[dict], name: str, ok: bool, detail: Any = None) -> None:
+    checks.append({"check": name, "ok": bool(ok),
+                   **({"detail": detail} if detail is not None else {})})
+
+
+def _verify_catalog(checks: list[dict], run_dir: Path, inventory: dict, units: dict,
+                    dispositions: dict, owner: dict, nodes: dict, inv_ids: set,
+                    page_texts: dict) -> None:
+    """The catalog-related checks: every file listed, every navigation target reachable."""
+    catalog_path = run_dir / "catalog.json"
+    if catalog_path.is_file():
+        catalog = json.loads(catalog_path.read_text(encoding="utf-8"))
+        listed = set(catalog.get("files") or {})
+        missing = sorted(set(inventory) - listed)
+        known_empty_missing = sorted(path for path, entry in inventory.items()
+                                     if entry.get("known_empty")
+                                     and not (catalog.get("files") or {}).get(path, {}).get("known_empty"))
+        _add_check(checks, "catalog_lists_every_file", not missing and not known_empty_missing,
+                   {"inventory_files": len(inventory), "missing": missing[:12],
+                    "known_empty_not_marked": known_empty_missing[:12]})
+        # Compare the actual CLI view with accepted ownership and rendered
+        # anchors, not just the number of catalog entries.
+        searchable = query_catalog(run_dir)["symbols"]
+        navigation_errors = []
+        for sid in sorted(inv_ids | set(units)):
+            record = searchable.get(sid)
+            disposition = dispositions.get(sid) or {}
+            target = sid if sid in units else disposition.get("unit")
+            if sid not in units and disposition.get("how") == "index_only":
+                if (record is None or record.get("how") != "index_only"
+                        or record.get("page") is not None or record.get("anchor") is not None
+                        or record.get("reason") != disposition.get("reason", "")):
+                    navigation_errors.append(f"{sid}: index-only disposition lost")
+                continue
+            node = owner.get(target)
+            page = f"nodes/{node}.md"
+            fragment = f"#{anchor(target)}" if target else None
+            if (target not in units or node not in nodes
+                    or not record or record.get("unit") != target or record.get("node") != node
+                    or record.get("page") != page or record.get("anchor") != fragment
+                    or record.get("how") != ("unit" if sid in units else disposition.get("how"))
+                    or f'id="{fragment[1:]}"' not in page_texts.get(page, "")):
+                navigation_errors.append(f"{sid}: primary page or anchor is missing/wrong")
+        _add_check(checks, "catalog_navigation_resolves", not navigation_errors,
+                   {"checked": len(inv_ids | set(units)), "broken": navigation_errors[:12]})
+    else:
+        _add_check(checks, "catalog_lists_every_file", False, "catalog.json is missing")
+        _add_check(checks, "catalog_navigation_resolves", False, "catalog.json is missing")
+
+
 def verify(run_dir: Path, inventory: dict, units: dict, dispositions: dict,
            tree: dict) -> list[dict]:
     """Deterministic structural/coverage checks for the semantic artifact.
@@ -806,17 +856,13 @@ def verify(run_dir: Path, inventory: dict, units: dict, dispositions: dict,
     semantically verified."""
     checks: list[dict] = []
 
-    def check(name: str, ok: bool, detail: Any = None) -> None:
-        checks.append({"check": name, "ok": bool(ok),
-                       **({"detail": detail} if detail is not None else {})})
-
     inv_ids = set(inventory_ids(inventory))
     missing = sorted(inv_ids - set(dispositions))
     broken = [key for key, entry in dispositions.items()
               if (entry or {}).get("how") in {"unit", "grouped"}
               and entry.get("unit") not in units]
-    check("semantic_dispositions_cover_inventory", not missing and not broken,
-          {"inventory_ids": len(inv_ids), "missing": missing[:12], "broken": broken[:12]})
+    _add_check(checks, "semantic_dispositions_cover_inventory", not missing and not broken,
+               {"inventory_ids": len(inv_ids), "missing": missing[:12], "broken": broken[:12]})
 
     nodes = {node["id"]: node for node in tree.get("nodes") or []}
     owner: dict[str, str] = {}
@@ -826,9 +872,9 @@ def verify(run_dir: Path, inventory: dict, units: dict, dispositions: dict,
             if uid in owner:
                 dupes.append(f"{uid}:{owner[uid]}+{nid}")
             owner[uid] = nid
-    check("unique_primary_ownership", not dupes and set(units) <= set(owner),
-          {"units": len(units), "assigned": len(owner), "dupes": dupes[:12],
-           "unassigned": sorted(set(units) - set(owner))[:12]})
+    _add_check(checks, "unique_primary_ownership", not dupes and set(units) <= set(owner),
+               {"units": len(units), "assigned": len(owner), "dupes": dupes[:12],
+                "unassigned": sorted(set(units) - set(owner))[:12]})
 
     roots = [nid for nid, node in nodes.items() if not node.get("parent")]
     children: dict[str, list[str]] = {nid: [] for nid in nodes}
@@ -845,17 +891,17 @@ def verify(run_dir: Path, inventory: dict, units: dict, dispositions: dict,
             continue
         seen.add(nid)
         stack.extend(children.get(nid, []))
-    check("tree_single_root_acyclic_reachable",
-          len(roots) == 1 and not cycle and seen == set(nodes),
-          {"nodes": len(nodes), "roots": roots, "cycle": cycle,
-           "unreachable": sorted(set(nodes) - seen)[:12]})
+    _add_check(checks, "tree_single_root_acyclic_reachable",
+               len(roots) == 1 and not cycle and seen == set(nodes),
+               {"nodes": len(nodes), "roots": roots, "cycle": cycle,
+                "unreachable": sorted(set(nodes) - seen)[:12]})
     hollow = sorted(nid for nid, node in nodes.items() if not node.get("unit_ids") and not children[nid])
-    check("no_empty_nodes", not hollow or not units, hollow[:12])
+    _add_check(checks, "no_empty_nodes", not hollow or not units, hollow[:12])
     clashes = [f"{kid}: {nodes[kid].get('title')!r}" for kids in children.values()
                for i, kid in enumerate(kids)
                if normalize_title(str(nodes[kid].get("title"))) in
                {normalize_title(str(nodes[other].get("title"))) for other in kids[:i]}]
-    check("sibling_titles_distinct", not clashes, clashes[:12])
+    _add_check(checks, "sibling_titles_distinct", not clashes, clashes[:12])
 
     bad_ranges = []
     for uid, unit in units.items():
@@ -867,7 +913,7 @@ def verify(run_dir: Path, inventory: dict, units: dict, dispositions: dict,
             for pair in entry["lines"]:
                 if not (1 <= pair[0] <= pair[1] <= nlines):
                     bad_ranges.append(f"{uid}:{entry['path']}:{pair}")
-    check("unit_ranges_present_and_inbounds", not bad_ranges, bad_ranges[:12])
+    _add_check(checks, "unit_ranges_present_and_inbounds", not bad_ranges, bad_ranges[:12])
 
     docs = run_dir / "docs"
     links = sorted(docs.rglob("*.md"))
@@ -894,48 +940,11 @@ def verify(run_dir: Path, inventory: dict, units: dict, dispositions: dict,
             elif fragment and resolved.suffix == ".md" \
                     and f'id="{fragment}"' not in resolved.read_text(encoding="utf-8"):
                 broken_links.append(f"{md.relative_to(docs)} -> {target} (anchor missing)")
-    check("relative_links_resolve", not broken_links,
-          {"checked": len(links), "broken": broken_links[:12]})
-    catalog_path = run_dir / "catalog.json"
-    if catalog_path.is_file():
-        catalog = json.loads(catalog_path.read_text(encoding="utf-8"))
-        listed = set(catalog.get("files") or {})
-        missing = sorted(set(inventory) - listed)
-        known_empty_missing = sorted(path for path, entry in inventory.items()
-                                     if entry.get("known_empty")
-                                     and not (catalog.get("files") or {}).get(path, {}).get("known_empty"))
-        check("catalog_lists_every_file", not missing and not known_empty_missing,
-              {"inventory_files": len(inventory), "missing": missing[:12],
-               "known_empty_not_marked": known_empty_missing[:12]})
-        # Compare the actual CLI view with accepted ownership and rendered
-        # anchors, not just the number of catalog entries.
-        searchable = query_catalog(run_dir)["symbols"]
-        navigation_errors = []
-        for sid in sorted(inv_ids | set(units)):
-            record = searchable.get(sid)
-            disposition = dispositions.get(sid) or {}
-            target = sid if sid in units else disposition.get("unit")
-            if sid not in units and disposition.get("how") == "index_only":
-                if (record is None or record.get("how") != "index_only"
-                        or record.get("page") is not None or record.get("anchor") is not None
-                        or record.get("reason") != disposition.get("reason", "")):
-                    navigation_errors.append(f"{sid}: index-only disposition lost")
-                continue
-            node = owner.get(target)
-            page = f"nodes/{node}.md"
-            fragment = f"#{anchor(target)}" if target else None
-            if (target not in units or node not in nodes
-                    or not record or record.get("unit") != target or record.get("node") != node
-                    or record.get("page") != page or record.get("anchor") != fragment
-                    or record.get("how") != ("unit" if sid in units else disposition.get("how"))
-                    or f'id="{fragment[1:]}"' not in page_texts.get(page, "")):
-                navigation_errors.append(f"{sid}: primary page or anchor is missing/wrong")
-        check("catalog_navigation_resolves", not navigation_errors,
-              {"checked": len(inv_ids | set(units)), "broken": navigation_errors[:12]})
-    else:
-        check("catalog_lists_every_file", False, "catalog.json is missing")
-        check("catalog_navigation_resolves", False, "catalog.json is missing")
-    check("semantic_rendered", (docs / "INDEX.md").is_file() and catalog_path.is_file())
+    _add_check(checks, "relative_links_resolve", not broken_links,
+               {"checked": len(links), "broken": broken_links[:12]})
+    _verify_catalog(checks, run_dir, inventory, units, dispositions, owner, nodes,
+                    inv_ids, page_texts)
+    _add_check(checks, "semantic_rendered", (docs / "INDEX.md").is_file() and (run_dir / "catalog.json").is_file())
     return checks
 
 
