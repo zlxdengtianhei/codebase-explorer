@@ -601,8 +601,9 @@ def _basis_lines(basis: dict) -> list[str]:
     backend = graph.get("backend") or {}
     edges = ", ".join(f"{kind}={count}" for kind, count in graph["edge_counts"].items()) or "none"
     replaced = f"yes, latest {graph['updated_at']}" if graph["updated"] else "no"
-    return lines + [f"- Graph: SHA-256 `{graph['digest']}` · backend `{backend.get('name') or 'unknown'}` "
-                    f"version `{backend.get('version') or 'unknown'}` · edges {edges} · replaced {replaced}"]
+    tools = ", ".join(f"`{part.get('name')}` {part.get('version') or 'version unknown'}"
+                      for part in backend.get("components") or [backend]) or "unknown"
+    return lines + [f"- Graph: SHA-256 `{graph['digest']}` · built by {tools} · edges {edges} · replaced {replaced}"]
 
 
 def _write_run(prep: _RenderPrep) -> None:

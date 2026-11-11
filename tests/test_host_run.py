@@ -815,7 +815,7 @@ def test_update_graph_adds_dataflow_without_rerunning_a_complete_run(tmp_path: P
     assert f"- CBE version: `{state['cbe_version']}`" in notes
     assert "- Models: none recorded" in notes
     assert f"- Source: {len(state['files'])} files · SHA-256 `{source_digest}`" in notes
-    assert (f"- Graph: SHA-256 `{result['new_graph_digest']}` · backend `test` version `1` · "
+    assert (f"- Graph: SHA-256 `{result['new_graph_digest']}` · built by `test` 1 · "
             f"edges dataflow=1 · replaced yes, latest {result['updated_at']}") in notes
     verifier = host_run._RunState(state)
     host_run._verified_context(run_dir, verifier)  # the new raw fingerprint is accepted
