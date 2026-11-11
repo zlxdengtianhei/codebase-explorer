@@ -176,6 +176,16 @@ def _ordinary_name(spec: GrammarSpec, offsets: OffsetMap, node: Any, scope: str 
         if left is not None and left.type in {"constant", "scope_resolution"}:
             return _text(offsets, left.start_byte, left.end_byte)
         return ""
+    if spec.ordinary_name_style == "python":
+        left = node.child_by_field_name("left")
+        statement = node.parent
+        container = statement.parent if statement is not None and statement.type == "expression_statement" else None
+        if (left is None or left.type != "identifier" or container is None
+                or not (container.type == "module"
+                        or (container.type == "block" and container.parent is not None
+                            and container.parent.type == "class_definition"))):
+            return ""
+        return _text(offsets, left.start_byte, left.end_byte)
     ancestor = node.parent
     while ancestor is not None:
         if ancestor.type in {"statement_block", "compound_statement", "block", "for_statement", "if_statement"}:
@@ -450,7 +460,9 @@ def _coalesce_declarations(offsets: OffsetMap, declarations: list[_Declaration])
 
     def owner(decl: _Declaration) -> Any:
         node = decl.node.parent
-        while node is not None and node.type in {"lexical_declaration", "variable_declaration", "export_statement"}:
+        while node is not None and node.type in {
+                "lexical_declaration", "variable_declaration", "export_statement", "expression_statement"
+        }:
             node = node.parent
         return node
 

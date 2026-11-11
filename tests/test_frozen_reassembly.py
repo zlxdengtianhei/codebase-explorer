@@ -37,7 +37,7 @@ def test_typescript_declarations_partition_source_without_fallback(tmp_path, sou
 
 
 @pytest.mark.parametrize("name,expected", [
-    ("sample.py", "b1bf81a725414500bc5825e4653552d5c8ec4e639efd081f3ace42bf307152fe"),
+    ("sample.py", "9daf01508e472adf85e7ca600f883b58c7688167ab4078849788bf516ec11021"),
     ("sample.c", "086004254d35de88ce7000b3c91b0c70d1f0e404376bd97a598fcee354db38be"),
     ("sample.js", "08aa4241827427e1986a5ae85e5acccbac0111b1ba775a9206d3c307c36fe52d"),
 ])

@@ -217,6 +217,9 @@ GRAMMARS: tuple[GrammarSpec, ...] = (
         class_kinds={"class_definition": "class"},
         wrappers=frozenset({"decorated_definition"}),
         value_function_kinds=frozenset(),
+        ordinary_declaration_kinds=frozenset({"assignment"}),
+        ordinary_name_style="python",
+        ordinary_in_class_scope=True,
     ),
     GrammarSpec(
         name="javascript",

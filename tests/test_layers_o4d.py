@@ -21,9 +21,10 @@ def test_edges_obey_exclusive_ownership_at_shared_boundary(tmp_path, capsys):
     units = {s["id"]: {"id": s["id"], "kind": s["kind"], "explain": "First. Complete explanation."}
              for s in symbols}
     parent = next(s for s in symbols if s["name"] == "MethodView")
+    marker = next(s for s in symbols if s["name"] == "marker")
     child = next(s for s in symbols if s["name"] == "__init_subclass__")
     other = next(s for s in symbols if s["name"] == "other")
-    assert parent["lines"][-1][-1] == child["lines"][0][0]
+    assert parent["lines"][-1][-1] == marker["lines"][0][0] == 2
     nodes = [{"id": s["id"], "path": "views.py", "start_line": s["lines"][0][0]}
              for s in (parent, child, other)]
     graph = {"nodes": nodes, "edges": [

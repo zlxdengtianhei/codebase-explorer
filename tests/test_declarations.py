@@ -44,6 +44,7 @@ def cli(run, command, *args):
     ('LIMIT', 'c/demo.c', '#define LIMIT 8'),
     ('LIMIT', 'cpp/demo.cpp', 'constexpr int LIMIT = 8'),
     ('LIMIT', 'go/demo.go', 'const LIMIT = 8'),
+    ('LIMIT', 'python/demo.py', 'LIMIT = 8'),
     ('LIMIT', 'javascript/demo.js', 'export const LIMIT = 8'),
     ('LIMIT', 'typescript/demo.ts', 'export const LIMIT = 8'),
     ('counter', 'c/demo.c', 'static int counter = 0'),
@@ -89,12 +90,41 @@ def chunks(tmp_path, filename, text):
     ('A.java', 'class A { void f() { int local=1; final int cached=2; } }\n', {'local', 'cached'}),
     ('a.rb', 'local = 1\n$global = 2\nclass Box\n @instance = 3\n @@shared = 4\nend\n', {'local', '$global', '@instance', '@@shared'}),
     ('a.go', 'package p\nfunc f() { var local = 1; const cached = 2 }\n', {'local', 'cached'}),
-    ('a.py', 'LIMIT=1\ncomputed=object()\nclass Box:\n FIELD=2\n', {'LIMIT', 'computed', 'FIELD'}),
 ])
 def test_non_units(tmp_path, filename, text, absent):
     rows = chunks(tmp_path, filename, text)
     assert not (absent & {c['name'] for c in rows})
     assert not [c for c in rows if c['kind'] == 'module_region']
+
+
+def test_python_module_and_class_declarations(tmp_path):
+    text = (
+        'plain = 1\n'
+        'typed: int = 2\n'
+        'annotated: str\n'
+        'a, b = (1, 2)\n'
+        'x[0] = 3\n'
+        'obj.attr = 4\n'
+        'count += 1\n'
+        'if TYPE_CHECKING:\n'
+        '    blocked = 5\n'
+        'class Box:\n'
+        '    field = 6\n'
+        '    typed_field: int = 7\n'
+        '    annotation_only: str\n'
+        '    def method(self):\n'
+        '        local = 8\n'
+        'after = 9\n'
+    )
+    rows = chunks(tmp_path, 'a.py', text)
+    regions = [c for c in rows if c['kind'] == 'module_region']
+    assert [c['name'] for c in regions] == ['plain', 'field', 'after']
+    assert [c['qualified_name'] for c in regions] == ['plain', 'Box.field', 'after']
+    assert regions[0]['signature'] == 'plain, typed, annotated'
+    assert regions[0]['text'] == 'plain = 1\ntyped: int = 2\nannotated: str'
+    assert regions[1]['signature'] == 'field, typed_field, annotation_only'
+    excluded = {'a', 'b', 'x', 'obj', 'attr', 'count', 'blocked', 'local'}
+    assert not excluded & {name for c in regions for name in c['signature'].split(', ')}
 
 
 def test_macros_runs_comments_conditionals_and_multiline(tmp_path):
