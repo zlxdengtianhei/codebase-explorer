@@ -223,6 +223,7 @@ def graph_quality(graph: dict, *, existing_paths: Iterable[str] | None = None) -
         "incomplete_capabilities": [dict(c) for c in capabilities
                                     if c.get("status") not in {"resolved", "empty"}],
         "frontend_failures": [dict(d) for d in diagnostics if d.get("code") in BACKEND_FAILURE_CODES],
+        "non_call_sites": dict(graph.get("non_call_sites", {})),
     }
 
 
@@ -328,15 +329,15 @@ def analyze_graph(
 
     use_joern = backend in ("auto", "joern")
     use_imports = backend in ("auto", "imports")
+    joern_missing = False
 
     if use_joern:
         joern = backends.find_joern(joern_home)
         if joern is None:
-            if backend == "joern":
-                raise GraphError("joern backend requested but the Joern CLI was not found")
+            joern_missing = True
             diagnostics.append({"path": None, "code": "backend_unavailable",
-                                "message": "Joern CLI not found; call/cfg/dataflow skipped"})
-            extra_capabilities.extend(_unavailable("joern", requested, ("call", "cfg", "dataflow")))
+                                "message": "Joern CLI not found; call/cfg/dataflow/import graph skipped"})
+            extra_capabilities.extend(_unavailable("joern", requested, ("call", "cfg", "dataflow", "import")))
         else:
             try:
                 fragment = backends.build_with_joern(
@@ -354,7 +355,9 @@ def analyze_graph(
                 ran = ran or (bool(fragment["raw"]) and any(
                     c.get("status") in {"resolved", "partial", "empty"} for c in fragment["capabilities"]))
 
-    if use_imports:
+    # An automatic call-graph build has one failure contract when Joern is
+    # absent. Import-only analysis remains available by explicit selection.
+    if use_imports and not (backend == "auto" and joern_missing):
         depcruise = backends.find_depcruise(depcruise_bin)
         import_languages = [lang for lang in requested if lang in backends.DEPCRUISE_LANGUAGES]
         if depcruise is None and import_languages:
@@ -377,9 +380,6 @@ def analyze_graph(
                 ran = True
             fragments.append(fragment)
             diagnostics.extend(fragment["diagnostics"])
-
-    if not fragments:
-        raise GraphError("no graph backend was available for the requested languages")
 
     files = repository_files(repo)
     nodes, edges = _merge(fragments)
@@ -425,6 +425,11 @@ def analyze_graph(
         "fingerprint": _fingerprint(manifest, config_manifest, components),
     }
 
+    non_call_sites = {}
+    for fragment in fragments:
+        for reason, count in fragment.get("non_call_sites", {}).items():
+            non_call_sites[reason] = non_call_sites.get(reason, 0) + count
+
     graph = {
         "schema": SCHEMA_GRAPH,
         "source_manifest": manifest,
@@ -434,7 +439,9 @@ def analyze_graph(
         "edges": edges,
         "capabilities": capabilities,
         "diagnostics": diagnostics,
+        "non_call_sites": dict(sorted(non_call_sites.items())),
     }
+    graph = _scrub_repository_paths(graph, repo)
     graph["quality"] = graph_quality(graph, existing_paths=files)
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(graph, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -442,6 +449,20 @@ def analyze_graph(
         causes = "; ".join(d["message"] for d in diagnostics if d.get("code") in BACKEND_FAILURE_CODES)
         raise GraphError("no graph backend completed" + (f": {causes}" if causes else ""), graph=graph)
     return graph
+
+
+def _scrub_repository_paths(value, repo):
+    """Remove the repository's absolute prefix from every graph text field."""
+    if isinstance(value, dict):
+        return {key: _scrub_repository_paths(item, repo) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_scrub_repository_paths(item, repo) for item in value]
+    if isinstance(value, tuple):
+        return tuple(_scrub_repository_paths(item, repo) for item in value)
+    if isinstance(value, str):
+        root = str(repo).rstrip(os.sep)
+        return value.replace(root + os.sep, "").replace(root, ".")
+    return value
 
 
 def query_graph(

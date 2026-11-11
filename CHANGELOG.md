@@ -31,7 +31,7 @@
   in pages and `query`), the bounded `index_only` fill, and the `answer_fallback`
   replay of earlier answers. Run schema is now `cbe-host-run/3`; a run planned
   before this change must be planned again.
-- HTTP 429 and 503 are waited out inside the call (`Retry-After`, else 5 s doubling
+- HTTP 429, 502, 503 and 504 are waited out inside the call (`Retry-After`, else 5 s doubling
   to 120 s, up to 6 repeats), use no answer attempt and are logged as `rate_limited`
   rows. A call still refused returns its task to the queue and pauses the run; the
   run stops only after 3 such calls in a row.

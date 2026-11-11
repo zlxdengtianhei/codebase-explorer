@@ -1,0 +1,3842 @@
+{
+  "backend": "joern",
+  "cpgFile": "<run>/cpg-javascript.bin",
+  "files": [
+    {
+      "name": "main.ts",
+      "hash": ""
+    },
+    {
+      "name": "util.ts",
+      "hash": ""
+    }
+  ],
+  "types": [
+    {
+      "name": "run",
+      "fullName": "main.ts::program:run",
+      "file": "main.ts",
+      "inherits": [
+        "ANY"
+      ]
+    },
+    {
+      "name": ":program",
+      "fullName": "main.ts::program",
+      "file": "main.ts",
+      "inherits": [
+        "ANY"
+      ]
+    },
+    {
+      "name": "helper",
+      "fullName": "util.ts::program:helper",
+      "file": "util.ts",
+      "inherits": [
+        "ANY"
+      ]
+    },
+    {
+      "name": ":program",
+      "fullName": "util.ts::program",
+      "file": "util.ts",
+      "inherits": [
+        "ANY"
+      ]
+    }
+  ],
+  "methods": [
+    {
+      "name": ":program",
+      "fullName": "main.ts::program",
+      "file": "main.ts",
+      "line": 1,
+      "signature": "",
+      "nodeId": "107374182400"
+    },
+    {
+      "name": "run",
+      "fullName": "main.ts::program:run",
+      "file": "main.ts",
+      "line": 2,
+      "signature": "",
+      "nodeId": "107374182401"
+    },
+    {
+      "name": "helper",
+      "fullName": "util.ts::program:helper",
+      "file": "util.ts",
+      "line": 1,
+      "signature": "",
+      "nodeId": "107374182402"
+    },
+    {
+      "name": ":program",
+      "fullName": "util.ts::program",
+      "file": "util.ts",
+      "line": 1,
+      "signature": "",
+      "nodeId": "107374182403"
+    }
+  ],
+  "calls": [
+    {
+      "caller": "main.ts::program",
+      "callerId": "107374182400",
+      "callerFile": "main.ts",
+      "line": 1,
+      "column": 0,
+      "name": "require",
+      "code": "require(\"./util.js\")",
+      "methodFullName": "main.ts::program:require",
+      "dispatchType": "DYNAMIC_DISPATCH",
+      "callees": [
+        {
+          "nodeId": "107374182410",
+          "fullName": "main.ts::program:require",
+          "external": true,
+          "file": "<empty>",
+          "line": -1
+        }
+      ],
+      "nodeId": "30064771072",
+      "sourceCode": "import { helper } from \"./util.js\";"
+    },
+    {
+      "caller": "main.ts::program:run",
+      "callerId": "107374182401",
+      "callerFile": "main.ts",
+      "line": 4,
+      "column": 2,
+      "name": "<operator>.assignment",
+      "code": "(_result_0 = _iterator_0.next())",
+      "methodFullName": "<operator>.assignment",
+      "dispatchType": "STATIC_DISPATCH",
+      "callees": [
+        {
+          "nodeId": "107374182404",
+          "fullName": "<operator>.assignment",
+          "external": true,
+          "file": "<empty>",
+          "line": -1
+        }
+      ],
+      "nodeId": "30064771073"
+    },
+    {
+      "caller": "main.ts::program:run",
+      "callerId": "107374182401",
+      "callerFile": "main.ts",
+      "line": 4,
+      "column": 2,
+      "name": "next",
+      "code": "_iterator_0.next()",
+      "methodFullName": "<unknownFullName>",
+      "dispatchType": "DYNAMIC_DISPATCH",
+      "callees": [],
+      "nodeId": "30064771074"
+    },
+    {
+      "caller": "main.ts::program:run",
+      "callerId": "107374182401",
+      "callerFile": "main.ts",
+      "line": 4,
+      "column": 2,
+      "name": "<operator>.fieldAccess",
+      "code": "_iterator_0.next",
+      "methodFullName": "<operator>.fieldAccess",
+      "dispatchType": "STATIC_DISPATCH",
+      "callees": [
+        {
+          "nodeId": "107374182405",
+          "fullName": "<operator>.fieldAccess",
+          "external": true,
+          "file": "<empty>",
+          "line": -1
+        }
+      ],
+      "nodeId": "30064771075"
+    },
+    {
+      "caller": "main.ts::program:run",
+      "callerId": "107374182401",
+      "callerFile": "main.ts",
+      "line": 3,
+      "column": 6,
+      "name": "<operator>.assignment",
+      "code": "let total = 0",
+      "methodFullName": "<operator>.assignment",
+      "dispatchType": "STATIC_DISPATCH",
+      "callees": [
+        {
+          "nodeId": "107374182404",
+          "fullName": "<operator>.assignment",
+          "external": true,
+          "file": "<empty>",
+          "line": -1
+        }
+      ],
+      "nodeId": "30064771076"
+    },
+    {
+      "caller": "main.ts::program:run",
+      "callerId": "107374182401",
+      "callerFile": "main.ts",
+      "line": 4,
+      "column": 2,
+      "name": "<operator>.assignment",
+      "code": "_iterator_0 = <operator>.iterator(items)",
+      "methodFullName": "<operator>.assignment",
+      "dispatchType": "STATIC_DISPATCH",
+      "callees": [
+        {
+          "nodeId": "107374182404",
+          "fullName": "<operator>.assignment",
+          "external": true,
+          "file": "<empty>",
+          "line": -1
+        }
+      ],
+      "nodeId": "30064771077"
+    },
+    {
+      "caller": "main.ts::program:run",
+      "callerId": "107374182401",
+      "callerFile": "main.ts",
+      "line": 4,
+      "column": 2,
+      "name": "<operator>.iterator",
+      "code": "<operator>.iterator(items)",
+      "methodFullName": "<operator>.iterator",
+      "dispatchType": "STATIC_DISPATCH",
+      "callees": [
+        {
+          "nodeId": "107374182406",
+          "fullName": "<operator>.iterator",
+          "external": true,
+          "file": "<empty>",
+          "line": -1
+        }
+      ],
+      "nodeId": "30064771078"
+    },
+    {
+      "caller": "main.ts::program:run",
+      "callerId": "107374182401",
+      "callerFile": "main.ts",
+      "line": 4,
+      "column": 2,
+      "name": "<operator>.not",
+      "code": "!(_result_0 = _iterator_0.next()).done",
+      "methodFullName": "<operator>.not",
+      "dispatchType": "STATIC_DISPATCH",
+      "callees": [
+        {
+          "nodeId": "107374182407",
+          "fullName": "<operator>.not",
+          "external": true,
+          "file": "<empty>",
+          "line": -1
+        }
+      ],
+      "nodeId": "30064771079"
+    },
+    {
+      "caller": "main.ts::program:run",
+      "callerId": "107374182401",
+      "callerFile": "main.ts",
+      "line": 4,
+      "column": 2,
+      "name": "<operator>.fieldAccess",
+      "code": "(_result_0 = _iterator_0.next()).done",
+      "methodFullName": "<operator>.fieldAccess",
+      "dispatchType": "STATIC_DISPATCH",
+      "callees": [
+        {
+          "nodeId": "107374182405",
+          "fullName": "<operator>.fieldAccess",
+          "external": true,
+          "file": "<empty>",
+          "line": -1
+        }
+      ],
+      "nodeId": "30064771080"
+    },
+    {
+      "caller": "main.ts::program:run",
+      "callerId": "107374182401",
+      "callerFile": "main.ts",
+      "line": 4,
+      "column": 2,
+      "name": "<operator>.assignment",
+      "code": "item = _result_0.value",
+      "methodFullName": "<operator>.assignment",
+      "dispatchType": "STATIC_DISPATCH",
+      "callees": [
+        {
+          "nodeId": "107374182404",
+          "fullName": "<operator>.assignment",
+          "external": true,
+          "file": "<empty>",
+          "line": -1
+        }
+      ],
+      "nodeId": "30064771081"
+    },
+    {
+      "caller": "main.ts::program:run",
+      "callerId": "107374182401",
+      "callerFile": "main.ts",
+      "line": 4,
+      "column": 2,
+      "name": "<operator>.fieldAccess",
+      "code": "_result_0.value",
+      "methodFullName": "<operator>.fieldAccess",
+      "dispatchType": "STATIC_DISPATCH",
+      "callees": [
+        {
+          "nodeId": "107374182405",
+          "fullName": "<operator>.fieldAccess",
+          "external": true,
+          "file": "<empty>",
+          "line": -1
+        }
+      ],
+      "nodeId": "30064771082"
+    },
+    {
+      "caller": "main.ts::program:run",
+      "callerId": "107374182401",
+      "callerFile": "main.ts",
+      "line": 4,
+      "column": 28,
+      "name": "<operator>.assignmentPlus",
+      "code": "total += helper(item)",
+      "methodFullName": "<operator>.assignmentPlus",
+      "dispatchType": "STATIC_DISPATCH",
+      "callees": [
+        {
+          "nodeId": "107374182408",
+          "fullName": "<operator>.assignmentPlus",
+          "external": true,
+          "file": "<empty>",
+          "line": -1
+        }
+      ],
+      "nodeId": "30064771083"
+    },
+    {
+      "caller": "main.ts::program:run",
+      "callerId": "107374182401",
+      "callerFile": "main.ts",
+      "line": 4,
+      "column": 37,
+      "name": "helper",
+      "code": "helper(item)",
+      "methodFullName": "util.js:helper",
+      "dispatchType": "DYNAMIC_DISPATCH",
+      "callees": [
+        {
+          "nodeId": "107374182411",
+          "fullName": "util.js:helper",
+          "external": true,
+          "file": "<empty>",
+          "line": -1
+        }
+      ],
+      "nodeId": "30064771084"
+    },
+    {
+      "caller": "main.ts::program",
+      "callerId": "107374182400",
+      "callerFile": "main.ts",
+      "line": 1,
+      "column": 0,
+      "name": "<operator>.assignment",
+      "code": "var helper = require(\"./util.js\").helper",
+      "methodFullName": "<operator>.assignment",
+      "dispatchType": "STATIC_DISPATCH",
+      "callees": [
+        {
+          "nodeId": "107374182404",
+          "fullName": "<operator>.assignment",
+          "external": true,
+          "file": "<empty>",
+          "line": -1
+        }
+      ],
+      "nodeId": "30064771085"
+    },
+    {
+      "caller": "main.ts::program",
+      "callerId": "107374182400",
+      "callerFile": "main.ts",
+      "line": 1,
+      "column": 0,
+      "name": "<operator>.fieldAccess",
+      "code": "require(\"./util.js\").helper",
+      "methodFullName": "<operator>.fieldAccess",
+      "dispatchType": "STATIC_DISPATCH",
+      "callees": [
+        {
+          "nodeId": "107374182405",
+          "fullName": "<operator>.fieldAccess",
+          "external": true,
+          "file": "<empty>",
+          "line": -1
+        }
+      ],
+      "nodeId": "30064771086"
+    },
+    {
+      "caller": "main.ts::program",
+      "callerId": "107374182400",
+      "callerFile": "main.ts",
+      "line": 2,
+      "column": 7,
+      "name": "<operator>.assignment",
+      "code": "function run = function run(items: number[]): number {\n  let total = 0;\n  for (const item of items) total += helper(item);\n  return total;\n}",
+      "methodFullName": "<operator>.assignment",
+      "dispatchType": "STATIC_DISPATCH",
+      "callees": [
+        {
+          "nodeId": "107374182404",
+          "fullName": "<operator>.assignment",
+          "external": true,
+          "file": "<empty>",
+          "line": -1
+        }
+      ],
+      "nodeId": "30064771087"
+    },
+    {
+      "caller": "main.ts::program",
+      "callerId": "107374182400",
+      "callerFile": "main.ts",
+      "line": 2,
+      "column": 0,
+      "name": "<operator>.assignment",
+      "code": "exports.run = run",
+      "methodFullName": "<operator>.assignment",
+      "dispatchType": "STATIC_DISPATCH",
+      "callees": [
+        {
+          "nodeId": "107374182404",
+          "fullName": "<operator>.assignment",
+          "external": true,
+          "file": "<empty>",
+          "line": -1
+        }
+      ],
+      "nodeId": "30064771088"
+    },
+    {
+      "caller": "main.ts::program",
+      "callerId": "107374182400",
+      "callerFile": "main.ts",
+      "line": 2,
+      "column": 0,
+      "name": "<operator>.fieldAccess",
+      "code": "exports.run",
+      "methodFullName": "<operator>.fieldAccess",
+      "dispatchType": "STATIC_DISPATCH",
+      "callees": [
+        {
+          "nodeId": "107374182405",
+          "fullName": "<operator>.fieldAccess",
+          "external": true,
+          "file": "<empty>",
+          "line": -1
+        }
+      ],
+      "nodeId": "30064771089"
+    },
+    {
+      "caller": "util.ts::program:helper",
+      "callerId": "107374182402",
+      "callerFile": "util.ts",
+      "line": 1,
+      "column": 55,
+      "name": "<operator>.addition",
+      "code": "value + 1",
+      "methodFullName": "<operator>.addition",
+      "dispatchType": "STATIC_DISPATCH",
+      "callees": [
+        {
+          "nodeId": "107374182409",
+          "fullName": "<operator>.addition",
+          "external": true,
+          "file": "<empty>",
+          "line": -1
+        }
+      ],
+      "nodeId": "30064771090"
+    },
+    {
+      "caller": "util.ts::program",
+      "callerId": "107374182403",
+      "callerFile": "util.ts",
+      "line": 1,
+      "column": 7,
+      "name": "<operator>.assignment",
+      "code": "function helper = function helper(value: number): number { return value + 1; }",
+      "methodFullName": "<operator>.assignment",
+      "dispatchType": "STATIC_DISPATCH",
+      "callees": [
+        {
+          "nodeId": "107374182404",
+          "fullName": "<operator>.assignment",
+          "external": true,
+          "file": "<empty>",
+          "line": -1
+        }
+      ],
+      "nodeId": "30064771091"
+    },
+    {
+      "caller": "util.ts::program",
+      "callerId": "107374182403",
+      "callerFile": "util.ts",
+      "line": 1,
+      "column": 0,
+      "name": "<operator>.assignment",
+      "code": "exports.helper = helper",
+      "methodFullName": "<operator>.assignment",
+      "dispatchType": "STATIC_DISPATCH",
+      "callees": [
+        {
+          "nodeId": "107374182404",
+          "fullName": "<operator>.assignment",
+          "external": true,
+          "file": "<empty>",
+          "line": -1
+        }
+      ],
+      "nodeId": "30064771092"
+    },
+    {
+      "caller": "util.ts::program",
+      "callerId": "107374182403",
+      "callerFile": "util.ts",
+      "line": 1,
+      "column": 0,
+      "name": "<operator>.fieldAccess",
+      "code": "exports.helper",
+      "methodFullName": "<operator>.fieldAccess",
+      "dispatchType": "STATIC_DISPATCH",
+      "callees": [
+        {
+          "nodeId": "107374182405",
+          "fullName": "<operator>.fieldAccess",
+          "external": true,
+          "file": "<empty>",
+          "line": -1
+        }
+      ],
+      "nodeId": "30064771093"
+    }
+  ],
+  "cfg": [
+    {
+      "method": "main.ts::program",
+      "methodId": "107374182400",
+      "file": "main.ts",
+      "line": 1,
+      "nodeId": "107374182400",
+      "nodes": [
+        {
+          "i": 0,
+          "label": "METHOD",
+          "line": 2,
+          "column": 7,
+          "order": 1,
+          "code": "function run(items: number[]): number {",
+          "file": "main.ts",
+          "ownerMethod": "main.ts::program:run",
+          "nodeId": "107374182401"
+        },
+        {
+          "i": 1,
+          "label": "BLOCK",
+          "line": -1,
+          "column": -1,
+          "order": 2,
+          "code": "<empty>",
+          "file": "main.ts",
+          "ownerMethod": "main.ts::program",
+          "nodeId": "25769803776"
+        },
+        {
+          "i": 2,
+          "label": "CALL",
+          "line": 1,
+          "column": 0,
+          "order": 1,
+          "code": "var helper = require(\"./util.js\").helper",
+          "file": "main.ts",
+          "ownerMethod": "main.ts::program",
+          "nodeId": "30064771085"
+        },
+        {
+          "i": 3,
+          "label": "BLOCK",
+          "line": 2,
+          "column": 0,
+          "order": 2,
+          "code": "export function run(items: number[]): number {",
+          "file": "main.ts",
+          "ownerMethod": "main.ts::program",
+          "nodeId": "25769803780"
+        },
+        {
+          "i": 4,
+          "label": "IDENTIFIER",
+          "line": 1,
+          "column": 0,
+          "order": 1,
+          "code": "helper",
+          "file": "main.ts",
+          "ownerMethod": "main.ts::program",
+          "nodeId": "68719476751"
+        },
+        {
+          "i": 5,
+          "label": "CALL",
+          "line": 1,
+          "column": 0,
+          "order": 2,
+          "code": "require(\"./util.js\").helper",
+          "file": "main.ts",
+          "ownerMethod": "main.ts::program",
+          "nodeId": "30064771086"
+        },
+        {
+          "i": 6,
+          "label": "CALL",
+          "line": 2,
+          "column": 7,
+          "order": 1,
+          "code": "function run = function run(items: number[]): number {",
+          "file": "main.ts",
+          "ownerMethod": "main.ts::program",
+          "nodeId": "30064771087"
+        },
+        {
+          "i": 7,
+          "label": "CALL",
+          "line": 2,
+          "column": 0,
+          "order": 2,
+          "code": "exports.run = run",
+          "file": "main.ts",
+          "ownerMethod": "main.ts::program",
+          "nodeId": "30064771088"
+        },
+        {
+          "i": 8,
+          "label": "CALL",
+          "line": 1,
+          "column": 0,
+          "order": 1,
+          "code": "require(\"./util.js\")",
+          "file": "main.ts",
+          "ownerMethod": "main.ts::program",
+          "nodeId": "30064771072"
+        },
+        {
+          "i": 9,
+          "label": "FIELD_IDENTIFIER",
+          "line": 1,
+          "column": 0,
+          "order": 2,
+          "code": "helper",
+          "file": "main.ts",
+          "ownerMethod": "main.ts::program",
+          "nodeId": "55834574851"
+        },
+        {
+          "i": 10,
+          "label": "IDENTIFIER",
+          "line": 2,
+          "column": 7,
+          "order": 1,
+          "code": "run",
+          "file": "main.ts",
+          "ownerMethod": "main.ts::program",
+          "nodeId": "68719476754"
+        },
+        {
+          "i": 11,
+          "label": "METHOD_REF",
+          "line": 2,
+          "column": 7,
+          "order": 2,
+          "code": "run",
+          "file": "main.ts",
+          "ownerMethod": "main.ts::program",
+          "nodeId": "120259084288"
+        },
+        {
+          "i": 12,
+          "label": "CALL",
+          "line": 2,
+          "column": 0,
+          "order": 1,
+          "code": "exports.run",
+          "file": "main.ts",
+          "ownerMethod": "main.ts::program",
+          "nodeId": "30064771089"
+        },
+        {
+          "i": 13,
+          "label": "IDENTIFIER",
+          "line": 2,
+          "column": 0,
+          "order": 2,
+          "code": "run",
+          "file": "main.ts",
+          "ownerMethod": "main.ts::program",
+          "nodeId": "68719476756"
+        },
+        {
+          "i": 14,
+          "label": "IDENTIFIER",
+          "line": 1,
+          "column": 0,
+          "order": 1,
+          "code": "require",
+          "file": "main.ts",
+          "ownerMethod": "main.ts::program",
+          "nodeId": "68719476752"
+        },
+        {
+          "i": 15,
+          "label": "IDENTIFIER",
+          "line": 1,
+          "column": 0,
+          "order": 2,
+          "code": "this",
+          "file": "main.ts",
+          "ownerMethod": "main.ts::program",
+          "nodeId": "68719476753"
+        },
+        {
+          "i": 16,
+          "label": "LITERAL",
+          "line": 1,
+          "column": 0,
+          "order": 3,
+          "code": "\"./util.js\"",
+          "file": "main.ts",
+          "ownerMethod": "main.ts::program",
+          "nodeId": "90194313217"
+        },
+        {
+          "i": 17,
+          "label": "IDENTIFIER",
+          "line": 2,
+          "column": 0,
+          "order": 1,
+          "code": "exports",
+          "file": "main.ts",
+          "ownerMethod": "main.ts::program",
+          "nodeId": "68719476755"
+        },
+        {
+          "i": 18,
+          "label": "FIELD_IDENTIFIER",
+          "line": 2,
+          "column": 0,
+          "order": 2,
+          "code": "run",
+          "file": "main.ts",
+          "ownerMethod": "main.ts::program",
+          "nodeId": "55834574852"
+        }
+      ],
+      "edges": [
+        {
+          "from": 0,
+          "to": -1
+        },
+        {
+          "from": 2,
+          "to": 10
+        },
+        {
+          "from": 3,
+          "to": -1
+        },
+        {
+          "from": 4,
+          "to": 14
+        },
+        {
+          "from": 5,
+          "to": 2
+        },
+        {
+          "from": 6,
+          "to": 17
+        },
+        {
+          "from": 7,
+          "to": 3
+        },
+        {
+          "from": 8,
+          "to": 9
+        },
+        {
+          "from": 9,
+          "to": 5
+        },
+        {
+          "from": 10,
+          "to": 11
+        },
+        {
+          "from": 11,
+          "to": 6
+        },
+        {
+          "from": 12,
+          "to": 13
+        },
+        {
+          "from": 13,
+          "to": 7
+        },
+        {
+          "from": 14,
+          "to": 15
+        },
+        {
+          "from": 15,
+          "to": 16
+        },
+        {
+          "from": 16,
+          "to": 8
+        },
+        {
+          "from": 17,
+          "to": 18
+        },
+        {
+          "from": 18,
+          "to": 12
+        }
+      ]
+    },
+    {
+      "method": "main.ts::program:run",
+      "methodId": "107374182401",
+      "file": "main.ts",
+      "line": 2,
+      "nodeId": "107374182401",
+      "nodes": [
+        {
+          "i": 0,
+          "label": "BLOCK",
+          "line": 2,
+          "column": 45,
+          "order": 3,
+          "code": "{",
+          "file": "main.ts",
+          "ownerMethod": "main.ts::program:run",
+          "nodeId": "25769803777"
+        },
+        {
+          "i": 1,
+          "label": "CALL",
+          "line": 3,
+          "column": 6,
+          "order": 1,
+          "code": "let total = 0",
+          "file": "main.ts",
+          "ownerMethod": "main.ts::program:run",
+          "nodeId": "30064771076"
+        },
+        {
+          "i": 2,
+          "label": "BLOCK",
+          "line": 4,
+          "column": 2,
+          "order": 2,
+          "code": "for (const item of items) total += helper(item);",
+          "file": "main.ts",
+          "ownerMethod": "main.ts::program:run",
+          "nodeId": "25769803778"
+        },
+        {
+          "i": 3,
+          "label": "RETURN",
+          "line": 5,
+          "column": 2,
+          "order": 3,
+          "code": "return total",
+          "file": "main.ts",
+          "ownerMethod": "main.ts::program:run",
+          "nodeId": "141733920768"
+        },
+        {
+          "i": 4,
+          "label": "IDENTIFIER",
+          "line": 3,
+          "column": 6,
+          "order": 1,
+          "code": "total",
+          "file": "main.ts",
+          "ownerMethod": "main.ts::program:run",
+          "nodeId": "68719476739"
+        },
+        {
+          "i": 5,
+          "label": "LITERAL",
+          "line": 3,
+          "column": 14,
+          "order": 2,
+          "code": "0",
+          "file": "main.ts",
+          "ownerMethod": "main.ts::program:run",
+          "nodeId": "90194313216"
+        },
+        {
+          "i": 6,
+          "label": "CALL",
+          "line": 4,
+          "column": 2,
+          "order": 1,
+          "code": "_iterator_0 = <operator>.iterator(items)",
+          "file": "main.ts",
+          "ownerMethod": "main.ts::program:run",
+          "nodeId": "30064771077"
+        },
+        {
+          "i": 7,
+          "label": "IDENTIFIER",
+          "line": 4,
+          "column": 2,
+          "order": 2,
+          "code": "_result_0",
+          "file": "main.ts",
+          "ownerMethod": "main.ts::program:run",
+          "nodeId": "68719476742"
+        },
+        {
+          "i": 8,
+          "label": "IDENTIFIER",
+          "line": 4,
+          "column": 2,
+          "order": 3,
+          "code": "item",
+          "file": "main.ts",
+          "ownerMethod": "main.ts::program:run",
+          "nodeId": "68719476743"
+        },
+        {
+          "i": 9,
+          "label": "CONTROL_STRUCTURE",
+          "line": 4,
+          "column": 2,
+          "order": 4,
+          "code": "for (const item of items) total += helper(item);",
+          "file": "main.ts",
+          "ownerMethod": "main.ts::program:run",
+          "nodeId": "47244640256"
+        },
+        {
+          "i": 10,
+          "label": "IDENTIFIER",
+          "line": 5,
+          "column": 9,
+          "order": 1,
+          "code": "total",
+          "file": "main.ts",
+          "ownerMethod": "main.ts::program:run",
+          "nodeId": "68719476750"
+        },
+        {
+          "i": 11,
+          "label": "IDENTIFIER",
+          "line": 4,
+          "column": 2,
+          "order": 1,
+          "code": "_iterator_0",
+          "file": "main.ts",
+          "ownerMethod": "main.ts::program:run",
+          "nodeId": "68719476740"
+        },
+        {
+          "i": 12,
+          "label": "CALL",
+          "line": 4,
+          "column": 2,
+          "order": 2,
+          "code": "<operator>.iterator(items)",
+          "file": "main.ts",
+          "ownerMethod": "main.ts::program:run",
+          "nodeId": "30064771078"
+        },
+        {
+          "i": 13,
+          "label": "CALL",
+          "line": 4,
+          "column": 2,
+          "order": 1,
+          "code": "!(_result_0 = _iterator_0.next()).done",
+          "file": "main.ts",
+          "ownerMethod": "main.ts::program:run",
+          "nodeId": "30064771079"
+        },
+        {
+          "i": 14,
+          "label": "BLOCK",
+          "line": 4,
+          "column": 2,
+          "order": 2,
+          "code": "for (const item of items) total += helper(item);",
+          "file": "main.ts",
+          "ownerMethod": "main.ts::program:run",
+          "nodeId": "25769803779"
+        },
+        {
+          "i": 15,
+          "label": "IDENTIFIER",
+          "line": 4,
+          "column": 21,
+          "order": 1,
+          "code": "items",
+          "file": "main.ts",
+          "ownerMethod": "main.ts::program:run",
+          "nodeId": "68719476741"
+        },
+        {
+          "i": 16,
+          "label": "CALL",
+          "line": 4,
+          "column": 2,
+          "order": 1,
+          "code": "(_result_0 = _iterator_0.next()).done",
+          "file": "main.ts",
+          "ownerMethod": "main.ts::program:run",
+          "nodeId": "30064771080"
+        },
+        {
+          "i": 17,
+          "label": "CALL",
+          "line": 4,
+          "column": 2,
+          "order": 1,
+          "code": "item = _result_0.value",
+          "file": "main.ts",
+          "ownerMethod": "main.ts::program:run",
+          "nodeId": "30064771081"
+        },
+        {
+          "i": 18,
+          "label": "CALL",
+          "line": 4,
+          "column": 28,
+          "order": 2,
+          "code": "total += helper(item)",
+          "file": "main.ts",
+          "ownerMethod": "main.ts::program:run",
+          "nodeId": "30064771083"
+        },
+        {
+          "i": 19,
+          "label": "CALL",
+          "line": 4,
+          "column": 2,
+          "order": 1,
+          "code": "(_result_0 = _iterator_0.next())",
+          "file": "main.ts",
+          "ownerMethod": "main.ts::program:run",
+          "nodeId": "30064771073"
+        },
+        {
+          "i": 20,
+          "label": "FIELD_IDENTIFIER",
+          "line": 4,
+          "column": 2,
+          "order": 2,
+          "code": "done",
+          "file": "main.ts",
+          "ownerMethod": "main.ts::program:run",
+          "nodeId": "55834574849"
+        },
+        {
+          "i": 21,
+          "label": "IDENTIFIER",
+          "line": 4,
+          "column": 2,
+          "order": 1,
+          "code": "item",
+          "file": "main.ts",
+          "ownerMethod": "main.ts::program:run",
+          "nodeId": "68719476744"
+        },
+        {
+          "i": 22,
+          "label": "CALL",
+          "line": 4,
+          "column": 2,
+          "order": 2,
+          "code": "_result_0.value",
+          "file": "main.ts",
+          "ownerMethod": "main.ts::program:run",
+          "nodeId": "30064771082"
+        },
+        {
+          "i": 23,
+          "label": "IDENTIFIER",
+          "line": 4,
+          "column": 28,
+          "order": 1,
+          "code": "total",
+          "file": "main.ts",
+          "ownerMethod": "main.ts::program:run",
+          "nodeId": "68719476746"
+        },
+        {
+          "i": 24,
+          "label": "CALL",
+          "line": 4,
+          "column": 37,
+          "order": 2,
+          "code": "helper(item)",
+          "file": "main.ts",
+          "ownerMethod": "main.ts::program:run",
+          "nodeId": "30064771084"
+        },
+        {
+          "i": 25,
+          "label": "IDENTIFIER",
+          "line": 4,
+          "column": 2,
+          "order": 1,
+          "code": "_result_0",
+          "file": "main.ts",
+          "ownerMethod": "main.ts::program:run",
+          "nodeId": "68719476736"
+        },
+        {
+          "i": 26,
+          "label": "CALL",
+          "line": 4,
+          "column": 2,
+          "order": 2,
+          "code": "_iterator_0.next()",
+          "file": "main.ts",
+          "ownerMethod": "main.ts::program:run",
+          "nodeId": "30064771074"
+        },
+        {
+          "i": 27,
+          "label": "IDENTIFIER",
+          "line": 4,
+          "column": 2,
+          "order": 1,
+          "code": "_result_0",
+          "file": "main.ts",
+          "ownerMethod": "main.ts::program:run",
+          "nodeId": "68719476745"
+        },
+        {
+          "i": 28,
+          "label": "FIELD_IDENTIFIER",
+          "line": 4,
+          "column": 2,
+          "order": 2,
+          "code": "value",
+          "file": "main.ts",
+          "ownerMethod": "main.ts::program:run",
+          "nodeId": "55834574850"
+        },
+        {
+          "i": 29,
+          "label": "IDENTIFIER",
+          "line": 4,
+          "column": 37,
+          "order": 1,
+          "code": "helper",
+          "file": "main.ts",
+          "ownerMethod": "main.ts::program:run",
+          "nodeId": "68719476747"
+        },
+        {
+          "i": 30,
+          "label": "IDENTIFIER",
+          "line": 4,
+          "column": 37,
+          "order": 2,
+          "code": "this",
+          "file": "main.ts",
+          "ownerMethod": "main.ts::program:run",
+          "nodeId": "68719476748"
+        },
+        {
+          "i": 31,
+          "label": "IDENTIFIER",
+          "line": 4,
+          "column": 44,
+          "order": 3,
+          "code": "item",
+          "file": "main.ts",
+          "ownerMethod": "main.ts::program:run",
+          "nodeId": "68719476749"
+        },
+        {
+          "i": 32,
+          "label": "CALL",
+          "line": 4,
+          "column": 2,
+          "order": 1,
+          "code": "_iterator_0.next",
+          "file": "main.ts",
+          "ownerMethod": "main.ts::program:run",
+          "nodeId": "30064771075"
+        },
+        {
+          "i": 33,
+          "label": "IDENTIFIER",
+          "line": 4,
+          "column": 2,
+          "order": 2,
+          "code": "_iterator_0",
+          "file": "main.ts",
+          "ownerMethod": "main.ts::program:run",
+          "nodeId": "68719476738"
+        },
+        {
+          "i": 34,
+          "label": "IDENTIFIER",
+          "line": 4,
+          "column": 2,
+          "order": 1,
+          "code": "_iterator_0",
+          "file": "main.ts",
+          "ownerMethod": "main.ts::program:run",
+          "nodeId": "68719476737"
+        },
+        {
+          "i": 35,
+          "label": "FIELD_IDENTIFIER",
+          "line": 4,
+          "column": 2,
+          "order": 2,
+          "code": "next",
+          "file": "main.ts",
+          "ownerMethod": "main.ts::program:run",
+          "nodeId": "55834574848"
+        }
+      ],
+      "edges": [
+        {
+          "from": 1,
+          "to": 11
+        },
+        {
+          "from": 2,
+          "to": 10
+        },
+        {
+          "from": 3,
+          "to": -1
+        },
+        {
+          "from": 4,
+          "to": 5
+        },
+        {
+          "from": 5,
+          "to": 1
+        },
+        {
+          "from": 6,
+          "to": 7
+        },
+        {
+          "from": 7,
+          "to": 8
+        },
+        {
+          "from": 8,
+          "to": 25
+        },
+        {
+          "from": 10,
+          "to": 3
+        },
+        {
+          "from": 11,
+          "to": 15
+        },
+        {
+          "from": 12,
+          "to": 6
+        },
+        {
+          "from": 13,
+          "to": 21
+        },
+        {
+          "from": 13,
+          "to": 2
+        },
+        {
+          "from": 15,
+          "to": 12
+        },
+        {
+          "from": 16,
+          "to": 13
+        },
+        {
+          "from": 17,
+          "to": 23
+        },
+        {
+          "from": 18,
+          "to": 25
+        },
+        {
+          "from": 19,
+          "to": 20
+        },
+        {
+          "from": 20,
+          "to": 16
+        },
+        {
+          "from": 21,
+          "to": 27
+        },
+        {
+          "from": 22,
+          "to": 17
+        },
+        {
+          "from": 23,
+          "to": 29
+        },
+        {
+          "from": 24,
+          "to": 18
+        },
+        {
+          "from": 25,
+          "to": 34
+        },
+        {
+          "from": 26,
+          "to": 19
+        },
+        {
+          "from": 27,
+          "to": 28
+        },
+        {
+          "from": 28,
+          "to": 22
+        },
+        {
+          "from": 29,
+          "to": 30
+        },
+        {
+          "from": 30,
+          "to": 31
+        },
+        {
+          "from": 31,
+          "to": 24
+        },
+        {
+          "from": 32,
+          "to": 33
+        },
+        {
+          "from": 33,
+          "to": 26
+        },
+        {
+          "from": 34,
+          "to": 35
+        },
+        {
+          "from": 35,
+          "to": 32
+        }
+      ]
+    },
+    {
+      "method": "util.ts::program:helper",
+      "methodId": "107374182402",
+      "file": "util.ts",
+      "line": 1,
+      "nodeId": "107374182402",
+      "nodes": [
+        {
+          "i": 0,
+          "label": "BLOCK",
+          "line": 1,
+          "column": 46,
+          "order": 3,
+          "code": "{ return value + 1; }",
+          "file": "util.ts",
+          "ownerMethod": "util.ts::program",
+          "nodeId": "25769803782"
+        },
+        {
+          "i": 1,
+          "label": "RETURN",
+          "line": 1,
+          "column": 48,
+          "order": 1,
+          "code": "return value + 1",
+          "file": "util.ts",
+          "ownerMethod": "util.ts::program",
+          "nodeId": "141733920769"
+        },
+        {
+          "i": 2,
+          "label": "CALL",
+          "line": 1,
+          "column": 55,
+          "order": 1,
+          "code": "value + 1",
+          "file": "util.ts",
+          "ownerMethod": "util.ts::program",
+          "nodeId": "30064771090"
+        },
+        {
+          "i": 3,
+          "label": "IDENTIFIER",
+          "line": 1,
+          "column": 55,
+          "order": 1,
+          "code": "value",
+          "file": "util.ts",
+          "ownerMethod": "util.ts::program",
+          "nodeId": "68719476757"
+        },
+        {
+          "i": 4,
+          "label": "LITERAL",
+          "line": 1,
+          "column": 63,
+          "order": 2,
+          "code": "1",
+          "file": "util.ts",
+          "ownerMethod": "util.ts::program",
+          "nodeId": "90194313218"
+        }
+      ],
+      "edges": [
+        {
+          "from": 1,
+          "to": -1
+        },
+        {
+          "from": 2,
+          "to": 1
+        },
+        {
+          "from": 3,
+          "to": 4
+        },
+        {
+          "from": 4,
+          "to": 2
+        }
+      ]
+    },
+    {
+      "method": "util.ts::program",
+      "methodId": "107374182403",
+      "file": "util.ts",
+      "line": 1,
+      "nodeId": "107374182403",
+      "nodes": [
+        {
+          "i": 0,
+          "label": "METHOD",
+          "line": 1,
+          "column": 7,
+          "order": 1,
+          "code": "function helper(value: number): number { return value + 1; }",
+          "file": "util.ts",
+          "ownerMethod": "util.ts::program",
+          "nodeId": "107374182402"
+        },
+        {
+          "i": 1,
+          "label": "BLOCK",
+          "line": -1,
+          "column": -1,
+          "order": 2,
+          "code": "<empty>",
+          "file": "util.ts",
+          "ownerMethod": "util.ts::program",
+          "nodeId": "25769803781"
+        },
+        {
+          "i": 2,
+          "label": "BLOCK",
+          "line": 1,
+          "column": 0,
+          "order": 1,
+          "code": "export function helper(value: number): number { return value + 1; }",
+          "file": "util.ts",
+          "ownerMethod": "util.ts::program",
+          "nodeId": "25769803783"
+        },
+        {
+          "i": 3,
+          "label": "CALL",
+          "line": 1,
+          "column": 7,
+          "order": 1,
+          "code": "function helper = function helper(value: number): number { return value + 1; }",
+          "file": "util.ts",
+          "ownerMethod": "util.ts::program",
+          "nodeId": "30064771091"
+        },
+        {
+          "i": 4,
+          "label": "CALL",
+          "line": 1,
+          "column": 0,
+          "order": 2,
+          "code": "exports.helper = helper",
+          "file": "util.ts",
+          "ownerMethod": "util.ts::program",
+          "nodeId": "30064771092"
+        },
+        {
+          "i": 5,
+          "label": "IDENTIFIER",
+          "line": 1,
+          "column": 7,
+          "order": 1,
+          "code": "helper",
+          "file": "util.ts",
+          "ownerMethod": "util.ts::program",
+          "nodeId": "68719476758"
+        },
+        {
+          "i": 6,
+          "label": "METHOD_REF",
+          "line": 1,
+          "column": 7,
+          "order": 2,
+          "code": "helper",
+          "file": "util.ts",
+          "ownerMethod": "util.ts::program",
+          "nodeId": "120259084289"
+        },
+        {
+          "i": 7,
+          "label": "CALL",
+          "line": 1,
+          "column": 0,
+          "order": 1,
+          "code": "exports.helper",
+          "file": "util.ts",
+          "ownerMethod": "util.ts::program",
+          "nodeId": "30064771093"
+        },
+        {
+          "i": 8,
+          "label": "IDENTIFIER",
+          "line": 1,
+          "column": 0,
+          "order": 2,
+          "code": "helper",
+          "file": "util.ts",
+          "ownerMethod": "util.ts::program",
+          "nodeId": "68719476760"
+        },
+        {
+          "i": 9,
+          "label": "IDENTIFIER",
+          "line": 1,
+          "column": 0,
+          "order": 1,
+          "code": "exports",
+          "file": "util.ts",
+          "ownerMethod": "util.ts::program",
+          "nodeId": "68719476759"
+        },
+        {
+          "i": 10,
+          "label": "FIELD_IDENTIFIER",
+          "line": 1,
+          "column": 0,
+          "order": 2,
+          "code": "helper",
+          "file": "util.ts",
+          "ownerMethod": "util.ts::program",
+          "nodeId": "55834574853"
+        }
+      ],
+      "edges": [
+        {
+          "from": 0,
+          "to": -1
+        },
+        {
+          "from": 2,
+          "to": -1
+        },
+        {
+          "from": 3,
+          "to": 9
+        },
+        {
+          "from": 4,
+          "to": 2
+        },
+        {
+          "from": 5,
+          "to": 6
+        },
+        {
+          "from": 6,
+          "to": 3
+        },
+        {
+          "from": 7,
+          "to": 8
+        },
+        {
+          "from": 8,
+          "to": 4
+        },
+        {
+          "from": 9,
+          "to": 10
+        },
+        {
+          "from": 10,
+          "to": 7
+        }
+      ]
+    }
+  ],
+  "cfgMethodsOmitted": 0,
+  "imports": [
+    {
+      "file": "main.ts",
+      "line": 1,
+      "code": "import { helper } from \"./util.js\"",
+      "nodeId": "73014444032"
+    }
+  ],
+  "reachingDefs": [
+    {
+      "source": {
+        "label": "METHOD_PARAMETER_IN",
+        "line": 2,
+        "column": 7,
+        "code": "this",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "111669149696"
+      },
+      "target": {
+        "label": "IDENTIFIER",
+        "line": 4,
+        "column": 37,
+        "code": "this",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "68719476748"
+      }
+    },
+    {
+      "source": {
+        "label": "METHOD_PARAMETER_IN",
+        "line": 2,
+        "column": 7,
+        "code": "this",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "111669149696"
+      },
+      "target": {
+        "label": "METHOD_PARAMETER_OUT",
+        "line": 2,
+        "column": 7,
+        "code": "this",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "115964116992"
+      }
+    },
+    {
+      "source": {
+        "label": "METHOD_PARAMETER_IN",
+        "line": 2,
+        "column": 7,
+        "code": "this",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "111669149696"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 2,
+        "column": 7,
+        "code": "RET",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "124554051584"
+      }
+    },
+    {
+      "source": {
+        "label": "METHOD_PARAMETER_IN",
+        "line": 2,
+        "column": 20,
+        "code": "items: number[]",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "111669149697"
+      },
+      "target": {
+        "label": "IDENTIFIER",
+        "line": 4,
+        "column": 21,
+        "code": "items",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "68719476741"
+      }
+    },
+    {
+      "source": {
+        "label": "METHOD_PARAMETER_IN",
+        "line": 2,
+        "column": 20,
+        "code": "items: number[]",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "111669149697"
+      },
+      "target": {
+        "label": "METHOD_PARAMETER_OUT",
+        "line": 2,
+        "column": 20,
+        "code": "items: number[]",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "115964116993"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": 3,
+        "column": 6,
+        "code": "let total = 0",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "30064771076"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 2,
+        "column": 7,
+        "code": "RET",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "124554051584"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": 3,
+        "column": 6,
+        "code": "total",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "68719476739"
+      },
+      "target": {
+        "label": "IDENTIFIER",
+        "line": 4,
+        "column": 28,
+        "code": "total",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "68719476746"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": 3,
+        "column": 6,
+        "code": "total",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "68719476739"
+      },
+      "target": {
+        "label": "IDENTIFIER",
+        "line": 5,
+        "column": 9,
+        "code": "total",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "68719476750"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": 3,
+        "column": 6,
+        "code": "total",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "68719476739"
+      },
+      "target": {
+        "label": "CALL",
+        "line": 3,
+        "column": 6,
+        "code": "let total = 0",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "30064771076"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": 3,
+        "column": 6,
+        "code": "total",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "68719476739"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 2,
+        "column": 7,
+        "code": "RET",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "124554051584"
+      }
+    },
+    {
+      "source": {
+        "label": "LITERAL",
+        "line": 3,
+        "column": 14,
+        "code": "0",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "90194313216"
+      },
+      "target": {
+        "label": "IDENTIFIER",
+        "line": 3,
+        "column": 6,
+        "code": "total",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "68719476739"
+      }
+    },
+    {
+      "source": {
+        "label": "LITERAL",
+        "line": 3,
+        "column": 14,
+        "code": "0",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "90194313216"
+      },
+      "target": {
+        "label": "CALL",
+        "line": 3,
+        "column": 6,
+        "code": "let total = 0",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "30064771076"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": 4,
+        "column": 2,
+        "code": "_iterator_0 = <operator>.iterator(items)",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "30064771077"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 2,
+        "column": 7,
+        "code": "RET",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "124554051584"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": 4,
+        "column": 2,
+        "code": "_iterator_0",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "68719476740"
+      },
+      "target": {
+        "label": "CALL",
+        "line": 4,
+        "column": 2,
+        "code": "_iterator_0 = <operator>.iterator(items)",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "30064771077"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": 4,
+        "column": 2,
+        "code": "_iterator_0",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "68719476740"
+      },
+      "target": {
+        "label": "IDENTIFIER",
+        "line": 4,
+        "column": 2,
+        "code": "_iterator_0",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "68719476738"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": 4,
+        "column": 2,
+        "code": "_iterator_0",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "68719476740"
+      },
+      "target": {
+        "label": "IDENTIFIER",
+        "line": 4,
+        "column": 2,
+        "code": "_iterator_0",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "68719476737"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": 4,
+        "column": 2,
+        "code": "<operator>.iterator(items)",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "30064771078"
+      },
+      "target": {
+        "label": "IDENTIFIER",
+        "line": 4,
+        "column": 2,
+        "code": "_iterator_0",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "68719476740"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": 4,
+        "column": 2,
+        "code": "<operator>.iterator(items)",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "30064771078"
+      },
+      "target": {
+        "label": "CALL",
+        "line": 4,
+        "column": 2,
+        "code": "_iterator_0 = <operator>.iterator(items)",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "30064771077"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": 4,
+        "column": 2,
+        "code": "<operator>.iterator(items)",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "30064771078"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 2,
+        "column": 7,
+        "code": "RET",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "124554051584"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": 4,
+        "column": 21,
+        "code": "items",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "68719476741"
+      },
+      "target": {
+        "label": "CALL",
+        "line": 4,
+        "column": 2,
+        "code": "<operator>.iterator(items)",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "30064771078"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": 4,
+        "column": 21,
+        "code": "items",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "68719476741"
+      },
+      "target": {
+        "label": "METHOD_PARAMETER_OUT",
+        "line": 2,
+        "column": 20,
+        "code": "items: number[]",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "115964116993"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": 4,
+        "column": 21,
+        "code": "items",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "68719476741"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 2,
+        "column": 7,
+        "code": "RET",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "124554051584"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": 4,
+        "column": 2,
+        "code": "!(_result_0 = _iterator_0.next()).done",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "30064771079"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 2,
+        "column": 7,
+        "code": "RET",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "124554051584"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": 4,
+        "column": 2,
+        "code": "(_result_0 = _iterator_0.next()).done",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "30064771080"
+      },
+      "target": {
+        "label": "CALL",
+        "line": 4,
+        "column": 2,
+        "code": "!(_result_0 = _iterator_0.next()).done",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "30064771079"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": 4,
+        "column": 2,
+        "code": "(_result_0 = _iterator_0.next()).done",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "30064771080"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 2,
+        "column": 7,
+        "code": "RET",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "124554051584"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": 4,
+        "column": 2,
+        "code": "(_result_0 = _iterator_0.next())",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "30064771073"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 2,
+        "column": 7,
+        "code": "RET",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "124554051584"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": 4,
+        "column": 2,
+        "code": "_result_0",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "68719476736"
+      },
+      "target": {
+        "label": "CALL",
+        "line": 4,
+        "column": 2,
+        "code": "_result_0.value",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "30064771082"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": 4,
+        "column": 2,
+        "code": "_result_0",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "68719476736"
+      },
+      "target": {
+        "label": "CALL",
+        "line": 4,
+        "column": 2,
+        "code": "(_result_0 = _iterator_0.next())",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "30064771073"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": 4,
+        "column": 2,
+        "code": "_result_0",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "68719476736"
+      },
+      "target": {
+        "label": "IDENTIFIER",
+        "line": 4,
+        "column": 2,
+        "code": "_result_0",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "68719476745"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": 4,
+        "column": 2,
+        "code": "_result_0",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "68719476736"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 2,
+        "column": 7,
+        "code": "RET",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "124554051584"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": 4,
+        "column": 2,
+        "code": "_iterator_0.next()",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "30064771074"
+      },
+      "target": {
+        "label": "IDENTIFIER",
+        "line": 4,
+        "column": 2,
+        "code": "_result_0",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "68719476736"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": 4,
+        "column": 2,
+        "code": "_iterator_0.next()",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "30064771074"
+      },
+      "target": {
+        "label": "CALL",
+        "line": 4,
+        "column": 2,
+        "code": "(_result_0 = _iterator_0.next())",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "30064771073"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": 4,
+        "column": 2,
+        "code": "_iterator_0.next()",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "30064771074"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 2,
+        "column": 7,
+        "code": "RET",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "124554051584"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": 4,
+        "column": 2,
+        "code": "_iterator_0",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "68719476738"
+      },
+      "target": {
+        "label": "CALL",
+        "line": 4,
+        "column": 2,
+        "code": "_iterator_0.next()",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "30064771074"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": 4,
+        "column": 2,
+        "code": "_iterator_0",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "68719476738"
+      },
+      "target": {
+        "label": "IDENTIFIER",
+        "line": 4,
+        "column": 2,
+        "code": "_iterator_0",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "68719476737"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": 4,
+        "column": 2,
+        "code": "_iterator_0",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "68719476738"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 2,
+        "column": 7,
+        "code": "RET",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "124554051584"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": 4,
+        "column": 2,
+        "code": "item = _result_0.value",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "30064771081"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 2,
+        "column": 7,
+        "code": "RET",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "124554051584"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": 4,
+        "column": 2,
+        "code": "item",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "68719476744"
+      },
+      "target": {
+        "label": "IDENTIFIER",
+        "line": 4,
+        "column": 44,
+        "code": "item",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "68719476749"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": 4,
+        "column": 2,
+        "code": "item",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "68719476744"
+      },
+      "target": {
+        "label": "CALL",
+        "line": 4,
+        "column": 2,
+        "code": "item = _result_0.value",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "30064771081"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": 4,
+        "column": 2,
+        "code": "_result_0.value",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "30064771082"
+      },
+      "target": {
+        "label": "IDENTIFIER",
+        "line": 4,
+        "column": 2,
+        "code": "item",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "68719476744"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": 4,
+        "column": 2,
+        "code": "_result_0.value",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "30064771082"
+      },
+      "target": {
+        "label": "CALL",
+        "line": 4,
+        "column": 2,
+        "code": "item = _result_0.value",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "30064771081"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": 4,
+        "column": 28,
+        "code": "total += helper(item)",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "30064771083"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 2,
+        "column": 7,
+        "code": "RET",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "124554051584"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": 4,
+        "column": 28,
+        "code": "total",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "68719476746"
+      },
+      "target": {
+        "label": "CALL",
+        "line": 4,
+        "column": 28,
+        "code": "total += helper(item)",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "30064771083"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": 4,
+        "column": 28,
+        "code": "total",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "68719476746"
+      },
+      "target": {
+        "label": "IDENTIFIER",
+        "line": 5,
+        "column": 9,
+        "code": "total",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "68719476750"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": 4,
+        "column": 28,
+        "code": "total",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "68719476746"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 2,
+        "column": 7,
+        "code": "RET",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "124554051584"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": 4,
+        "column": 37,
+        "code": "helper(item)",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "30064771084"
+      },
+      "target": {
+        "label": "IDENTIFIER",
+        "line": 4,
+        "column": 28,
+        "code": "total",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "68719476746"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": 4,
+        "column": 37,
+        "code": "helper(item)",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "30064771084"
+      },
+      "target": {
+        "label": "CALL",
+        "line": 4,
+        "column": 28,
+        "code": "total += helper(item)",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "30064771083"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": 4,
+        "column": 37,
+        "code": "helper(item)",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "30064771084"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 2,
+        "column": 7,
+        "code": "RET",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "124554051584"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": 4,
+        "column": 37,
+        "code": "this",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "68719476748"
+      },
+      "target": {
+        "label": "IDENTIFIER",
+        "line": 4,
+        "column": 44,
+        "code": "item",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "68719476749"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": 4,
+        "column": 37,
+        "code": "this",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "68719476748"
+      },
+      "target": {
+        "label": "CALL",
+        "line": 4,
+        "column": 37,
+        "code": "helper(item)",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "30064771084"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": 4,
+        "column": 37,
+        "code": "this",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "68719476748"
+      },
+      "target": {
+        "label": "METHOD_PARAMETER_OUT",
+        "line": 2,
+        "column": 7,
+        "code": "this",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "115964116992"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": 4,
+        "column": 37,
+        "code": "this",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "68719476748"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 2,
+        "column": 7,
+        "code": "RET",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "124554051584"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": 4,
+        "column": 44,
+        "code": "item",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "68719476749"
+      },
+      "target": {
+        "label": "IDENTIFIER",
+        "line": 4,
+        "column": 37,
+        "code": "this",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "68719476748"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": 4,
+        "column": 44,
+        "code": "item",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "68719476749"
+      },
+      "target": {
+        "label": "CALL",
+        "line": 4,
+        "column": 37,
+        "code": "helper(item)",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "30064771084"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": 4,
+        "column": 44,
+        "code": "item",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "68719476749"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 2,
+        "column": 7,
+        "code": "RET",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "124554051584"
+      }
+    },
+    {
+      "source": {
+        "label": "RETURN",
+        "line": 5,
+        "column": 2,
+        "code": "return total",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "141733920768"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 2,
+        "column": 7,
+        "code": "RET",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "124554051584"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": 5,
+        "column": 9,
+        "code": "total",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "68719476750"
+      },
+      "target": {
+        "label": "RETURN",
+        "line": 5,
+        "column": 2,
+        "code": "return total",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "141733920768"
+      }
+    },
+    {
+      "source": {
+        "label": "METHOD_PARAMETER_IN",
+        "line": 1,
+        "column": 0,
+        "code": "this",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program",
+        "nodeId": "111669149698"
+      },
+      "target": {
+        "label": "IDENTIFIER",
+        "line": 1,
+        "column": 0,
+        "code": "this",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program",
+        "nodeId": "68719476753"
+      }
+    },
+    {
+      "source": {
+        "label": "METHOD_PARAMETER_IN",
+        "line": 1,
+        "column": 0,
+        "code": "this",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program",
+        "nodeId": "111669149698"
+      },
+      "target": {
+        "label": "METHOD_PARAMETER_OUT",
+        "line": 1,
+        "column": 0,
+        "code": "this",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program",
+        "nodeId": "115964116994"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": 1,
+        "column": 0,
+        "code": "var helper = require(\"./util.js\").helper",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program",
+        "nodeId": "30064771085"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 1,
+        "column": 0,
+        "code": "RET",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program",
+        "nodeId": "124554051585"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": 1,
+        "column": 0,
+        "code": "helper",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program",
+        "nodeId": "68719476751"
+      },
+      "target": {
+        "label": "CALL",
+        "line": 1,
+        "column": 0,
+        "code": "var helper = require(\"./util.js\").helper",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program",
+        "nodeId": "30064771085"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": 1,
+        "column": 0,
+        "code": "helper",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program",
+        "nodeId": "68719476751"
+      },
+      "target": {
+        "label": "IDENTIFIER",
+        "line": 4,
+        "column": 37,
+        "code": "helper",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program:run",
+        "nodeId": "68719476747"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": 1,
+        "column": 0,
+        "code": "helper",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program",
+        "nodeId": "68719476751"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 1,
+        "column": 0,
+        "code": "RET",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program",
+        "nodeId": "124554051585"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": 1,
+        "column": 0,
+        "code": "require(\"./util.js\").helper",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program",
+        "nodeId": "30064771086"
+      },
+      "target": {
+        "label": "IDENTIFIER",
+        "line": 1,
+        "column": 0,
+        "code": "helper",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program",
+        "nodeId": "68719476751"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": 1,
+        "column": 0,
+        "code": "require(\"./util.js\").helper",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program",
+        "nodeId": "30064771086"
+      },
+      "target": {
+        "label": "CALL",
+        "line": 1,
+        "column": 0,
+        "code": "var helper = require(\"./util.js\").helper",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program",
+        "nodeId": "30064771085"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": 1,
+        "column": 0,
+        "code": "require(\"./util.js\").helper",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program",
+        "nodeId": "30064771086"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 1,
+        "column": 0,
+        "code": "RET",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program",
+        "nodeId": "124554051585"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": 1,
+        "column": 0,
+        "code": "require(\"./util.js\")",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program",
+        "nodeId": "30064771072"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 1,
+        "column": 0,
+        "code": "RET",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program",
+        "nodeId": "124554051585"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": 1,
+        "column": 0,
+        "code": "this",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program",
+        "nodeId": "68719476753"
+      },
+      "target": {
+        "label": "CALL",
+        "line": 1,
+        "column": 0,
+        "code": "require(\"./util.js\")",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program",
+        "nodeId": "30064771072"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": 1,
+        "column": 0,
+        "code": "this",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program",
+        "nodeId": "68719476753"
+      },
+      "target": {
+        "label": "METHOD_PARAMETER_OUT",
+        "line": 1,
+        "column": 0,
+        "code": "this",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program",
+        "nodeId": "115964116994"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": 1,
+        "column": 0,
+        "code": "this",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program",
+        "nodeId": "68719476753"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 1,
+        "column": 0,
+        "code": "RET",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program",
+        "nodeId": "124554051585"
+      }
+    },
+    {
+      "source": {
+        "label": "LITERAL",
+        "line": 1,
+        "column": 0,
+        "code": "\"./util.js\"",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program",
+        "nodeId": "90194313217"
+      },
+      "target": {
+        "label": "IDENTIFIER",
+        "line": 1,
+        "column": 0,
+        "code": "this",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program",
+        "nodeId": "68719476753"
+      }
+    },
+    {
+      "source": {
+        "label": "LITERAL",
+        "line": 1,
+        "column": 0,
+        "code": "\"./util.js\"",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program",
+        "nodeId": "90194313217"
+      },
+      "target": {
+        "label": "CALL",
+        "line": 1,
+        "column": 0,
+        "code": "require(\"./util.js\")",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program",
+        "nodeId": "30064771072"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": 2,
+        "column": 7,
+        "code": "function run = function run(items: number[]): number {",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program",
+        "nodeId": "30064771087"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 1,
+        "column": 0,
+        "code": "RET",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program",
+        "nodeId": "124554051585"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": 2,
+        "column": 7,
+        "code": "run",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program",
+        "nodeId": "68719476754"
+      },
+      "target": {
+        "label": "CALL",
+        "line": 2,
+        "column": 7,
+        "code": "function run = function run(items: number[]): number {",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program",
+        "nodeId": "30064771087"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": 2,
+        "column": 7,
+        "code": "run",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program",
+        "nodeId": "68719476754"
+      },
+      "target": {
+        "label": "IDENTIFIER",
+        "line": 2,
+        "column": 0,
+        "code": "run",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program",
+        "nodeId": "68719476756"
+      }
+    },
+    {
+      "source": {
+        "label": "METHOD_REF",
+        "line": 2,
+        "column": 7,
+        "code": "run",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program",
+        "nodeId": "120259084288"
+      },
+      "target": {
+        "label": "IDENTIFIER",
+        "line": 2,
+        "column": 7,
+        "code": "run",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program",
+        "nodeId": "68719476754"
+      }
+    },
+    {
+      "source": {
+        "label": "METHOD_REF",
+        "line": 2,
+        "column": 7,
+        "code": "run",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program",
+        "nodeId": "120259084288"
+      },
+      "target": {
+        "label": "CALL",
+        "line": 2,
+        "column": 7,
+        "code": "function run = function run(items: number[]): number {",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program",
+        "nodeId": "30064771087"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": 2,
+        "column": 0,
+        "code": "exports.run = run",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program",
+        "nodeId": "30064771088"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 1,
+        "column": 0,
+        "code": "RET",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program",
+        "nodeId": "124554051585"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": 2,
+        "column": 0,
+        "code": "exports.run",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program",
+        "nodeId": "30064771089"
+      },
+      "target": {
+        "label": "CALL",
+        "line": 2,
+        "column": 0,
+        "code": "exports.run = run",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program",
+        "nodeId": "30064771088"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": 2,
+        "column": 0,
+        "code": "exports.run",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program",
+        "nodeId": "30064771089"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 1,
+        "column": 0,
+        "code": "RET",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program",
+        "nodeId": "124554051585"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": 2,
+        "column": 0,
+        "code": "exports",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program",
+        "nodeId": "68719476755"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 1,
+        "column": 0,
+        "code": "RET",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program",
+        "nodeId": "124554051585"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": 2,
+        "column": 0,
+        "code": "run",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program",
+        "nodeId": "68719476756"
+      },
+      "target": {
+        "label": "CALL",
+        "line": 2,
+        "column": 0,
+        "code": "exports.run",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program",
+        "nodeId": "30064771089"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": 2,
+        "column": 0,
+        "code": "run",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program",
+        "nodeId": "68719476756"
+      },
+      "target": {
+        "label": "CALL",
+        "line": 2,
+        "column": 0,
+        "code": "exports.run = run",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program",
+        "nodeId": "30064771088"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": 2,
+        "column": 0,
+        "code": "run",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program",
+        "nodeId": "68719476756"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 1,
+        "column": 0,
+        "code": "RET",
+        "file": "main.ts",
+        "ownerMethod": "main.ts::program",
+        "nodeId": "124554051585"
+      }
+    },
+    {
+      "source": {
+        "label": "METHOD_PARAMETER_IN",
+        "line": 1,
+        "column": 7,
+        "code": "this",
+        "file": "util.ts",
+        "ownerMethod": "util.ts::program",
+        "nodeId": "111669149699"
+      },
+      "target": {
+        "label": "METHOD_PARAMETER_OUT",
+        "line": 1,
+        "column": 7,
+        "code": "this",
+        "file": "util.ts",
+        "ownerMethod": "util.ts::program",
+        "nodeId": "115964116995"
+      }
+    },
+    {
+      "source": {
+        "label": "METHOD_PARAMETER_IN",
+        "line": 1,
+        "column": 7,
+        "code": "this",
+        "file": "util.ts",
+        "ownerMethod": "util.ts::program",
+        "nodeId": "111669149699"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 1,
+        "column": 7,
+        "code": "RET",
+        "file": "util.ts",
+        "ownerMethod": "util.ts::program",
+        "nodeId": "124554051586"
+      }
+    },
+    {
+      "source": {
+        "label": "METHOD_PARAMETER_IN",
+        "line": 1,
+        "column": 23,
+        "code": "value: number",
+        "file": "util.ts",
+        "ownerMethod": "util.ts::program",
+        "nodeId": "111669149700"
+      },
+      "target": {
+        "label": "METHOD_PARAMETER_OUT",
+        "line": 1,
+        "column": 23,
+        "code": "value: number",
+        "file": "util.ts",
+        "ownerMethod": "util.ts::program",
+        "nodeId": "115964116996"
+      }
+    },
+    {
+      "source": {
+        "label": "METHOD_PARAMETER_IN",
+        "line": 1,
+        "column": 23,
+        "code": "value: number",
+        "file": "util.ts",
+        "ownerMethod": "util.ts::program",
+        "nodeId": "111669149700"
+      },
+      "target": {
+        "label": "IDENTIFIER",
+        "line": 1,
+        "column": 55,
+        "code": "value",
+        "file": "util.ts",
+        "ownerMethod": "util.ts::program",
+        "nodeId": "68719476757"
+      }
+    },
+    {
+      "source": {
+        "label": "RETURN",
+        "line": 1,
+        "column": 48,
+        "code": "return value + 1",
+        "file": "util.ts",
+        "ownerMethod": "util.ts::program",
+        "nodeId": "141733920769"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 1,
+        "column": 7,
+        "code": "RET",
+        "file": "util.ts",
+        "ownerMethod": "util.ts::program",
+        "nodeId": "124554051586"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": 1,
+        "column": 55,
+        "code": "value + 1",
+        "file": "util.ts",
+        "ownerMethod": "util.ts::program",
+        "nodeId": "30064771090"
+      },
+      "target": {
+        "label": "RETURN",
+        "line": 1,
+        "column": 48,
+        "code": "return value + 1",
+        "file": "util.ts",
+        "ownerMethod": "util.ts::program",
+        "nodeId": "141733920769"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": 1,
+        "column": 55,
+        "code": "value + 1",
+        "file": "util.ts",
+        "ownerMethod": "util.ts::program",
+        "nodeId": "30064771090"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 1,
+        "column": 7,
+        "code": "RET",
+        "file": "util.ts",
+        "ownerMethod": "util.ts::program",
+        "nodeId": "124554051586"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": 1,
+        "column": 55,
+        "code": "value",
+        "file": "util.ts",
+        "ownerMethod": "util.ts::program",
+        "nodeId": "68719476757"
+      },
+      "target": {
+        "label": "METHOD_PARAMETER_OUT",
+        "line": 1,
+        "column": 23,
+        "code": "value: number",
+        "file": "util.ts",
+        "ownerMethod": "util.ts::program",
+        "nodeId": "115964116996"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": 1,
+        "column": 55,
+        "code": "value",
+        "file": "util.ts",
+        "ownerMethod": "util.ts::program",
+        "nodeId": "68719476757"
+      },
+      "target": {
+        "label": "CALL",
+        "line": 1,
+        "column": 55,
+        "code": "value + 1",
+        "file": "util.ts",
+        "ownerMethod": "util.ts::program",
+        "nodeId": "30064771090"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": 1,
+        "column": 55,
+        "code": "value",
+        "file": "util.ts",
+        "ownerMethod": "util.ts::program",
+        "nodeId": "68719476757"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 1,
+        "column": 7,
+        "code": "RET",
+        "file": "util.ts",
+        "ownerMethod": "util.ts::program",
+        "nodeId": "124554051586"
+      }
+    },
+    {
+      "source": {
+        "label": "LITERAL",
+        "line": 1,
+        "column": 63,
+        "code": "1",
+        "file": "util.ts",
+        "ownerMethod": "util.ts::program",
+        "nodeId": "90194313218"
+      },
+      "target": {
+        "label": "CALL",
+        "line": 1,
+        "column": 55,
+        "code": "value + 1",
+        "file": "util.ts",
+        "ownerMethod": "util.ts::program",
+        "nodeId": "30064771090"
+      }
+    },
+    {
+      "source": {
+        "label": "METHOD_PARAMETER_IN",
+        "line": 1,
+        "column": 0,
+        "code": "this",
+        "file": "util.ts",
+        "ownerMethod": "util.ts::program",
+        "nodeId": "111669149701"
+      },
+      "target": {
+        "label": "METHOD_PARAMETER_OUT",
+        "line": 1,
+        "column": 0,
+        "code": "this",
+        "file": "util.ts",
+        "ownerMethod": "util.ts::program",
+        "nodeId": "115964116997"
+      }
+    },
+    {
+      "source": {
+        "label": "METHOD_PARAMETER_IN",
+        "line": 1,
+        "column": 0,
+        "code": "this",
+        "file": "util.ts",
+        "ownerMethod": "util.ts::program",
+        "nodeId": "111669149701"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 1,
+        "column": 0,
+        "code": "RET",
+        "file": "util.ts",
+        "ownerMethod": "util.ts::program",
+        "nodeId": "124554051587"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": 1,
+        "column": 7,
+        "code": "function helper = function helper(value: number): number { return value + 1; }",
+        "file": "util.ts",
+        "ownerMethod": "util.ts::program",
+        "nodeId": "30064771091"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 1,
+        "column": 0,
+        "code": "RET",
+        "file": "util.ts",
+        "ownerMethod": "util.ts::program",
+        "nodeId": "124554051587"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": 1,
+        "column": 7,
+        "code": "helper",
+        "file": "util.ts",
+        "ownerMethod": "util.ts::program",
+        "nodeId": "68719476758"
+      },
+      "target": {
+        "label": "CALL",
+        "line": 1,
+        "column": 7,
+        "code": "function helper = function helper(value: number): number { return value + 1; }",
+        "file": "util.ts",
+        "ownerMethod": "util.ts::program",
+        "nodeId": "30064771091"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": 1,
+        "column": 7,
+        "code": "helper",
+        "file": "util.ts",
+        "ownerMethod": "util.ts::program",
+        "nodeId": "68719476758"
+      },
+      "target": {
+        "label": "IDENTIFIER",
+        "line": 1,
+        "column": 0,
+        "code": "helper",
+        "file": "util.ts",
+        "ownerMethod": "util.ts::program",
+        "nodeId": "68719476760"
+      }
+    },
+    {
+      "source": {
+        "label": "METHOD_REF",
+        "line": 1,
+        "column": 7,
+        "code": "helper",
+        "file": "util.ts",
+        "ownerMethod": "util.ts::program",
+        "nodeId": "120259084289"
+      },
+      "target": {
+        "label": "IDENTIFIER",
+        "line": 1,
+        "column": 7,
+        "code": "helper",
+        "file": "util.ts",
+        "ownerMethod": "util.ts::program",
+        "nodeId": "68719476758"
+      }
+    },
+    {
+      "source": {
+        "label": "METHOD_REF",
+        "line": 1,
+        "column": 7,
+        "code": "helper",
+        "file": "util.ts",
+        "ownerMethod": "util.ts::program",
+        "nodeId": "120259084289"
+      },
+      "target": {
+        "label": "CALL",
+        "line": 1,
+        "column": 7,
+        "code": "function helper = function helper(value: number): number { return value + 1; }",
+        "file": "util.ts",
+        "ownerMethod": "util.ts::program",
+        "nodeId": "30064771091"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": 1,
+        "column": 0,
+        "code": "exports.helper = helper",
+        "file": "util.ts",
+        "ownerMethod": "util.ts::program",
+        "nodeId": "30064771092"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 1,
+        "column": 0,
+        "code": "RET",
+        "file": "util.ts",
+        "ownerMethod": "util.ts::program",
+        "nodeId": "124554051587"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": 1,
+        "column": 0,
+        "code": "exports.helper",
+        "file": "util.ts",
+        "ownerMethod": "util.ts::program",
+        "nodeId": "30064771093"
+      },
+      "target": {
+        "label": "CALL",
+        "line": 1,
+        "column": 0,
+        "code": "exports.helper = helper",
+        "file": "util.ts",
+        "ownerMethod": "util.ts::program",
+        "nodeId": "30064771092"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": 1,
+        "column": 0,
+        "code": "exports.helper",
+        "file": "util.ts",
+        "ownerMethod": "util.ts::program",
+        "nodeId": "30064771093"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 1,
+        "column": 0,
+        "code": "RET",
+        "file": "util.ts",
+        "ownerMethod": "util.ts::program",
+        "nodeId": "124554051587"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": 1,
+        "column": 0,
+        "code": "exports",
+        "file": "util.ts",
+        "ownerMethod": "util.ts::program",
+        "nodeId": "68719476759"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 1,
+        "column": 0,
+        "code": "RET",
+        "file": "util.ts",
+        "ownerMethod": "util.ts::program",
+        "nodeId": "124554051587"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": 1,
+        "column": 0,
+        "code": "helper",
+        "file": "util.ts",
+        "ownerMethod": "util.ts::program",
+        "nodeId": "68719476760"
+      },
+      "target": {
+        "label": "CALL",
+        "line": 1,
+        "column": 0,
+        "code": "exports.helper",
+        "file": "util.ts",
+        "ownerMethod": "util.ts::program",
+        "nodeId": "30064771093"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": 1,
+        "column": 0,
+        "code": "helper",
+        "file": "util.ts",
+        "ownerMethod": "util.ts::program",
+        "nodeId": "68719476760"
+      },
+      "target": {
+        "label": "CALL",
+        "line": 1,
+        "column": 0,
+        "code": "exports.helper = helper",
+        "file": "util.ts",
+        "ownerMethod": "util.ts::program",
+        "nodeId": "30064771092"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": 1,
+        "column": 0,
+        "code": "helper",
+        "file": "util.ts",
+        "ownerMethod": "util.ts::program",
+        "nodeId": "68719476760"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 1,
+        "column": 0,
+        "code": "RET",
+        "file": "util.ts",
+        "ownerMethod": "util.ts::program",
+        "nodeId": "124554051587"
+      }
+    }
+  ],
+  "reachingDefsTruncated": false,
+  "reachingDefsOmitted": 0,
+  "dataflowPaths": [],
+  "dataflowErrors": [],
+  "_languages": [
+    "typescript"
+  ],
+  "_frontend": "jssrc2cpg",
+  "_repo_root": "<repo>",
+  "_go_modules": {},
+  "_javascript_packages": [],
+  "_files": [
+    "main.ts",
+    "package.json",
+    "raw.json",
+    "util.ts"
+  ],
+  "_non_call_sites": {
+    "import_statement": 1,
+    "synthetic": 20
+  }
+}

@@ -131,8 +131,10 @@ def test_rate_limit_is_waited_out_in_place_and_uses_no_attempt(tmp_path, server,
     assert {row["attempt"] for row in _rows(tmp_path)} == {"1"}
 
 
-def test_503_is_treated_like_429(tmp_path, server, monkeypatch, waits) -> None:
-    _Handler.script = [(503, {}), (503, {})]
+@pytest.mark.parametrize("status", [502, 503, 504])
+def test_gateway_statuses_are_treated_like_429(tmp_path, server, monkeypatch, waits, status) -> None:
+    """502 (seen in a real run: the upstream read failed), 503 and 504 take the same in-place path."""
+    _Handler.script = [(status, {}), (status, {})]
     _Handler.body = {"choices": [{"message": {"content": "{}"}}]}
     result = _call(tmp_path, server, monkeypatch)
     assert result.error is None and len(waits) == 2

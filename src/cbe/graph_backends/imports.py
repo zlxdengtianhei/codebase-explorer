@@ -67,6 +67,12 @@ def build_with_depcruise(repo, run_dir, depcruise_bin, timeout: int, languages: 
     seen: set[str] = set()
     counter = 0
     files = repository_files(repo)
+    if (not payload.get("modules") and any(lang in {"typescript", "tsx"} for lang in languages)
+            and any(path.endswith((".ts", ".tsx", ".mts", ".cts")) for path in files)):
+        return _result([], [], [{"path": None, "code": "depcruise_no_modules",
+            "message": "dependency-cruiser returned zero modules for TypeScript input; this usually means "
+                       "the 'typescript' package is missing or unsupported (require >=2 <6)"}],
+                       languages, status="failed")
 
     def add_file(rel: str) -> str | None:
         node_id = file_id(rel, files)
@@ -134,8 +140,8 @@ def build_with_grimp(repo, languages: list[str], suffix_map=None) -> dict:
              "message": "grimp is not installed; Python import graph skipped (install the 'graphs' extra)"}],
             "capabilities": []}
     resolver = ImportResolver(repo, suffix_map=suffix_map)
-    packages = _top_level_python_packages(repo)
-    if not packages:
+    package_roots = _python_package_roots(repo)
+    if not package_roots:
         return _result([], [], [{"path": None, "code": "no_python_packages",
                                  "message": "no importable top-level Python package was found"}],
                        None, status="empty", language="python")
@@ -146,10 +152,13 @@ def build_with_grimp(repo, languages: list[str], suffix_map=None) -> dict:
     built = 0
     hard_failures = 0
     not_packages = 0
-    inserted = str(repo)
-    sys.path.insert(0, inserted)
+    inserted = []
+    for _, root in reversed(package_roots):
+        value = str(root)
+        sys.path.insert(0, value)
+        inserted.append(value)
     try:
-        for package in packages:
+        for package, _ in package_roots:
             try:
                 graph = grimp.build_graph(package)
             except Exception as exc:  # grimp has several failure modes for arbitrary trees
@@ -187,10 +196,11 @@ def build_with_grimp(repo, languages: list[str], suffix_map=None) -> dict:
                         "backend": "grimp",
                     })
     finally:
-        try:
-            sys.path.remove(inserted)
-        except ValueError:
-            pass
+        for value in inserted:
+            try:
+                sys.path.remove(value)
+            except ValueError:
+                pass
     if edges:
         status = "resolved"
     elif built:
@@ -226,20 +236,26 @@ def _result(nodes, edges, diagnostics, languages, *, status, language=None) -> d
     return {"nodes": nodes, "edges": edges, "diagnostics": diagnostics, "capabilities": capabilities}
 
 
-def _top_level_python_packages(repo) -> list[str]:
-    packages: list[str] = []
-    try:
-        import pathlib
+def _python_package_roots(repo) -> list[tuple[str, object]]:
+    """Find top-level import names and the source roots that expose them."""
+    import pathlib
 
-        entries = sorted(pathlib.Path(repo).iterdir())
-    except OSError:
-        return packages
-    for entry in entries:
-        name = entry.name
-        if name.startswith((".", "_")):
-            continue
-        if entry.is_dir() and (entry / "__init__.py").is_file():
-            packages.append(name)
-        elif entry.is_file() and entry.suffix == ".py" and name != "setup.py":
-            packages.append(entry.stem)
-    return packages
+    repo = pathlib.Path(repo)
+    files = repository_files(repo)
+    found: dict[tuple[str, str], None] = {}
+    for path in files:
+        pure = pathlib.PurePosixPath(path)
+        if path.endswith("/__init__.py"):
+            top = pure.parent
+            while str(top.parent) != "." and str(top.parent / "__init__.py") in files:
+                top = top.parent
+            root = repo if str(top.parent) == "." else repo / top.parent
+            found[(top.name, str(root))] = None
+        elif "/" not in path and pure.suffix == ".py" and pure.name != "setup.py":
+            found[(pure.stem, str(repo))] = None
+    return [(name, pathlib.Path(root)) for name, root in sorted(found)]
+
+
+def _top_level_python_packages(repo) -> list[str]:
+    """Compatibility helper: import names discoverable from the whole tree."""
+    return [name for name, _ in _python_package_roots(repo)]

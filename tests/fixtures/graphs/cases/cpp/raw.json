@@ -1,0 +1,1175 @@
+{
+  "backend": "joern",
+  "cpgFile": "<run>/cpg-c.bin",
+  "files": [
+    {
+      "name": "helper.cpp",
+      "hash": ""
+    },
+    {
+      "name": "helper.hpp",
+      "hash": ""
+    },
+    {
+      "name": "main.cpp",
+      "hash": ""
+    },
+    {
+      "name": "<includes>",
+      "hash": ""
+    },
+    {
+      "name": "<unknown>",
+      "hash": ""
+    }
+  ],
+  "types": [
+    {
+      "name": "helper",
+      "fullName": "demo.v1.helper:int(int)",
+      "file": "helper.cpp",
+      "inherits": []
+    },
+    {
+      "name": "<global>",
+      "fullName": "helper.cpp:<global>",
+      "file": "helper.cpp",
+      "inherits": []
+    },
+    {
+      "name": "<global>",
+      "fullName": "helper.hpp:<global>",
+      "file": "helper.hpp",
+      "inherits": []
+    },
+    {
+      "name": "main",
+      "fullName": "main:int()",
+      "file": "main.cpp",
+      "inherits": []
+    },
+    {
+      "name": "<global>",
+      "fullName": "main.cpp:<global>",
+      "file": "main.cpp",
+      "inherits": []
+    }
+  ],
+  "methods": [
+    {
+      "name": "helper",
+      "fullName": "demo.v1.helper:int(int)",
+      "file": "helper.cpp",
+      "line": 3,
+      "signature": "int(int)",
+      "nodeId": "107374182400"
+    },
+    {
+      "name": "main",
+      "fullName": "main:int()",
+      "file": "main.cpp",
+      "line": 3,
+      "signature": "int()",
+      "nodeId": "107374182403"
+    },
+    {
+      "name": "missing",
+      "fullName": "demo.v1.missing:void()",
+      "file": "helper.hpp",
+      "line": 3,
+      "signature": "void()",
+      "nodeId": "107374182406"
+    }
+  ],
+  "calls": [
+    {
+      "caller": "main:int()",
+      "callerId": "107374182403",
+      "callerFile": "main.cpp",
+      "line": 4,
+      "column": 8,
+      "name": "<operator>.assignment",
+      "code": "ok = true",
+      "methodFullName": "<operator>.assignment",
+      "dispatchType": "STATIC_DISPATCH",
+      "callees": [
+        {
+          "nodeId": "107374182408",
+          "fullName": "<operator>.assignment",
+          "external": true,
+          "file": "<empty>",
+          "line": -1
+        }
+      ],
+      "nodeId": "30064771072"
+    },
+    {
+      "caller": "main:int()",
+      "callerId": "107374182403",
+      "callerFile": "main.cpp",
+      "line": 5,
+      "column": 3,
+      "name": "missing",
+      "code": "demo::v1::missing()",
+      "methodFullName": "demo.v1.missing:void()",
+      "dispatchType": "STATIC_DISPATCH",
+      "callees": [
+        {
+          "nodeId": "107374182406",
+          "fullName": "demo.v1.missing:void()",
+          "external": false,
+          "file": "helper.hpp",
+          "line": 3
+        }
+      ],
+      "nodeId": "30064771073"
+    },
+    {
+      "caller": "main:int()",
+      "callerId": "107374182403",
+      "callerFile": "main.cpp",
+      "line": 6,
+      "column": 10,
+      "name": "<operator>.addition",
+      "code": "LOCAL_ASSERT(ok) + demo::v1::helper(0)",
+      "methodFullName": "<operator>.addition",
+      "dispatchType": "STATIC_DISPATCH",
+      "callees": [
+        {
+          "nodeId": "107374182409",
+          "fullName": "<operator>.addition",
+          "external": true,
+          "file": "<empty>",
+          "line": -1
+        }
+      ],
+      "nodeId": "30064771074"
+    },
+    {
+      "caller": "main:int()",
+      "callerId": "107374182403",
+      "callerFile": "main.cpp",
+      "line": 6,
+      "column": 10,
+      "name": "LOCAL_ASSERT",
+      "code": "LOCAL_ASSERT(ok)",
+      "methodFullName": "main.cpp:LOCAL_ASSERT:ANY(1)",
+      "dispatchType": "INLINED",
+      "callees": [
+        {
+          "nodeId": "107374182407",
+          "fullName": "main.cpp:LOCAL_ASSERT:ANY(1)",
+          "external": true,
+          "file": "main.cpp",
+          "line": 2
+        }
+      ],
+      "nodeId": "30064771075"
+    },
+    {
+      "caller": "main:int()",
+      "callerId": "107374182403",
+      "callerFile": "main.cpp",
+      "line": 6,
+      "column": 10,
+      "name": "<operator>.conditional",
+      "code": "(ok) ? 0 : helper(1)",
+      "methodFullName": "<operator>.conditional",
+      "dispatchType": "STATIC_DISPATCH",
+      "callees": [
+        {
+          "nodeId": "107374182410",
+          "fullName": "<operator>.conditional",
+          "external": true,
+          "file": "<empty>",
+          "line": -1
+        }
+      ],
+      "nodeId": "30064771076"
+    },
+    {
+      "caller": "main:int()",
+      "callerId": "107374182403",
+      "callerFile": "main.cpp",
+      "line": 6,
+      "column": 10,
+      "name": "helper",
+      "code": "helper(1)",
+      "methodFullName": "<unresolvedNamespace>.helper:<unresolvedSignature>(1)",
+      "dispatchType": "STATIC_DISPATCH",
+      "callees": [
+        {
+          "nodeId": "107374182411",
+          "fullName": "<unresolvedNamespace>.helper:<unresolvedSignature>(1)",
+          "external": true,
+          "file": "<empty>",
+          "line": -1
+        }
+      ],
+      "nodeId": "30064771077"
+    },
+    {
+      "caller": "main:int()",
+      "callerId": "107374182403",
+      "callerFile": "main.cpp",
+      "line": 6,
+      "column": 29,
+      "name": "helper",
+      "code": "demo::v1::helper(0)",
+      "methodFullName": "demo.v1.helper:int(int)",
+      "dispatchType": "STATIC_DISPATCH",
+      "callees": [
+        {
+          "nodeId": "107374182400",
+          "fullName": "demo.v1.helper:int(int)",
+          "external": false,
+          "file": "helper.cpp",
+          "line": 3
+        }
+      ],
+      "nodeId": "30064771078"
+    }
+  ],
+  "cfg": [
+    {
+      "method": "demo.v1.helper:int(int)",
+      "methodId": "107374182400",
+      "file": "helper.cpp",
+      "line": 3,
+      "nodeId": "107374182400",
+      "nodes": [
+        {
+          "i": 0,
+          "label": "BLOCK",
+          "line": 3,
+          "column": 23,
+          "order": 2,
+          "code": "{ return value; }",
+          "file": "helper.cpp",
+          "ownerMethod": "demo.v1.helper:int(int)",
+          "nodeId": "25769803776"
+        },
+        {
+          "i": 1,
+          "label": "RETURN",
+          "line": 3,
+          "column": 25,
+          "order": 1,
+          "code": "return value;",
+          "file": "helper.cpp",
+          "ownerMethod": "demo.v1.helper:int(int)",
+          "nodeId": "141733920768"
+        },
+        {
+          "i": 2,
+          "label": "IDENTIFIER",
+          "line": 3,
+          "column": 32,
+          "order": 1,
+          "code": "value",
+          "file": "helper.cpp",
+          "ownerMethod": "demo.v1.helper:int(int)",
+          "nodeId": "68719476736"
+        }
+      ],
+      "edges": [
+        {
+          "from": 1,
+          "to": -1
+        },
+        {
+          "from": 2,
+          "to": 1
+        }
+      ]
+    },
+    {
+      "method": "main:int()",
+      "methodId": "107374182403",
+      "file": "main.cpp",
+      "line": 3,
+      "nodeId": "107374182403",
+      "nodes": [
+        {
+          "i": 0,
+          "label": "BLOCK",
+          "line": 3,
+          "column": 12,
+          "order": 1,
+          "code": "{",
+          "file": "main.cpp",
+          "ownerMethod": "main:int()",
+          "nodeId": "25769803783"
+        },
+        {
+          "i": 1,
+          "label": "CALL",
+          "line": 4,
+          "column": 8,
+          "order": 2,
+          "code": "ok = true",
+          "file": "main.cpp",
+          "ownerMethod": "main:int()",
+          "nodeId": "30064771072"
+        },
+        {
+          "i": 2,
+          "label": "CALL",
+          "line": 5,
+          "column": 3,
+          "order": 3,
+          "code": "demo::v1::missing()",
+          "file": "main.cpp",
+          "ownerMethod": "main:int()",
+          "nodeId": "30064771073"
+        },
+        {
+          "i": 3,
+          "label": "RETURN",
+          "line": 6,
+          "column": 3,
+          "order": 4,
+          "code": "return LOCAL_ASSERT(ok) + demo::v1::helper(0);",
+          "file": "main.cpp",
+          "ownerMethod": "main:int()",
+          "nodeId": "141733920769"
+        },
+        {
+          "i": 4,
+          "label": "IDENTIFIER",
+          "line": 4,
+          "column": 8,
+          "order": 1,
+          "code": "ok",
+          "file": "main.cpp",
+          "ownerMethod": "main:int()",
+          "nodeId": "68719476737"
+        },
+        {
+          "i": 5,
+          "label": "LITERAL",
+          "line": 4,
+          "column": 13,
+          "order": 2,
+          "code": "true",
+          "file": "main.cpp",
+          "ownerMethod": "main:int()",
+          "nodeId": "90194313216"
+        },
+        {
+          "i": 6,
+          "label": "CALL",
+          "line": 6,
+          "column": 10,
+          "order": 1,
+          "code": "LOCAL_ASSERT(ok) + demo::v1::helper(0)",
+          "file": "main.cpp",
+          "ownerMethod": "main:int()",
+          "nodeId": "30064771074"
+        },
+        {
+          "i": 7,
+          "label": "CALL",
+          "line": 6,
+          "column": 10,
+          "order": 1,
+          "code": "LOCAL_ASSERT(ok)",
+          "file": "main.cpp",
+          "ownerMethod": "main:int()",
+          "nodeId": "30064771075"
+        },
+        {
+          "i": 8,
+          "label": "CALL",
+          "line": 6,
+          "column": 29,
+          "order": 2,
+          "code": "demo::v1::helper(0)",
+          "file": "main.cpp",
+          "ownerMethod": "main:int()",
+          "nodeId": "30064771078"
+        },
+        {
+          "i": 9,
+          "label": "IDENTIFIER",
+          "line": 6,
+          "column": 10,
+          "order": 1,
+          "code": "ok",
+          "file": "main.cpp",
+          "ownerMethod": "main:int()",
+          "nodeId": "68719476738"
+        },
+        {
+          "i": 10,
+          "label": "BLOCK",
+          "line": 6,
+          "column": 10,
+          "order": 2,
+          "code": "<empty>",
+          "file": "main.cpp",
+          "ownerMethod": "main:int()",
+          "nodeId": "25769803784"
+        },
+        {
+          "i": 11,
+          "label": "LITERAL",
+          "line": 6,
+          "column": 46,
+          "order": 1,
+          "code": "0",
+          "file": "main.cpp",
+          "ownerMethod": "main:int()",
+          "nodeId": "90194313219"
+        },
+        {
+          "i": 12,
+          "label": "CALL",
+          "line": 6,
+          "column": 10,
+          "order": 1,
+          "code": "(ok) ? 0 : helper(1)",
+          "file": "main.cpp",
+          "ownerMethod": "main:int()",
+          "nodeId": "30064771076"
+        },
+        {
+          "i": 13,
+          "label": "IDENTIFIER",
+          "line": 6,
+          "column": 10,
+          "order": 1,
+          "code": "ok",
+          "file": "main.cpp",
+          "ownerMethod": "main:int()",
+          "nodeId": "68719476739"
+        },
+        {
+          "i": 14,
+          "label": "LITERAL",
+          "line": 6,
+          "column": 10,
+          "order": 2,
+          "code": "0",
+          "file": "main.cpp",
+          "ownerMethod": "main:int()",
+          "nodeId": "90194313217"
+        },
+        {
+          "i": 15,
+          "label": "CALL",
+          "line": 6,
+          "column": 10,
+          "order": 3,
+          "code": "helper(1)",
+          "file": "main.cpp",
+          "ownerMethod": "main:int()",
+          "nodeId": "30064771077"
+        },
+        {
+          "i": 16,
+          "label": "LITERAL",
+          "line": 6,
+          "column": 10,
+          "order": 1,
+          "code": "1",
+          "file": "main.cpp",
+          "ownerMethod": "main:int()",
+          "nodeId": "90194313218"
+        }
+      ],
+      "edges": [
+        {
+          "from": 1,
+          "to": 2
+        },
+        {
+          "from": 2,
+          "to": 9
+        },
+        {
+          "from": 3,
+          "to": -1
+        },
+        {
+          "from": 4,
+          "to": 5
+        },
+        {
+          "from": 5,
+          "to": 1
+        },
+        {
+          "from": 6,
+          "to": 3
+        },
+        {
+          "from": 7,
+          "to": 13
+        },
+        {
+          "from": 7,
+          "to": 11
+        },
+        {
+          "from": 8,
+          "to": 6
+        },
+        {
+          "from": 9,
+          "to": 7
+        },
+        {
+          "from": 11,
+          "to": 8
+        },
+        {
+          "from": 12,
+          "to": 11
+        },
+        {
+          "from": 13,
+          "to": 14
+        },
+        {
+          "from": 13,
+          "to": 16
+        },
+        {
+          "from": 14,
+          "to": 12
+        },
+        {
+          "from": 15,
+          "to": 12
+        },
+        {
+          "from": 16,
+          "to": 15
+        }
+      ]
+    },
+    {
+      "method": "demo.v1.missing:void()",
+      "methodId": "107374182406",
+      "file": "helper.hpp",
+      "line": 3,
+      "nodeId": "107374182406",
+      "nodes": [
+        {
+          "i": 0,
+          "label": "BLOCK",
+          "line": -1,
+          "column": -1,
+          "order": 1,
+          "code": "<empty>",
+          "file": "helper.hpp",
+          "ownerMethod": "demo.v1.missing:void()",
+          "nodeId": "25769803787"
+        }
+      ],
+      "edges": []
+    }
+  ],
+  "cfgMethodsOmitted": 0,
+  "imports": [
+    {
+      "file": "helper.cpp",
+      "line": 1,
+      "code": "#include \"helper.hpp\"",
+      "nodeId": "73014444032"
+    },
+    {
+      "file": "main.cpp",
+      "line": 1,
+      "code": "#include \"helper.hpp\"",
+      "nodeId": "73014444033"
+    }
+  ],
+  "reachingDefs": [
+    {
+      "source": {
+        "label": "METHOD_PARAMETER_IN",
+        "line": 3,
+        "column": 12,
+        "code": "int value",
+        "file": "helper.cpp",
+        "ownerMethod": "demo.v1.helper:int(int)",
+        "nodeId": "111669149696"
+      },
+      "target": {
+        "label": "METHOD_PARAMETER_OUT",
+        "line": 3,
+        "column": 12,
+        "code": "int value",
+        "file": "helper.cpp",
+        "ownerMethod": "demo.v1.helper:int(int)",
+        "nodeId": "115964116992"
+      }
+    },
+    {
+      "source": {
+        "label": "METHOD_PARAMETER_IN",
+        "line": 3,
+        "column": 12,
+        "code": "int value",
+        "file": "helper.cpp",
+        "ownerMethod": "demo.v1.helper:int(int)",
+        "nodeId": "111669149696"
+      },
+      "target": {
+        "label": "IDENTIFIER",
+        "line": 3,
+        "column": 32,
+        "code": "value",
+        "file": "helper.cpp",
+        "ownerMethod": "demo.v1.helper:int(int)",
+        "nodeId": "68719476736"
+      }
+    },
+    {
+      "source": {
+        "label": "METHOD_PARAMETER_IN",
+        "line": 3,
+        "column": 12,
+        "code": "int value",
+        "file": "helper.cpp",
+        "ownerMethod": "demo.v1.helper:int(int)",
+        "nodeId": "111669149696"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 3,
+        "column": 1,
+        "code": "RET",
+        "file": "helper.cpp",
+        "ownerMethod": "demo.v1.helper:int(int)",
+        "nodeId": "124554051584"
+      }
+    },
+    {
+      "source": {
+        "label": "RETURN",
+        "line": 3,
+        "column": 25,
+        "code": "return value;",
+        "file": "helper.cpp",
+        "ownerMethod": "demo.v1.helper:int(int)",
+        "nodeId": "141733920768"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 3,
+        "column": 1,
+        "code": "RET",
+        "file": "helper.cpp",
+        "ownerMethod": "demo.v1.helper:int(int)",
+        "nodeId": "124554051584"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": 3,
+        "column": 32,
+        "code": "value",
+        "file": "helper.cpp",
+        "ownerMethod": "demo.v1.helper:int(int)",
+        "nodeId": "68719476736"
+      },
+      "target": {
+        "label": "RETURN",
+        "line": 3,
+        "column": 25,
+        "code": "return value;",
+        "file": "helper.cpp",
+        "ownerMethod": "demo.v1.helper:int(int)",
+        "nodeId": "141733920768"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": 4,
+        "column": 8,
+        "code": "ok = true",
+        "file": "main.cpp",
+        "ownerMethod": "main:int()",
+        "nodeId": "30064771072"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 3,
+        "column": 1,
+        "code": "RET",
+        "file": "main.cpp",
+        "ownerMethod": "main:int()",
+        "nodeId": "124554051587"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": 4,
+        "column": 8,
+        "code": "ok",
+        "file": "main.cpp",
+        "ownerMethod": "main:int()",
+        "nodeId": "68719476737"
+      },
+      "target": {
+        "label": "IDENTIFIER",
+        "line": 6,
+        "column": 10,
+        "code": "ok",
+        "file": "main.cpp",
+        "ownerMethod": "main:int()",
+        "nodeId": "68719476738"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": 4,
+        "column": 8,
+        "code": "ok",
+        "file": "main.cpp",
+        "ownerMethod": "main:int()",
+        "nodeId": "68719476737"
+      },
+      "target": {
+        "label": "CALL",
+        "line": 4,
+        "column": 8,
+        "code": "ok = true",
+        "file": "main.cpp",
+        "ownerMethod": "main:int()",
+        "nodeId": "30064771072"
+      }
+    },
+    {
+      "source": {
+        "label": "LITERAL",
+        "line": 4,
+        "column": 13,
+        "code": "true",
+        "file": "main.cpp",
+        "ownerMethod": "main:int()",
+        "nodeId": "90194313216"
+      },
+      "target": {
+        "label": "IDENTIFIER",
+        "line": 4,
+        "column": 8,
+        "code": "ok",
+        "file": "main.cpp",
+        "ownerMethod": "main:int()",
+        "nodeId": "68719476737"
+      }
+    },
+    {
+      "source": {
+        "label": "LITERAL",
+        "line": 4,
+        "column": 13,
+        "code": "true",
+        "file": "main.cpp",
+        "ownerMethod": "main:int()",
+        "nodeId": "90194313216"
+      },
+      "target": {
+        "label": "CALL",
+        "line": 4,
+        "column": 8,
+        "code": "ok = true",
+        "file": "main.cpp",
+        "ownerMethod": "main:int()",
+        "nodeId": "30064771072"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": 5,
+        "column": 3,
+        "code": "demo::v1::missing()",
+        "file": "main.cpp",
+        "ownerMethod": "main:int()",
+        "nodeId": "30064771073"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 3,
+        "column": 1,
+        "code": "RET",
+        "file": "main.cpp",
+        "ownerMethod": "main:int()",
+        "nodeId": "124554051587"
+      }
+    },
+    {
+      "source": {
+        "label": "RETURN",
+        "line": 6,
+        "column": 3,
+        "code": "return LOCAL_ASSERT(ok) + demo::v1::helper(0);",
+        "file": "main.cpp",
+        "ownerMethod": "main:int()",
+        "nodeId": "141733920769"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 3,
+        "column": 1,
+        "code": "RET",
+        "file": "main.cpp",
+        "ownerMethod": "main:int()",
+        "nodeId": "124554051587"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": 6,
+        "column": 10,
+        "code": "LOCAL_ASSERT(ok) + demo::v1::helper(0)",
+        "file": "main.cpp",
+        "ownerMethod": "main:int()",
+        "nodeId": "30064771074"
+      },
+      "target": {
+        "label": "RETURN",
+        "line": 6,
+        "column": 3,
+        "code": "return LOCAL_ASSERT(ok) + demo::v1::helper(0);",
+        "file": "main.cpp",
+        "ownerMethod": "main:int()",
+        "nodeId": "141733920769"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": 6,
+        "column": 10,
+        "code": "LOCAL_ASSERT(ok) + demo::v1::helper(0)",
+        "file": "main.cpp",
+        "ownerMethod": "main:int()",
+        "nodeId": "30064771074"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 3,
+        "column": 1,
+        "code": "RET",
+        "file": "main.cpp",
+        "ownerMethod": "main:int()",
+        "nodeId": "124554051587"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": 6,
+        "column": 10,
+        "code": "LOCAL_ASSERT(ok)",
+        "file": "main.cpp",
+        "ownerMethod": "main:int()",
+        "nodeId": "30064771075"
+      },
+      "target": {
+        "label": "CALL",
+        "line": 6,
+        "column": 10,
+        "code": "LOCAL_ASSERT(ok) + demo::v1::helper(0)",
+        "file": "main.cpp",
+        "ownerMethod": "main:int()",
+        "nodeId": "30064771074"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": 6,
+        "column": 10,
+        "code": "LOCAL_ASSERT(ok)",
+        "file": "main.cpp",
+        "ownerMethod": "main:int()",
+        "nodeId": "30064771075"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 3,
+        "column": 1,
+        "code": "RET",
+        "file": "main.cpp",
+        "ownerMethod": "main:int()",
+        "nodeId": "124554051587"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": 6,
+        "column": 10,
+        "code": "ok",
+        "file": "main.cpp",
+        "ownerMethod": "main:int()",
+        "nodeId": "68719476738"
+      },
+      "target": {
+        "label": "CALL",
+        "line": 6,
+        "column": 10,
+        "code": "LOCAL_ASSERT(ok)",
+        "file": "main.cpp",
+        "ownerMethod": "main:int()",
+        "nodeId": "30064771075"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": 6,
+        "column": 10,
+        "code": "ok",
+        "file": "main.cpp",
+        "ownerMethod": "main:int()",
+        "nodeId": "68719476738"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 3,
+        "column": 1,
+        "code": "RET",
+        "file": "main.cpp",
+        "ownerMethod": "main:int()",
+        "nodeId": "124554051587"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": 6,
+        "column": 10,
+        "code": "(ok) ? 0 : helper(1)",
+        "file": "main.cpp",
+        "ownerMethod": "main:int()",
+        "nodeId": "30064771076"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 3,
+        "column": 1,
+        "code": "RET",
+        "file": "main.cpp",
+        "ownerMethod": "main:int()",
+        "nodeId": "124554051587"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": 6,
+        "column": 10,
+        "code": "ok",
+        "file": "main.cpp",
+        "ownerMethod": "main:int()",
+        "nodeId": "68719476739"
+      },
+      "target": {
+        "label": "CALL",
+        "line": 6,
+        "column": 10,
+        "code": "(ok) ? 0 : helper(1)",
+        "file": "main.cpp",
+        "ownerMethod": "main:int()",
+        "nodeId": "30064771076"
+      }
+    },
+    {
+      "source": {
+        "label": "IDENTIFIER",
+        "line": 6,
+        "column": 10,
+        "code": "ok",
+        "file": "main.cpp",
+        "ownerMethod": "main:int()",
+        "nodeId": "68719476739"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 3,
+        "column": 1,
+        "code": "RET",
+        "file": "main.cpp",
+        "ownerMethod": "main:int()",
+        "nodeId": "124554051587"
+      }
+    },
+    {
+      "source": {
+        "label": "LITERAL",
+        "line": 6,
+        "column": 10,
+        "code": "0",
+        "file": "main.cpp",
+        "ownerMethod": "main:int()",
+        "nodeId": "90194313217"
+      },
+      "target": {
+        "label": "CALL",
+        "line": 6,
+        "column": 10,
+        "code": "(ok) ? 0 : helper(1)",
+        "file": "main.cpp",
+        "ownerMethod": "main:int()",
+        "nodeId": "30064771076"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": 6,
+        "column": 10,
+        "code": "helper(1)",
+        "file": "main.cpp",
+        "ownerMethod": "main:int()",
+        "nodeId": "30064771077"
+      },
+      "target": {
+        "label": "CALL",
+        "line": 6,
+        "column": 10,
+        "code": "(ok) ? 0 : helper(1)",
+        "file": "main.cpp",
+        "ownerMethod": "main:int()",
+        "nodeId": "30064771076"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": 6,
+        "column": 10,
+        "code": "helper(1)",
+        "file": "main.cpp",
+        "ownerMethod": "main:int()",
+        "nodeId": "30064771077"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 3,
+        "column": 1,
+        "code": "RET",
+        "file": "main.cpp",
+        "ownerMethod": "main:int()",
+        "nodeId": "124554051587"
+      }
+    },
+    {
+      "source": {
+        "label": "LITERAL",
+        "line": 6,
+        "column": 10,
+        "code": "1",
+        "file": "main.cpp",
+        "ownerMethod": "main:int()",
+        "nodeId": "90194313218"
+      },
+      "target": {
+        "label": "CALL",
+        "line": 6,
+        "column": 10,
+        "code": "helper(1)",
+        "file": "main.cpp",
+        "ownerMethod": "main:int()",
+        "nodeId": "30064771077"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": 6,
+        "column": 29,
+        "code": "demo::v1::helper(0)",
+        "file": "main.cpp",
+        "ownerMethod": "main:int()",
+        "nodeId": "30064771078"
+      },
+      "target": {
+        "label": "CALL",
+        "line": 6,
+        "column": 10,
+        "code": "LOCAL_ASSERT(ok) + demo::v1::helper(0)",
+        "file": "main.cpp",
+        "ownerMethod": "main:int()",
+        "nodeId": "30064771074"
+      }
+    },
+    {
+      "source": {
+        "label": "CALL",
+        "line": 6,
+        "column": 29,
+        "code": "demo::v1::helper(0)",
+        "file": "main.cpp",
+        "ownerMethod": "main:int()",
+        "nodeId": "30064771078"
+      },
+      "target": {
+        "label": "METHOD_RETURN",
+        "line": 3,
+        "column": 1,
+        "code": "RET",
+        "file": "main.cpp",
+        "ownerMethod": "main:int()",
+        "nodeId": "124554051587"
+      }
+    },
+    {
+      "source": {
+        "label": "LITERAL",
+        "line": 6,
+        "column": 46,
+        "code": "0",
+        "file": "main.cpp",
+        "ownerMethod": "main:int()",
+        "nodeId": "90194313219"
+      },
+      "target": {
+        "label": "CALL",
+        "line": 6,
+        "column": 29,
+        "code": "demo::v1::helper(0)",
+        "file": "main.cpp",
+        "ownerMethod": "main:int()",
+        "nodeId": "30064771078"
+      }
+    }
+  ],
+  "reachingDefsTruncated": false,
+  "reachingDefsOmitted": 0,
+  "dataflowPaths": [],
+  "dataflowErrors": [],
+  "_languages": [
+    "cpp"
+  ],
+  "_frontend": "c2cpg",
+  "_repo_root": "<repo>",
+  "_go_modules": {},
+  "_javascript_packages": [],
+  "_c_macros": [
+    "LOCAL_ASSERT"
+  ],
+  "_files": [
+    "helper.cpp",
+    "helper.hpp",
+    "main.cpp",
+    "raw.json"
+  ],
+  "_non_call_sites": {
+    "macro": 1,
+    "synthetic": 3
+  }
+}

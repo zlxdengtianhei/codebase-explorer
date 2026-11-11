@@ -92,9 +92,9 @@ def test_capabilities_failed_when_frontend_errored() -> None:
     assert "boom" in caps["call"]["limitations"]
 
 
-def test_ruby_capability_documents_test_path_exclusion() -> None:
+def test_ruby_capability_documents_no_default_exclusion() -> None:
     caps = {c["graph"]: c for c in _capabilities_for("ruby", {}, "1")}
-    assert "test" in (caps["call"]["condition"] or "")
+    assert "--no-default-exclude" in (caps["call"]["condition"] or "")
 
 
 # ---------------------------------------------------------------------------
