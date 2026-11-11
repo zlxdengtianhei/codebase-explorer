@@ -74,6 +74,13 @@ def code_text(text: str) -> str:
     return f"{fence} {text} {fence}"
 
 
+def inline_code(text: str) -> str:
+    """Compact code span: padded only where the text itself touches a backtick."""
+    fence = "`" * (max((len(run) for run in re.findall(r"`+", text)), default=0) + 1)
+    pad = " " if text.startswith("`") or text.endswith("`") else ""
+    return f"{fence}{pad}{text}{pad}{fence}"
+
+
 def _file_link(label: str, path: str, source_links: dict[str, str]) -> str:
     reference = source_links.setdefault(path, f"f{len(source_links) + 1}")
     return f"[{label}][{reference}]"
@@ -100,8 +107,6 @@ def _build_unit_block(uid: str, units: dict, ranges_map: dict, owner: dict,
                       name_of: Callable[[str], str], source_links: dict[str, str]) -> str:
     unit = units[uid]
     lines = [f"### `{name_of(uid)}`", ""]
-    for row in unit.get("id_corrections") or []:
-        lines += [f"> **ID corrected by CBE.** {row['notice']}", ""]
     raw_signature = unit.get("signature") or unit.get("kind") or "unit"
     declaration = re.search(r"\b(?:async def|def|class)\s+\w", raw_signature)
     if declaration:
@@ -153,12 +158,184 @@ def _build_unit_block(uid: str, units: dict, ranges_map: dict, owner: dict,
     return "\n".join(lines).rstrip() + "\n"
 
 
+def _graph_coverage(graph: dict | None, source_root: Path) -> list[str]:
+    """What the graph covers, in plain lines (RUN.md)."""
+    lines: list[str] = []
+    if graph is None:
+        lines += ["No graph was provided. Relations are inferred by the model from source and may be inaccurate."]
+    else:
+        from cbe.graph import read_graph_quality, graph_state
+        quality = read_graph_quality(graph, repo=source_root)
+        state, _ = graph_state(graph, quality=quality)
+        if state == "failed":
+            lines += ["No graph backend succeeded. Relations are inferred by the model from source."]
+        elif state == "empty":
+            lines += ["The graph is empty. No relations are graph-confirmed; relations are inferred by the model from source."]
+        elif state == "unsupported":
+            lines += ["The graph does not support this analysis. Relations are inferred by the model from source and may be inaccurate."]
+        else:
+            lines += ["Source: static analysis graph. Resolved relations are graph-confirmed; this does not guarantee semantic correctness. "
+                            "External targets are outside the repository; ambiguous targets have multiple candidates. "
+                            "Unresolved or unsupported relations, and languages or relation kinds without coverage, rely on model inference and may be inaccurate."]
+        by_language: dict[str, list[dict]] = {}
+        for row in quality["edge_counts"]:
+            by_language.setdefault(row["language"], []).append(row)
+        lines += ["Import and call status ratios use the edge count of each kind. "
+                        "CFG and dataflow are structural edges; only their counts are shown, without status ratios."]
+        for language, rows in sorted(by_language.items()):
+            by_kind = {row["kind"]: row for row in rows}
+            relations = []
+            for kind in ("import", "call"):
+                row = by_kind.get(kind)
+                if row is None:
+                    continue
+                total = row["total"]
+                proportions = ", ".join(f"{status} {count}/{total} ({count / total:.0%})"
+                                        for status, count in row["statuses"].items() if count) if total else "no edges"
+                relations.append(f"{language} {kind}: {proportions}")
+            structural = ", ".join(f"{kind}={by_kind[kind]['total']}"
+                                   for kind in ("cfg", "dataflow") if kind in by_kind)
+            if relations:
+                lines += [" · ".join(relations) + "."]
+            if structural:
+                lines += [f"{language} structural edges: {structural}."]
+        incomplete = quality["incomplete_capabilities"]
+        if incomplete:
+            lines += ["Incomplete capabilities: " + "; ".join(
+                f"{c.get('language')}/{c.get('graph')} {c.get('status')}"
+                for c in incomplete) + "."]
+        integrity = [f"dangling edges {quality['dangling_edges']['count']}",
+                     f"nodes outside manifest {quality['nodes_outside_manifest']['count']}",
+                     f"nodes with missing files {quality['nodes_missing_files']['count']}"
+                     if quality["file_existence_checked"] else "file existence not checked"]
+        if quality["frontend_failures"]:
+            integrity.append("frontend failed; see graph diagnostics")
+        if quality["backend_completed"] is None:
+            integrity.append("backend completion unknown")
+        lines += ["Program checks: " + "; ".join(integrity) + "."]
+    return lines
+
+
+INDEX_MIN_TOKENS = 2000   # the entry page may use at least this many tokens ...
+INDEX_SHARE = 0.03        # ... or this share of the source's tokens
+FILES_SHOWN = 3
+
+
+def _rank_files(units: dict, ranges_map: dict, members: list[str]) -> list[str]:
+    """File names of a node's subtree, the ones with most unit lines first."""
+    lines: dict[str, int] = {}
+    for uid in members:
+        for rng in ranges_map.get(uid) or units.get(uid, {}).get("ranges") or []:
+            lines[rng["path"]] = lines.get(rng["path"], 0) + sum(b - a + 1 for a, b in rng["lines"])
+    return [path for path, _ in sorted(lines.items(), key=lambda item: (-item[1], item[0]))]
+
+
+def _short_names(paths) -> dict[str, str]:
+    """The shortest trailing part of each path that no other path shares (``a/b.py``, ``b.py`` ...)."""
+    split = {path: path.split("/") for path in set(paths)}
+    depth = max((len(parts) for parts in split.values()), default=1)
+    names: dict[str, str] = {}
+    for width in range(1, depth + 1):
+        count: dict[str, int] = {}
+        for parts in split.values():
+            key = "/".join(parts[-width:])
+            count[key] = count.get(key, 0) + 1
+        for path, parts in split.items():
+            key = "/".join(parts[-width:])
+            if path not in names and (count[key] == 1 or width >= len(parts)):
+                names[path] = key
+    return names
+
+
+def _entry_page(*, repo: str, nodes: dict, children: dict, roots: list[str], units: dict, ranges_map: dict,
+                overview: str | None, flows: list[dict], candidates: list[list[str]], graph_state: str,
+                graph_reason: str, owner: dict, name_of: Callable[[str], str], budget: int) -> tuple[str, dict]:
+    """INDEX.md: the module tree with one capability line per node, key flows, the three commands.
+
+    The tree is drawn to its full depth. Over the token budget, every node first shows one file instead of
+    three, then no file, and only then does the deepest level fold away (it stays on the node pages): the
+    leaf modules are what a reader looks for, a representative file is only a hint."""
+    from cbe.token_budget import count_text_tokens
+
+    members: dict[str, list[str]] = {}
+
+    def subtree(nid: str) -> list[str]:
+        if nid not in members:
+            members[nid] = list(nodes[nid].get("unit_ids") or [])
+            for kid in children.get(nid) or []:
+                members[nid] += subtree(kid)
+        return members[nid]
+
+    top = [kid for root in roots for kid in (children.get(root) or [])] or roots
+
+    def depth(nid: str) -> int:
+        return 1 + max((depth(kid) for kid in children.get(nid) or []), default=0)
+
+    levels = max((depth(nid) for nid in top), default=1)
+    ranked = {nid: _rank_files(units, ranges_map, subtree(nid)) for nid in nodes}
+    short = _short_names(path for row in ranked.values() for path in row)
+
+    def module_lines(nid: str, level: int, shown: int, files: int) -> list[str]:
+        node = nodes[nid]
+        names = [short[path] for path in ranked[nid][:files]]
+        capability = literal_links((node.get("capability") or "").strip())
+        rows = ["  " * level + f"- [**{link_text(node.get('title') or nid)}**](nodes/{nid}.md)"
+                f"{' — ' + capability if capability else ''} "
+                f"({len(subtree(nid))} units{'; ' if names else ''}{', '.join(inline_code(n) for n in names)})"]
+        if level + 1 < shown:
+            for kid in children.get(nid) or []:
+                rows += module_lines(kid, level + 1, shown, files)
+        return rows
+
+    def flow_lines() -> list[str]:
+        shown, rows = flows, []
+        if not flows and candidates:
+            rows += ["Program candidates, not selected by the model (first 5):"]
+            shown = [dict(name=f"Candidate {i}", description="Extracted by the program from resolved calls.",
+                          steps=path, inferred_steps=[]) for i, path in enumerate(candidates[:5], 1)]
+        elif not flows:
+            rows += ["No flows: " + (graph_reason if graph_state != "provided" else
+                                     "no resolved calls or no entry units with zero incoming calls") + "."]
+        for flow in shown:
+            steps = []
+            for i, uid in enumerate(flow["steps"]):
+                if i:
+                    steps.append(" → (model-inferred) → " if i in flow["inferred_steps"] else " → ")
+                steps.append(inline_code(name_of(uid)) + ("" if owner.get(uid) in nodes else " (not assigned to a node)"))
+            rows.append(f"- **{link_text(flow['name'])}**: {literal_links(flow['description'])} — " + "".join(steps))
+        return rows
+
+    def page(shown: int, files: int) -> str:
+        lines = [f"# {repo}: code map", ""]
+        if (overview or "").strip():
+            lines += [literal_links(overview.strip()), ""]
+        lines += ["## Modules", ""]
+        for nid in top:
+            lines += module_lines(nid, 0, shown, files)
+        lines += ["", "## Key flows", ""] + flow_lines()
+        lines += ["", "## Read further", "",
+                  '`RUN` is this run directory. Find an `ID` by name, then read it:', "",
+                  '- `cbe find --run-dir "$RUN" --term "NAME"` — locate a unit, symbol or file by name',
+                  '- `cbe query --run-dir "$RUN" --id "ID"` — the explanation, relations and evidence of one unit',
+                  '- `cbe source --run-dir "$RUN" --id "ID" --context 2` — the frozen source, digest checked',
+                  "", "More: [DEPENDENCIES.md](DEPENDENCIES.md) · [RUN.md](RUN.md)"]
+        return "\n".join(lines) + "\n"
+
+    ladder = [(levels, FILES_SHOWN), (levels, 1), (levels, 0)] + [(n, 0) for n in range(levels - 1, 0, -1)]
+    for shown, files in ladder:
+        text = page(shown, files)
+        tokens = count_text_tokens(text)
+        if tokens <= budget:
+            break
+    return text, {"budget": budget, "tokens": tokens, "over_budget": tokens > budget, "levels": levels,
+                  "levels_shown": shown, "files_per_node": files}
+
+
 def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
            dispositions: dict, tree: dict, languages: dict[str, str],
            index_notes: list[str] | None = None, system: dict | None = None,
-           graph: dict | None = None, context: dict | None = None,
-           id_corrections: list[dict] | None = None) -> dict:
-    """Render node pages, INDEX.md and a catalog under ``run_dir/docs``.
+           graph: dict | None = None, context: dict | None = None, source_tokens: int | None = None) -> dict:
+    """Render node pages, INDEX.md, DEPENDENCIES.md, RUN.md and a catalog under ``run_dir/docs``.
 
     ``languages`` maps each path to the language frozen in the source context,
     so the catalog agrees with the plan even when it remapped a suffix.
@@ -178,6 +355,12 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
             children[node["parent"]].append(nid)
         for uid in node.get("unit_ids") or []:
             owner[uid] = nid
+    subtree_sizes: dict[str, int] = {}
+
+    def subtree_units(nid: str) -> int:
+        if nid not in subtree_sizes:
+            subtree_sizes[nid] = len(nodes[nid].get("unit_ids") or []) + sum(subtree_units(k) for k in children[nid])
+        return subtree_sizes[nid]
 
     anchors: dict[str, str] = {}
     for uid in sorted(units):
@@ -235,15 +418,12 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
                 + (f"containment · → {edge['count']} / ← {edge['reverse_count']} edge(s) "
                    f"(ancestor direct units and descendant subtree; → follows {code_text(edge['from'])} → {code_text(edge['to'])})"
                    if edge["source"] == "containment" else
-                   f"{labels[edge['source']]} · {edge['count']} edge(s)")
+                   labels[edge["source"]]
+                   + "".join(f" · {text}" for text in (
+                       f"{edge['count']} edge(s)" if edge["count"] else "",
+                       f"{edge.get('inferred_count', 0)} inferred relation(s)" if edge.get("inferred_count") else "") if text))
                 + (" · " + literal_links(edge["description"]) if edge["description"] else ""))
 
-    from cbe.records import correction_notice
-
-    for row in id_corrections or []:
-        uid = row["corrected"]
-        if uid in units and re.fullmatch(r"units\[\d+\]\.id", row["location"]):
-            units[uid].setdefault("id_corrections", []).append({**row, "notice": correction_notice(row)})
     for nid, node in nodes.items():
         source_links: dict[str, str] = {}
         lines = [f"# {node.get('title') or nid}", ""]
@@ -256,7 +436,7 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
             for kid in children[nid]:
                 kid_node = nodes[kid]
                 lines.append(f"- [{link_text(kid_node.get('title') or kid)}]({kid}.md) `{kid}` · "
-                             f"{len(kid_node.get('unit_ids') or [])} unit(s)")
+                             f"{subtree_units(kid)} unit(s)")
             lines.append("")
         if edges_by_from.get(nid):
             lines += ["**Depends on.**", ""]
@@ -287,102 +467,25 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
                   for path, ref in source_links.items()]
         (nodes_dir / f"{nid}.md").write_text("\n".join(lines).strip() + "\n", encoding="utf-8")
 
-    def outline(nid: str, level: int) -> list[str]:
-        node = nodes[nid]
-        pad = "  " * level
-        rows = [f"{pad}- [{link_text(node.get('title') or nid)}](nodes/{nid}.md) "
-                f"({len(node.get('unit_ids') or [])} units)"]
-        for uid in (node.get("unit_ids") or [])[:1]:
-            if uid in units:
-                rows.append(f"{pad}  - [{name_of(uid)}](nodes/{nid}.md#{anchor(uid)}) · "
-                            + literal_links(units[uid]["summary"]))
-        for kid in children.get(nid) or []:
-            rows.extend(outline(kid, level + 1))
-        return rows
-
     roots = [nid for nid, node in nodes.items() if not node.get("parent")]
-    index_lines = ["# Codebase Explorer", "", "## How to read this report", "",
-                   "Start with the responsibility tree in INDEX. Open a node page for your maintenance question, then choose a unit.",
-                   "Node pages explain responsibilities. `catalog.json` stores full signatures, source ranges, folded members, relation evidence, and graph edges.",
-                   "Set `RUN` to the absolute path of this run directory. Find an id, then read its explanation or frozen source.", "", "```sh",
-                   'cbe find --run-dir "$RUN" --term "SEARCH_TERM"',
-                   'cbe query --run-dir "$RUN" --id "$ID"',
-                   'cbe source --run-dir "$RUN" --id "$ID" --context 2', "```", "",
-                   "`ID` can be a unit id, symbol id, or file path. Commands return the content directly.",
-                   "`source` reads frozen source and verifies its digest first.",
-                   "The catalog also stores reverse graph edges, statuses, and raw evidence.", "", "## Responsibility tree", ""]
-    for root in roots:
-        index_lines.extend(outline(root, 0))
-    index_lines += ["", "## Reading stats", "",
-                    f"- units: {len(units)} · semantic nodes: {len(nodes)} · "
-                    f"dispositioned inventory ids: {len(dispositions)}",
-                    "- source ranges are program-derived from the inventory, never model-written"]
-    index_lines += ["", "## Graph coverage", ""]
-    if graph is None:
-        index_lines += ["No graph was provided. Relations are inferred by the model from source and may be inaccurate."]
-    else:
-        from cbe.graph import read_graph_quality, graph_state
-        quality = read_graph_quality(graph, repo=source_root)
-        state, _ = graph_state(graph, quality=quality)
-        if state == "failed":
-            index_lines += ["No graph backend succeeded. Relations are inferred by the model from source."]
-        elif state == "empty":
-            index_lines += ["The graph is empty. No relations are graph-confirmed; relations are inferred by the model from source."]
-        elif state == "unsupported":
-            index_lines += ["The graph does not support this analysis. Relations are inferred by the model from source and may be inaccurate."]
-        else:
-            index_lines += ["Source: static analysis graph. Resolved relations are graph-confirmed; this does not guarantee semantic correctness. "
-                            "External targets are outside the repository; ambiguous targets have multiple candidates. "
-                            "Unresolved or unsupported relations, and languages or relation kinds without coverage, rely on model inference and may be inaccurate."]
-        by_language: dict[str, list[dict]] = {}
-        for row in quality["edge_counts"]:
-            by_language.setdefault(row["language"], []).append(row)
-        index_lines += ["Import and call status ratios use the edge count of each kind. "
-                        "CFG and dataflow are structural edges; only their counts are shown, without status ratios."]
-        for language, rows in sorted(by_language.items()):
-            by_kind = {row["kind"]: row for row in rows}
-            relations = []
-            for kind in ("import", "call"):
-                row = by_kind.get(kind)
-                if row is None:
-                    continue
-                total = row["total"]
-                proportions = ", ".join(f"{status} {count}/{total} ({count / total:.0%})"
-                                        for status, count in row["statuses"].items() if count) if total else "no edges"
-                relations.append(f"{language} {kind}: {proportions}")
-            structural = ", ".join(f"{kind}={by_kind[kind]['total']}"
-                                   for kind in ("cfg", "dataflow") if kind in by_kind)
-            if relations:
-                index_lines += [" · ".join(relations) + "."]
-            if structural:
-                index_lines += [f"{language} structural edges: {structural}."]
-        incomplete = quality["incomplete_capabilities"]
-        if incomplete:
-            index_lines += ["Incomplete capabilities: " + "; ".join(
-                f"{c.get('language')}/{c.get('graph')} {c.get('status')}"
-                for c in incomplete) + "."]
-        integrity = [f"dangling edges {quality['dangling_edges']['count']}",
-                     f"nodes outside manifest {quality['nodes_outside_manifest']['count']}",
-                     f"nodes with missing files {quality['nodes_missing_files']['count']}"
-                     if quality["file_existence_checked"] else "file existence not checked"]
-        if quality["frontend_failures"]:
-            integrity.append("frontend failed; see graph diagnostics")
-        if quality["backend_completed"] is None:
-            integrity.append("backend completion unknown")
-        index_lines += ["Program checks: " + "; ".join(integrity) + "."]
-    if system:
-        index_lines += ["", "## Overview", "", literal_links(system["overview"]),
-                        "", "## Maintenance navigation", "", literal_links(system["maintenance_navigation"])]
-    index_lines += ["", "## Dependency view", "",
-                    "Arrows point from a user to its dependency. Containment is structural, not a dependency. "
-                    "Graph-confirmed pairs appear in both the tree and resolved call/import edges. "
-                    "Model-inferred pairs appear only in the tree. Graph-only pairs appear only in the graph.",
-                    "Graph-confirmed and model-inferred pairs count edges between two subtrees. "
-                    "Graph-only pairs count edges between direct node owners. "
-                    "Containment rows show resolved edges between ancestor direct units and a descendant subtree in both directions. "
-                    "Within containment rows count direct owner pairs separately. Neither kind of containment row appears in Mermaid or the three dependency totals."]
+    index_text, index_meta = _entry_page(
+        repo=source_root.name, nodes=nodes, children=children, roots=roots, units=units, ranges_map=ranges_map,
+        overview=(system or {}).get("overview"), flows=relationships["key_flows"],
+        candidates=relationships["candidate_flows"], graph_state=relationships["graph_state"],
+        graph_reason=relationships["graph_reason"], owner=owner, name_of=name_of,
+        budget=max(INDEX_MIN_TOKENS, int(INDEX_SHARE * (source_tokens or 0))))
+    (docs_dir / "INDEX.md").write_text(index_text, encoding="utf-8")
+
+    dep_lines = ["# Dependencies", "",
+                 "Arrows point from a user to its dependency. Containment is structural, not a dependency. "
+                 "Graph-confirmed pairs appear in both the tree and resolved call/import edges. "
+                 "Model-inferred pairs appear only in the tree. Graph-only pairs appear only in the graph.",
+                 "Graph-confirmed and model-inferred pairs count edges between two subtrees. "
+                 "Graph-only pairs count edges between direct node owners. "
+                 "Containment rows show resolved edges between ancestor direct units and a descendant subtree in both directions. "
+                 "Within containment rows count direct owner pairs separately. Neither kind of containment row appears in Mermaid or the three dependency totals."]
     if relationships["graph_state"] != "provided":
-        index_lines += ["No usable graph evidence; only model-inferred dependencies are listed: " + relationships["graph_reason"] + "."]
+        dep_lines += ["No usable graph evidence; only model-inferred dependencies are listed: " + relationships["graph_reason"] + "."]
     degree = {}
     for edge in relationships["dependencies"]:
         if edge.get("containment"):
@@ -396,61 +499,44 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
         # fences; only safe program-generated aliases become Mermaid ids.
         def mermaid_label(text):
             return "".join(c if c.isalnum() or c in " _-" else f"#{ord(c)};" for c in text[:100])
-        index_lines += ["", "```mermaid", "flowchart LR"]
-        index_lines += [f'  {aliases[nid]}["{mermaid_label(nodes[nid].get("title") or nid)}"]'
-                        for nid in selected]
+        dep_lines += ["", "```mermaid", "flowchart LR"]
+        dep_lines += [f'  {aliases[nid]}["{mermaid_label(nodes[nid].get("title") or nid)}"]'
+                      for nid in selected]
         for edge in relationships["dependencies"]:
             if not edge.get("containment") and edge["from"] in aliases and edge["to"] in aliases:
                 arrow = DEPENDENCY_STYLES[edge["source"]][1]
-                index_lines.append(f"  {aliases[edge['from']]} {arrow} {aliases[edge['to']]}")
-        index_lines += ["```", "", f"Selected {len(selected)} nodes by connection count. Legend: "
-                        + "; ".join(f"`{arrow}` {label}" for label, arrow in DEPENDENCY_STYLES.values()) + "."]
+                dep_lines.append(f"  {aliases[edge['from']]} {arrow} {aliases[edge['to']]}")
+        dep_lines += ["```", "", f"Selected {len(selected)} nodes by connection count. Legend: "
+                      + "; ".join(f"`{arrow}` {label}" for label, arrow in DEPENDENCY_STYLES.values()) + "."]
     else:
-        index_lines += ["No node dependencies."]
-    index_lines += ["", "## Dependency list", ""]
+        dep_lines += ["No node dependencies."]
+    dep_lines += ["", "## Dependency list", ""]
     for edge in relationships["dependencies"]:
         if edge["source"] == "within_containment":
             continue
-        index_lines += [f"- [{link_text(nodes[edge['from']].get('title') or edge['from'])}]"
-                        f"(nodes/{edge['from']}.md) → " + dependency_line(edge, edge["to"], "nodes/")[2:]]
-    index_lines += ["", f"Graph-only pairs are ranked by edge count; {relationships['graph_only_omitted']} omitted.",
-                    "", "### Within containment", ""]
+        dep_lines += [f"- [{link_text(nodes[edge['from']].get('title') or edge['from'])}]"
+                      f"(nodes/{edge['from']}.md) → " + dependency_line(edge, edge["to"], "nodes/")[2:]]
+    dep_lines += ["", f"Graph-only pairs are ranked by edge count; {relationships['graph_only_omitted']} omitted.",
+                  "", "### Within containment", ""]
     for edge in relationships["dependencies"]:
         if edge["source"] == "within_containment":
-            index_lines += [f"- [{link_text(nodes[edge['from']].get('title') or edge['from'])}]"
-                            f"(nodes/{edge['from']}.md) → " + dependency_line(edge, edge["to"], "nodes/")[2:]]
-    index_lines += ["", f"Within containment: {relationships['within_containment_count']} pairs, ranked by edge count; "
-                    f"{relationships['within_containment_omitted']} omitted. Each graph list keeps at most 40 pairs independently."]
+            dep_lines += [f"- [{link_text(nodes[edge['from']].get('title') or edge['from'])}]"
+                          f"(nodes/{edge['from']}.md) → " + dependency_line(edge, edge["to"], "nodes/")[2:]]
+    dep_lines += ["", f"Within containment: {relationships['within_containment_count']} pairs, ranked by edge count; "
+                  f"{relationships['within_containment_omitted']} omitted. Each graph list keeps at most 40 pairs independently."]
     if not (system or {}).get("dependency_descriptions"):
-        index_lines += ["", "The system response provided no key dependency descriptions."]
-    index_lines += ["", "## Key flows", ""]
-    if not relationships["candidate_flows"]:
-        index_lines += ["No candidate flows: " + (relationships["graph_reason"]
-                        if relationships["graph_state"] != "provided" else
-                        "no resolved calls or no entry units with zero incoming calls") + "."]
-    displayed_flows = relationships["key_flows"]
-    if not displayed_flows:
-        index_lines += ["The system response provided no key flows."]
-        if relationships["candidate_flows"]:
-            index_lines += ["", "Program candidates, not selected by the model (first 5):", ""]
-            displayed_flows = [dict(name=f"Candidate {i}", description="Extracted by the program from resolved calls.",
-                                    steps=path, inferred_steps=[])
-                               for i, path in enumerate(relationships["candidate_flows"][:5], 1)]
-    for flow in displayed_flows:
-        index_lines += [f"- **{link_text(flow['name'])}** · {literal_links(flow['description'])}"]
-        steps = []
-        for i, uid in enumerate(flow["steps"]):
-            if i:
-                steps.append(" → (model-inferred) → " if i in flow["inferred_steps"] else " → ")
-            if owner.get(uid) in nodes:
-                steps.append(f"[{link_text(name_of(uid))}](nodes/{owner[uid]}.md#{anchor(uid)})")
-            else:
-                # A resumed module can introduce units before the accepted tree is rebuilt.
-                steps.append(f"[{link_text(name_of(uid))}](../catalog.json) (not assigned to a node)")
-        index_lines += ["  " + "".join(steps)]
+        dep_lines += ["", "The system response provided no key dependency descriptions."]
+    (docs_dir / "DEPENDENCIES.md").write_text("\n".join(dep_lines) + "\n", encoding="utf-8")
+
+    run_lines = ["# Run notes", "", "Where this run's facts come from and what was and was not checked.", "",
+                 "## Reading stats", "",
+                 f"- units: {len(units)} · semantic nodes: {len(nodes)} · "
+                 f"dispositioned inventory ids: {len(dispositions)}",
+                 "- source ranges are program-derived from the inventory, never model-written",
+                 "", "## Graph coverage", ""] + _graph_coverage(graph, source_root)
     if index_notes:
-        index_lines += ["", "## Generation notes", ""] + [f"- {item}" for item in index_notes]
-    (docs_dir / "INDEX.md").write_text("\n".join(index_lines) + "\n", encoding="utf-8")
+        run_lines += ["", "## Generation notes", ""] + [f"- {item}" for item in index_notes]
+    (docs_dir / "RUN.md").write_text("\n".join(run_lines) + "\n", encoding="utf-8")
 
     # catalog: semantic index plus the per-inventory-id `symbols` and per-file `files` maps
     symbol_index: dict[str, dict] = {}
@@ -521,7 +607,7 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
             "key_flows": len(relationships["key_flows"]),
             "candidate_flows": len(relationships["candidate_flows"]),
             "ranges_map": ranges_map, "symbol_index": symbol_index,
-            "index": str(docs_dir / "INDEX.md")}
+            "index": {**index_meta, "path": str(docs_dir / "INDEX.md")}}
 
 
 def catalog_symbols(catalog: dict) -> dict[str, dict]:
@@ -790,8 +876,7 @@ def find(run_dir: Path, term: str, limit: int = 25) -> list[dict[str, Any]]:
         summary = " ".join(words[:25]) + ("…" if len(words) > 25 else "")
         results.append({"id": sid, "name": name, "kind": symbol.get("kind") or record.get("kind") or
                         "symbol", "location": format_ranges(ranges),
-                        "summary": summary, "matched_fields": matched,
-                        **({"id_corrected": True} if record.get("id_corrections") else {})})
+                        "summary": summary, "matched_fields": matched})
     results.sort(key=lambda row: (0 if needle in {row["id"].casefold(), row["name"].casefold(),
                                                   str(catalog["symbols"].get(row["id"], {}).get("display_name", "")).casefold()}
                                  else 1))
@@ -800,8 +885,7 @@ def find(run_dir: Path, term: str, limit: int = 25) -> list[dict[str, Any]]:
 
 def find_text(results: list[dict]) -> str:
     return "".join(f"{r['name']} | {r['id']} | {r['kind']} | {r['location']} | "
-                   f"{r['summary']} | match: {','.join(r['matched_fields'])}"
-                   f"{' | ID corrected; may be inaccurate (see query)' if r.get('id_corrected') else ''}\n"
+                   f"{r['summary']} | match: {','.join(r['matched_fields'])}\n"
                    for r in results)
 
 
@@ -867,7 +951,7 @@ def query_text(record: dict) -> str:
 
     summary, remainder = summary_and_remainder(record)
     lines = [f"{record.get('display_name', record['name'])}  {record['id']}"]
-    for field in ("dependencies", "depended_on_by", "id_corrections", "signature", "signatures", "ranges", "summary", "explain", "extras",
+    for field in ("dependencies", "depended_on_by", "signature", "signatures", "ranges", "summary", "explain", "extras",
                   "uncertainties", "relations", "reverse_relations", "folded_members",
                   "internal_edge_counts", "units", "symbols"):
         value = record.get(field)
@@ -976,7 +1060,7 @@ def layer_metrics(run_dir: Path) -> dict:
                 in_units = True
             if stripped.startswith("## Look up code"):
                 in_footer = True
-            if path.name == "INDEX.md":
+            if path.parent == run_dir / "docs":
                 category = "index"
             elif re.match(r"\[f\d+\]: ", stripped):
                 category = "signature_location"

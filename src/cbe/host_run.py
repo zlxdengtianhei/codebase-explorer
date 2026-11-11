@@ -15,10 +15,21 @@ frozen plan and every task's state, attempts, timings, and output path;
 re-reads the state under a lock, so any host continues with ``resume``.
 
 No single task failure voids a run. Detail tasks have three answer attempts;
-other tasks have two. Each strict-check failure is re-asked with the exact error
-until the final attempt, when a usable answer may be normalized and flagged.
-Only an unusable final answer marks the task failed. Finished batches always render; failed parts stay pending until
-retried, and the overview task can be retried on its own.
+other tasks have two. A detail answer is decoded unit by unit: what is usable is
+kept, and a re-ask lists only the gaps (symbols with logic that no unit explains,
+units that were rejected). After the last attempt the remaining gaps are indexed
+without prose and flagged ``unexplained``; the task still completes.
+
+The module tree is made by the program: once all detail is settled ``skeleton.build``
+freezes its structure into the run state, and ``tree_name_<k>`` tasks (batches of leaf
+modules) and one ``tree_top`` task (all internal nodes) only name it (``treename``). Those
+answers are decoded node by node like detail answers; a node that stays unnamed after the
+last attempt gets a program-made title and the task still completes.
+
+Other tasks are re-asked with the exact error, and a usable final answer is normalized and
+flagged. Only an unusable final answer marks a task failed. Finished batches always
+render; failed parts stay pending until retried, and the overview task can be
+retried on its own.
 """
 
 from __future__ import annotations
@@ -35,25 +46,24 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterator
 
-from cbe import aggregation, batching, checks, docs, projection, prompts, symbols
+from cbe import aggregation, batching, checks, docs, projection, prompts, skeleton, symbols, treename
 from cbe import __version__
 from cbe import source_context
+from cbe.token_budget import count_text_tokens
 
 
-SCHEMA = "cbe-host-run/2"
+SCHEMA = "cbe-host-run/3"
 MAX_ATTEMPTS = 2
 DETAIL_MAX_ATTEMPTS = 3
 REVIEW_MODES = ("none", "sample", "all")
 # One switch for both drivers: change to "all" to review every module by default.
 DEFAULT_REVIEW = "sample"
-ORDER = {"names": 0, "module": 1, "repair": 2, "tree": 3, "review": 4, "system": 5}
+TREE_KINDS = ("tree_name", "tree_top")
+ORDER = {"module": 1, "repair": 2, "tree_name": 3, "tree_top": 3, "review": 4, "system": 5}
+LEGACY_KINDS = ("names", "tree")   # tasks of runs planned before the program-made tree
 
 
 class HostRunError(ValueError):
-    pass
-
-
-class MergeBudgetError(HostRunError):
     pass
 
 
@@ -80,6 +90,7 @@ class _RunState(dict[str, Any]):
     # Cache only within one locked operation; attributes are never serialized.
     context: dict[str, Any] | None = None
     aggregation_cache: tuple | None = None
+    tree_cache: tuple | None = None
 
 
 def context_digest(context: dict[str, Any]) -> str:
@@ -177,20 +188,54 @@ def _semantic_units(run_dir: Path, state: dict[str, Any]) -> tuple[dict[str, dic
     return units, dispositions
 
 
-def _semantic_tree(run_dir: Path, state: dict[str, Any], units: dict[str, dict]) -> dict[str, Any]:
-    """Accepted tree, or an honest mechanical batch grouping while it is missing."""
-    tree = _accepted(run_dir, "tree") if "tree" in state["tasks"] else None
-    if tree:
+def _legacy_state(state: dict[str, Any]) -> bool:
+    return any(task["kind"] in LEGACY_KINDS for task in state["tasks"].values())
+
+
+def _refuse_legacy(state: dict[str, Any]) -> None:
+    if _legacy_state(state):
+        raise HostRunError("this run was planned with the earlier tree tasks (names, tree), which this build "
+                           "no longer runs; run `plan` again for a fresh run. Its finished docs can still be "
+                           "rendered, searched and queried")
+
+
+def _tree_names(run_dir: Path, state: dict[str, Any]) -> dict[str, dict]:
+    """Records of every node a finished tree task has named, by node id."""
+    names: dict[str, dict] = {}
+    for tid, task in state["tasks"].items():
+        if task["kind"] in TREE_KINDS and task["status"] == "done":
+            names.update((_accepted(run_dir, tid) or {}).get("names") or {})
+    return names
+
+
+def _semantic_tree(run_dir: Path, state: dict[str, Any]) -> dict[str, Any]:
+    """The tree as far as it is named: the frozen skeleton with the accepted names, program-made
+    titles for the rest. Before the skeleton is frozen it is built from the units finished so far."""
+    if _legacy_state(state):
         if state.get("aggregation", {}).get("regions"):
-            from cbe.aggregation import compose
-            return compose(tree, _subtrees(run_dir, state, units))
+            raise HostRunError("this run was built with region trees, which this build no longer composes; "
+                               "`find`, `query` and `source` still work on its docs and catalog; for the "
+                               "new entry page run `plan` again and generate")
+        tree = _accepted(run_dir, "tree")
+        if tree is None:
+            raise HostRunError("this run has no accepted tree; run `plan` again")
         return tree
-    if state.get("aggregation", {}).get("regions"):
-        regions = state["aggregation"]["regions"]
-        upper = checks.mechanical_tree([{"number": 0, "title": "Accepted region subtrees",
-                                        "files": []}], {r["id"]: {} for r in regions})
-        return aggregation.compose(upper, _subtrees(run_dir, state, units))
-    return checks.mechanical_tree(state["modules"], units)
+    records, edges = _aggregation_inputs(run_dir, state)
+    fingerprint = _detail_fingerprint(run_dir, state)
+    frozen = state.get("skeleton")
+    if frozen and frozen["input_digest"] == fingerprint:
+        nodes = frozen["nodes"]
+    else:
+        cached = getattr(state, "tree_cache", None)
+        if cached is None or cached[0] != fingerprint:
+            cached = fingerprint, skeleton.build(records, edges)["nodes"]
+            if isinstance(state, _RunState):
+                state.tree_cache = cached
+        nodes = cached[1]
+    if not nodes:
+        return treename.empty_tree()
+    return treename.assemble(treename.Tree(nodes), _tree_names(run_dir, state), records, edges,
+                             Path(state["repo"]).name)
 
 
 def _detail_fingerprint(run_dir: Path, state: dict[str, Any]) -> str:
@@ -247,50 +292,46 @@ def _aggregation_inputs(run_dir: Path, state: dict[str, Any]) -> tuple[dict, lis
     return payload
 
 
-def _invalidate_regions(run_dir: Path, state: dict[str, Any]) -> None:
-    for tid in list(state["tasks"]):
-        if state["tasks"][tid].get("region"):
-            del state["tasks"][tid]
-            (state_dir(run_dir) / "accepted" / f"{tid}.json").unlink(missing_ok=True)
+def _invalidate_tree(run_dir: Path, state: dict[str, Any]) -> None:
+    """Drop the frozen skeleton, its naming tasks and their answers (the detail changed)."""
+    for tid in [tid for tid, task in state["tasks"].items() if task["kind"] in TREE_KINDS]:
+        del state["tasks"][tid]
+        (state_dir(run_dir) / "accepted" / f"{tid}.json").unlink(missing_ok=True)
+        _partial_path(run_dir, tid).unlink(missing_ok=True)
+    state.pop("skeleton", None)
+    (state_dir(run_dir) / "accepted" / "tree.json").unlink(missing_ok=True)
 
 
-def _subtrees(run_dir: Path, state: dict[str, Any], units: dict) -> dict:
-    result = {}
-    for region in state["aggregation"]["regions"]:
-        rid = region["id"]
-        task_id = "tree_" + rid
-        result[rid] = _accepted(run_dir, task_id) or checks.mechanical_tree(
-            [{"number": 0, "title": rid, "files": [r["path"] for uid in region["unit_ids"]
-              for r in units[uid].get("ranges", [])]}],
-            {uid: units[uid] for uid in region["unit_ids"]})
-    return result
+def _prepare_tree(run_dir: Path, state: dict[str, Any]) -> None:
+    """Once all detail and review is settled, freeze the skeleton and make the naming tasks.
 
-
-def _prepare_aggregation(run_dir: Path, state: dict[str, Any]) -> None:
-    """Plan only once detail is available; repairs invalidate the region snapshot."""
-    from cbe.aggregation import Limits, partition
-    modules = [t for t in state["tasks"].values() if t["kind"] == "module"]
-    if not modules or not all(t["status"] in {"done", "failed"} for t in modules):
+    The same detail finds the same skeleton in the run state; changed detail (a late module, a
+    repair) drops it and starts over."""
+    tasks = state["tasks"]
+    if _legacy_state(state) or not _done_modules(state) or not all(
+            _settled(state, task) for task in tasks.values() if task["kind"] in {"module", "repair", "review"}):
         return
     fingerprint = _detail_fingerprint(run_dir, state)
-    if state.get("aggregation", {}).get("input_digest") == fingerprint:
+    if (state.get("skeleton") or {}).get("input_digest") == fingerprint:
         return
     units, edges = _aggregation_inputs(run_dir, state)
-    # A newly completed detail/repair invalidates all regions, including leases.
-    _invalidate_regions(run_dir, state)
-    limits = Limits.configured()
-    render_prompt = lambda rows, graph: prompts.TOOL_FREE_RULES + "\n\n" + prompts.tree_prompt(
-        rows, sorted({r["path"] for row in rows.values() for r in row.get("ranges", [])}), graph)
-    regions = partition(units, edges, limits, render_prompt,
-                        context=_verified_context(run_dir, state)) if units else []
-    state["aggregation"] = {"input_digest": fingerprint, "limits": {"max_units": limits.max_units,
-                              "max_tokens": limits.max_tokens}, "regions": regions}
-    for region in regions:
-        tid = "tree_" + region["id"]
-        state["tasks"][tid] = {**_task(tid, "tree"), "region": region["id"]}
-    if regions:
-        log_event(run_dir, "queue", f"{len(regions)} candidate region trees followed by tree merge",
-                  regions=regions)
+    if not units and not state.get("skeleton"):
+        return  # an empty run: _auto_complete_empty_modules published its one-node tree
+    _invalidate_tree(run_dir, state)
+    if not units:
+        return
+    frozen = {**treename.freeze(units, edges), "input_digest": fingerprint}
+    state["skeleton"] = frozen
+    for number in range(len(frozen["batches"])):
+        tid = f"tree_name_{number + 1}"
+        tasks[tid] = _task(tid, "tree_name", batch=number)
+    parents = {node["parent"] for node in frozen["nodes"]}
+    leaves = sum(node["id"] not in parents for node in frozen["nodes"])
+    if leaves > 1:
+        tasks["tree_top"] = _task("tree_top", "tree_top")
+    log_event(run_dir, "queue", f"module skeleton frozen: {leaves} modules in {len(frozen['nodes'])} nodes; "
+              f"{len(frozen['batches'])} naming batch(es)" + (", then tree_top" if leaves > 1 else ""),
+              leaves=leaves, nodes=len(frozen["nodes"]), batches=len(frozen["batches"]))
 
 
 def _known_unit_ids(run_dir: Path, state: dict[str, Any], *, exclude: int | None = None) -> set[str]:
@@ -351,13 +392,7 @@ def _auto_complete_empty_modules(run_dir: Path, state: dict[str, Any]) -> list[s
         # repository; before that the real units are still in flight.
         units, _ = _semantic_units(run_dir, state)
         if not units:
-            tree = state["tasks"].get("tree")
-            if tree is not None and tree["status"] == "pending":
-                write_json(state_dir(run_dir) / "accepted" / "tree.json",
-                            checks.mechanical_tree(state["modules"], units))
-                tree["status"], tree["output"] = "done", "host/accepted/tree.json"
-                log_event(run_dir, "accept", "tree auto-completed mechanically: no units in this run",
-                       task="tree")
+            write_json(state_dir(run_dir) / "accepted" / "tree.json", treename.empty_tree())
             system = state["tasks"].get("system")
             if system is not None and system["status"] == "pending":
                 write_json(state_dir(run_dir) / "accepted" / "system.json",
@@ -394,7 +429,10 @@ def locked_state(run_dir: Path) -> Iterator[dict[str, Any]]:
             found = state.get("schema")
             hint = ("; this run uses the older free-text module layout, which is not "
                     "readable by this build. Start a new run instead of resuming it."
-                    if found == "cbe-host-run/1" else ".")
+                    if found == "cbe-host-run/1" else
+                    "; this run was planned for the older answer format (full inventory ids and "
+                    "dispositions), which this build no longer accepts. Run `plan` again for a fresh run."
+                    if found == "cbe-host-run/2" else ".")
             raise HostRunError(f"unsupported run schema {found!r}{hint}")
         if not state.get("semantic"):
             raise HostRunError("this run uses the module-page layout of CBE before 2.2, which this build "
@@ -422,14 +460,6 @@ def _task(task_id: str, kind: str, module: int | None = None, **extra: Any) -> d
     return {"id": task_id, "kind": kind, "module": module, "status": "pending", "attempts": 0,
             "errors": [], "flags": [], "lease": None, "leased_at": None, "submitted_at": None,
             "seconds": None, "output": None, "usage": [], **extra}
-
-
-def _modules(state: dict[str, Any]) -> list[batching.Module]:
-    """Rebuild the reading batches (paths, tokens and signatures; no source text) from the run state."""
-    files = {row["path"]: batching.SourceFile(row["path"], "", row["tokens"], row["digest"], list(row["signatures"]))
-             for row in state["files"]}
-    return [batching.Module(row["number"], [files[path] for path in row["files"]], row["bucket"], row["title"])
-            for row in state["modules"]]
 
 
 def _accepted(run_dir: Path, task_id: str) -> dict[str, Any] | None:
@@ -532,10 +562,9 @@ def plan(repo: Path, run_dir: Path | None = None, *, review: str = DEFAULT_REVIE
     context = _build_context(repo, selected, graph_path=graph_path)
     symbols.ensure_chunk_coverage(context, repo, selected)
     inventory = symbols.inventory_from_context(context, selected)
-    tasks: dict[str, dict[str, Any]] = {"names": _task("names", "names")}
+    tasks: dict[str, dict[str, Any]] = {}
     for module in modules:
         tasks[f"module_{module.number + 1}"] = _task(f"module_{module.number + 1}", "module", module.number)
-    tasks["tree"] = _task("tree", "tree")
     if review == "sample":
         reviewed = [max(modules, key=lambda module: (module.tokens, -module.number))]
     else:
@@ -600,9 +629,6 @@ def _settled(state: dict[str, Any], task: dict[str, Any]) -> bool:
         return True
     if task["kind"] in {"review", "repair"}:
         return _module_task(state, task["module"])["status"] == "failed"
-    if task["kind"] == "tree":
-        modules = [other for other in state["tasks"].values() if other["kind"] == "module"]
-        return all(other["status"] in {"done", "failed"} for other in modules)
     if task["kind"] == "system":
         others = [other for other in state["tasks"].values() if other["kind"] != "system"]
         return all(_settled(state, other) for other in others) and not _done_modules(state)
@@ -610,33 +636,26 @@ def _settled(state: dict[str, Any], task: dict[str, Any]) -> bool:
 
 
 def _ready(state: dict[str, Any]) -> list[str]:
+    if _legacy_state(state):
+        return []
     tasks = state["tasks"]
-    titled = tasks["names"]["status"] in {"done", "failed"}
+    tree_names = [task for task in tasks.values() if task["kind"] == "tree_name"]
     ready = []
     for task_id, task in tasks.items():
         if task["status"] != "pending":
             continue
         kind = task["kind"]
-        if kind in {"names", "module", "repair"}:
-            # Detail prompts use only the frozen context and inventory.
+        if kind in {"module", "repair", "tree_name"}:
+            # Detail prompts use only the frozen context and inventory; tree_name tasks exist only
+            # for a skeleton frozen after all detail and review settled.
             ok = True
-        elif kind == "tree":
-            modules = [other for other in tasks.values() if other["kind"] == "module"]
-            ok = titled and bool(modules) and all(other["status"] in {"done", "failed"} for other in modules) \
-                and any(other["status"] == "done" for other in modules)
-            if ok:
-                # Freeze reviewed detail before handing out any tree lease.
-                ok = all(_settled(state, t) for t in tasks.values()
-                         if t["kind"] in {"review", "repair"})
-            if ok and task_id == "tree" and state.get("aggregation", {}).get("regions"):
-                ok = all(tasks["tree_" + r["id"]]["status"] in {"done", "failed"}
-                         for r in state["aggregation"]["regions"])
+        elif kind == "tree_top":
+            ok = all(other["status"] in {"done", "failed"} for other in tree_names)
         elif kind == "review":
             ok = _module_task(state, task["module"])["status"] == "done"
         else:
             others = [other for other in tasks.values() if other["kind"] != "system"]
-            tree_ok = ("tree" not in tasks) or tasks["tree"]["status"] in {"done", "failed"}
-            ok = titled and bool(_done_modules(state)) and tree_ok \
+            ok = bool(_done_modules(state)) and bool(state.get("skeleton")) \
                 and all(_settled(state, other) for other in others)
         if ok:
             ready.append(task_id)
@@ -679,10 +698,10 @@ def _detail_task(run_dir: Path, state: dict[str, Any], task: dict[str, Any], *, 
 def _system_inputs(run_dir: Path, state: dict[str, Any]) -> tuple[list[dict], int, dict, dict]:
     """Use the same tree, evidence and character limit for prompt and acceptance."""
     units, edges = _aggregation_inputs(run_dir, state)
-    tree = _semantic_tree(run_dir, state, units)
+    tree = _semantic_tree(run_dir, state)
     nodes = tree.get("nodes") or []
     view = aggregation.relationship_view(tree, edges, _verified_context(run_dir, state).get("graph"))
-    return nodes, checks.system_limit(len(nodes)), view, units
+    return nodes, checks.system_limit(), view, units
 
 
 def _body(run_dir: Path, state: dict[str, Any], task: dict[str, Any], *, embed: bool) -> tuple[str, str]:
@@ -699,39 +718,36 @@ def _body(run_dir: Path, state: dict[str, Any], task: dict[str, Any], *, embed: 
         no_source += (" Use your file-writing tool to write the result JSON. "
                       "Do not run shell commands, scripts, or interpreters, not even to assemble or check the JSON: "
                       "in the user's harness each one asks for permission, and this task does not need them.")
-    if kind == "names":
-        return no_source, prompts.names_prompt(_modules(state))
     if kind in {"module", "repair"}:
         return reading, _detail_task(run_dir, state, task, embed=embed, with_diagnostics=True,
                                      issues=task.get("issues") if kind == "repair" else None)
-    if kind == "tree":
-        from cbe.aggregation import merge_inputs
-        units, edges = _aggregation_inputs(run_dir, state)
-        regions = state.get("aggregation", {}).get("regions") or []
-        if task.get("region"):
-            wanted = aggregation.region_unit_ids(regions, task["region"])
-            units = {uid: row for uid, row in units.items() if uid in wanted}
-            edges = [e for e in edges if e["from"] in wanted and e["to"] in wanted]
-        elif regions:
-            units, edges = merge_inputs(regions, _subtrees(run_dir, state, units), edges)
-        all_paths = sorted({r["path"] for row in units.values() for r in row.get("ranges", [])})
-        body = prompts.tree_prompt(units, all_paths, edges,
-                                   merge=bool(regions and not task.get("region")))
-        if regions and not task.get("region"):
-            from cbe.token_budget import count_text_tokens
-            size = count_text_tokens(prompts.TOOL_FREE_RULES + "\n\n" + body)
-            budget = state["aggregation"]["limits"]["max_tokens"]
-            state["aggregation"]["merge_input_tokens"] = size
-            if size > budget:
-                raise MergeBudgetError(f"tree merge input {size} exceeds token budget {budget}; "
-                                   "increase CBE_TREE_MAX_TOKENS and replan; accepted region subtrees are retained")
-        return no_source, body
+    if kind in TREE_KINDS:
+        return no_source, _tree_body(run_dir, state, task)
     if kind == "review":
         units = _module_output(run_dir, state, task["module"])
         return reading, prompts.review_prompt(
             units, _detail_task(run_dir, state, task, embed=embed, with_diagnostics=False))
     nodes, limit, view, _ = _system_inputs(run_dir, state)
     return no_source, prompts.system_prompt(nodes, limit, view)
+
+
+def _tree_names_for_top(run_dir: Path, state: dict[str, Any], tree: "treename.Tree", records: dict) -> dict[str, dict]:
+    """Every leaf's record: the accepted one, or a program-made one when its naming task has not finished."""
+    names = _tree_names(run_dir, state)
+    for leaf in tree.leaves():
+        if leaf not in names:
+            names[leaf] = treename.program_record(records, tree.members(leaf))
+    return names
+
+
+def _tree_body(run_dir: Path, state: dict[str, Any], task: dict[str, Any]) -> str:
+    records, edges = _aggregation_inputs(run_dir, state)
+    tree = treename.Tree(state["skeleton"]["nodes"])
+    if task["kind"] == "tree_name":
+        batch = state["skeleton"]["batches"][task["batch"]]
+        return prompts.tree_name_prompt(treename.name_blocks(batch, tree, records, edges))
+    names = _tree_names_for_top(run_dir, state, tree, records)
+    return prompts.tree_top_prompt(Path(state["repo"]).name, treename.top_blocks(tree, names, records, edges))
 
 
 def _previous_error(task: dict[str, Any]) -> str:
@@ -747,16 +763,20 @@ def _prompt(run_dir: Path, state: dict[str, Any], task: dict[str, Any]) -> str:
     return (f"# Codebase Explorer task `{task['id']}` (run {state['run_tag']})\n\n{rules}\n\n"
             f"When you are done, write exactly one JSON object (no Markdown fences, no commentary) to this "
             f"file, creating or replacing it:\n{outbox}\n\nThen reply with the single line: DONE {task['id']}\n"
-            f"{_previous_error(task)}\n---\n\n{body}")
+            f"{_retry_note(run_dir, state, task) or _previous_error(task)}\n---\n\n{body}")
 
 
 def completion_prompt(run_dir: Path, task_id: str) -> str:
     """The same task as one tool-free completion: source is embedded."""
     with locked_state(run_dir) as state:
+        _refuse_legacy(state)
         task = state["tasks"][task_id]
         _, body = _body(run_dir, state, task, embed=True)
         prompt = prompts.TOOL_FREE_RULES + "\n\n" + body
-        if task["errors"]:
+        note = _retry_note(run_dir, state, task)
+        if note is not None:
+            prompt += note  # the first-ask text stays byte-identical, so the provider's prefix cache can serve it
+        elif task["errors"]:
             prompt += "\n\nPrevious completion failed. Correct it now. Original error: " + task["errors"][-1][:2000]
             previous = state_dir(run_dir) / "raw" / f"{task_id}.attempt-{task['attempts']}.txt"
             if previous.is_file():
@@ -767,9 +787,10 @@ def completion_prompt(run_dir: Path, task_id: str) -> str:
 def next_tasks(run_dir: Path, *, limit: int | None = None, owner: str | None = None,
                reclaim_after: int | None = None) -> dict[str, Any]:
     with locked_state(run_dir) as state:
+        _refuse_legacy(state)
         _verified_context(run_dir, state)
         _auto_complete_empty_modules(run_dir, state)
-        _prepare_aggregation(run_dir, state)
+        _prepare_tree(run_dir, state)
         now = time.time()
         if reclaim_after is not None:
             for task in state["tasks"].values():
@@ -791,23 +812,12 @@ def next_tasks(run_dir: Path, *, limit: int | None = None, owner: str | None = N
                     raise HostRunError("source missing or changed since plan: " + ", ".join(changed[:10])
                                        + "; start a new plan")
             prompt_path = state_dir(run_dir) / "tasks" / f"{task_id}.md"
-            try:
-                prompt_text = _prompt(run_dir, state, task)
-            except MergeBudgetError as exc:
-                task["status"], task["lease"] = "failed", None
-                task["errors"].append(str(exc))
-                log_event(run_dir, "fail", str(exc), task=task_id)
-                _maybe_render(run_dir, state, force=True)
-                queue.extend(tid for tid in _ready(state)[:max(0, slots - len(handed))] if tid not in queue)
-                continue
-            prompt_path.write_text(prompt_text, encoding="utf-8")
+            prompt_path.write_text(_prompt(run_dir, state, task), encoding="utf-8")
             (state_dir(run_dir) / "outbox" / f"{task_id}.json").unlink(missing_ok=True)
             stamp = _now()
             task["status"], task["leased_at"] = "leased", stamp
             task["lease"] = {"id": secrets.token_hex(4), "at": stamp, "owner": owner or state["host"]}
             if task["kind"] == "system":
-                task["covered"] = _done_modules(state)
-            if task["kind"] == "tree":
                 task["covered"] = _done_modules(state)
             labels = _labels(state, task_id)
             handed.append({
@@ -829,62 +839,8 @@ def next_tasks(run_dir: Path, *, limit: int | None = None, owner: str | None = N
 # ---------------------------------------------------------------- submit
 
 
-def _raise_problems(problems: list[str]) -> None:
-    """Adapt a validator that returns problems to one that raises, so the
-    submit path's schema_error handling and re-ask work unchanged."""
-    if problems:
-        raise ValueError("; ".join(problems[:12]))
-
-
 def _checks(run_dir: Path, state: dict[str, Any], task: dict[str, Any]) -> tuple[Any, Any]:
-    """(strict check, normalizer) for a task; both mutate the value they accept."""
-    modules = _modules(state)
-    if task["kind"] in {"module", "repair"}:
-        paths = list(state["modules"][task["module"]]["files"])
-        subset = symbols.inventory_for_paths(state["inventory"], paths)
-        known = _known_unit_ids(run_dir, state, exclude=task["module"])
-        def validate_detail(value):
-            problems = checks.validate_details(value, paths, subset, known)
-            # The retry prompt has a bounded error excerpt. Put actionable
-            # identity diagnostics before secondary shape/coverage errors.
-            problems.sort(key=lambda problem: ("not in this batch's inventory" not in problem,
-                                               "dispositions missing inventory ids" not in problem))
-            _raise_problems(problems)
-        return (validate_detail,
-                lambda value: checks.normalize_details(value, paths, subset, known))
-    if task["kind"] == "tree":
-        universe = set(_semantic_units(run_dir, state)[0])
-        regions = state.get("aggregation", {}).get("regions") or []
-        if task.get("region"):
-            universe = aggregation.region_unit_ids(regions, task["region"])
-        elif regions:
-            universe = {r["id"] for r in regions}
-        if regions and not task.get("region"):
-            from cbe.aggregation import compose
-            units = _semantic_units(run_dir, state)[0]
-            subtrees = _subtrees(run_dir, state, units)
-            def validate_merge(value):
-                _raise_problems(checks.validate_tree(value, universe))
-                _raise_problems(checks.validate_tree(compose(value, subtrees), set(units)))
-            def normalize_merge(value):
-                flags = checks.normalize_tree(value, universe)
-                validate_merge(value)
-                return flags
-            return validate_merge, normalize_merge
-        if task.get("region"):
-            def validate_region(value):
-                _raise_problems(checks.validate_tree(value, universe))
-                aggregation.validate_region_ids(value, task["region"])
-            def normalize_region(value):
-                flags = checks.normalize_tree(value, universe)
-                validate_region(value)
-                return flags
-            return validate_region, normalize_region
-        return (lambda value: _raise_problems(checks.validate_tree(value, universe)),
-                lambda value: checks.normalize_tree(value, universe))
-    if task["kind"] == "names":
-        return (lambda value: checks.check_naming(value, modules),
-                lambda value: checks.normalize_naming(value, modules))
+    """(strict check, normalizer) for a non-detail task; both mutate the value they accept."""
     if task["kind"] == "review":
         return checks.check_review, checks.normalize_review
     _, limit, view, units = _system_inputs(run_dir, state)
@@ -900,6 +856,166 @@ def _checks(run_dir: Path, state: dict[str, Any], task: dict[str, Any]) -> tuple
         repaired = True
         return flags
     return strict, normalize
+
+
+DETAIL_KINDS = {"module", "repair"}
+
+
+def _partial_path(run_dir: Path, task_id: str) -> Path:
+    return state_dir(run_dir) / "partial" / f"{task_id}.json"
+
+
+def _load_partial(run_dir: Path, task_id: str) -> dict[str, Any]:
+    """Units already accepted from earlier answers of one detail task."""
+    path = _partial_path(run_dir, task_id)
+    if path.is_file():
+        return json.loads(path.read_text(encoding="utf-8"))
+    if task_id.startswith("tree_"):
+        return {"good": {}, "errors": {}}
+    return {"units": [], "flags": [], "invalid": [], "notes": "", "decoded": False}
+
+
+def _detail_table(state: dict[str, Any], task: dict[str, Any]) -> list[dict]:
+    return symbols.batch_table(state["modules"][task["module"]]["files"], state["inventory"])
+
+
+def _gaps(run_dir: Path, state: dict[str, Any], table: list[dict], units: list[dict]) -> list[dict]:
+    """Symbols with logic that no unit explains yet (see ``checks.find_gaps``)."""
+    wanted = {row["id"] for row in table if row["kind"] in checks.GAP_KINDS}
+    tokens = {chunk["id"]: count_text_tokens(chunk.get("text") or "")
+              for chunk in _verified_context(run_dir, state).get("chunks") or [] if chunk["id"] in wanted}
+    return checks.find_gaps(table, units, tokens)
+
+
+def _tree_nodes(state: dict[str, Any], task: dict[str, Any], tree: "treename.Tree") -> dict[str, str]:
+    """``{label: node}`` of the nodes a tree task names."""
+    if task["kind"] == "tree_name":
+        return treename.name_context(state["skeleton"]["batches"][task["batch"]], tree)[0]
+    return treename.top_context(tree)
+
+
+def _tree_retry_note(run_dir: Path, state: dict[str, Any], task: dict[str, Any]) -> str:
+    partial = _load_partial(run_dir, task["id"])
+    labels = _tree_nodes(state, task, treename.Tree(state["skeleton"]["nodes"]))
+    pending = [label for label, node in labels.items() if node not in partial["good"]]
+    return prompts.tree_retry_note(pending, [m for node, rows in partial["errors"].items() for m in rows],
+                                   sorted(r["title"] for r in partial["good"].values()))
+
+
+def _retry_note(run_dir: Path, state: dict[str, Any], task: dict[str, Any]) -> str | None:
+    """The follow-up that a re-ask appends: for a detail task only the gaps, for a tree task only the
+    nodes that were rejected."""
+    if task["kind"] not in DETAIL_KINDS | set(TREE_KINDS) or not _partial_path(run_dir, task["id"]).is_file():
+        return None
+    if task["kind"] in TREE_KINDS:
+        return _tree_retry_note(run_dir, state, task)
+    partial = _load_partial(run_dir, task["id"])
+    table = _detail_table(state, task)
+    problem = task["errors"][-1][:300] if task["errors"] and task["errors"][-1].startswith("schema_error") else None
+    return prompts.gap_note(_gaps(run_dir, state, table, partial["units"]), partial["invalid"], problem)
+
+
+def _settle_detail(run_dir: Path, state: dict[str, Any], task: dict[str, Any], value: dict[str, Any] | None,
+                   error: str | None, final: bool) -> tuple[str | None, dict[str, Any] | None, list[str]]:
+    """Decode one detail answer and fold it into the task's accepted units.
+
+    Returns ``(error, payload, flags)``: ``payload`` is the internal result when the
+    batch is complete, or when this was the last answer (remaining gaps are indexed
+    without prose and flagged ``unexplained``). Otherwise ``error`` names what is
+    still missing and the decoded units stay saved for the re-ask."""
+    if value is None and not (error or "").startswith("schema_error"):
+        return error, None, []  # a provider-side failure: no answer to decode; saved units wait
+    table = _detail_table(state, task)
+    partial = _load_partial(run_dir, task["id"])
+    decoded = None
+    if value is not None:
+        try:
+            decoded = checks.decode_details(value, table, have=partial["units"],
+                                            known_ids=_known_unit_ids(run_dir, state, exclude=task["module"]))
+        except ValueError as exc:
+            error = f"schema_error:{exc}"
+    if decoded is not None:
+        partial["units"] += decoded.units
+        partial["flags"] += decoded.flags
+        partial["invalid"] = decoded.invalid
+        partial["notes"] = decoded.notes or partial["notes"]
+        partial["decoded"] = True
+    gaps = _gaps(run_dir, state, table, partial["units"])
+    if decoded is not None and not gaps:
+        # A rejected unit alone never earns a re-ask: if its symbols mattered they are gaps, and
+        # a unit that names no symbol (a stray string in the list) has nothing to recover.
+        error = None
+        partial["flags"] += [f"invalid unit h={row['h']}: {row['why']}" for row in decoded.invalid]
+    elif not final or not partial["decoded"]:
+        if decoded is not None:
+            _partial_path(run_dir, task["id"]).parent.mkdir(exist_ok=True)
+            write_json(_partial_path(run_dir, task["id"]), partial)
+            error = (f"incomplete: {len(gaps)} symbol(s) with logic still without a unit "
+                     f"{[row['n'] for row in gaps][:20]}; {len(decoded.invalid)} unit(s) rejected")
+        return error, None, []
+    else:
+        error = None
+        partial["flags"] += [f"invalid unit h={row['h']}: {row['why']}" for row in partial["invalid"]]
+        partial["flags"] += [f"unexplained: {row['id']}" for row in gaps]
+    _partial_path(run_dir, task["id"]).unlink(missing_ok=True)
+    return None, checks.assemble_details(table, partial["units"], notes=partial["notes"]), partial["flags"]
+
+
+def _settle_tree(run_dir: Path, state: dict[str, Any], task: dict[str, Any], value: dict[str, Any] | None,
+                 error: str | None, final: bool) -> tuple[str | None, dict[str, Any] | None, list[str]]:
+    """Decode one tree_name or tree_top answer node by node (see ``treename``).
+
+    Same contract as ``_settle_detail``: the good nodes are kept, a re-ask names only the rest, and
+    after the last answer every node still unnamed gets a program-made title, so the task completes."""
+    if value is None and not (error or "").startswith("schema_error"):
+        return error, None, []  # a provider-side failure: no answer to decode; saved nodes wait
+    records, _ = _aggregation_inputs(run_dir, state)
+    tree = treename.Tree(state["skeleton"]["nodes"])
+    labels = _tree_nodes(state, task, tree)
+    partial = _load_partial(run_dir, task["id"])
+    pending = set(labels.values()) - set(partial["good"])
+    taken = {treename.normalize_title(r["title"]) for r in partial["good"].values()}
+    problems: dict[str, list[str]] = {}
+    if value is not None:
+        try:
+            if task["kind"] == "tree_name":
+                good, problems = treename.decode_names(value, state["skeleton"]["batches"][task["batch"]], tree,
+                                                       pending, taken)
+            else:
+                good, problems = treename.decode_top(value, tree, _tree_names_for_top(run_dir, state, tree, records),
+                                                     pending, taken)
+            partial["good"].update(good)
+        except ValueError as exc:
+            error = f"schema_error:{exc}"
+    pending -= set(partial["good"])
+    if not pending:
+        error, flags = None, []
+    elif not final:
+        if partial["good"]:
+            _partial_path(run_dir, task["id"]).parent.mkdir(exist_ok=True)
+            write_json(_partial_path(run_dir, task["id"]), {**partial, "errors": problems})
+        shown = "; ".join(m for rows in problems.values() for m in rows)[:300] or (error or "")
+        return f"incomplete: {len(pending)} of {len(labels)} node(s) not named: {shown}", None, []
+    else:
+        error, flags = None, []
+        for label, node in labels.items():
+            if node in pending:
+                partial["good"][node] = treename.program_record(records, tree.members(node))
+                why = "; ".join(problems.get(node, [])) or "no usable answer"
+                flags.append(f"program-made title for {label}: {why}"[:300])
+    _partial_path(run_dir, task["id"]).unlink(missing_ok=True)
+    return None, {"names": partial["good"]}, flags
+
+
+def _write_tree(run_dir: Path, state: dict[str, Any]) -> None:
+    """When every naming task is done, publish the finished tree as ``accepted/tree.json``."""
+    if all(task["status"] == "done" for task in state["tasks"].values() if task["kind"] in TREE_KINDS):
+        tree = _semantic_tree(run_dir, state)
+        units, _ = _aggregation_inputs(run_dir, state)
+        problems = checks.validate_tree(tree, set(units))
+        if problems:
+            raise HostRunError("the assembled module tree is invalid: " + "; ".join(problems[:6]))
+        write_json(state_dir(run_dir) / "accepted" / "tree.json", tree)
 
 
 def _usage_entry(usage: dict[str, Any] | None, attempt: int) -> dict[str, Any] | None:
@@ -928,16 +1044,24 @@ def _apply_submit(run_dir: Path, state: dict[str, Any], task: dict[str, Any], re
     archive = state_dir(run_dir) / "raw"
     if raw is not None:
         (archive / f"{task['id']}.attempt-{attempt}.txt").write_text(raw, encoding="utf-8")
-    strict, normalize = _checks(run_dir, state, task)
     value: dict[str, Any] | None = None
     flags: list[str] = []
+    detail = task["kind"] in DETAIL_KINDS
+    naming = task["kind"] in TREE_KINDS
+    if not (detail or naming):
+        strict, normalize = _checks(run_dir, state, task)
     if error is None:
         try:
             value = checks.json_object(raw or "")
-            strict(value)
+            if not (detail or naming):
+                strict(value)
         except (ValueError, TypeError) as exc:
             error, value = f"schema_error:{exc}", None
-    if error is not None and final:
+    if detail:
+        error, value, flags = _settle_detail(run_dir, state, task, value, error, final)
+    elif naming:
+        error, value, flags = _settle_tree(run_dir, state, task, value, error, final)
+    elif error is not None and final:
         # Answers without delivered source or with provider truncation must
         # never be resurrected by the final-attempt normalizer.
         undelivered = set(task.get("undelivered_attempts") or []) | set(task.get("unsafe_attempts") or [])
@@ -953,17 +1077,9 @@ def _apply_submit(run_dir: Path, state: dict[str, Any], task: dict[str, Any], re
                 parsed = checks.json_object(candidate.read_text(encoding="utf-8"))
                 flags = normalize(parsed)
                 strict(parsed)
-            except checks.MissingDispositionsError as exc:
-                if number == attempt:
-                    error = f"schema_error:{exc}"
-                if task["kind"] not in {"module", "repair"}:
-                    break
-                continue
             except (ValueError, TypeError):
                 continue
             value = parsed
-            if number < attempt and task["kind"] in {"module", "repair"}:
-                flags.append(f"answer_fallback: attempt {number} (final attempt {attempt})")
             task["normalized_from"] = error
             error = None
             break
@@ -1000,34 +1116,18 @@ def _apply_submit(run_dir: Path, state: dict[str, Any], task: dict[str, Any], re
                + "; ".join(flags)[:600], task=task["id"], flags=flags)
     log_event(run_dir, "accept", f"{label} attempt {attempt}{timing} -> {task['output']}", task=task["id"],
            attempt=attempt)
-    if task["kind"] == "names":
-        for row in value["names"]:
-            state["modules"][row["module"]]["title"] = row["title"].strip()
+    if task["kind"] in TREE_KINDS:
+        _write_tree(run_dir, state)
     elif task["kind"] == "review" and value["decision"] == "needs_repair" and value["issues"]:
         repair_id = f"repair_{task['module'] + 1}"
         if repair_id not in state["tasks"]:
             state["tasks"][repair_id] = _task(repair_id, "repair", task["module"], issues=value["issues"])
             log_event(run_dir, "queue", f"{repair_id} for {len(value['issues'])} review finding(s)", task=repair_id)
     elif task["kind"] in {"module", "repair"}:
-        # Region outputs describe a fixed detail snapshot. A repair or a late
-        # module must not leave old leases/accepted upper nodes composable.
-        if state.get("aggregation", {}).get("regions"):
-            _invalidate_regions(run_dir, state)
-            state.pop("aggregation", None)
-            upper = state["tasks"]["tree"]
-            upper["status"], upper["lease"], upper["attempt_base"] = "pending", None, upper["attempts"]
-            (state_dir(run_dir) / "accepted" / "tree.json").unlink(missing_ok=True)
-        tree = state["tasks"].get("tree")
-        if tree is not None and tree["status"] == "done" \
-                and (task["kind"] == "repair"
-                     or task["module"] not in tree.get("covered", [])):
-            # Both a newly finished module and a repair can change the unit
-            # set (a repair often adds grp: units), so the ownership tree
-            # must be rebuilt or some unit ends up with no primary owner.
-            tree["status"], tree["attempt_base"] = "pending", tree["attempts"]
-            tree.pop("covered", None)
-            log_event(run_dir, "queue", "tree again so the ownership tree covers the current units",
-                   task="tree")
+        # The skeleton and the names describe a fixed detail snapshot: a repair or a late module
+        # changes the unit set, so the tree is made again.
+        if state.get("skeleton"):
+            _invalidate_tree(run_dir, state)
         system = state["tasks"]["system"]
         if system["status"] == "done" and (task["kind"] == "repair"
                                             or task["module"] not in system.get("covered", [])):
@@ -1043,6 +1143,7 @@ def _apply_submit(run_dir: Path, state: dict[str, Any], task: dict[str, Any], re
 def submit(run_dir: Path, task_id: str, *, result: Path | None = None, usage: dict[str, Any] | None = None,
            error: str | None = None, raw_text: str | None = None) -> dict[str, Any]:
     with locked_state(run_dir) as state:
+        _refuse_legacy(state)
         # Evidence is only consumed against the frozen snapshot.
         _verified_context(run_dir, state)
         task = state["tasks"].get(task_id)
@@ -1133,6 +1234,7 @@ def resume(run_dir: Path, *, owner: str | None = None, retry_failed: bool = True
     A ``graph_path`` passed on resume must be the same graph the plan froze; a
     different graph is rejected instead of silently ignored."""
     with locked_state(run_dir) as state:
+        _refuse_legacy(state)
         _verified_context(run_dir, state)
         state.setdefault("runtime_environments", []).append(_runtime_environment())
         _auto_complete_empty_modules(run_dir, state)
@@ -1220,12 +1322,9 @@ def _maybe_render(run_dir: Path, state: dict[str, Any], *, force: bool = False, 
 
 def _mechanical_semantic_overview(state: dict[str, Any], tree: dict[str, Any]) -> dict[str, str]:
     nodes = tree.get("nodes") or []
-    lines = [f"- {node.get('title') or node['id']}: {node.get('summary') or node.get('capability') or ''}"
-             for node in nodes if node.get("parent") is not None]
     return {"overview": (f"This map covers {len(state['files'])} source files in {len(nodes)} semantic "
                          "nodes. The model-written overview is not available yet, so this summary is "
-                         "generated mechanically from the responsibility tree."),
-            "maintenance_navigation": checks.truncate("\n".join(lines), checks.system_limit(max(len(nodes), 1)))}
+                         "generated mechanically from the responsibility tree.")}
 
 
 def _semantic_review_summary(run_dir: Path, state: dict[str, Any]) -> dict[str, Any]:
@@ -1258,72 +1357,42 @@ def _semantic_review_summary(run_dir: Path, state: dict[str, Any]) -> dict[str, 
                     "this is not a whole-map proof"}
 
 
-def _identity_corrections(state: dict[str, Any]) -> list[dict[str, str]]:
-    """Read durable S5d flags too, so old runs gain the same visibility on render."""
-    rows = []
-    for task in sorted(state["tasks"].values(), key=lambda row: row["id"]):
-        for flag in task.get("flags") or []:
-            match = re.fullmatch(r"id_corrected: (.*?) -> (.*?) \((.*)\)", flag)
-            if match:
-                original, corrected, location = match.groups()
-                rows.append({"task": task["id"], "original": original,
-                             "corrected": corrected, "location": location})
-    return rows
-
-
-def _answer_fallbacks(state: dict[str, Any]) -> list[dict[str, Any]]:
-    rows = []
-    for task in sorted(state["tasks"].values(), key=lambda row: row["id"]):
-        for flag in task.get("flags") or []:
-            match = re.fullmatch(r"answer_fallback: attempt (\d+) \(final attempt (\d+)\)", flag)
-            if match:
-                rows.append({"task": task["id"], "attempt": int(match[1]), "final_attempt": int(match[2])})
-    return rows
-
-
-def _index_only_fills(state: dict[str, Any]) -> list[dict[str, str]]:
-    """Count program-created entries, including flags preserved in older runs."""
-    rows = []
-    for task in sorted(state["tasks"].values(), key=lambda row: row["id"]):
-        for flag in task.get("flags") or []:
-            for suffix, reason in ((": disposition missing; treated as index_only", "missing"),
-                                   (": invalid disposition; treated as index_only", "invalid")):
-                if flag.endswith(suffix):
-                    rows.append({"task": task["id"], "symbol": flag.removesuffix(suffix),
-                                 "reason": reason})
-    return rows
+def _unexplained(state: dict[str, Any]) -> list[dict[str, str]]:
+    """Symbols that kept no prose because no answer explained them (flag ``unexplained: <id>``)."""
+    return [{"task": task["id"], "symbol": flag.removeprefix("unexplained: ")}
+            for task in sorted(state["tasks"].values(), key=lambda row: row["id"])
+            for flag in task.get("flags") or [] if flag.startswith("unexplained: ")]
 
 
 def _render(run_dir: Path, state: dict[str, Any]) -> None:
     try:
         context = _verified_context(run_dir, state)
         _auto_complete_empty_modules(run_dir, state)
-    except HostRunError as exc:
+        tree = _semantic_tree(run_dir, state)
+    except (HostRunError, symbols.SemanticError) as exc:
         state["render_error"] = str(exc)
         log_event(run_dir, "render", f"failed: {exc}", error=str(exc))
         return
     units, dispositions = _semantic_units(run_dir, state)
-    tree = _semantic_tree(run_dir, state, units)
     pending = [f"module_{row['number'] + 1}" for row in state["modules"]
                if _module_output(run_dir, state, row["number"]) is None]
     index_notes: list[str] = []
-    tree_task = state["tasks"].get("tree")
-    if tree_task is not None and tree_task["status"] != "done":
-        if state.get("aggregation", {}).get("regions"):
-            index_notes.append("The region merge is " + tree_task["status"] +
-                               "; accepted region subtrees are retained under a mechanical root. "
-                               "Check the merge error and budget before starting a new plan.")
-        else:
-            index_notes.append("The responsibility tree is a mechanical batch grouping because the `tree` "
-                               "task is " + ("failed; resume the run to retry it."
-                                             if tree_task["status"] == "failed" else "not finished yet."))
-    for tid, task in state["tasks"].items():
-        if task.get("region") and task["status"] == "failed":
-            index_notes.append(f"Region `{tid}` failed; its subtree uses the mechanical fallback.")
+    open_tree = [tid for tid, task in state["tasks"].items() if task["kind"] in TREE_KINDS and task["status"] != "done"]
+    if open_tree:
+        index_notes.append("Module names come from the program (frequent words and the main directory) "
+                           "where these tasks are not finished: " + ", ".join(open_tree)
+                           + "; resume the run to finish them.")
+    elif units and not state.get("skeleton") and not _legacy_state(state):
+        index_notes.append("The module tree is a program grouping with program-made names: it is not frozen "
+                           "yet because reading is not finished.")
+    made = sum(1 for node in tree.get("nodes") or [] if node.get("note"))
+    if made:
+        index_notes.append(f"{made} module title(s) are program-made (frequent words and main directory) "
+                           "because no usable model name was accepted for them.")
     system_task = state["tasks"]["system"]
     system = _accepted(run_dir, "system")
     if system is None:
-        index_notes.append("The overview and navigation are mechanical because the `system` task is "
+        index_notes.append("The overview is mechanical because the `system` task is "
                            + ("failed; resume the run to retry it." if system_task["status"] == "failed"
                               else "not finished yet."))
     else:
@@ -1342,36 +1411,24 @@ def _render(run_dir: Path, state: dict[str, Any]) -> None:
     normalized = sorted(task["id"] for task in state["tasks"].values()
                         if task["flags"] and "known_empty" not in task["flags"])
     if normalized:
-        index_notes.append("Normalized after the final invalid answer (facts kept, shape fixed): "
+        index_notes.append("Accepted with repairs or gaps (see each task's flags in host/state.json): "
                            + ", ".join(normalized) + ".")
-    for row in _answer_fallbacks(state):
-        index_notes.append(f"answer_fallback: {row['task']}: accepted attempt {row['attempt']} "
-                           f"after final attempt {row['final_attempt']} failed validation.")
-    fill_counts: dict[str, int] = {}
-    for row in _index_only_fills(state):
+    unexplained: dict[str, int] = {}
+    for row in _unexplained(state):
         task = state["tasks"][row["task"]]
-        repair = (state["tasks"].get(f"repair_{task['module'] + 1}")
-                  if task["kind"] == "module" else None)
+        repair = (state["tasks"].get(f"repair_{task['module'] + 1}") if task["kind"] == "module" else None)
         if task["status"] == "done" and not (repair and repair["status"] == "done"):
-            fill_counts[row["task"]] = fill_counts.get(row["task"], 0) + 1
-    for tid, count in sorted(fill_counts.items()):
-        index_notes.append(f"{tid}: CBE assigned {count} inventory symbol(s) to index_only "
-                           "because the model answer omitted or supplied invalid dispositions.")
-    page_corrections = []
-    for row in _identity_corrections(state):
-        task = state["tasks"][row["task"]]
-        if task["kind"] == "module":
-            repair = state["tasks"].get(f"repair_{task['module'] + 1}")
-            if repair and repair["status"] == "done":
-                continue  # The repair's prose supersedes this corrected module answer.
-        page_corrections.append(row)
+            unexplained[row["task"]] = unexplained.get(row["task"], 0) + 1
+    for tid, count in sorted(unexplained.items()):
+        index_notes.append(f"{tid}: {count} function/method/class symbol(s) were left without prose "
+                           "because no model answer explained them.")
     try:
         meta = docs.render(run_dir=run_dir, source_root=Path(state["repo"]),
                                inventory=state.get("inventory") or {}, units=units,
                                dispositions=dispositions, tree=tree, index_notes=index_notes,
                                system=system or _mechanical_semantic_overview(state, tree),
                                graph=context.get("graph"), context=context,
-                               id_corrections=page_corrections,
+                               source_tokens=sum(row["tokens"] for row in state["files"]),
                                languages={row["path"]: row.get("language") or "unknown" for row in context["files"]})
     except symbols.SemanticError as exc:
         state["render_error"] = str(exc)
@@ -1392,14 +1449,11 @@ def _render(run_dir: Path, state: dict[str, Any]) -> None:
                "source_tokens": sum(row["tokens"] for row in state["files"]),
                "modules": len(state["modules"]), "units": meta["units_rendered"],
                "semantic_nodes": meta["nodes"], "published_pages": published_pages,
-               "pending": pending + (["tree"] if tree_task and tree_task["status"] != "done" else [])
-                          + (["system"] if system_task["status"] != "done" else []),
+               "pending": pending + open_tree + (["system"] if system_task["status"] != "done" else []),
                "normalized": sorted(task["id"] for task in state["tasks"].values()
                                    if task["flags"] and "known_empty" not in task["flags"]),
-               "id_corrected_count": len(_identity_corrections(state)),
-               "id_corrected": _identity_corrections(state),
-               "index_only_filled_count": len(_index_only_fills(state)),
-               "index_only_filled": _index_only_fills(state),
+               "unexplained_count": len(_unexplained(state)),
+               "unexplained": _unexplained(state),
                "known_empty": sorted(task["id"] for task in state["tasks"].values()
                                     if "known_empty" in task["flags"]),
                "wall_seconds": round(time.time() - epoch(state["created_at"]), 3),
@@ -1408,9 +1462,6 @@ def _render(run_dir: Path, state: dict[str, Any]) -> None:
     for code in ("source_reassembly_fallback", "context_fallback"):
         if rows := state.get(code, []):
             summary.update({code + "_count": len(rows), code: rows})
-    fallbacks = _answer_fallbacks(state)
-    if fallbacks:
-        summary.update(answer_fallback_count=len(fallbacks), answer_fallback=fallbacks)
     if reason:
         summary["partial_reason"], summary["partial_detail"] = reason, state.get("partial_detail", "")
     state["verify"] = verify_state(run_dir, state)
@@ -1426,14 +1477,17 @@ def _render(run_dir: Path, state: dict[str, Any]) -> None:
         {f["path"]: f.get("language", "unknown") for f in context["files"]}, previous,
         comparison_scope="same_run_rerender")
     summary["aggregation_principles"] = principle_report
-    summary["aggregation"] = state.get("aggregation", {})
+    summary["tree"] = {"leaves": sum(1 for node in tree["nodes"] if node.get("unit_ids")),
+                       "nodes": len(tree["nodes"]), "program_made_titles": made,
+                       "naming_tasks": sum(task["kind"] in TREE_KINDS for task in state["tasks"].values()),
+                       "index": meta["index"]}
     summary["node_dependencies"] = meta["relationship_counts"]
     summary["within_containment"] = meta["within_containment_count"]
     summary["key_flows"] = meta["key_flows"]
     summary["candidate_flows"] = meta["candidate_flows"]
     write_json(previous_path, principle_report)
-    with (run_dir / "docs" / "INDEX.md").open("a", encoding="utf-8") as index:
-        index.write(principles.markdown(principle_report))
+    with (run_dir / "docs" / "RUN.md").open("a", encoding="utf-8") as run_page:
+        run_page.write(principles.run_lines(principle_report, tree))
     summary["layers"] = docs.layer_metrics(run_dir)
     summary["semantic_review"] = _semantic_review_summary(run_dir, state)
     summary["truth"] = ("deterministic structure/coverage checks and the separate semantic review are "
@@ -1477,7 +1531,7 @@ def verify_state(run_dir: Path, state: dict[str, Any]) -> dict[str, Any]:
         return {"ok": False, "checks": checks}
     try:
         units, dispositions = _semantic_units(run_dir, state)
-        tree = _semantic_tree(run_dir, state, units)
+        tree = _semantic_tree(run_dir, state)
         checks += docs.verify(run_dir, state.get("inventory") or {}, units, dispositions, tree)
     except (symbols.SemanticError, OSError, ValueError) as exc:
         check("semantic_checks", False, str(exc)[:300])
@@ -1545,20 +1599,9 @@ def _status_markdown(state: dict[str, Any]) -> str:
                     "reviewed by a separate reader of the source. This is independent of the "
                     "deterministic structure/coverage checks and does not prove whole-map truth.", ""]
                    if review_tasks else [])
-    corrections = _identity_corrections(state)
-    correction_lines = [f"id_corrected {len(corrections)}", ""]
-    correction_lines += [f"- {row['task']}: {docs.code_text(row['original'])} → "
-                         f"{docs.code_text(row['corrected'])} ({row['location']})"
-                         for row in corrections]
-    fills = _index_only_fills(state)
-    correction_lines += ["", f"index_only_filled {len(fills)}", ""]
-    correction_lines += [f"- {row['task']}: {docs.code_text(row['symbol'])} ({row['reason']})"
-                         for row in fills]
-    fallbacks = _answer_fallbacks(state)
-    if fallbacks:
-        correction_lines += ["", f"answer_fallback {len(fallbacks)}", ""]
-        correction_lines += [f"- {row['task']}: accepted attempt {row['attempt']} "
-                             f"(final attempt {row['final_attempt']})" for row in fallbacks]
+    unexplained = _unexplained(state)
+    correction_lines = [f"unexplained {len(unexplained)}", ""]
+    correction_lines += [f"- {row['task']}: {docs.code_text(row['symbol'])}" for row in unexplained]
     for code in ("source_reassembly_fallback", "context_fallback"):
         if rows := state.get(code, []):
             correction_lines += ["", f"{code} {len(rows)}", ""]
@@ -1578,25 +1621,16 @@ def _status_markdown(state: dict[str, Any]) -> str:
              "Counts: " + ", ".join(f"{key} {value}" for key, value in sorted(counts.items())), "",
              *correction_lines, "",
              "| Task | Module | State | Attempts | Seconds | Output | Note |", "|---|---|---|---:|---:|---|---|"]
-    for task in sorted(state["tasks"].values(), key=lambda row: (ORDER[row["kind"]], row["module"] or 0)):
+    for task in sorted(state["tasks"].values(), key=lambda row: (ORDER.get(row["kind"], 0), row["module"] or 0)):
         output = task["output"] or ""
         if task["module"] is not None and state["modules"][task["module"]].get("page") and task["kind"] == "module":
             output = state["modules"][task["module"]]["page"]
-        task_fills = sum(row["task"] == task["id"] for row in fills)
-        shape_flags = [flag for flag in task["flags"] if not flag.startswith("id_corrected:")
-                       and not flag.startswith("answer_fallback:")
-                       and not flag.endswith((": disposition missing; treated as index_only",
-                                              ": invalid disposition; treated as index_only"))]
-        identity_count = sum(flag.startswith("id_corrected:") for flag in task["flags"])
+        task_unexplained = sum(row["task"] == task["id"] for row in unexplained)
+        shape_flags = [flag for flag in task["flags"] if not flag.startswith("unexplained: ")]
         note = (task["errors"][-1][:120] if task["status"] in {"failed", "pending"} and task["errors"]
                 else f"normalized ({len(shape_flags)})" if shape_flags else "")
-        if identity_count:
-            note += ("; " if note else "") + f"id_corrected {identity_count}"
-        for row in fallbacks:
-            if row["task"] == task["id"]:
-                note += ("; " if note else "") + f"answer_fallback attempt {row['attempt']}"
-        if task_fills:
-            note += ("; " if note else "") + f"index_only_filled {task_fills}"
+        if task_unexplained:
+            note += ("; " if note else "") + f"unexplained {task_unexplained}"
         lines.append(f"| {task['id']} | {_title(state, task) if task['module'] is not None else ''} | "
                      f"{task['status']} | {task['attempts']} | {task['seconds'] if task['seconds'] is not None else ''} | "
                      f"{output} | {note.replace('|', '/')} |")

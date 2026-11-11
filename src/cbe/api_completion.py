@@ -21,11 +21,13 @@ from __future__ import annotations
 import csv
 import json
 import os
+import random
 import re
 import time
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
+from email.utils import parsedate_to_datetime
 from pathlib import Path
 from threading import Lock
 from typing import Any
@@ -57,6 +59,62 @@ def _csv_row(path: Path, row: dict[str, Any]) -> None:
             if first:
                 writer.writeheader()
             writer.writerow({field: row.get(field, "") for field in FIELDS})
+
+
+#: HTTP 429 and 503 are provider pushback, not answers: the call waits and repeats in place.
+#: A repeat does not use up an answer attempt; each one is a ``rate_limited`` row in calls.csv.
+RATE_LIMIT_STATUSES = (429, 503)
+RATE_LIMIT_RETRIES = 6
+BACKOFF_START_SECONDS = 5
+BACKOFF_MAX_SECONDS = 120
+RATE_LIMIT_BODY_CHARS = 300
+_sleep = time.sleep
+
+
+def _retry_delay(retry_after: str | None, retry: int) -> float:
+    """Seconds to wait before repeat number ``retry`` (from 0): the server's
+    ``Retry-After`` when it gives one, else 5 s doubling to 120 s; both with jitter."""
+    seconds: float | None = None
+    if retry_after:
+        try:
+            seconds = float(retry_after)
+        except ValueError:
+            try:
+                seconds = parsedate_to_datetime(retry_after).timestamp() - time.time()
+            except (TypeError, ValueError):
+                seconds = None
+    if seconds is None:
+        seconds = BACKOFF_START_SECONDS * 2 ** retry
+    seconds = min(max(seconds, 0.0), BACKOFF_MAX_SECONDS)
+    return min(seconds + random.uniform(0, max(1.0, seconds * 0.2)), BACKOFF_MAX_SECONDS)
+
+
+def _post(request: urllib.request.Request, timeout: int, *, task: str, attempt: int, csv_path: Path,
+          secrets: list[str], pushback: list[dict[str, Any]], clock: dict[str, float]) -> tuple[int, bytes]:
+    """POST once, repeating in place after HTTP 429/503. ``pushback`` collects what each refusal said;
+    ``clock['started']`` is reset so a row's seconds cover its own request, not the wait before it."""
+    for retry in range(RATE_LIMIT_RETRIES + 1):
+        clock["started"] = time.monotonic()
+        try:
+            with urllib.request.urlopen(request, timeout=timeout) as response:
+                return response.status, response.read(MAX_RESPONSE_BYTES + 1)
+        except urllib.error.HTTPError as exc:
+            if exc.code not in RATE_LIMIT_STATUSES:
+                raise
+            try:
+                body = _redact(exc.read(2048).decode("utf-8", "replace"), secrets)[:RATE_LIMIT_BODY_CHARS]
+            except OSError:
+                body = ""
+            retry_after = exc.headers.get("Retry-After") if exc.headers else None
+            pushback.append({"status": exc.code, "retry_after": retry_after, "body": body})
+            if retry == RATE_LIMIT_RETRIES:
+                raise
+            delay = _retry_delay(retry_after, retry)
+            pushback[-1]["waited_seconds"] = round(delay, 1)
+            _csv_row(csv_path, {"task": task, "attempt": attempt, "result": "rate_limited",
+                                "seconds": round(time.monotonic() - clock["started"], 3)})
+            _sleep(delay)
+    raise AssertionError("unreachable")  # pragma: no cover
 
 
 MAX_RESPONSE_BYTES = 8 * 1024 * 1024
@@ -230,7 +288,8 @@ def invoke(*, task: str, attempt: int, prompt: str, repo: Path, run_dir: Path,
     safe_task = re.sub(r"[^a-zA-Z0-9_.-]", "_", task)
     raw_dir = run_dir / "raw"
     raw_dir.mkdir(parents=True, exist_ok=True)
-    started = time.monotonic()
+    clock = {"started": time.monotonic()}
+    pushback: list[dict[str, Any]] = []
     error: str | None = None
     text = ""
     usage: dict[str, int] | None = None
@@ -270,9 +329,8 @@ def invoke(*, task: str, attempt: int, prompt: str, repo: Path, run_dir: Path,
                 headers[name] = value
                 secrets.append(value)
         request = urllib.request.Request(request_target, data=body, headers=headers, method="POST")
-        with urllib.request.urlopen(request, timeout=timeout) as response:
-            status = response.status
-            raw = response.read(MAX_RESPONSE_BYTES + 1)
+        status, raw = _post(request, timeout, task=task, attempt=attempt, csv_path=csv_path,
+                            secrets=secrets, pushback=pushback, clock=clock)
         body_truncated = len(raw) > MAX_RESPONSE_BYTES
         raw_body = raw[:MAX_RESPONSE_BYTES].decode("utf-8", "replace")
         payload: Any = None
@@ -310,8 +368,8 @@ def invoke(*, task: str, attempt: int, prompt: str, repo: Path, run_dir: Path,
         # that may reflect the key, so it is redacted first.
         if exc.code == 401:
             error = "provider_auth"
-        elif exc.code == 429:
-            error = "provider_limit"
+        elif exc.code in RATE_LIMIT_STATUSES:
+            error = "provider_limit"  # only after every repeat in place was refused
         else:
             error = f"provider_error:http_{exc.code}:{detail}"
     except urllib.error.URLError as exc:
@@ -322,7 +380,7 @@ def invoke(*, task: str, attempt: int, prompt: str, repo: Path, run_dir: Path,
         error = f"invalid_json:{_redact(str(exc), secrets)[:160]}"
     except OSError as exc:
         error = f"api_io:{type(exc).__name__}:{_redact(str(exc), secrets)[:120]}"
-    elapsed = time.monotonic() - started
+    elapsed = time.monotonic() - clock["started"]
 
     if error is None:
         try:
@@ -338,6 +396,7 @@ def invoke(*, task: str, attempt: int, prompt: str, repo: Path, run_dir: Path,
                     "finish_reason": finish_reason, "choice": choice,
                     "usage": usage, "provider_usage": provider_usage,
                     "provider_response": provider_evidence,
+                    "rate_limited": pushback,
                     "usage_basis": "provider prompt_tokens minus cached_tokens maps to input; "
                                    "cache holds the cached portion",
                     "error": error, "seconds": round(elapsed, 3)},

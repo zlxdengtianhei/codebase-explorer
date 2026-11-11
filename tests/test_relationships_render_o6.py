@@ -45,7 +45,6 @@ def test_render_resolved_calls_and_inferred_transitions(tmp_path):
     assert result["key_flows"] == 3 and result["candidate_flows"] == 1
     assert [f["inferred_steps"] for f in catalog["key_flows"]] == [[], [1], [2]]
     index = (run / "docs/INDEX.md").read_text()
-    assert f"nodes/root.md#{docs.anchor(a)}" in index
-    assert f"nodes/helper.md#{docs.anchor(b)}" in index
-    assert "(model-inferred)" in index and "graph-confirmed" in index
+    assert "(model-inferred)" in index and "Round trip" in index
+    assert "graph-confirmed" in (run / "docs/DEPENDENCIES.md").read_text()
     assert all(row["ok"] for row in docs.verify(run, inventory, units, payload["dispositions"], tree))

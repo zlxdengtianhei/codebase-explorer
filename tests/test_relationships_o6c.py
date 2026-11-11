@@ -130,7 +130,7 @@ def test_pages_and_catalog_show_containment_counts_but_mermaid_excludes_both_kin
                              "start_byte": SRC.index("    def submit"), "end_byte": len(SRC.encode())},
                             {"id": "pkg/jobs.py::reserve@5", "path": "pkg/jobs.py",
                              "start_byte": SRC.index("def reserve(value):"), "end_byte": SRC.index("class Pool:")}]})
-    index = (run / "docs/INDEX.md").read_text()
+    index = (run / "docs/DEPENDENCIES.md").read_text()
     assert "Graph-confirmed and model-inferred pairs count edges between two subtrees." in index
     assert "Graph-only pairs count edges between direct node owners." in index
     assert "containment · → 1 / ← 1 edge(s)" in index

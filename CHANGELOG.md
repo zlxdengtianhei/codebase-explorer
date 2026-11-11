@@ -2,6 +2,39 @@
 
 ## 2.2.0.dev0 (unreleased)
 
+- The program builds the module tree; the model only names it. After all detail and
+  review has settled, `skeleton.build` freezes the structure in the run state and
+  `tree_name_<k>` tasks (leaf modules, in batches of about 12,000 prompt tokens, in
+  parallel) and one `tree_top` task (all groups above them) name it. Answers are decoded
+  node by node with short numbers; a re-ask lists only the rejected nodes; a node still
+  unnamed after the last answer gets a program-made title (no numbering) and a `note`.
+  `validate_tree` adds three hard checks: no node without units and children, distinct
+  sibling titles, evidence units inside the node. Removed: the region tasks and merge
+  (`partition`, `compose`, `merge_inputs`, `Limits`, `CBE_TREE_*` variables), the
+  `names` task and the mechanical batch tree; the model can no longer add, drop or move
+  nodes or units. A run planned with the old `names` or `tree` tasks must be planned
+  again to continue; its finished docs still render, except a run built from region trees.
+- Entry page. `docs/INDEX.md` is the overview, the module tree to its leaves with one
+  capability line per node, key flows and the three lookup commands, within
+  max(2,000 tokens, 3% of the source tokens): the deepest level folds first, then each
+  node shows one file instead of three. The dependency view moves to
+  `docs/DEPENDENCIES.md`; reading stats, graph coverage, generation notes and the
+  cohesion and granularity readings move to `docs/RUN.md`. The system overview no
+  longer carries `maintenance_navigation`.
+- Change the detail answer contract. Symbols are named by short numbers from a
+  numbered list in the prompt (`{"units":[{"h":[12],"explain":"..."}]}`); the
+  program derives ids, kinds, groups and the full `dispositions` map. Usable units
+  of an answer are kept; a re-ask repeats the first ask and lists only the gaps
+  (functions, methods and classes of 40 tokens or more that no unit explains,
+  and rejected units). After the last answer the rest is indexed without prose and
+  flagged `unexplained`. Removed: id correction (`id_corrected`, correction notices
+  in pages and `query`), the bounded `index_only` fill, and the `answer_fallback`
+  replay of earlier answers. Run schema is now `cbe-host-run/3`; a run planned
+  before this change must be planned again.
+- HTTP 429 and 503 are waited out inside the call (`Retry-After`, else 5 s doubling
+  to 120 s, up to 6 repeats), use no answer attempt and are logged as `rate_limited`
+  rows. A call still refused returns its task to the queue and pauses the run; the
+  run stops only after 3 such calls in a row.
 - Remove the OpenCode and Devin completion paths. `cbe generate` now talks only
   to an OpenAI-compatible endpoint and requires `--model`; `--host api` is still
   accepted, other `--host` values are rejected. The built-in Z.AI and Devin

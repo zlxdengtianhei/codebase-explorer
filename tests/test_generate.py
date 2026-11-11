@@ -18,33 +18,16 @@ generator = importlib.import_module("cbe.generate")
 
 def _semantic_answer(prompt: str) -> dict:
     """One valid semantic-stage answer, chosen from the prompt's own content."""
-    if "Modules:\n" in prompt and "INVENTORY (" not in prompt:
-        rows = json.loads(prompt.split("Modules:\n", 1)[1])
-        return {"names": [{"module": row["module"], "title": f"Area {row['module']}"}
-                           for row in rows]}
+    from test_host_run import _detail_from_prompt, _system_answer, _tree_name_from_prompt, _tree_top_from_prompt
+    if "MODULES:\n\n" in prompt:
+        return _tree_name_from_prompt(prompt)
+    if "GROUPS:\n\n" in prompt:
+        return _tree_top_from_prompt(prompt)
     if "DOCUMENTATION (structured units)" in prompt:
         return {"decision": "accepted", "issues": []}
-    if "INVENTORY (this batch" in prompt:
-        inv = json.loads(prompt.split("INVENTORY (this batch, authoritative ids):\n", 1)[1]
-                         .split("\n\n", 1)[0])
-        units, dispositions = [], {}
-        for file_row in inv:
-            for symbol in file_row["symbols"]:
-                units.append({"id": symbol["id"], "kind": symbol["kind"],
-                              "explain": f"Unit {symbol['name']} does its job.",
-                              "extras": [], "relations": [], "uncertainties": []})
-                dispositions[symbol["id"]] = {"how": "unit", "unit": symbol["id"],
-                                               "reason": "real behavior"}
-        return {"units": units, "dispositions": dispositions, "batch_notes": "batch ok"}
-    if "UNITS:\n" in prompt:
-        units = json.loads(prompt.split("UNITS:\n", 1)[1])
-        ids = [unit["id"] for unit in units]
-        return {"nodes": [{"id": "root", "parent": None, "title": "Root",
-                           "capability": "All units of the repository under one semantic root.",
-                           "summary": "Start here.", "unit_ids": ids}], "depends_on": []}
-    from test_host_run import _system_answer
-    return {"overview": "A small work reservation package.",
-            "maintenance_navigation": "Open the root node.", **_system_answer(prompt)}
+    if "SYMBOLS (this batch" in prompt:
+        return _detail_from_prompt(prompt)
+    return {"overview": "A small work reservation package.", **_system_answer(prompt)}
 
 
 def test_generate_renders_and_accounts_for_each_physical_call(tmp_path, monkeypatch) -> None:
@@ -79,12 +62,12 @@ def test_generate_renders_and_accounts_for_each_physical_call(tmp_path, monkeypa
     assert "apiKey" not in json.dumps(api_config)
     assert result["source_files"] == 2
     assert result["modules"] == 2
-    assert result["calls"] == len(seen) == 6
-    assert result["input_tokens"] == 1200
-    assert result["cache_tokens"] == 6
+    assert result["calls"] == len(seen) == 5   # two reading batches, one review, one naming batch, the overview
+    assert result["input_tokens"] == 1000
+    assert result["cache_tokens"] == 5
     assert result["status"] == "complete"
     index = (run_dir / "docs" / "INDEX.md").read_text(encoding="utf-8")
-    assert "## Responsibility tree" in index
+    assert "## Modules" in index
     pages = "".join(path.read_text(encoding="utf-8")
                      for path in (run_dir / "docs" / "nodes").glob("*.md"))
     assert "src/pkg/jobs.py" in pages
@@ -92,7 +75,7 @@ def test_generate_renders_and_accounts_for_each_physical_call(tmp_path, monkeypa
     matches = docs.find(run_dir, "reserve_run")
     assert matches and docs.query(run_dir, matches[0]["id"])["file"] == "src/pkg/jobs.py"
     with (run_dir / "calls.csv").open(newline="", encoding="utf-8") as stream:
-        assert len(list(csv.DictReader(stream))) == 6
+        assert len(list(csv.DictReader(stream))) == 5
 
 
 def test_crlf_source_is_embedded_verbatim_and_the_run_completes(tmp_path, monkeypatch) -> None:
@@ -166,13 +149,6 @@ def test_plan_preserves_whole_large_file_and_rejects_oversized_one() -> None:
         batching.plan([too_large])
 
 
-def test_naming_trims_long_but_complete_titles() -> None:
-    modules = [batching.Module(0, [batching.SourceFile("pkg/a.py", "", 1, "unused", [])], "pkg")]
-    value = {"names": [{"module": 0, "title": "A descriptive module title " * 5}]}
-    checks.check_naming(value, modules)
-    assert len(value["names"][0]["title"]) <= 80
-
-
 def test_primary_directory_share_uses_direct_parent_not_a_common_ancestor() -> None:
     module = batching.Module(0, [
         batching.SourceFile("pkg/a/x.py", "", 1, "unused", []),
@@ -226,7 +202,7 @@ def test_generate_renders_partial_run_and_resume_finishes_pending_parts(tmp_path
                                           "cache_tokens": 0, "result": "invalid_json:prose", "seconds": 0.01})
             return Completion(None, "invalid_json:prose", "Here is the module summary in prose.", None, 0.01)
         if task == "system_overview":
-            value = {"overview": "A tiny package.", "maintenance_navigation": "Open the jobs page. " * 300}
+            value = {"overview": "A tiny package with jobs pages. " * 100}
         else:
             value = _semantic_answer(kwargs["prompt"])
         _csv_row(kwargs["csv_path"], {"task": task, "attempt": attempt, "input_tokens": 200, "output_tokens": 2,
@@ -238,8 +214,8 @@ def test_generate_renders_partial_run_and_resume_finishes_pending_parts(tmp_path
     first = json.loads(capsys.readouterr().out)
     assert code == 3 and first["status"] == "partial" and first["pending"] == ["module_2"]
     assert first["normalized"] == ["system"]
-    index = (run_dir / "docs" / "INDEX.md").read_text(encoding="utf-8")
-    assert "## Generation notes" in index and "module_2" in index
+    notes = (run_dir / "docs" / "RUN.md").read_text(encoding="utf-8")
+    assert "## Generation notes" in notes and "module_2" in notes
     with (run_dir / "calls.csv").open(newline="", encoding="utf-8") as stream:
         results = {(row["task"], row["attempt"]): row["result"] for row in csv.DictReader(stream)}
     assert results[("system_overview", "1")] == "schema_error"
@@ -251,7 +227,7 @@ def test_generate_renders_partial_run_and_resume_finishes_pending_parts(tmp_path
     second = json.loads(capsys.readouterr().out)
     assert code == 0 and second["status"] == "complete" and second["pending"] == []
     assert seen[0] == "module_2" and "system_overview" in seen  # the overview is redone to cover module_2
-    assert "are pending" not in (run_dir / "docs" / "INDEX.md").read_text(encoding="utf-8")
+    assert "are pending" not in (run_dir / "docs" / "RUN.md").read_text(encoding="utf-8")
 
 
 def _tiny_repo(tmp_path):
@@ -337,7 +313,7 @@ def test_preflight_stops_the_run_before_a_call_when_a_body_is_missing(tmp_path, 
         generator.generate(repo, run_dir, model="example/model", jobs=2)
     # The completion function ran only for tasks that embed no source; no module
     # call was paid for once a prompt arrived without its file bodies.
-    assert called and not _module_calls(called)
+    assert not _module_calls(called)
     state = json.loads((run_dir / "host" / "state.json").read_text(encoding="utf-8"))
     assert state["partial_reason"] == "source_not_embedded"
     log = (run_dir / "progress.log").read_text(encoding="utf-8")
@@ -438,13 +414,12 @@ def test_generate_resume_rejects_a_different_graph(tmp_path) -> None:
         generator.generate(repo, run_dir, model="example/model", resume=True, graph_path=gb)
 
 
-def test_system_limit_grows_with_the_module_count() -> None:
-    # A recorded GLM overview of 3147 characters once voided a whole 13-module run.
-    system = {"overview": "Overview.", "maintenance_navigation": "n" * 3147,
-              "dependency_descriptions": [], "key_flows": []}
-    checks.check_system(system, checks.system_limit(13))
-    with pytest.raises(ValueError, match="at most 2000"):
-        checks.check_system({"overview": "x", "maintenance_navigation": "n" * 3147})
+def test_overview_is_short_and_its_limit_is_shared_by_prompt_and_check() -> None:
+    # The overview opens the entry page: 2 to 4 sentences, not a page of navigation.
+    limit = checks.system_limit()
+    checks.check_system({"overview": "Overview. " * 100, "dependency_descriptions": [], "key_flows": []}, limit)
+    with pytest.raises(ValueError, match=f"at most {limit}"):
+        checks.check_system({"overview": "n" * (limit + 1), "dependency_descriptions": [], "key_flows": []}, limit)
 
 
 def test_scan_keeps_own_source_in_build_dist_vendor_hidden_and_minified(tmp_path) -> None:

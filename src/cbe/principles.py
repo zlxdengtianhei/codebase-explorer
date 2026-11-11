@@ -10,7 +10,10 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass
 import hashlib
 import json
-import os
+
+from cbe.skeleton import GRAIN
+
+SHARED_MIN_EDGES = 3   # P5: edges a dependent module needs before a unit counts as shared
 
 
 def _p1(c):
@@ -35,15 +38,8 @@ def _p2(c):
             "scope": "direct primary ownership; incident cross-module edges counted at each endpoint"}
 
 
-def grain_bounds() -> tuple[int, int]:
-    low, high = int(os.environ.get("CBE_TREE_MIN_GRAIN", 5)), int(os.environ.get("CBE_TREE_MAX_GRAIN", 30))
-    if not 1 <= low <= high:
-        raise ValueError("tree grain bounds must satisfy 1 <= minimum <= maximum")
-    return low, high
-
-
 def _p3(c):
-    low, high = grain_bounds()
+    low, high = GRAIN
     sizes = {n["id"]: len(n.get("unit_ids") or []) for n in c["nodes"] if n.get("unit_ids")}
     bad = {nid: size for nid, size in sizes.items() if not low <= size <= high}
     return {"ok": not bad, "bounds": [low, high], "out_of_bounds": bad,
@@ -63,7 +59,7 @@ def _p5(c):
         source, target = c["owner"].get(e["from"]), c["owner"].get(e["to"])
         if source and target and source != target:
             users[e["to"]][source] += e["count"]
-    minimum = int(os.environ.get("CBE_TREE_SHARED_MIN_EDGES", 3))
+    minimum = SHARED_MIN_EDGES
     shared = {uid: dict(counts) for uid, counts in sorted(users.items())
               if sum(n >= minimum for n in counts.values()) >= 2}
     return {"ok": not shared, "min_edges_per_dependent_module": minimum,
@@ -100,18 +96,17 @@ def _p7(c):
 @dataclass(frozen=True)
 class Principle:
     id: str
-    prompt: str
     check: object
 
 
 PRINCIPLES = (
-    Principle("P1", "Give each module one distinct capability sentence.", _p1),
-    Principle("P2", "Prefer cohesive responsibilities; use resolved internal and external edges as evidence.", _p2),
-    Principle("P3", "Aim for {grain_min}–{grain_max} units per module; grow genuine intermediate capabilities when needed.", _p3),
-    Principle("P4", "Give every unit exactly one primary home; reference it elsewhere.", _p4),
-    Principle("P5", "Keep shared utilities and infrastructure separate from their consumers.", _p5),
-    Principle("P6", "Group by responsibility across languages and retain language identity.", _p6),
-    Principle("P7", "Use stable responsibility-based ids and titles for identical inputs.", _p7),
+    Principle("P1", _p1),   # one distinct capability sentence per module
+    Principle("P2", _p2),   # cohesion: resolved edges stay inside the module
+    Principle("P3", _p3),   # granularity: units per module
+    Principle("P4", _p4),   # one primary home per unit
+    Principle("P5", _p5),   # shared utilities apart from their consumers
+    Principle("P6", _p6),   # language identity kept
+    Principle("P7", _p7),   # stable identity for identical inputs
 )
 
 
@@ -147,22 +142,20 @@ def report(tree: dict, units: dict, edges: list[dict], languages: dict, previous
             "edge_counts_by_kind": {kind: sum(e["count"] for e in edges if e["kind"] == kind)
                                     for kind in sorted({e["kind"] for e in edges})},
             "checks": [{"principle": p.id, **p.check(c)} for p in PRINCIPLES],
-            "hierarchy": {"ok": len(units) <= grain_bounds()[1] or any(n.get("parent") and children[n["id"]] for n in nodes),
-                          "requires_intermediate_above_units": grain_bounds()[1]},
+            "hierarchy": {"ok": len(units) <= GRAIN[1] or any(n.get("parent") and children[n["id"]] for n in nodes),
+                          "requires_intermediate_above_units": GRAIN[1]},
             "introduction_length": {"ok": not long, "overlong": long,
                                     "scope": "capability+summary characters versus descendant explain characters"}}
 
 
-def markdown(result: dict) -> str:
-    lines = ["", "## Aggregation principle checks", "",
-             "Program diagnostics only; they do not prove semantic correctness or trigger rewrites.", ""]
-    for row in result["checks"]:
-        state = "not checked" if row["ok"] is None else ("pass" if row["ok"] else "observe")
-        if row["principle"] == "P7":
-            state = row["status"]
-        lines += [f"### {row['principle']} · {state}", "", "```json",
-                  json.dumps(row, ensure_ascii=False, sort_keys=True), "```", ""]
-    lines += ["Hierarchy and introduction length:", "", "```json",
-              json.dumps({k: result[k] for k in ("hierarchy", "introduction_length")}, ensure_ascii=False),
-              "```", ""]
-    return "\n".join(lines)
+def run_lines(result: dict, tree: dict) -> str:
+    """The two numbers RUN.md shows; the full readings stay in summary.json."""
+    rows = next(c for c in result["checks"] if c["principle"] == "P2")["modules"]
+    linked = [r for r in rows.values() if r["internal"] or r["external"]]
+    low, high = GRAIN
+    sizes = [len(n["unit_ids"]) for n in tree.get("nodes") or [] if n.get("unit_ids")]
+    return ("\n## Checks\n\n"
+            f"- Cohesion: {sum(r['internal'] >= r['external'] for r in linked)} of {len(linked)} modules with edges "
+            "have at least as many resolved edges inside as outside.\n"
+            f"- Granularity: {sum(low <= n <= high for n in sizes)} of {len(sizes)} modules hold {low} to {high} units.\n"
+            "- Program diagnostics only; they do not prove semantic correctness. All readings: `summary.json`.\n")

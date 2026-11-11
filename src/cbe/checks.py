@@ -1,23 +1,22 @@
 """Strict checks and shape repair for every task result.
 
-Module and repair detail tasks allow 3 answers; other tasks allow 2. On the
-final invalid answer, the normalizer makes usable content compliant and returns
-flags describing every change, or fails when the answer cannot be accepted. Retained
-obligations: the model never emits line numbers (the program derives published
-ranges from the inventory); every inventory id gets exactly one disposition
-(unit / grouped / index_only), so nothing is silently dropped; length and count
-are never repair triggers; the ownership tree is single-rooted and acyclic for
-containment while dependency cycles stay allowed; each unit has exactly one
-primary owner.
+Detail answers are decoded, not validated: see ``decode_details``. Other tasks
+allow 2 answers; on the final invalid answer, the normalizer makes usable content
+compliant and returns flags describing every change, or fails when the answer
+cannot be accepted. Retained obligations: the model never emits line numbers (the
+program derives published ranges from the inventory); every inventory id gets
+exactly one disposition (unit / grouped / index_only), written by the program, so
+nothing is silently dropped; length and count are never repair triggers; the
+ownership tree is single-rooted and acyclic for containment while dependency
+cycles stay allowed; each unit has exactly one primary owner.
 """
 
 from __future__ import annotations
 
 import json
 import re
+from dataclasses import dataclass, field
 from typing import Any
-
-from cbe.batching import Module, fallback_title
 
 
 def json_object(text: str) -> dict[str, Any]:
@@ -32,34 +31,14 @@ def json_object(text: str) -> dict[str, Any]:
 
 
 UNIT_KINDS = {"class", "function", "method", "group", "module_region"}
-DISPOSITION_HOW = {"unit", "grouped", "index_only"}
 RELATION_KINDS = {"call", "inherit", "override", "import", "raise", "use",
                   "contract", "group"}
 EXTRA_TOPICS = {"condition", "failure", "side_effect", "field", "contract"}
 
 
-def check_naming(value: dict[str, Any], modules: list[Module]) -> None:
-    rows = value.get("names")
-    if not isinstance(rows, list) or len(rows) != len(modules):
-        raise ValueError("names must contain one entry per module")
-    seen: set[int] = set()
-    for row in rows:
-        if not isinstance(row, dict) or type(row.get("module")) is not int or not isinstance(row.get("title"), str):
-            raise ValueError("each name needs integer module and string title")
-        if row["module"] in seen or not row["title"].strip():
-            raise ValueError("duplicate or empty module title")
-        title = row["title"].strip()
-        if len(title) > 80:
-            title = title[:80].rsplit(" ", 1)[0] or title[:80]
-        row["title"] = title
-        seen.add(row["module"])
-    if seen != {module.number for module in modules}:
-        raise ValueError("module title IDs do not match planned modules")
-
-
-def system_limit(node_count: int) -> int:
-    """Overview and navigation name semantic nodes, independent of reading batches."""
-    return max(2000, min(12000, 250 * node_count))
+def system_limit() -> int:
+    """The overview is 2 to 4 sentences; the entry page has a token budget."""
+    return 1200
 
 
 DEPENDENCY_EVIDENCE_WORDS = re.compile(
@@ -73,9 +52,8 @@ DEPENDENCY_EVIDENCE_WORDS = re.compile(
 def check_system(value: dict[str, Any], limit: int = 2000, *, unit_ids=None, dependencies=None,
                  has_candidates: bool = False, normalized: bool = False) -> None:
     errors = []
-    for key in ("overview", "maintenance_navigation"):
-        if not isinstance(value.get(key), str) or not value[key].strip() or len(value[key]) > limit:
-            errors.append(f"{key} must be a nonempty concise string of at most {limit} characters")
+    if not isinstance(value.get("overview"), str) or not value["overview"].strip() or len(value["overview"]) > limit:
+        errors.append(f"overview must be a nonempty concise string of at most {limit} characters")
     descriptions = value.get("dependency_descriptions")
     flows = value.get("key_flows")
     if not isinstance(descriptions, list):
@@ -167,40 +145,14 @@ def _fit(value: dict[str, Any], key: str, limit: int, flags: list[str], *, label
     value[key] = text
 
 
-def normalize_naming(value: Any, modules: list[Module]) -> list[str]:
-    if not isinstance(value, dict):
-        raise ValueError("naming result is not a JSON object")
-    rows = value.get("names") if isinstance(value.get("names"), list) else []
-    titles: dict[int, str] = {}
-    for row in rows:
-        if (isinstance(row, dict) and type(row.get("module")) is int and isinstance(row.get("title"), str)
-                and row["title"].strip() and row["module"] not in titles
-                and 0 <= row["module"] < len(modules)):
-            titles[row["module"]] = row["title"]
-    if not titles:
-        raise ValueError("naming result has no usable titles")
-    flags = []
-    for module in modules:
-        if module.number not in titles:
-            titles[module.number] = fallback_title(module)
-            flags.append(f"module {module.number + 1} had no title; used {titles[module.number]!r}")
-    value["names"] = [{"module": number, "title": titles[number]} for number in sorted(titles)]
-    check_naming(value, modules)
-    return flags
-
-
 def normalize_system(value: Any, limit: int, *, unit_ids=None, dependencies=None,
                      has_candidates: bool = False) -> list[str]:
     if not isinstance(value, dict):
         raise ValueError("overview result is not a JSON object")
     flags: list[str] = []
-    for key in ("overview", "maintenance_navigation"):
-        _fit(value, key, limit, flags)
+    _fit(value, "overview", limit, flags)
     if not value["overview"].strip():
         raise ValueError("overview result has no overview")
-    if not value["maintenance_navigation"].strip():
-        value["maintenance_navigation"] = "See the subsystem list below."
-        flags.append("maintenance_navigation was empty")
     # Preserve each independently valid row after the final rejected answer.
     for key in ("dependency_descriptions", "key_flows"):
         rows = value.get(key)
@@ -265,292 +217,177 @@ def _normalize_choice(value: Any, allowed: "set[str] | frozenset[str]",
     return default, True
 
 
-class MissingDispositionsError(ValueError):
-    """The final detail answer omits too much coverage to repair mechanically."""
+# ---------------------------------------------------------------- detail answers
+#
+# A detail answer names symbols by the short numbers of its batch table
+# (``symbols.batch_table``) and never writes an inventory id. ``decode_details``
+# turns it into the internal shape every later stage reads: ``units`` with
+# ``id``/``kind``/``members`` and a complete ``dispositions`` map. It accepts
+# what it can, unit by unit; only a non-object answer or a missing ``units``
+# list voids the whole answer.
+
+#: A function, method or class whose own source has at least this many tokens and
+#: that no unit mentions is a gap to re-ask, not an automatic index_only entry.
+GAP_MIN_TOKENS = 40
+GAP_KINDS = {"function", "method", "class"}
+NOT_EXPLAINED = "not explained; indexed without prose"
 
 
-def _detail_fill_limit(total: int) -> int:
-    """Keep one-off repair tolerance; two omissions require at least 40 symbols."""
-    if total <= 1:
-        return 0
-    return 2 if total >= 40 else 1
+@dataclass
+class Decoded:
+    """What one answer added: accepted units, notes on repairs, units rejected."""
+    units: list[dict[str, Any]] = field(default_factory=list)
+    flags: list[str] = field(default_factory=list)
+    invalid: list[dict[str, Any]] = field(default_factory=list)
+    notes: str = ""
 
 
-def _missing_dispositions_problem(missing: list[str], total: int,
-                                  invalid: list[str] | None = None) -> str:
-    limit = _detail_fill_limit(total)
-    if invalid:
-        return (f"dispositions require automatic index_only: {len(missing) + len(invalid)}/{total} "
-                f"missing or invalid (automatic index_only limit {limit}). "
-                "Every inventory symbol must have a disposition: unit, grouped or index_only; "
-                f"return the complete dispositions object. Missing ids: {missing}; invalid ids: {invalid}")
-    return (f"dispositions missing inventory ids: {len(missing)}/{total} missing "
-            f"(automatic index_only limit {limit}). "
-            "Every inventory symbol must have a disposition: unit, grouped or index_only; "
-            f"return the complete dispositions object. First {min(12, len(missing))} missing ids: {missing[:12]}")
+def _number(value: Any) -> int | None:
+    if type(value) is int:
+        return value
+    if isinstance(value, str) and value.strip().isdigit():
+        return int(value.strip())
+    return None
 
 
-def _detail_identity(uid: str) -> tuple[str, ...]:
-    """Ignore only the generated final offset, retaining path/kind/qualified name."""
-    stem = re.sub(r"::\d+[\w-]*(?:::s\d+)*$", "", uid)
-    return tuple(stem.split("::", 2))
+def covered_ids(units: list[dict[str, Any]], table: list[dict]) -> set[str]:
+    """Inventory ids that some unit explains (its own id or a member)."""
+    scope = {row["id"] for row in table}
+    return {sid for unit in units for sid in [unit["id"], *(unit.get("members") or [])] if sid in scope}
 
 
-def _detail_id_problem(uid: str, scope_ids: set[str]) -> str:
-    parts = _detail_identity(uid)
-    name = parts[2] if len(parts) >= 3 else uid
-    candidates = sorted(candidate for candidate in scope_ids
-                        if len(_detail_identity(candidate)) >= 3
-                        and _detail_identity(candidate)[2] == name)
-    if not candidates and scope_ids:
-        def prefix_length(candidate: str) -> int:
-            other = _detail_identity(candidate)
-            other_name = other[2] if len(other) >= 3 else candidate
-            return next((i for i, (a, b) in enumerate(zip(name, other_name)) if a != b),
-                        min(len(name), len(other_name)))
-        longest = max(map(prefix_length, scope_ids))
-        candidates = sorted(candidate for candidate in scope_ids
-                            if prefix_length(candidate) == longest)
-    return (f"unit id {uid} is not in this batch's inventory; candidates: {candidates[:12]}. "
-            "Unit ids must come only from this batch's inventory; use grp: for self-created groups.")
+def _kebab(text: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
 
 
-def validate_details(payload: Any, paths: list[str], inventory: dict[str, dict],
-                     known_unit_ids: set[str]) -> list[str]:
-    """Hard problems only (empty list = acceptable).
+def _group_id(title: Any, first: dict, taken: set[str]) -> str:
+    base = _kebab(title) if isinstance(title, str) else ""
+    base = base or _kebab(first["name"]) or "group"
+    stem = f"grp:{first['path'].rsplit('/', 1)[-1]}-{base}"
+    uid, count = stem, 1
+    while uid in taken:
+        count += 1
+        uid = f"{stem}-{count}"
+    return uid
 
-    Hard means structure, symbol identity, references, coverage, and nonempty
-    required content. Length and count are never checked here and never trigger
-    a model repair. The function never mutates its input."""
-    problems: list[str] = []
+
+def _decode_unit(raw: dict[str, Any], rows: list[dict], by_number: dict[int, dict], taken: set[str]) -> dict[str, Any]:
+    """The internal unit for one answer unit whose ``h`` and ``explain`` are valid."""
+    first = rows[0]
+    if len(rows) == 1:
+        unit: dict[str, Any] = {"id": first["id"], "kind": first["kind"]}
+    else:
+        unit = {"id": _group_id(raw.get("title"), first, taken), "kind": "group",
+                "members": [row["id"] for row in rows]}
+    unit["explain"] = raw["explain"].strip()
+    unit["extras"] = [{"topic": _normalize_choice(extra.get("topic"), EXTRA_TOPICS, "contract")[0],
+                       "note": extra["note"].strip()}
+                      for extra in raw.get("extras") or []
+                      if isinstance(extra, dict) and isinstance(extra.get("note"), str) and extra["note"].strip()]
+    relations = []
+    for rel in raw.get("relations") or []:
+        if not isinstance(rel, dict):
+            continue
+        number = _number(rel.get("to"))
+        target = by_number[number]["id"] if number in by_number else (
+            rel["to"].strip() if number is None and isinstance(rel.get("to"), str) and rel["to"].strip() else None)
+        if target is None:
+            continue
+        relation = {"target": target, "kind": _normalize_choice(rel.get("kind", "use"), RELATION_KINDS, "use")[0]}
+        if isinstance(rel.get("basis"), str):
+            relation["basis"] = rel["basis"]
+        relations.append(relation)
+    unit["relations"] = relations
+    unit["uncertainties"] = [item for item in raw.get("uncertainties") or [] if isinstance(item, str)]
+    return unit
+
+
+def decode_details(payload: Any, table: list[dict], *, have: list[dict[str, Any]] | None = None,
+                   known_ids: set[str] | frozenset[str] = frozenset()) -> Decoded:
+    """Decode one detail answer against its batch table.
+
+    ``have`` holds units accepted from earlier answers of the same task; their
+    symbols and ids stay taken. A unit with an unknown short number loses that
+    number; a number already in an earlier unit stays with the first (a unit whose
+    symbols are all taken is ignored); a unit left without any valid number or
+    without an explanation is returned in ``invalid`` and the other units are kept. Raises ``ValueError`` only when the whole answer is unusable."""
     if not isinstance(payload, dict):
-        return ["result is not a JSON object"]
-    units = payload.get("units")
-    if not isinstance(units, list):
-        return ["units must be a list"]
-    scope_ids = {row["id"] for path in paths for row in inventory[path]["symbols"]}
-    if not units and scope_ids:
-        # An empty batch (every file known-empty, no inventory id) may validly
-        # return no units; a batch with ids must explain them.
-        return ["units must be a nonempty list"]
-    seen: set[str] = set()
+        raise ValueError("answer is not a JSON object")
+    rows = payload.get("units")
+    if not isinstance(rows, list):
+        raise ValueError("answer has no units list")
+    have = have or []
+    by_number = {row["n"]: row for row in table}
+    by_id = {row["id"]: row for row in table}
+    taken_symbols = covered_ids(have, table)
+    taken_ids = {unit["id"] for unit in have} | set(known_ids)
+    out = Decoded()
+    for index, raw in enumerate(rows):
+        label = f"unit {index + 1}"
+        if not isinstance(raw, dict):
+            out.invalid.append({"h": [], "why": f"{label} is not an object"})
+            continue
+        listed = raw.get("h")
+        numbers: list[int] = []
+        for item in listed if isinstance(listed, list) else []:
+            number = _number(item)
+            if number not in by_number:
+                out.flags.append(f"{label}: unknown symbol number {item!r} removed")
+            elif number not in numbers:
+                numbers.append(number)
+        symbols = []
+        for number in numbers:
+            row = by_number[number]
+            if row["id"] in taken_symbols:
+                out.flags.append(f"{label}: symbol {number} is already in an earlier unit; kept there")
+            else:
+                symbols.append(row)
+        shown = [row["n"] for row in symbols]
+        if not numbers:
+            out.invalid.append({"h": [], "why": f"{label} lists no symbol number of this batch"})
+            continue
+        if not symbols:  # a repeat of explained symbols loses nothing; it is not worth a re-ask
+            out.flags.append(f"{label}: every symbol is already in an earlier unit; ignored")
+            continue
+        if not isinstance(raw.get("explain"), str) or not raw["explain"].strip():
+            out.invalid.append({"h": shown, "why": f"{label} has an empty explain"})
+            continue
+        unit = _decode_unit(raw, symbols, by_number, taken_ids)
+        taken_symbols |= {row["id"] for row in symbols}
+        taken_ids.add(unit["id"])
+        out.units.append(unit)
+    if isinstance(payload.get("notes"), str):
+        out.notes = payload["notes"].strip()
+    return out
+
+
+def find_gaps(table: list[dict], units: list[dict[str, Any]], tokens: dict[str, int]) -> list[dict]:
+    """Symbols with logic that no unit mentions: functions, methods and classes
+    outside test files whose own source is at least ``GAP_MIN_TOKENS`` tokens.
+    Everything else that no unit mentions is simply indexed without prose."""
+    done = covered_ids(units, table)
+    return [row for row in table
+            if row["id"] not in done and row["kind"] in GAP_KINDS
+            and tokens.get(row["id"], 0) >= GAP_MIN_TOKENS]
+
+
+def assemble_details(table: list[dict], units: list[dict[str, Any]], *, notes: str = "") -> dict[str, Any]:
+    """The internal payload: units plus a complete ``dispositions`` map.
+
+    A symbol inside a unit is ``unit`` (the unit is the symbol) or ``grouped``;
+    every other symbol is ``index_only``."""
+    dispositions: dict[str, dict[str, Any]] = {}
     for unit in units:
-        if not isinstance(unit, dict):
-            problems.append("unit is not an object")
-            continue
-        uid = unit.get("id")
-        if not isinstance(uid, str) or not uid.strip():
-            problems.append("unit without id")
-            continue
-        if uid in seen or uid in known_unit_ids:
-            problems.append(f"duplicate unit id {uid}")
-        seen.add(uid)
-        if not uid.startswith("grp:") and uid not in scope_ids:
-            problems.append(_detail_id_problem(uid, scope_ids))
-        kind = unit.get("kind")
-        if not isinstance(kind, str) or kind not in UNIT_KINDS:
-            problems.append(f"{uid}: kind must be one of {sorted(UNIT_KINDS)}; got {kind!r}")
-        explain = unit.get("explain")
-        if not isinstance(explain, str) or not explain.strip():
-            problems.append(f"{uid}: explain must be a nonempty paragraph")
-        summary = unit.get("summary")
-        if summary is not None and not isinstance(summary, str):
-            problems.append(f"{uid}: summary must be a string when supplied")
-        extras = unit.get("extras", [])
-        if not isinstance(extras, list):
-            problems.append(f"{uid}: extras must be a list")
+        if unit["kind"] == "group":
+            dispositions.update({sid: {"how": "grouped", "unit": unit["id"]} for sid in unit["members"]})
         else:
-            for extra in extras:
-                topic = extra.get("topic") if isinstance(extra, dict) else None
-                if not isinstance(topic, str) or topic not in EXTRA_TOPICS:
-                    problems.append(f"{uid}: extra topic must be one of {sorted(EXTRA_TOPICS)}; "
-                                    f"got {topic!r}")
-                    continue
-                note = extra.get("note")
-                if not isinstance(note, str) or not note.strip():
-                    problems.append(f"{uid}: extra note must be a nonempty string")
-        relations = unit.get("relations", [])
-        if not isinstance(relations, list):
-            problems.append(f"{uid}: relations must be a list")
-        else:
-            for rel in relations:
-                if not isinstance(rel, dict) or not isinstance(rel.get("target"), str) \
-                        or not rel["target"].strip():
-                    problems.append(f"{uid}: relation needs a nonempty target")
-                    continue
-                rel_kind = rel.get("kind", "use")
-                if not isinstance(rel_kind, str) or rel_kind not in RELATION_KINDS:
-                    problems.append(f"{uid}: relation kind must be one of {sorted(RELATION_KINDS)}; "
-                                    f"got {rel_kind!r}")
-        uncertainties = unit.get("uncertainties", [])
-        if not isinstance(uncertainties, list) or any(not isinstance(item, str) for item in uncertainties):
-            problems.append(f"{uid}: uncertainties must be a list of strings")
-        members = unit.get("members", [])
-        if members and not isinstance(members, list):
-            problems.append(f"{uid}: members must be a list")
-    dispositions = payload.get("dispositions")
-    if not isinstance(dispositions, dict):
-        if scope_ids:
-            problems.append(_missing_dispositions_problem(sorted(scope_ids), len(scope_ids)))
-        return problems + ["dispositions must be an object keyed by inventory id"]
-    missing = sorted(scope_ids - set(dispositions))
-    extra = sorted(set(dispositions) - scope_ids)
-    if missing:
-        problems.append(_missing_dispositions_problem(missing, len(scope_ids)))
-    if extra:
-        problems.append(f"dispositions has non-scope keys: {extra[:12]}")
-    for key, entry in dispositions.items():
-        if key not in scope_ids:
-            continue
-        how = entry.get("how") if isinstance(entry, dict) else None
-        if not isinstance(how, str) or how not in DISPOSITION_HOW:
-            problems.append(f"disposition {key}: how must be one of {sorted(DISPOSITION_HOW)}; "
-                            f"got {how!r}")
-            continue
-        target = entry.get("unit")
-        if how in {"unit", "grouped"}:
-            if not isinstance(target, str) or target not in seen:
-                problems.append(f"disposition {key}: unit target {target!r} is not a unit "
-                                "defined in this result")
-        if how == "unit" and target != key:
-            problems.append(f"disposition {key}: how=unit requires target == the same id")
-        reason = entry.get("reason")
-        if how == "index_only" and (not isinstance(reason, str) or not reason.strip()):
-            problems.append(f"disposition {key}: index_only requires a reason")
-        if reason is not None and not isinstance(reason, str):
-            problems.append(f"disposition {key}: reason must be a string")
-    notes = payload.get("batch_notes")
-    if not isinstance(notes, str) or not notes.strip():
-        problems.append("batch_notes must be a nonempty string")
-    return problems
-
-
-def normalize_details(payload: Any, paths: list[str], inventory: dict[str, dict],
-                      known_unit_ids: set[str]) -> list[str]:
-    """Make a usable answer compliant without dropping facts.
-
-    Identity is repaired only when path, kind and qualified name identify one
-    batch inventory id. All rewritten identity fields receive flags. Shape
-    repairs retain facts; a strict check at submission still decides acceptance.
-    Raises when nothing usable is left or missing dispositions exceed the
-    bounded automatic index-only repair allowance."""
-    if not isinstance(payload, dict):
-        raise ValueError("module result is not a JSON object")
-    if not isinstance(payload.get("units"), list):
-        raise ValueError("module result has no units list")
-    if not payload["units"] and any(inventory.get(path, {}).get("symbols") for path in paths):
-        raise ValueError("module result has no units")
-    flags: list[str] = []
-    scope_ids = {row["id"] for path in paths for row in inventory[path]["symbols"]}
-    # Only structural identity fields are rewritten; prose is never searched.
-    # Include references as well as definitions, since either can contain a typo.
-    def corrected(uid: Any, location: str) -> Any:
-        if not isinstance(uid, str) or uid in scope_ids or uid.startswith("grp:"):
-            return uid
-        matches = [candidate for candidate in scope_ids
-                   if _detail_identity(candidate) == _detail_identity(uid)]
-        if len(matches) == 1:
-            flags.append(f"id_corrected: {uid} -> {matches[0]} ({location})")
-            return matches[0]
-        return uid
-
-    for index, unit in enumerate(payload["units"]):
-        if not isinstance(unit, dict):
-            continue
-        unit["id"] = corrected(unit.get("id"), f"units[{index}].id")
-        relations = unit.get("relations")
-        for rel_index, rel in enumerate(relations if isinstance(relations, list) else []):
-            if isinstance(rel, dict) and "target" in rel:
-                rel["target"] = corrected(rel["target"], f"units[{index}].relations[{rel_index}].target")
-        if isinstance(unit.get("members"), list):
-            unit["members"] = [corrected(member, f"units[{index}].members[{member_index}]")
-                               for member_index, member in enumerate(unit["members"])]
-    dispositions = payload.get("dispositions")
-    if isinstance(dispositions, dict):
-        for key in list(dispositions):
-            entry = dispositions[key]
-            if isinstance(entry, dict) and "unit" in entry:
-                entry["unit"] = corrected(entry["unit"], f"dispositions[{key}].unit")
-            target_key = corrected(key, f"dispositions[{key}] key")
-            if target_key != key:
-                if target_key in dispositions:
-                    dispositions.pop(key)
-                    flags.append(f"{key}: duplicate disposition after id correction to {target_key}; dropped")
-                else:
-                    dispositions[target_key] = dispositions.pop(key)
-    missing = sorted(scope_ids - set(dispositions)) if isinstance(dispositions, dict) else sorted(scope_ids)
-    invalid = []
-    if isinstance(dispositions, dict):
-        for key in sorted(scope_ids & set(dispositions)):
-            entry = dispositions[key]
-            how = entry.get("how") if isinstance(entry, dict) else None
-            if not isinstance(how, str) or how not in DISPOSITION_HOW:
-                invalid.append(key)
-    filled = missing + invalid
-    if filled and (len(filled) == len(scope_ids) or len(filled) > _detail_fill_limit(len(scope_ids))):
-        raise MissingDispositionsError(_missing_dispositions_problem(missing, len(scope_ids), invalid))
-    units = [unit for unit in payload["units"] if isinstance(unit, dict)
-             and isinstance(unit.get("id"), str) and unit["id"].strip()]
-    if len(units) != len(payload["units"]):
-        flags.append(f"dropped {len(payload['units']) - len(units)} malformed unit(s)")
-    for unit in units:
-        kind, changed = _normalize_choice(unit.get("kind"), UNIT_KINDS, "module_region")
-        if changed:
-            flags.append(f"{unit['id']}: kind rewritten to {kind}")
-            unit["kind"] = kind
-        if not isinstance(unit.get("explain"), str) or not unit["explain"].strip():
-            flags.append(f"{unit['id']}: explain was empty; wrote a placeholder")
-            unit["explain"] = "No explanation was returned for this unit."
-        if "summary" in unit and not isinstance(unit["summary"], str):
-            unit["summary"] = _as_text(unit["summary"])
-            flags.append(f"{unit['id']}: summary was not a string; converted to text")
-        if not isinstance(unit.get("extras"), list):
-            flags.append(f"{unit['id']}: extras was not a list; dropped")
-            unit["extras"] = []
-        for extra in unit["extras"]:
-            if not isinstance(extra, dict):
-                continue
-            topic, changed = _normalize_choice(extra.get("topic"), EXTRA_TOPICS, "contract")
-            if changed:
-                extra["topic"] = topic
-        relations = unit.get("relations")
-        if relations is not None and not isinstance(relations, list):
-            flags.append(f"{unit['id']}: relations was not a list; dropped")
-            unit["relations"] = []
-        for rel in unit.get("relations") or []:
-            if not isinstance(rel, dict):
-                continue
-            rel_kind, changed = _normalize_choice(rel.get("kind", "use"), RELATION_KINDS, "use")
-            if changed:
-                flags.append(f"{unit['id']}: relation kind rewritten to {rel_kind}")
-                rel["kind"] = rel_kind
-        if not isinstance(unit.get("uncertainties"), list):
-            flags.append(f"{unit['id']}: uncertainties was not a list; dropped")
-            unit["uncertainties"] = []
-    payload["units"] = units
-    scope_ids = {row["id"] for path in paths for row in inventory[path]["symbols"]}
-    dispositions = payload.get("dispositions")
-    if not isinstance(dispositions, dict):
-        dispositions = {}
-        flags.append("dispositions was missing; rebuilt as index_only")
-    for key in sorted(scope_ids - set(dispositions)):
-        dispositions[key] = {"how": "index_only", "unit": None,
-                             "reason": "no disposition returned; indexed without prose"}
-        flags.append(f"{key}: disposition missing; treated as index_only")
-    for key in sorted(set(dispositions) - scope_ids):
-        dispositions.pop(key)
-        flags.append(f"{key}: disposition key was not in this batch; dropped")
-    for key, entry in dispositions.items():
-        how = entry.get("how") if isinstance(entry, dict) else None
-        if not isinstance(how, str) or how not in DISPOSITION_HOW:
-            dispositions[key] = {"how": "index_only", "unit": None,
-                                 "reason": "invalid disposition; indexed without prose"}
-            flags.append(f"{key}: invalid disposition; treated as index_only")
-    payload["dispositions"] = dispositions
-    if not isinstance(payload.get("batch_notes"), str) or not payload["batch_notes"].strip():
-        payload["batch_notes"] = "No batch notes returned."
-        flags.append("batch_notes was empty")
-    return flags
+            dispositions[unit["id"]] = {"how": "unit", "unit": unit["id"]}
+    for row in table:
+        dispositions.setdefault(row["id"], {"how": "index_only", "unit": None, "reason": NOT_EXPLAINED})
+    payload: dict[str, Any] = {"units": units, "dispositions": dispositions}
+    if notes:
+        payload["batch_notes"] = notes
+    return payload
 
 
 _NODE_ID = re.compile(r"^[a-z0-9][a-z0-9._-]{0,63}$")
@@ -631,6 +468,34 @@ def validate_tree(payload: Any, unit_universe: set[str]) -> list[str]:
         if children.get(nid) and isinstance(capability, str) and len(capability) < 40:
             problems.append(f"node {nid} has children but capability text is not a real "
                             "explanation (<40 chars)")
+    if unit_universe:
+        empty = sorted(nid for nid, node in by_id.items() if not node.get("unit_ids") and not children.get(nid))
+        if empty:
+            problems.append(f"nodes with no units and no children: {empty[:12]}")
+        for nid, kids in children.items():
+            titles: dict[str, str] = {}
+            for kid in kids:
+                title = by_id[kid].get("title")
+                key = re.sub(r"\W+", " ", title.lower()).strip() if isinstance(title, str) else None
+                if key and key in titles:
+                    problems.append(f"nodes {titles[key]} and {kid} are siblings with the same title {title!r}")
+                elif key:
+                    titles[key] = kid
+    members: dict[str, set[str]] = {}
+
+    def subtree(nid: str) -> set[str]:
+        if nid not in members:
+            members[nid] = {u for u in by_id[nid].get("unit_ids") or [] if isinstance(u, str)}
+            for kid in children.get(nid, []):
+                members[nid] |= subtree(kid)
+        return members[nid]
+
+    if root is not None and not any(p.startswith("node ") and "reachable twice" in p for p in problems):
+        for nid, node in by_id.items():
+            evidence = node.get("evidence_units")
+            if evidence is not None and (not isinstance(evidence, list)
+                                         or any(not isinstance(u, str) or u not in subtree(nid) for u in evidence)):
+                problems.append(f"node {nid}: evidence_units must be members of the node's subtree")
     edges = payload.get("depends_on")
     if not isinstance(edges, list):
         problems.append("depends_on must be a list")
@@ -644,92 +509,3 @@ def validate_tree(payload: Any, unit_universe: set[str]) -> list[str]:
                 problems.append(f"depends_on {edge.get('from')}->{edge.get('to')}: "
                                 "basis (evidence) is required")
     return problems
-
-
-def normalize_tree(payload: Any, unit_universe: set[str]) -> list[str]:
-    """Repair shape only: drop bad nodes, reattach orphans under the first root,
-    and assign unowned units to a fallback node. Never drops a unit."""
-    if not isinstance(payload, dict):
-        raise ValueError("tree result is not a JSON object")
-    nodes = [node for node in payload.get("nodes") or []
-             if isinstance(node, dict) and isinstance(node.get("id"), str)
-             and _NODE_ID.match(node["id"])]
-    if not nodes:
-        raise ValueError("tree result has no usable nodes")
-    flags: list[str] = []
-    seen: set[str] = set()
-    unique: list[dict] = []
-    for node in nodes:
-        if node["id"] in seen:
-            flags.append(f"dropped duplicate node {node['id']}")
-            continue
-        seen.add(node["id"])
-        unique.append(node)
-    nodes = unique
-    by_id = {node["id"]: node for node in nodes}
-    roots = [node for node in nodes if node.get("parent") is None]
-    if not roots:
-        nodes[0]["parent"] = None
-        roots = [nodes[0]]
-        flags.append("no root; promoted the first node")
-    root = roots[0]["id"]
-    for node in nodes:
-        parent = node.get("parent")
-        if node["id"] != root and (not isinstance(parent, str) or parent not in by_id):
-            node["parent"] = root
-            flags.append(f"{node['id']}: parent missing; attached to root")
-    for field in ("title", "capability", "summary"):
-        for node in nodes:
-            if not isinstance(node.get(field), str) or not node[field].strip():
-                node[field] = node.get("title") or node["id"]
-                flags.append(f"{node['id']}: {field} was empty")
-    for node in nodes:
-        if not isinstance(node.get("unit_ids"), list):
-            node["unit_ids"] = []
-    owner: set[str] = set()
-    for node in nodes:
-        kept = [uid for uid in node["unit_ids"] if isinstance(uid, str) and uid in unit_universe
-                and uid not in owner]
-        if len(kept) != len(node["unit_ids"]):
-            flags.append(f"{node['id']}: dropped unknown or duplicate unit ids")
-        node["unit_ids"] = kept
-        owner.update(kept)
-    missing = sorted(unit_universe - owner)
-    if missing:
-        fallback = by_id.get(root)
-        assert fallback is not None
-        fallback.setdefault("unit_ids", []).extend(missing)
-        flags.append(f"{len(missing)} unit(s) had no owner; assigned to the root")
-    if not isinstance(payload.get("depends_on"), list):
-        payload["depends_on"] = []
-        flags.append("depends_on was not a list; dropped")
-    payload["nodes"] = nodes
-    return flags
-
-
-def mechanical_tree(modules: list[dict], units: dict[str, dict]) -> dict:
-    """A real structural fallback when the tree task cannot run: one node per
-    module/batch under a single root. It is honestly coarse, not a semantic
-    grouping, and the renderer says so."""
-    nodes = [{"id": "root", "parent": None, "title": "Codebase",
-              "capability": "Every source area of the repository. The semantic tree task "
-                            "did not produce accepted output, so the program grouped units "
-                            "by their reading batch; this is a structural fallback.",
-              "summary": "Open the area page for one batch of source files.",
-              "unit_ids": []}]
-    module_of: dict[str, str] = {}
-    for module in modules:
-        nid = f"area-{module['number'] + 1}"
-        nodes.append({"id": nid, "parent": "root", "title": module.get("title") or nid,
-                      "capability": "The source files in this reading batch.",
-                      "summary": "Units read from this batch of files.",
-                      "unit_ids": []})
-        for path in module["files"]:
-            module_of[path] = nid
-    by_id = {node["id"]: node for node in nodes}
-    for uid in units:
-        path = uid.split("::", 1)[0]
-        nid = module_of.get(path, "root")
-        by_id[nid]["unit_ids"].append(uid)
-    return {"nodes": nodes, "depends_on": [],
-            "fallback": "mechanical batch grouping; the tree task did not complete"}

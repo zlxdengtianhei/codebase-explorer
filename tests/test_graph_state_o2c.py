@@ -1,4 +1,4 @@
-"""Availability agrees at the prompt/INDEX boundary, including a failed build."""
+"""Availability agrees at the prompt/RUN.md boundary, including a failed build."""
 import copy
 import json
 from pathlib import Path
@@ -32,7 +32,7 @@ def test_prompt_and_index_share_availability(tmp_path, value, state, prompt_text
     assert line.startswith("GRAPH:") and prompt_text in line
     docs.render(run_dir=tmp_path, source_root=tmp_path, inventory={}, units={}, dispositions={},
                 tree={"nodes": []}, languages={}, graph=value)
-    index = (tmp_path / "docs/INDEX.md").read_text()
+    index = (tmp_path / "docs/RUN.md").read_text()
     opening = index.split("## Graph coverage\n\n", 1)[1].splitlines()[0]
     assert opening.startswith(index_text)
 

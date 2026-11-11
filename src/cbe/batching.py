@@ -27,6 +27,10 @@ MAX_TOKENS = 25_000
 MAX_SINGLE_FILE_TOKENS = 60_000
 
 
+def is_test_path(path: str) -> bool:
+    return path.startswith(("tests/", "test/", "t/")) or "/test_" in path
+
+
 @dataclass
 class SourceFile:
     path: str
@@ -38,7 +42,7 @@ class SourceFile:
 
     @property
     def is_test(self) -> bool:
-        return self.path.startswith(("tests/", "test/", "t/")) or "/test_" in self.path
+        return is_test_path(self.path)
 
 
 @dataclass

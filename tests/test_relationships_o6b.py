@@ -137,7 +137,8 @@ def render_example(tmp_path, *, evidence=True, flows=True, many=False):
 
 
 def test_three_mermaid_line_styles_and_full_legend(tmp_path):
-    _, index, _ = render_example(tmp_path)
+    run, _, _ = render_example(tmp_path)
+    index = (run / "docs/DEPENDENCIES.md").read_text()
     diagram = index.split("```mermaid\n", 1)[1].split("```", 1)[0]
     assert all(arrow in diagram for arrow in (" --> ", " -.-> ", " ==> "))
     legend = index.split("Legend: ", 1)[1].splitlines()[0]
@@ -146,34 +147,37 @@ def test_three_mermaid_line_styles_and_full_legend(tmp_path):
 
 
 def test_dependency_list_keeps_all_source_labels_and_separates_footnotes(tmp_path):
-    _, index, _ = render_example(tmp_path)
-    listing = index.split("## Dependency list\n", 1)[1].split("## Key flows", 1)[0]
-    assert all(f"· {label} ·" in listing for label in ("graph-confirmed", "model-inferred", "graph-only"))
+    run, _, _ = render_example(tmp_path)
+    listing = (run / "docs/DEPENDENCIES.md").read_text().split("## Dependency list\n", 1)[1]
+    assert all(f"· {label}" in listing for label in ("graph-confirmed", "model-inferred", "graph-only"))
+    assert "edge(s)" in listing and "0 edge(s)" not in listing and "model-inferred\n" in listing
     assert "\n\nGraph-only pairs are ranked by edge count" in listing
     assert "\n\nThe system response provided no key dependency descriptions." in listing
 
 
 def test_mermaid_at_most_fifteen_nodes(tmp_path):
-    _, index, _ = render_example(tmp_path, many=True)
+    run, _, _ = render_example(tmp_path, many=True)
+    index = (run / "docs/DEPENDENCIES.md").read_text()
     diagram = index.split("```mermaid\n", 1)[1].split("```", 1)[0]
     assert len(re.findall(r'^  n\d+\[', diagram, re.M)) == 15
 
 
-def test_index_explains_unavailable_graph(tmp_path):
-    _, index, _ = render_example(tmp_path, evidence=False)
+def test_dependencies_page_explains_unavailable_graph(tmp_path):
+    run, _, _ = render_example(tmp_path, evidence=False)
+    index = (run / "docs/DEPENDENCIES.md").read_text()
     assert "No usable graph evidence; only model-inferred dependencies are listed:" in index
 
 
 def test_index_explains_unavailable_candidates(tmp_path):
     _, index, _ = render_example(tmp_path, evidence=False, flows=False)
-    assert "No candidate flows:" in index
+    assert "No flows:" in index
 
 
 def test_all_bad_flows_fall_back_to_linked_program_candidates(tmp_path):
     run, index, result = render_example(tmp_path, flows=False)
     assert result["key_flows"] == 0 and result["candidate_flows"] == 1
     assert "Program candidates, not selected by the model" in index
-    assert "**Candidate 1**" in index and f"nodes/a.md#{docs.anchor('pkg/jobs.py::Pool.submit')}" in index
+    assert "**Candidate 1**" in index and "`Pool.submit`" in index and "`pkg/jobs.py:reserve`" in index
     assert json.loads((run / "catalog.json").read_text())["key_flows"] == []
 
 

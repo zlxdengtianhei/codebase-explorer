@@ -227,17 +227,13 @@ cbe host verify --run-dir /absolute/path/to/run
 
 The skill describes the complete loop and the result contracts. `host plan` accepts `.` or any path for the repository; `--run-dir`, `--repo`, and `--graph` need absolute paths. The skill's commands avoid quoted shell variables, because Claude Code asks for confirmation before it runs a command with quoted text it cannot check, even when `cbe` is on the allow list. The `tasks` count that `plan` prints covers the planned tasks only; each review finding adds one repair task later. `next` leases every task it returns, including the re-ask of a rejected task, so each one needs a subagent; attempts at one task share a label and their usage adds up. `submit` prints one JSON object and exits 0 whether it accepts or rejects: `accepted: true` carries `normalized` and `flags`, and `accepted: false` carries `error`, `attempts`, and `task_status` (`pending` for a queued re-ask, `failed` when the attempts are used up). `progress.log` records both.
 
-Detail authors receive their assigned frozen source chunks and local graph evidence. The tree stage receives responsibility summaries, source locations and counted unit edges; it assigns each unit one primary place in a semantic tree. Static resolved edges retain their analyzer kind. Detail authors' relations are a separate `kind=relation` category with `provenance=model_inferred`; they do not become static call evidence. Reports count the categories separately. A directory or a dense set of import edges does not by itself define a module's responsibility.
+Detail authors receive their assigned frozen source chunks and local graph evidence. The program, not the model, builds the module tree (`skeleton.build`): it groups units by their resolved call and import edges, shared files and directories, and similar wording, and gives each unit one primary place. The model only names the modules and the groups above them, from responsibility summaries, source locations and counted unit edges. Static resolved edges retain their analyzer kind. Detail authors' relations are a separate `kind=relation` category with `provenance=model_inferred`; they do not become static call evidence. Reports count the categories separately. A directory or a dense set of import edges does not by itself define a module's responsibility.
 
-Large trees use program-selected candidate regions, one `tree_region-*` task per region, then a `tree` merge that attaches their accepted subtrees. Set `CBE_TREE_MAX_UNITS` and `CBE_TREE_MAX_TOKENS` before the first tree dispatch to configure the region limits; defaults are defined in `cbe.aggregation.Limits`. The plan records the chosen limits and each region's initial completion input tokens in `host/state.json`. Files are indivisible; a unit spanning multiple files joins those files into one block. Unit count is a packing target that an indivisible block may exceed, while the token ceiling is strict. Regions are balanced using incremental summary and edge weights, directory locality and import affinity, then their complete prompts are measured. A file block larger than the token budget produces an explicit planning error with the configuration remedy. Region tasks wait for detail review and repair to settle, including reviews whose source module failed; small runs keep one tree task.
-
-Region node ids use compact prefixes (`r1-`, `r2-`, …). A region submission whose prefixed id exceeds 64 characters is rejected with the allowed length. A failed region gets a mechanical subtree. A failed merge retains all accepted region subtrees beneath a mechanical upper tree, and INDEX distinguishes these two failures. The merge completion input is also measured: if it exceeds the configured budget, the merge fails explicitly and the system overview can still finish from the retained tree. The current implementation does not introduce another merge layer automatically; increase the budget and make a new plan after inspecting this error.
-
-The defaults are 300 units and 64,000 input tokens. The token ceiling leaves room for whole files and inferred relations: an offline replay of accepted Flask answers measured 42,870 tokens for 254 units and 49,971 for 294 units, so both remain single-tree runs. At an explicit 32,000 ceiling the 294-unit snapshot splits into 171 and 123 units (26,677 and 20,250 tokens), with no file split. On celery's 12,106 synthetic units the largest indivisible file needs 44,422 tokens; the old 32,000 ceiling cannot hold it. At the defaults, 41 regions fit (largest 53,503 tokens), and the synthetic merge needs about 50,600 tokens. These are measured input sizes, not a guarantee of model context capacity or semantic grouping quality; configure the limits for the chosen model. Detail records are cached by accepted-answer content, with cache integrity checked before reuse; unchanged `next` calls skip rebuilding records and planning. Caches over 10 MB are compressed.
+Once all detail and review has settled, the program freezes the tree structure in `host/state.json`. `tree_name_<k>` tasks name the leaf modules in batches of about 12,000 prompt tokens and run in parallel; one `tree_top` task then names every group above them (a repository that is a single module has no `tree_top`). A model answer cannot add, remove or move a node or a unit. Answers are decoded node by node with short numbers (`M1`, `u3`, `G2`): good nodes are kept and a re-ask lists only the rejected ones. A node that is still unnamed after the last answer gets a title made by the program from its members' frequent words and main directory; the task completes, the node carries a `note`, and RUN.md and `summary.json` count these. The tree is always valid: no empty node, no two siblings with the same title, evidence units inside the node. A repair or a late reading batch changes the detail, so the skeleton and the names are made again.
 
 The dependency view labels pairs as **graph-confirmed** (tree and resolved call/import edges), **model-inferred** (tree only), or **graph-only** (graph only). The first two count edges between subtrees; graph-only counts direct node owners. **Containment** rows show resolved edges between ancestor direct units and a descendant subtree as `→ N / ← M`, relative to the listed pair. **Within containment** rows list direct owner pairs separately. Both containment categories stay out of Mermaid and the three dependency totals. Graph-only and within containment each keep their own top 40 pairs by edge count and report their own omitted count. `summary.json` records the full within containment count in `within_containment`. Key flows link unit ids; when the model supplies none, the report labels the first five paths **Program candidates, not selected by the model**. Program labels and navigation use English; model prose keeps its original language.
 
-P1–P7 diagnostics appear in `summary.json` and at the end of INDEX. They are advisory and never request a rewrite. Set `CBE_TREE_MIN_GRAIN`, `CBE_TREE_MAX_GRAIN`, and `CBE_TREE_SHARED_MIN_EDGES` to adjust granularity and shared-utility reporting. P5 reports dependency signals even when a utility already has its own module. Product P7 compares the prior rendering within this run for identical detail input: it says `re-render identical` or `re-render changed`, with no stability pass. Its first observation is `not_checked`. Cross-run id/title stability is assessed only by replay scripts that supply a previous report from another run with the same detail fingerprint; repeated rendering does not test a fresh model completion.
+P1–P7 diagnostics appear in `summary.json`; RUN.md shows two of them, cohesion and granularity. They are advisory and never request a rewrite. P5 reports dependency signals even when a utility already has its own module. Product P7 compares the prior rendering within this run for identical detail input: it says `re-render identical` or `re-render changed`, with no stability pass. Its first observation is `not_checked`. Cross-run id/title stability is assessed only by replay scripts that supply a previous report from another run with the same detail fingerprint; repeated rendering does not test a fresh model completion.
 
 `--graph` is optional. Without it the context explicitly records that no analyzed graph was supplied. The model must not invent missing relations. `--review` selects `none`, `sample`, or `all`. Operational completion, structural validity, and semantic review are separate results.
 
@@ -305,12 +301,15 @@ The endpoint must support the configured request fields. Batch limits apply to
 new plans; `--resume` keeps the frozen batches. A response ending with `length`
 (or `max_tokens`/`max_output_tokens`) fails with `output_limit`, even if its JSON
 parses. Module and repair detail tasks allow 3 answers; other tasks allow 2.
-Each rejection includes the error; on the final invalid answer the driver
-normalizes usable content. For module and repair details it tries answers from
-newest to oldest within the current round, accepting the first normalized answer
-that passes the same strict checks, or fails the task for resume if none passes. Truncated attempts
-cannot be accepted by final normalization. Increase
-`output_max_tokens` for resume or start a fresh run with smaller batch limits if needed.
+A detail answer is decoded unit by unit and a re-ask lists only what is missing
+(see the answer rules below); for the other tasks each rejection includes the
+error, and on the final invalid answer the driver normalizes usable content.
+Truncated attempts cannot be accepted by final normalization. HTTP 429 and 503
+are waited out inside the call (the server's `Retry-After`, else 5 s doubling to
+120 s, at most 6 repeats): they use no answer attempt and each shows as a
+`rate_limited` row in `calls.csv`. A call that is still refused goes back to the
+queue and the run pauses 60 s; the run stops with `provider_limit` only after 3
+such calls in a row with no response in between. Increase
 `output_max_tokens` caps API output (sent as the provider's `max_tokens` field);
 `batch_max_tokens` caps source input per reading batch.
 CLI help reads the model defaults table directly.
@@ -371,7 +370,8 @@ Start at `docs/INDEX.md`; the files outside `docs/` serve the commands and scrip
 
 | Path in `RUN` | What it is | Size |
 |---|---|---|
-| `docs/INDEX.md` | Start here. How to read the report, the responsibility tree with one line per unit, reading stats, graph coverage, the system overview, maintenance navigation, the dependency view and list, key flows, generation notes, and the P1–P7 checks. | 22 KB |
+| `docs/INDEX.md` | Start here. The overview, the module tree to its leaves with one capability line per node, key flows and the three lookup commands. Its size is capped at the larger of 2,000 tokens and 3% of the source tokens: over that, the deepest level is folded into the node pages first. | `summary.json` → `tree.index` records the budget and the tokens used |
+| `docs/DEPENDENCIES.md`, `docs/RUN.md` | Dependency view and list; then reading stats, graph coverage, generation notes and the cohesion and granularity readings. | |
 | `docs/nodes/<node>.md` | One page per responsibility node: its capability, what it depends on, then each unit with its signature, a program-derived source link, the explanation and its relations. The footer gives `find`, `query` and `source` commands. | 14 pages; `docs/` holds 114 KB |
 | `catalog.json` | The machine-readable catalogue that `find` and `query` read: units, every inventory symbol with its disposition (`unit`, `grouped` or `index_only`), files, tree nodes, node dependencies, key flows, and one shared table of call and import edges. | 1.1 MB; svelte about 27 MB |
 | `context.json` | The frozen source snapshot: every chunk's text, byte and line range and hash, plus the analyzed graph when the run had one. `source`, `query --edges` and verification read it. | 17.9 MB with the Joern graph (0.4 MB without); svelte about 250 MB |
@@ -487,48 +487,32 @@ and `STATUS.md`; a finished run with failed checks is `partial`, with failing
 check names in the status document. `cbe generate` likewise exits 3 for a partial
 run. Fix the reported cause and verify again; source drift requires a new plan.
 
-Detail answers may use inventory IDs from their own batch or `grp:` IDs for
-model-defined groups. Normalization must pass the same strict checks before an
-answer is published; unrepaired answers stay failed for resume. Model prose that
-looks like an inline Markdown link is rendered as literal text, including code
-such as `environ['werkzeug.debug.preserve_context'](ctx)`. Code spans and fenced
-code remain verbatim; source and navigation links are generated by CBE.
+A detail answer never writes an inventory ID. The instruction lists the batch's
+symbols as numbered lines (number, kind, name, source lines); the answer names
+symbols by number: `{"units":[{"h":[12],"explain":"..."},{"h":[20,21],"title":"parse
+entrypoints","explain":"..."}],"notes":"optional"}`. One number makes a unit for
+that symbol; several numbers make a group, and CBE generates the `grp:` ID, the
+unit kind and the full `dispositions` map. A relation target is a number inside
+the batch, or a name string outside it. Model prose that looks like an inline
+Markdown link is rendered as literal text, including code such as
+`environ['werkzeug.debug.preserve_context'](ctx)`. Code spans and fenced code remain
+verbatim; source and navigation links are generated by CBE.
 
-When a detail ID uniquely matches a batch inventory entry by path, kind and
-qualified name, final normalization can correct the ID (including suffixes such
-as `_full`). A corrected unit definition has a notice beside its body: CBE shows
-the original and inventory IDs and warns that the model wrote the body under the
-wrong ID, so it may be inaccurate. Reference-only corrections do not add a unit
-notice. The same notice is stored in each corrected catalog unit's
-`id_corrections` and returned by `query` in text and JSON; `find` marks the row
-and directs the reader to `query`. Notices count as program-written `node_text`, not `model_body`, in the
-Markdown token breakdown. `STATUS.md` lists `id_corrected` separately from shape
-normalization; `summary.json` contains `id_corrected_count` and `id_corrected`
-rows with `task`, `original`, `corrected` and `location`. The existing `normalized`
-task list remains available. If an extra disposition key corrects to an existing
-key, CBE keeps the existing disposition, drops the extra key and records flags.
-
-Automatic `index_only` coverage repair is bounded: a partially supplied detail
-answer may need one inventory disposition filled, or two when its batch has at
-least 40 inventory symbols. Missing dispositions and entries with invalid `how`
-share this allowance; an answer requiring every disposition to be filled is
-rejected. Retry diagnostics name missing or invalid IDs and the repair count.
-If the final answer still fails any check, CBE tries earlier answers from newest
-to oldest in the current round, applying the same identity corrections, coverage
-allowance and strict checks. The first passing answer is accepted; if none passes,
-the task fails and the run stays partial for resume. A fallback is flagged as
-`answer_fallback: attempt N (final attempt M)`. `STATUS.md` and INDEX list the
-selected attempt separately from `id_corrected`; `summary.json` adds
-`answer_fallback_count` and `answer_fallback` rows with `task`, `attempt` and
-`final_attempt` when a fallback occurs. Explicit model-authored `index_only`
-choices and complete group dispositions are unaffected.
-
-`STATUS.md` and `summary.json` list `index_only_filled` separately from
-`id_corrected`; JSON includes `index_only_filled_count` and rows with `task`,
-`symbol`, and `reason` (`missing` or `invalid`). These count only entries made
-by normalization and exclude the model's own
-`index_only` choices. INDEX notes identify the affected active module/repair;
-the note counts as program-written `index` text, outside `model_body`.
+CBE keeps every usable unit of an answer. An unknown number is dropped and noted;
+a number that two units list stays with the first; a unit left without a symbol
+or without an `explain` is rejected and the other units are kept. Only an answer
+that is not a JSON object, or has no `units` list, is refused whole. A symbol that
+no unit lists is indexed without prose, unless it is a function, method or class
+whose own source is at least 40 tokens (tests included): that is a gap. The prompt asks
+for tests to be handed in as groups, one unit per behavior they pin. When an
+answer leaves gaps or rejected units, the re-ask repeats the first ask unchanged
+and appends only the gaps, so the provider's prefix cache can serve it, and the
+model returns only additional units. After the last answer (3 for module and
+repair tasks) the symbols that are still unexplained are indexed without prose and
+flagged `unexplained`; the task still completes. `STATUS.md` and `summary.json`
+(`unexplained_count`, `unexplained`) list them, and the RUN.md notes name the
+affected modules. A run planned for the earlier answer format (full IDs and
+dispositions) is refused with a request to run `plan` again.
 
 Usage reports distinguish known counters, estimates, and missing values. Host-agent usage can be imported where the harness provides the corresponding session records. Unknown model prices remain `null` in JSON and `unknown` in the cost report, even when token counts are exact. `cbe host cost --price INPUT,OUTPUT,CACHE_WRITE,CACHE_READ` accepts supplied rates in USD per million tokens. `cbe host cost` prices exact rows by the model recorded in each transcript; `--model MODEL` prices only the rows that are still estimates, which `import-usage` lists as `tasks_without_exact_usage`. In Claude Code, subagents run in the background and their usage arrives only in a later notification, so the skill submits each task when its `DONE` hand-back arrives, without usage; `import-usage` then adds exact usage from the subagent transcripts. Price equivalents are not subscription invoices.
 
@@ -537,9 +521,9 @@ Usage reports distinguish known counters, estimates, and missing values. Host-ag
 Each item below happened in the evaluation runs. The link after it names the section of [evaluation/README.md](evaluation/README.md) that records it.
 
 - **C and C++ macros produce `syntax_error`.** Tree-sitter parses each file without running the preprocessor. CBE still puts every byte of the file into some chunk, but a macro-heavy region can become one coarse chunk, and a macro can be taken for a name. In curl, 153 of the 485 source files (31.5%) reported `syntax_error` ([Q-A: curl](evaluation/README.md#q-a-curl-e5)). In cJSON, 3 files reported it, and `internal_malloc` and `internal_realloc` were registered as `function::CJSON_CDECL`, the calling-convention macro. In fmt, 19 files reported it, and the empty macro `FMT_END_EXPORT` was registered as a function that covers lines 928–1755 ([Showcase](evaluation/README.md#showcase-e6)). Read the `diagnostics` of `cbe context build` before you generate. For C++ headers, pass `--header-language cpp`.
-- **A run can stay `partial` after resumes.** fmt stayed partial after two resumes. Both resumes exited 2 with the task still leased, and the root cause was not located. `format.h` and `core.h` (39.663% of the source) have no published unit. After the resumes, 28 node pages lost their dependency notes, and `summary.json` under-counts 6 requests. The first-pass answer for `format.h` had been cut at the 49,152-token output limit ([Showcase](evaluation/README.md#showcase-e6)). `cbe host status --run-dir RUN` shows which task is leased or failed. The finished parts stay readable, and INDEX names the pending work.
+- **A run can stay `partial` after resumes.** fmt stayed partial after two resumes. Both resumes exited 2 with the task still leased, and the root cause was not located. `format.h` and `core.h` (39.663% of the source) have no published unit. After the resumes, 28 node pages lost their dependency notes, and `summary.json` under-counts 6 requests. The first-pass answer for `format.h` had been cut at the 49,152-token output limit ([Showcase](evaluation/README.md#showcase-e6)). `cbe host status --run-dir RUN` shows which task is leased or failed. The finished parts stay readable, and RUN.md names the pending work.
 - **First passes are often incomplete.** With `zai/glm-5.3-flash`, the first passes on svelte, pytest and curl ended incomplete, mostly because of malformed module answers (`schema_error`). The resumes used the same settings ([Showcase](evaluation/README.md#showcase-e6)). Every svelte run completed within one resume ([Q-C](evaluation/README.md#q-c-cost-and-size-e4b-e4c)). Continue with `cbe host resume` or `cbe generate ... --resume`.
-- **A provider rate limit stops a run.** The curl first pass stopped on an HTTP 429 response ([Generation runs](evaluation/README.md#generation-runs)). Resume when the limit allows.
+- **A provider rate limit can still stop a run.** The curl first pass stopped on an HTTP 429 response ([Generation runs](evaluation/README.md#generation-runs)), before the driver waited out 429 and 503. It now stops only after 3 refused calls in a row, each already repeated 6 times. Resume when the limit allows.
 - **A missing optional grammar turns a file into one whole-file chunk.** During the evaluation, the Python environment was rebuilt without all of the optional grammar packages. The polyglot example then had 7 whole-file fallbacks; with the grammars present it had 1 (`src/q.sql`, because CBE has no SQL grammar) ([Showcase](evaluation/README.md#showcase-e6), [Limitations](evaluation/README.md#limitations)). `cbe languages` shows each missing grammar as `"available": false` with its import error, and `context build` names each affected file, as here for a Ruby file without the `languages` extra:
 
   ```text
@@ -627,7 +611,7 @@ A resumed detail answer can introduce a grouped unit before the responsibility
 tree has been rebuilt. Flow steps for these units link to the catalog and say
 `not assigned to a node`; resume the tree/system tasks to complete navigation.
 Until a new system answer is accepted, rendering keeps the last accepted overview,
-dependency descriptions and key flows. INDEX notes that this overview predates
+dependency descriptions and key flows. RUN.md notes that this overview predates
 some completed modules and will update when the resumed system task completes.
 Without an accepted system answer, rendering uses a mechanical overview.
 Joern nodes with filenames outside the source manifest retain their identity

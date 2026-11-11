@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from cbe import host_run
+from cbe import checks, host_run, symbols
 from test_generate import _semantic_answer, _tiny_repo
 
 
@@ -46,42 +46,51 @@ def _finish(run):
     return host_run.status(run)
 
 
+UNUSABLE = {'nope': 1}  # no units list: the one kind of answer that is still refused whole
+
+
+def _gap(run, tid):
+    """The first function of the task's batch: the symbol a test leaves out of its answer."""
+    state = json.loads((run / 'host/state.json').read_text())
+    files = state['modules'][state['tasks'][tid]['module']]['files']
+    return next(row for row in symbols.batch_table(files, state['inventory']) if row['kind'] == 'function')
+
+
 @pytest.mark.parametrize('kind',['module','repair'])
-def test_detail_gets_third_answer_with_previous_identity_and_coverage_diagnostics(tmp_path, kind):
+def test_detail_gets_third_answer_with_only_the_gap_in_the_follow_up(tmp_path, monkeypatch, kind):
+    monkeypatch.setattr(checks, 'GAP_MIN_TOKENS', 1)
     run, item = _target(tmp_path, kind)
     tid = item['task']
-    value = _semantic_answer(host_run.completion_prompt(run, tid))
-    good = value['units'][0]['id']
-    bad = good.rsplit('::',1)[0]+'::999999_tmp'
-    value['units'][0]['id'] = bad
-    value['dispositions'][good]['unit'] = bad
-    first = _answer(run,item,value)
+    gap = _gap(run, tid)
+    first_ask = host_run.completion_prompt(run, tid)
+    value = _semantic_answer(first_ask)
+    value['units'] = [unit for unit in value['units'] if unit['h'] != [gap['n']]]
+    first = _answer(run, item, value)
     assert not first['accepted'] and first['task_status']=='pending'
     item = _next(run,tid)
     prompt = host_run.completion_prompt(run,tid)
-    assert bad in prompt and good in prompt and 'candidates:' in prompt
-    value = _semantic_answer(prompt)
-    value.pop('dispositions')
-    second = _answer(run,item,value)
+    assert prompt.startswith(first_ask) and f"{gap['n']} function {gap['name']}" in prompt[len(first_ask):]
+    second = _answer(run,item,UNUSABLE)
     assert not second['accepted'] and second['task_status']=='pending'
     assert not (run/f'host/accepted/{tid}.json').exists()
     item = _next(run,tid)
     prompt = host_run.completion_prompt(run,tid)
-    assert 'Every inventory symbol must have a disposition' in prompt and good in prompt
-    third = _answer(run,item,_semantic_answer(prompt))
+    follow_up = prompt[len(first_ask):]
+    assert 'no units list' in follow_up and f"{gap['n']} function {gap['name']}" in follow_up
+    third = _answer(run,item,{'units': [{'h': [gap['n']], 'explain': 'The missing unit.'}]})
     assert third['accepted'] and third['attempts']==3 and not third['normalized']
+    accepted = json.loads((run/f'host/accepted/{tid}.json').read_text())
+    assert gap['id'] in {unit['id'] for unit in accepted['units']}
     assert _finish(run)['status']=='complete' and host_run.verify(run)['ok']
 
 
 @pytest.mark.parametrize('kind',['module','repair'])
-def test_three_bad_detail_answers_fail_and_render_partial(tmp_path, kind):
+def test_three_unusable_detail_answers_fail_and_render_partial(tmp_path, kind):
     run, item = _target(tmp_path,kind)
     tid = item['task']
     for attempt in (1,2,3):
         if attempt>1:item=_next(run,tid)
-        value = _semantic_answer(host_run.completion_prompt(run,tid))
-        value.pop('dispositions')
-        result = _answer(run,item,value)
+        result = _answer(run,item,UNUSABLE)
         assert not result['accepted']
         assert result['task_status']==('failed' if attempt==3 else 'pending')
     status = _finish(run)
@@ -100,15 +109,13 @@ def test_detail_resume_and_retry_grant_three_fresh_answers(tmp_path,kind,recover
     tid=item['task']
     for attempt in (1,2,3):
         if attempt>1:item=_next(run,tid)
-        value=_semantic_answer(host_run.completion_prompt(run,tid));value.pop('dispositions')
-        result=_answer(run,item,value)
+        result=_answer(run,item,UNUSABLE)
     assert result['task_status']=='failed'
     if recovery=='resume':host_run.resume(run)
     else:host_run.retry(run,tid)
     for fresh in (1,2,3):
         item=_next(run,tid)
-        value=_semantic_answer(host_run.completion_prompt(run,tid))
-        if fresh<3:value.pop('dispositions')
+        value=UNUSABLE if fresh<3 else _semantic_answer(host_run.completion_prompt(run,tid))
         result=_answer(run,item,value)
         assert result['accepted']==(fresh==3)
         assert result['attempts']==3+fresh
@@ -122,7 +129,7 @@ def test_detail_resume_and_retry_grant_three_fresh_answers(tmp_path,kind,recover
     assert '1/3 this round' in log and '2/3 this round' in log
 
 
-@pytest.mark.parametrize('kind',['names','tree','system','review'])
+@pytest.mark.parametrize('kind',['tree_name','system','review'])
 def test_other_task_kinds_still_have_two_answers_and_two_after_retry(tmp_path,kind):
     run,item=_target(tmp_path,kind)
     tid=item['task']
