@@ -11,3 +11,6 @@ claude_mcp_list.txt
 experiments/**/node_modules/
 experiments/**/.work/
 .codebase-analysis/
+
+# evaluation scratch (clones, raw model answers)
+.eval/

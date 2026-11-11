@@ -1,0 +1,607 @@
+{
+ "ruby_llm": {
+  "fewer_modules": [
+   {
+    "name": "dir depth 0",
+    "modules": 1,
+    "random3_recall": 1.0,
+    "random3_share": 1.0,
+    "oracle3_recall": 1.0,
+    "lift": 1.0
+   },
+   {
+    "name": "dir depth 1",
+    "modules": 1,
+    "random3_recall": 1.0,
+    "random3_share": 1.0,
+    "oracle3_recall": 1.0,
+    "lift": 1.0
+   },
+   {
+    "name": "dir depth 2",
+    "modules": 4,
+    "random3_recall": 0.7545636708214885,
+    "random3_share": 0.7556770275911799,
+    "oracle3_recall": 1.0,
+    "lift": 0.9985266764384244
+   },
+   {
+    "name": "dir depth 3",
+    "modules": 7,
+    "random3_recall": 0.42873147657629507,
+    "random3_share": 0.4290806292458917,
+    "oracle3_recall": 1.0,
+    "lift": 0.9991862772500119
+   },
+   {
+    "name": "dir depth 4",
+    "modules": 22,
+    "random3_recall": 0.13771492474588448,
+    "random3_share": 0.13767036699684995,
+    "oracle3_recall": 0.9998760842627014,
+    "lift": 1.0003236553370671
+   },
+   {
+    "name": "dir depth 5",
+    "modules": 23,
+    "random3_recall": 0.13217288288002518,
+    "random3_share": 0.13152307487950207,
+    "oracle3_recall": 0.9998760842627014,
+    "lift": 1.0049406387519335
+   },
+   {
+    "name": "one module for everything",
+    "modules": 1,
+    "random3_recall": 1.0,
+    "random3_share": 1.0,
+    "oracle3_recall": 1.0,
+    "lift": 1.0
+   }
+  ],
+  "b_bias": {
+   "T0 up1: soft Q": 0.046846931241192546,
+   "T0 up1: hard-majority Q (the probe's way)": 0.046846931241192546,
+   "one file per module": -0.024314196093978113,
+   "one module for everything": -2.55351295663786e-15,
+   "B1 one module": 0.0,
+   "B1 one unit per module": -0.008926234384295063,
+   "B1 edge weight (call edges)": 410.0,
+   "leaf dirs: real Q": 0.0818143443382851,
+   "leaf dirs randomly paired (files kept together), mean Q": 0.06879824605213766
+  },
+  "leak": {
+   "up1": "13/17",
+   "leaf": "36/51"
+  },
+  "no_map": {
+   "glm-flash": {
+    "exact_path_recall": 0.3615961854388763,
+    "same_file_name_recall": 0.42826285210554293,
+    "tokens_per_q": 184.33333333333334
+   },
+   "deepseek-flash": {
+    "exact_path_recall": 0.44616454562061936,
+    "same_file_name_recall": 0.4594978789539527,
+    "tokens_per_q": 2193.5666666666666
+   }
+  },
+  "no_capability_up1": {
+   "view": "up1-no-capability",
+   "modules": 17,
+   "page_tokens": 803,
+   "page_id": "f65e07bcc8",
+   "questions": 30,
+   "reference": {
+    "random3_recall": 0.17485632582812308,
+    "random3_share": 0.17663666552810353,
+    "largest3_recall": 0.2793971448228414,
+    "largest3_share": 0.295798702038028,
+    "oracle3_recall": 0.9992224894914595
+   },
+   "models": {
+    "glm-flash": {
+     "recall": 0.7570758218248336,
+     "share": 0.16745607043910585,
+     "lift": 4.521041368280158,
+     "tokens_per_q": 997.9,
+     "no_valid_answer": 0,
+     "invalid_ids_dropped": 0,
+     "mean_modules_chosen": 3.0
+    },
+    "deepseek-flash": {
+     "recall": 0.7833152606898104,
+     "share": 0.1639568864093514,
+     "lift": 4.777568529412702,
+     "tokens_per_q": 2585.5666666666666,
+     "no_valid_answer": 0,
+     "invalid_ids_dropped": 0,
+     "mean_modules_chosen": 3.0
+    }
+   }
+  }
+ },
+ "gson": {
+  "fewer_modules": [
+   {
+    "name": "dir depth 0",
+    "modules": 1,
+    "random3_recall": 1.0,
+    "random3_share": 1.0,
+    "oracle3_recall": 1.0,
+    "lift": 1.0
+   },
+   {
+    "name": "dir depth 1",
+    "modules": 1,
+    "random3_recall": 1.0,
+    "random3_share": 1.0,
+    "oracle3_recall": 1.0,
+    "lift": 1.0
+   },
+   {
+    "name": "dir depth 2",
+    "modules": 1,
+    "random3_recall": 1.0,
+    "random3_share": 1.0,
+    "oracle3_recall": 1.0,
+    "lift": 1.0
+   },
+   {
+    "name": "dir depth 3",
+    "modules": 1,
+    "random3_recall": 1.0,
+    "random3_share": 1.0,
+    "oracle3_recall": 1.0,
+    "lift": 1.0
+   },
+   {
+    "name": "dir depth 4",
+    "modules": 1,
+    "random3_recall": 1.0,
+    "random3_share": 1.0,
+    "oracle3_recall": 1.0,
+    "lift": 1.0
+   },
+   {
+    "name": "dir depth 5",
+    "modules": 2,
+    "random3_recall": 1.0,
+    "random3_share": 1.0,
+    "oracle3_recall": 1.0,
+    "lift": 1.0
+   },
+   {
+    "name": "dir depth 6",
+    "modules": 2,
+    "random3_recall": 1.0,
+    "random3_share": 1.0,
+    "oracle3_recall": 1.0,
+    "lift": 1.0
+   },
+   {
+    "name": "dir depth 7",
+    "modules": 2,
+    "random3_recall": 1.0,
+    "random3_share": 1.0,
+    "oracle3_recall": 1.0,
+    "lift": 1.0
+   },
+   {
+    "name": "dir depth 8",
+    "modules": 6,
+    "random3_recall": 0.4988900030010672,
+    "random3_share": 0.505471903920339,
+    "oracle3_recall": 1.0,
+    "lift": 0.9869787007581946
+   },
+   {
+    "name": "dir depth 9",
+    "modules": 9,
+    "random3_recall": 0.3321277040884327,
+    "random3_share": 0.33077492731315206,
+    "oracle3_recall": 1.0,
+    "lift": 1.0040897198172458
+   },
+   {
+    "name": "dir depth 10",
+    "modules": 10,
+    "random3_recall": 0.3006125083300013,
+    "random3_share": 0.29795383197461184,
+    "oracle3_recall": 1.0,
+    "lift": 1.008923115161063
+   },
+   {
+    "name": "one module for everything",
+    "modules": 1,
+    "random3_recall": 1.0,
+    "random3_share": 1.0,
+    "oracle3_recall": 1.0,
+    "lift": 1.0
+   }
+  ],
+  "b_bias": {
+   "T0 up1: soft Q": 0.03881450243047194,
+   "T0 up1: hard-majority Q (the probe's way)": 0.03881450243047194,
+   "one file per module": -0.039602311986732294,
+   "one module for everything": 3.1086244689504383e-15,
+   "B1 one module": 0.0,
+   "B1 one unit per module": -0.009113635366869875,
+   "B1 edge weight (call edges)": 755.0,
+   "leaf dirs: real Q": 0.13902231673868265,
+   "leaf dirs randomly paired (files kept together), mean Q": 0.12676430504637837
+  },
+  "leak": {
+   "up1": "5/8",
+   "leaf": "14/23"
+  },
+  "no_map": {
+   "glm-flash": {
+    "exact_path_recall": 0.6392524671230257,
+    "same_file_name_recall": 0.6408784833831883,
+    "tokens_per_q": 230.96666666666667
+   },
+   "deepseek-flash": {
+    "exact_path_recall": 0.7097085718606179,
+    "same_file_name_recall": 0.7446679214541139,
+    "tokens_per_q": 1302.5666666666666
+   }
+  },
+  "no_capability_up1": {
+   "view": "up1-no-capability",
+   "modules": 8,
+   "page_tokens": 470,
+   "page_id": "b0edf30715",
+   "questions": 30,
+   "reference": {
+    "random3_recall": 0.3821103282626001,
+    "random3_share": 0.37707756114246627,
+    "largest3_recall": 0.8240867912385019,
+    "largest3_share": 0.7015563536856507,
+    "oracle3_recall": 0.9955555555555555
+   },
+   "models": {
+    "glm-flash": {
+     "recall": 0.8204846373329265,
+     "share": 0.5196301997225548,
+     "lift": 1.5789779688921208,
+     "tokens_per_q": 678.4333333333333,
+     "no_valid_answer": 0,
+     "invalid_ids_dropped": 0,
+     "mean_modules_chosen": 3.0
+    },
+    "deepseek-flash": {
+     "recall": 0.7465342380054781,
+     "share": 0.5348896870189841,
+     "lift": 1.3956788775757092,
+     "tokens_per_q": 1991.2666666666667,
+     "no_valid_answer": 0,
+     "invalid_ids_dropped": 0,
+     "mean_modules_chosen": 3.0
+    }
+   }
+  }
+ },
+ "tsdown": {
+  "fewer_modules": [
+   {
+    "name": "dir depth 0",
+    "modules": 1,
+    "random3_recall": 1.0,
+    "random3_share": 1.0,
+    "oracle3_recall": 1.0,
+    "lift": 1.0
+   },
+   {
+    "name": "dir depth 1",
+    "modules": 1,
+    "random3_recall": 1.0,
+    "random3_share": 1.0,
+    "oracle3_recall": 1.0,
+    "lift": 1.0
+   },
+   {
+    "name": "dir depth 2",
+    "modules": 4,
+    "random3_recall": 0.7519220675988391,
+    "random3_share": 0.7531209610072589,
+    "oracle3_recall": 1.0,
+    "lift": 0.9984080998000422
+   },
+   {
+    "name": "dir depth 3",
+    "modules": 5,
+    "random3_recall": 0.5999299533157966,
+    "random3_share": 0.6030753838247574,
+    "oracle3_recall": 1.0,
+    "lift": 0.9947843493643991
+   },
+   {
+    "name": "one module for everything",
+    "modules": 1,
+    "random3_recall": 1.0,
+    "random3_share": 1.0,
+    "oracle3_recall": 1.0,
+    "lift": 1.0
+   }
+  ],
+  "b_bias": {
+   "T0 up1: soft Q": 0.0073589941139637904,
+   "T0 up1: hard-majority Q (the probe's way)": 0.0073589941139637904,
+   "one file per module": -0.050389618727379244,
+   "one module for everything": 3.1086244689504383e-15,
+   "B1 one module": 0.0,
+   "B1 one unit per module": -0.021587434945973066,
+   "B1 edge weight (call edges)": 207.0,
+   "leaf dirs: real Q": 0.04772977550545782,
+   "leaf dirs randomly paired (files kept together), mean Q": 0.096811251568933
+  },
+  "leak": {
+   "up1": "8/9",
+   "leaf": "17/19"
+  },
+  "no_map": {
+   "glm-flash": {
+    "exact_path_recall": 0.10714285714285715,
+    "same_file_name_recall": 0.24135640478924061,
+    "tokens_per_q": 180.23333333333332
+   },
+   "deepseek-flash": {
+    "exact_path_recall": 0.3888801851066002,
+    "same_file_name_recall": 0.4915622012214521,
+    "tokens_per_q": 2156.866666666667
+   }
+  },
+  "no_capability_up1": {
+   "view": "up1-no-capability",
+   "modules": 9,
+   "page_tokens": 228,
+   "page_id": "9269737bbc",
+   "questions": 30,
+   "reference": {
+    "random3_recall": 0.3406751617142508,
+    "random3_share": 0.33661800603841463,
+    "largest3_recall": 0.6000936788378888,
+    "largest3_share": 0.6486798997880131,
+    "oracle3_recall": 1.0
+   },
+   "models": {
+    "glm-flash": {
+     "recall": 0.8045033432475532,
+     "share": 0.4798419734052804,
+     "lift": 1.6766006056916156,
+     "tokens_per_q": 592.8,
+     "no_valid_answer": 0,
+     "invalid_ids_dropped": 0,
+     "mean_modules_chosen": 3.0
+    },
+    "deepseek-flash": {
+     "recall": 0.7689981715354849,
+     "share": 0.4966981435087043,
+     "lift": 1.5482203458688963,
+     "tokens_per_q": 1858.5,
+     "no_valid_answer": 0,
+     "invalid_ids_dropped": 0,
+     "mean_modules_chosen": 3.0
+    }
+   }
+  }
+ },
+ "fmt": {
+  "fewer_modules": [
+   {
+    "name": "dir depth 0",
+    "modules": 1,
+    "random3_recall": 1.0,
+    "random3_share": 1.0,
+    "oracle3_recall": 1.0,
+    "lift": 1.0
+   },
+   {
+    "name": "dir depth 1",
+    "modules": 2,
+    "random3_recall": 1.0,
+    "random3_share": 1.0,
+    "oracle3_recall": 1.0,
+    "lift": 1.0
+   },
+   {
+    "name": "dir depth 2",
+    "modules": 2,
+    "random3_recall": 1.0,
+    "random3_share": 1.0,
+    "oracle3_recall": 1.0,
+    "lift": 1.0
+   },
+   {
+    "name": "one module for everything",
+    "modules": 1,
+    "random3_recall": 1.0,
+    "random3_share": 1.0,
+    "oracle3_recall": 1.0,
+    "lift": 1.0
+   }
+  ],
+  "b_bias": {
+   "T0 up1: soft Q": 0.027448594238004456,
+   "T0 up1: hard-majority Q (the probe's way)": 0.027448594238004456,
+   "one file per module": -0.08636919941144204,
+   "one module for everything": -4.440892098500626e-16,
+   "B1 one module": 0.0,
+   "B1 one unit per module": -0.0823961937716263,
+   "B1 edge weight (call edges)": 68.0,
+   "leaf dirs: real Q": -0.02095805673174611,
+   "leaf dirs randomly paired (files kept together), mean Q": -0.02095805673174611
+  },
+  "leak": {
+   "up1": "8/13",
+   "leaf": "14/37"
+  },
+  "no_map": {
+   "glm-flash": {
+    "exact_path_recall": 0.31666666666666665,
+    "same_file_name_recall": 0.31666666666666665,
+    "tokens_per_q": 180.66666666666666
+   },
+   "deepseek-flash": {
+    "exact_path_recall": 0.31666666666666665,
+    "same_file_name_recall": 0.31666666666666665,
+    "tokens_per_q": 1012.7666666666667
+   }
+  },
+  "no_capability_up1": {
+   "view": "up1-no-capability",
+   "modules": 13,
+   "page_tokens": 260,
+   "page_id": "92af007a64",
+   "questions": 30,
+   "reference": {
+    "random3_recall": 0.22754601462091734,
+    "random3_share": 0.2307220358547055,
+    "largest3_recall": 0.6595920292418348,
+    "largest3_share": 0.5258088951412185,
+    "oracle3_recall": 1.0
+   },
+   "models": {
+    "glm-flash": {
+     "recall": 0.7095920292418347,
+     "share": 0.40010099917036396,
+     "lift": 1.773532259887431,
+     "tokens_per_q": 444.93333333333334,
+     "no_valid_answer": 0,
+     "invalid_ids_dropped": 0,
+     "mean_modules_chosen": 3.0
+    },
+    "deepseek-flash": {
+     "recall": 0.6694611484494752,
+     "share": 0.35746492082386466,
+     "lift": 1.8728023631145108,
+     "tokens_per_q": 984.1666666666666,
+     "no_valid_answer": 0,
+     "invalid_ids_dropped": 0,
+     "mean_modules_chosen": 3.0
+    }
+   }
+  }
+ },
+ "flask": {
+  "fewer_modules": [
+   {
+    "name": "dir depth 0",
+    "modules": 1,
+    "random3_recall": 1.0,
+    "random3_share": 1.0,
+    "oracle3_recall": 1.0,
+    "lift": 1.0
+   },
+   {
+    "name": "dir depth 1",
+    "modules": 1,
+    "random3_recall": 1.0,
+    "random3_share": 1.0,
+    "oracle3_recall": 1.0,
+    "lift": 1.0
+   },
+   {
+    "name": "dir depth 2",
+    "modules": 1,
+    "random3_recall": 1.0,
+    "random3_share": 1.0,
+    "oracle3_recall": 1.0,
+    "lift": 1.0
+   },
+   {
+    "name": "dir depth 3",
+    "modules": 3,
+    "random3_recall": 1.0,
+    "random3_share": 1.0,
+    "oracle3_recall": 1.0,
+    "lift": 1.0
+   },
+   {
+    "name": "dir depth 4",
+    "modules": 3,
+    "random3_recall": 1.0,
+    "random3_share": 1.0,
+    "oracle3_recall": 1.0,
+    "lift": 1.0
+   },
+   {
+    "name": "dir depth 5",
+    "modules": 3,
+    "random3_recall": 1.0,
+    "random3_share": 1.0,
+    "oracle3_recall": 1.0,
+    "lift": 1.0
+   },
+   {
+    "name": "one module for everything",
+    "modules": 1,
+    "random3_recall": 1.0,
+    "random3_share": 1.0,
+    "oracle3_recall": 1.0,
+    "lift": 1.0
+   }
+  ],
+  "b_bias": {
+   "T0 up1: soft Q": -0.0920990555263065,
+   "T0 up1: hard-majority Q (the probe's way)": -0.09589589040617703,
+   "one file per module": -0.11328502159174107,
+   "one module for everything": 2.220446049250313e-16,
+   "B1 one module": 0.0,
+   "B1 one unit per module": -0.016132053090936332,
+   "B1 edge weight (call edges)": 283.0,
+   "leaf dirs: real Q": 0.03738569259529645,
+   "leaf dirs randomly paired (files kept together), mean Q": 0.03738569259529645
+  },
+  "leak": {
+   "up1": "6/9",
+   "leaf": "13/32"
+  },
+  "no_map": {
+   "glm-flash": {
+    "exact_path_recall": 0.4419257340241796,
+    "same_file_name_recall": 0.5038975650100951,
+    "tokens_per_q": 169.23333333333332
+   },
+   "deepseek-flash": {
+    "exact_path_recall": 0.4979274611398964,
+    "same_file_name_recall": 0.6932326254591452,
+    "tokens_per_q": 1947.2
+   }
+  },
+  "no_capability_up1": {
+   "view": "up1-no-capability",
+   "modules": 9,
+   "page_tokens": 266,
+   "page_id": "f216714261",
+   "questions": 30,
+   "reference": {
+    "random3_recall": 0.3255633305597362,
+    "random3_share": 0.3333198485526709,
+    "largest3_recall": 0.38546691290309026,
+    "largest3_share": 0.4995523724261415,
+    "oracle3_recall": 0.9991002472893286
+   },
+   "models": {
+    "glm-flash": {
+     "recall": 0.7841965955321099,
+     "share": 0.37095270068636227,
+     "lift": 2.114006971997064,
+     "tokens_per_q": 459.43333333333334,
+     "no_valid_answer": 0,
+     "invalid_ids_dropped": 0,
+     "mean_modules_chosen": 3.0
+    },
+    "deepseek-flash": {
+     "recall": 0.749686101587528,
+     "share": 0.3989704565801253,
+     "lift": 1.8790516671676627,
+     "tokens_per_q": 1695.9333333333334,
+     "no_valid_answer": 0,
+     "invalid_ids_dropped": 0,
+     "mean_modules_chosen": 3.0
+    }
+   }
+  }
+ }
+}

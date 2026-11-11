@@ -1,0 +1,235 @@
+{
+ "repo": "fmt",
+ "snapshot": "b4ffa39b9994c961418406f47358791d89a5aa48",
+ "seed": 20261111,
+ "rules": "Pick the 30 commits per repo that scale C asks the model about. The rules are code; the funnel is stored.\n\nA commit is kept when it is before the snapshot, is not a merge, changes 1-5 snapshot non-test source files,\nhas a title that says something, and the snapshot source files hold at least half of its changed lines in\nnon-test code files (so a commit whose real code moved or was deleted is not scored on one leftover file). Dropped titles are counted by the first rule that matches, in this order:\nvague, version/release, dependencies, docs, format/style. Sampling is seeded.",
+ "funnel": {
+  "non_merge_commits": 7867,
+  "merge_commits_excluded": 166,
+  "no_snapshot_source_file_changed": 3750,
+  "title_format_style": 631,
+  "title_version_release": 67,
+  "snapshot_files_under_half_of_code_change": 266,
+  "title_docs_only": 385,
+  "title_vague_title": 1767,
+  "title_dependencies": 43,
+  "more_than_5_snapshot_source_files": 8,
+  "pool": 950
+ },
+ "selected": [
+  {
+   "sha": "a34a97cc1d7d50ed6b05bd315ecef7aeb97f1364",
+   "subject": "Supporting ? as a string presentation type (#2674)",
+   "files": {
+    "include/fmt/compile.h": 39,
+    "include/fmt/format-inl.h": 191,
+    "include/fmt/ranges.h": 284
+   }
+  },
+  {
+   "sha": "702b3d1618676ca87dea1b360c7b14e45a151ffb",
+   "subject": "Fix link error in windows with shared library.",
+   "files": {
+    "src/format.cc": 2
+   }
+  },
+  {
+   "sha": "5bdce181f1222b7651cb1d6b307deb7762696f33",
+   "subject": "Mark styled_arg as a view to prevent lifetime issues",
+   "files": {
+    "include/fmt/color.h": 3
+   }
+  },
+  {
+   "sha": "61844b6b67166690adeb297c585062aa5bebf390",
+   "subject": "Fix build error on GCC-9",
+   "files": {
+    "include/fmt/chrono.h": 4,
+    "include/fmt/xchar.h": 7
+   }
+  },
+  {
+   "sha": "6aaf7f4b79e31b7409b2d0663129049e668a789b",
+   "subject": "Suppress a gcc 13 warning",
+   "files": {
+    "include/fmt/format-inl.h": 1
+   }
+  },
+  {
+   "sha": "cdf1a3b5308b3e22fb18d6a240d6dae05fa1c1b5",
+   "subject": "Fix codecvt warning (#2408) (#2725)",
+   "files": {
+    "include/fmt/chrono.h": 5
+   }
+  },
+  {
+   "sha": "cbc7b8d5c1a0a88671fa1497d9e09197fde334f2",
+   "subject": "Cleanup dead variable (#3338)",
+   "files": {
+    "include/fmt/ranges.h": 2
+   }
+  },
+  {
+   "sha": "9e2490be4c1a8d38deca61c1c32a84f21e1a79d6",
+   "subject": "Rename precision parameter",
+   "files": {
+    "include/fmt/chrono.h": 2
+   }
+  },
+  {
+   "sha": "762c33a96403a1fe8d36b90fcd42650c0402c91a",
+   "subject": "Simplify windows handling (#1903)",
+   "files": {
+    "include/fmt/format-inl.h": 43
+   }
+  },
+  {
+   "sha": "b8b06e3e10345a57431cb986e6e99f1adaad57e0",
+   "subject": "Fix conversion warnings in Grisu",
+   "files": {
+    "include/fmt/format-inl.h": 34
+   }
+  },
+  {
+   "sha": "06b3a1000ce062ad92e74f8a659b47f365d0688a",
+   "subject": "Add support for time points with arbitrary durations (#2208)",
+   "files": {
+    "include/fmt/chrono.h": 6
+   }
+  },
+  {
+   "sha": "e98155a6fbc9eedcd82e79ecdf808cfa829f5d0f",
+   "subject": "Remove redundant specializations",
+   "files": {
+    "include/fmt/xchar.h": 4
+   }
+  },
+  {
+   "sha": "ac9677323057b1ca31d157294b15ad0a74ae2b79",
+   "subject": "Added missing std::declval for non-default-constructible types (#4024)",
+   "files": {
+    "include/fmt/ranges.h": 11
+   }
+  },
+  {
+   "sha": "ec2463c905224cb520e947c1841a38862b1ad557",
+   "subject": "Implement utf8_to_utf16 using utf8_decode",
+   "files": {
+    "include/fmt/format-inl.h": 119
+   }
+  },
+  {
+   "sha": "b5b9317a3c1b794b0cd1087a4b4076fc2c278dee",
+   "subject": "Warn about unsafe use of join",
+   "files": {
+    "include/fmt/ranges.h": 10
+   }
+  },
+  {
+   "sha": "e8244777ee1c32df8233c215ac9ff626b2dd2c38",
+   "subject": "Move a few classes into an anonymous namespace (#4713)",
+   "files": {
+    "src/os.cc": 4
+   }
+  },
+  {
+   "sha": "c882790a2e0134e7943fc70e42a99d210f5f2334",
+   "subject": "Add a set formatter",
+   "files": {
+    "include/fmt/ranges.h": 55
+   }
+  },
+  {
+   "sha": "e0136fc8bd48f72d29d9276437a3bdca357789e0",
+   "subject": "Qualify calls to make_wformat_args. Fixes #2639. (#2641)",
+   "files": {
+    "include/fmt/xchar.h": 4
+   }
+  },
+  {
+   "sha": "8a39388516cf3630b0498fce373de0dfd54bdcac",
+   "subject": "Fix the default locale in ostream_formatter",
+   "files": {
+    "include/fmt/ostream.h": 7
+   }
+  },
+  {
+   "sha": "bfd95392c77789a5e516617ce02a895865a68c3d",
+   "subject": "Remove MSVC 2015 workaround",
+   "files": {
+    "include/fmt/ranges.h": 12
+   }
+  },
+  {
+   "sha": "864b9a2202817e0315d8598f28997c13c694ca65",
+   "subject": "Correct the comment",
+   "files": {
+    "include/fmt/format-inl.h": 5
+   }
+  },
+  {
+   "sha": "d60b907f87ee58c43798597a05693efdab3c3a60",
+   "subject": "Replace mod_inv_25 by explicit value (#3450)",
+   "files": {
+    "include/fmt/format-inl.h": 11
+   }
+  },
+  {
+   "sha": "9bb1605f105bc8bbee715618d5abf01a6fc47657",
+   "subject": "Remove some branches",
+   "files": {
+    "include/fmt/format-inl.h": 4
+   }
+  },
+  {
+   "sha": "64db979e38ec644b1798e41610b28c8d2c8a2739",
+   "subject": "Added a missing FMT_STRING in fmt::println() (#4407)",
+   "files": {
+    "include/fmt/ostream.h": 3
+   }
+  },
+  {
+   "sha": "06895a768785618afbd018bf75baffdd8ee6c172",
+   "subject": "Add missing includes",
+   "files": {
+    "include/fmt/chrono.h": 2,
+    "include/fmt/printf.h": 2
+   }
+  },
+  {
+   "sha": "9293f7072e3155aedfd00cc25f9dbcb5aad539c6",
+   "subject": "Suppress gcc warning on privates-only class (#2053)",
+   "files": {
+    "include/fmt/ostream.h": 2
+   }
+  },
+  {
+   "sha": "aeb6ad4dd0c055cbde42aca6e9a79cf894480ea3",
+   "subject": "Added formatter for bit_reference-like types (#3570)",
+   "files": {
+    "include/fmt/std.h": 46
+   }
+  },
+  {
+   "sha": "883d9595c53101f5d32f86bceb496676cd3413c2",
+   "subject": "Support alternative locale names in tests",
+   "files": {
+    "include/fmt/chrono.h": 2
+   }
+  },
+  {
+   "sha": "706eabd5e580e55088681f41254440aff957a288",
+   "subject": "Resolved warning C4127: conditional expression is constant (#3967)",
+   "files": {
+    "include/fmt/ranges.h": 4
+   }
+  },
+  {
+   "sha": "17be91c07901d960e1ede3c94b286d14129ca868",
+   "subject": "Fix a clang-tidy error",
+   "files": {
+    "include/fmt/std.h": 30
+   }
+  }
+ ]
+}
