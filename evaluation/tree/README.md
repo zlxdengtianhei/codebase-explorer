@@ -22,3 +22,5 @@ Tree file: `{"name": "T2-gson", "nodes": [{"id", "parent", "title", "capability"
 Files: `common.py` (loading, cuts, soft file membership), `measures.py` (A, B1, B2), `commits.py` (commit choice),
 `locate.py` (C: page, prompt, gateway calls, scoring), `run.py` (commands, tables), `controls.py` (checks).
 Raw model answers and caches go to `$CBE_EVAL_LAB` (not in git) and are reused on rerun. The model endpoint is an OpenAI-compatible gateway; see `locate.py`.
+
+In the repository: the scripts and three tables in `results/` (`table_all.md`, `compare.md`, `controls.md`). Not in the repository: the per-repo commit lists (`commits/`, re-drawn deterministically by `run.py commits` from the pinned snapshots with the seed in `commits.py`), the raw rows (`results/*.jsonl`) and the raw model answers. Read `controls.md` before trusting any number in the tables: it shows how each scale can mislead.

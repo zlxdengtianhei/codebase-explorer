@@ -14,3 +14,6 @@ experiments/**/.work/
 
 # evaluation scratch (clones, raw model answers)
 .eval/
+evaluation/tree/commits/
+evaluation/tree/results/*.json
+evaluation/tree/results/*.jsonl
