@@ -53,7 +53,7 @@ def _group_first(value: dict, title: str, count: int = 2) -> dict:
     """Fold the first ``count`` answer units into one grouped unit (``h`` lists several numbers)."""
     units = value["units"]
     merged = {"h": [number for unit in units[:count] for number in unit["h"]], "title": title,
-              "explain": f"Helpers {title} work together."}
+              "explain": f"Helpers {title.replace('_', '-')} work together."}
     return {**value, "units": [merged, *units[count:]]}
 
 

@@ -131,6 +131,8 @@ def _build_unit_block(uid: str, units: dict, owner: dict,
         lines += [literal_links(summary), ""]
     if explain:
         lines += [literal_links(explain), ""]
+    if unit.get("ungrounded"):
+        lines += [f"check: names {', '.join(unit['ungrounded'])}, not found in this unit's source", ""]
     extras = [extra for extra in unit.get("extras") or []
               if isinstance(extra, dict) and isinstance(extra.get("note"), str)
               and extra["note"].strip()]

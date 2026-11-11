@@ -182,6 +182,10 @@ incoming: call add_item_to_object cJSON.c::function::add_item_to_object::55010 [
 
 `STATUS.md` and `summary.json` list the symbols that stayed unexplained after the last answer (`unexplained_count`, `unexplained`).
 
+**Answer-time grounding.** CBE checks identifiers in backticks, code-like words, calls, and names from the run's symbol list. A unit is suspect when it mentions at least one identifier and none occurs, ignoring case, in its own frozen source, file path, unit ID, or member IDs. Call edges do not count. Three or more suspect units in at least 30% of an answer reject the whole answer. Otherwise only the suspect units are re-asked. On the last attempt CBE keeps them and adds `ungrounded` to the unit, a task flag, a `check:` line in `query` and its node page, and `ungrounded_count` to `summary.json`.
+
+This check catches explanations attached to the wrong symbol. In one replay it caught 21 of 27 such explanations. Across six other runs it flagged 48 of 1,788 accepted explanations (about 2.7%). It cannot catch an explanation that uses the right names but describes the behavior wrongly.
+
 **Common mistakes.** Each of these exits 2 and prints the error on stderr (the message text is shortened here):
 
 | You wrote | Error | Write instead |

@@ -181,6 +181,8 @@ def query_text(record: dict) -> str:
 
     summary, remainder = summary_and_remainder(record)
     lines = [f"{record.get('display_name', record['name'])}  {record['id']}"]
+    if record.get("ungrounded"):
+        lines.append(f"check: names {', '.join(record['ungrounded'])}, not found in this unit's source")
     for field in ("dependencies", "depended_on_by", "signature", "signatures", "ranges", "summary", "explain", "extras",
                   "uncertainties", "relations", "reverse_relations", "folded_members",
                   "internal_edge_counts", "facts", "units", "symbols", "notice"):

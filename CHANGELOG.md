@@ -57,6 +57,9 @@
   `docs/DEPENDENCIES.md`; reading stats, graph coverage and generation notes move to
   `docs/RUN.md`. The system overview no
   longer carries `maintenance_navigation`.
+- Check detail explanations for identifiers absent from their own unit's frozen source.
+  Re-ask isolated suspect units, reject a largely suspect answer as a batch, and mark
+  last-attempt survivors in the catalogue, query text, node pages, task flags and summary.
 - Change the detail answer contract. Symbols are named by short numbers from a
   numbered list in the prompt (`{"units":[{"h":[12],"explain":"..."}]}`); the
   program derives ids, kinds, groups and the full `dispositions` map. Usable units
