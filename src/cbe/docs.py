@@ -947,6 +947,12 @@ def query(run_dir: Path, symbol_id: str, edges: str | None = None) -> dict[str, 
                 owner = nodes.get(node.get("owner"), node)
                 return (edge.get("path") or owner.get("path")) == symbol_id
             return ownership.edge_source(edge, nodes) in members
+        from cbe.graph import NO_DATAFLOW_MESSAGE, built_without_dataflow
+
+        if built_without_dataflow(graph) and "dataflow" in edges.split(","):
+            if edges == "dataflow":
+                raise SemanticError(NO_DATAFLOW_MESSAGE)
+            record["notice"] = NO_DATAFLOW_MESSAGE
         record["raw_edges"] = [e for e in graph.get("edges") or []
                                if (edges == "all" or e.get("kind") in edges.split(",")) and matches(e)]
     return record
@@ -960,7 +966,7 @@ def query_text(record: dict) -> str:
     lines = [f"{record.get('display_name', record['name'])}  {record['id']}"]
     for field in ("dependencies", "depended_on_by", "signature", "signatures", "ranges", "summary", "explain", "extras",
                   "uncertainties", "relations", "reverse_relations", "folded_members",
-                  "internal_edge_counts", "units", "symbols"):
+                  "internal_edge_counts", "units", "symbols", "notice"):
         value = record.get(field)
         if not value or (field == "summary" and remainder != (record.get("explain") or "").strip()):
             continue

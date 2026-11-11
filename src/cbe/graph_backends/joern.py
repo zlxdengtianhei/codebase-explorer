@@ -29,13 +29,13 @@ import os
 import re
 from collections import Counter
 import shlex
-import shutil
 import subprocess
 from pathlib import Path
 
 from .identity import repository_files, file_id
 from ._calls import CallResolver
 from .resolution import go_modules
+from .toolchain import MIN_JAVA_MAJOR, JavaInstall, find_joern, java_environment, setup_hint  # noqa: F401
 
 #: language id (canonical, matches ``cbe.source_context``) -> Joern frontend
 #: flag.  ``pythonsrc``/``javasrc`` are the source frontends; ``python``/``java``
@@ -85,7 +85,7 @@ import java.nio.file.{Files, Paths}
 import scala.util.{Try, Success, Failure}
 
 @main def main(cpgFile: String, outFile: String, maxReachingDefs: Int,
-               pathMethods: String, maxPathsPerMethod: Int, maxMethods: Int): Unit = {
+               pathMethods: String, maxPathsPerMethod: Int, maxMethods: Int, withDataflow: Int): Unit = {
   val cpg = importCpg(cpgFile).get
   implicit val engineConfig: EngineConfig = EngineConfig()
 
@@ -188,7 +188,7 @@ import scala.util.{Try, Success, Failure}
   val rdSeen = scala.collection.mutable.Set[(Long, Long)]()
   val rdBuf = scala.collection.mutable.ArrayBuffer[ujson.Obj]()
   var rdOmitted = 0
-  realMethods.foreach { m =>
+  (if (withDataflow != 0) realMethods else List[Method]()).foreach { m =>
     m.ast.foreach { n =>
       if (n.label != "METHOD") {
         n.out("REACHING_DEF").foreach { o =>
@@ -206,7 +206,7 @@ import scala.util.{Try, Success, Failure}
 
   // Optional, explicitly requested value-flow paths.  Separate scope; sampled;
   // the full path set is counted so the sample is visible.
-  val requested = pathMethods.split(",").map(_.trim).filter(_.nonEmpty).toList
+  val requested = if (withDataflow != 0) pathMethods.split(",").map(_.trim).filter(_.nonEmpty).toList else List[String]()
   val pathBuf = scala.collection.mutable.ArrayBuffer[ujson.Obj]()
   val errBuf = scala.collection.mutable.ArrayBuffer[ujson.Obj]()
   requested.foreach { name =>
@@ -241,6 +241,7 @@ import scala.util.{Try, Success, Failure}
     "cfg" -> cfg,
     "cfgMethodsOmitted" -> (realMethods.size - cfgMethods.size),
     "imports" -> imports,
+    "dataflowRequested" -> (withDataflow != 0),
     "reachingDefs" -> rdBuf.toList,
     "reachingDefsTruncated" -> (rdOmitted > 0),
     "reachingDefsOmitted" -> rdOmitted,
@@ -258,32 +259,15 @@ class JoernError(RuntimeError):
     """Raised when the Joern CLI is missing or a whole run fails."""
 
 
-def find_joern(joern_home: Path | str | None = None) -> Path | None:
-    """Locate the Joern CLI directory that holds ``joern`` and ``joern-parse``."""
-
-    candidates: list[Path] = []
-    for base in (joern_home, os.environ.get("CBE_JOERN_HOME")):
-        if not base:
-            continue
-        base = Path(base).expanduser()
-        candidates += [base, base / "joern-cli", base / "bin"]
-    which = shutil.which("joern")
-    if which:
-        candidates.append(Path(which).parent)
-    for candidate in candidates:
-        if (candidate / "joern").is_file() and (candidate / "joern-parse").is_file():
-            return candidate
-    return None
-
-
 def _run(argv: list[str], timeout: int, cwd: Path, *, env=None) -> subprocess.CompletedProcess:
     return subprocess.run(argv, cwd=str(cwd), check=False, env=env,
                           capture_output=True, text=True, timeout=timeout, stdin=subprocess.DEVNULL)
 
 
-def joern_version(joern_bin: Path, timeout: int) -> str:
+def joern_version(joern_bin: Path, timeout: int, java: JavaInstall | None = None) -> str:
     try:
-        completed = _run([str(joern_bin), "--version"], timeout=timeout, cwd=joern_bin.parent)
+        completed = _run([str(joern_bin), "--version"], timeout=timeout, cwd=joern_bin.parent,
+                         env=java_environment(java))
     except (OSError, subprocess.TimeoutExpired):
         return "unknown"
     for line in (completed.stdout + completed.stderr).splitlines():
@@ -304,6 +288,8 @@ def build_with_joern(
     max_paths_per_method: int = 5,
     max_methods: int | None = None,
     joern_heap: str | None = None,
+    java: JavaInstall | None = None,
+    with_dataflow: bool = False,
 ) -> dict:
     """Parse each frontend's languages with Joern and return a normalized fragment.
 
@@ -319,12 +305,12 @@ def build_with_joern(
     script = run_dir / "joern_export.sc"
     script.write_text(_EXPORT_SCRIPT, encoding="utf-8")
 
-    joern_env = None
+    joern_env = java_environment(java)
     if joern_heap:
-        joern_env = os.environ.copy()
+        joern_env = dict(joern_env or os.environ)
         # Last -Xmx wins, preserving unrelated caller JVM options.
         joern_env["JAVA_TOOL_OPTIONS"] = (joern_env.get("JAVA_TOOL_OPTIONS", "") + f" -Xmx{joern_heap}").strip()
-    version = joern_version(joern_bin, timeout)
+    version = joern_version(joern_bin, timeout, java)
     roots = [str(repo), str(joern_home)]
     diagnostics: list[dict] = []
     capabilities: list[dict] = []
@@ -332,7 +318,7 @@ def build_with_joern(
     edges: list[dict] = []
     raw: list[dict] = []
     non_call_sites = Counter()
-    path_methods = ",".join(dataflow_path_methods or [])
+    path_methods = ",".join(dataflow_path_methods or []) if with_dataflow else ""
     files = repository_files(repo)
 
     by_language: dict[str, list[str]] = {}
@@ -373,6 +359,8 @@ def build_with_joern(
             cause = _first_error_line(parse_output, roots)
             if cause:
                 message += f": {cause}"
+            if java is None:
+                message += f"; no Java {MIN_JAVA_MAJOR}+ was found, {setup_hint()}"
             diagnostics.append({"path": None, "code": "backend_error", "message": message})
             continue
         try:
@@ -380,6 +368,7 @@ def build_with_joern(
                 [str(joern_bin), "--script", str(script),
                  "--param", f"cpgFile={cpg}", "--param", f"outFile={export}",
                  "--param", f"maxMethods={max_methods if max_methods is not None else -1}",
+                 "--param", f"withDataflow={int(with_dataflow)}",
                  "--param", f"maxReachingDefs={max_reaching_defs}",
                  "--param", f"pathMethods={path_methods}",
                  "--param", f"maxPathsPerMethod={max_paths_per_method}", "--nocolors"],
@@ -920,7 +909,9 @@ def _capabilities_for(language: str, payload: dict, version: str,
     cfg_methods = sum(1 for cfg in payload.get("cfg", []) if cfg.get("edges"))
     rd_edges = len(payload.get("reachingDefs", []))
     has_methods = bool(payload.get("methods"))
-    if payload.get("reachingDefsTruncated"):
+    if not payload.get("dataflowRequested", True):
+        df_status = "not_requested"
+    elif payload.get("reachingDefsTruncated"):
         df_status = "partial"
     elif rd_edges:
         df_status = "resolved"
@@ -976,7 +967,9 @@ def _capabilities_for(language: str, payload: dict, version: str,
                     scope="reaching_def", reaching_def_edges=rd_edges,
                     reaching_defs_truncated=bool(payload.get("reachingDefsTruncated")),
                     edges_omitted=payload.get("reachingDefsOmitted", None if payload.get("reachingDefsTruncated") else 0),
-                    limitations=(f"REACHING_DEF export truncated; {payload.get('reachingDefsOmitted', 'unknown')} edges omitted"
+                    limitations=("dataflow was not exported; rebuild with `cbe graph build --with-dataflow`"
+                                 if df_status == "not_requested" else
+                                 f"REACHING_DEF export truncated; {payload.get('reachingDefsOmitted', 'unknown')} edges omitted"
                                  if payload.get("reachingDefsTruncated") else
                                  (None if rd_edges else "analyzer ran but produced no REACHING_DEF edges")),
                     condition="local reaching definitions; inter-procedural value-flow paths are a separate opt-in query"),

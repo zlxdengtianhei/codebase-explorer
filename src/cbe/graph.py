@@ -57,7 +57,7 @@ GRAPH_CONFIG_NAMES = frozenset({
 GRAPH_CONFIG_SUFFIXES = (".csproj", ".sln", ".gemspec", ".cmake", ".mk")
 
 GRAPH_KINDS = frozenset({"import", "call", "cfg", "dataflow"})
-_CAPABILITY_RANK = {"resolved": 6, "partial": 5, "empty": 4, "unsupported": 3,
+_CAPABILITY_RANK = {"resolved": 6, "partial": 5, "empty": 4, "not_requested": 4, "unsupported": 3,
                     "failed": 2, "unavailable": 1}
 
 
@@ -177,8 +177,11 @@ def graph_quality(graph: dict, *, existing_paths: Iterable[str] | None = None) -
     capabilities = graph.get("capabilities", [])
     languages = set(manifest.values()) | {c.get("language") or "unknown" for c in capabilities}
     statuses = ("resolved", "ambiguous", "unresolved", "external", "unsupported")
+    not_exported = {(c.get("language") or "unknown", "dataflow") for c in capabilities
+                    if c.get("graph") == "dataflow" and c.get("status") == "not_requested"}
     counts = {(language, kind): dict.fromkeys(statuses, 0)
-              for language in languages for kind in sorted(GRAPH_KINDS)}
+              for language in languages for kind in sorted(GRAPH_KINDS)
+              if (language, kind) not in not_exported}  # a row of zeros would claim "no dataflow edges"
     dangling = []
     for edge in edges:
         source = by_id.get(edge.get("source"), {})
@@ -203,7 +206,7 @@ def graph_quality(graph: dict, *, existing_paths: Iterable[str] | None = None) -
     diagnostics = graph.get("diagnostics", [])
     no_backend = any(d.get("code") == "no_backend_completed" for d in diagnostics)
     backend = graph.get("backend") or {}
-    successful = {"resolved", "partial", "empty"}
+    successful = {"resolved", "partial", "empty", "not_requested"}
     all_failed = bool(capabilities) and all(c.get("status") == "failed" for c in capabilities)
     successful_component = any(c.get("status") in successful for c in backend.get("components", []))
     completed = (False if no_backend or backend.get("name") == "none" or (all_failed and not successful_component) else
@@ -221,7 +224,7 @@ def graph_quality(graph: dict, *, existing_paths: Iterable[str] | None = None) -
         "empty_graph": not nodes and not edges,
         "backend_completed": completed,
         "incomplete_capabilities": [dict(c) for c in capabilities
-                                    if c.get("status") not in {"resolved", "empty"}],
+                                    if c.get("status") not in {"resolved", "empty", "not_requested"}],
         "frontend_failures": [dict(d) for d in diagnostics if d.get("code") in BACKEND_FAILURE_CODES],
         "non_call_sites": dict(graph.get("non_call_sites", {})),
     }
@@ -238,6 +241,17 @@ def read_graph_quality(graph: dict, *, existing_paths: Iterable[str] | None = No
     if existing_paths is None and repo is not None:
         existing_paths = repository_files(repo)
     return graph_quality(graph, existing_paths=existing_paths)
+
+
+NO_DATAFLOW_MESSAGE = ("this graph was built without dataflow; "
+                       "rebuild with `cbe graph build --with-dataflow`")
+
+
+def built_without_dataflow(graph: object) -> bool:
+    """True when the graph says its dataflow was not exported (every dataflow capability is not_requested)."""
+    rows = [c for c in (graph.get("capabilities") or []) if isinstance(c, dict) and c.get("graph") == "dataflow"] \
+        if isinstance(graph, dict) else []
+    return bool(rows) and all(c.get("status") == "not_requested" for c in rows)
 
 
 def graph_state(graph: object, *, quality: dict | None = None) -> tuple[str, str]:
@@ -283,21 +297,29 @@ def analyze_graph(
     depcruise_bin=None,
     timeout: int = 300,
     max_methods: int | None = None,
-    max_reaching_defs: int = 50000,
+    max_reaching_defs: int | None = None,
     dataflow_path_methods: list[str] | None = None,
     max_paths_per_method: int = 5,
+    with_dataflow: bool = False,
 ) -> dict:
     """Build a ``cbe-graph/1`` graph and write it to ``output``.
 
     ``backend`` is ``auto``, ``joern``, or ``imports``.  Runtime artifacts (CPG,
     export JSON, script) stay in a sibling run directory next to ``output``;
     nothing is written into the source tree.
+
+    Dataflow (reaching definitions) is exported only on request: ``with_dataflow``,
+    or giving ``max_reaching_defs`` or ``dataflow_path_methods``, which already
+    mean the caller wants it.  Without it the dataflow capability is ``not_requested``.
     """
 
     from pathlib import Path
 
     from cbe import graph_backends as backends  # noqa: PLC0415
 
+    with_dataflow = bool(with_dataflow or max_reaching_defs is not None or dataflow_path_methods)
+    if max_reaching_defs is None:
+        max_reaching_defs = 50000
     for name, value in (("timeout", timeout),
                         ("max_reaching_defs", max_reaching_defs),
                         ("max_paths_per_method", max_paths_per_method)):
@@ -336,13 +358,15 @@ def analyze_graph(
         if joern is None:
             joern_missing = True
             diagnostics.append({"path": None, "code": "backend_unavailable",
-                                "message": "Joern CLI not found; call/cfg/dataflow/import graph skipped"})
+                                "message": "Joern CLI not found; call/cfg/dataflow/import graph skipped; "
+                                           + backends.setup_hint()})
             extra_capabilities.extend(_unavailable("joern", requested, ("call", "cfg", "dataflow", "import")))
         else:
             try:
                 fragment = backends.build_with_joern(
                     repo, run_dir / "joern", requested, joern, timeout,
-                    joern_heap=joern_heap, max_methods=max_methods, max_reaching_defs=max_reaching_defs,
+                    joern_heap=joern_heap, java=backends.find_java(), max_methods=max_methods,
+                    max_reaching_defs=max_reaching_defs, with_dataflow=with_dataflow,
                     dataflow_path_methods=dataflow_path_methods,
                     max_paths_per_method=max_paths_per_method)
             except backends.JoernError as exc:
@@ -353,7 +377,8 @@ def analyze_graph(
                 components.append(fragment["backend"])
                 diagnostics.extend(fragment["diagnostics"])
                 ran = ran or (bool(fragment["raw"]) and any(
-                    c.get("status") in {"resolved", "partial", "empty"} for c in fragment["capabilities"]))
+                    c.get("status") in {"resolved", "partial", "empty", "not_requested"}
+                    for c in fragment["capabilities"]))
 
     # An automatic call-graph build has one failure contract when Joern is
     # absent. Import-only analysis remains available by explicit selection.
@@ -484,6 +509,8 @@ def query_graph(
         raise GraphError("expected a cbe-graph/1 payload")
     if kind is not None and kind not in GRAPH_KINDS:
         raise GraphError(f"unknown graph kind {kind!r}; expected one of {sorted(GRAPH_KINDS)}")
+    if kind == "dataflow" and built_without_dataflow(graph):
+        raise GraphError(NO_DATAFLOW_MESSAGE)
     if direction not in ("both", "in", "out"):
         raise GraphError(f"unknown direction {direction!r}")
 

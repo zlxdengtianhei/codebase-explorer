@@ -55,11 +55,11 @@ This path documents the four core files of [cJSON](https://github.com/DaveGamble
 
    The full output lists five diagnostics: `syntax_error` for `cJSON.c`, `cJSON.h` and `cJSON_Utils.h`, and `ambiguous_language` for both headers. The `syntax_error` entries come from cJSON's macros; see [Known limitations and troubleshooting](#known-limitations-and-troubleshooting). Generation does not need this file, because `generate` and `host plan` freeze their own copy. Use it to see the file list, chunk count and diagnostics before you spend model calls.
 
-4. Optional: build a code graph with Joern ([Optional graph analyzers](#optional-graph-analyzers) says how to install it). This took 28 seconds here and makes no model call:
+4. Optional: build a code graph with Joern. `cbe graph setup` downloads Joern and a Java runtime once (about 1.9 GB, see [Optional graph analyzers](#optional-graph-analyzers)). The build took 28 seconds here and makes no model call:
 
    ```sh
-   cbe graph build "$HOME/cbe-demo/cjson" --output "$HOME/cbe-demo/graph.json" \
-     --joern-home /path/to/joern-cli
+   cbe graph setup
+   cbe graph build "$HOME/cbe-demo/cjson" --output "$HOME/cbe-demo/graph.json" --with-dataflow
    cbe graph capabilities --graph "$HOME/cbe-demo/graph.json"
    ```
 
@@ -124,9 +124,16 @@ Context building and generation work without any analyzer. A graph adds static i
 
 | Analyzer | What it adds | How to install | How CBE finds it |
 |---|---|---|---|
-| Joern 4.0.654 and a JDK | Calls, CFG and dataflow; include and import declarations. The next section lists the languages and their conditions. | Download the `joern-cli-<os>-<arch>.zip` asset for your platform (for example `joern-cli-macos-arm64.zip`) from the [Joern v4.0.654 release](https://github.com/joernio/joern/releases/tag/v4.0.654) and unzip it. Joern's [installation page](https://docs.joern.io/installation/) asks for JDK 19 and says newer JDKs might work; the graph in this README was built on JDK 21.0.9. | `--joern-home DIR`, then the `CBE_JOERN_HOME` environment variable, then `joern` on `PATH`. `DIR` is the directory that holds `joern` and `joern-parse`; CBE also looks in `DIR/joern-cli`. |
+| Joern 4.0.654 and Java 21 or newer | Calls, CFG and dataflow; include and import declarations. The next section lists the languages and their conditions. | `cbe graph setup` downloads the pinned Joern release and, when no Java 21+ is found, a Temurin 21 JRE into the user cache directory (`~/.cache/cbe/tools` on Linux, `~/Library/Caches/cbe/tools` on macOS), after checking SHA-256 values pinned in the code. Linux x86_64 and macOS (arm64, x86_64) are supported; on other platforms install by hand (below). `cbe graph setup --check` downloads nothing and reports what it finds. | Joern: `--joern-home DIR`, then `CBE_JOERN_HOME`, then the cache directory, then `joern-parse` on `PATH`. `DIR` is the directory that holds `joern` and `joern-parse`; CBE also looks in `DIR/joern-cli`. A `--joern-home` or `CBE_JOERN_HOME` that does not hold `joern-parse` is an error naming that path; CBE does not fall back to the next place. Java: `JAVA_HOME`, then `java` on `PATH`, then the cache directory. |
 | dependency-cruiser 16 and Node.js | JavaScript and TypeScript import graph | `npm install dependency-cruiser@16` in a tools directory. Tested with 16.10.4 on Node.js 22.20.0. | `--depcruise-bin PATH` (for example `.../node_modules/.bin/depcruise`), then `CBE_DEPCRUISE_BIN`, then `depcruise` on `PATH` |
 | Grimp 3.17 | Python import graph | `uv tool install --python 3.13 '.[graphs]'` | Imported from the CBE environment |
+
+<details>
+<summary>Install Joern by hand</summary>
+
+`cbe graph setup` is the short way. To install yourself, download the `joern-cli-<os>-<arch>.zip` asset for your platform (for example `joern-cli-linux-x86_64.zip` or `joern-cli-macos-arm64.zip`) from the [Joern v4.0.654 release](https://github.com/joernio/joern/releases/tag/v4.0.654), unzip it, and pass the resulting `joern-cli` directory as `--joern-home DIR` or set `CBE_JOERN_HOME`. Each asset has a `.sha512` file next to it. Install Java 21 or newer yourself (Joern's [installation page](https://docs.joern.io/installation/) asks for JDK 19 and says newer JDKs might work; the graph in this README was built on JDK 21.0.9) and keep it on `PATH` or in `JAVA_HOME`. The macOS assets are pinned from upstream metadata and have not been exercised by us yet. Do not use a Joern version other than 4.0.654: the graph classification is tested against its output.
+
+</details>
 
 Check what ran with `cbe graph capabilities --graph /absolute/path/to/graph.json`. The `backend.components` list names each analyzer and its version, and every `capabilities` row gives a language, a graph kind and a status, for example `resolved`, `partial`, `empty`, `failed` or `unavailable`. The Quickstart graph reports:
 
@@ -136,7 +143,7 @@ Check what ran with `cbe graph capabilities --graph /absolute/path/to/graph.json
 
 What a missing analyzer costs:
 
-- **No Joern:** no calls, CFG or dataflow for any language. `graph build` records `backend_unavailable` ("Joern CLI not found; call/cfg/dataflow skipped"). When no other analyzer covers the requested languages, as for the C-only Quickstart input, `graph build` exits 2 with `no graph backend was available for the requested languages`.
+- **No Joern:** no calls, CFG or dataflow for any language. `graph build` records `backend_unavailable` ("Joern CLI not found; call/cfg/dataflow/import graph skipped; run `cbe graph setup` (downloads about 1.9 GB)"). When no other analyzer covers the requested languages, as for the C-only Quickstart input, `graph build` exits 2 with `no graph backend was available for the requested languages`.
 - **No dependency-cruiser:** the JavaScript and TypeScript import graph is skipped with `backend_unavailable`. If Joern ran, it still records import declarations, but these do not establish a resolved file dependency.
 - **No Grimp:** the Python import graph is skipped with `backend_unavailable` ("grimp is not installed; Python import graph skipped (install the 'graphs' extra)").
 
@@ -144,28 +151,30 @@ What a missing analyzer costs:
 
 Tree-sitter provides syntax and code boundaries. Import resolution, calls, control flow, and data flow come from external analyzers. Each graph records the backend version, input hashes, capabilities, unresolved targets, and analysis conditions. A graph that does not match the current source is rejected when building a context.
 
-The graph adapters use [Joern](https://joern.io/), [Grimp](https://grimp.readthedocs.io/), and [dependency-cruiser](https://github.com/sverweij/dependency-cruiser) according to the language and graph type. The selected integration versions are Joern 4.0.654, Grimp 3.17, and dependency-cruiser 16. Install the `graphs` extra for Grimp (`uv tool install --python 3.13 '.[graphs]'`). Joern and dependency-cruiser are separate installations. The CBE package does not include Joern, a JDK, or Node dependencies.
+The graph adapters use [Joern](https://joern.io/), [Grimp](https://grimp.readthedocs.io/), and [dependency-cruiser](https://github.com/sverweij/dependency-cruiser) according to the language and graph type. The selected integration versions are Joern 4.0.654, Grimp 3.17, and dependency-cruiser 16. Install the `graphs` extra for Grimp (`uv tool install --python 3.13 '.[graphs]'`). Joern and dependency-cruiser are separate installations; `cbe graph setup` installs Joern and a JRE for you. The CBE package does not include Joern, Java, or Node dependencies.
 
-| Source language | Import backend | Call / CFG / local definition-use backend | Relevant conditions |
+| Source language | Import backend | Call graph with Joern 4.0.654 | Relevant conditions |
 |---|---|---|---|
-| C / C++ | Joern include declarations | Joern | Include paths, macros and compilation settings affect results; virtual calls may bind to a static base target. |
-| Python | Grimp, plus Joern declarations | Joern | Package layout affects imports; dynamic and external calls can remain unresolved. |
-| JavaScript / TypeScript / TSX | dependency-cruiser, plus Joern declarations | Joern | Dynamic imports, CommonJS and external targets may remain partial. |
-| Java | Joern declarations | Joern | Project types and dependencies affect resolution. |
-| Go | Joern declarations | Joern | Cross-package calls may remain unresolved or external. |
-| Ruby | Joern declarations | Joern | The frontend excludes `test`, `tests` and `spec` paths by default. |
-| Rust | Joern declarations | Joern | The frontend requires a Cargo project layout; a flat source directory can fail. |
-| PHP | Joern declarations | Joern | An external PHP runtime (7 or later) is required. The local trial without it reported a failed analysis. |
-| C# | Joern declarations | Joern | Namespace and project layout affect resolution; the bundled AST generator must run on the host platform. |
-| Kotlin | Joern declarations | Joern | Project dependencies and build conditions affect resolution. |
-| Swift | Joern declarations | Joern | The frontend parses per file; the tested cross-file call remained external. |
+| C / C++ | Joern include declarations | works | Include paths, macros and compilation settings affect results; virtual calls may bind to a static base target. |
+| Python | Grimp, plus Joern declarations | works | Package layout affects imports; dynamic and external calls can remain unresolved. |
+| JavaScript / TypeScript | dependency-cruiser, plus Joern declarations | works | Dynamic imports, CommonJS and external targets may remain partial. |
+| TSX | dependency-cruiser, plus Joern declarations | not tested | Uses the same Joern frontend as JavaScript and TypeScript. |
+| Java | Joern declarations | works | Project types and dependencies affect resolution. |
+| Go | Joern declarations | works | Cross-package calls may remain unresolved or external. |
+| Ruby | Joern declarations | works | CBE passes `--no-default-exclude` so `test`, `tests` and `spec` paths are analyzed. |
+| Rust | Joern declarations | needs `cargo` | The frontend runs `cargo` and needs a Cargo project layout; a flat source directory can fail. |
+| PHP | Joern declarations | needs `php` | An external PHP runtime (7 or later) must be on `PATH`. The local trial without it reported a failed analysis. |
+| C# | Joern declarations | known failure | Joern 4.0.654 failed on a real 55-file repository: the export script hit a null pointer error, and the build recorded a failed capability. A two-file test fixture works, so small inputs may succeed. |
+| Kotlin | Joern declarations | known failure | Joern 4.0.654 failed on a real 146-file repository: `joern-parse` stopped with `key not found: MethodRef`, and the build recorded a failed capability. A two-file test fixture works, so small inputs may succeed. |
+| Swift | Joern declarations | not tested | |
 
-Joern import declarations do not establish a resolved file dependency. Capabilities describe the actual run, including frontend failures; a registered source language alone does not establish semantic graph coverage. Use an installed Joern distribution and, when needed, a local dependency-cruiser executable:
+"works" means a real repository of that language produced a call graph with Joern 4.0.654; resolution quality still depends on the code. `cbe languages` reports the same status as `call_graph` for each language. Source parsing and chunking support every language in the table whatever the call-graph column says.
+
+Joern import declarations do not establish a resolved file dependency. Capabilities describe the actual run, including frontend failures; a registered source language alone does not establish semantic graph coverage. `graph build` finds the Joern and Java that `cbe graph setup` installed. Pass `--joern-home` to use another Joern, and `--depcruise-bin` for a local dependency-cruiser executable:
 
 ```sh
 cbe graph build /absolute/path/to/repo \
   --output /absolute/path/to/graph.json \
-  --joern-home /absolute/path/to/joern-cli \
   --depcruise-bin /absolute/path/to/node_modules/.bin/depcruise
 cbe graph capabilities --graph /absolute/path/to/graph.json
 cbe graph query --graph /absolute/path/to/graph.json --path src/example.py --kind call
@@ -173,7 +182,7 @@ cbe context build /absolute/path/to/repo \
   --graph /absolute/path/to/graph.json --output /absolute/path/to/context.json
 ```
 
-`--language` can limit analysis to a language. `--max-methods` limits only CFG export per frontend (default: unlimited); method identities and calls remain complete, diagnostics report the exact omitted method count, and CFG capability is `partial` when methods are omitted. `--max-reaching-defs` bounds reaching-definition edges; `--dataflow-path-method` opts into sampled value-flow paths. `--joern-heap 8g` sets the Joern JVM maximum heap through `JAVA_TOOL_OPTIONS`, preserving other JVM options; without it, JVM settings are inherited. Backend failures retain their cause in graph diagnostics and print a line to stderr. Partial builds succeed when another backend completes; if every backend fails, the command exits nonzero and retains a diagnostic graph when possible. Joern JSON is written compactly to a writer to avoid an extra whole-document string and byte array. `graph query` accepts `import`, `call`, `cfg`, or `dataflow`, a node ID, and an edge direction (`in`, `out`, or `both`). A local query retains boundary endpoints and identifies omitted scope. It can read the graph embedded in a generation run's frozen `context.json` for manual inspection of the evidence used at planning. Host detail tasks receive a bounded excerpt and a separate complete evidence file when the batch has graph nodes. The full graph stays in the output file; `graph build` prints a compact result and capability report.
+`--language` can limit analysis to a language. `--max-methods` limits only CFG export per frontend (default: unlimited); method identities and calls remain complete, diagnostics report the exact omitted method count, and CFG capability is `partial` when methods are omitted. Dataflow (reaching definitions) is not exported by default, because nothing in a generation run reads its content and it was over half of `graph.json` on flask (23 of 41 MB). `--with-dataflow` exports it; giving `--max-reaching-defs` (cap on reaching-definition edges, default 50,000) or `--dataflow-path-method` (sampled value-flow paths) also turns it on. Without it the dataflow capability is `not_requested`, and `cbe graph query --kind dataflow` and `cbe query --edges dataflow` answer "this graph was built without dataflow; rebuild with `cbe graph build --with-dataflow`". CFG is exported by default because its node labels feed the graph evidence in detail prompts. `--joern-heap 8g` sets the Joern JVM maximum heap through `JAVA_TOOL_OPTIONS`, preserving other JVM options; without it, JVM settings are inherited. Backend failures retain their cause in graph diagnostics and print a line to stderr. Partial builds succeed when another backend completes; if every backend fails, the command exits nonzero and retains a diagnostic graph when possible. Joern JSON is written compactly to a writer to avoid an extra whole-document string and byte array. `graph query` accepts `import`, `call`, `cfg`, or `dataflow`, a node ID, and an edge direction (`in`, `out`, or `both`). A local query retains boundary endpoints and identifies omitted scope. It can read the graph embedded in a generation run's frozen `context.json` for manual inspection of the evidence used at planning. Host detail tasks receive a bounded excerpt and a separate complete evidence file when the batch has graph nodes. The full graph stays in the output file; `graph build` prints a compact result and capability report.
 
 The graph's `quality` audit reports edge status counts, integrity issues, and incomplete capabilities; `cbe graph capabilities --graph /absolute/path/to/graph.json --repo /absolute/path/to/repo` refreshes the audit against current repository files.
 
@@ -411,7 +420,7 @@ internal_edge_counts: {'cfg': 4, 'dataflow': 10}
 outgoing: call cJSON_ParseWithOpts cJSON.c::function::cJSON_ParseWithOpts::31069 [resolved] cJSON.c:L1229 id=cpg:c/call/30064772040
 ```
 
-Calls and imports keep their analyzer status (`resolved`, `unresolved`, `external`, `ambiguous`). CFG and dataflow edges inside the unit are only counted in `internal_edge_counts`; `--edges cfg,dataflow` or `--edges all` lists them from the frozen graph in `context.json`.
+Calls and imports keep their analyzer status (`resolved`, `unresolved`, `external`, `ambiguous`). CFG and dataflow edges inside the unit are only counted in `internal_edge_counts` (a graph built without dataflow shows no `dataflow` entry rather than 0); `--edges cfg,dataflow` or `--edges all` lists them from the frozen graph in `context.json`. `--edges dataflow` on a graph built without dataflow says to rebuild with `cbe graph build --with-dataflow`.
 
 **Grouped symbols.** The text view does not print a symbol's disposition, owning unit or page. Here `cJSON_Parse` has no unit of its own: the model folded it with `cJSON_ParseWithLength` into a group. `--json` shows this (excerpt):
 
@@ -541,7 +550,7 @@ Each item below happened in the evaluation runs. The link after it names the sec
   ```
 
   Reinstall with the extras that you need, for example `uv tool install --python 3.13 --reinstall '.[graphs,languages,languages-community]'`, and run `cbe languages` again.
-- **Graph limits omit edges.** Reaching definitions stop at `--max-reaching-defs` (default 50,000): ruby_llm omitted 38,310 edges, and the curl graph omitted 486,150. ruby_llm's import graph was empty (0 resolved; 46 imports without a path) ([Showcase](evaluation/README.md#showcase-e6), [Q-A: curl](evaluation/README.md#q-a-curl-e5)). The dataflow row of `cbe graph capabilities` reports `reaching_defs_truncated` and `edges_omitted`. Raise `--max-reaching-defs` when you need the omitted edges.
+- **Graph limits omit edges.** Reaching definitions stop at `--max-reaching-defs` (default 50,000): ruby_llm omitted 38,310 edges, and the curl graph omitted 486,150. ruby_llm's import graph was empty (0 resolved; 46 imports without a path) ([Showcase](evaluation/README.md#showcase-e6), [Q-A: curl](evaluation/README.md#q-a-curl-e5)). The dataflow row of `cbe graph capabilities` reports `reaching_defs_truncated` and `edges_omitted`. Raise `--max-reaching-defs` when you need the omitted edges; dataflow is only exported when you ask for it (`--with-dataflow`).
 
 ## Evaluation
 

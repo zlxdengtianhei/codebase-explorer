@@ -379,7 +379,7 @@ _DEPCRUISE = os.environ.get("CBE_DEPCRUISE_BIN")
 def test_joern_integration_c_relation(tmp_path: Path) -> None:
     graph = analyze_graph(FIXTURES / "c_relation", tmp_path / "c.json",
                           backend="joern", languages=["c"],
-                          joern_home=Path(_JOERN), timeout=600)
+                          joern_home=Path(_JOERN), timeout=600, with_dataflow=True)
     calls = [edge for edge in graph["edges"]
              if edge["kind"] == "call" and edge["status"] == "resolved"
              and edge.get("expression", "").strip().startswith("compute")]

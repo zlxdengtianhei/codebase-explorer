@@ -1,0 +1,44 @@
+name: Joern graph tests
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  joern:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.1.0
+      - name: Install CBE and test tools
+        run: |
+          uv venv --python 3.13 "$RUNNER_TEMP/venv"
+          uv pip install --python "$RUNNER_TEMP/venv/bin/python" -e ".[graphs,languages]" pytest
+          echo "$RUNNER_TEMP/venv/bin" >> "$GITHUB_PATH"
+      - name: Cache key from the pinned Joern and Java versions
+        id: pins
+        run: |
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          from cbe.graph_backends.toolchain import JAVA_VERSION, JOERN_VERSION
+          print(f"key=cbe-tools-linux-joern-{JOERN_VERSION}-jre-{JAVA_VERSION}")
+          PY
+      - name: Restore Joern and Java
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/cbe/tools
+          key: ${{ steps.pins.outputs.key }}
+      - name: Install Joern and Java (downloads only on a cache miss)
+        run: |
+          cbe graph setup
+          cbe graph setup --check > "$RUNNER_TEMP/tools.json"
+          python - <<'PY' >> "$GITHUB_ENV"
+          import json, os
+          found = json.load(open(os.environ["RUNNER_TEMP"] + "/tools.json"))
+          print("CBE_JOERN_HOME=" + found["joern"]["path"])
+          print("JAVA_HOME=" + found["java"]["path"])
+          PY
+      - name: Run the tests that need Joern
+        run: |
+          cd "$RUNNER_TEMP"
+          python -m pytest $(grep -l CBE_JOERN_HOME "$GITHUB_WORKSPACE"/tests/*.py) --import-mode=importlib --basetemp="$RUNNER_TEMP/joern-tests" -q -rs

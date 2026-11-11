@@ -119,6 +119,13 @@ def build_parser() -> argparse.ArgumentParser:
 
     graph_p = sub.add_parser("graph", help="Build and query source-linked code graphs")
     graph_sub = graph_p.add_subparsers(dest="graph_command", required=True)
+    graph_setup = graph_sub.add_parser(
+        "setup", help="Download and unpack Joern and a Java runtime into the user cache directory")
+    graph_setup.add_argument("--check", action="store_true",
+                             help="download nothing; report the Joern and Java found and what is missing")
+    graph_setup.add_argument("--force", action="store_true", help="download and unpack again even if installed")
+    graph_setup.add_argument("--with-java", action="store_true",
+                             help="download a JRE even when Java 21+ is already available")
     graph_build = graph_sub.add_parser("build", help="Run the configured open-source analyzers")
     graph_build.add_argument("repo", type=lambda value: Path(value).expanduser().resolve())
     graph_build.add_argument("--output", type=_abs, required=True, help="graph JSON output path")
@@ -131,7 +138,11 @@ def build_parser() -> argparse.ArgumentParser:
     graph_build.add_argument("--timeout", type=int, default=300)
     graph_build.add_argument("--max-methods", type=int, default=None,
                              help="maximum methods for CFG export per frontend; default: unlimited; omitted methods are reported")
-    graph_build.add_argument("--max-reaching-defs", type=int, default=50000)
+    graph_build.add_argument("--with-dataflow", action="store_true",
+                             help="also export dataflow (reaching definitions); off by default. "
+                                  "--max-reaching-defs and --dataflow-path-method imply it")
+    graph_build.add_argument("--max-reaching-defs", type=int, default=None,
+                             help="cap on reaching-definition edges (default 50000 when dataflow is exported)")
     graph_build.add_argument("--dataflow-path-method", action="append", dest="dataflow_path_methods",
                              help="opt in to sampled value-flow paths for a named method")
     graph_build.add_argument("--max-paths-per-method", type=int, default=5)
@@ -256,6 +267,17 @@ def main(argv: list[str] | None = None) -> int:
             from cbe.graph import analyze_graph, query_graph, read_graph_quality, GraphError, BACKEND_FAILURE_CODES
 
             build_error = None
+            if args.graph_command == "setup":
+                from cbe.graph_backends import toolchain
+
+                try:
+                    value = (toolchain.check() if args.check else
+                             toolchain.setup(force=args.force, with_java=args.with_java))
+                except toolchain.SetupError as exc:
+                    print(f"cbe graph setup: {exc}", file=sys.stderr)
+                    return 2
+                print(json.dumps(value, ensure_ascii=False, indent=2))
+                return 2 if value["missing"] else 0
             if args.graph_command == "build":
                 try:
                     graph = analyze_graph(args.repo, args.output, backend=args.backend,
@@ -264,7 +286,8 @@ def main(argv: list[str] | None = None) -> int:
                                           depcruise_bin=args.depcruise_bin, timeout=args.timeout,
                                           max_methods=args.max_methods, max_reaching_defs=args.max_reaching_defs,
                                           dataflow_path_methods=args.dataflow_path_methods,
-                                          max_paths_per_method=args.max_paths_per_method)
+                                          max_paths_per_method=args.max_paths_per_method,
+                                          with_dataflow=args.with_dataflow)
                 except GraphError as exc:
                     if exc.graph is None:
                         raise
