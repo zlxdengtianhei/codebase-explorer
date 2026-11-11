@@ -7,9 +7,9 @@
 <a href="https://github.com/zlxdengtianhei/codebase-explorer/actions/workflows/wheel-install.yml"><img alt="CI" src="https://github.com/zlxdengtianhei/codebase-explorer/actions/workflows/wheel-install.yml/badge.svg"></a>
 </p>
 
-<p align="center"><img src="https://github.com/zlxdengtianhei/codebase-explorer/releases/download/walkthrough-v2.2.0.dev0/hero-2.gif" alt="35-second animation: code units are linked, grouped into modules, shown as a system map; one module page opens and cbe source prints the original lines" width="100%"></p>
+<p align="center"><img src="https://github.com/zlxdengtianhei/codebase-explorer/releases/download/walkthrough-v2.2.0.dev0/hero-2.gif" alt="34-second animation: code units are linked, grouped into modules, shown as a system map; one module page opens and cbe source prints the original lines" width="100%"></p>
 
-<p align="center">35 seconds: units, links, modules, map, one module page, then the source. <a href="docs/videos.md">Narrated walkthrough videos</a>.</p>
+<p align="center">34 seconds: units, links, modules, map, one module page, then the source. <a href="docs/videos.md">Narrated walkthrough videos</a>.</p>
 
 A file tree shows where files are, not what each part is for. CBE (Codebase Explorer) reads a repository and writes what the tree lacks: one page that lists the whole module tree with a line on what each module is responsible for, and a page per module that explains each function and class and links to the exact source lines. You read it. A coding agent can look things up in it with three commands.
 
