@@ -13,6 +13,8 @@ from typing import Any
 
 from cbe.symbols import SemanticError
 
+RUN_VERSION_ERROR = "this run directory was made by a different version of cbe; start a new plan"
+
 
 def catalog_symbols(catalog: dict) -> dict[str, dict]:
     """Resolve the current catalog's public search view.
@@ -51,8 +53,12 @@ def catalog_symbols(catalog: dict) -> dict[str, dict]:
             record[direction] = [edge_table[e] if isinstance(e, str) else e
                                  for e in record.get(direction) or []]
     return records
+
+
 def query_catalog(run_dir: Path) -> dict[str, Any]:
     catalog = json.loads((run_dir / "catalog.json").read_text(encoding="utf-8"))
+    if "symbol_index" not in catalog:
+        raise SemanticError(RUN_VERSION_ERROR)
     catalog["symbols"] = catalog_symbols(catalog)
     return catalog
 

@@ -56,7 +56,7 @@ from cbe.token_budget import count_text_tokens
 
 
 SCHEMA = "cbe-host-run/3"
-RUN_VERSION_ERROR = "this run directory was made by a different version of cbe; start a new plan"
+RUN_VERSION_ERROR = catalog_query.RUN_VERSION_ERROR
 MAX_ATTEMPTS = 2
 DETAIL_MAX_ATTEMPTS = 3
 REVIEW_MODES = ("none", "sample", "all")

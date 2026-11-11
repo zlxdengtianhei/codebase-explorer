@@ -225,6 +225,20 @@ def test_find_and_query_resolve_grouped_symbols_units_and_index_only(tmp_path, o
     assert catalog_path.read_bytes() == before
 
 
+def test_queries_on_a_catalog_from_another_version_say_so(tmp_path) -> None:
+    run, *_rest, group, _ = _grouped_run(tmp_path)
+    catalog_path = run / "catalog.json"
+    catalog = json.loads(catalog_path.read_text())
+    del catalog["symbol_index"]
+    catalog_path.write_text(json.dumps(catalog))
+    message = "^this run directory was made by a different version of cbe; start a new plan$"
+    for call in (lambda: catalog_query.find(run, "job"),
+                 lambda: catalog_query.query(run, group),
+                 lambda: catalog_query.source(run, group)):
+        with pytest.raises(symbols.SemanticError, match=message):
+            call()
+
+
 @pytest.mark.parametrize("damage", ["wrong_target", "missing_group", "missing_anchor"])
 def test_verification_rejects_broken_published_navigation(tmp_path, damage) -> None:
     run, inventory, units, dispositions, tree, members, group, _ = _grouped_run(tmp_path)
