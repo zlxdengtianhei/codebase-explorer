@@ -6,25 +6,12 @@ import json
 from pathlib import Path
 
 from cbe import symbols
-from cbe.batching import Module
 from cbe.checks import RELATION_KINDS
 from cbe.projection import DEFAULT_GRAPH_MAX_TOKENS, graph_prompt_lines
 from cbe.token_budget import count_text_tokens
 
 
 TOOL_FREE_RULES = """You document source code in one response. Use only supplied source and signatures. Never use tools or ask to read files. Return exactly one JSON object, no Markdown fences. Separate observed syntax from inferred behavior; state uncertainty instead of inventing runtime facts. Be concise. Test functions and trivial accessors need no individual prose. Paths identify files; do not repeat large source passages."""
-
-
-def names_prompt(modules: list[Module]) -> str:
-    rows = [{"module": module.number, "subsystem": module.bucket,
-             "kind": "tests" if module.is_test else "source",
-             "files": [f.path for f in module.files],
-             "signatures": [name for f in module.files for name in f.signatures[:30]]}
-            for module in modules]
-    return ("TASK: Give each source module a short functional title, not a numbered part or path hash. "
-            "Return JSON: {\"names\":[{\"module\":0,\"title\":\"...\"}, ...]}. "
-            "Respect each module's subsystem and test/source kind. Name the common role, not a list of unrelated files. "
-            "Keep mixed-language scope honest. Modules:\n" + json.dumps(rows, ensure_ascii=False))
 
 
 FILE_TASK_RULES = (
@@ -222,44 +209,45 @@ def detail_prompt(paths: list[str], inventory: dict[str, dict], *,
     return "\n".join(header + body)
 
 
-def tree_prompt(units: dict[str, dict], files: list[str], edges: list[dict] | None = None, *, merge: bool = False) -> str:
-    from cbe.aggregation import digest
-    from cbe.principles import PRINCIPLES, grain_bounds
+TREE_NAME_INSTRUCTIONS = """You name the modules of a codebase. A program already grouped code units into modules, using call and import edges, shared files and similar wording. You do not regroup. You see no source code: each unit is one line of what it does. Units are numbered u1, u2, ...
 
-    grain_min, grain_max = grain_bounds()
-    digests = [units[uid] if merge else digest(units[uid]) for uid in sorted(units)]
-    return (
-        "You design a recursive semantic responsibility tree for a codebase, from the "
-        "structured detail units below. You see no raw source: reason only from these "
-        "units. Each unit carries only its responsibility summary and source location. "
-        "The graph below rolls source edges up to units with kind and count. "
-        "kind=relation is model-inferred evidence, counted separately from resolved static edges; "
-        "missing edges do not prove independence. No full explanations are provided.\n\n"
-        + ("MERGE: UNITS are accepted candidate regions. Assign each region id exactly once; "
-           "do not repeat their detail units or rewrite their subtrees. The program grafts each "
-           "intact subtree at its selected home. Use their top nodes and cross-region edges.\n\n" if merge else "") +
-        "OUTPUT: exactly one JSON object, no Markdown fences, no commentary: "
-        '{"nodes":[...],"depends_on":[...]}\n\n'
-        "nodes: objects with fields\n"
-        "  id (short kebab slug, unique), parent (id of the parent; exactly ONE node - the "
-        "root - has parent null), title (short name), capability (what responsibility this "
-        "node owns and why its children and units belong together; for any node with "
-        "children this must be a real explanation of the shared capability), summary (how a "
-        "reader should use this subtree; 2-4 sentences), unit_ids (list of unit ids whose "
-        "PRIMARY home is this node; every unit id below must appear in exactly one node).\n"
-        "A node may have children AND its own unit_ids. The tree may be uneven. Create "
-        "genuine intermediate capability nodes; do NOT invent filler nodes and do NOT "
-        "flatten everything under the root. Do not mirror the directory layout unless the "
-        "responsibilities really coincide.\n"
-        "depends_on: list of {from, to, basis} between node ids: 'from' needs 'to'. basis "
-        "cites unit-level evidence (unit ids / call / import). Real cycles are allowed.\n\n"
-        "Every unit id in UNITS must be assigned exactly once.\n\n"
-        "FILES: " + json.dumps(sorted(files), ensure_ascii=False) + "\n\n"
-        "UNIT GRAPH (resolved static edges and model-inferred relations; from, to, kind, count):\n" + json.dumps(edges or [], ensure_ascii=False)
-        + "\n\nAGGREGATION PRINCIPLES:\n" + "\n".join(
-            f"{p.id}: " + p.prompt.format(grain_min=grain_min, grain_max=grain_max) for p in PRINCIPLES)
-        + "\n\nUNITS:\n" + json.dumps(digests, ensure_ascii=False)
-    )
+For EVERY module below return:
+- title: 2 to 6 words naming the module's responsibility. If the members come from one directory, still say what the module does. Titles must differ from each other.
+- capability: ONE sentence of about 25 words or fewer: what the module is responsible for and why its members belong together.
+- summary: 2 or 3 sentences: when a reader should come to this module and what they find there.
+- evidence_units: 2 to 4 unit numbers of that module that show the capability best.
+
+Answer with one JSON object and nothing else:
+{"modules": [{"id": "M1", "title": "...", "capability": "...", "summary": "...", "evidence_units": ["u1", "u2"]}]}
+"""
+
+TREE_TOP_INSTRUCTIONS = """You name the upper levels of a module tree of a codebase. The program fixed the structure: each GROUP below lists its children. A child is either a module that already has a title, or another group (named in this same answer: name the deepest groups first). You do not regroup or rename the children. You see no source code.
+
+For EVERY group return:
+- title: 2 to 6 words naming the shared responsibility of the group as a whole. Not a child's title repeated, not a directory name. Titles must differ from each other.
+- capability: ONE sentence of about 25 words or fewer: what the group is responsible for and why these children belong together.
+- summary: 2 or 3 sentences: when a reader should come here and how the children divide the work.
+{root_note}
+Answer with one JSON object and nothing else:
+{"groups": [{"id": "G1", "title": "...", "capability": "...", "summary": "..."}]}
+"""
+
+
+def tree_name_prompt(blocks: list[str]) -> str:
+    return TREE_NAME_INSTRUCTIONS + "\nMODULES:\n\n" + "\n\n".join(blocks)
+
+
+def tree_top_prompt(repo: str, blocks: list[str]) -> str:
+    note = (f'G1 is the whole repository "{repo}": its title is the system\'s name or says what it is.\n')
+    return TREE_TOP_INSTRUCTIONS.replace("{root_note}", note) + "\nGROUPS:\n\n" + "\n\n".join(blocks)
+
+
+def tree_retry_note(pending: list[str], problems: list[str], taken: list[str]) -> str:
+    """Appended to the first prompt when some nodes of a naming answer were rejected."""
+    return ("\n\nSome entries of your previous answer were accepted. Answer again ONLY for: "
+            + ", ".join(pending) + " (the same JSON shape, with only these entries). Problems: "
+            + "; ".join(problems[:20]) + ("\nTitles already taken, do not reuse: " + "; ".join(taken[:60]) if taken else "")
+            + "\n")
 
 
 def review_prompt(units: dict | None, detail_task: str) -> str:
@@ -300,10 +288,10 @@ def system_prompt(nodes: list[dict], limit: int, relationships: dict | None = No
                   "capability": node.get("capability"), "summary": node.get("summary"),
                   "parent": node.get("parent"), "units": len(node.get("unit_ids") or [])}
                  for node in nodes]
-    return ("TASK: Synthesize these semantic node summaries and program-derived relationships into an overview and maintenance "
-            f"navigation for the repository. Return JSON with nonempty strings overview and "
-            f"maintenance_navigation, each at most {limit} characters. Explain which node to open for "
-            "a maintenance question; do not invent unseen details. Also return dependency_descriptions: "
+    return ("TASK: Synthesize these semantic node summaries and program-derived relationships into an overview "
+            f"of the repository. Return JSON with a nonempty string overview of 2 to 4 sentences, at most {limit} "
+            "characters: what the system is and how its top-level modules divide the work. Do not invent unseen "
+            "details. Also return dependency_descriptions: "
             "[{\"from\":\"node id\",\"to\":\"node id\",\"description\":\"one sentence\"}], describing "
             "at least one key dependency when the table is nonempty (otherwise []). Use existing pairs only; "
             "describe only who uses whom for what. Do not write evidence/source words "

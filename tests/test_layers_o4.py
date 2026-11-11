@@ -42,7 +42,7 @@ def test_page_and_catalog_share_complete_records(tmp_path):
     assert "### `class::" not in page and "### `function::" not in page
     assert "pkg/jobs.py:L" in page and "**Relations.**" not in page
     assert "Look up code" in page and "cbe source --run-dir" in page
-    assert "How to read this report" in (run / "docs/INDEX.md").read_text()
+    assert "## Read further" in (run / "docs/INDEX.md").read_text()
     for uid, original in units.items():
         record = catalog["units"][uid]
         for field in ("explain", "extras", "relations", "uncertainties", "members"):
@@ -173,14 +173,16 @@ def test_fallback_snapshot_keeps_exact_unsupported_source_after_repo_is_gone(tmp
     assert "create table jobs" in capsys.readouterr().out
 
 
-def test_summary_prompt_and_tree_digest_uses_summary_without_full_explanation():
-    from cbe import prompts
-    unit = {"id": "a.py::f", "kind": "function", "explain": "First. Second."}
-    from cbe.aggregation import digest as unit_digest
-    digest = unit_digest(unit)
-    assert digest["summary"] == "First." and "explain" not in digest
+def test_summary_prompt_and_tree_naming_use_summary_without_full_explanation():
+    from cbe import prompts, treename
+    from cbe.records import summary_sentence
+    unit = {"id": "a.py::f", "kind": "function", "explain": "First. Second.", "ranges": [{"path": "a.py"}]}
+    assert summary_sentence(unit) == "First."
     unit["summary"] = "Chosen."
-    assert unit_digest(unit)["summary"] == "Chosen."
+    assert summary_sentence(unit) == "Chosen."
+    tree = treename.Tree([{"id": "m1", "parent": None, "unit_ids": ["a.py::f"], "level": 0}])
+    block = "\n".join(treename.name_blocks(["m1"], tree, {"a.py::f": unit}, []))
+    assert "Chosen." in block and "Second." not in block
     prompt = prompts.detail_prompt(["a.py"], {"a.py": {"symbols": []}})
     assert "Do not emit a separate summary field" in prompt and "25 words" in prompt
 

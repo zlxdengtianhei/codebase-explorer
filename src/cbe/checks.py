@@ -18,7 +18,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Any
 
-from cbe.batching import Module, fallback_title, is_test_path
+from cbe.batching import is_test_path
 
 
 def json_object(text: str) -> dict[str, Any]:
@@ -38,28 +38,9 @@ RELATION_KINDS = {"call", "inherit", "override", "import", "raise", "use",
 EXTRA_TOPICS = {"condition", "failure", "side_effect", "field", "contract"}
 
 
-def check_naming(value: dict[str, Any], modules: list[Module]) -> None:
-    rows = value.get("names")
-    if not isinstance(rows, list) or len(rows) != len(modules):
-        raise ValueError("names must contain one entry per module")
-    seen: set[int] = set()
-    for row in rows:
-        if not isinstance(row, dict) or type(row.get("module")) is not int or not isinstance(row.get("title"), str):
-            raise ValueError("each name needs integer module and string title")
-        if row["module"] in seen or not row["title"].strip():
-            raise ValueError("duplicate or empty module title")
-        title = row["title"].strip()
-        if len(title) > 80:
-            title = title[:80].rsplit(" ", 1)[0] or title[:80]
-        row["title"] = title
-        seen.add(row["module"])
-    if seen != {module.number for module in modules}:
-        raise ValueError("module title IDs do not match planned modules")
-
-
-def system_limit(node_count: int) -> int:
-    """Overview and navigation name semantic nodes, independent of reading batches."""
-    return max(2000, min(12000, 250 * node_count))
+def system_limit() -> int:
+    """The overview is 2 to 4 sentences; the entry page has a token budget."""
+    return 1200
 
 
 DEPENDENCY_EVIDENCE_WORDS = re.compile(
@@ -73,9 +54,8 @@ DEPENDENCY_EVIDENCE_WORDS = re.compile(
 def check_system(value: dict[str, Any], limit: int = 2000, *, unit_ids=None, dependencies=None,
                  has_candidates: bool = False, normalized: bool = False) -> None:
     errors = []
-    for key in ("overview", "maintenance_navigation"):
-        if not isinstance(value.get(key), str) or not value[key].strip() or len(value[key]) > limit:
-            errors.append(f"{key} must be a nonempty concise string of at most {limit} characters")
+    if not isinstance(value.get("overview"), str) or not value["overview"].strip() or len(value["overview"]) > limit:
+        errors.append(f"overview must be a nonempty concise string of at most {limit} characters")
     descriptions = value.get("dependency_descriptions")
     flows = value.get("key_flows")
     if not isinstance(descriptions, list):
@@ -167,40 +147,14 @@ def _fit(value: dict[str, Any], key: str, limit: int, flags: list[str], *, label
     value[key] = text
 
 
-def normalize_naming(value: Any, modules: list[Module]) -> list[str]:
-    if not isinstance(value, dict):
-        raise ValueError("naming result is not a JSON object")
-    rows = value.get("names") if isinstance(value.get("names"), list) else []
-    titles: dict[int, str] = {}
-    for row in rows:
-        if (isinstance(row, dict) and type(row.get("module")) is int and isinstance(row.get("title"), str)
-                and row["title"].strip() and row["module"] not in titles
-                and 0 <= row["module"] < len(modules)):
-            titles[row["module"]] = row["title"]
-    if not titles:
-        raise ValueError("naming result has no usable titles")
-    flags = []
-    for module in modules:
-        if module.number not in titles:
-            titles[module.number] = fallback_title(module)
-            flags.append(f"module {module.number + 1} had no title; used {titles[module.number]!r}")
-    value["names"] = [{"module": number, "title": titles[number]} for number in sorted(titles)]
-    check_naming(value, modules)
-    return flags
-
-
 def normalize_system(value: Any, limit: int, *, unit_ids=None, dependencies=None,
                      has_candidates: bool = False) -> list[str]:
     if not isinstance(value, dict):
         raise ValueError("overview result is not a JSON object")
     flags: list[str] = []
-    for key in ("overview", "maintenance_navigation"):
-        _fit(value, key, limit, flags)
+    _fit(value, "overview", limit, flags)
     if not value["overview"].strip():
         raise ValueError("overview result has no overview")
-    if not value["maintenance_navigation"].strip():
-        value["maintenance_navigation"] = "See the subsystem list below."
-        flags.append("maintenance_navigation was empty")
     # Preserve each independently valid row after the final rejected answer.
     for key in ("dependency_descriptions", "key_flows"):
         rows = value.get(key)
@@ -516,6 +470,34 @@ def validate_tree(payload: Any, unit_universe: set[str]) -> list[str]:
         if children.get(nid) and isinstance(capability, str) and len(capability) < 40:
             problems.append(f"node {nid} has children but capability text is not a real "
                             "explanation (<40 chars)")
+    if unit_universe:
+        empty = sorted(nid for nid, node in by_id.items() if not node.get("unit_ids") and not children.get(nid))
+        if empty:
+            problems.append(f"nodes with no units and no children: {empty[:12]}")
+        for nid, kids in children.items():
+            titles: dict[str, str] = {}
+            for kid in kids:
+                title = by_id[kid].get("title")
+                key = re.sub(r"\W+", " ", title.lower()).strip() if isinstance(title, str) else None
+                if key and key in titles:
+                    problems.append(f"nodes {titles[key]} and {kid} are siblings with the same title {title!r}")
+                elif key:
+                    titles[key] = kid
+    members: dict[str, set[str]] = {}
+
+    def subtree(nid: str) -> set[str]:
+        if nid not in members:
+            members[nid] = {u for u in by_id[nid].get("unit_ids") or [] if isinstance(u, str)}
+            for kid in children.get(nid, []):
+                members[nid] |= subtree(kid)
+        return members[nid]
+
+    if root is not None and not any(p.startswith("node ") and "reachable twice" in p for p in problems):
+        for nid, node in by_id.items():
+            evidence = node.get("evidence_units")
+            if evidence is not None and (not isinstance(evidence, list)
+                                         or any(not isinstance(u, str) or u not in subtree(nid) for u in evidence)):
+                problems.append(f"node {nid}: evidence_units must be members of the node's subtree")
     edges = payload.get("depends_on")
     if not isinstance(edges, list):
         problems.append("depends_on must be a list")
@@ -529,92 +511,3 @@ def validate_tree(payload: Any, unit_universe: set[str]) -> list[str]:
                 problems.append(f"depends_on {edge.get('from')}->{edge.get('to')}: "
                                 "basis (evidence) is required")
     return problems
-
-
-def normalize_tree(payload: Any, unit_universe: set[str]) -> list[str]:
-    """Repair shape only: drop bad nodes, reattach orphans under the first root,
-    and assign unowned units to a fallback node. Never drops a unit."""
-    if not isinstance(payload, dict):
-        raise ValueError("tree result is not a JSON object")
-    nodes = [node for node in payload.get("nodes") or []
-             if isinstance(node, dict) and isinstance(node.get("id"), str)
-             and _NODE_ID.match(node["id"])]
-    if not nodes:
-        raise ValueError("tree result has no usable nodes")
-    flags: list[str] = []
-    seen: set[str] = set()
-    unique: list[dict] = []
-    for node in nodes:
-        if node["id"] in seen:
-            flags.append(f"dropped duplicate node {node['id']}")
-            continue
-        seen.add(node["id"])
-        unique.append(node)
-    nodes = unique
-    by_id = {node["id"]: node for node in nodes}
-    roots = [node for node in nodes if node.get("parent") is None]
-    if not roots:
-        nodes[0]["parent"] = None
-        roots = [nodes[0]]
-        flags.append("no root; promoted the first node")
-    root = roots[0]["id"]
-    for node in nodes:
-        parent = node.get("parent")
-        if node["id"] != root and (not isinstance(parent, str) or parent not in by_id):
-            node["parent"] = root
-            flags.append(f"{node['id']}: parent missing; attached to root")
-    for field in ("title", "capability", "summary"):
-        for node in nodes:
-            if not isinstance(node.get(field), str) or not node[field].strip():
-                node[field] = node.get("title") or node["id"]
-                flags.append(f"{node['id']}: {field} was empty")
-    for node in nodes:
-        if not isinstance(node.get("unit_ids"), list):
-            node["unit_ids"] = []
-    owner: set[str] = set()
-    for node in nodes:
-        kept = [uid for uid in node["unit_ids"] if isinstance(uid, str) and uid in unit_universe
-                and uid not in owner]
-        if len(kept) != len(node["unit_ids"]):
-            flags.append(f"{node['id']}: dropped unknown or duplicate unit ids")
-        node["unit_ids"] = kept
-        owner.update(kept)
-    missing = sorted(unit_universe - owner)
-    if missing:
-        fallback = by_id.get(root)
-        assert fallback is not None
-        fallback.setdefault("unit_ids", []).extend(missing)
-        flags.append(f"{len(missing)} unit(s) had no owner; assigned to the root")
-    if not isinstance(payload.get("depends_on"), list):
-        payload["depends_on"] = []
-        flags.append("depends_on was not a list; dropped")
-    payload["nodes"] = nodes
-    return flags
-
-
-def mechanical_tree(modules: list[dict], units: dict[str, dict]) -> dict:
-    """A real structural fallback when the tree task cannot run: one node per
-    module/batch under a single root. It is honestly coarse, not a semantic
-    grouping, and the renderer says so."""
-    nodes = [{"id": "root", "parent": None, "title": "Codebase",
-              "capability": "Every source area of the repository. The semantic tree task "
-                            "did not produce accepted output, so the program grouped units "
-                            "by their reading batch; this is a structural fallback.",
-              "summary": "Open the area page for one batch of source files.",
-              "unit_ids": []}]
-    module_of: dict[str, str] = {}
-    for module in modules:
-        nid = f"area-{module['number'] + 1}"
-        nodes.append({"id": nid, "parent": "root", "title": module.get("title") or nid,
-                      "capability": "The source files in this reading batch.",
-                      "summary": "Units read from this batch of files.",
-                      "unit_ids": []})
-        for path in module["files"]:
-            module_of[path] = nid
-    by_id = {node["id"]: node for node in nodes}
-    for uid in units:
-        path = uid.split("::", 1)[0]
-        nid = module_of.get(path, "root")
-        by_id[nid]["unit_ids"].append(uid)
-    return {"nodes": nodes, "depends_on": [],
-            "fallback": "mechanical batch grouping; the tree task did not complete"}

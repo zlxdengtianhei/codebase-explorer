@@ -84,9 +84,10 @@ def test_source_labels_in_both_languages_are_rejected(label):
 
 def test_english_artifact_navigation_and_catalog_interface_fields(tmp_path):
     run, index, _ = render_example(tmp_path, flows=False)
-    assert "### Within containment" in index
+    deps = (run / "docs/DEPENDENCIES.md").read_text()
+    assert "### Within containment" in deps
     assert "Program candidates, not selected by the model" in index
-    assert "Graph-only pairs are ranked by edge count; 0 omitted." in index
+    assert "Graph-only pairs are ranked by edge count; 0 omitted." in deps
     for page in (run / "docs").rglob("*.md"):
         assert not re.search(r"[\u4e00-\u9fff]", page.read_text()), page
     catalog = json.loads((run / "catalog.json").read_text())

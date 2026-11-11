@@ -1,11 +1,11 @@
 """S61 run-status guidance and escaping of model-written titles."""
 import json
 
-from cbe import host_run
+from cbe import docs, host_run
 from test_generate import _semantic_answer, _tiny_repo
 
 
-def _run(tmp_path, tree=None, repair=False):
+def _run(tmp_path, repair=False):
     run = tmp_path / "run"
     host_run.plan(_tiny_repo(tmp_path), run, review="all" if repair else "none", jobs=20, driver="script")
     for _ in range(20):
@@ -16,8 +16,6 @@ def _run(tmp_path, tree=None, repair=False):
             value = _semantic_answer(host_run.completion_prompt(run, item["task"]))
             if item["kind"] == "review" and repair:
                 value = {"decision": "needs_repair", "issues": ["Please check the explanation."]}
-            if item["kind"] == "tree" and tree:
-                tree(value)
             path = run / "answer.json"
             path.write_text(json.dumps(value))
             result = host_run.submit(run, item["task"], result=path)
@@ -39,17 +37,19 @@ def test_source_drift_requests_new_plan(tmp_path):
 def test_titles_escaped_in_outline_children_parent_and_dependencies(tmp_path):
     title = r"Root [x] (detail) \\ *literal*"
     child_title = "Child ] text [z]"
-    def tree(value):
-        root = value["nodes"][0]
-        root["title"] = title
-        value["nodes"].append({"id": "child", "parent": "root", "title": child_title,
-                               "unit_ids": [], "capability": "Child", "summary": "Child."})
-        value["depends_on"] = [{"from": "root", "to": "child", "basis": "Uses child."}]
-    run, _ = _run(tmp_path, tree=tree)
+    units = {uid: {"id": uid, "kind": "group", "explain": "A useful explanation."}
+             for uid in ("grp:one", "grp:two")}
+    tree = {"nodes": [{"id": "root", "parent": None, "title": title, "unit_ids": ["grp:one"],
+                       "capability": "Root capability.", "summary": "Root."},
+                      {"id": "child", "parent": "root", "title": child_title, "unit_ids": ["grp:two"],
+                       "capability": "Child capability.", "summary": "Child."}],
+            "depends_on": [{"from": "root", "to": "child", "basis": "Uses child."}]}
+    docs.render(run_dir=tmp_path, source_root=tmp_path, inventory={}, units=units, dispositions={},
+                languages={}, tree=tree)
     expected_root = r"Root \[x\] \(detail\) \\\\ \*literal\*"
     expected_child = r"Child \] text \[z\]"
-    root = (run / "docs/nodes/root.md").read_text()
+    root = (tmp_path / "docs/nodes/root.md").read_text()
     assert f"[{expected_child}](child.md)" in root.split("**Children.**")[1].split("**Depends on.**")[0]
     assert f"[{expected_child}](child.md)" in root.split("**Depends on.**")[1]
-    assert f"Parent: [{expected_root}](root.md)" in (run / "docs/nodes/child.md").read_text()
-    assert f"[{expected_root}](nodes/root.md)" in (run / "docs/INDEX.md").read_text()
+    assert f"Parent: [{expected_root}](root.md)" in (tmp_path / "docs/nodes/child.md").read_text()
+    assert f"**{expected_child}**" in (tmp_path / "docs/INDEX.md").read_text()

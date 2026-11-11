@@ -77,7 +77,7 @@ def _delivery_problem(run_dir: Path) -> tuple[str | None, str]:
     return None, ""
 
 
-# Tasks whose prompt embeds source bodies; names and system prompts embed none.
+# Tasks whose prompt embeds source bodies; tree naming and system prompts embed none.
 SOURCE_TASK_KINDS = ("module", "repair", "review")
 
 
@@ -144,8 +144,6 @@ def _call_delivery_problem(run_dir: Path, task_id: str,
 
 def _csv_task(task_id: str, review: str) -> str:
     """Keep calls.csv task names comparable with earlier script runs."""
-    if task_id == "names":
-        return "module_names"
     if task_id == "system":
         return "system_overview"
     if review == "sample" and task_id.startswith(("review_", "repair_")):

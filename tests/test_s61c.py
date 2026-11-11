@@ -129,7 +129,7 @@ def test_detail_resume_and_retry_grant_three_fresh_answers(tmp_path,kind,recover
     assert '1/3 this round' in log and '2/3 this round' in log
 
 
-@pytest.mark.parametrize('kind',['names','tree','system','review'])
+@pytest.mark.parametrize('kind',['tree_name','system','review'])
 def test_other_task_kinds_still_have_two_answers_and_two_after_retry(tmp_path,kind):
     run,item=_target(tmp_path,kind)
     tid=item['task']

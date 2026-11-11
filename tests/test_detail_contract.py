@@ -180,10 +180,6 @@ def test_old_format_answers_are_not_accepted(tmp_path) -> None:
     ids = symbols.inventory_ids(state["inventory"])
     old = {"units": [{"id": i, "kind": "function", "explain": "x."} for i in ids],
            "dispositions": {i: {"how": "unit", "unit": i} for i in ids}, "batch_notes": "n"}
-    host_run.next_tasks(run, limit=1)
-    (run / "host" / "outbox" / "names.json").write_text(json.dumps(
-        {"names": [{"module": 0, "title": "A"}, {"module": 1, "title": "B"}]}))
-    assert host_run.submit(run, "names")["accepted"]
     item = host_run.next_tasks(run, limit=1)["tasks"][0]
     path = run / "host" / "outbox" / f"{item['task']}.json"
     path.write_text(json.dumps(old))

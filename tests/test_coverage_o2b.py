@@ -21,7 +21,7 @@ def test_relation_percentages_exclude_structural_edges(tmp_path):
     }
     docs.render(run_dir=tmp_path, source_root=tmp_path, inventory={}, units={}, dispositions={},
                 tree={"nodes": []}, languages={}, graph=graph)
-    index = (tmp_path / "docs/INDEX.md").read_text()
+    index = (tmp_path / "docs/RUN.md").read_text()
     assert "python import: resolved 1/2 (50%), external 1/2 (50%)" in index
     assert "python call: resolved 1/4 (25%), unresolved 3/4 (75%)" in index
     assert "cfg=100" in index and "dataflow=100" in index

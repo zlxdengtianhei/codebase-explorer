@@ -115,46 +115,28 @@ def test_missing_new_fields_reasked_then_normalized_via_host(tmp_path):
     assert accepted["key_flows"] == accepted["dependency_descriptions"] == []
     state = json.loads((run / "host/state.json").read_text())
     assert any("key_flows" in flag for flag in state["tasks"]["system"]["flags"])
-    assert "The system response provided no key flows" in (run / "docs/INDEX.md").read_text()
+    assert "No flows:" in (run / "docs/INDEX.md").read_text()
     assert host_run.verify(run)["ok"]
 
 
-def test_render_query_and_links_with_inferred_flow(tmp_path):
-    # Drive a real planned frozen context, assigning each source unit to a node.
+def test_host_run_publishes_sibling_dependencies_and_flows_with_inferred_transitions(tmp_path):
+    # Drive a real planned frozen context to the end; the tree comes from the program.
     repo = _repo(tmp_path)
     gp = tmp_path / "graph.json"
     gp.write_text(json.dumps(_graph_for(repo, ["src/pkg/jobs.py", "src/pkg/cli.py"])))
     run = Path(host_run.plan(repo, tmp_path / "run", graph_path=gp, review="none")["run_dir"])
     while True:
-        item = host_run.next_tasks(run, limit=1)["tasks"][0]
-        if item["kind"] == "tree":
-            value = _good(item, run)
-            ids = value["nodes"][0]["unit_ids"]
-            value["nodes"][0]["unit_ids"] = ids[:1]
-            value["nodes"][0]["title"] = 'Root ["<&`'
-            value["nodes"].append(dict(id="child", parent="root", title="Child", capability="Calls.",
-                                       summary="Helpers.", unit_ids=ids[1:]))
-            value["depends_on"] = [{"from": "root", "to": "child", "basis": "Uses helper."}]
-            assert _answer_task(run, item, value)["accepted"]
-        elif item["kind"] == "system":
-            # This fixture has no call evidence, so flows are supplied to the
-            # renderer directly below to exercise inferred transition display.
-            assert _answer_task(run, item, _good(item, run))["accepted"]
+        item = host_run.next_tasks(run, limit=1)["tasks"]
+        if not item:
             break
-        else:
-            assert _answer_task(run, item, _good(item, run))["accepted"]
+        assert _answer_task(run, item[0], _good(item[0], run))["accepted"]
     catalog = json.loads((run / "catalog.json").read_text())
-    dep = catalog["node_dependencies"][0]
-    assert dep["source"] == "containment" and dep["description"] == "Uses its service."
-    assert dep["containment"] and dep["count"] == 0
-    assert docs.query(run, "root")["dependencies"] == [dep]
-    assert docs.query(run, "child")["depended_on_by"] == [dep]
-    assert "Depended on by" in (run / "docs/nodes/child.md").read_text()
-    index = (run / "docs/INDEX.md").read_text()
-    assert '```mermaid' not in index  # containment is never drawn as dependency
-    assert "containment · → 0 / ← 0 edge(s)" in index and "Uses its service." in index
-    assert host_run.verify(run)["ok"]
+    assert catalog["nodes"] and host_run.verify(run)["ok"]
+    for dep in catalog["node_dependencies"]:
+        assert dep["from"] in catalog["nodes"] and dep["to"] in catalog["nodes"]
+    # Flows are supplied to the renderer's helper directly to exercise inferred transition display.
+    value = tree()
     view = aggregation.relationship_view(value, [], graph())
-    system = dict(key_flows=[dict(name="Flow", description="Uses helpers.", steps=ids[:2])])
+    system = dict(key_flows=[dict(name="Flow", description="Uses helpers.", steps=["a", "c"])])
     enriched = aggregation.annotate_relationships(view, system, [])
     assert enriched["key_flows"][0]["inferred_steps"] == [1]

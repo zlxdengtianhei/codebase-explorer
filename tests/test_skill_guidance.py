@@ -61,12 +61,12 @@ def test_plan_takes_dot_but_run_lookup_needs_an_absolute_repo(tmp_path: Path, mo
 
 def test_submit_output_tells_acceptance_from_rejection(tmp_path: Path, capsys) -> None:
     run_dir = Path(host_run.plan(_repo(tmp_path), tmp_path / "run", review="none", jobs=1)["run_dir"])
-    names = host_run.next_tasks(run_dir)["tasks"][0]
-    Path(names["output_file"]).write_text(
-        json.dumps(_answer({"kind": "names"}, Path(names["prompt_file"]).read_text())))
-    accepted = host_run.submit(run_dir, "names")
+    first = host_run.next_tasks(run_dir)["tasks"][0]
+    Path(first["output_file"]).write_text(
+        json.dumps(_answer({"kind": "module"}, Path(first["prompt_file"]).read_text())))
+    accepted = host_run.submit(run_dir, first["task"])
     assert accepted["accepted"] is True and accepted["normalized"] is False and accepted["flags"] == []
-    repeated = host_run.submit(run_dir, "names")
+    repeated = host_run.submit(run_dir, first["task"])
     assert repeated["accepted"] is True and repeated["already"] is True
     assert "normalized" not in repeated and "flags" not in repeated
 
@@ -101,17 +101,17 @@ def test_cost_needs_model_only_for_estimated_rows_and_adds_attempts(tmp_path: Pa
     _drive(run_dir)
     tag = json.loads((run_dir / "host" / "state.json").read_text())["run_tag"]
     subagents = tmp_path / "claude" / "proj" / "session" / "subagents"
-    _transcript(subagents, "agent-a1", f"cbe {tag} names", output_tokens=10)
-    _transcript(subagents, "agent-a2", f"cbe {tag} names", output_tokens=30)
+    _transcript(subagents, "agent-a1", f"cbe {tag} module_1", output_tokens=10)
+    _transcript(subagents, "agent-a2", f"cbe {tag} module_1", output_tokens=30)
     imported = usage.import_usage(run_dir, "claude-code", tmp_path / "claude")
     assert imported["tasks_with_exact_usage"] == 1 and imported["subagent_transcripts"] == 2
     estimated = imported["tasks_without_exact_usage"]
-    assert estimated and "names" not in estimated
+    assert estimated and "module_1" not in estimated
 
     plain = usage.cost(run_dir)
     rows = {row["task"]: row for row in plain["tasks"]}
-    assert rows["names"]["basis"] == "exact" and rows["names"]["subagents"] == 2
-    assert rows["names"]["output_tokens"] == 40 and rows["names"]["usd_api_equivalent"] > 0
+    assert rows["module_1"]["basis"] == "exact" and rows["module_1"]["subagents"] == 2
+    assert rows["module_1"]["output_tokens"] == 40 and rows["module_1"]["usd_api_equivalent"] > 0
     assert all(rows[task]["basis"] == "estimate" and rows[task]["usd_api_equivalent"] is None
                for task in estimated)
     assert plain["totals"]["usd"] is None

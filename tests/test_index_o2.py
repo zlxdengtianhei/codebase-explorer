@@ -1,4 +1,4 @@
-"""Accepted system overview and navigation appear in the published INDEX."""
+"""The accepted system overview opens the published INDEX."""
 from pathlib import Path
 
 from cbe import host_run
@@ -10,6 +10,6 @@ def test_accepted_system_is_published(tmp_path):
     _drive(run)
     index = (run / "docs/INDEX.md").read_text()
     assert "A tiny job reservation package." in index
-    assert "Open the root node." in index
+    assert "Maintenance navigation" not in index
 
 

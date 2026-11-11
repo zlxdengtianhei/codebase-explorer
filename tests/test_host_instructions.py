@@ -51,7 +51,7 @@ def test_review_instruction_asks_for_strings_and_its_example_is_a_valid_answer(t
 
 def test_nonreading_host_tasks_write_json_with_file_tools_without_commands(tmp_path: Path) -> None:
     seen = _instruction_files(tmp_path)
-    for kind in ('names', 'tree', 'system'):
+    for kind in ('tree_name', 'system'):
         text = seen[kind]
         assert 'your file-writing tool to write the result JSON' in text
         assert 'Do not run shell commands, scripts, or interpreters' in text

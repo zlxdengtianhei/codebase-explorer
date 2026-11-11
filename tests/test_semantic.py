@@ -107,25 +107,44 @@ def test_validate_tree_requires_a_dependency_basis() -> None:
     assert any("basis" in problem for problem in checks.validate_tree(payload, set(ids)))
 
 
-def test_normalize_tree_assigns_unowned_units_to_the_root() -> None:
-    inventory = _inventory()
-    ids = [row["id"] for row in inventory["pkg/jobs.py"]["symbols"]]
-    payload = _tree(ids[:-1])
-    flags = checks.normalize_tree(payload, set(ids))
-    assert any("no owner" in flag for flag in flags)
-    owned = {uid for node in payload["nodes"] for uid in node["unit_ids"]}
-    assert owned == set(ids)
+def _two_leaf_tree(ids):
+    cap = "A real capability text that explains the whole group."
+    return {"nodes": [
+        {"id": "root", "parent": None, "title": "Root", "capability": cap, "summary": "s", "unit_ids": []},
+        {"id": "a", "parent": "root", "title": "Alpha", "capability": "Alpha does the first half.",
+         "summary": "s", "unit_ids": ids[:2], "evidence_units": ids[:1]},
+        {"id": "b", "parent": "root", "title": "Beta", "capability": "Beta does the other half.",
+         "summary": "s", "unit_ids": ids[2:], "evidence_units": ids[2:3]}], "depends_on": []}
 
 
-def test_mechanical_tree_covers_every_unit_and_is_labelled_a_fallback() -> None:
-    inventory = _inventory()
-    units = {row["id"]: {"id": row["id"], "kind": row["kind"], "explain": "x"}
-             for row in inventory["pkg/jobs.py"]["symbols"]}
-    tree = checks.mechanical_tree([{"number": 0, "title": "Jobs", "files": ["pkg/jobs.py"]}], units)
-    assert tree["fallback"]
-    owned = {uid for node in tree["nodes"] for uid in node["unit_ids"]}
-    assert owned == set(units)
-    assert checks.validate_tree(tree, set(units)) == []
+def test_validate_tree_accepts_a_tree_with_evidence_inside_each_subtree() -> None:
+    ids = [row["id"] for row in _inventory()["pkg/jobs.py"]["symbols"]]
+    assert len(ids) >= 3
+    assert checks.validate_tree(_two_leaf_tree(ids), set(ids)) == []
+
+
+def test_validate_tree_rejects_a_node_with_no_units_and_no_children() -> None:
+    ids = [row["id"] for row in _inventory()["pkg/jobs.py"]["symbols"]]
+    tree = _two_leaf_tree(ids)
+    tree["nodes"].append({"id": "hollow", "parent": "root", "title": "Hollow", "capability": "Nothing here.",
+                          "summary": "s", "unit_ids": []})
+    assert any("no units and no children" in problem for problem in checks.validate_tree(tree, set(ids)))
+
+
+def test_validate_tree_rejects_siblings_with_the_same_title() -> None:
+    ids = [row["id"] for row in _inventory()["pkg/jobs.py"]["symbols"]]
+    tree = _two_leaf_tree(ids)
+    tree["nodes"][2]["title"] = "  alpha! "
+    assert any("same title" in problem for problem in checks.validate_tree(tree, set(ids)))
+    tree["nodes"][2]["parent"] = "a"   # not siblings any more: a node under a unit-holding parent
+    assert not any("same title" in problem for problem in checks.validate_tree(tree, set(ids)))
+
+
+def test_validate_tree_rejects_evidence_outside_the_node_subtree() -> None:
+    ids = [row["id"] for row in _inventory()["pkg/jobs.py"]["symbols"]]
+    tree = _two_leaf_tree(ids)
+    tree["nodes"][1]["evidence_units"] = ids[2:3]    # a unit of the other module
+    assert any("evidence_units" in problem for problem in checks.validate_tree(tree, set(ids)))
 
 
 def test_render_publishes_node_pages_source_links_and_a_compatible_catalog(tmp_path) -> None:
