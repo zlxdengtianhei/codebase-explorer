@@ -20,4 +20,5 @@ Program checks: dangling edges 0; nodes outside manifest 0; nodes with missing f
 
 - Cohesion: 13 of 22 modules with edges have at least as many resolved edges inside as outside.
 - Granularity: 19 of 22 modules hold 5 to 30 units.
+- Introduction length: the longest module introduction is 0.17 times the explanations under it; 0 module(s) above 1.
 - Program diagnostics only; they do not prove semantic correctness. All readings: `summary.json`.

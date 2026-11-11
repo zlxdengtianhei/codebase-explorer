@@ -25,7 +25,7 @@ internal_edge_counts: {'cfg': 62, 'dataflow': 110}
 outgoing: call raise_routing_exception src/flask/app.py::method::Flask.raise_routing_exception::19427 [resolved] src/flask/app.py:L891 id=cpg:pythonsrc/call/30064771770
 ```
 
-**This run.** `complete`, `cbe host verify` pass. 4 model tasks, 31 tree nodes, 293 units. 8 requests, 0 answers refused and asked again. Prompt 857,525 tokens (cached included, 11.48x source), output 69,130 tokens (0.925x source). `docs/INDEX.md`: 1,612 tokens. Wall time 293 s, one headless claude -p command.
+**This run.** `complete`, `cbe host verify` pass. 4 model tasks, 31 tree nodes, 293 units. 8 requests, 0 answers refused and asked again. Prompt 857,525 tokens (cached included, 11.48x source), output 69,130 tokens (0.925x source). `docs/INDEX.md`: 1,612 tokens. Wall time 293 s, one headless claude -p command. Rendered again by CBE `4d000f5` without a model call, to add the Python facts to `catalog.json.gz` and the introduction-length line to `docs/RUN.md`; the explanations and the tree are unchanged.
 
 **Known gaps.**
 - Symbols without an explanation (`unexplained`): 0.

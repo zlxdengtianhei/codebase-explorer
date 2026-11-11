@@ -124,7 +124,13 @@
         },
         "scope": "nodes with directly owned units; structural ancestors excluded"
       }
-    ]
+    ],
+    "introduction_length": {
+      "ok": true,
+      "overlong": {},
+      "max_ratio": 0.908,
+      "scope": "capability+summary characters versus the explain characters of the units under the node"
+    }
   },
   "tree": {
     "leaves": 11,
@@ -152,25 +158,25 @@
   "layers": {
     "tokenizer": "o200k_base",
     "source_tokens": 1708,
-    "semantic_tokens": 9875,
+    "semantic_tokens": 10029,
     "semantic_breakdown": {
       "model_body": 1886,
-      "signature_location": 1426,
+      "signature_location": 1552,
       "heading_anchor": 1216,
       "relations": 49,
       "footer": 1288,
-      "index": 2193,
+      "index": 2221,
       "node_text": 1817
     },
     "model_body_tokens": 1886,
     "model_body_source_ratio": 1.104215456674473,
-    "published_markdown_source_ratio": 5.781615925058548,
-    "deterministic_tokens": 109033,
-    "catalog_tokens": 109033,
+    "published_markdown_source_ratio": 5.871779859484778,
+    "deterministic_tokens": 109396,
+    "catalog_tokens": 109396,
     "frozen_graph_tokens": 0,
     "frozen_graph_bytes": 1030054,
-    "semantic_source_ratio": 5.781615925058548,
-    "deterministic_source_ratio": 63.836651053864166,
+    "semantic_source_ratio": 5.871779859484778,
+    "deterministic_source_ratio": 64.04918032786885,
     "scope": "Breakdown partitions full Markdown BPE tokens by the first byte's line: model_body is published unit explain, summary, extras and uncertainties; signature_location includes shared source-file reference definitions (including ones used by relations); heading_anchor, relations, footer, INDEX and node_text (including labels/whitespace) partition the rest. model_body/source and published_markdown/source use complete frozen files. semantic: all published Markdown (node pages + INDEX, including navigation, signatures and commands); deterministic: catalog.json as serialized, including preserved prose copies and edge references, excluding the graph field; frozen graph is excluded from token ratios (frozen_graph_tokens=0), reported separately as frozen_graph_bytes using UTF-8 JSON with ensure_ascii=False and compact separators; complete graph evidence is expanded only with query --edges; source: complete frozen files counted once; context source chunks, host prompts, raw answers and summary.json excluded; layers are storage measures, not disjoint content classes"
   },
   "semantic_review": {
@@ -217,31 +223,5 @@
     "pending": [],
     "note": "an independent reviewer read the source for each reviewed batch; this is not a whole-map proof"
   },
-  "truth": "deterministic structure/coverage checks and the separate semantic review are different states; neither one proves prose truth",
-  "counts": {
-    "done": 10
-  },
-  "leased": [],
-  "failed": [],
-  "ready": 0,
-  "next_action": "done; open <RUN>/docs/INDEX.md, then run `cbe host cost --run-dir <RUN>`",
-  "usage_unknown": [],
-  "render_error": null,
-  "stopped": null,
-  "progress_log": "<RUN>/progress.log",
-  "model": "group/glm-5.3-flash",
-  "input_token_basis": "provider prompt_tokens minus cached_tokens; cache reported separately",
-  "calls": 10,
-  "input_tokens": 32939,
-  "output_tokens": 9969,
-  "cache_tokens": 2304,
-  "token_totals_basis": "observed calls; missing usage is excluded, never estimated",
-  "calls_with_unknown_input": 0,
-  "calls_with_unknown_output": 0,
-  "observed_cache_tokens": 2304,
-  "calls_with_unknown_cache": 0,
-  "priced_usd": null,
-  "price_basis": "unknown; configure API price_per_million: [input, output, cache]",
-  "usage_complete": true,
-  "seconds": 113.851
+  "truth": "deterministic structure/coverage checks and the separate semantic review are different states; neither one proves prose truth"
 }
