@@ -26,7 +26,7 @@ internal_edge_counts: {'cfg': 76, 'dataflow': 119}
 **This run.** `complete`, `cbe host verify` pass. 4 model tasks, 15 tree nodes, 107 units. 11 requests, 2 answers refused and asked again. Prompt 134,094 tokens (cached included, 3.9x source), output 22,119 tokens (0.644x source). `docs/INDEX.md`: 1,281 tokens. Wall time 285 s in 1 command(s).
 
 **Known gaps.**
-- Symbols without an explanation (`unexplained`): 0.
+- Functions, methods and classes of at least 40 tokens that ended without an explanation (`unexplained`): 0. Indexed without prose and not asked for again (smaller symbols, declarations, leftover module-level code): 103 catalogue entries, 3 of them functions, methods or classes.
 - Sample review by a separate reader of the source read 1 module batch(es) (module 3: needs_repair, 1 issue(s), repair done). The repaired text was not read again.
 - 2 answer(s) were refused by the program's checks and asked again; 0 call(s) waited on a rate limit.
 - Graph diagnostic `files_absent_from_graph`: 2 c manifest files have no method nodes: cJSON.h, cJSON_Utils.h

@@ -28,7 +28,7 @@ explain: Resolves an inline CLI config into a flat list of fully resolved build 
 **This run.** `complete`, `cbe host verify` pass. 7 model tasks, 15 tree nodes, 113 units. 12 requests, 0 answers refused and asked again. Prompt 117,051 tokens (cached included, 3.03x source), output 26,229 tokens (0.678x source). `docs/INDEX.md`: 1,519 tokens. Wall time 195 s in 1 command(s).
 
 **Known gaps.**
-- Symbols without an explanation (`unexplained`): 0.
+- Functions, methods and classes of at least 40 tokens that ended without an explanation (`unexplained`): 0. Indexed without prose and not asked for again (smaller symbols, declarations, leftover module-level code): 130 catalogue entries, 2 of them functions, methods or classes.
 - Sample review by a separate reader of the source read 1 module batch(es) (module 3: needs_repair, 2 issue(s), repair done). The repaired text was not read again.
 - Graph: analyzer capabilities that did not complete: typescript/call partial.
 - Graph diagnostic `files_absent_from_graph`: 1 typescript manifest files have no method nodes: src/shims.d.ts

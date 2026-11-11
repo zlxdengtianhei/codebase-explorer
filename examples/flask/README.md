@@ -28,7 +28,7 @@ outgoing: call raise_routing_exception src/flask/app.py::method::Flask.raise_rou
 **This run.** `complete`, `cbe host verify` pass. 4 model tasks, 31 tree nodes, 293 units. 8 requests, 0 answers refused and asked again. Prompt 857,525 tokens (cached included, 11.48x source), output 69,130 tokens (0.925x source). `docs/INDEX.md`: 1,612 tokens. Wall time 293 s, one headless claude -p command. Rendered again by CBE `4d000f5` without a model call, to add the Python facts to `catalog.json.gz` and the introduction-length line to `docs/RUN.md`; the explanations and the tree are unchanged.
 
 **Known gaps.**
-- Symbols without an explanation (`unexplained`): 0.
+- Functions, methods and classes of at least 40 tokens that ended without an explanation (`unexplained`): 0. Indexed without prose and not asked for again (smaller symbols, declarations, leftover module-level code): 32 catalogue entries, 0 of them functions, methods or classes.
 - Sample review by a separate reader of the source read 1 module batch(es) (module 0: accepted, 0 issue(s)).
 - Graph: analyzer capabilities that did not complete: python/call partial.
 - Graph diagnostic `python_external_name_unverified` (19 entries, first shown): Python external target lacks a library identity: ['F.read', 'functools.py:<module>.update_wrapper.<returnValue>.read']

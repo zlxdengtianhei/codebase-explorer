@@ -28,7 +28,7 @@ explain: vformat styles into a memory_buffer via detail::vformat_to and converts
 **This run.** `complete`, `cbe host verify` pass. 11 model tasks, 53 tree nodes, 474 units. 27 requests, 12 answers refused and asked again. Prompt 732,733 tokens (cached included, 3.96x source), output 87,890 tokens (0.475x source). `docs/INDEX.md`: 3,473 tokens. Wall time 337 s in 1 command(s).
 
 **Known gaps.**
-- Symbols without an explanation (`unexplained`): 0.
+- Functions, methods and classes of at least 40 tokens that ended without an explanation (`unexplained`): 0. Indexed without prose and not asked for again (smaller symbols, declarations, leftover module-level code): 1,421 catalogue entries, 187 of them functions, methods or classes.
 - Sample review by a separate reader of the source read 1 module batch(es) (module 0: needs_repair, 2 issue(s), repair done). The repaired text was not read again.
 - 1 tree node title(s) were made by the program because the model did not name them.
 - 12 answer(s) were refused by the program's checks and asked again; 0 call(s) waited on a rate limit.

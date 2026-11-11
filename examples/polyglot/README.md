@@ -28,7 +28,7 @@ signatures: {"id": "python_case.py::method::Worker.run::404::s1", "signature": "
 **This run.** `complete`, `cbe host verify` pass. 5 model tasks, 14 tree nodes, 54 units. 10 requests, 0 answers refused and asked again. Prompt 35,243 tokens (cached included, 20.63x source), output 9,969 tokens (5.837x source). `docs/INDEX.md`: 1,150 tokens. Wall time 90 s in 1 command(s). Rendered again by CBE `4d000f5` without a model call, to add the Python facts to `catalog.json.gz` and the introduction-length line to `docs/RUN.md`; the explanations and the tree are unchanged.
 
 **Known gaps.**
-- Symbols without an explanation (`unexplained`): 0.
+- Functions, methods and classes of at least 40 tokens that ended without an explanation (`unexplained`): 0. Indexed without prose and not asked for again (smaller symbols, declarations, leftover module-level code): 53 catalogue entries, 9 of them functions, methods or classes.
 - Sample review by a separate reader of the source read 1 module batch(es) (module 0: needs_repair, 27 issue(s), repair done). The repaired text was not read again.
 - `src/q.sql` was read as one whole-file chunk (unsupported_language).
 - Graph: analyzer capabilities that did not complete: c_sharp/call partial; javascript/call partial; kotlin/call partial; php/call failed; php/cfg failed; php/dataflow failed; php/import failed; ruby/call partial; rust/call failed; rust/cfg failed; rust/dataflow failed; rust/import failed; typescript/call partial.

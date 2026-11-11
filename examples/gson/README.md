@@ -28,7 +28,7 @@ ranges: gson/src/main/java/com/google/gson/Gson.java:L565-L570
 **This run.** `complete`, `cbe host verify` pass. 18 model tasks, 49 tree nodes, 460 units. 36 requests, 13 answers refused and asked again. Prompt 529,583 tokens (cached included, 3.32x source), output 72,629 tokens (0.455x source). `docs/INDEX.md`: 3,612 tokens. Wall time 442 s in 1 command(s).
 
 **Known gaps.**
-- Symbols without an explanation (`unexplained`): 0.
+- Functions, methods and classes of at least 40 tokens that ended without an explanation (`unexplained`): 0. Indexed without prose and not asked for again (smaller symbols, declarations, leftover module-level code): 503 catalogue entries, 217 of them functions, methods or classes.
 - Sample review by a separate reader of the source read 1 module batch(es) (module 15: needs_repair, 1 issue(s), repair done). The repaired text was not read again.
 - 13 answer(s) were refused by the program's checks and asked again; 0 call(s) waited on a rate limit.
 - Graph: analyzer capabilities that did not complete: java/call partial; java/dataflow partial.

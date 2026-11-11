@@ -63,6 +63,17 @@ def excerpts(example: Path, term: str, query_id: str | None) -> tuple[str, str, 
     return "\n".join(_short(line) for line in shown), "\n".join(_short(line) for line in got[:7]), qid
 
 
+def unexplained_line(example: Path, unexplained: int) -> str:
+    """Two different counts: symbols the program insisted on, and symbols it let pass without prose."""
+    catalog = json.loads(gzip.decompress((example / "catalog.json.gz").read_bytes()))
+    silent = [sid for sid, row in catalog["symbol_index"].items() if row.get("how") == "index_only"]
+    code = sum((catalog["symbols"].get(sid) or {}).get("kind") in {"function", "method", "class"} for sid in silent)
+    return (f"Functions, methods and classes of at least 40 tokens that ended without an explanation "
+            f"(`unexplained`): {unexplained}. Indexed without prose and not asked for again (smaller symbols, "
+            f"declarations, leftover module-level code): {len(silent):,} catalogue entries, {code:,} of them "
+            "functions, methods or classes.")
+
+
 def gaps(example: Path, row: dict, spec: dict, graph: Path | None = None) -> list[str]:
     summary = json.loads((example / "summary.json").read_text(encoding="utf-8"))
     out = []
@@ -71,7 +82,7 @@ def gaps(example: Path, row: dict, spec: dict, graph: Path | None = None) -> lis
                    "It is published as it stopped.")
     if not row.get("verify_ok"):
         out.append("`cbe host verify` did not pass: " + ", ".join(row.get("verify_failed_checks") or ["see summary.json"]) + ".")
-    out.append(f"Symbols without an explanation (`unexplained`): {row['unexplained']}.")
+    out.append(unexplained_line(example, row["unexplained"]))
     review = summary.get("semantic_review") or {}
     reviewed = review.get("reviewed") or []
     if reviewed:

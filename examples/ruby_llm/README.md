@@ -28,7 +28,7 @@ signatures: {"id": "lib/ruby_llm/tool.rb::method::RubyLLM.Tool.Halt.to_s::609", 
 **This run.** `complete`, `cbe host verify` pass. 12 model tasks, 35 tree nodes, 352 units. 21 requests, 3 answers refused and asked again. Prompt 273,118 tokens (cached included, 3.65x source), output 59,486 tokens (0.794x source). `docs/INDEX.md`: 1,904 tokens. Wall time 303 s in 1 command(s).
 
 **Known gaps.**
-- Symbols without an explanation (`unexplained`): 0.
+- Functions, methods and classes of at least 40 tokens that ended without an explanation (`unexplained`): 0. Indexed without prose and not asked for again (smaller symbols, declarations, leftover module-level code): 928 catalogue entries, 209 of them functions, methods or classes.
 - Sample review by a separate reader of the source read 1 module batch(es) (module 2: needs_repair, 1 issue(s), repair done). The repaired text was not read again.
 - 3 answer(s) were refused by the program's checks and asked again; 0 call(s) waited on a rate limit.
 - Graph: analyzer capabilities that did not complete: ruby/call partial; ruby/dataflow partial.
