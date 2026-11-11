@@ -521,14 +521,6 @@ def language_name(path: str) -> str:
     return spec.name if spec is not None else _language_from_suffix(path)
 
 
-def language_for_path(path: str | os.PathLike[str]) -> str | None:
-    """Return the CBE language name for a path, or ``None`` if unsupported."""
-
-    suffix = PurePosixPath(str(path)).suffix
-    spec = _grammar_for_suffix(suffix)
-    return spec.name if spec is not None else None
-
-
 _LOADED_LANGUAGES: dict[tuple[str, str, str], Any] = {}
 
 

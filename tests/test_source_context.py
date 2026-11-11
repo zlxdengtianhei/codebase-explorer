@@ -26,7 +26,7 @@ from cbe.source_context import (
     available_languages,
     build_context,
     context_for_paths,
-    language_for_path,
+    language_name,
     register_language,
 )
 
@@ -190,7 +190,7 @@ def test_declarations_are_recognised(path):
 @pytest.mark.parametrize("path", list(EXTRA_LANGUAGES))
 def test_joern_frontend_fixture_is_chunked_when_grammar_available(path):
     languages = {entry["name"]: entry for entry in available_languages()["languages"]}
-    language = language_for_path(path)
+    language = language_name(path)
     if not languages[language]["available"]:
         pytest.skip(f"grammar for {language} not installed: {languages[language]['error']}")
     context = build_context(FIXTURES, paths=[path])
@@ -558,7 +558,7 @@ def test_register_language_adds_a_suffix_through_one_path(tmp_path):
         (tmp_path / "a.cst").write_text("int f(void) { return 1; }\n")
         context = build_context(tmp_path, paths=["a.cst"])
         assert any(c["kind"] == "function" and c["name"] == "f" for c in context["chunks"])
-        assert language_for_path("a.cst") == "c-custom"
+        assert language_name("a.cst") == "c-custom"
         assert any(entry["name"] == "c-custom" for entry in available_languages()["languages"])
     finally:
         import cbe.source_context as sc
@@ -578,7 +578,7 @@ def test_a_registered_override_gives_context_and_graph_the_same_language(tmp_pat
     register_language(dataclasses.replace(c_spec, suffixes=(*c_spec.suffixes, ".py")))
     try:
         (tmp_path / "mapped.py").write_text("int f(void) { return 1; }\n")
-        assert language_for_path("mapped.py") == "c"
+        assert language_name("mapped.py") == "c"
         assert sc.suffix_languages()[".py"] == "c"
         assert build_context(tmp_path, paths=["mapped.py"])["files"][0]["language"] == "c"
         assert [row["language"] for row in discover_sources(tmp_path)] == ["c"]
@@ -600,7 +600,7 @@ def test_a_narrower_override_keeps_the_built_in_suffixes_in_every_view(tmp_path)
     try:
         for name in ("mapped.py", "native.c"):
             (tmp_path / name).write_text("int entry(void) { return 0; }\n")
-        assert [language_for_path(name) for name in ("mapped.py", "native.c")] == ["c", "c"]
+        assert [language_name(name) for name in ("mapped.py", "native.c")] == ["c", "c"]
         assert (sc.suffix_languages()[".py"], sc.suffix_languages()[".c"]) == ("c", "c")
         assert [row["path"] for row in discover_sources(tmp_path)] == ["mapped.py", "native.c"]
         assert [row.path for row in batching.scan(tmp_path)] == ["mapped.py", "native.c"]
@@ -617,7 +617,7 @@ def test_a_suffix_declared_in_upper_case_is_matched_like_any_other(tmp_path):
     register_language(dataclasses.replace(c_spec, name="c-upper", suffixes=(".UPX",)))
     try:
         assert sc.suffix_languages()[".upx"] == "c-upper"
-        assert language_for_path("a.upx") == language_for_path("a.UPX") == "c-upper"
+        assert language_name("a.upx") == language_name("a.UPX") == "c-upper"
     finally:
         sc._EXTRA_SPECS.pop("c-upper", None)
 
@@ -644,7 +644,7 @@ def test_registered_overrides_resolve_ambiguous_suffix(tmp_path):
     )
     register_language(hpp_override)
     try:
-        assert language_for_path("api.h") == "cpp-h"
+        assert language_name("api.h") == "cpp-h"
         (tmp_path / "api.h").write_text("template <typename T>\nT maxv(T a, T b) { return a > b ? a : b; }\n")
         context = build_context(tmp_path, paths=["api.h"])
         assert not any(d["code"] == "ambiguous_language" for d in context["diagnostics"])
@@ -661,8 +661,7 @@ def test_language_discovery_covers_priority_and_extra_languages():
     for name in ["c", "cpp", "python", "javascript", "typescript", "java", "go"]:
         assert name in languages
         assert languages[name]["available"] is True, f"{name} grammar unavailable: {languages[name]['error']}"
-    assert language_for_path("x.tsx") == "tsx"
-    assert language_for_path("x.unknown") is None
+    assert language_name("x.tsx") == "tsx"
     # The registry is the single discovery path: an extra language is visible
     # without touching the priority list.
     assert "go" in languages
@@ -843,7 +842,7 @@ def test_unavailable_registered_grammar_is_listed_not_silently_unsupported():
         entry = next(e for e in available_languages()["languages"] if e["name"] == "klingon")
         assert entry["available"] is False
         assert entry["error"]
-        assert language_for_path("x.tlh") == "klingon"
+        assert language_name("x.tlh") == "klingon"
     finally:
         import cbe.source_context as sc
 

@@ -122,11 +122,6 @@ def ensure_chunk_coverage(context: dict, repo: Path, paths: list[str]) -> dict:
     return context
 
 
-def inventory_for_paths(inventory: dict[str, dict], paths: Iterable[str]) -> dict[str, dict]:
-    chosen = set(paths)
-    return {path: inventory[path] for path in sorted(inventory) if path in chosen}
-
-
 def batch_table(paths: Iterable[str], inventory: dict[str, dict]) -> list[dict]:
     """The short-number table of one detail batch.
 

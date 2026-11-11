@@ -1,8 +1,7 @@
 """Program-computed module skeleton: units + edges in, a tree of modules out.
 
 Pure function. It calls no model, reads and writes no file, and knows nothing
-about the task state machine. A model later only names the modules and may move
-a few units to a neighbouring module (see ``evaluation/tree/naming.py``).
+about the task state machine. A model later only names the modules (``treename``).
 
 How the tree is computed
 ------------------------
@@ -24,8 +23,6 @@ How the tree is computed
    carry a ``flag`` that says why.
 3. Upper levels: modules become points, anchors stay, Louvain runs again, repeat
    until at most ``TOP_MAX`` nodes are left.  A group of one module is not a node.
-4. Per unit: the two other leaf modules it is tied to most strongly (the menu
-   a model may pick from when it moves a unit).
 
 Same input and seed give byte-identical output.  Node ids are a hash of the
 sorted member unit ids of the node's subtree.
@@ -475,17 +472,3 @@ def _subtree_units(tree: dict, name: str) -> list[str]:
         out.extend(_subtree_units(tree, kid))
     return out
 
-
-def resolved_graph(units: dict, edges: list[dict]) -> nx.Graph:
-    """Undirected graph of resolved call/import edges between units (for modularity readings)."""
-    G = nx.Graph()
-    G.add_nodes_from(sorted(units))
-    for e in edges:
-        a, b = e.get("from"), e.get("to")
-        if e.get("kind") in ("call", "import") and a in units and b in units and a != b:
-            wt = int(e.get("count") or 1)
-            if G.has_edge(a, b):
-                G[a][b]["weight"] += wt
-            else:
-                G.add_edge(a, b, weight=wt)
-    return G
