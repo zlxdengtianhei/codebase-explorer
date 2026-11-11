@@ -14,7 +14,6 @@ import re
 from pathlib import Path
 from typing import Any, Callable
 
-from cbe import concrete_facts
 from cbe.symbols import SemanticError, inventory_ids
 
 
@@ -479,21 +478,15 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
     compatibility_symbols: dict[str, dict] = {}
     compatibility_files: dict[str, dict] = {}
     for path, entry in inventory.items():
-        facts = concrete_facts.file_facts(path, sources.get(path, "")) \
-            if path.endswith(".py") else None
         compatibility_files[path] = {"tokens": entry.get("tokens", 0),
                                      "language": languages.get(path, "unknown"),
                                      "known_empty": bool(entry.get("known_empty")),
                                      "ranges": [{"path": path, "lines": [[1, max(1, len(sources.get(path, '').splitlines()))]]}],
                                      "signatures": [{"id": sid, "signature": row["signature"]}
                                                     for sid, row in symbol_records.items() if row["file"] == path]}
-        if facts and facts.get("file"):
-            compatibility_files[path]["facts"] = facts["file"]
         for symbol in entry["symbols"]:
             record: dict[str, Any] = {**symbol_records[symbol["id"]], "file": path, "name": symbol["name"],
                                       **symbol_index.get(symbol["id"], {"node": None, "page": None})}
-            if facts and facts["symbols"].get(symbol["name"]):
-                record["facts"] = facts["symbols"][symbol["name"]]
             compatibility_symbols[symbol["id"]] = record
 
     catalog = {
@@ -534,7 +527,7 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
 def catalog_symbols(catalog: dict) -> dict[str, dict]:
     """Resolve the public search view, including catalogs from earlier runs.
 
-    Inventory IDs retain their names/facts. The semantic index supplies their
+    Inventory IDs retain their names. The semantic index supplies their
     disposition and primary page; synthetic units are also first-class query
     targets. Legacy catalogs without a semantic index retain their old view.
     """
@@ -780,10 +773,8 @@ def find(run_dir: Path, term: str, limit: int = 25) -> list[dict[str, Any]]:
                  for s in entry.get("symbols", [])}
     needle = term.casefold()
     results = []
-    candidates = [(sid, record, False) for sid, record in catalog["symbols"].items()]
-    candidates += [(path, record, True) for path, record in catalog["files"].items() if record.get("facts")]
-    for sid, record, is_file in candidates:
-        searchable = {"facts": record["facts"]} if is_file else {"id": sid, **record}
+    for sid, record in catalog["symbols"].items():
+        searchable = {"id": sid, **record}
         matched = [field for field, value in searchable.items()
                    if needle in json.dumps(value, ensure_ascii=False).casefold()]
         if not matched:
@@ -791,8 +782,6 @@ def find(run_dir: Path, term: str, limit: int = 25) -> list[dict[str, Any]]:
         path, symbol = inventory.get(sid, (record.get("file"), {}))
         ranges = ([{"path": path, "lines": symbol["lines"]}] if symbol.get("lines") else
                   record.get("ranges") or [])
-        if is_file and not ranges:
-            ranges = [{"path": sid, "lines": [[1, max(1, catalog.get("inventory", {}).get(sid, {}).get("nlines", 1))]]}]
         name = record.get("display_name") or record.get("name") or sid
         if "::" in name:
             name = symbol.get("name") or name
@@ -800,7 +789,7 @@ def find(run_dir: Path, term: str, limit: int = 25) -> list[dict[str, Any]]:
         words = summary.split()
         summary = " ".join(words[:25]) + ("…" if len(words) > 25 else "")
         results.append({"id": sid, "name": name, "kind": symbol.get("kind") or record.get("kind") or
-                        ("file" if is_file else "symbol"), "location": format_ranges(ranges),
+                        "symbol", "location": format_ranges(ranges),
                         "summary": summary, "matched_fields": matched,
                         **({"id_corrected": True} if record.get("id_corrections") else {})})
     results.sort(key=lambda row: (0 if needle in {row["id"].casefold(), row["name"].casefold(),
@@ -844,7 +833,6 @@ def query(run_dir: Path, symbol_id: str, edges: str | None = None) -> dict[str, 
                             if any(r["path"] == symbol_id for r in u.get("ranges") or [])],
                   "symbols": [listing(sid, s) for sid, s in catalog["symbols"].items()
                               if s.get("file") == symbol_id and sid not in catalog.get("units", {})],
-                  "facts": catalog["files"][symbol_id].get("facts", {}),
                   "imports": [e for e in table.values() if e.get("kind") == "import"
                               and e.get("path") == symbol_id]}
     else:
@@ -881,7 +869,7 @@ def query_text(record: dict) -> str:
     lines = [f"{record.get('display_name', record['name'])}  {record['id']}"]
     for field in ("dependencies", "depended_on_by", "id_corrections", "signature", "signatures", "ranges", "summary", "explain", "extras",
                   "uncertainties", "relations", "reverse_relations", "folded_members",
-                  "internal_edge_counts", "facts", "units", "symbols"):
+                  "internal_edge_counts", "units", "symbols"):
         value = record.get(field)
         if not value or (field == "summary" and remainder != (record.get("explain") or "").strip()):
             continue
