@@ -343,7 +343,7 @@ def _graph_for(context, edges):
     return {
         "schema": "cbe-graph/1",
         "backend": {"name": "test", "version": "0"},
-        "capabilities": {"python": {"call": "supported"}},
+        "capabilities": [{"language": "python", "graph": "call", "status": "resolved"}],
         "source_manifest": manifest,
         "nodes": [
             {"id": "n1", "kind": "function", "path": "sample.py", "start_line": 9, "end_line": 11, "name": "top"},
@@ -458,7 +458,7 @@ def test_context_for_paths_prunes_graph_but_keeps_boundary_nodes(tmp_path):
     assert {"n1", "n2", "ext", "n3"} <= node_ids
     assert {e["id"] for e in local["graph"]["edges"]} == {"e1", "e2", "e3"}
     assert local["graph"]["scope"]["partial"] is True
-    assert local["graph"]["capabilities"] == {"python": {"call": "supported"}}
+    assert local["graph"]["capabilities"] == [{"language": "python", "graph": "call", "status": "resolved"}]
 
     only_c = context_for_paths(context, ["sample.c"])
     assert {n["id"] for n in only_c["graph"]["nodes"]} == {"n3", "n2"}

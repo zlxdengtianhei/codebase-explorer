@@ -452,7 +452,7 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
         index_lines += ["", "## Generation notes", ""] + [f"- {item}" for item in index_notes]
     (docs_dir / "INDEX.md").write_text("\n".join(index_lines) + "\n", encoding="utf-8")
 
-    # catalog: semantic index plus the compatibility `symbols` / `files` maps
+    # catalog: semantic index plus the per-inventory-id `symbols` and per-file `files` maps
     symbol_index: dict[str, dict] = {}
     for uid in sorted(units):
         node = owner.get(uid)
@@ -475,19 +475,19 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
                                  "reason": entry.get("reason", "")}
 
 
-    compatibility_symbols: dict[str, dict] = {}
-    compatibility_files: dict[str, dict] = {}
+    catalog_symbol_rows: dict[str, dict] = {}
+    catalog_file_rows: dict[str, dict] = {}
     for path, entry in inventory.items():
-        compatibility_files[path] = {"tokens": entry.get("tokens", 0),
-                                     "language": languages.get(path, "unknown"),
-                                     "known_empty": bool(entry.get("known_empty")),
-                                     "ranges": [{"path": path, "lines": [[1, max(1, len(sources.get(path, '').splitlines()))]]}],
-                                     "signatures": [{"id": sid, "signature": row["signature"]}
-                                                    for sid, row in symbol_records.items() if row["file"] == path]}
+        catalog_file_rows[path] = {"tokens": entry.get("tokens", 0),
+                                   "language": languages.get(path, "unknown"),
+                                   "known_empty": bool(entry.get("known_empty")),
+                                   "ranges": [{"path": path, "lines": [[1, max(1, len(sources.get(path, '').splitlines()))]]}],
+                                   "signatures": [{"id": sid, "signature": row["signature"]}
+                                                  for sid, row in symbol_records.items() if row["file"] == path]}
         for symbol in entry["symbols"]:
             record: dict[str, Any] = {**symbol_records[symbol["id"]], "file": path, "name": symbol["name"],
                                       **symbol_index.get(symbol["id"], {"node": None, "page": None})}
-            compatibility_symbols[symbol["id"]] = record
+            catalog_symbol_rows[symbol["id"]] = record
 
     catalog = {
         "schema": SCHEMA, "project": "Codebase Explorer", "version": "",
@@ -510,8 +510,8 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
         "inventory": inventory,
         "short_names": names,
         "merges": [],
-        "symbols": compatibility_symbols,
-        "files": compatibility_files,
+        "symbols": catalog_symbol_rows,
+        "files": catalog_file_rows,
     }
     (run_dir / "catalog.json").write_text(json.dumps(catalog, ensure_ascii=False, indent=2) + "\n",
                                           encoding="utf-8")
