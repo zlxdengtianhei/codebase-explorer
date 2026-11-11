@@ -4,7 +4,22 @@ version = "2.2.0.dev0"
 description = "Source-grounded, navigable documentation for software repositories"
 readme = "README.md"
 license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.12,<3.14"
+authors = [{ name = "zlxdengtianhei" }]
+keywords = ["code-documentation", "code-understanding", "call-graph", "agent-skills", "claude-code", "tree-sitter", "developer-tools"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Documentation",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
 dependencies = [
     "tiktoken>=0.9,<1",
     "networkx>=3.2",
@@ -30,6 +45,13 @@ languages-community = [
     "tree-sitter-kotlin==1.1.0",
     "tree-sitter-swift==0.7.4",
 ]
+
+[project.urls]
+Homepage = "https://github.com/zlxdengtianhei/codebase-explorer"
+Documentation = "https://github.com/zlxdengtianhei/codebase-explorer/blob/main/docs/running.md"
+"Online example" = "https://zlxdengtianhei.github.io/codebase-explorer/?data=flask"
+Changelog = "https://github.com/zlxdengtianhei/codebase-explorer/blob/main/CHANGELOG.md"
+Issues = "https://github.com/zlxdengtianhei/codebase-explorer/issues"
 
 [project.scripts]
 cbe = "cbe.cli:main"
