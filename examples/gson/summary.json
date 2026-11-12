@@ -77,24 +77,24 @@
   "layers": {
     "tokenizer": "o200k_base",
     "source_tokens": 159691,
-    "semantic_tokens": 92368,
+    "semantic_tokens": 92396,
     "semantic_breakdown": {
       "model_body": 35056,
       "signature_location": 19319,
       "heading_anchor": 12266,
       "relations": 557,
       "footer": 4508,
-      "index": 9056,
+      "index": 9084,
       "node_text": 11606
     },
     "model_body_tokens": 35056,
     "model_body_source_ratio": 0.21952395563932844,
-    "published_markdown_source_ratio": 0.5784170679625026,
+    "published_markdown_source_ratio": 0.5785924065852177,
     "deterministic_tokens": 2410434,
     "catalog_tokens": 2410434,
     "frozen_graph_tokens": 0,
     "frozen_graph_bytes": 43510266,
-    "semantic_source_ratio": 0.5784170679625026,
+    "semantic_source_ratio": 0.5785924065852177,
     "deterministic_source_ratio": 15.094363489489076,
     "scope": "Breakdown partitions full Markdown BPE tokens by the first byte's line: model_body is published unit explain, summary, extras and uncertainties; signature_location includes shared source-file reference definitions (including ones used by relations); heading_anchor, relations, footer, INDEX and node_text (including labels/whitespace) partition the rest. model_body/source and published_markdown/source use complete frozen files. semantic: all published Markdown (node pages + INDEX, including navigation, signatures and commands); deterministic: catalog.json as serialized, including preserved prose copies and edge references, excluding the graph field; frozen graph is excluded from token ratios (frozen_graph_tokens=0), reported separately as frozen_graph_bytes using UTF-8 JSON with ensure_ascii=False and compact separators; complete graph evidence is expanded only with query --edges; source: complete frozen files counted once; context source chunks, host prompts, raw answers and summary.json excluded; layers are storage measures, not disjoint content classes"
   },
@@ -114,6 +114,7 @@
       "needs_repair": 1
     },
     "pending": [],
+    "escalated": null,
     "note": "an independent reviewer read the source for each reviewed batch; this is not a whole-map proof"
   },
   "truth": "deterministic structure/coverage checks and the separate semantic review are different states; neither one proves prose truth"

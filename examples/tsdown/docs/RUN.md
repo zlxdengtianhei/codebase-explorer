@@ -22,3 +22,7 @@ typescript import: resolved 142/532 (27%), unresolved 158/532 (30%), external 23
 typescript structural edges: cfg=21516, dataflow=39253.
 Incomplete capabilities: typescript/call partial.
 Program checks: dangling edges 0; nodes outside manifest 0; nodes with missing files 0.
+
+## Generation notes
+
+- Review: sampled batch module_4 (30 units), 2 issue(s); the other 6 batch(es) were not reviewed.

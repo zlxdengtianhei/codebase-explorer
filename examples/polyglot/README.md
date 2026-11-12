@@ -25,7 +25,7 @@ signatures: {"id": "python_case.py::function::Worker.run.format_result::532", "s
 signatures: {"id": "python_case.py::method::Worker.run::404::s1", "signature": "def run(self, payload: str) -> dict:"}
 ```
 
-**This run.** `complete`, `cbe host verify` pass. 5 model tasks, 14 tree nodes, 54 units. 10 requests, 0 answers refused and asked again. Prompt 35,243 tokens (cached included, 20.63x source), output 9,969 tokens (5.837x source). `docs/INDEX.md`: 1,150 tokens. Wall time 90 s in 1 command(s). Rendered again without a model call, first by CBE `4d000f5` (which added the Python facts to `catalog.json.gz`), then by `5a701bf`; the explanations and the tree are unchanged.
+**This run.** `complete`, `cbe host verify` pass. 5 model tasks, 14 tree nodes, 54 units. 10 requests, 0 answers refused and asked again. Prompt 35,243 tokens (cached included, 20.63x source), output 9,969 tokens (5.837x source). `docs/INDEX.md`: 1,150 tokens. Wall time 90 s in 1 command(s). Rendered again without a model call, first by CBE `4d000f5` (which added the Python facts to `catalog.json.gz`), then by `d12a572`; the explanations and the tree are unchanged.
 
 **Known gaps.**
 - Functions, methods and classes of at least 40 tokens that ended without an explanation (`unexplained`): 0. Indexed without prose and not asked for again (smaller symbols, declarations, leftover module-level code): 53 catalogue entries, 9 of them functions, methods or classes.

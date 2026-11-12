@@ -22,3 +22,7 @@ python import: resolved 95/307 (31%), external 212/307 (69%) · python call: res
 python structural edges: cfg=22975, dataflow=44873.
 Incomplete capabilities: python/call partial.
 Program checks: dangling edges 0; nodes outside manifest 0; nodes with missing files 0.
+
+## Generation notes
+
+- Review: sampled batch module_1 (76 units), 0 issue(s); the other 3 batch(es) were not reviewed.

@@ -26,4 +26,5 @@ Program checks: dangling edges 0; nodes outside manifest 0; nodes with missing f
 
 ## Generation notes
 
+- Review: sampled batch module_16 (56 units), 1 issue(s); the other 17 batch(es) were not reviewed.
 - Accepted with repairs or gaps (see each task's flags in host/state.json): module_5.

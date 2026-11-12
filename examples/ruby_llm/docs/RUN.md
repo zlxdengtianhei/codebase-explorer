@@ -22,3 +22,7 @@ ruby import: resolved 9/45 (20%), external 36/45 (80%) · ruby call: resolved 85
 ruby structural edges: cfg=53285, dataflow=50000.
 Incomplete capabilities: ruby/call partial; ruby/dataflow partial.
 Program checks: dangling edges 0; nodes outside manifest 0; nodes with missing files 0.
+
+## Generation notes
+
+- Review: sampled batch module_3 (87 units), 1 issue(s); the other 11 batch(es) were not reviewed.

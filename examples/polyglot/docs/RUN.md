@@ -49,4 +49,5 @@ Program checks: dangling edges 0; nodes outside manifest 0; nodes with missing f
 
 ## Generation notes
 
+- Review: sampled batch module_1 (45 units), 27 issue(s); the other 4 batch(es) were not reviewed.
 - Known-empty files (no source text, no inventory id, no unit, no model call): src/empty.py.

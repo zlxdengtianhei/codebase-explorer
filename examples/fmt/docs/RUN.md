@@ -26,4 +26,5 @@ Program checks: dangling edges 0; nodes outside manifest 0; nodes with missing f
 ## Generation notes
 
 - 1 module title(s) are program-made (frequent words and main directory) because no usable model name was accepted for them.
+- Review: sampled batch module_1 (104 units), 2 issue(s); the other 10 batch(es) were not reviewed.
 - Accepted with repairs or gaps (see each task's flags in host/state.json): module_1, tree_top.
