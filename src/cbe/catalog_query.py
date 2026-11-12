@@ -112,12 +112,42 @@ def find_text(results: list[dict]) -> str:
                    for r in results)
 
 
+def resolve_name(catalog: dict[str, Any], name: str) -> str | None:
+    """The one ID a name copied from a page stands for; None when it is no page name.
+
+    Tried in order: a group unit's name without its ``grp:`` prefix; a unit heading or
+    anchor as the page prints it; a symbol name. A step that matches several IDs raises
+    with all of them: the caller picks, the program does not guess."""
+    term = name.strip().strip("`").strip()
+    if not term:
+        return None
+    units, names = catalog.get("units", {}), catalog.get("short_names", {})
+    anchor = term.lstrip("#")
+    steps = [
+        [f"grp:{term}"] if f"grp:{term}" in catalog["symbols"] else [],
+        sorted(uid for uid, unit in units.items()
+               if names.get(uid) == term or (unit.get("anchor") or "").lstrip("#") == anchor),
+        sorted(sid for sid, record in catalog["symbols"].items()
+               if term in {record.get("name"), record.get("display_name"),
+                           sid.split("::")[2] if sid.count("::") >= 2 else None}),
+    ]
+    for ids in steps:
+        if len(ids) == 1:
+            return ids[0]
+        if ids:
+            raise SemanticError(f"{name} matches {len(ids)} IDs; query one of them:\n" + "\n".join(ids))
+    return None
+
+
 def query(run_dir: Path, symbol_id: str, edges: str | None = None) -> dict[str, Any]:
     """Compact object view; frozen graph is read only for explicit expansion."""
     if edges is not None and edges != "all" and (
             not edges or set(edges.split(",")) - {"import", "call", "cfg", "dataflow"}):
         raise SemanticError("--edges must be all or comma-separated import,call,cfg,dataflow")
     catalog = query_catalog(run_dir)
+    asked = symbol_id
+    if not any(symbol_id in catalog.get(table, {}) for table in ("nodes", "symbols", "files")):
+        symbol_id = resolve_name(catalog, symbol_id) or symbol_id
     table = catalog.get("edges") or {}
     if symbol_id in catalog.get("nodes", {}):
         return {"id": symbol_id, "name": catalog["nodes"][symbol_id]["title"],
@@ -148,6 +178,8 @@ def query(run_dir: Path, symbol_id: str, edges: str | None = None) -> dict[str, 
                             f"first use cbe find --run-dir {run_dir} --term {symbol_id}")
     record.setdefault("name", symbol_id)
     record["display_name"] = catalog.get("short_names", {}).get(symbol_id, record["name"])
+    if asked != symbol_id:
+        record["resolved_from"] = asked
     if edges:
         from cbe.records import SourceOwnership, frozen_sources
 
@@ -180,7 +212,8 @@ def query_text(record: dict) -> str:
     from cbe.records import summary_and_remainder
 
     summary, remainder = summary_and_remainder(record)
-    lines = [f"{record.get('display_name', record['name'])}  {record['id']}"]
+    lines = [f"resolved: {record['resolved_from']} -> {record['id']}"] if record.get("resolved_from") else []
+    lines.append(f"{record.get('display_name', record['name'])}  {record['id']}")
     if record.get("ungrounded"):
         lines.append(f"check: names {', '.join(record['ungrounded'])}, not found in this unit's source")
     for field in ("dependencies", "depended_on_by", "signature", "signatures", "ranges", "summary", "explain", "extras",
@@ -231,7 +264,7 @@ def source(run_dir: Path, object_id: str, context: int = 0) -> str:
             if not 1 <= start <= end <= nlines:
                 raise SemanticError(f"source range out of bounds: {row['path']}:{start}-{end}")
             selected.setdefault(row["path"], []).append([max(1, start - context), min(nlines, end + context)])
-    output = []
+    output = [f"# resolved: {record['resolved_from']} -> {record['id']}"] if record.get("resolved_from") else []
     for path, spans in sorted(selected.items()):
         merged: list[list[int]] = []
         for start, end in sorted(spans):

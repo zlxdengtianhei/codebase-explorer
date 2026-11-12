@@ -135,7 +135,7 @@ cJSON_Delete | cJSON.c::function::cJSON_Delete::6306 | function | cJSON.c:L253-L
 
 Each line is `name | id | kind | location | summary | match: fields`. Only the first row is `cJSON_Parse` itself. `cJSON_New_Item` and `cJSON_Delete` match only in `incoming`: the parser calls them, so they are neighbors, not the symbol you searched for. `--json` prints the same rows as objects with `id`, `name`, `kind`, `location`, `summary` and `matched_fields`.
 
-`cbe query --run-dir RUN --id ID [--json] [--edges all|import,call,cfg,dataflow]` takes an exact ID: an inventory symbol ID or unit ID from `find`, a `grp:` group ID, a file path, or a responsibility-node ID (the node page name without `.md`, for example `core-parsing`). The text view prints the explanation once, then one line per relation or edge:
+`cbe query --run-dir RUN --id ID [--json] [--edges all|import,call,cfg,dataflow]` takes an ID: an inventory symbol ID or unit ID from `find`, a `grp:` group ID, a file path, or a responsibility-node ID (the node page name without `.md`, for example `core-parsing`). It also takes the names a page shows, tried in this order: a group unit's heading without the `grp:` prefix; a unit heading or its anchor (`u-…`, with or without `#`); a symbol name. When one ID matches, the output starts with `resolved: NAME -> ID`; when several match, it lists them and exits 2 without choosing. `cbe source` resolves names the same way. The text view prints the explanation once, then one line per relation or edge:
 
 ```text
 $ cbe query --run-dir /absolute/path/to/run --id 'cJSON.c::function::cJSON_Parse::33515'
@@ -190,7 +190,8 @@ What it catches and what it does not, from a replay on the seven example runs (n
 
 | You wrote | Error | Write instead |
 |---|---|---|
-| `cbe query --run-dir RUN --id cJSON_Parse` | `unknown unit, symbol or file: cJSON_Parse; first use cbe find --run-dir RUN --term cJSON_Parse` | Run `find` first and copy the ID from its second column. |
+| `cbe query --run-dir RUN --id cJSON_Pars` | `unknown unit, symbol or file: cJSON_Pars; first use cbe find --run-dir RUN --term cJSON_Pars` | Run `find` first and copy the ID from its second column. |
+| `cbe query --run-dir RUN --id parse` (a name several symbols share) | `parse matches 2 IDs; query one of them:` and the IDs, one per line | Query one of the listed IDs. |
 | `cbe find --run-dir runs/cjson/run --term x` | `cbe find: error: argument --run-dir: expected an absolute path, got runs/cjson/run` | Give the absolute run directory. |
 
 `find` and `query` also accept the search term or the ID as a bare argument; the flag forms `--term` and `--id` stay the stable interface.

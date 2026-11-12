@@ -57,7 +57,7 @@ def test_version_uses_installed_command_name(capsys):
 
 
 def test_unknown_query_suggests_find(run, capsys):
-    assert cli.main(["query", "--run-dir", str(run), "LIMIT"]) == 2
+    assert cli.main(["query", "--run-dir", str(run), "NO_SUCH_LIMIT"]) == 2
     assert "cbe find --run-dir" in capsys.readouterr().err
 
 

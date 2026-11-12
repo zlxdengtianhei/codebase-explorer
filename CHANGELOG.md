@@ -2,6 +2,9 @@
 
 ## 2.2.0.dev0 (unreleased)
 
+- `cbe query` and `cbe source` take the names the pages show: a group unit's heading without
+  `grp:`, a unit heading or anchor, or a symbol name. One match is used and named on the first
+  output line (`resolved: NAME -> ID`); several matches are listed and nothing is chosen.
 - `--review sample` escalates: when the sampled batch has any finding, every other batch is
   reviewed in the same run (`summary.json` `semantic_review.escalated`). `RUN.md` gets one
   `Review:` line saying which batches a second model read and what it found.
