@@ -18,6 +18,24 @@ PAGES = [SKILL_DIR / "SKILL.md", SKILL_DIR / "references/claude-code.md", SKILL_
 PLACEHOLDERS = {"RUN": "/abs/run", "ID": "unit-id", "TASK": "module_1", "SEARCH_TERM": "needle"}
 
 
+def test_skill_frontmatter_follows_the_agent_skills_spec() -> None:
+    """Keep the offline check aligned with skills-ref's metadata validation."""
+    text = (SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
+    assert text.startswith("---\n")
+    frontmatter = text.split("---\n", 2)[1]
+    fields = dict(line.split(":", 1) for line in frontmatter.splitlines() if line and not line[0].isspace())
+    assert set(fields) <= {"name", "description", "license", "compatibility", "metadata", "allowed-tools"}
+    assert {"name", "description"} <= set(fields)
+
+    name = fields["name"].strip()
+    assert 0 < len(name) <= 64
+    assert name == name.lower() == SKILL_DIR.name
+    assert not name.startswith("-") and not name.endswith("-") and "--" not in name
+    assert all(character.isalnum() or character == "-" for character in name)
+    assert 0 < len(fields["description"].strip()) <= 1024
+    assert len(fields.get("compatibility", "")) <= 500
+
+
 def _example_commands() -> list[str]:
     """Commands in sh blocks, plus inline commands that name a run or repository."""
     found = []

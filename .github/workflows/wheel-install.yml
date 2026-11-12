@@ -23,6 +23,10 @@ jobs:
         run: |
           cd "$RUNNER_TEMP"
           PYTHONPATH="$GITHUB_WORKSPACE/src" "$RUNNER_TEMP/venv/bin/python" -m pytest "$GITHUB_WORKSPACE/tests" --import-mode=importlib --basetemp="$RUNNER_TEMP/source-tests" -q
+      - name: Validate Agent Skill metadata
+        run: |
+          uv pip install --python "$RUNNER_TEMP/venv/bin/python" skills-ref==0.1.1
+          "$RUNNER_TEMP/venv/bin/agentskills" validate plugin/skills/codebase-explorer
       - name: Check public wheel contents
         run: |
           python - <<'PY'
