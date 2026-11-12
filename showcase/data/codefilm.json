@@ -845,7 +845,7 @@
         },
         {
           "node": "app-and-request-context-management",
-          "unit": "class RequestContext:",
+          "unit": "RequestContext · RequestContext.__init__",
           "unitId": "src/flask/ctx.py::class::RequestContext::8798::s0",
           "blocks": [
             {
@@ -1013,7 +1013,7 @@
       "views": [
         {
           "node": "blueprint-deferred-registration",
-          "unit": "@setupmethod\n    def record(self, func: DeferredSetupFunction) -> None:",
+          "unit": "Blueprint.record · Blueprint.add_url_rule",
           "unitId": "src/flask/sansio/blueprints.py::method::Blueprint.record::8831",
           "blocks": [
             {
@@ -1111,9 +1111,25 @@
       "views": [
         {
           "node": "configuration-loading",
-          "unit": "def from_pyfile(\n        self, filename: str | os.PathLike[str], silent: bool = False\n    ) -> bool:",
+          "unit": "Config.from_prefixed_env · Config.from_pyfile · Config.from_object · Config.from_file · Config.from_mapping",
           "unitId": "src/flask/config.py::method::Config.from_pyfile::6295",
           "blocks": [
+            {
+              "path": "src/flask/config.py",
+              "first": 126,
+              "last": 128,
+              "highlights": [
+                126,
+                127,
+                128
+              ],
+              "lines": [
+                "    def from_prefixed_env(",
+                "        self, prefix: str = \"FLASK\", *, loads: t.Callable[[str], t.Any] = json.loads",
+                "    ) -> bool:"
+              ],
+              "sha256": "3e2a85d033da9ba1d6d051f8087d61a574c17b7d0d4b38cf10ec2bcf56fa92dd"
+            },
             {
               "path": "src/flask/config.py",
               "first": 187,
@@ -1144,22 +1160,6 @@
             },
             {
               "path": "src/flask/config.py",
-              "first": 304,
-              "last": 306,
-              "highlights": [
-                304,
-                305,
-                306
-              ],
-              "lines": [
-                "    def from_mapping(",
-                "        self, mapping: t.Mapping[str, t.Any] | None = None, **kwargs: t.Any",
-                "    ) -> bool:"
-              ],
-              "sha256": "3e2a85d033da9ba1d6d051f8087d61a574c17b7d0d4b38cf10ec2bcf56fa92dd"
-            },
-            {
-              "path": "src/flask/config.py",
               "first": 256,
               "last": 261,
               "highlights": [
@@ -1182,16 +1182,16 @@
             },
             {
               "path": "src/flask/config.py",
-              "first": 126,
-              "last": 128,
+              "first": 304,
+              "last": 306,
               "highlights": [
-                126,
-                127,
-                128
+                304,
+                305,
+                306
               ],
               "lines": [
-                "    def from_prefixed_env(",
-                "        self, prefix: str = \"FLASK\", *, loads: t.Callable[[str], t.Any] = json.loads",
+                "    def from_mapping(",
+                "        self, mapping: t.Mapping[str, t.Any] | None = None, **kwargs: t.Any",
                 "    ) -> bool:"
               ],
               "sha256": "3e2a85d033da9ba1d6d051f8087d61a574c17b7d0d4b38cf10ec2bcf56fa92dd"
@@ -1200,25 +1200,9 @@
         },
         {
           "node": "configuration-loading",
-          "unit": "def from_prefixed_env(\n        self, prefix: str = \"FLASK\", *, loads: t.Callable[[str], t.Any] = json.loads\n    ) -> bool:",
+          "unit": "Config.from_prefixed_env · Config.from_object",
           "unitId": "src/flask/config.py::method::Config.from_prefixed_env::4172",
           "blocks": [
-            {
-              "path": "src/flask/config.py",
-              "first": 252,
-              "last": 254,
-              "highlights": [
-                252,
-                253,
-                254
-              ],
-              "lines": [
-                "        for key in dir(obj):",
-                "            if key.isupper():",
-                "                self[key] = getattr(obj, key)"
-              ],
-              "sha256": "3e2a85d033da9ba1d6d051f8087d61a574c17b7d0d4b38cf10ec2bcf56fa92dd"
-            },
             {
               "path": "src/flask/config.py",
               "first": 158,
@@ -1269,6 +1253,22 @@
                 "            current[tail] = value",
                 "",
                 "        return True"
+              ],
+              "sha256": "3e2a85d033da9ba1d6d051f8087d61a574c17b7d0d4b38cf10ec2bcf56fa92dd"
+            },
+            {
+              "path": "src/flask/config.py",
+              "first": 252,
+              "last": 254,
+              "highlights": [
+                252,
+                253,
+                254
+              ],
+              "lines": [
+                "        for key in dir(obj):",
+                "            if key.isupper():",
+                "                self[key] = getattr(obj, key)"
               ],
               "sha256": "3e2a85d033da9ba1d6d051f8087d61a574c17b7d0d4b38cf10ec2bcf56fa92dd"
             }

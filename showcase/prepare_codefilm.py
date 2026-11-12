@@ -139,7 +139,8 @@ def main():
                 for r in unit["ranges"]:
                     ranges.extend((r["path"], a, b) for a, b in r["lines"])
             blocks = []
-            for path, first, last, highlights in view["blocks"]:
+            # Excerpts read top to bottom: in file order, then line order.
+            for path, first, last, highlights in sorted(view["blocks"], key=lambda b: (b[0], b[1])):
                 if ranges and not view.get("sourceOnly"):
                     assert any(path == p and a <= first and last <= b for p, a, b in ranges), (item["id"], path, first, last)
                 assert first <= last and set(highlights) <= set(range(first, last + 1))
@@ -167,9 +168,18 @@ def main():
                     "sha256": source_cache[path]["sha256"],
                 })
             primary = view["units"][0] if view["units"] else None
+            # A view that shows several units names each of them, in source order, instead of
+            # putting all excerpts under the first unit's signature.
+            def first_line(uid):
+                ranges = catalog["units"][uid].get("ranges") or [{"path": "", "lines": [[0, 0]]}]
+                return (ranges[0]["path"], ranges[0]["lines"][0][0])
+            label = (catalog["units"][primary]["signature"] if len(view["units"]) == 1 else
+                     " · ".join(uid.split("::")[2] if uid.count("::") >= 2 else uid.removeprefix("grp:")
+                                for uid in sorted(view["units"], key=first_line))
+                     if view["units"] else "current_app / request")
             views.append({
                 "node": node,
-                "unit": catalog["units"][primary]["signature"] if primary else "current_app / request",
+                "unit": label,
                 "unitId": primary,
                 "blocks": blocks,
             })
