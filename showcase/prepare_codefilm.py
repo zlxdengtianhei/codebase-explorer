@@ -20,56 +20,56 @@ SCENES = {
     "1": {
         "title": "Enter through wsgi_app",
         "views": [
-            {"node": "wsgi-entry-and-request-contexts", "units": [APP + "wsgi_app::59470"], "blocks": [("src/flask/app.py", 1505, 1513, [1505, 1507, 1508])]},
-            {"node": "wsgi-entry-and-request-contexts", "units": [APP + "wsgi_app::59470"], "blocks": [("src/flask/app.py", 1514, 1527, [1514, 1526])]},
+            {"node": "wsgi-entry-and-request-contexts", "units": [APP + "wsgi_app::59470"], "blocks": [("src/flask/app.py", 1506, 1511, [1506])]},
+            {"node": "wsgi-entry-and-request-contexts", "units": [APP + "wsgi_app::59470"], "blocks": [("src/flask/app.py", 1506, 1511, [1506, 1510, 1511]), ("src/flask/app.py", 1518, 1527, [1518, 1519, 1527])]},
         ],
     },
     "2": {
         "title": "Push the request context",
         "views": [
-            {"node": "app-and-request-context-management", "units": [CTX + "push::12063"], "blocks": [("src/flask/ctx.py", 367, 390, list(range(370, 379)) + [385, 386, 389, 390])]},
-            {"node": "app-and-request-context-management", "units": [CTX + "match_request::11664"], "blocks": [("src/flask/ctx.py", 357, 365, [361, 362])]},
+            {"node": "app-and-request-context-management", "units": [CTX + "push::12063"], "blocks": [("src/flask/ctx.py", 367, 394, [372, 373, 374, 384, 385, 386, 393, 394])]},
+            {"node": "app-and-request-context-management", "units": [CTX + "match_request::11664"], "blocks": [("src/flask/ctx.py", 357, 365, [363])]},
         ],
     },
     "3": {
         "title": "Run the full dispatch cycle",
         "views": [
-            {"node": "request-dispatch-cycle", "units": [APP + "full_dispatch_request::36613"], "blocks": [("src/flask/app.py", 904, 920, [911, 913, 914])]},
-            {"node": "request-dispatch-cycle", "units": [APP + "full_dispatch_request::36613"], "blocks": [("src/flask/app.py", 904, 920, [914, 915, 916, 920])]},
+            {"node": "request-dispatch-cycle", "units": [APP + "full_dispatch_request::36613"], "blocks": [("src/flask/app.py", 904, 920, [914, 915])]},
+            {"node": "request-dispatch-cycle", "units": [APP + "full_dispatch_request::36613"], "blocks": [("src/flask/app.py", 904, 920, [915, 916, 917])]},
         ],
     },
     "4": {
         "title": "Before-request hooks",
         "views": [
-            {"node": "request-dispatch-cycle", "units": [APP + "preprocess_request::51235"], "blocks": [("src/flask/app.py", 1271, 1296, [1282, 1288, 1289, 1290, 1291])]},
-            {"node": "request-dispatch-cycle", "units": [APP + "preprocess_request::51235"], "blocks": [("src/flask/app.py", 1271, 1296, [1291, 1292, 1293, 1294])]},
+            {"node": "request-dispatch-cycle", "units": [APP + "preprocess_request::51235"], "blocks": [("src/flask/app.py", 1271, 1296, [1281, 1288, 1289, 1290, 1291])]},
+            {"node": "request-dispatch-cycle", "units": [APP + "preprocess_request::51235"], "blocks": [("src/flask/app.py", 1271, 1296, [1293, 1294])]},
         ],
     },
     "5": {
         "title": "Resolve and call the view",
         "views": [
-            {"node": "request-dispatch-cycle", "units": [APP + "dispatch_request::35345"], "blocks": [("src/flask/app.py", 879, 902, [890, 891, 892, 901, 902])]},
+            {"node": "request-dispatch-cycle", "units": [APP + "dispatch_request::35345"], "blocks": [("src/flask/app.py", 879, 902, [892, 901, 902])]},
         ],
     },
     "6": {
         "title": "Make a response",
         "views": [
-            {"node": "response-finalization-and-error-fallback", "units": [APP + "finalize_request::37229"], "blocks": [("src/flask/app.py", 939, 951, [939, 941])]},
-            {"node": "response-finalization-and-error-fallback", "units": [APP + "make_response::45351"], "blocks": [("src/flask/app.py", 1214, 1233, [1215, 1216, 1223, 1228, 1229])]},
+            {"node": "response-finalization-and-error-fallback", "units": [APP + "finalize_request::37229"], "blocks": [("src/flask/app.py", 939, 951, [939])]},
+            {"node": "response-finalization-and-error-fallback", "units": [APP + "make_response::45351"], "blocks": [("src/flask/app.py", 1219, 1232, [1220, 1224, 1225, 1226, 1227, 1230, 1231])]},
         ],
     },
     "7": {
         "title": "After-request work and teardown",
         "views": [
-            {"node": "response-finalization-and-error-fallback", "units": [APP + "process_response::52366"], "blocks": [("src/flask/app.py", 1310, 1324, list(range(1311, 1323)))]},
-            {"node": "wsgi-entry-and-request-contexts", "units": [APP + "wsgi_app::59470"], "blocks": [("src/flask/app.py", 1514, 1527, [1517, 1526])]},
+            {"node": "response-finalization-and-error-fallback", "units": [APP + "process_response::52366"], "blocks": [("src/flask/app.py", 1311, 1324, [1313, 1314, 1316, 1319, 1321, 1322])]},
+            {"node": "wsgi-entry-and-request-contexts", "units": [APP + "wsgi_app::59470"], "blocks": [("src/flask/app.py", 1518, 1527, [1519, 1527])]},
         ],
     },
     "8": {
         "title": "What the two contexts hold",
         "views": [
-            {"node": "app-and-request-context-management", "units": ["grp:ctx.py-appcontext"], "sourceOnly": True, "blocks": [("src/flask/ctx.py", 238, 253, [246, 247, 248, 249])]},
-            {"node": "app-and-request-context-management", "units": ["src/flask/ctx.py::class::RequestContext::8798::s0", CTX + "__init__::9823"], "blocks": [("src/flask/ctx.py", 309, 335, [317, 319, 321, 323, 325, 326, 327, 331])]},
+            {"node": "app-and-request-context-management", "units": ["grp:ctx.py-appcontext"], "sourceOnly": True, "blocks": [("src/flask/ctx.py", 238, 253, [246, 247, 248])]},
+            {"node": "app-and-request-context-management", "units": ["src/flask/ctx.py::class::RequestContext::8798::s0", CTX + "__init__::9823"], "blocks": [("src/flask/ctx.py", 309, 335, [320, 323, 325, 326, 327, 331])]},
         ],
     },
     "9": {
@@ -82,15 +82,15 @@ SCENES = {
     "10": {
         "title": "Blueprints defer registration",
         "views": [
-            {"node": "blueprint-deferred-registration", "units": [BP + "record::8831", BP + "add_url_rule::16654"], "blocks": [("src/flask/sansio/blueprints.py", 223, 230, [230]), ("src/flask/sansio/blueprints.py", 423, 441, [432, 433, 434])]},
-            {"node": "blueprint-deferred-registration", "units": [BP + "register::10928"], "blocks": [("src/flask/sansio/blueprints.py", 327, 345, [334, 335, 337, 338])]},
+            {"node": "blueprint-deferred-registration", "units": [BP + "record::8831", BP + "add_url_rule::16654"], "blocks": [("src/flask/sansio/blueprints.py", 223, 230, [230]), ("src/flask/sansio/blueprints.py", 423, 441, [433, 434, 435, 436, 437, 438, 439])]},
+            {"node": "blueprint-deferred-registration", "units": [BP + "register::10928"], "blocks": [("src/flask/sansio/blueprints.py", 330, 335, [331, 332, 334, 335])]},
         ],
     },
     "11": {
         "title": "Load configuration",
         "views": [
-            {"node": "configuration-loading", "units": [CONFIG + "from_pyfile::6295", CONFIG + "from_object::7574"], "blocks": [("src/flask/config.py", 202, 216, [202, 203, 204, 205, 215]), ("src/flask/config.py", 245, 254, [246, 252, 253, 254])]},
-            {"node": "configuration-loading", "units": [CONFIG + "from_prefixed_env::4172"], "blocks": [("src/flask/config.py", 150, 166, [153, 154, 157, 158, 161, 162, 163]), ("src/flask/config.py", 168, 180, [168, 170, 171, 174, 175, 177, 178, 180])]},
+            {"node": "configuration-loading", "units": [CONFIG + "from_pyfile::6295", CONFIG + "from_object::7574", CONFIG + "from_mapping::10951", CONFIG + "from_file::9243", CONFIG + "from_prefixed_env::4172"], "blocks": [("src/flask/config.py", 187, 189, [187, 188, 189]), ("src/flask/config.py", 218, 218, [218]), ("src/flask/config.py", 304, 306, [304, 305, 306]), ("src/flask/config.py", 256, 261, [256, 257, 258, 259, 260, 261]), ("src/flask/config.py", 126, 128, [126, 127, 128])]},
+            {"node": "configuration-loading", "units": [CONFIG + "from_prefixed_env::4172", CONFIG + "from_object::7574"], "blocks": [("src/flask/config.py", 252, 254, [252, 253, 254]), ("src/flask/config.py", 158, 165, [158, 159, 161, 162]), ("src/flask/config.py", 172, 185, [173, 174, 176, 178, 179, 181, 183])]},
         ],
     },
 }
@@ -121,6 +121,8 @@ def main():
     assert set(SCENES) == {item["id"] for item in script["items"]}
     source_cache = {}
     output_items = []
+    invalid_highlights = []
+    highlight_count = 0
 
     for item in script["items"]:
         spec = SCENES[item["id"]]
@@ -150,6 +152,12 @@ def main():
                     }
                 source = source_cache[path]["lines"]
                 assert last <= len(source)
+                for line_number in highlights:
+                    stripped = source[line_number - 1].strip()
+                    if (not stripped or stripped.startswith("#")
+                            or re.fullmatch(r"[\"'()\[\]{}:,]+", stripped)):
+                        invalid_highlights.append(f"{path}:{line_number}: {stripped!r}")
+                highlight_count += len(highlights)
                 blocks.append({
                     "path": path,
                     "first": first,
@@ -166,6 +174,11 @@ def main():
                 "blocks": blocks,
             })
         output_items.append({**item, "title": spec["title"], "views": views})
+
+    if invalid_highlights:
+        details = "\n".join(invalid_highlights)
+        raise SystemExit(f"invalid highlighted source lines: {len(invalid_highlights)}\n{details}")
+    print(f"highlight validation: {highlight_count} highlighted lines, 0 invalid")
 
     nodes = {k: {key: catalog["nodes"][k][key] for key in ("title", "parent", "children", "capability")} for k in catalog["nodes"]}
     result = {
