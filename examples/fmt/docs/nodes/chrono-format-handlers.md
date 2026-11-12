@@ -102,10 +102,6 @@ Public format-spec handlers render individual std::tm fields.
 
 Text is copied directly. Weekday and month names use fixed English names in classic mode and localized time_put otherwise. Numeric weekday, month, week, day, hour, minute, and second handlers write numeric values in classic or standard mode and use localized alternative callbacks otherwise. UTC offset always uses the offset helper and does not switch to localized time_put; zone name always uses the zone helper, which may transcode through the locale writer. ISO week-based year and short year always write numeric values. 24-hour time always writes HH:MM. ISO time writes 24-hour time, a colon, then standard seconds. 12-hour time in classic mode writes HH:MM:SS, a space, and AM/PM; otherwise it uses localized time_put. AM/PM in classic mode writes A or P followed by M; otherwise it uses localized time_put. Datetime, local date, and local time compose classic fields or use localized time_put with the E modifier for alternative systems. US date writes MM/DD/YY; ISO date writes YYYY-MM-DD, using extended year output outside 0–9999. Century handling writes "-0" for years -99 through -1, two digits for upper 0–99, otherwise the full upper value; alternative mode uses localized time_put. Day-of-year writes the one-based day with padding. Seconds write the numeric second and, when subseconds are present, either floating or integral fractional seconds; localized seconds do not format subseconds. Duration value and unit callbacks are no-ops for tm.
 
-## Look up code
-
-`RUN` is the run directory. Find `ID` by a unit title on this page (exact names first):
-`cbe find --run-dir "$RUN" --term "UNIT_TITLE"`. Then use an `ID` from the results:
-`cbe query --run-dir "$RUN" --id "$ID"`; `cbe source --run-dir "$RUN" --id "$ID" --context 2`.
+Look up code: the commands are under "Read further" in [INDEX.md](../INDEX.md); `cbe query` and `cbe source` take a unit title or anchor from this page.
 
 [f1]: https://github.com/fmtlib/fmt/blob/b4ffa39b9994c961418406f47358791d89a5aa48/include/fmt/chrono.h

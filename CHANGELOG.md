@@ -9,7 +9,9 @@
   unresolved 2,076 -> 993 of 2,322. C# line numbers, which Joern counts from 0, now count from 1.
 - Node pages no longer repeat the `find`/`query`/`source` command block; it stays in `INDEX.md`
   under "Read further", and each node page ends with one line pointing there. On flask the
-  pages are 1,550 tokens shorter (2.6%). Published examples keep the old footer.
+  pages are 1,550 tokens shorter (2.6%). The seven published examples are re-rendered from
+  their runs with the new footer (no model call; only node pages and the token counts in
+  `summary.json` change).
 - `cbe query` and `cbe source` take the names the pages show: a group unit's heading without
   `grp:`, a unit heading or anchor, or a symbol name. One match is used and named on the first
   output line (`resolved: NAME -> ID`); several matches are listed and nothing is chosen.

@@ -67,10 +67,6 @@ Unquoted-value skipper.
 
 It advances until a structural or whitespace character, requiring lenient mode for '/', backslash, ';', '#', and '=' before treating them as terminators, and refills the buffer as needed.
 
-## Look up code
-
-`RUN` is the run directory. Find `ID` by a unit title on this page (exact names first):
-`cbe find --run-dir "$RUN" --term "UNIT_TITLE"`. Then use an `ID` from the results:
-`cbe query --run-dir "$RUN" --id "$ID"`; `cbe source --run-dir "$RUN" --id "$ID" --context 2`.
+Look up code: the commands are under "Read further" in [INDEX.md](../INDEX.md); `cbe query` and `cbe source` take a unit title or anchor from this page.
 
 [f1]: https://github.com/google/gson/blob/e2292f9c9f2e07a4791827e8eea34aa7d80545d6/gson/src/main/java/com/google/gson/stream/JsonReader.java

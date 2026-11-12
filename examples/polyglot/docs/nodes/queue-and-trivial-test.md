@@ -39,11 +39,7 @@ Applies a transform function to each job's payload and returns the transformed r
 
 The callback receives job.payload, never the Job wrapper; the input array is not modified. Behavior (including thrown errors from fn) follows Array.prototype.map semantics.
 
-## Look up code
-
-`RUN` is the run directory. Find `ID` by a unit title on this page (exact names first):
-`cbe find --run-dir "$RUN" --term "UNIT_TITLE"`. Then use an `ID` from the results:
-`cbe query --run-dir "$RUN" --id "$ID"`; `cbe source --run-dir "$RUN" --id "$ID" --context 2`.
+Look up code: the commands are under "Read further" in [INDEX.md](../INDEX.md); `cbe query` and `cbe source` take a unit title or anchor from this page.
 
 [f1]: ../../source/ts_case.ts
 [f2]: ../../source/tests/test_x.py

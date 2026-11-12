@@ -132,11 +132,7 @@ Runs the configured onSuccess command or callback and returns an abort controlle
 
 Without onSuccess it returns undefined. A string command runs through a shell with inherited stdio and the config cwd; its nonzero exit code is copied to process.exitCode, and abort kills the child process when a pid exists. A callback receives the config and abort signal; its returned promise is not awaited or caught. Synchronous callback errors propagate.
 
-## Look up code
-
-`RUN` is the run directory. Find `ID` by a unit title on this page (exact names first):
-`cbe find --run-dir "$RUN" --term "UNIT_TITLE"`. Then use an `ID` from the results:
-`cbe query --run-dir "$RUN" --id "$ID"`; `cbe source --run-dir "$RUN" --id "$ID" --context 2`.
+Look up code: the commands are under "Read further" in [INDEX.md](../INDEX.md); `cbe query` and `cbe source` take a unit title or anchor from this page.
 
 [f1]: https://github.com/rolldown/tsdown/blob/2b1be7e0accdb1d6e903cd42642666431fc5e93d/src/build.ts
 [f2]: https://github.com/rolldown/tsdown/blob/2b1be7e0accdb1d6e903cd42642666431fc5e93d/src/features/clean.ts

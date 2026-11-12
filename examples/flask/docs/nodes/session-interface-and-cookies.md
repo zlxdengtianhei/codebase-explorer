@@ -137,10 +137,6 @@ Decides whether a Set-Cookie header should be sent: true if session.modified, or
 
 Otherwise falsy. Returns the evaluated expression, so the result may not be a strict bool.
 
-## Look up code
-
-`RUN` is the run directory. Find `ID` by a unit title on this page (exact names first):
-`cbe find --run-dir "$RUN" --term "UNIT_TITLE"`. Then use an `ID` from the results:
-`cbe query --run-dir "$RUN" --id "$ID"`; `cbe source --run-dir "$RUN" --id "$ID" --context 2`.
+Look up code: the commands are under "Read further" in [INDEX.md](../INDEX.md); `cbe query` and `cbe source` take a unit title or anchor from this page.
 
 [f1]: https://github.com/pallets/flask/blob/85c5d93cbd049c4bd0679c36fd1ddcae8c37b642/src/flask/sessions.py

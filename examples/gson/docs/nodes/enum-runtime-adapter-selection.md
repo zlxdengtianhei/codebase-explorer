@@ -92,11 +92,7 @@ Chooses the adapter for serialization.
 
 It starts with the delegate and computes a more-specific runtime type. If the runtime type differs, it gets the runtime adapter: a runtime adapter that is not a direct ReflectiveTypeAdapterFactory.Adapter is chosen; otherwise, if the delegate is not reflective, the delegate is chosen; otherwise the runtime adapter is chosen. The direct instanceof check does not unwrap delegating wrappers, so a delegating wrapper around a reflective adapter is treated as non-reflective. If the runtime type is not more specific, the delegate is used.
 
-## Look up code
-
-`RUN` is the run directory. Find `ID` by a unit title on this page (exact names first):
-`cbe find --run-dir "$RUN" --term "UNIT_TITLE"`. Then use an `ID` from the results:
-`cbe query --run-dir "$RUN" --id "$ID"`; `cbe source --run-dir "$RUN" --id "$ID" --context 2`.
+Look up code: the commands are under "Read further" in [INDEX.md](../INDEX.md); `cbe query` and `cbe source` take a unit title or anchor from this page.
 
 [f1]: https://github.com/google/gson/blob/e2292f9c9f2e07a4791827e8eea34aa7d80545d6/gson/src/main/java/com/google/gson/internal/bind/EnumTypeAdapter.java
 [f2]: https://github.com/google/gson/blob/e2292f9c9f2e07a4791827e8eea34aa7d80545d6/gson/src/main/java/com/google/gson/internal/bind/TypeAdapterRuntimeTypeWrapper.java

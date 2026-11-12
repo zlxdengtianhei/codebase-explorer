@@ -80,24 +80,24 @@
   "layers": {
     "tokenizer": "o200k_base",
     "source_tokens": 38670,
-    "semantic_tokens": 30041,
+    "semantic_tokens": 29191,
     "semantic_breakdown": {
       "model_body": 10716,
       "signature_location": 4645,
       "heading_anchor": 2559,
       "relations": 36,
-      "footer": 1564,
+      "footer": 714,
       "index": 5326,
       "node_text": 5195
     },
     "model_body_tokens": 10716,
     "model_body_source_ratio": 0.27711404189294025,
-    "published_markdown_source_ratio": 0.7768554434962504,
+    "published_markdown_source_ratio": 0.7548745797776054,
     "deterministic_tokens": 504200,
     "catalog_tokens": 504200,
     "frozen_graph_tokens": 0,
     "frozen_graph_bytes": 26911496,
-    "semantic_source_ratio": 0.7768554434962504,
+    "semantic_source_ratio": 0.7548745797776054,
     "deterministic_source_ratio": 13.038531161106802,
     "scope": "Breakdown partitions full Markdown BPE tokens by the first byte's line: model_body is published unit explain, summary, extras and uncertainties; signature_location includes shared source-file reference definitions (including ones used by relations); heading_anchor, relations, footer, INDEX and node_text (including labels/whitespace) partition the rest. model_body/source and published_markdown/source use complete frozen files. semantic: all published Markdown (node pages + INDEX, including navigation, signatures and commands); deterministic: catalog.json as serialized, including preserved prose copies and edge references, excluding the graph field; frozen graph is excluded from token ratios (frozen_graph_tokens=0), reported separately as frozen_graph_bytes using UTF-8 JSON with ensure_ascii=False and compact separators; complete graph evidence is expanded only with query --edges; source: complete frozen files counted once; context source chunks, host prompts, raw answers and summary.json excluded; layers are storage measures, not disjoint content classes"
   },

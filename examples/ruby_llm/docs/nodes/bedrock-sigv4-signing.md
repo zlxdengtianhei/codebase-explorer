@@ -159,10 +159,6 @@ These module functions escape and normalize request URLs for signing.
 
 uri_escape_path escapes each non-slash path segment with uri_escape. uri_escape returns nil for nil, otherwise CGI-escapes the UTF-8 string, converts '+' to '%20', and restores '~'. normalize_path cleans the URI path with Pathname, turns '.' into an empty string, and appends a trailing slash when the original path ended with one and the cleaned path does not; it mutates uri.path. host returns the host when the URI port equals the default port, otherwise host:port.
 
-## Look up code
-
-`RUN` is the run directory. Find `ID` by a unit title on this page (exact names first):
-`cbe find --run-dir "$RUN" --term "UNIT_TITLE"`. Then use an `ID` from the results:
-`cbe query --run-dir "$RUN" --id "$ID"`; `cbe source --run-dir "$RUN" --id "$ID" --context 2`.
+Look up code: the commands are under "Read further" in [INDEX.md](../INDEX.md); `cbe query` and `cbe source` take a unit title or anchor from this page.
 
 [f1]: https://github.com/crmne/ruby_llm/blob/1e315ab4b3f3a150c443dc9a17f504756c2aad6f/lib/ruby_llm/providers/bedrock/signing.rb

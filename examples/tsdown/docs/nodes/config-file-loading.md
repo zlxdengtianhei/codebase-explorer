@@ -101,11 +101,7 @@ Resolves workspace mode into a flat list of configs and discovered config files.
 
 With no workspace option it returns the merged config as a single config and an empty file list. `true` means auto-discovery; a string or array becomes the include list; an object supplies include/exclude/config. Auto-discovery globs package.json files under the root cwd, excludes the default node_modules/dist/test/temp patterns, drops the root package.json, and maps each file to its directory. Explicit includes glob directories only, absolutely, with the same excludes. No packages throws. Each package directory loads a config file with the workspace config override and that directory as cwd; found files are collected as concurrent loads finish, and each loaded config is merged over the normalized root/inline config. Loader errors propagate.
 
-## Look up code
-
-`RUN` is the run directory. Find `ID` by a unit title on this page (exact names first):
-`cbe find --run-dir "$RUN" --term "UNIT_TITLE"`. Then use an `ID` from the results:
-`cbe query --run-dir "$RUN" --id "$ID"`; `cbe source --run-dir "$RUN" --id "$ID" --context 2`.
+Look up code: the commands are under "Read further" in [INDEX.md](../INDEX.md); `cbe query` and `cbe source` take a unit title or anchor from this page.
 
 [f1]: https://github.com/rolldown/tsdown/blob/2b1be7e0accdb1d6e903cd42642666431fc5e93d/src/config/file.ts
 [f2]: https://github.com/rolldown/tsdown/blob/2b1be7e0accdb1d6e903cd42642666431fc5e93d/src/config/index.ts

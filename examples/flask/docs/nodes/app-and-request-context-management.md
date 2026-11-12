@@ -155,11 +155,7 @@ Binds the request context and ensures an app context, opens the session, and mat
 
 If there is no current app context or its app differs from this app, a new app context is created and pushed; otherwise None is remembered (nothing pushed). The request variable token and that optional app context are stored on the stack. If the session is None (first push), session_interface.open_session is called; a None result falls back to make_null_session. Re-pushes keep the existing session. If url_adapter is not None, match_request runs after the session exists so converters can use it.
 
-## Look up code
-
-`RUN` is the run directory. Find `ID` by a unit title on this page (exact names first):
-`cbe find --run-dir "$RUN" --term "UNIT_TITLE"`. Then use an `ID` from the results:
-`cbe query --run-dir "$RUN" --id "$ID"`; `cbe source --run-dir "$RUN" --id "$ID" --context 2`.
+Look up code: the commands are under "Read further" in [INDEX.md](../INDEX.md); `cbe query` and `cbe source` take a unit title or anchor from this page.
 
 [f1]: https://github.com/pallets/flask/blob/85c5d93cbd049c4bd0679c36fd1ddcae8c37b642/src/flask/ctx.py
 [f2]: https://github.com/pallets/flask/blob/85c5d93cbd049c4bd0679c36fd1ddcae8c37b642/src/flask/app.py

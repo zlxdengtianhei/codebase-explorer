@@ -227,11 +227,7 @@ Normalizes a requested temperature for models that reject or ignore it.
 
 If the model id starts with o followed by a digit or with gpt-5, it logs a debug message and returns 1.0. Otherwise, if the id contains -search, it logs a debug message and returns nil. Otherwise it returns the input unchanged. The first condition wins, so a gpt-5 search model returns 1.0 rather than nil.
 
-## Look up code
-
-`RUN` is the run directory. Find `ID` by a unit title on this page (exact names first):
-`cbe find --run-dir "$RUN" --term "UNIT_TITLE"`. Then use an `ID` from the results:
-`cbe query --run-dir "$RUN" --id "$ID"`; `cbe source --run-dir "$RUN" --id "$ID" --context 2`.
+Look up code: the commands are under "Read further" in [INDEX.md](../INDEX.md); `cbe query` and `cbe source` take a unit title or anchor from this page.
 
 [f1]: https://github.com/crmne/ruby_llm/blob/1e315ab4b3f3a150c443dc9a17f504756c2aad6f/lib/ruby_llm/providers/gemini/capabilities.rb
 [f2]: https://github.com/crmne/ruby_llm/blob/1e315ab4b3f3a150c443dc9a17f504756c2aad6f/lib/ruby_llm/providers/openai/capabilities.rb

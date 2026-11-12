@@ -159,11 +159,7 @@ Resolves a model id and provider into a model info object and provider instance.
 
 It defaults config to RubyLLM.config and looks up an explicit provider in Provider.providers. If that provider class exists, it instantiates a temporary provider and forces assume_exists when the provider is local. In the assume_exists branch it requires a provider, raises Error for an unknown provider, instantiates it, tries Models.find for local providers while rescuing ModelNotFoundError, and falls back to Model::Info.default. In the non-assume branch it calls Models.find, then resolves the model's provider or raises Error if unregistered. An unknown explicit provider does not raise at the initial providers lookup; it returns nil, and the later path raises ModelNotFoundError or an unregistered-provider Error.
 
-## Look up code
-
-`RUN` is the run directory. Find `ID` by a unit title on this page (exact names first):
-`cbe find --run-dir "$RUN" --term "UNIT_TITLE"`. Then use an `ID` from the results:
-`cbe query --run-dir "$RUN" --id "$ID"`; `cbe source --run-dir "$RUN" --id "$ID" --context 2`.
+Look up code: the commands are under "Read further" in [INDEX.md](../INDEX.md); `cbe query` and `cbe source` take a unit title or anchor from this page.
 
 [f1]: https://github.com/crmne/ruby_llm/blob/1e315ab4b3f3a150c443dc9a17f504756c2aad6f/lib/ruby_llm/providers/bedrock/capabilities.rb
 [f2]: https://github.com/crmne/ruby_llm/blob/1e315ab4b3f3a150c443dc9a17f504756c2aad6f/lib/ruby_llm/providers/bedrock/media.rb

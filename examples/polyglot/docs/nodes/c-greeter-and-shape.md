@@ -35,10 +35,6 @@ Program is a static class whose Main writes a new Greeter's greeting to the cons
 
 Main constructs Greeter with "x", calls Greet, and passes the result to Console.WriteLine; it returns void and has console output as a side effect.
 
-## Look up code
-
-`RUN` is the run directory. Find `ID` by a unit title on this page (exact names first):
-`cbe find --run-dir "$RUN" --term "UNIT_TITLE"`. Then use an `ID` from the results:
-`cbe query --run-dir "$RUN" --id "$ID"`; `cbe source --run-dir "$RUN" --id "$ID" --context 2`.
+Look up code: the commands are under "Read further" in [INDEX.md](../INDEX.md); `cbe query` and `cbe source` take a unit title or anchor from this page.
 
 [f1]: ../../source/src/Sample.cs

@@ -57,10 +57,6 @@ A type-erased view over formatting arguments and a descriptor.
 
 The descriptor encodes packed type bits and flags; packed arguments live in a value array, unpacked arguments in a basic_format_arg array. get(id) returns an empty argument for out-of-range or none types, get(name) scans named arguments via get_id, and max_size reports the packed limit or descriptor count. Constructors from argument stores set the named-argument flag; the view does not own argument storage.
 
-## Look up code
-
-`RUN` is the run directory. Find `ID` by a unit title on this page (exact names first):
-`cbe find --run-dir "$RUN" --term "UNIT_TITLE"`. Then use an `ID` from the results:
-`cbe query --run-dir "$RUN" --id "$ID"`; `cbe source --run-dir "$RUN" --id "$ID" --context 2`.
+Look up code: the commands are under "Read further" in [INDEX.md](../INDEX.md); `cbe query` and `cbe source` take a unit title or anchor from this page.
 
 [f1]: https://github.com/fmtlib/fmt/blob/b4ffa39b9994c961418406f47358791d89a5aa48/include/fmt/core.h

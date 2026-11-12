@@ -81,11 +81,7 @@ The file-level statement evaluates top(1) and assigns the result to result.
 
 Since top adds one through its lambda and then adds the default b of 1, the assigned value is 3.
 
-## Look up code
-
-`RUN` is the run directory. Find `ID` by a unit title on this page (exact names first):
-`cbe find --run-dir "$RUN" --term "UNIT_TITLE"`. Then use an `ID` from the results:
-`cbe query --run-dir "$RUN" --id "$ID"`; `cbe source --run-dir "$RUN" --id "$ID" --context 2`.
+Look up code: the commands are under "Read further" in [INDEX.md](../INDEX.md); `cbe query` and `cbe source` take a unit title or anchor from this page.
 
 [f1]: ../../source/src/Sample.java
 [f2]: ../../source/src/sample.kt

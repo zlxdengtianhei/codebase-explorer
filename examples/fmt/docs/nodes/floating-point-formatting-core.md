@@ -77,10 +77,6 @@ This function writes a decimal floating value in fixed notation.
 
 For nonnegative exponents it appends zeros and optional fractional zeros, applying grouping to the integer part. For positive decimal point positions it writes the point and trailing zeros. For negative positions it writes a leading zero, optional point, leading zeros, significand, and trailing zeros. It handles sign, alternate form, precision, grouping, and right padding.
 
-## Look up code
-
-`RUN` is the run directory. Find `ID` by a unit title on this page (exact names first):
-`cbe find --run-dir "$RUN" --term "UNIT_TITLE"`. Then use an `ID` from the results:
-`cbe query --run-dir "$RUN" --id "$ID"`; `cbe source --run-dir "$RUN" --id "$ID" --context 2`.
+Look up code: the commands are under "Read further" in [INDEX.md](../INDEX.md); `cbe query` and `cbe source` take a unit title or anchor from this page.
 
 [f1]: https://github.com/fmtlib/fmt/blob/b4ffa39b9994c961418406f47358791d89a5aa48/include/fmt/format.h

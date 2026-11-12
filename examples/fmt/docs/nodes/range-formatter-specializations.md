@@ -74,10 +74,6 @@ Formatter for ranges classified as string or debug_string.
 
 It chooses std_string_view when constructible from the range begin/end, otherwise basic_string. parse delegates to the underlying string formatter and, for debug_string kind, enables debug format. format constructs the chosen string type from the range begin/end and delegates to the underlying formatter.
 
-## Look up code
-
-`RUN` is the run directory. Find `ID` by a unit title on this page (exact names first):
-`cbe find --run-dir "$RUN" --term "UNIT_TITLE"`. Then use an `ID` from the results:
-`cbe query --run-dir "$RUN" --id "$ID"`; `cbe source --run-dir "$RUN" --id "$ID" --context 2`.
+Look up code: the commands are under "Read further" in [INDEX.md](../INDEX.md); `cbe query` and `cbe source` take a unit title or anchor from this page.
 
 [f1]: https://github.com/fmtlib/fmt/blob/b4ffa39b9994c961418406f47358791d89a5aa48/include/fmt/ranges.h

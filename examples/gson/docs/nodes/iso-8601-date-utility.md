@@ -53,10 +53,6 @@ Parses an ISO-8601 date from the current ParsePosition index, updating the index
 - Time zone: 'Z' is UTC; '+'/'-' takes the remaining substring, appends '00' when shorter than five characters, advances by that length, maps +0000/+00:00 to UTC, otherwise builds a GMT zone and rejects a resolved ID that differs even after removing colons; +hh, +hhmm, and +hh:mm forms are accepted when they resolve; any other indicator is rejected.
 - Failure: missing time zone, invalid zone, and numeric/range failures are wrapped in ParseException with the quoted input, a message, the current position, and the original cause.
 
-## Look up code
-
-`RUN` is the run directory. Find `ID` by a unit title on this page (exact names first):
-`cbe find --run-dir "$RUN" --term "UNIT_TITLE"`. Then use an `ID` from the results:
-`cbe query --run-dir "$RUN" --id "$ID"`; `cbe source --run-dir "$RUN" --id "$ID" --context 2`.
+Look up code: the commands are under "Read further" in [INDEX.md](../INDEX.md); `cbe query` and `cbe source` take a unit title or anchor from this page.
 
 [f1]: https://github.com/google/gson/blob/e2292f9c9f2e07a4791827e8eea34aa7d80545d6/gson/src/main/java/com/google/gson/internal/bind/util/ISO8601Utils.java

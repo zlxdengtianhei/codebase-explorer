@@ -59,11 +59,7 @@ Decides whether an HTTP exception should be trapped instead of handled.
 
 Evaluated in order: if config TRAP_HTTP_EXCEPTIONS is truthy, returns True. If TRAP_BAD_REQUEST_ERRORS is None, debug is on and e is a BadRequestKeyError, returns True. If TRAP_BAD_REQUEST_ERRORS is truthy, returns isinstance(e, BadRequest). Otherwise returns False. A falsy-but-not-None TRAP_BAD_REQUEST_ERRORS (False) disables debug-based trapping. Reads config and self.debug only; no side effects.
 
-## Look up code
-
-`RUN` is the run directory. Find `ID` by a unit title on this page (exact names first):
-`cbe find --run-dir "$RUN" --term "UNIT_TITLE"`. Then use an `ID` from the results:
-`cbe query --run-dir "$RUN" --id "$ID"`; `cbe source --run-dir "$RUN" --id "$ID" --context 2`.
+Look up code: the commands are under "Read further" in [INDEX.md](../INDEX.md); `cbe query` and `cbe source` take a unit title or anchor from this page.
 
 [f1]: https://github.com/pallets/flask/blob/85c5d93cbd049c4bd0679c36fd1ddcae8c37b642/src/flask/app.py
 [f2]: https://github.com/pallets/flask/blob/85c5d93cbd049c4bd0679c36fd1ddcae8c37b642/src/flask/sansio/app.py

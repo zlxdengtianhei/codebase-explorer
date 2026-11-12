@@ -12,8 +12,4 @@ Use this repository when working with cJSON's JSON parsing, rendering, mutation,
 - [Item Creation and Lifecycle](item-creation-and-lifecycle.md) `item-creation-and-lifecycle` · 7 unit(s)
 - [Public Header Types and Macros](public-header-types-and-macros.md) `public-header-types-and-macros` · 7 unit(s)
 
-## Look up code
-
-`RUN` is the run directory. Find `ID` by a unit title on this page (exact names first):
-`cbe find --run-dir "$RUN" --term "UNIT_TITLE"`. Then use an `ID` from the results:
-`cbe query --run-dir "$RUN" --id "$ID"`; `cbe source --run-dir "$RUN" --id "$ID" --context 2`.
+Look up code: the commands are under "Read further" in [INDEX.md](../INDEX.md); `cbe query` and `cbe source` take a unit title or anchor from this page.

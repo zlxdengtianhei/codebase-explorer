@@ -91,10 +91,6 @@ Applies after-request processing to a response and saves the session.
 
 First the functions registered with after_this_request on the request context run in registration order. Then after_request_funcs for blueprint names (innermost first via request.blueprints order) and finally the app (None) run, each list in reversed order. Each function (through ensure_sync) receives and returns the response. Finally, if the context session is not a null session (per session_interface.is_null_session), save_session is called with the response. Exceptions from hooks or session saving propagate.
 
-## Look up code
-
-`RUN` is the run directory. Find `ID` by a unit title on this page (exact names first):
-`cbe find --run-dir "$RUN" --term "UNIT_TITLE"`. Then use an `ID` from the results:
-`cbe query --run-dir "$RUN" --id "$ID"`; `cbe source --run-dir "$RUN" --id "$ID" --context 2`.
+Look up code: the commands are under "Read further" in [INDEX.md](../INDEX.md); `cbe query` and `cbe source` take a unit title or anchor from this page.
 
 [f1]: https://github.com/pallets/flask/blob/85c5d93cbd049c4bd0679c36fd1ddcae8c37b642/src/flask/app.py

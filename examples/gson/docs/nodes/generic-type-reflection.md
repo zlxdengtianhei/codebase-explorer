@@ -276,11 +276,7 @@ Builds a parameterized token from a raw class and type arguments, validating the
 
 rawType and the typeArguments array are required non-null via Objects.requireNonNull, so nulls throw NullPointerException. rawType must be a Class or IllegalArgumentException is thrown. The actual argument count must equal the raw class's type-parameter count or IllegalArgumentException is thrown. If the count is zero (only possible for a non-generic class after the count check), it returns get(rawClass) before the owner-type check. Otherwise, if GsonTypes.requiresOwnerType(rawType) is true it throws IllegalArgumentException about needing an owner type. Each individual type argument is required non-null via Objects.requireNonNull, so a null element throws NullPointerException; each argument's raw type must satisfy every bound of the corresponding type variable or IllegalArgumentException is thrown. On success it returns a token for GsonTypes.newParameterizedTypeWithOwner(null, rawClass, typeArguments).
 
-## Look up code
-
-`RUN` is the run directory. Find `ID` by a unit title on this page (exact names first):
-`cbe find --run-dir "$RUN" --term "UNIT_TITLE"`. Then use an `ID` from the results:
-`cbe query --run-dir "$RUN" --id "$ID"`; `cbe source --run-dir "$RUN" --id "$ID" --context 2`.
+Look up code: the commands are under "Read further" in [INDEX.md](../INDEX.md); `cbe query` and `cbe source` take a unit title or anchor from this page.
 
 [f1]: https://github.com/google/gson/blob/e2292f9c9f2e07a4791827e8eea34aa7d80545d6/gson/src/main/java/com/google/gson/internal/bind/ArrayTypeAdapter.java
 [f2]: https://github.com/google/gson/blob/e2292f9c9f2e07a4791827e8eea34aa7d80545d6/gson/src/main/java/com/google/gson/internal/GsonTypes.java

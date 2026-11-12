@@ -87,10 +87,6 @@ Groups macros and declarations that change a node value.
 
 cJSON_SetIntValue: if object is non-NULL, assigns both valueint and valuedouble to number and yields the assigned value; if NULL, yields number without assignment. cJSON_SetNumberValue: if object is non-NULL, calls cJSON_SetNumberHelper with the number cast to double and yields the helper result; if NULL, yields number. The header only declares cJSON_SetNumberHelper, so side effects such as whether valueint is updated are not established here. cJSON_SetValuestring is declared to change valuestring only when the object type is cJSON_String; its implementation and failure semantics are not in this header. cJSON_SetBoolValue: if object is non-NULL and its type has cJSON_False or cJSON_True set, clears those bits and sets cJSON_True for nonzero boolValue or cJSON_False otherwise, yielding the new type; otherwise yields cJSON_Invalid and does not modify the object.
 
-## Look up code
-
-`RUN` is the run directory. Find `ID` by a unit title on this page (exact names first):
-`cbe find --run-dir "$RUN" --term "UNIT_TITLE"`. Then use an `ID` from the results:
-`cbe query --run-dir "$RUN" --id "$ID"`; `cbe source --run-dir "$RUN" --id "$ID" --context 2`.
+Look up code: the commands are under "Read further" in [INDEX.md](../INDEX.md); `cbe query` and `cbe source` take a unit title or anchor from this page.
 
 [f1]: https://github.com/DaveGamble/cJSON/blob/6d9f2443ab071f86e5d9b43025a40929ec41c46c/cJSON.h

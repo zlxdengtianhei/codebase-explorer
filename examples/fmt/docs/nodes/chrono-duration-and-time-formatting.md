@@ -248,10 +248,6 @@ Writes fractional seconds for an integral duration.
 
 It derives the subsecond precision from the period, subtracts whole seconds, converts the remainder to that precision, and formats digits with leading zeros. With negative precision it asserts the representation is not floating and writes a decimal point only when the subsecond period is below seconds. With positive precision it writes a decimal point, limits leading zeros to the requested precision, truncates digits when the precision is shorter than the available digits, and pads remaining zeros. Zero precision writes nothing.
 
-## Look up code
-
-`RUN` is the run directory. Find `ID` by a unit title on this page (exact names first):
-`cbe find --run-dir "$RUN" --term "UNIT_TITLE"`. Then use an `ID` from the results:
-`cbe query --run-dir "$RUN" --id "$ID"`; `cbe source --run-dir "$RUN" --id "$ID" --context 2`.
+Look up code: the commands are under "Read further" in [INDEX.md](../INDEX.md); `cbe query` and `cbe source` take a unit title or anchor from this page.
 
 [f1]: https://github.com/fmtlib/fmt/blob/b4ffa39b9994c961418406f47358791d89a5aa48/include/fmt/chrono.h

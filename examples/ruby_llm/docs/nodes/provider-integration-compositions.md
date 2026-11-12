@@ -216,11 +216,7 @@ Perplexity is an OpenAI-derived provider integration composing chat and models m
 
 Its API base is the fixed Perplexity URL. Headers send a Bearer API key and Content-Type application/json. The class-level capabilities method returns the Perplexity capabilities class, and configuration requires a Perplexity API key. Error parsing returns nil for an empty body; when the body contains both html and title markers, it extracts the title, strips a leading number and space, and returns it; if no title match is found it falls through to the inherited parser, which also handles non-HTML bodies.
 
-## Look up code
-
-`RUN` is the run directory. Find `ID` by a unit title on this page (exact names first):
-`cbe find --run-dir "$RUN" --term "UNIT_TITLE"`. Then use an `ID` from the results:
-`cbe query --run-dir "$RUN" --id "$ID"`; `cbe source --run-dir "$RUN" --id "$ID" --context 2`.
+Look up code: the commands are under "Read further" in [INDEX.md](../INDEX.md); `cbe query` and `cbe source` take a unit title or anchor from this page.
 
 [f1]: https://github.com/crmne/ruby_llm/blob/1e315ab4b3f3a150c443dc9a17f504756c2aad6f/lib/ruby_llm/providers/anthropic.rb
 [f2]: https://github.com/crmne/ruby_llm/blob/1e315ab4b3f3a150c443dc9a17f504756c2aad6f/lib/ruby_llm/providers/bedrock.rb

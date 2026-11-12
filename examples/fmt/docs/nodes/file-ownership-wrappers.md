@@ -102,11 +102,7 @@ Windows non-MinGW helper that opens a UTF-16 path with _wsopen_s using _SH_DENYN
 
 If the resulting descriptor is -1, it throws a system_error with the returned error code and the UTF-8 path; otherwise it returns a file owning the descriptor. On Windows default_open_mode is _S_IREAD|_S_IWRITE, i.e. 0600, not 0666.
 
-## Look up code
-
-`RUN` is the run directory. Find `ID` by a unit title on this page (exact names first):
-`cbe find --run-dir "$RUN" --term "UNIT_TITLE"`. Then use an `ID` from the results:
-`cbe query --run-dir "$RUN" --id "$ID"`; `cbe source --run-dir "$RUN" --id "$ID" --context 2`.
+Look up code: the commands are under "Read further" in [INDEX.md](../INDEX.md); `cbe query` and `cbe source` take a unit title or anchor from this page.
 
 [f1]: https://github.com/fmtlib/fmt/blob/b4ffa39b9994c961418406f47358791d89a5aa48/include/fmt/os.h
 [f2]: https://github.com/fmtlib/fmt/blob/b4ffa39b9994c961418406f47358791d89a5aa48/src/os.cc

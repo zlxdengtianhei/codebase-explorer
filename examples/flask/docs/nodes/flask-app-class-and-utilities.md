@@ -150,10 +150,6 @@ Updates a template context dict in place with values from template context proce
 
 Processor names start with None (app level); if a request is active (truthy proxy), blueprint names are chained in reversed(request.blueprints) order, so more specific blueprints run last. For each name present in template_context_processors, each processor is run through ensure_sync and its result merged into the context. A copy of the original context is taken first and re-applied at the end, so values passed to render_template win over processor values.
 
-## Look up code
-
-`RUN` is the run directory. Find `ID` by a unit title on this page (exact names first):
-`cbe find --run-dir "$RUN" --term "UNIT_TITLE"`. Then use an `ID` from the results:
-`cbe query --run-dir "$RUN" --id "$ID"`; `cbe source --run-dir "$RUN" --id "$ID" --context 2`.
+Look up code: the commands are under "Read further" in [INDEX.md](../INDEX.md); `cbe query` and `cbe source` take a unit title or anchor from this page.
 
 [f1]: https://github.com/pallets/flask/blob/85c5d93cbd049c4bd0679c36fd1ddcae8c37b642/src/flask/app.py
