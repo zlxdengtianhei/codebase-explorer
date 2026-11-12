@@ -5,18 +5,19 @@
   "source_files": 22,
   "source_tokens": 1708,
   "modules": 5,
-  "units": 54,
-  "semantic_nodes": 14,
-  "published_pages": 15,
+  "units": 60,
+  "semantic_nodes": 13,
+  "published_pages": 14,
   "pending": [],
   "normalized": [],
   "unexplained_count": 0,
   "unexplained": [],
   "known_empty": [],
-  "wall_seconds": 88.53,
+  "wall_seconds": 774.043,
   "basis": {
     "cbe_version": "2.2.0.dev0",
     "models": [
+      "group/deepseek",
       "group/glm-5.3-flash"
     ],
     "source": {
@@ -51,7 +52,7 @@
   },
   "run_dir": "<RUN>",
   "index": "<RUN>/docs/INDEX.md",
-  "subagent_tasks": 10,
+  "subagent_tasks": 23,
   "context_fallback_count": 1,
   "context_fallback": [
     {
@@ -63,13 +64,13 @@
   ],
   "deterministic_checks_ok": true,
   "tree": {
-    "leaves": 11,
-    "nodes": 14,
+    "leaves": 10,
+    "nodes": 13,
     "program_made_titles": 0,
     "naming_tasks": 2,
     "index": {
       "budget": 2000,
-      "tokens": 1150,
+      "tokens": 1133,
       "over_budget": false,
       "levels": 2,
       "levels_shown": 2,
@@ -83,30 +84,30 @@
     "graph_only": 0
   },
   "within_containment": 0,
-  "key_flows": 4,
-  "candidate_flows": 4,
+  "key_flows": 5,
+  "candidate_flows": 5,
   "layers": {
     "tokenizer": "o200k_base",
     "source_tokens": 1708,
-    "semantic_tokens": 10009,
+    "semantic_tokens": 10236,
     "semantic_breakdown": {
-      "model_body": 1886,
-      "signature_location": 1426,
-      "heading_anchor": 1216,
-      "relations": 49,
-      "footer": 1288,
-      "index": 2327,
-      "node_text": 1817
+      "model_body": 1905,
+      "signature_location": 1682,
+      "heading_anchor": 1354,
+      "relations": 97,
+      "footer": 1196,
+      "index": 2326,
+      "node_text": 1676
     },
-    "model_body_tokens": 1886,
-    "model_body_source_ratio": 1.104215456674473,
-    "published_markdown_source_ratio": 5.860070257611241,
-    "deterministic_tokens": 109396,
-    "catalog_tokens": 109396,
+    "model_body_tokens": 1905,
+    "model_body_source_ratio": 1.1153395784543325,
+    "published_markdown_source_ratio": 5.992974238875878,
+    "deterministic_tokens": 113151,
+    "catalog_tokens": 113151,
     "frozen_graph_tokens": 0,
     "frozen_graph_bytes": 1030054,
-    "semantic_source_ratio": 5.860070257611241,
-    "deterministic_source_ratio": 64.04918032786885,
+    "semantic_source_ratio": 5.992974238875878,
+    "deterministic_source_ratio": 66.2476580796253,
     "scope": "Breakdown partitions full Markdown BPE tokens by the first byte's line: model_body is published unit explain, summary, extras and uncertainties; signature_location includes shared source-file reference definitions (including ones used by relations); heading_anchor, relations, footer, INDEX and node_text (including labels/whitespace) partition the rest. model_body/source and published_markdown/source use complete frozen files. semantic: all published Markdown (node pages + INDEX, including navigation, signatures and commands); deterministic: catalog.json as serialized, including preserved prose copies and edge references, excluding the graph field; frozen graph is excluded from token ratios (frozen_graph_tokens=0), reported separately as frozen_graph_bytes using UTF-8 JSON with ensure_ascii=False and compact separators; complete graph evidence is expanded only with query --edges; source: complete frozen files counted once; context source chunks, host prompts, raw answers and summary.json excluded; layers are storage measures, not disjoint content classes"
   },
   "semantic_review": {
@@ -145,14 +146,79 @@
           "src/sample.php::function::top::24: describes a Rust main printing with println!, but top defines $inner = fn($x) => $x + 1 and returns $inner($a)."
         ],
         "repair": "done"
+      },
+      {
+        "module": 1,
+        "decision": "accepted",
+        "issues": [],
+        "repair": null
+      },
+      {
+        "module": 2,
+        "decision": "needs_repair",
+        "issues": [
+          "grp:js_case.js-run-wrapper: says fn()'s return value is passed through unchanged and exceptions propagate, but run is async, so it always returns a promise and synchronous throws from fn become promise rejections rather than synchronous throws."
+        ],
+        "repair": "done"
+      },
+      {
+        "module": 3,
+        "decision": "needs_repair",
+        "issues": [
+          "python_case.py::function::helper::155: relation target python_case.py::module_residual::::0 is wrong because FLAG is defined in the module region at L1-9, not the residual region.",
+          "grp:python_case.py-worker-class: says run converts data['n'] to int but omits that int() can raise ValueError or TypeError for non-numeric values and those errors propagate."
+        ],
+        "repair": "done"
+      },
+      {
+        "module": 4,
+        "decision": "accepted",
+        "issues": [],
+        "repair": null
       }
     ],
     "outcomes": {
-      "needs_repair": 1
+      "needs_repair": 3,
+      "accepted": 2
     },
     "pending": [],
-    "escalated": null,
+    "escalated": {
+      "from": "review_1",
+      "issues": 27,
+      "added": [
+        "review_2",
+        "review_3",
+        "review_4",
+        "review_5"
+      ]
+    },
     "note": "an independent reviewer read the source for each reviewed batch; this is not a whole-map proof"
   },
-  "truth": "deterministic structure/coverage checks and the separate semantic review are different states; neither one proves prose truth"
+  "truth": "deterministic structure/coverage checks and the separate semantic review are different states; neither one proves prose truth",
+  "counts": {
+    "done": 16
+  },
+  "leased": [],
+  "failed": [],
+  "ready": 0,
+  "next_action": "done; open <RUN>/docs/INDEX.md, then run `cbe host cost --run-dir <RUN>`",
+  "usage_unknown": [],
+  "render_error": null,
+  "stopped": null,
+  "progress_log": "<RUN>/progress.log",
+  "model": "group/deepseek",
+  "input_token_basis": "provider prompt_tokens minus cached_tokens; cache reported separately",
+  "calls": 27,
+  "input_tokens": 78637,
+  "output_tokens": 105177,
+  "cache_tokens": null,
+  "token_totals_basis": "observed calls; missing usage is excluded, never estimated",
+  "calls_with_unknown_input": 1,
+  "calls_with_unknown_output": 1,
+  "observed_cache_tokens": 6272,
+  "calls_with_unknown_cache": 1,
+  "priced_usd": null,
+  "price_basis": "unknown; configure API price_per_million: [input, output, cache]",
+  "usage_complete": false,
+  "seconds": 920.678
 }

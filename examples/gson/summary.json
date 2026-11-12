@@ -5,9 +5,9 @@
   "source_files": 86,
   "source_tokens": 159691,
   "modules": 18,
-  "units": 460,
-  "semantic_nodes": 49,
-  "published_pages": 50,
+  "units": 442,
+  "semantic_nodes": 44,
+  "published_pages": 45,
   "pending": [],
   "normalized": [
     "module_5"
@@ -15,10 +15,11 @@
   "unexplained_count": 0,
   "unexplained": [],
   "known_empty": [],
-  "wall_seconds": 441.965,
+  "wall_seconds": 4857.17,
   "basis": {
     "cbe_version": "2.2.0.dev0",
     "models": [
+      "group/deepseek",
       "group/glm-5.3-flash"
     ],
     "source": {
@@ -49,58 +50,190 @@
   },
   "run_dir": "<RUN>",
   "index": "<RUN>/docs/INDEX.md",
-  "subagent_tasks": 36,
+  "subagent_tasks": 105,
   "deterministic_checks_ok": true,
   "tree": {
-    "leaves": 32,
-    "nodes": 49,
+    "leaves": 30,
+    "nodes": 44,
     "program_made_titles": 0,
     "naming_tasks": 3,
     "index": {
       "budget": 4790,
-      "tokens": 3612,
+      "tokens": 2809,
       "over_budget": false,
-      "levels": 4,
-      "levels_shown": 4,
+      "levels": 3,
+      "levels_shown": 3,
       "files_per_node": 3,
       "path": "<RUN>/docs/INDEX.md"
     }
   },
   "node_dependencies": {
-    "graph_confirmed": 59,
+    "graph_confirmed": 54,
     "model_inferred": 0,
-    "graph_only": 72
+    "graph_only": 58
   },
   "within_containment": 0,
-  "key_flows": 6,
+  "key_flows": 5,
   "candidate_flows": 24,
   "layers": {
     "tokenizer": "o200k_base",
     "source_tokens": 159691,
-    "semantic_tokens": 92396,
+    "semantic_tokens": 81586,
     "semantic_breakdown": {
-      "model_body": 35056,
-      "signature_location": 19319,
-      "heading_anchor": 12266,
-      "relations": 557,
-      "footer": 4508,
-      "index": 9084,
-      "node_text": 11606
+      "model_body": 29397,
+      "signature_location": 19236,
+      "heading_anchor": 11397,
+      "relations": 0,
+      "footer": 4048,
+      "index": 7817,
+      "node_text": 9691
     },
-    "model_body_tokens": 35056,
-    "model_body_source_ratio": 0.21952395563932844,
-    "published_markdown_source_ratio": 0.5785924065852177,
-    "deterministic_tokens": 2410434,
-    "catalog_tokens": 2410434,
+    "model_body_tokens": 29397,
+    "model_body_source_ratio": 0.1840867675698693,
+    "published_markdown_source_ratio": 0.5108991740298452,
+    "deterministic_tokens": 2400665,
+    "catalog_tokens": 2400665,
     "frozen_graph_tokens": 0,
     "frozen_graph_bytes": 43510266,
-    "semantic_source_ratio": 0.5785924065852177,
-    "deterministic_source_ratio": 15.094363489489076,
+    "semantic_source_ratio": 0.5108991740298452,
+    "deterministic_source_ratio": 15.033189096442504,
     "scope": "Breakdown partitions full Markdown BPE tokens by the first byte's line: model_body is published unit explain, summary, extras and uncertainties; signature_location includes shared source-file reference definitions (including ones used by relations); heading_anchor, relations, footer, INDEX and node_text (including labels/whitespace) partition the rest. model_body/source and published_markdown/source use complete frozen files. semantic: all published Markdown (node pages + INDEX, including navigation, signatures and commands); deterministic: catalog.json as serialized, including preserved prose copies and edge references, excluding the graph field; frozen graph is excluded from token ratios (frozen_graph_tokens=0), reported separately as frozen_graph_bytes using UTF-8 JSON with ensure_ascii=False and compact separators; complete graph evidence is expanded only with query --edges; source: complete frozen files counted once; context source chunks, host prompts, raw answers and summary.json excluded; layers are storage measures, not disjoint content classes"
   },
   "semantic_review": {
     "mode": "sample",
     "reviewed": [
+      {
+        "module": 0,
+        "decision": "needs_repair",
+        "issues": [
+          "gson/src/main/java/module-info.java::module_residual::::0: says the module works without the optional dependencies, but the source only declares requires static and does not establish that runtime code paths avoid them."
+        ],
+        "repair": "done"
+      },
+      {
+        "module": 1,
+        "decision": "needs_repair",
+        "issues": [
+          "gson/src/main/java/com/google/gson/Gson.java::method::Gson.newJsonWriter::35898: says the non-executable prefix is the four-byte string )}' plus newline, but the code writes the five-character prefix )]}' plus newline."
+        ],
+        "repair": "done"
+      },
+      {
+        "module": 2,
+        "decision": "needs_repair",
+        "issues": [
+          "grp:GsonBuilder.java-registertypeadapter-and-override-guard: says hasNonOverridableAdapter rejects Object.class with IllegalArgumentException, but that helper only returns a boolean and registerTypeAdapter throws the exception.",
+          "grp:GsonBuilder.java-simple-flag-setters: omits the member excludeFieldsWithoutExposeAnnotation's excluder delegation and instead describes non-member setFieldNamingStrategy.",
+          "gson/src/main/java/com/google/gson/GsonBuilder.java::method::GsonBuilder.registerTypeHierarchyAdapter::36721: says exact-type registrations take precedence over hierarchy ones, but a hierarchy TypeAdapter is added to the same factories list and reverse registration order can let it precede an earlier exact-type adapter."
+        ],
+        "repair": "done"
+      },
+      {
+        "module": 3,
+        "decision": "needs_repair",
+        "issues": [
+          "grp:JsonArray.java-jsonarray-add-methods: says a null argument array would propagate a NullPointerException from ArrayList.addAll, but the code dereferences array.elements first, so the NPE occurs before ArrayList.addAll is called.",
+          "grp:JsonObject.java-jsonobject-read-accessors: calls entrySet and keySet read-only views, but they are live backed views from the underlying map and can mutate the JsonObject through removal or entry updates."
+        ],
+        "repair": "done"
+      },
+      {
+        "module": 4,
+        "decision": "needs_repair",
+        "issues": [
+          "grp:FieldNamingPolicy.java-fieldnamingpolicy-enum-constants: says aURL becomes a_u_r_l under the separator policies, but only LOWER_CASE_WITH_UNDERSCORES yields a_u_r_l; UPPER_CASE_WITH_UNDERSCORES yields A_U_R_L and the dash/dot policies use '-' and '.'.",
+          "grp:JsonPrimitive.java-hashcode-and-double-hashing: says hashOfDoubleValue uses Long.hashCode whenever the double is mathematically integral, but the code only does so when doubleValue == (long) doubleValue, so integral doubles outside long range use Double.hashCode."
+        ],
+        "repair": "done"
+      },
+      {
+        "module": 5,
+        "decision": "accepted",
+        "issues": [],
+        "repair": null
+      },
+      {
+        "module": 6,
+        "decision": "needs_repair",
+        "issues": [
+          "grp:JsonSerializationContext.java-jsonserializationcontext: says serialize(Object) uses the object's runtime shape, but the source only says it invokes default serialization and does not specify runtime-type selection."
+        ],
+        "repair": "done"
+      },
+      {
+        "module": 7,
+        "decision": "accepted",
+        "issues": [],
+        "repair": null
+      },
+      {
+        "module": 8,
+        "decision": "needs_repair",
+        "issues": [
+          "grp:ConstructorConstructor.java-constructor-lookup-entrypoints: says the filter is consulted even when an InstanceCreator exists only indirectly, but the code returns an InstanceCreatorConstructor before computing filterResult, so instance creators bypass the filter.",
+          "grp:ConstructorConstructor.java-constructor-lookup-entrypoints: says an interface or abstract raw type returns a ThrowingObjectConstructor, but Collection/Map interfaces and abstract collection/map types can be handled by newDefaultImplementationConstructor before checkInstantiable."
+        ],
+        "repair": "done"
+      },
+      {
+        "module": 9,
+        "decision": "needs_repair",
+        "issues": [
+          "gson/src/main/java/com/google/gson/internal/LinkedTreeMap.java::method::LinkedTreeMap.find::4374: says a created node is linked before the header's prev, but the source links it after header.prev as the new header.prev at the end of iteration order.",
+          "grp:Streams.java-appendablewriter-and-currentwrite: says the char[]-based write lets the Appendable see a subSequence view without copying, but CurrentWrite.subSequence returns a new String, so that path copies."
+        ],
+        "repair": "done"
+      },
+      {
+        "module": 10,
+        "decision": "needs_repair",
+        "issues": [
+          "grp:TypeAdapters.java-long-as-string-adapter: says reading is like LONG, but LONG_AS_STRING.read does not catch NumberFormatException and wrap it in JsonSyntaxException as LONG does."
+        ],
+        "repair": "done"
+      },
+      {
+        "module": 11,
+        "decision": "needs_repair",
+        "issues": [
+          "grp:JavaTimeTypeAdapters.java-integer-fields-java-time-adapters: asserts JSON object field names/order and malformed-input exception surface from IntegerFieldsTypeAdapter, but that adapter's read/write loop is not in the supplied source.",
+          "grp:JavaTimeTypeAdapters.java-localdatetime-adapter: says a missing member triggers JsonSyntaxException, but a present null value also leaves the field null and triggers requireNonNullField.",
+          "grp:JavaTimeTypeAdapters.java-offsetdatetime-and-offsettime-adapters: says a missing member triggers JsonSyntaxException, but a present null value also leaves the field null and triggers requireNonNullField.",
+          "grp:JavaTimeTypeAdapters.java-zoneddatetime-adapter: says a missing member triggers JsonSyntaxException, but a present null value also leaves the field null and triggers requireNonNullField.",
+          "grp:ReflectiveTypeAdapterFactory.java-recordadapter: says readField throws IllegalStateException for a missing component, but Adapter.read catches IllegalStateException and wraps it as JsonSyntaxException, so the public failure surface is JsonSyntaxException.",
+          "grp:ReflectiveTypeAdapterFactory.java-createboundfield-and-its-boundfield-implementation: implies static final fields throw JsonIOException, but that branch only runs when blockInaccessible is false; when blocked, the accessibility check runs and field.set may throw IllegalAccessException."
+        ],
+        "repair": "done"
+      },
+      {
+        "module": 12,
+        "decision": "needs_repair",
+        "issues": [
+          "grp:JsonTreeReader.java-nextdouble-and-nextlong: says both nextDouble and nextLong ASCII-validate STRING inputs first, but nextDouble does not call validateAscii; only nextLong does."
+        ],
+        "repair": "done"
+      },
+      {
+        "module": 13,
+        "decision": "needs_repair",
+        "issues": [
+          "grp:NumberTypeAdapter.java-numbertypeadapter-class-and-factories: describes getFactory behavior even though getFactory is not a member of this group; getFactory is listed in grp:NumberTypeAdapter.java-numbertypeadapter-read-write, whose explanation omits it.",
+          "gson/src/main/java/com/google/gson/internal/bind/JsonElementTypeAdapter.java::method::JsonElementTypeAdapter.read::2548: says malformed structure surfaces as reader IOExceptions and the IllegalStateException path comes only from readTerminal, but the source does not establish that exclusive failure surface for the reader calls.",
+          "gson/src/main/java/com/google/gson/internal/bind/ObjectTypeAdapter.java::method::ObjectTypeAdapter.read::3491: says the only thrown exception is readTerminal's IllegalStateException, but the source does not establish that exclusive failure surface for the reader calls.",
+          "gson/src/main/java/com/google/gson/internal/bind/ArrayTypeAdapter.java::method::ArrayTypeAdapter.read::2391: says unboxing nulls would throw, but the code passes list elements to Array.set without unboxing, so the failure surface is Array.set's exception rather than an unboxing NPE."
+        ],
+        "repair": "done"
+      },
+      {
+        "module": 14,
+        "decision": "needs_repair",
+        "issues": [
+          "grp:ReflectionHelper.java-reflectionhelper-class: says record queries never fail merely because the JVM lacks records, but on a non-record JVM isRecord returns false while getRecordComponentNames, getAccessor, and getCanonicalRecordConstructor throw UnsupportedOperationException.",
+          "grp:ReflectionHelper.java-class-modifier-queries: says isAnonymousOrNonStaticLocal identifies inner classes that cannot be instantiated via a no-arg constructor, but the code only checks non-static plus anonymous/local and does not test constructors.",
+          "gson/src/main/java/com/google/gson/internal/bind/util/ISO8601Utils.java::method::ISO8601Utils.parse::5200: describes accepted date/time and timezone formats as yyyy-MM-dd/yyyyMMdd and [+-]hh[:mm], but the code also accepts mixed dash/colon variants and +hhmm offsets."
+        ],
+        "repair": "done"
+      },
       {
         "module": 15,
         "decision": "needs_repair",
@@ -108,14 +241,84 @@
           "gson/src/main/java/com/google/gson/stream/JsonReader.java::method::JsonReader.nextNonWhitespace::53619: says only comments require lenient mode and that '/' is otherwise returned as data, but checkLenient() is invoked for every '/' with following input before the comment/data distinction, so in non-lenient mode any '/' (even one that is not starting a comment) throws MalformedJsonException, and '/' is only ever returned as data in lenient mode or at end of input"
         ],
         "repair": "done"
+      },
+      {
+        "module": 16,
+        "decision": "needs_repair",
+        "issues": [
+          "grp:JsonWriter.java-formatting-configuration: says formattedColon is ': ' or ':' on the same condition as formattedComma (space-after-separators and empty newline), but the code sets formattedColon to ': ' whenever usesSpaceAfterSeparators() is true, regardless of newline.",
+          "gson/src/main/java/com/google/gson/stream/JsonWriter.java::method::JsonWriter.value::20995: says a malformed Number is rejected before any output is written, but writeDeferredName() runs before validation, so a pending property name is written before the IllegalArgumentException.",
+          "gson/src/main/java/com/google/gson/stream/JsonWriter.java::method::JsonWriter.string::24404: says it selects the HTML-safe replacement table but does not state that this additionally escapes <, >, &, = and ', so the htmlSafe branch's output is not fully described."
+        ],
+        "repair": "done"
+      },
+      {
+        "module": 17,
+        "decision": "needs_repair",
+        "issues": [
+          "grp:LazilyParsedNumber.java-lazilyparsednumber-numeric-conversions: says intValue/longValue fall back to BigDecimal and truncate rather than throw, but asBigDecimal uses NumberLimits.parseBigDecimal, which can throw NumberFormatException for strings over 10,000 chars or with absolute scale >= 10,000.",
+          "grp:LazilyParsedNumber.java-lazilyparsednumber-value-semantics-and-serialization: says writeReplace substitutes a BigDecimal, but it calls asBigDecimal/NumberLimits.parseBigDecimal and can throw NumberFormatException for invalid or over-limit strings.",
+          "grp:TypeToken.java-typetoken-assignability-internals: says the parameterized check builds a type-variable map from the source's actual arguments, but it only does so when the source is a ParameterizedType; otherwise it skips typeEquals and recurses into interfaces/superclass.",
+          "grp:TypeToken.java-typetoken-factories: says getParameterized throws IllegalArgumentException if rawType is not a Class, but a null rawType is rejected earlier by Objects.requireNonNull and throws NullPointerException."
+        ],
+        "repair": "done"
       }
     ],
     "outcomes": {
-      "needs_repair": 1
+      "needs_repair": 16,
+      "accepted": 2
     },
     "pending": [],
-    "escalated": null,
+    "escalated": {
+      "from": "review_16",
+      "issues": 1,
+      "added": [
+        "review_1",
+        "review_2",
+        "review_3",
+        "review_4",
+        "review_5",
+        "review_6",
+        "review_7",
+        "review_8",
+        "review_9",
+        "review_10",
+        "review_11",
+        "review_12",
+        "review_13",
+        "review_14",
+        "review_15",
+        "review_17",
+        "review_18"
+      ]
+    },
     "note": "an independent reviewer read the source for each reviewed batch; this is not a whole-map proof"
   },
-  "truth": "deterministic structure/coverage checks and the separate semantic review are different states; neither one proves prose truth"
+  "truth": "deterministic structure/coverage checks and the separate semantic review are different states; neither one proves prose truth",
+  "counts": {
+    "done": 56
+  },
+  "leased": [],
+  "failed": [],
+  "ready": 0,
+  "next_action": "done; open <RUN>/docs/INDEX.md, then run `cbe host cost --run-dir <RUN>`",
+  "usage_unknown": [],
+  "render_error": null,
+  "stopped": null,
+  "progress_log": "<RUN>/progress.log",
+  "model": "group/deepseek",
+  "input_token_basis": "provider prompt_tokens minus cached_tokens; cache reported separately",
+  "calls": 113,
+  "input_tokens": 1654536,
+  "output_tokens": 1149617,
+  "cache_tokens": null,
+  "token_totals_basis": "observed calls; missing usage is excluded, never estimated",
+  "calls_with_unknown_input": 1,
+  "calls_with_unknown_output": 1,
+  "observed_cache_tokens": 360256,
+  "calls_with_unknown_cache": 1,
+  "priced_usd": null,
+  "price_basis": "unknown; configure API price_per_million: [input, output, cache]",
+  "usage_complete": false,
+  "seconds": 7995.238
 }

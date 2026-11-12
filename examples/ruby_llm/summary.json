@@ -5,18 +5,19 @@
   "source_files": 115,
   "source_tokens": 74885,
   "modules": 12,
-  "units": 352,
-  "semantic_nodes": 35,
-  "published_pages": 36,
+  "units": 295,
+  "semantic_nodes": 27,
+  "published_pages": 28,
   "pending": [],
   "normalized": [],
   "unexplained_count": 0,
   "unexplained": [],
   "known_empty": [],
-  "wall_seconds": 301.404,
+  "wall_seconds": 3744.116,
   "basis": {
     "cbe_version": "2.2.0.dev0",
     "models": [
+      "group/deepseek",
       "group/glm-5.3-flash"
     ],
     "source": {
@@ -47,58 +48,76 @@
   },
   "run_dir": "<RUN>",
   "index": "<RUN>/docs/INDEX.md",
-  "subagent_tasks": 21,
+  "subagent_tasks": 66,
   "deterministic_checks_ok": true,
   "tree": {
-    "leaves": 26,
-    "nodes": 35,
+    "leaves": 19,
+    "nodes": 27,
     "program_made_titles": 0,
-    "naming_tasks": 3,
+    "naming_tasks": 2,
     "index": {
       "budget": 2246,
-      "tokens": 1904,
+      "tokens": 1992,
       "over_budget": false,
       "levels": 3,
-      "levels_shown": 2,
-      "files_per_node": 0,
+      "levels_shown": 3,
+      "files_per_node": 1,
       "path": "<RUN>/docs/INDEX.md"
     }
   },
   "node_dependencies": {
-    "graph_confirmed": 23,
-    "model_inferred": 2,
-    "graph_only": 20
+    "graph_confirmed": 15,
+    "model_inferred": 0,
+    "graph_only": 16
   },
   "within_containment": 0,
-  "key_flows": 5,
+  "key_flows": 6,
   "candidate_flows": 24,
   "layers": {
     "tokenizer": "o200k_base",
     "source_tokens": 74885,
-    "semantic_tokens": 67526,
+    "semantic_tokens": 58362,
     "semantic_breakdown": {
-      "model_body": 29419,
-      "signature_location": 12599,
-      "heading_anchor": 9134,
-      "relations": 453,
-      "footer": 3220,
-      "index": 4999,
-      "node_text": 7702
+      "model_body": 26458,
+      "signature_location": 11863,
+      "heading_anchor": 7630,
+      "relations": 203,
+      "footer": 2484,
+      "index": 4472,
+      "node_text": 5252
     },
-    "model_body_tokens": 29419,
-    "model_body_source_ratio": 0.3928557120918742,
-    "published_markdown_source_ratio": 0.9017293182880417,
-    "deterministic_tokens": 2142904,
-    "catalog_tokens": 2142904,
+    "model_body_tokens": 26458,
+    "model_body_source_ratio": 0.3533150831274621,
+    "published_markdown_source_ratio": 0.7793550110168925,
+    "deterministic_tokens": 2117219,
+    "catalog_tokens": 2117219,
     "frozen_graph_tokens": 0,
     "frozen_graph_bytes": 52564448,
-    "semantic_source_ratio": 0.9017293182880417,
-    "deterministic_source_ratio": 28.615931094344663,
+    "semantic_source_ratio": 0.7793550110168925,
+    "deterministic_source_ratio": 28.272938505708755,
     "scope": "Breakdown partitions full Markdown BPE tokens by the first byte's line: model_body is published unit explain, summary, extras and uncertainties; signature_location includes shared source-file reference definitions (including ones used by relations); heading_anchor, relations, footer, INDEX and node_text (including labels/whitespace) partition the rest. model_body/source and published_markdown/source use complete frozen files. semantic: all published Markdown (node pages + INDEX, including navigation, signatures and commands); deterministic: catalog.json as serialized, including preserved prose copies and edge references, excluding the graph field; frozen graph is excluded from token ratios (frozen_graph_tokens=0), reported separately as frozen_graph_bytes using UTF-8 JSON with ensure_ascii=False and compact separators; complete graph evidence is expanded only with query --edges; source: complete frozen files counted once; context source chunks, host prompts, raw answers and summary.json excluded; layers are storage measures, not disjoint content classes"
   },
   "semantic_review": {
     "mode": "sample",
     "reviewed": [
+      {
+        "module": 0,
+        "decision": "needs_repair",
+        "issues": [
+          "lib/ruby_llm.rb::method::RubyLLM.configure::1413: says the block's return value is discarded, but the method returns the result of yield.",
+          "lib/ruby_llm.rb::module_residual::::0: says loader.setup activates eager/normal loading, but the source only calls setup and never eager_loads; setup installs autoloading.",
+          "grp:ruby_llm.rb-registry-accessors: says both accessors are read-only with no side effects, but the source only shows Models.instance and Provider.providers.values and does not establish that Models.instance is side-effect-free."
+        ],
+        "repair": "done"
+      },
+      {
+        "module": 1,
+        "decision": "needs_repair",
+        "issues": [
+          "lib/generators/ruby_llm/chat_ui/chat_ui_generator.rb::method::RubyLLM.Generators.ChatUIGenerator.add_broadcasting_to_message_model::5591: says injection happens before the message model's final end, but the code uses before: \"end\\n\" without anchoring to the final end."
+        ],
+        "repair": "done"
+      },
       {
         "module": 2,
         "decision": "needs_repair",
@@ -106,14 +125,150 @@
           "grp:chat.rb-tool-call-execution-loop: says a Tool::Halt result is returned 'stopping the loop', but handle_tool_calls iterates all of the response's tool calls without breaking; every remaining tool call still executes and appends its tool message, and only the final recursion into complete is skipped, returning the last Halt result (not the first) if any occurred."
         ],
         "repair": "done"
+      },
+      {
+        "module": 3,
+        "decision": "needs_repair",
+        "issues": [
+          "grp:configuration.rb-global-configuration: says instance_variables strips ivars whose names end in _id, _key, _secret, or _token, but the regex only anchors _token and matches _id/_key/_secret anywhere.",
+          "grp:mime_type.rb-mime-type-helpers: says all predicates raise NoMethodError on nil, but pdf? compares with == and returns false for nil.",
+          "grp:utils.rb-data-utilities: says deep_symbolize_keys leaves arrays' contents intact, but it recursively maps arrays and symbolizes nested hash keys."
+        ],
+        "repair": "done"
+      },
+      {
+        "module": 4,
+        "decision": "needs_repair",
+        "issues": [
+          "grp:acts_as.rb-actsas-concern-and-models-monkey-patch: says the included hook reopens RubyLLM::Models::Singleton, but the source class_eval target is RubyLLM::Models.",
+          "grp:acts_as.rb-acts-as-dsl-macros: says class names default via classify on the association name, but acts_as_tool_call defaults result_class to message_class and acts_as_message's parent_tool_call uses tool_call_class rather than classifying the association name.",
+          "grp:acts_as_legacy.rb-legacy-with-delegators: says with_context re-builds to_llm with the given context, but to_llm memoizes @chat with ||= so an existing chat is reused and the new context is ignored.",
+          "grp:chat_methods.rb-tool-call-persistence: lists persist_content as a member but the explanation never states that it attaches prepared blobs only when the record responds to attachments.",
+          "grp:acts_as_legacy.rb-legacy-persistence-internals and grp:chat_methods.rb-attachment-and-content-normalization: say convert_to_active_storage_format wraps non-Attachment sources, but it returns nil for blank sources before wrapping."
+        ],
+        "repair": "done"
+      },
+      {
+        "module": 5,
+        "decision": "needs_repair",
+        "issues": [
+          "grp:capabilities.rb-bedrock-provider-class: says the reopened Bedrock class mixes in Capabilities, Chat, Media, Models, Signing, and Streaming, but the supplied files only define those modules nested inside the class and show no include/mixin.",
+          "lib/ruby_llm/providers/bedrock/models.rb::method::RubyLLM.Providers.Bedrock.Models.model_id_with_region::2633: says the ID is unchanged when inferenceTypesSupported includes 'INFERENCE_PROFILE', but the code returns unchanged unless it includes 'INFERENCE_PROFILE' (and also returns unchanged when it includes 'ON_DEMAND').",
+          "grp:signing.rb-signature: says initialize dynamically defines setters for every option key, but it only calls existing attr_accessor setters via send, so unknown keys raise NoMethodError instead of being accepted.",
+          "lib/ruby_llm/providers/bedrock/chat.rb::method::RubyLLM.Providers.Bedrock.Chat.sync_response::194: says additional_headers are layered over the request headers, but the code does additional_headers.merge(req.headers), so request headers override additional_headers."
+        ],
+        "repair": "done"
+      },
+      {
+        "module": 6,
+        "decision": "needs_repair",
+        "issues": [
+          "grp:capabilities.rb-capability-predicates: says vision/functions/json/caching are false for embedding ids, but the code only excludes text-embedding and embedding-001, so gemini-embedding-exp matches /gemini/ and returns true.",
+          "grp:capabilities.rb-capability-predicates: says each predicate explicitly excludes flash-lite, but supports_vision?, supports_video?, and supports_audio? do not exclude it and return true for flash-lite ids.",
+          "grp:streaming.rb-streaming: build_chunk also sets tool_calls via extract_tool_calls, but the unit only describes model id, content, and token extraction.",
+          "grp:chat.rb-completion-response-parsing: says parse_content returns '' for a tool-call-only turn, but the code returns '' whenever any part has functionCall, even if text parts are also present.",
+          "grp:tools.rb-tool-schema-conversion: normalize_any_of_schema sets nullable only when exactly one non-null option and a null option exist; with multiple non-null options and a null it returns the first non-null without nullable, which the unit does not state."
+        ],
+        "repair": "done"
+      },
+      {
+        "module": 7,
+        "decision": "needs_repair",
+        "issues": [
+          "lib/ruby_llm/providers/openai/capabilities.rb::method::RubyLLM.Providers.OpenAI.Capabilities.model_family::6708: says negative lookaheads keep mini/nano variants out of base families, but the gpt5 pattern /^gpt-5/ precedes gpt5_mini and gpt5_nano and matches them, so those families are never returned.",
+          "grp:transcription.rb-audio-transcription: says an explicitly passed chunking_strategy option always allows it, but supports_chunking_strategy? returns false for whisper models before checking the option.",
+          "grp:capabilities.rb-context-window-and-output-token-limits: omits recognized families such as gpt4o, gpt4_turbo, chatgpt4o, o1_mini, and babbage/davinci and their distinct context/max values, so the stated mapping is incomplete.",
+          "grp:capabilities.rb-capability-predicates-2: says vision is true for 4o families, but supports_vision? returns false for gpt4o_audio, gpt4o_realtime, gpt4o_transcribe, gpt4o_mini_audio, gpt4o_mini_realtime, gpt4o_mini_transcribe, and gpt4o_mini_tts."
+        ],
+        "repair": "done"
+      },
+      {
+        "module": 8,
+        "decision": "needs_repair",
+        "issues": [
+          "grp:capabilities.rb-anthropic-price-lookups: says get_input_price and get_output_price dig the family's PRICES entry, but model_family returns a string while PRICES keys are symbols, so both lookups always fall back to the defaults.",
+          "grp:tools.rb-anthropic-tool-message-formatting: says format_tool_call returns the Raw content value directly, but the code returns an assistant message hash whose content is the raw value.",
+          "grp:models.rb-vertexai-model-builders: says build_model_from_api_data stores versionId, openSourceCategory, launchStage, supportedActions, and publisherModelTemplate in metadata, but the metadata keys are snake_case (version_id, open_source_category, launch_stage, supported_actions, publisher_model_template).",
+          "grp:prelude_handling.rb-bedrock-event-stream-prelude-handling: says find_next_message scans for the next valid 8-byte candidate, but scan_range stops before chunk.bytesize - 8, so the final possible position is never checked."
+        ],
+        "repair": "done"
+      },
+      {
+        "module": 9,
+        "decision": "needs_repair",
+        "issues": [
+          "grp:base.rb-bedrock-streaming-base: says stream_response signs against connection.url_prefix + stream_url, but the code uses connection.connection.url_prefix + stream_url.",
+          "grp:embeddings.rb-vertexai-embeddings: says parse_embedding_response maps body['predictions''] but the code reads body['predictions']."
+        ],
+        "repair": "done"
+      },
+      {
+        "module": 10,
+        "decision": "needs_repair",
+        "issues": [
+          "grp:info.rb-model-info: calls Info an immutable value object, but the class exposes mutable arrays/hashes through attr_reader and to_h without freezing.",
+          "grp:info.rb-model-info: initialize's description omits that missing modalities and pricing are defaulted to empty hashes before wrapping, so nil inputs do not raise."
+        ],
+        "repair": "done"
+      },
+      {
+        "module": 11,
+        "decision": "needs_repair",
+        "issues": [
+          "lib/tasks/models.rake::function::generate_aliases::8424: says Anthropic aliases are emitted only if an OpenRouter or Bedrock match exists, but the guard also accepts the Anthropic model itself, which is always present, so every grouped Anthropic base name gets an alias.",
+          "lib/tasks/models.rake::module_residual::::0: says all tasks depend on ENV keys for live refresh, but only models:update configures from ENV and refreshes; models:docs and models:aliases do not."
+        ],
+        "repair": "done"
       }
     ],
     "outcomes": {
-      "needs_repair": 1
+      "needs_repair": 12
     },
     "pending": [],
-    "escalated": null,
+    "escalated": {
+      "from": "review_3",
+      "issues": 1,
+      "added": [
+        "review_1",
+        "review_2",
+        "review_4",
+        "review_5",
+        "review_6",
+        "review_7",
+        "review_8",
+        "review_9",
+        "review_10",
+        "review_11",
+        "review_12"
+      ]
+    },
     "note": "an independent reviewer read the source for each reviewed batch; this is not a whole-map proof"
   },
-  "truth": "deterministic structure/coverage checks and the separate semantic review are different states; neither one proves prose truth"
+  "truth": "deterministic structure/coverage checks and the separate semantic review are different states; neither one proves prose truth",
+  "counts": {
+    "done": 39
+  },
+  "leased": [],
+  "failed": [],
+  "ready": 0,
+  "next_action": "done; open <RUN>/docs/INDEX.md, then run `cbe host cost --run-dir <RUN>`",
+  "usage_unknown": [],
+  "render_error": null,
+  "stopped": null,
+  "progress_log": "<RUN>/progress.log",
+  "model": "group/deepseek",
+  "input_token_basis": "provider prompt_tokens minus cached_tokens; cache reported separately",
+  "calls": 71,
+  "input_tokens": 1130872,
+  "output_tokens": 917112,
+  "cache_tokens": 117504,
+  "token_totals_basis": "observed calls; missing usage is excluded, never estimated",
+  "calls_with_unknown_input": 0,
+  "calls_with_unknown_output": 0,
+  "observed_cache_tokens": 117504,
+  "calls_with_unknown_cache": 0,
+  "priced_usd": null,
+  "price_basis": "unknown; configure API price_per_million: [input, output, cache]",
+  "usage_complete": true,
+  "seconds": 6123.716
 }

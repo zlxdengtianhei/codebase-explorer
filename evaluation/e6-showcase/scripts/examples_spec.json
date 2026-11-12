@@ -6,11 +6,17 @@
     "origin": "Origin: synthetic fixture in this repository, manifest SHA-256 `6b19d76603fb65d1961c8c2eb449b0ff9d101eedfdd0e0a1f09676b2b6b4965c`",
     "scope": "all of `source/` (23 files; CBE reads 22)",
     "read": [
-      "worker-and-queue-case-study.md",
-      "javascript-closures-and-async.md",
-      "edge-case-parsing-fixtures.md"
+      "cross-language-object-utilities.md",
+      "cross-language-greeter-utilities.md",
+      "php-swift-shape-examples.md"
     ],
-    "term": "Worker"
+    "term": "Worker",
+    "model_note": "GLM-5.3-flash through a local gateway, API path, route `group/glm-5.3-flash`, with `--config` `{\"timeout\": 1800, \"output_max_tokens\": 49152, \"reasoning_effort\": \"low\", \"response_format\": {\"type\": \"json_object\"}, \"batch_target_tokens\": 8000, \"batch_max_tokens\": 10000}` (the built-in defaults of route `zai/glm-5.3-flash`, which a route name outside the model profile does not get); then, with CBE `3928ff5`, because the sampled review had findings, every batch was reviewed and the flagged explanations rewritten by DeepSeek (route `group/deepseek`, same gateway and `--config`)",
+    "review_pass2": {
+      "rechecked": 3,
+      "issues": 2,
+      "repaired": 1
+    }
   },
   "cjson": {
     "title": "cJSON",
@@ -19,13 +25,19 @@
     "origin": "Upstream: https://github.com/DaveGamble/cJSON at `6d9f2443ab071f86e5d9b43025a40929ec41c46c`",
     "scope": "`cJSON.c`, `cJSON.h`, `cJSON_Utils.c`, `cJSON_Utils.h`",
     "read": [
-      "json-parser.md",
-      "json-printing-and-serialization.md",
-      "json-pointer-resolution.md"
+      "core-json-parse-and-print.md",
+      "json-pointer-patch-utilities.md",
+      "public-utility-api-and-mutators.md"
     ],
     "term": "cJSON_InitHooks",
     "repo_url": "https://github.com/DaveGamble/cJSON",
-    "sha": "6d9f2443ab071f86e5d9b43025a40929ec41c46c"
+    "sha": "6d9f2443ab071f86e5d9b43025a40929ec41c46c",
+    "model_note": "GLM-5.3-flash through a local gateway, API path, route `group/glm-5.3-flash`, with `--config` `{\"timeout\": 1800, \"output_max_tokens\": 49152, \"reasoning_effort\": \"low\", \"response_format\": {\"type\": \"json_object\"}, \"batch_target_tokens\": 8000, \"batch_max_tokens\": 10000}` (the built-in defaults of route `zai/glm-5.3-flash`, which a route name outside the model profile does not get); then, with CBE `3928ff5`, because the sampled review had findings, every batch was reviewed and the flagged explanations rewritten by DeepSeek (route `group/deepseek`, same gateway and `--config`)",
+    "review_pass2": {
+      "rechecked": 4,
+      "issues": 8,
+      "repaired": 1
+    }
   },
   "tsdown": {
     "title": "tsdown",
@@ -34,13 +46,19 @@
     "origin": "Upstream: https://github.com/rolldown/tsdown at `2b1be7e0accdb1d6e903cd42642666431fc5e93d`",
     "scope": "`src/` without `*.test.ts`",
     "read": [
-      "build-orchestration-and-lifecycle.md",
-      "rolldown-option-assembly.md",
-      "config-resolution-and-normalization.md"
+      "package-output-and-validation.md",
+      "dependency-externalization-utilities.md",
+      "package-export-map-generation.md"
     ],
     "term": "resolveConfig",
     "repo_url": "https://github.com/rolldown/tsdown",
-    "sha": "2b1be7e0accdb1d6e903cd42642666431fc5e93d"
+    "sha": "2b1be7e0accdb1d6e903cd42642666431fc5e93d",
+    "model_note": "GLM-5.3-flash through a local gateway, API path, route `group/glm-5.3-flash`, with `--config` `{\"timeout\": 1800, \"output_max_tokens\": 49152, \"reasoning_effort\": \"low\", \"response_format\": {\"type\": \"json_object\"}, \"batch_target_tokens\": 8000, \"batch_max_tokens\": 10000}` (the built-in defaults of route `zai/glm-5.3-flash`, which a route name outside the model profile does not get); then, with CBE `3928ff5`, because the sampled review had findings, every batch was reviewed and the flagged explanations rewritten by DeepSeek (route `group/deepseek`, same gateway and `--config`)",
+    "review_pass2": {
+      "rechecked": 7,
+      "issues": 8,
+      "repaired": 5
+    }
   },
   "ruby_llm": {
     "title": "ruby_llm",
@@ -49,13 +67,19 @@
     "origin": "Upstream: https://github.com/crmne/ruby_llm at `1e315ab4b3f3a150c443dc9a17f504756c2aad6f`",
     "scope": "`lib/` (147 files; CBE reads 115)",
     "read": [
-      "provider-adapters-and-tools.md",
-      "streaming-and-result-objects.md",
-      "tool-definition-and-execution.md"
+      "provider-model-abstractions.md",
+      "provider-composition-and-registry.md",
+      "provider-integration-compositions.md"
     ],
     "term": "Tool",
     "repo_url": "https://github.com/crmne/ruby_llm",
-    "sha": "1e315ab4b3f3a150c443dc9a17f504756c2aad6f"
+    "sha": "1e315ab4b3f3a150c443dc9a17f504756c2aad6f",
+    "model_note": "GLM-5.3-flash through a local gateway, API path, route `group/glm-5.3-flash`, with `--config` `{\"timeout\": 1800, \"output_max_tokens\": 49152, \"reasoning_effort\": \"low\", \"response_format\": {\"type\": \"json_object\"}, \"batch_target_tokens\": 8000, \"batch_max_tokens\": 10000}` (the built-in defaults of route `zai/glm-5.3-flash`, which a route name outside the model profile does not get); then, with CBE `3928ff5`, because the sampled review had findings, every batch was reviewed and the flagged explanations rewritten by DeepSeek (route `group/deepseek`, same gateway and `--config`)",
+    "review_pass2": {
+      "rechecked": 12,
+      "issues": 16,
+      "repaired": 9
+    }
   },
   "flask": {
     "title": "Flask",
@@ -84,16 +108,22 @@
     "origin": "Upstream: https://github.com/fmtlib/fmt at `b4ffa39b9994c961418406f47358791d89a5aa48`",
     "scope": "`include/` and `src/`, read as C++ (`--header-language cpp`)",
     "read": [
-      "core-formatting-implementation.md",
-      "chrono-and-time-formatting.md",
-      "float-to-decimal-conversion.md"
+      "core-formatting-internals.md",
+      "low-level-formatting-primitives.md",
+      "format-core-utilities.md"
     ],
     "term": "vformat",
     "gaps": [
       "The second `find` row above, `FMT_EXPORT`, is a macro the parser took for a function name; the unit is the `dynamic_format_arg_store` class declared at `include/fmt/args.h:L66-L78`."
     ],
     "repo_url": "https://github.com/fmtlib/fmt",
-    "sha": "b4ffa39b9994c961418406f47358791d89a5aa48"
+    "sha": "b4ffa39b9994c961418406f47358791d89a5aa48",
+    "model_note": "GLM-5.3-flash through a local gateway, API path, route `group/glm-5.3-flash`, with `--config` `{\"timeout\": 1800, \"output_max_tokens\": 49152, \"reasoning_effort\": \"low\", \"response_format\": {\"type\": \"json_object\"}, \"batch_target_tokens\": 8000, \"batch_max_tokens\": 10000}` (the built-in defaults of route `zai/glm-5.3-flash`, which a route name outside the model profile does not get); then, with CBE `3928ff5`, because the sampled review had findings, every batch was reviewed and the flagged explanations rewritten by DeepSeek (route `group/deepseek`, same gateway and `--config`)",
+    "review_pass2": {
+      "rechecked": 10,
+      "issues": 18,
+      "repaired": 7
+    }
   },
   "gson": {
     "title": "Gson",
@@ -102,12 +132,18 @@
     "origin": "Upstream: https://github.com/google/gson at `e2292f9c9f2e07a4791827e8eea34aa7d80545d6`",
     "scope": "`gson/src/main/java`",
     "read": [
-      "type-adapter-framework.md",
-      "json-reading-infrastructure.md",
-      "reflective-object-binding.md"
+      "core-configuration-and-adapters.md",
+      "gson-setup-and-defaults.md",
+      "gson-builder-configuration.md"
     ],
     "term": "toJson",
     "repo_url": "https://github.com/google/gson",
-    "sha": "e2292f9c9f2e07a4791827e8eea34aa7d80545d6"
+    "sha": "e2292f9c9f2e07a4791827e8eea34aa7d80545d6",
+    "model_note": "GLM-5.3-flash through a local gateway, API path, route `group/glm-5.3-flash`, with `--config` `{\"timeout\": 1800, \"output_max_tokens\": 49152, \"reasoning_effort\": \"low\", \"response_format\": {\"type\": \"json_object\"}, \"batch_target_tokens\": 8000, \"batch_max_tokens\": 10000}` (the built-in defaults of route `zai/glm-5.3-flash`, which a route name outside the model profile does not get); then, with CBE `3928ff5`, because the sampled review had findings, every batch was reviewed and the flagged explanations rewritten by DeepSeek (route `group/deepseek`, same gateway and `--config`)",
+    "review_pass2": {
+      "rechecked": 16,
+      "issues": 35,
+      "repaired": 10
+    }
   }
 }

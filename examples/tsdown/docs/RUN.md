@@ -5,13 +5,13 @@ Where this run's facts come from and what was and was not checked.
 ## Generation basis
 
 - CBE version: `2.2.0.dev0`
-- Models: `group/glm-5.3-flash`
+- Models: `group/deepseek`, `group/glm-5.3-flash`
 - Source: 43 files · SHA-256 `6211424a980e58ce57402128a3755fa54e4cc701bec5faece8c851386f3b90a6`
 - Graph: SHA-256 `6690f936b2f6bf4a588286dc3c0d0ee0fc3346089a27245b02730b71f14e075c` · built by `joern` 4.0.654, `dependency-cruiser` 16.10.4 · edges call=1013, cfg=21516, dataflow=39253, import=532 · replaced no
 
 ## Reading stats
 
-- units: 113 · semantic nodes: 15 · dispositioned inventory ids: 317
+- units: 116 · semantic nodes: 17 · dispositioned inventory ids: 317
 - source ranges are program-derived from the inventory, never model-written
 
 ## Graph coverage
@@ -25,4 +25,4 @@ Program checks: dangling edges 0; nodes outside manifest 0; nodes with missing f
 
 ## Generation notes
 
-- Review: sampled batch module_4 (30 units), 2 issue(s); the other 6 batch(es) were not reviewed.
+- Review: the sampled batch (review_4) reported 2 issue(s), so every batch was reviewed: 7 of 7 reviewed, 25 issue(s) in total.

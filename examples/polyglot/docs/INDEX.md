@@ -1,29 +1,29 @@
 # polyglot: code map
 
-This repository is a polyglot collection of small, self-contained code samples spanning PHP, Swift, Ruby, Python, Kotlin, JavaScript, Go, Rust, C, C++, TypeScript, C#, and Java. Its top-level modules divide the work into parallel greeting-and-utility demos for cross-language comparison, parser edge-case fixtures and generics/interface samples for exercising language tooling, and standalone demonstrations of closures, async patterns, structs, workers, and minimal main classes. Each file is intentionally small, mixing reader-facing feature demos with fixture-oriented stress cases.
+This repository is a polyglot collection of small code examples and tests. Its top-level modules divide work among cross-language object/utility examples, struct/closure and mixed-syntax cases, JavaScript async/closure patterns, Python worker JSON/state handling, TypeScript shape/identity examples, and queue/trivial tests. The examples emphasize parallel syntax demonstrations rather than a single application; some parser-oriented cases, such as the malformed C file, have explicitly unreliable function boundaries.
 
 ## Modules
 
-- [**Scripting Language Greeting Demos**](nodes/scripting-language-greeting-demos.md) — Provides matching greeting classes and utility helpers in PHP, Swift, Ruby, Python, and Kotlin for cross-language comparison. (16 units; `sample.rb`, `sample.php`, `sample.py`)
-  - [**PHP and Swift Greeting Samples**](nodes/php-and-swift-greeting-samples.md) — Demonstrates the same greeting class and incrementing top function in PHP and Swift for cross-language comparison. (5 units; `sample.php`, `sample.swift`)
-  - [**Ruby Greeting and Utilities**](nodes/ruby-greeting-and-utilities.md) — Provides a Ruby greeting class, a Util helper module, a lambda-based top function, and a load-time result assignment. (4 units; `sample.rb`)
-  - [**Python Greeting and Math Helpers**](nodes/python-greeting-and-math-helpers.md) — Provides a Python greeting class, a pi-based top function, an identity decorator, and an import-time result assignment. (4 units; `sample.py`)
-  - [**Kotlin Greeter and Utilities**](nodes/kotlin-greeter-and-utilities.md) — Provides a Kotlin greeting class, a singleton Util object with a constant helper, and a function adding a list's size. (3 units; `sample.kt`)
-- [**Parser Fixtures and Type Samples**](nodes/parser-fixtures-and-type-samples.md) — Supplies parser edge-case files and generic-type examples useful for testing language tooling behavior. (12 units; `sample.cpp`, `sample.ts`, `sample.c`)
-  - [**Edge-Case Parsing Fixtures**](nodes/edge-case-parsing-fixtures.md) — Collects C, Python, and SQL files exercising parser edge cases: syntax errors, CRLF, unicode identifiers, and trivial statements. (8 units; `sample.c`, `unicode.py`, `crlf.py`)
-  - [**Generics and Interfaces Samples**](nodes/generics-and-interfaces-samples.md) — Shows generic types and functions in C++ and TypeScript, plus a Shape-implementing Circle class. (4 units; `sample.cpp`, `sample.ts`)
-- [**JavaScript Closures and Async**](nodes/javascript-closures-and-async.md) — Demonstrates JavaScript closures, async functions, a counter factory, and simple value-passing helpers. (8 units; `js_case.js`, `sample.js`)
-- [**Go and Rust Point Samples**](nodes/go-and-rust-point-samples.md) — Provides parallel Go and Rust Point structs with sum methods, plus closure-based top functions and printing entry points. (6 units; `sample.rs`, `sample.go`)
-- [**Worker and Queue Case Study**](nodes/worker-and-queue-case-study.md) — Implements a JSON-processing Python worker, a generic TypeScript FIFO job queue with transforms, and a trivial test. (5 units; `python_case.py`, `ts_case.ts`, `test_x.py`)
-- [**C# Greeter Console Program**](nodes/c-greeter-console-program.md) — Provides a C# Greeter class with greeting and increment operations plus a console Main entry point and helpers. (4 units; `Sample.cs`)
-- [**Java Counter Main Class**](nodes/java-counter-main-class.md) — Provides a Java Main class holding a constructor-set count with add operations and a nested empty-run class. (3 units; `Sample.java`)
+- [**Cross-Language Object Utilities**](nodes/cross-language-object-utilities.md) — Groups greeter, shape, interface, decorator, and helper examples across Java, Kotlin, Ruby, PHP, Swift, Python, and C#. (24 units; `Sample.cs`, `sample.php`, `sample.swift`)
+  - [**Cross-Language Greeter Utilities**](nodes/cross-language-greeter-utilities.md) — Collects Java, Kotlin, and Ruby examples of Greeter, constant Util helpers, and top computations with file-level result assignment. (9 units; `sample.rb`, `Sample.java`, `sample.kt`)
+  - [**PHP Swift Shape Examples**](nodes/php-swift-shape-examples.md) — Groups PHP and Swift Greeter, Shape, top-closure, and Swift Point examples that demonstrate parallel class, interface, and closure syntax. (8 units; `sample.php`, `sample.swift`)
+  - [**Python Greeter and Decorator**](nodes/python-greeter-and-decorator.md) — Collects Python examples of a greeting class, a top function using math.pi, an identity decorator, and file-level result assignment. (4 units; `sample.py`)
+  - [**C# Greeter and Shape**](nodes/c-greeter-and-shape.md) — Groups C# Greeter, IShape, and Program examples showing constructor name storage, an Area interface, and console greeting output. (3 units; `Sample.cs`)
+- [**Struct Closure Syntax Examples**](nodes/struct-closure-syntax-examples.md) — Groups struct, closure, arithmetic, template, SQL, and malformed-syntax examples across C, Go, Rust, Python, C++, and related files. (19 units; `sample.rs`, `sample.cpp`, `sample.go`)
+  - [**Multi-Language Struct and Closure**](nodes/multi-language-struct-and-closure.md) — Collects C, Go, Rust, and Python examples of structs, point sums, closures, helpers, and simple arithmetic functions. (13 units; `sample.rs`, `sample.go`, `sample.c`)
+  - [**Mixed Syntax and Template Examples**](nodes/mixed-syntax-and-template-examples.md) — Groups malformed C, Python wrappers, SQL select, C++ template Box, and maximum examples that exercise parser and syntax handling. (6 units; `sample.cpp`, `crlf.py`, `broken.c`)
+- [**JavaScript Async and Closures**](nodes/javascript-async-and-closures.md) — Groups JavaScript examples of async wrappers, closure factories, widgets, async arrows, helper delegation, and arithmetic functions. (6 units; `js_case.js`, `sample.js`)
+- [**Worker JSON and State**](nodes/worker-json-and-state.md) — Collects a Python Worker state holder, JSON-processing run method, negative-input helper behavior, and async reset test. (5 units; `python_case.py`)
+- [**TypeScript Shape and Identity**](nodes/typescript-shape-and-identity.md) — Groups TypeScript Shape interface, Circle area implementation, and generic identity function examples. (3 units; `sample.ts`)
+- [**Queue and Trivial Test**](nodes/queue-and-trivial-test.md) — Groups a generic async FIFO Job queue, a job-payload transform, and a placeholder test asserting only True. (3 units; `ts_case.ts`, `test_x.py`)
 
 ## Key flows
 
-- **Python worker helper usage**: The Python worker case study's grouped worker class relies on a helper function to support its processing. — `python_case.py-worker-class` → `helper`
-- **C main computes via add**: The C sample's main function calls add to compute its result. — `main` → `add`
-- **Python decorated top-level flow**: The Python sample's top-level code, grouped with its inner closure, applies the identity decorator during module execution. — `sample.py module code (L21–L24)` → `sample.py-top-with-inner-closure` → `decorate`
-- **Ruby top-level load flow**: The Ruby sample's module-level code invokes the top function when the file is loaded. — `sample.rb module code (L24–L26)` → `src/sample.rb:top`
+- **Worker helper rejection**: The worker run/nested formatter group reaches helper, which handles negative-input rejection. — `python_case.py-worker-run-and-nested-formatter` → `helper`
+- **Negative helper test**: The negative-input test exercises helper's rejection behavior. — `test_helper_rejects_negative` → `helper`
+- **C add call**: The C sample main uses add for arithmetic. — `main` → `add`
+- **Python residual decorator path**: The Python sample residual evaluation enters the top/inner group and decorator example. — `sample.py module code (L21–L24)` → `sample.py-top-and-inner` → `decorate`
+- **Ruby top result**: The Ruby sample residual assigns the result of top(1). — `sample.rb module code (L24–L26)` → `src/sample.rb:top`
 
 ## Read further
 

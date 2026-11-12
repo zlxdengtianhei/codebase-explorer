@@ -5,104 +5,84 @@ Graph-confirmed and model-inferred pairs count edges between two subtrees. Graph
 
 ```mermaid
 flowchart LR
-  n0["Core provider infrastructure"]
-  n1["Gemini and media integrations"]
-  n2["Provider Adapters and Tools"]
-  n3["Streaming and result objects"]
-  n4["Attachment Normalization and MIME"]
-  n5["Provider chat wire formatting"]
-  n6["Streaming and Provider Core"]
-  n7["Tool definition and execution"]
-  n8["ActiveRecord persistence bridge"]
-  n9["Generator shared helpers"]
-  n10["Model Metadata and Embeddings"]
-  n11["Bedrock AWS integration"]
-  n12["Chat conversation orchestration"]
-  n13["Persistence and Conversation Layer"]
-  n14["AWS SigV4 Request Signing"]
-  n4 --> n6
-  n14 --> n6
-  n11 --> n0
-  n11 --> n3
-  n1 --> n5
-  n10 --> n2
-  n10 --> n6
-  n13 --> n4
-  n13 --> n2
-  n2 --> n4
-  n2 --> n10
-  n2 -.-> n13
-  n2 --> n6
-  n6 -.-> n10
-  n6 --> n2
-  n3 --> n11
-  n3 --> n0
-  n8 ==> n1
-  n7 ==> n1
-  n8 ==> n12
-  n1 ==> n4
-  n1 ==> n0
-  n1 ==> n3
-  n5 ==> n3
-  n8 ==> n4
-  n4 ==> n0
+  n0["Provider Connection And Errors"]
+  n1["Chat Message And Tool Formatting"]
+  n2["Attachment And Content Handling"]
+  n3["Provider Transport And Streaming"]
+  n4["Streaming Chunk Accumulation"]
+  n5["Generator Naming Helpers"]
+  n6["ActiveRecord Chat Persistence"]
+  n7["Chat Payload And Auxiliary APIs"]
+  n8["Model Registry And Media"]
+  n9["Chat Persistence And Orchestration"]
+  n10["Core Chat Configuration"]
+  n11["Media And Auxiliary Operations"]
+  n12["Provider Model Abstractions"]
+  n13["Chat UI Generator"]
+  n14["Embedding And Provider Hooks"]
+  n6 --> n10
+  n2 --> n3
+  n7 --> n0
+  n7 --> n4
+  n9 --> n2
+  n9 --> n3
+  n13 --> n5
+  n12 --> n3
+  n3 --> n2
+  n3 --> n12
+  n4 --> n7
+  n4 --> n0
+  n6 ==> n2
+  n4 ==> n1
+  n6 ==> n1
   n14 ==> n0
-  n12 ==> n5
-  n5 ==> n0
-  n5 ==> n7
-  n3 ==> n5
-  n7 ==> n3
+  n11 ==> n2
+  n11 ==> n0
+  n2 ==> n1
+  n2 ==> n0
+  n1 ==> n8
+  n1 ==> n0
+  n1 ==> n4
+  n10 ==> n1
+  n8 ==> n0
+  n0 ==> n8
 ```
 
 Selected 15 nodes by connection count. Legend: `-->` graph-confirmed; `-.->` model-inferred; `==>` graph-only.
 
 ## Dependency list
 
-- [ActiveRecord persistence bridge](nodes/activerecord-persistence-bridge.md) → [Chat Orchestration and Gem Facade](nodes/chat-orchestration-and-gem-facade.md) · graph-confirmed · 2 edge(s) · The ActiveRecord bridge builds and drives Chat objects from persisted records.
-- [Attachment Normalization and MIME](nodes/attachment-normalization-and-mime.md) → [Streaming and Provider Core](nodes/streaming-and-provider-core.md) · graph-confirmed · 1 edge(s) · Attachment normalization prepares file content for rendering into provider requests.
-- [AWS SigV4 Request Signing](nodes/aws-sigv4-request-signing.md) → [Streaming and Provider Core](nodes/streaming-and-provider-core.md) · graph-confirmed · 1 edge(s) · SigV4 signing authenticates Bedrock requests issued through the provider core.
-- [Bedrock AWS integration](nodes/bedrock-aws-integration.md) → [Core provider infrastructure](nodes/core-provider-infrastructure.md) · graph-confirmed · 1 edge(s) · Bedrock integration builds on the abstract provider base and connection management.
-- [Bedrock AWS integration](nodes/bedrock-aws-integration.md) → [Streaming and result objects](nodes/streaming-and-result-objects.md) · graph-confirmed · 1 edge(s)
-- [Chat UI scaffolding generator](nodes/chat-ui-scaffolding-generator.md) → [Generator shared helpers](nodes/generator-shared-helpers.md) · graph-confirmed · 3 edge(s) · The chat UI generator uses shared helpers for naming, model mappings, and acts_as declarations.
-- [Chat Wire and Media Formats](nodes/chat-wire-and-media-formats.md) → [Tool definition and execution](nodes/tool-definition-and-execution.md) · graph-confirmed · 1 edge(s)
-- [Gem entry and configuration](nodes/gem-entry-and-configuration.md) → [Chat conversation orchestration](nodes/chat-conversation-orchestration.md) · graph-confirmed · 2 edge(s)
-- [Gemini and media integrations](nodes/gemini-and-media-integrations.md) → [Provider chat wire formatting](nodes/provider-chat-wire-formatting.md) · graph-confirmed · 1 edge(s)
-- [Install generator](nodes/install-generator.md) → [Generator shared helpers](nodes/generator-shared-helpers.md) · graph-confirmed · 1 edge(s)
-- [Migration numbering and v1.9](nodes/migration-numbering-and-v1-9.md) → [Generator shared helpers](nodes/generator-shared-helpers.md) · graph-confirmed · 2 edge(s)
-- [Model Metadata and Embeddings](nodes/model-metadata-and-embeddings.md) → [Provider Adapters and Tools](nodes/provider-adapters-and-tools.md) · graph-confirmed · 2 edge(s) · Model metadata and embedding support feed capability lookups into the provider adapters.
-- [Model Metadata and Embeddings](nodes/model-metadata-and-embeddings.md) → [Streaming and Provider Core](nodes/streaming-and-provider-core.md) · graph-confirmed · 2 edge(s)
-- [Persistence and Conversation Layer](nodes/persistence-and-conversation-layer.md) → [Attachment Normalization and MIME](nodes/attachment-normalization-and-mime.md) · graph-confirmed · 1 edge(s)
-- [Persistence and Conversation Layer](nodes/persistence-and-conversation-layer.md) → [Provider Adapters and Tools](nodes/provider-adapters-and-tools.md) · graph-confirmed · 4 edge(s) · 2 inferred relation(s) · The persistence layer uses provider adapters and tool machinery when converting stored records into live chats.
-- [Provider Adapters and Tools](nodes/provider-adapters-and-tools.md) → [Attachment Normalization and MIME](nodes/attachment-normalization-and-mime.md) · graph-confirmed · 2 edge(s)
-- [Provider Adapters and Tools](nodes/provider-adapters-and-tools.md) → [Model Metadata and Embeddings](nodes/model-metadata-and-embeddings.md) · graph-confirmed · 1 edge(s)
-- [Provider Adapters and Tools](nodes/provider-adapters-and-tools.md) → [Persistence and Conversation Layer](nodes/persistence-and-conversation-layer.md) · model-inferred · 1 inferred relation(s)
-- [Provider Adapters and Tools](nodes/provider-adapters-and-tools.md) → [Streaming and Provider Core](nodes/streaming-and-provider-core.md) · graph-confirmed · 9 edge(s) · Provider adapters rely on the shared provider base, connections, and streaming machinery to execute requests.
-- [Streaming and Provider Core](nodes/streaming-and-provider-core.md) → [Model Metadata and Embeddings](nodes/model-metadata-and-embeddings.md) · model-inferred · 1 inferred relation(s)
-- [Streaming and Provider Core](nodes/streaming-and-provider-core.md) → [Provider Adapters and Tools](nodes/provider-adapters-and-tools.md) · graph-confirmed · 1 edge(s)
-- [Streaming and result objects](nodes/streaming-and-result-objects.md) → [Bedrock AWS integration](nodes/bedrock-aws-integration.md) · graph-confirmed · 1 edge(s) · 1 inferred relation(s)
-- [Streaming and result objects](nodes/streaming-and-result-objects.md) → [Core provider infrastructure](nodes/core-provider-infrastructure.md) · graph-confirmed · 2 edge(s)
-- [Tool definition and execution](nodes/tool-definition-and-execution.md) → [Chat Wire and Media Formats](nodes/chat-wire-and-media-formats.md) · graph-confirmed · 3 edge(s) · Tool definitions are converted into provider-specific tool declarations for chat requests.
-- [v1.7 upgrade generator](nodes/v1-7-upgrade-generator.md) → [Generator shared helpers](nodes/generator-shared-helpers.md) · graph-confirmed · 4 edge(s)
-- [ActiveRecord persistence bridge](nodes/activerecord-persistence-bridge.md) → [Gemini and media integrations](nodes/gemini-and-media-integrations.md) · graph-only · 3 edge(s)
-- [Tool definition and execution](nodes/tool-definition-and-execution.md) → [Gemini and media integrations](nodes/gemini-and-media-integrations.md) · graph-only · 3 edge(s)
-- [ActiveRecord persistence bridge](nodes/activerecord-persistence-bridge.md) → [Chat conversation orchestration](nodes/chat-conversation-orchestration.md) · graph-only · 2 edge(s)
-- [Gemini and media integrations](nodes/gemini-and-media-integrations.md) → [Attachment Normalization and MIME](nodes/attachment-normalization-and-mime.md) · graph-only · 2 edge(s)
-- [Gemini and media integrations](nodes/gemini-and-media-integrations.md) → [Core provider infrastructure](nodes/core-provider-infrastructure.md) · graph-only · 2 edge(s)
-- [Gemini and media integrations](nodes/gemini-and-media-integrations.md) → [Streaming and result objects](nodes/streaming-and-result-objects.md) · graph-only · 2 edge(s)
-- [Model info value objects](nodes/model-info-value-objects.md) → [Gemini and media integrations](nodes/gemini-and-media-integrations.md) · graph-only · 2 edge(s)
-- [Provider chat wire formatting](nodes/provider-chat-wire-formatting.md) → [Streaming and result objects](nodes/streaming-and-result-objects.md) · graph-only · 2 edge(s)
-- [ActiveRecord persistence bridge](nodes/activerecord-persistence-bridge.md) → [Attachment Normalization and MIME](nodes/attachment-normalization-and-mime.md) · graph-only · 1 edge(s)
-- [Attachment Normalization and MIME](nodes/attachment-normalization-and-mime.md) → [Core provider infrastructure](nodes/core-provider-infrastructure.md) · graph-only · 1 edge(s)
-- [AWS SigV4 Request Signing](nodes/aws-sigv4-request-signing.md) → [Core provider infrastructure](nodes/core-provider-infrastructure.md) · graph-only · 1 edge(s)
-- [Bedrock model capabilities](nodes/bedrock-model-capabilities.md) → [Core provider infrastructure](nodes/core-provider-infrastructure.md) · graph-only · 1 edge(s)
-- [Chat conversation orchestration](nodes/chat-conversation-orchestration.md) → [Provider chat wire formatting](nodes/provider-chat-wire-formatting.md) · graph-only · 1 edge(s) · Chat orchestration renders conversation state into provider-specific chat payloads.
-- [Embeddings and Mistral support](nodes/embeddings-and-mistral-support.md) → [Core provider infrastructure](nodes/core-provider-infrastructure.md) · graph-only · 1 edge(s)
-- [Provider chat wire formatting](nodes/provider-chat-wire-formatting.md) → [Core provider infrastructure](nodes/core-provider-infrastructure.md) · graph-only · 1 edge(s)
-- [Provider chat wire formatting](nodes/provider-chat-wire-formatting.md) → [Tool definition and execution](nodes/tool-definition-and-execution.md) · graph-only · 1 edge(s)
-- [Provider class composition](nodes/provider-class-composition.md) → [Core provider infrastructure](nodes/core-provider-infrastructure.md) · graph-only · 1 edge(s)
-- [Provider class composition](nodes/provider-class-composition.md) → [OpenAI model capabilities](nodes/openai-model-capabilities.md) · graph-only · 1 edge(s)
-- [Streaming and result objects](nodes/streaming-and-result-objects.md) → [Provider chat wire formatting](nodes/provider-chat-wire-formatting.md) · graph-only · 1 edge(s)
-- [Tool definition and execution](nodes/tool-definition-and-execution.md) → [Streaming and result objects](nodes/streaming-and-result-objects.md) · graph-only · 1 edge(s)
+- [ActiveRecord Chat Persistence](nodes/activerecord-chat-persistence.md) → [Core Chat Configuration](nodes/core-chat-configuration.md) · graph-confirmed · 2 edge(s) · ActiveRecord chat persistence uses core chat configuration for chat setup and orchestration.
+- [Attachment And Content Handling](nodes/attachment-and-content-handling.md) → [Provider Transport And Streaming](nodes/provider-transport-and-streaming.md) · graph-confirmed · 2 edge(s) · Attachment and content handling uses provider transport and streaming for provider-facing content handling.
+- [Chat Payload And Auxiliary APIs](nodes/chat-payload-and-auxiliary-apis.md) → [Provider Connection And Errors](nodes/provider-connection-and-errors.md) · graph-confirmed · 3 edge(s) · Chat payload and auxiliary APIs use provider connection and errors for request dispatch and error handling.
+- [Chat Payload And Auxiliary APIs](nodes/chat-payload-and-auxiliary-apis.md) → [Streaming Chunk Accumulation](nodes/streaming-chunk-accumulation.md) · graph-confirmed · 1 edge(s)
+- [Chat Persistence And Orchestration](nodes/chat-persistence-and-orchestration.md) → [Attachment And Content Handling](nodes/attachment-and-content-handling.md) · graph-confirmed · 4 edge(s) · Chat persistence and orchestration uses attachment and content handling to normalize chat content and attachments.
+- [Chat Persistence And Orchestration](nodes/chat-persistence-and-orchestration.md) → [Provider Transport And Streaming](nodes/provider-transport-and-streaming.md) · graph-confirmed · 3 edge(s) · Chat persistence and orchestration uses provider transport and streaming to send chat requests and consume streamed responses.
+- [Chat UI Generator](nodes/chat-ui-generator.md) → [Generator Naming Helpers](nodes/generator-naming-helpers.md) · graph-confirmed · 3 edge(s) · Chat UI generator uses generator naming helpers to derive model names, namespaces, and routes.
+- [Provider Model Abstractions](nodes/provider-model-abstractions.md) → [Provider Transport And Streaming](nodes/provider-transport-and-streaming.md) · graph-confirmed · 6 edge(s) · Provider model abstractions use provider transport and streaming to connect model operations to provider requests.
+- [Provider Transport And Streaming](nodes/provider-transport-and-streaming.md) → [Attachment And Content Handling](nodes/attachment-and-content-handling.md) · graph-confirmed · 2 edge(s) · 1 inferred relation(s)
+- [Provider Transport And Streaming](nodes/provider-transport-and-streaming.md) → [Provider Model Abstractions](nodes/provider-model-abstractions.md) · graph-confirmed · 2 edge(s)
+- [RubyLLM Install Generator](nodes/rubyllm-install-generator.md) → [Generator Naming Helpers](nodes/generator-naming-helpers.md) · graph-confirmed · 1 edge(s)
+- [Streaming Chunk Accumulation](nodes/streaming-chunk-accumulation.md) → [Chat Payload And Auxiliary APIs](nodes/chat-payload-and-auxiliary-apis.md) · graph-confirmed · 3 edge(s) · 1 inferred relation(s) · Streaming chunk accumulation uses chat payload and auxiliary APIs to turn accumulated chunks into chat messages.
+- [Streaming Chunk Accumulation](nodes/streaming-chunk-accumulation.md) → [Provider Connection And Errors](nodes/provider-connection-and-errors.md) · graph-confirmed · 2 edge(s)
+- [Upgrade Migration Generators](nodes/upgrade-migration-generators.md) → [Generator Naming Helpers](nodes/generator-naming-helpers.md) · graph-confirmed · 4 edge(s) · Upgrade migration generators use generator naming helpers for migration naming and model mappings.
+- [V1.7 Upgrade Generator](nodes/v1-7-upgrade-generator.md) → [Generator Naming Helpers](nodes/generator-naming-helpers.md) · graph-confirmed · 4 edge(s)
+- [ActiveRecord Chat Persistence](nodes/activerecord-chat-persistence.md) → [Attachment And Content Handling](nodes/attachment-and-content-handling.md) · graph-only · 4 edge(s)
+- [Streaming Chunk Accumulation](nodes/streaming-chunk-accumulation.md) → [Chat Message And Tool Formatting](nodes/chat-message-and-tool-formatting.md) · graph-only · 3 edge(s)
+- [ActiveRecord Chat Persistence](nodes/activerecord-chat-persistence.md) → [Chat Message And Tool Formatting](nodes/chat-message-and-tool-formatting.md) · graph-only · 2 edge(s)
+- [Embedding And Provider Hooks](nodes/embedding-and-provider-hooks.md) → [Provider Connection And Errors](nodes/provider-connection-and-errors.md) · graph-only · 2 edge(s)
+- [Media And Auxiliary Operations](nodes/media-and-auxiliary-operations.md) → [Attachment And Content Handling](nodes/attachment-and-content-handling.md) · graph-only · 2 edge(s)
+- [Media And Auxiliary Operations](nodes/media-and-auxiliary-operations.md) → [Provider Connection And Errors](nodes/provider-connection-and-errors.md) · graph-only · 2 edge(s)
+- [Model Metadata Value Objects](nodes/model-metadata-value-objects.md) → [Chat Message And Tool Formatting](nodes/chat-message-and-tool-formatting.md) · graph-only · 2 edge(s)
+- [Attachment And Content Handling](nodes/attachment-and-content-handling.md) → [Chat Message And Tool Formatting](nodes/chat-message-and-tool-formatting.md) · graph-only · 1 edge(s)
+- [Attachment And Content Handling](nodes/attachment-and-content-handling.md) → [Provider Connection And Errors](nodes/provider-connection-and-errors.md) · graph-only · 1 edge(s)
+- [Chat Message And Tool Formatting](nodes/chat-message-and-tool-formatting.md) → [Model Registry And Media](nodes/model-registry-and-media.md) · graph-only · 1 edge(s)
+- [Chat Message And Tool Formatting](nodes/chat-message-and-tool-formatting.md) → [Provider Connection And Errors](nodes/provider-connection-and-errors.md) · graph-only · 1 edge(s)
+- [Chat Message And Tool Formatting](nodes/chat-message-and-tool-formatting.md) → [Streaming Chunk Accumulation](nodes/streaming-chunk-accumulation.md) · graph-only · 1 edge(s)
+- [Core Chat Configuration](nodes/core-chat-configuration.md) → [Chat Message And Tool Formatting](nodes/chat-message-and-tool-formatting.md) · graph-only · 1 edge(s)
+- [Model Registry And Media](nodes/model-registry-and-media.md) → [Provider Connection And Errors](nodes/provider-connection-and-errors.md) · graph-only · 1 edge(s)
+- [Provider Connection And Errors](nodes/provider-connection-and-errors.md) → [Model Registry And Media](nodes/model-registry-and-media.md) · graph-only · 1 edge(s)
+- [Provider Integration Compositions](nodes/provider-integration-compositions.md) → [Provider Connection And Errors](nodes/provider-connection-and-errors.md) · graph-only · 1 edge(s)
 
 Graph-only pairs are ranked by edge count; 0 omitted.
 

@@ -1,19 +1,16 @@
 # cJSON JSON Library
 
-**Capability.** Parses, builds, prints, and manipulates JSON data as cJSON trees, plus RFC 6901/6902/7396 pointer, patch, and merge-patch support.
+**Capability.** Provides a C library for parsing, printing, manipulating, and patching JSON data through public APIs and utilities.
 
-Come here for the whole cJSON system: the public API, node construction, parsing, printing, and item utilities. The pointer/patch engine group handles RFC 6901/6902 operations, while the remaining children cover construction, parsing, serialization, membership edits, merge patch, and patch generation.
+Use this repository when working with cJSON's JSON parsing, rendering, mutation, pointer, patch, and comparison facilities. Core parsing and printing anchor the public API; item lifecycle and utility mutators support value construction and changes, while JSON Pointer patch utilities handle structural addressing and transformations.
 
 **Children.**
 
-- [Item Utility Toolkit](item-utility-toolkit.md) `item-utility-toolkit` · 26 unit(s)
-- [Pointer and Patch Engine](pointer-and-patch-engine.md) `pointer-and-patch-engine` · 21 unit(s)
-- [Node construction and linking](node-construction-and-linking.md) `node-construction-and-linking` · 15 unit(s)
-- [Public header declarations](public-header-declarations.md) `public-header-declarations` · 14 unit(s)
-- [JSON parser](json-parser.md) `json-parser` · 9 unit(s)
-- [JSON printing and serialization](json-printing-and-serialization.md) `json-printing-and-serialization` · 8 unit(s)
-- [Object membership and merge patch](object-membership-and-merge-patch.md) `object-membership-and-merge-patch` · 7 unit(s)
-- [JSON Patch generation](json-patch-generation.md) `json-patch-generation` · 7 unit(s)
+- [Core JSON Parse and Print](core-json-parse-and-print.md) `core-json-parse-and-print` · 26 unit(s)
+- [JSON Pointer Patch Utilities](json-pointer-patch-utilities.md) `json-pointer-patch-utilities` · 25 unit(s)
+- [Public Utility API and Mutators](public-utility-api-and-mutators.md) `public-utility-api-and-mutators` · 7 unit(s)
+- [Item Creation and Lifecycle](item-creation-and-lifecycle.md) `item-creation-and-lifecycle` · 7 unit(s)
+- [Public Header Types and Macros](public-header-types-and-macros.md) `public-header-types-and-macros` · 7 unit(s)
 
 ## Look up code
 

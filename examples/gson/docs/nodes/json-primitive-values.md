@@ -1,115 +1,135 @@
-# JSON Primitive Values
+# JSON primitive values
 
-**Capability.** Implements JsonPrimitive, the immutable leaf node holding a Boolean, Number, or String with cross-type equality.
+**Capability.** Implements JsonPrimitive storage/conversion/equality and static primitive-wrapper identity utilities.
 
-This module defines scalar JSON values: type predicates, numeric getters that parse string forms, and hashCode/equals rules that treat integral and double representations consistently. It also identifies integral-only numbers.
+Use for JSON primitive value behavior and primitive class checks. Units show stored value accessors, numeric conversion, equality/hash, deep copy, and Primitives utilities.
 
 **Depends on.**
 
-- [Lazy Number Handling](lazy-number-handling.md) · graph-only · 2 edge(s)
+- [Internal Java utilities](internal-java-utilities.md) · graph-confirmed · 2 edge(s)
 
 **Depended on by.**
 
-- [Map Serialization](map-serialization.md) · graph-confirmed · 3 edge(s)
-- [In-memory tree reader](in-memory-tree-reader.md) · graph-only · 3 edge(s)
-- [Tree Element Bridge](tree-element-bridge.md) · graph-only · 2 edge(s)
+- [JsonElement tree reader](jsonelement-tree-reader.md) · graph-only · 3 edge(s)
+- [Map type adapter factory](map-type-adapter-factory.md) · graph-only · 3 edge(s)
+- [JsonElement tree base](jsonelement-tree-base.md) · graph-only · 2 edge(s)
+- [Gson serialization facade](gson-serialization-facade.md) · graph-only · 1 edge(s)
 
-Parent: [Primitives and Map Adapters](primitives-and-map-adapters.md)
+Parent: [Primitive values and utilities](primitive-values-and-utilities.md)
 
-## Units (11)
+## Units (12)
 
-<a id="u-4a066c73dcc4"></a>
-### `JsonPrimitive.java-boolean-access`
+<a id="u-c1bbab7ea01d"></a>
+### `JsonPrimitive.java-construction-and-storage`
 
-`public boolean isBoolean()` · [gson/src/main/java/com/google/gson/JsonPrimitive.java:L103-L105][f1]
+`class JsonPrimitive extends JsonElement` · [gson/src/main/java/com/google/gson/JsonPrimitive.java:L35-L37][f1]
 
-isBoolean reports whether the stored value is a Boolean.
+JsonPrimitive stores exactly one non-null value and exposes it as a JSON primitive.
 
-getAsBoolean returns it directly when it is; otherwise it falls back to Boolean.parseBoolean on the string form, so any string other than case-insensitive "true" yields false.
+Boolean, Number, and String constructors reject null with NullPointerException; the Character constructor also rejects null and stores the character's one-character String form. The class is final and immutable.
 
-<a id="u-49f59417c390"></a>
-### `JsonPrimitive.java-hashcode-and-double-hashing`
-
-`@Override public int hashCode()` · [gson/src/main/java/com/google/gson/JsonPrimitive.java:L260-L284][f1]
-
-hashCode returns 31 for a null value; for integral primitives and for other Numbers it delegates to hashOfDoubleValue of the double value, so primitives that equals considers equal across branches (e.g. Integer 42 and Double 42.0) hash identically; otherwise it returns the stored value's hashCode.
-
-hashOfDoubleValue uses Long.hashCode of the cast long when the double is mathematically integral (normalizing -0.0 to 0), otherwise Double.hashCode of the bits, collapsing NaN patterns to one value — both matching equals semantics.
-
-<a id="u-734958abf7b5"></a>
-### `JsonPrimitive.java-jsonprimitive-constructors`
-
-`class JsonPrimitive extends JsonElement` · [gson/src/main/java/com/google/gson/JsonPrimitive.java:L37-L47][f1]
-
-Each constructor stores the given Boolean, Number, or String after a null check that throws NullPointerException; the Character constructor converts the character to a one-character String because JSON has no character type.
-
-The value is final, making the primitive immutable.
-
-<a id="u-8b186d7c1053"></a>
-### `JsonPrimitive.java-jsonprimitive-javadoc-wrapper-regions`
+<a id="u-8fe04b6bc915"></a>
+### `JsonPrimitive.java-jsonprimitive`
 
 `class JsonPrimitive extends JsonElement` · [gson/src/main/java/com/google/gson/JsonPrimitive.java:L105-L113][f1]
 
-These class regions contain only the Javadoc and annotations surrounding methods that already have their own units (getAsBoolean, getAsNumber, getAsDouble, getAsFloat, getAsCharacter, hashCode, hashOfDoubleValue); they add no separate behavior.
+If the stored value is Boolean, returns it directly.
 
-The Javadoc documents exception contracts: getAsNumber throws UnsupportedOperationException for non-number, non-string values; getAsCharacter throws UnsupportedOperationException on an empty string value and is deprecated because it returns the string's first character rather than a char value; hashCode's comment explains why every numeric branch must delegate to the double-based hash (consistency with equals across mixed numeric types, per gson issue 992).
+Otherwise converts the value to a string and parses it with Boolean.parseBoolean, so only a case-insensitive true yields true and every other string yields false.
 
-<a id="u-744a3d314bc2"></a>
-### `JsonPrimitive.java-number-access`
+<a id="u-d491ef72a38e"></a>
+### `JsonPrimitive.java-jsonprimitive-2`
 
-`public boolean isNumber()` · [gson/src/main/java/com/google/gson/JsonPrimitive.java:L127-L129][f1]
+`class JsonPrimitive extends JsonElement` · [gson/src/main/java/com/google/gson/JsonPrimitive.java:L129-L138][f1]
 
-isNumber reports whether the stored value is a Number.
+If the stored value is a Number, returns it.
 
-getAsNumber returns the stored Number, or, for a String value, wraps it in a LazilyParsedNumber that defers parsing until a method is called (potentially throwing NumberFormatException then); for any other value type it throws UnsupportedOperationException.
+If it is a String, returns a LazilyParsedNumber that defers parsing and may throw NumberFormatException when its numeric methods are used. Any other stored type throws UnsupportedOperationException.
 
-<a id="u-603d47f75143"></a>
-### `JsonPrimitive.java-numeric-conversions`
+<a id="u-20983e92e5a7"></a>
+### `JsonPrimitive.java-jsonprimitive-3`
 
-`@Override public double getAsDouble()` · [gson/src/main/java/com/google/gson/JsonPrimitive.java:L173-L176][f1]
+`class JsonPrimitive extends JsonElement` · [gson/src/main/java/com/google/gson/JsonPrimitive.java:L155-L158][f1]
 
-Each numeric getter returns the stored number's corresponding value when the primitive is a Number, otherwise parses the string form (Double.parseDouble, Float.parseFloat, Long.parseLong, Short.parseShort, Integer.parseInt, Byte.parseByte), propagating NumberFormatException on unparseable strings.
+Returns the stored String directly; for a Number returns the number's toString; for a Boolean returns its toString.
 
-getAsBigDecimal returns a stored BigDecimal directly or parses the string via NumberLimits.parseBigDecimal. getAsBigInteger returns a stored BigInteger, converts an integral primitive via BigInteger.valueOf(longValue()), or parses the string via NumberLimits.parseBigInteger; note that a non-integral stored Number like Double 1.5 goes to the string-parsing path.
+Any other stored type throws AssertionError, which constructors normally prevent.
 
-<a id="u-0f5cdbd2d1da"></a>
-### `JsonPrimitive.java-string-access`
+<a id="u-3d3a623c20f9"></a>
+### `JsonPrimitive.java-jsonprimitive-4`
 
-`public boolean isString()` · [gson/src/main/java/com/google/gson/JsonPrimitive.java:L153-L155][f1]
+`class JsonPrimitive extends JsonElement` · [gson/src/main/java/com/google/gson/JsonPrimitive.java:L241-L248][f1]
 
-isString reports whether the stored value is a String.
+Deprecated accessor that gets the string form and returns its first character.
 
-getAsString returns the String directly; for a Number it returns its toString; for a Boolean its toString; the final branch throws AssertionError for an unexpected type, which is unreachable through the public constructors.
+If the string is empty, throws UnsupportedOperationException; otherwise returns charAt(0).
 
-<a id="u-fc28200a3762"></a>
-### `JsonPrimitive.deepCopy`
+<a id="u-537e50ddfce2"></a>
+### `JsonPrimitive.java-jsonprimitive-5`
 
-`@Override public JsonPrimitive deepCopy()` · [gson/src/main/java/com/google/gson/JsonPrimitive.java:L93-L96][f1]
+`class JsonPrimitive extends JsonElement` · [gson/src/main/java/com/google/gson/JsonPrimitive.java:L257-L260][f1]
 
-Returns this instance itself because JsonPrimitive is immutable, so deep copies share identity.
+Returns 31 if the stored value is null, although constructors reject null.
 
-<a id="u-fb80fb05ccaa"></a>
-### `JsonPrimitive.equals`
+For integral primitives and for other Number values, returns hashOfDoubleValue of the number's double value so equal numeric primitives across types share a hash. For non-number values, returns the stored value's hashCode.
 
-`@Override public boolean equals(Object obj)` · [gson/src/main/java/com/google/gson/JsonPrimitive.java:L306-L336][f1]
+<a id="u-f4b0c34b0cbe"></a>
+### `JsonPrimitive.java-jsonprimitive-6`
 
-Compares only JsonPrimitive instances of the same class: identical references are equal; null or other classes are not.
+`class JsonPrimitive extends JsonElement` · [gson/src/main/java/com/google/gson/JsonPrimitive.java:L284-L297][f1]
 
-With a null value, equality requires the other's value also null. If both primitives are integral (Long/Integer/Short/Byte/BigInteger), they are compared by BigInteger when either side is a BigInteger, otherwise by longValue. If both are Numbers, two BigDecimals compare via compareTo (ignoring scale, so 0 equals 0.00); other numbers compare by double value using == plus a special case treating NaN on both sides as equal (deliberately not Double.compare, so -0.0 equals +0.0). All remaining cases fall back to value.equals.
+Casts the double to long and returns Long.hashCode of that long only when the double equals the cast long; otherwise returns Double.hashCode of the double.
 
-<a id="u-0da3ed1dc54c"></a>
-### `JsonPrimitive.getAsCharacter`
+Thus integral doubles outside long range use Double.hashCode, -0.0 hashes like 0.0, and NaN bit patterns collapse to the canonical Double.hashCode.
 
-`@Deprecated @Override public char getAsCharacter()` · [gson/src/main/java/com/google/gson/JsonPrimitive.java:L248-L257][f1]
+<a id="u-8de900421ffb"></a>
+### `JsonPrimitive.java-jsonprimitive-7`
 
-Deprecated method that returns the first character of the string form, not a char value; throws UnsupportedOperationException when the string is empty.
+`class JsonPrimitive extends JsonElement` · [gson/src/main/java/com/google/gson/JsonPrimitive.java:L300-L306][f1]
 
-<a id="u-62fd262dc723"></a>
-### `JsonPrimitive.isIntegral`
+Identity returns true; null or a different runtime class returns false.
 
-`private static boolean isIntegral(JsonPrimitive primitive)` · [gson/src/main/java/com/google/gson/JsonPrimitive.java:L342-L352][f1]
+Two integral primitives compare by BigInteger when either stores BigInteger, otherwise by long values. Two Number primitives compare by BigDecimal.compareTo when both store BigDecimal, otherwise by double equality with special handling so -0.0 equals +0.0 and all NaN values are equal. Mixed integral/non-integral Number pairs therefore compare by double equality, so Integer 42 equals Double 42.0. Non-number values use stored value equality.
 
-Returns true only when the stored value is a Number of type BigInteger, Long, Integer, Short, or Byte; false for any other value, including other Number types like Double.
+<a id="u-1af374009fd6"></a>
+### `JsonPrimitive.java-jsonprimitive-8`
+
+`class JsonPrimitive extends JsonElement` · [gson/src/main/java/com/google/gson/JsonPrimitive.java:L336-L342][f1]
+
+Returns true only when the stored value is a BigInteger, Long, Integer, Short, or Byte.
+
+Other Number types, including BigDecimal, Double, and Float, return false.
+
+<a id="u-14ef251dd4bc"></a>
+### `JsonPrimitive.java-numeric-getters`
+
+`class JsonPrimitive extends JsonElement` · [gson/src/main/java/com/google/gson/JsonPrimitive.java:L168-L173][f1]
+
+These accessors convert the primitive to numeric types.
+
+For getAsDouble, getAsFloat, getAsLong, getAsShort, getAsInt, and getAsByte, a stored Number is converted with the corresponding primitiveValue method; otherwise the string form is parsed with the corresponding parse method, and parse failures throw NumberFormatException. getAsBigDecimal returns a stored BigDecimal directly; any other value, including another Number type, is parsed from the string form via NumberLimits.parseBigDecimal. getAsBigInteger returns a stored BigInteger directly; an integral stored number is converted with BigInteger.valueOf(longValue); a non-integral value is parsed from the string form via NumberLimits.parseBigInteger. Parsing failures throw NumberFormatException.
+
+**Uncertainties.**
+
+- NumberLimits parsing rules and limits are not visible in this file.
+
+<a id="u-0d824ffeec36"></a>
+### `JsonPrimitive.java-type-checks-and-copy`
+
+`class JsonPrimitive extends JsonElement` · [gson/src/main/java/com/google/gson/JsonPrimitive.java:L86-L93][f1]
+
+deepCopy returns the same instance because primitives are immutable.
+
+isBoolean, isNumber, and isString test the stored value's runtime type and perform no conversion. They return false for values of other types.
+
+<a id="u-12ec5550eef8"></a>
+### `Primitives.java-primitive-and-wrapper-utilities`
+
+`class Primitives` · [gson/src/main/java/com/google/gson/internal/Primitives.java:L27-L28][f2]
+
+Static utilities for primitive and wrapper class identity.
+
+Primitive detection requires a Class that reports itself primitive. Wrapper detection matches the nine wrapper classes by identity. Wrap maps each primitive class to its wrapper and returns other classes unchanged; unwrap does the reverse. Both are idempotent.
 
 ## Look up code
 
@@ -118,3 +138,4 @@ Returns true only when the stored value is a Number of type BigInteger, Long, In
 `cbe query --run-dir "$RUN" --id "$ID"`; `cbe source --run-dir "$RUN" --id "$ID" --context 2`.
 
 [f1]: https://github.com/google/gson/blob/e2292f9c9f2e07a4791827e8eea34aa7d80545d6/gson/src/main/java/com/google/gson/JsonPrimitive.java
+[f2]: https://github.com/google/gson/blob/e2292f9c9f2e07a4791827e8eea34aa7d80545d6/gson/src/main/java/com/google/gson/internal/Primitives.java

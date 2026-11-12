@@ -5,18 +5,19 @@
   "source_files": 43,
   "source_tokens": 38670,
   "modules": 7,
-  "units": 113,
-  "semantic_nodes": 15,
-  "published_pages": 16,
+  "units": 116,
+  "semantic_nodes": 17,
+  "published_pages": 18,
   "pending": [],
   "normalized": [],
   "unexplained_count": 0,
   "unexplained": [],
   "known_empty": [],
-  "wall_seconds": 194.323,
+  "wall_seconds": 1543.629,
   "basis": {
     "cbe_version": "2.2.0.dev0",
     "models": [
+      "group/deepseek",
       "group/glm-5.3-flash"
     ],
     "source": {
@@ -51,16 +52,16 @@
   },
   "run_dir": "<RUN>",
   "index": "<RUN>/docs/INDEX.md",
-  "subagent_tasks": 12,
+  "subagent_tasks": 38,
   "deterministic_checks_ok": true,
   "tree": {
-    "leaves": 11,
-    "nodes": 15,
+    "leaves": 13,
+    "nodes": 17,
     "program_made_titles": 0,
     "naming_tasks": 2,
     "index": {
       "budget": 2000,
-      "tokens": 1519,
+      "tokens": 1425,
       "over_budget": false,
       "levels": 2,
       "levels_shown": 2,
@@ -69,40 +70,69 @@
     }
   },
   "node_dependencies": {
-    "graph_confirmed": 26,
+    "graph_confirmed": 32,
     "model_inferred": 0,
-    "graph_only": 28
+    "graph_only": 32
   },
   "within_containment": 0,
-  "key_flows": 6,
+  "key_flows": 5,
   "candidate_flows": 24,
   "layers": {
     "tokenizer": "o200k_base",
     "source_tokens": 38670,
-    "semantic_tokens": 31196,
+    "semantic_tokens": 30041,
     "semantic_breakdown": {
-      "model_body": 11505,
-      "signature_location": 4443,
-      "heading_anchor": 2503,
-      "relations": 1119,
-      "footer": 1380,
-      "index": 5177,
-      "node_text": 5069
+      "model_body": 10716,
+      "signature_location": 4645,
+      "heading_anchor": 2559,
+      "relations": 36,
+      "footer": 1564,
+      "index": 5326,
+      "node_text": 5195
     },
-    "model_body_tokens": 11505,
-    "model_body_source_ratio": 0.2975174553917766,
-    "published_markdown_source_ratio": 0.8067235583139385,
-    "deterministic_tokens": 510339,
-    "catalog_tokens": 510339,
+    "model_body_tokens": 10716,
+    "model_body_source_ratio": 0.27711404189294025,
+    "published_markdown_source_ratio": 0.7768554434962504,
+    "deterministic_tokens": 504200,
+    "catalog_tokens": 504200,
     "frozen_graph_tokens": 0,
     "frozen_graph_bytes": 26911496,
-    "semantic_source_ratio": 0.8067235583139385,
-    "deterministic_source_ratio": 13.197284716834755,
+    "semantic_source_ratio": 0.7768554434962504,
+    "deterministic_source_ratio": 13.038531161106802,
     "scope": "Breakdown partitions full Markdown BPE tokens by the first byte's line: model_body is published unit explain, summary, extras and uncertainties; signature_location includes shared source-file reference definitions (including ones used by relations); heading_anchor, relations, footer, INDEX and node_text (including labels/whitespace) partition the rest. model_body/source and published_markdown/source use complete frozen files. semantic: all published Markdown (node pages + INDEX, including navigation, signatures and commands); deterministic: catalog.json as serialized, including preserved prose copies and edge references, excluding the graph field; frozen graph is excluded from token ratios (frozen_graph_tokens=0), reported separately as frozen_graph_bytes using UTF-8 JSON with ensure_ascii=False and compact separators; complete graph evidence is expanded only with query --edges; source: complete frozen files counted once; context source chunks, host prompts, raw answers and summary.json excluded; layers are storage measures, not disjoint content classes"
   },
   "semantic_review": {
     "mode": "sample",
     "reviewed": [
+      {
+        "module": 0,
+        "decision": "needs_repair",
+        "issues": [
+          "src/config/file.ts::function::loadConfigFile::1647: says upward traversal stops at the workspace directory, but the code sets stopAt to path.dirname(workspace), i.e. the workspace's parent.",
+          "src/config/file.ts::function::loadConfigFile::1647: says a string config path is treated as a file or directory, but the code only does so when fsStat returns a stat; a non-existent path is ignored and discovery proceeds.",
+          "src/config/options.ts::function::resolveUserConfig::1300: says devtools in watch mode disables its UI with a warning, but the warning is emitted only when devtools.ui is truthy."
+        ],
+        "repair": "done"
+      },
+      {
+        "module": 1,
+        "decision": "needs_repair",
+        "issues": [
+          "src/config/index.ts::function::resolveConfig::639: says it first resolves cwd to an absolute path, but the code only does so when inlineConfig.cwd is truthy."
+        ],
+        "repair": "done"
+      },
+      {
+        "module": 2,
+        "decision": "needs_repair",
+        "issues": [
+          "grp:build.ts-buildwithconfigs-orchestration: says restart re-invokes the caller's restart function exactly once per trigger, but the restarting flag is never reset, so only the first restart call proceeds and later triggers are no-ops.",
+          "src/build.ts::function::buildSingle.handleWatcher::5016: says BUNDLE_START clears the screen and logs the accumulated changed files unconditionally, but the code does this only when changedFile.length is nonzero.",
+          "src/build.ts::function::buildSingle.postBuild::8067: says hasBuilt is marked so done never repeats, but hasBuilt is set only after the build:done hook, so a throwing hook leaves it false and done can run again on the next postBuild.",
+          "src/cli.ts::function::runCLI::4628: says any thrown error is caught, but only runMatchedCommand is inside the try, so errors from cli.parse or enableDebug are not caught."
+        ],
+        "repair": "done"
+      },
       {
         "module": 3,
         "decision": "needs_repair",
@@ -111,14 +141,87 @@
           "src/features/rolldown.ts::function::resolveOutputOptions::5442: says minify is disabled 'for dts builds', but the code disables it via `!cjsDts && minify`, i.e. for cjsDts builds only."
         ],
         "repair": "done"
+      },
+      {
+        "module": 4,
+        "decision": "needs_repair",
+        "issues": [
+          "grp:copy.ts-copy-option-types: says CopyOptions can be a nested array, but the source type is Arrayable<string | CopyEntry>, which is a single string/entry or a flat array, not nested arrays.",
+          "grp:exe.ts-exe-sea-option-types: says SeaConfig enables code cache by default, but the source docstring marks useCodeCache with @default false.",
+          "src/features/target.ts::function::resolvePackageTarget::915: says the signature declares string|string[]|false|undefined input, but resolvePackageTarget takes a PackageJson and that union belongs to resolveTarget."
+        ],
+        "repair": "done"
+      },
+      {
+        "module": 5,
+        "decision": "needs_repair",
+        "issues": [
+          "src/features/pkg/attw.ts::function::attw::2587: says problems with a resolutionKind are kept only when their kind is not in the profile ignore list, but the code checks problem.resolutionKind against profiles[profile].",
+          "src/features/pkg/attw.ts::function::attw::2587: says remaining problems are formatted one line each, but formatProblem returns multi-line strings for several problem kinds.",
+          "src/features/pkg/attw.ts::function::formatProblem::4644: says it renders a single line with resolution kind and entrypoint prefixed, but several cases return multi-line strings and the code appends those fields.",
+          "src/features/pkg/exports.ts::function::generateExports::3977: says exports are sorted with 'index' first, but the map keys are '.' or './...' and the comparator's 'index' branch never matches, so all keys are ordered by localeCompare.",
+          "src/features/pkg/exports.ts::function::exportCss::9475: says the CSS export maps to an outDir-relative path, but join returns a path relative to the package root.",
+          "src/features/pkg/index.ts::function::bundleDone::1285: says it finally resolves the registry promise, but the conflicting-exports throw occurs before ctx.resolve(), so waiters are not released on that path.",
+          "src/features/pkg/exports.ts::function::getExportName::10573: says the second return value is the original file name, but the code returns the slash-normalized file name.",
+          "src/features/pkg/index.ts::function::dedupeConfigs::3936: says the fallback returns the first candidate when all candidates were filtered out as empty or duplicate, but duplicate filtering always keeps the first duplicate, so the fallback only applies when all candidates have empty option objects."
+        ],
+        "repair": "done"
+      },
+      {
+        "module": 6,
+        "decision": "needs_repair",
+        "issues": [
+          "src/utils/general.ts::function::toArray::76: says null/undefined yields the default wrapped in an array or an empty array when no default, but the code checks the default's truthiness, so falsy defaults such as 0, '' or false produce an empty array.",
+          "src/utils/fs.ts::function::lowestCommonAncestor::605: says a lone root segment returns path.sep plus that segment and cites a Windows drive like 'C:', but the special case only applies when the sole segment is the empty string; a drive segment is returned by join unchanged.",
+          "grp:logger.ts-logger-internals: says clearScreen prints no newlines when the repeat count is non-positive, but it still calls console.info with an empty string, which emits one newline.",
+          "grp:logger.ts-createlogger: says warnOnce delegates to error under failOnWarn but omits that it returns before adding the message to warnedMessages, so repeated new warnOnce calls are not deduplicated when failOnWarn is set."
+        ],
+        "repair": "done"
       }
     ],
     "outcomes": {
-      "needs_repair": 1
+      "needs_repair": 7
     },
     "pending": [],
-    "escalated": null,
+    "escalated": {
+      "from": "review_4",
+      "issues": 2,
+      "added": [
+        "review_1",
+        "review_2",
+        "review_3",
+        "review_5",
+        "review_6",
+        "review_7"
+      ]
+    },
     "note": "an independent reviewer read the source for each reviewed batch; this is not a whole-map proof"
   },
-  "truth": "deterministic structure/coverage checks and the separate semantic review are different states; neither one proves prose truth"
+  "truth": "deterministic structure/coverage checks and the separate semantic review are different states; neither one proves prose truth",
+  "counts": {
+    "done": 24
+  },
+  "leased": [],
+  "failed": [],
+  "ready": 0,
+  "next_action": "done; open <RUN>/docs/INDEX.md, then run `cbe host cost --run-dir <RUN>`",
+  "usage_unknown": [],
+  "render_error": null,
+  "stopped": null,
+  "progress_log": "<RUN>/progress.log",
+  "model": "group/deepseek",
+  "input_token_basis": "provider prompt_tokens minus cached_tokens; cache reported separately",
+  "calls": 42,
+  "input_tokens": 416857,
+  "output_tokens": 379233,
+  "cache_tokens": 22208,
+  "token_totals_basis": "observed calls; missing usage is excluded, never estimated",
+  "calls_with_unknown_input": 0,
+  "calls_with_unknown_output": 0,
+  "observed_cache_tokens": 22208,
+  "calls_with_unknown_cache": 0,
+  "priced_usd": null,
+  "price_basis": "unknown; configure API price_per_million: [input, output, cache]",
+  "usage_complete": true,
+  "seconds": 2345.671
 }

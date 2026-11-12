@@ -5,6 +5,12 @@
 - `--review sample` escalates: when the sampled batch has any finding, every other batch is
   reviewed in the same run (`summary.json` `semantic_review.escalated`). `RUN.md` gets one
   `Review:` line saying which batches a second model read and what it found.
+- Examples: cJSON, fmt, gson, polyglot, ruby_llm and tsdown had a sampled review with findings,
+  so, as the rule above now does, every other batch was reviewed and the flagged explanations
+  rewritten (DeepSeek; GLM-5.3-flash wrote the explanations). The rewritten batches were then
+  reviewed once more and rewritten once more where that review still found errors, and not
+  read again. Rewrites regroup the map, so these examples have new module pages. Each example
+  README gives the counts. flask (sampled review clean) is unchanged.
 - The explanation prompt asks for direct writing instead of compression: three or more
   conditions go on their own `- condition: outcome` lines, the signature is not restated, and
   failure paths and side effects come first. On flask the explanation total stayed the same

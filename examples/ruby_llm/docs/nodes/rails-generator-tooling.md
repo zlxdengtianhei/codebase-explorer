@@ -1,18 +1,18 @@
 # Rails Generator Tooling
 
-**Capability.** Generates migrations, models, initializers, and chat UI scaffolding to install and upgrade RubyLLM in Rails applications.
+**Capability.** Provides Rails generators for chat UI scaffolding, installation, upgrades, migrations, and shared naming helpers.
 
-Come here to install or upgrade the gem in a Rails app. Generator shared helpers support all generators; the remaining children cover installation, the v1.7 and v1.9 upgrades, chat UI scaffolding, and migration numbering.
+Use this group for Rails generator behavior and upgrade paths. Chat UI, install, and v1.7 upgrade generators share naming helpers; upgrade migration generators create migrations and guidance.
 
 **Children.**
 
-- [Generator shared helpers](generator-shared-helpers.md) `generator-shared-helpers` · 10 unit(s)
-- [v1.7 upgrade generator](v1-7-upgrade-generator.md) `v1-7-upgrade-generator` · 8 unit(s)
-- [Chat UI scaffolding generator](chat-ui-scaffolding-generator.md) `chat-ui-scaffolding-generator` · 8 unit(s)
-- [Install generator](install-generator.md) `install-generator` · 5 unit(s)
-- [Migration numbering and v1.9](migration-numbering-and-v1-9.md) `migration-numbering-and-v1-9` · 4 unit(s)
+- [Chat UI Generator](chat-ui-generator.md) `chat-ui-generator` · 8 unit(s)
+- [RubyLLM Install Generator](rubyllm-install-generator.md) `rubyllm-install-generator` · 7 unit(s)
+- [V1.7 Upgrade Generator](v1-7-upgrade-generator.md) `v1-7-upgrade-generator` · 7 unit(s)
+- [Generator Naming Helpers](generator-naming-helpers.md) `generator-naming-helpers` · 6 unit(s)
+- [Upgrade Migration Generators](upgrade-migration-generators.md) `upgrade-migration-generators` · 5 unit(s)
 
-Parent: [RubyLLM LLM Integration Gem](rubyllm-llm-integration-gem.md)
+Parent: [RubyLLM Multi-Provider Library](rubyllm-multi-provider-library.md)
 
 ## Look up code
 

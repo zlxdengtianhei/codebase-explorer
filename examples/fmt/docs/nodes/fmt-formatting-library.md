@@ -1,20 +1,20 @@
-# fmt formatting library
+# fmt Formatting Library
 
-**Capability.** Complete C++ formatting system: core format/argument machinery, float conversion, chrono, wide-char, styling, printf compatibility, and C API integration.
+**Capability.** Provides the fmt formatting library, spanning core formatting, compiled engines, character variants, chrono, ranges, and OS/stream integration.
 
-Start here for the whole library. Core formatting and argument handling dominate; specialized areas (chrono, wide characters, styling, printf, OS files) build on them.
+This is the repository-level view of fmt. Core internals and compiled engines handle formatting; character, chrono, range, standard-type, and OS/stream groups extend it to specialized outputs and integrations.
 
 **Children.**
 
-- [Core formatting implementation](core-formatting-implementation.md) `core-formatting-implementation` · 137 unit(s)
-- [Format argument infrastructure](format-argument-infrastructure.md) `format-argument-infrastructure` · 114 unit(s)
-- [Chrono and time formatting](chrono-and-time-formatting.md) `chrono-and-time-formatting` · 51 unit(s)
-- [Wide text and styling](wide-text-and-styling.md) `wide-text-and-styling` · 44 unit(s)
-- [Standard library type formatters](standard-library-type-formatters.md) `standard-library-type-formatters` · 31 unit(s)
-- [OS file and C API](os-file-and-c-api.md) `os-file-and-c-api` · 27 unit(s)
-- [Ranges and tuples formatting](ranges-and-tuples-formatting.md) `ranges-and-tuples-formatting` · 25 unit(s)
-- [Printf implementation](printf-implementation.md) `printf-implementation` · 24 unit(s)
-- [Dynamic args, enums, ostream](dynamic-args-enums-ostream.md) `dynamic-args-enums-ostream` · 21 unit(s)
+- [Core Formatting Internals](core-formatting-internals.md) `core-formatting-internals` · 125 unit(s)
+- [Compiled Formatting Engine](compiled-formatting-engine.md) `compiled-formatting-engine` · 92 unit(s)
+- [Character and Style Formatting](character-and-style-formatting.md) `character-and-style-formatting` · 54 unit(s)
+- [OS and Stream Integration](os-and-stream-integration.md) `os-and-stream-integration` · 49 unit(s)
+- [Chrono Formatting Support](chrono-formatting-support.md) `chrono-formatting-support` · 47 unit(s)
+- [Standard Library Formatters](standard-library-formatters.md) `standard-library-formatters` · 34 unit(s)
+- [Range and Tuple Formatting](range-and-tuple-formatting.md) `range-and-tuple-formatting` · 31 unit(s)
+- [Printf-Style Formatting Engine](printf-style-formatting-engine.md) `printf-style-formatting-engine` · 23 unit(s)
+- [Dynamic Arguments, Enums, and C API](dynamic-arguments-enums-and-c-api.md) `dynamic-arguments-enums-and-c-api` · 17 unit(s)
 
 ## Look up code
 

@@ -5,168 +5,164 @@ Graph-confirmed and model-inferred pairs count edges between two subtrees. Graph
 
 ```mermaid
 flowchart LR
-  n0["Public API and Tree Bridge"]
-  n1["Gson Entry Point and Streaming"]
-  n2["JSON Element Tree Model"]
-  n3["Public API and Type Resolution"]
-  n4["Tree Element Bridge"]
-  n5["Type Adapter Framework"]
-  n6["Exclusion Strategies and Builder"]
-  n7["Annotations and Module Declaration"]
-  n8["Core Adapter Abstractions and Time"]
-  n9["Generic Type Reflection"]
-  n10["Reflective Object Binding"]
-  n11["Reflective type adapter factory"]
-  n12["Gson Configuration Assembly"]
-  n13["Instance construction utilities"]
-  n14["Map Serialization"]
-  n9 --> n1
-  n9 --> n0
+  n0["Gson serialization facade"]
+  n1["JSON tree model"]
+  n2["Serialization facade and writing"]
+  n3["Generic type reflection"]
+  n4["Gson annotation adapter support"]
+  n5["Object binding adapters"]
+  n6["Core configuration and adapters"]
+  n7["JsonElement tree base"]
+  n8["Reflective adapter support"]
+  n9["Type resolution and enums"]
+  n10["Stream serialization helpers"]
+  n11["JSON primitive values"]
+  n12["JSON writer formatting"]
+  n13["Map type adapter factory"]
+  n14["Object construction adapters"]
+  n6 --> n1
+  n6 --> n5
+  n6 --> n2
+  n6 --> n9
+  n4 --> n6
+  n4 --> n5
+  n4 --> n9
+  n0 --> n12
+  n1 --> n6
+  n1 --> n5
+  n1 --> n2
   n1 --> n9
-  n1 --> n0
-  n2 --> n3
-  n2 --> n10
-  n2 --> n5
-  n0 --> n9
-  n0 --> n1
-  n3 --> n2
-  n3 --> n10
-  n3 --> n5
-  n10 --> n2
-  n10 --> n3
-  n10 --> n5
+  n12 --> n0
+  n13 --> n7
+  n13 --> n10
+  n5 --> n4
+  n5 --> n1
   n5 --> n2
-  n5 --> n3
-  n5 --> n10
-  n14 ==> n4
-  n11 ==> n0
-  n7 ==> n0
-  n8 ==> n0
+  n5 --> n9
+  n2 --> n4
+  n2 --> n1
+  n2 --> n9
+  n10 --> n7
+  n9 --> n5
+  n9 --> n2
+  n0 ==> n3
+  n14 ==> n8
+  n8 ==> n3
+  n0 ==> n10
+  n13 ==> n3
+  n13 ==> n11
+  n3 ==> n8
+  n4 ==> n3
+  n7 ==> n11
   n13 ==> n0
-  n14 ==> n1
-  n6 ==> n1
-  n6 ==> n0
-  n1 ==> n4
+  n14 ==> n3
+  n3 ==> n0
+  n4 ==> n14
   n0 ==> n4
-  n11 ==> n1
-  n8 ==> n1
-  n12 ==> n8
-  n12 ==> n6
-  n12 ==> n0
-  n13 ==> n1
-  n14 ==> n0
-  n11 ==> n9
-  n7 ==> n8
-  n7 ==> n1
-  n7 ==> n13
-  n8 ==> n4
+  n0 ==> n11
+  n12 ==> n7
 ```
 
 Selected 15 nodes by connection count. Legend: `-->` graph-confirmed; `-.->` model-inferred; `==>` graph-only.
 
 ## Dependency list
 
-- [Adapter Abstractions and Dates](nodes/adapter-abstractions-and-dates.md) → [Adapter Configuration and Policies](nodes/adapter-configuration-and-policies.md) · graph-confirmed · 1 edge(s)
-- [Adapter Configuration and Policies](nodes/adapter-configuration-and-policies.md) → [Adapter Abstractions and Dates](nodes/adapter-abstractions-and-dates.md) · graph-confirmed · 3 edge(s)
-- [Adapter Configuration and Policies](nodes/adapter-configuration-and-policies.md) → [Enum, Number Policy, Runtime Dispatch](nodes/enum-number-policy-runtime-dispatch.md) · graph-confirmed · 1 edge(s)
-- [Annotations and Module Declaration](nodes/annotations-and-module-declaration.md) → [Core Gson Contracts and Facade](nodes/core-gson-contracts-and-facade.md) · graph-confirmed · 5 edge(s)
-- [Arrays and Stream Bridge](nodes/arrays-and-stream-bridge.md) → [Primitives and Map Adapters](nodes/primitives-and-map-adapters.md) · graph-confirmed · 2 edge(s)
-- [Built-in Adapter Implementations](nodes/built-in-adapter-implementations.md) → [Exclusion Strategies and Builder](nodes/exclusion-strategies-and-builder.md) · graph-confirmed · 2 edge(s)
-- [Core Gson Contracts and Facade](nodes/core-gson-contracts-and-facade.md) → [Annotations and Module Declaration](nodes/annotations-and-module-declaration.md) · graph-confirmed · 1 edge(s)
-- [Element Tree Adapter](nodes/element-tree-adapter.md) → [JSON Array Model](nodes/json-array-model.md) · graph-confirmed · 1 edge(s)
-- [Element Types and Tree Adapters](nodes/element-types-and-tree-adapters.md) → [JSON Object and Ordered Map](nodes/json-object-and-ordered-map.md) · graph-confirmed · 2 edge(s)
-- [Enum, Number Policy, Runtime Dispatch](nodes/enum-number-policy-runtime-dispatch.md) → [Adapter Abstractions and Dates](nodes/adapter-abstractions-and-dates.md) · graph-confirmed · 1 edge(s)
-- [Exclusion Strategies and Builder](nodes/exclusion-strategies-and-builder.md) → [Built-in Adapter Implementations](nodes/built-in-adapter-implementations.md) · graph-confirmed · 2 edge(s) · The builder and excluder assemble configuration that selects among the built-in adapter implementations.
-- [Field Binding and Introspection](nodes/field-binding-and-introspection.md) → [Instance Creation and Access Control](nodes/instance-creation-and-access-control.md) · graph-confirmed · 4 edge(s)
-- [Generic Type Reflection](nodes/generic-type-reflection.md) → [Gson Entry Point and Streaming](nodes/gson-entry-point-and-streaming.md) · graph-confirmed · 2 edge(s)
-- [Generic Type Reflection](nodes/generic-type-reflection.md) → [Public API and Tree Bridge](nodes/public-api-and-tree-bridge.md) · graph-confirmed · 2 edge(s)
-- [Gson Configuration Assembly](nodes/gson-configuration-assembly.md) → [Number and Object Adapters](nodes/number-and-object-adapters.md) · graph-confirmed · 2 edge(s)
-- [Gson Entry Point and Streaming](nodes/gson-entry-point-and-streaming.md) → [Generic Type Reflection](nodes/generic-type-reflection.md) · graph-confirmed · 5 edge(s) · The Gson facade resolves generic types via TypeToken and GsonTypes utilities to look up adapters.
-- [Gson Entry Point and Streaming](nodes/gson-entry-point-and-streaming.md) → [Public API and Tree Bridge](nodes/public-api-and-tree-bridge.md) · graph-confirmed · 2 edge(s)
-- [In-memory tree reader](nodes/in-memory-tree-reader.md) → [Streaming JsonReader](nodes/streaming-jsonreader.md) · graph-confirmed · 1 edge(s)
-- [Instance construction utilities](nodes/instance-construction-utilities.md) → [Reflection access filtering](nodes/reflection-access-filtering.md) · graph-confirmed · 2 edge(s) · Instance construction consults access filters to decide whether reflective instantiation is permitted.
-- [Instance Creation and Access Control](nodes/instance-creation-and-access-control.md) → [Field Binding and Introspection](nodes/field-binding-and-introspection.md) · graph-confirmed · 4 edge(s)
-- [JSON Array Model](nodes/json-array-model.md) → [Tree Element Bridge](nodes/tree-element-bridge.md) · graph-confirmed · 1 edge(s)
-- [JSON Element Tree Model](nodes/json-element-tree-model.md) → [JSON Reading Infrastructure](nodes/json-reading-infrastructure.md) · graph-confirmed · 1 edge(s)
-- [JSON Element Tree Model](nodes/json-element-tree-model.md) → [Public API and Type Resolution](nodes/public-api-and-type-resolution.md) · graph-confirmed · 8 edge(s)
-- [JSON Element Tree Model](nodes/json-element-tree-model.md) → [Reflective Object Binding](nodes/reflective-object-binding.md) · graph-confirmed · 1 edge(s)
-- [JSON Element Tree Model](nodes/json-element-tree-model.md) → [Type Adapter Framework](nodes/type-adapter-framework.md) · graph-confirmed · 3 edge(s)
-- [JSON Object and Ordered Map](nodes/json-object-and-ordered-map.md) → [Element Types and Tree Adapters](nodes/element-types-and-tree-adapters.md) · graph-confirmed · 1 edge(s)
-- [JSON Parsing Facades](nodes/json-parsing-facades.md) → [Core Gson Contracts and Facade](nodes/core-gson-contracts-and-facade.md) · graph-confirmed · 3 edge(s) · JsonParser facades use the core Gson contracts to turn text into element trees.
-- [JSON Reading Infrastructure](nodes/json-reading-infrastructure.md) → [JSON Element Tree Model](nodes/json-element-tree-model.md) · graph-confirmed · 5 edge(s) · The reading infrastructure materializes parsed input as JsonElement tree nodes.
-- [JSON Reading Infrastructure](nodes/json-reading-infrastructure.md) → [Public API and Type Resolution](nodes/public-api-and-type-resolution.md) · graph-confirmed · 1 edge(s)
-- [JSON Reading Infrastructure](nodes/json-reading-infrastructure.md) → [Type Adapter Framework](nodes/type-adapter-framework.md) · graph-confirmed · 2 edge(s)
-- [JSON Writing Infrastructure](nodes/json-writing-infrastructure.md) → [JSON Element Tree Model](nodes/json-element-tree-model.md) · graph-confirmed · 3 edge(s) · The writing infrastructure emits JsonElement tree values as JSON output.
-- [JSON Writing Infrastructure](nodes/json-writing-infrastructure.md) → [Public API and Type Resolution](nodes/public-api-and-type-resolution.md) · graph-confirmed · 4 edge(s)
-- [JsonReader public API and docs](nodes/jsonreader-public-api-and-docs.md) → [Lexing and buffer lookahead](nodes/lexing-and-buffer-lookahead.md) · graph-confirmed · 1 edge(s)
-- [JsonReader public API and docs](nodes/jsonreader-public-api-and-docs.md) → [Token consumption and value decoding](nodes/token-consumption-and-value-decoding.md) · graph-confirmed · 1 edge(s)
-- [Lexing and buffer lookahead](nodes/lexing-and-buffer-lookahead.md) → [Token consumption and value decoding](nodes/token-consumption-and-value-decoding.md) · graph-confirmed · 9 edge(s) · Value decoding builds on the lexer's buffer filling and token peeking machinery.
-- [Map Serialization](nodes/map-serialization.md) → [Internal Reflection Utilities](nodes/internal-reflection-utilities.md) · graph-confirmed · 1 edge(s)
-- [Map Serialization](nodes/map-serialization.md) → [JSON Primitive Values](nodes/json-primitive-values.md) · graph-confirmed · 3 edge(s)
-- [Primitives and Map Adapters](nodes/primitives-and-map-adapters.md) → [Arrays and Stream Bridge](nodes/arrays-and-stream-bridge.md) · graph-confirmed · 6 edge(s)
-- [Public API and Tree Bridge](nodes/public-api-and-tree-bridge.md) → [Generic Type Reflection](nodes/generic-type-reflection.md) · graph-confirmed · 1 edge(s)
-- [Public API and Tree Bridge](nodes/public-api-and-tree-bridge.md) → [Gson Entry Point and Streaming](nodes/gson-entry-point-and-streaming.md) · graph-confirmed · 3 edge(s)
-- [Public API and Type Resolution](nodes/public-api-and-type-resolution.md) → [JSON Element Tree Model](nodes/json-element-tree-model.md) · graph-confirmed · 10 edge(s)
-- [Public API and Type Resolution](nodes/public-api-and-type-resolution.md) → [JSON Writing Infrastructure](nodes/json-writing-infrastructure.md) · graph-confirmed · 2 edge(s)
-- [Public API and Type Resolution](nodes/public-api-and-type-resolution.md) → [Reflective Object Binding](nodes/reflective-object-binding.md) · graph-confirmed · 1 edge(s)
-- [Public API and Type Resolution](nodes/public-api-and-type-resolution.md) → [Type Adapter Framework](nodes/type-adapter-framework.md) · graph-confirmed · 3 edge(s) · 1 inferred relation(s)
-- [Reflection and record support](nodes/reflection-and-record-support.md) → [Reflective type adapter factory](nodes/reflective-type-adapter-factory.md) · graph-confirmed · 2 edge(s)
-- [Reflective Object Binding](nodes/reflective-object-binding.md) → [JSON Element Tree Model](nodes/json-element-tree-model.md) · graph-confirmed · 1 edge(s)
-- [Reflective Object Binding](nodes/reflective-object-binding.md) → [Public API and Type Resolution](nodes/public-api-and-type-resolution.md) · graph-confirmed · 19 edge(s) · Reflective binding relies on the public API and type resolution to obtain adapters for field types.
-- [Reflective Object Binding](nodes/reflective-object-binding.md) → [Type Adapter Framework](nodes/type-adapter-framework.md) · graph-confirmed · 4 edge(s)
-- [Reflective type adapter factory](nodes/reflective-type-adapter-factory.md) → [Reflection and record support](nodes/reflection-and-record-support.md) · graph-confirmed · 13 edge(s) · The reflective factory uses reflection utilities and record introspection to bind fields.
-- [Streaming JsonReader](nodes/streaming-jsonreader.md) → [In-memory tree reader](nodes/in-memory-tree-reader.md) · graph-confirmed · 1 edge(s)
-- [Structural navigation and skipping](nodes/structural-navigation-and-skipping.md) → [Lexing and buffer lookahead](nodes/lexing-and-buffer-lookahead.md) · graph-confirmed · 8 edge(s)
-- [Structural navigation and skipping](nodes/structural-navigation-and-skipping.md) → [Token consumption and value decoding](nodes/token-consumption-and-value-decoding.md) · graph-confirmed · 7 edge(s)
-- [Token consumption and value decoding](nodes/token-consumption-and-value-decoding.md) → [Lexing and buffer lookahead](nodes/lexing-and-buffer-lookahead.md) · graph-confirmed · 14 edge(s)
-- [Tree Element Bridge](nodes/tree-element-bridge.md) → [Element Tree Adapter](nodes/element-tree-adapter.md) · graph-confirmed · 1 edge(s)
-- [Tree Element Bridge](nodes/tree-element-bridge.md) → [JSON Array Model](nodes/json-array-model.md) · graph-confirmed · 1 edge(s)
-- [Type Adapter Framework](nodes/type-adapter-framework.md) → [JSON Element Tree Model](nodes/json-element-tree-model.md) · graph-confirmed · 1 edge(s)
-- [Type Adapter Framework](nodes/type-adapter-framework.md) → [JSON Writing Infrastructure](nodes/json-writing-infrastructure.md) · graph-confirmed · 1 edge(s)
-- [Type Adapter Framework](nodes/type-adapter-framework.md) → [Public API and Type Resolution](nodes/public-api-and-type-resolution.md) · graph-confirmed · 23 edge(s) · Adapter machinery calls into the public API and type-resolution layer for adapter lookup and type tokens.
-- [Type Adapter Framework](nodes/type-adapter-framework.md) → [Reflective Object Binding](nodes/reflective-object-binding.md) · graph-confirmed · 2 edge(s)
-- [Map Serialization](nodes/map-serialization.md) → [Tree Element Bridge](nodes/tree-element-bridge.md) · graph-only · 6 edge(s)
-- [Reflective type adapter factory](nodes/reflective-type-adapter-factory.md) → [Public API and Tree Bridge](nodes/public-api-and-tree-bridge.md) · graph-only · 6 edge(s)
-- [Annotations and Module Declaration](nodes/annotations-and-module-declaration.md) → [Public API and Tree Bridge](nodes/public-api-and-tree-bridge.md) · graph-only · 4 edge(s)
-- [Core Adapter Abstractions and Time](nodes/core-adapter-abstractions-and-time.md) → [Public API and Tree Bridge](nodes/public-api-and-tree-bridge.md) · graph-only · 4 edge(s)
-- [In-memory tree writer](nodes/in-memory-tree-writer.md) → [Gson Entry Point and Streaming](nodes/gson-entry-point-and-streaming.md) · graph-only · 4 edge(s)
-- [Instance construction utilities](nodes/instance-construction-utilities.md) → [Public API and Tree Bridge](nodes/public-api-and-tree-bridge.md) · graph-only · 4 edge(s)
-- [Instance construction utilities](nodes/instance-construction-utilities.md) → [Reflection and record support](nodes/reflection-and-record-support.md) · graph-only · 4 edge(s)
-- [Map Serialization](nodes/map-serialization.md) → [Gson Entry Point and Streaming](nodes/gson-entry-point-and-streaming.md) · graph-only · 4 edge(s)
-- [Built-in JDK Type Adapters](nodes/built-in-jdk-type-adapters.md) → [Public API and Tree Bridge](nodes/public-api-and-tree-bridge.md) · graph-only · 3 edge(s)
-- [Exclusion Strategies and Builder](nodes/exclusion-strategies-and-builder.md) → [Gson Entry Point and Streaming](nodes/gson-entry-point-and-streaming.md) · graph-only · 3 edge(s)
-- [Exclusion Strategies and Builder](nodes/exclusion-strategies-and-builder.md) → [Public API and Tree Bridge](nodes/public-api-and-tree-bridge.md) · graph-only · 3 edge(s)
-- [Gson Entry Point and Streaming](nodes/gson-entry-point-and-streaming.md) → [Tree Element Bridge](nodes/tree-element-bridge.md) · graph-only · 3 edge(s)
-- [In-memory tree reader](nodes/in-memory-tree-reader.md) → [JSON Primitive Values](nodes/json-primitive-values.md) · graph-only · 3 edge(s)
-- [JSON Parsing Facades](nodes/json-parsing-facades.md) → [Gson Entry Point and Streaming](nodes/gson-entry-point-and-streaming.md) · graph-only · 3 edge(s)
-- [JSON Parsing Facades](nodes/json-parsing-facades.md) → [Tree Element Bridge](nodes/tree-element-bridge.md) · graph-only · 3 edge(s)
-- [Public API and Tree Bridge](nodes/public-api-and-tree-bridge.md) → [Tree Element Bridge](nodes/tree-element-bridge.md) · graph-only · 3 edge(s)
-- [Reflective type adapter factory](nodes/reflective-type-adapter-factory.md) → [Gson Entry Point and Streaming](nodes/gson-entry-point-and-streaming.md) · graph-only · 3 edge(s)
-- [Reflective type adapter factory](nodes/reflective-type-adapter-factory.md) → [Reflection access filtering](nodes/reflection-access-filtering.md) · graph-only · 3 edge(s)
-- [Core Adapter Abstractions and Time](nodes/core-adapter-abstractions-and-time.md) → [Gson Entry Point and Streaming](nodes/gson-entry-point-and-streaming.md) · graph-only · 2 edge(s)
-- [Enum, Number Policy, Runtime Dispatch](nodes/enum-number-policy-runtime-dispatch.md) → [Gson Entry Point and Streaming](nodes/gson-entry-point-and-streaming.md) · graph-only · 2 edge(s)
-- [Exclusion Strategies and Builder](nodes/exclusion-strategies-and-builder.md) → [Built-in JDK Type Adapters](nodes/built-in-jdk-type-adapters.md) · graph-only · 2 edge(s)
-- [Exclusion Strategies and Builder](nodes/exclusion-strategies-and-builder.md) → [Reflection and record support](nodes/reflection-and-record-support.md) · graph-only · 2 edge(s)
-- [Generic Type Reflection](nodes/generic-type-reflection.md) → [Built-in JDK Type Adapters](nodes/built-in-jdk-type-adapters.md) · graph-only · 2 edge(s)
-- [Gson Configuration Assembly](nodes/gson-configuration-assembly.md) → [Core Adapter Abstractions and Time](nodes/core-adapter-abstractions-and-time.md) · graph-only · 2 edge(s)
-- [Gson Configuration Assembly](nodes/gson-configuration-assembly.md) → [Exclusion Strategies and Builder](nodes/exclusion-strategies-and-builder.md) · graph-only · 2 edge(s)
-- [Gson Configuration Assembly](nodes/gson-configuration-assembly.md) → [Public API and Tree Bridge](nodes/public-api-and-tree-bridge.md) · graph-only · 2 edge(s)
-- [Instance construction utilities](nodes/instance-construction-utilities.md) → [Gson Entry Point and Streaming](nodes/gson-entry-point-and-streaming.md) · graph-only · 2 edge(s)
-- [JSON Primitive Values](nodes/json-primitive-values.md) → [Lazy Number Handling](nodes/lazy-number-handling.md) · graph-only · 2 edge(s)
-- [Map Serialization](nodes/map-serialization.md) → [Public API and Tree Bridge](nodes/public-api-and-tree-bridge.md) · graph-only · 2 edge(s)
-- [Number and Object Adapters](nodes/number-and-object-adapters.md) → [Public API and Tree Bridge](nodes/public-api-and-tree-bridge.md) · graph-only · 2 edge(s)
-- [Reflective type adapter factory](nodes/reflective-type-adapter-factory.md) → [Generic Type Reflection](nodes/generic-type-reflection.md) · graph-only · 2 edge(s)
-- [Token consumption and value decoding](nodes/token-consumption-and-value-decoding.md) → [Built-in JDK Type Adapters](nodes/built-in-jdk-type-adapters.md) · graph-only · 2 edge(s)
-- [Tree Element Bridge](nodes/tree-element-bridge.md) → [JSON Primitive Values](nodes/json-primitive-values.md) · graph-only · 2 edge(s)
-- [Annotations and Module Declaration](nodes/annotations-and-module-declaration.md) → [Core Adapter Abstractions and Time](nodes/core-adapter-abstractions-and-time.md) · graph-only · 1 edge(s)
-- [Annotations and Module Declaration](nodes/annotations-and-module-declaration.md) → [Gson Entry Point and Streaming](nodes/gson-entry-point-and-streaming.md) · graph-only · 1 edge(s)
-- [Annotations and Module Declaration](nodes/annotations-and-module-declaration.md) → [Instance construction utilities](nodes/instance-construction-utilities.md) · graph-only · 1 edge(s)
-- [Core Adapter Abstractions and Time](nodes/core-adapter-abstractions-and-time.md) → [In-memory tree writer](nodes/in-memory-tree-writer.md) · graph-only · 1 edge(s)
-- [Core Adapter Abstractions and Time](nodes/core-adapter-abstractions-and-time.md) → [Tree Element Bridge](nodes/tree-element-bridge.md) · graph-only · 1 edge(s)
-- [Date Formatting and Parsing](nodes/date-formatting-and-parsing.md) → [Gson Configuration Assembly](nodes/gson-configuration-assembly.md) · graph-only · 1 edge(s)
-- [Date Formatting and Parsing](nodes/date-formatting-and-parsing.md) → [Public API and Tree Bridge](nodes/public-api-and-tree-bridge.md) · graph-only · 1 edge(s)
+- [Core configuration and adapters](nodes/core-configuration-and-adapters.md) → [JSON tree model](nodes/json-tree-model.md) · graph-confirmed · 6 edge(s)
+- [Core configuration and adapters](nodes/core-configuration-and-adapters.md) → [Object binding adapters](nodes/object-binding-adapters.md) · graph-confirmed · 2 edge(s)
+- [Core configuration and adapters](nodes/core-configuration-and-adapters.md) → [Public utilities and dates](nodes/public-utilities-and-dates.md) · graph-confirmed · 1 edge(s)
+- [Core configuration and adapters](nodes/core-configuration-and-adapters.md) → [Serialization facade and writing](nodes/serialization-facade-and-writing.md) · graph-confirmed · 3 edge(s)
+- [Core configuration and adapters](nodes/core-configuration-and-adapters.md) → [Type resolution and enums](nodes/type-resolution-and-enums.md) · graph-confirmed · 4 edge(s)
+- [Enum runtime adapter selection](nodes/enum-runtime-adapter-selection.md) → [Generic type reflection](nodes/generic-type-reflection.md) · graph-confirmed · 1 edge(s)
+- [Gson annotation adapter support](nodes/gson-annotation-adapter-support.md) → [Core configuration and adapters](nodes/core-configuration-and-adapters.md) · graph-confirmed · 1 edge(s)
+- [Gson annotation adapter support](nodes/gson-annotation-adapter-support.md) → [Object binding adapters](nodes/object-binding-adapters.md) · graph-confirmed · 1 edge(s)
+- [Gson annotation adapter support](nodes/gson-annotation-adapter-support.md) → [Type resolution and enums](nodes/type-resolution-and-enums.md) · graph-confirmed · 2 edge(s)
+- [Gson serialization facade](nodes/gson-serialization-facade.md) → [JSON writer formatting](nodes/json-writer-formatting.md) · graph-confirmed · 2 edge(s) · The Gson serialization facade uses JSON writer formatting to emit serialized output.
+- [Gson setup and defaults](nodes/gson-setup-and-defaults.md) → [Built-in Java type adapters](nodes/built-in-java-type-adapters.md) · graph-confirmed · 3 edge(s) · Gson setup and defaults use built-in Java type adapters for standard adapter registrations.
+- [Java time and SQL adapters](nodes/java-time-and-sql-adapters.md) → [Core configuration and adapters](nodes/core-configuration-and-adapters.md) · graph-confirmed · 4 edge(s)
+- [Java time and SQL adapters](nodes/java-time-and-sql-adapters.md) → [Serialization facade and writing](nodes/serialization-facade-and-writing.md) · graph-confirmed · 8 edge(s)
+- [JSON element tree components](nodes/json-element-tree-components.md) → [Ordered JSON object map](nodes/ordered-json-object-map.md) · graph-confirmed · 2 edge(s)
+- [JSON element tree components](nodes/json-element-tree-components.md) → [Primitive values and utilities](nodes/primitive-values-and-utilities.md) · graph-confirmed · 5 edge(s)
+- [JSON primitive values](nodes/json-primitive-values.md) → [Internal Java utilities](nodes/internal-java-utilities.md) · graph-confirmed · 2 edge(s)
+- [JSON structure navigation](nodes/json-structure-navigation.md) → [JSON token scanning](nodes/json-token-scanning.md) · graph-confirmed · 10 edge(s) · JSON structure navigation uses token scanning to consume structural tokens and skip nested values.
+- [JSON structure navigation](nodes/json-structure-navigation.md) → [JSON value consumption](nodes/json-value-consumption.md) · graph-confirmed · 5 edge(s)
+- [JSON tree model](nodes/json-tree-model.md) → [Core configuration and adapters](nodes/core-configuration-and-adapters.md) · graph-confirmed · 1 edge(s)
+- [JSON tree model](nodes/json-tree-model.md) → [Object binding adapters](nodes/object-binding-adapters.md) · graph-confirmed · 1 edge(s)
+- [JSON tree model](nodes/json-tree-model.md) → [Serialization facade and writing](nodes/serialization-facade-and-writing.md) · graph-confirmed · 3 edge(s)
+- [JSON tree model](nodes/json-tree-model.md) → [Streaming and tree reading](nodes/streaming-and-tree-reading.md) · graph-confirmed · 1 edge(s)
+- [JSON tree model](nodes/json-tree-model.md) → [Type resolution and enums](nodes/type-resolution-and-enums.md) · graph-confirmed · 3 edge(s)
+- [JSON value consumption](nodes/json-value-consumption.md) → [JSON token scanning](nodes/json-token-scanning.md) · graph-confirmed · 16 edge(s) · JSON value consumption uses token scanning to parse scalar values, strings, and property names.
+- [JSON writer formatting](nodes/json-writer-formatting.md) → [Gson serialization facade](nodes/gson-serialization-facade.md) · graph-confirmed · 4 edge(s)
+- [JsonElement tree adapter](nodes/jsonelement-tree-adapter.md) → [Ordered JSON array](nodes/ordered-json-array.md) · graph-confirmed · 1 edge(s)
+- [JsonElement tree base](nodes/jsonelement-tree-base.md) → [Ordered JSON array](nodes/ordered-json-array.md) · graph-confirmed · 1 edge(s)
+- [JsonElement tree reader](nodes/jsonelement-tree-reader.md) → [Streaming JSON reader internals](nodes/streaming-json-reader-internals.md) · graph-confirmed · 1 edge(s)
+- [Map type adapter factory](nodes/map-type-adapter-factory.md) → [JsonElement tree base](nodes/jsonelement-tree-base.md) · graph-confirmed · 5 edge(s)
+- [Map type adapter factory](nodes/map-type-adapter-factory.md) → [Stream serialization helpers](nodes/stream-serialization-helpers.md) · graph-confirmed · 2 edge(s)
+- [Object binding adapters](nodes/object-binding-adapters.md) → [Gson annotation adapter support](nodes/gson-annotation-adapter-support.md) · graph-confirmed · 1 edge(s)
+- [Object binding adapters](nodes/object-binding-adapters.md) → [JSON tree model](nodes/json-tree-model.md) · graph-confirmed · 1 edge(s)
+- [Object binding adapters](nodes/object-binding-adapters.md) → [Serialization facade and writing](nodes/serialization-facade-and-writing.md) · graph-confirmed · 3 edge(s)
+- [Object binding adapters](nodes/object-binding-adapters.md) → [Type resolution and enums](nodes/type-resolution-and-enums.md) · graph-confirmed · 6 edge(s) · Object binding adapters use type resolution and enum handling when constructing and binding Java objects.
+- [Object construction adapters](nodes/object-construction-adapters.md) → [Reflection and exclusion rules](nodes/reflection-and-exclusion-rules.md) · graph-confirmed · 7 edge(s)
+- [Ordered JSON array](nodes/ordered-json-array.md) → [JsonElement tree base](nodes/jsonelement-tree-base.md) · graph-confirmed · 1 edge(s)
+- [Ordered JSON object map](nodes/ordered-json-object-map.md) → [JSON element tree components](nodes/json-element-tree-components.md) · graph-confirmed · 1 edge(s)
+- [Public utilities and dates](nodes/public-utilities-and-dates.md) → [JSON tree model](nodes/json-tree-model.md) · graph-confirmed · 3 edge(s)
+- [Public utilities and dates](nodes/public-utilities-and-dates.md) → [Serialization facade and writing](nodes/serialization-facade-and-writing.md) · graph-confirmed · 3 edge(s)
+- [Reflection and exclusion rules](nodes/reflection-and-exclusion-rules.md) → [Object construction adapters](nodes/object-construction-adapters.md) · graph-confirmed · 1 edge(s)
+- [Reflective adapter support](nodes/reflective-adapter-support.md) → [Serialization exclusion policy](nodes/serialization-exclusion-policy.md) · graph-confirmed · 1 edge(s)
+- [Serialization exclusion policy](nodes/serialization-exclusion-policy.md) → [Reflective adapter support](nodes/reflective-adapter-support.md) · graph-confirmed · 2 edge(s)
+- [Serialization facade and writing](nodes/serialization-facade-and-writing.md) → [Gson annotation adapter support](nodes/gson-annotation-adapter-support.md) · graph-confirmed · 1 edge(s)
+- [Serialization facade and writing](nodes/serialization-facade-and-writing.md) → [JSON tree model](nodes/json-tree-model.md) · graph-confirmed · 7 edge(s)
+- [Serialization facade and writing](nodes/serialization-facade-and-writing.md) → [Type resolution and enums](nodes/type-resolution-and-enums.md) · graph-confirmed · 9 edge(s)
+- [Stream serialization helpers](nodes/stream-serialization-helpers.md) → [JsonElement tree adapter](nodes/jsonelement-tree-adapter.md) · graph-confirmed · 1 edge(s)
+- [Stream serialization helpers](nodes/stream-serialization-helpers.md) → [JsonElement tree base](nodes/jsonelement-tree-base.md) · graph-confirmed · 1 edge(s)
+- [Streaming and tree reading](nodes/streaming-and-tree-reading.md) → [JSON tree model](nodes/json-tree-model.md) · graph-confirmed · 5 edge(s) · Streaming and tree reading use the JSON tree model to read JsonElement trees.
+- [Streaming and tree reading](nodes/streaming-and-tree-reading.md) → [Object binding adapters](nodes/object-binding-adapters.md) · graph-confirmed · 2 edge(s)
+- [Streaming and tree reading](nodes/streaming-and-tree-reading.md) → [Serialization facade and writing](nodes/serialization-facade-and-writing.md) · graph-confirmed · 1 edge(s)
+- [Streaming JSON reader core](nodes/streaming-json-reader-core.md) → [JSON token scanning](nodes/json-token-scanning.md) · graph-confirmed · 3 edge(s)
+- [Streaming JSON reader internals](nodes/streaming-json-reader-internals.md) → [JsonElement tree reader](nodes/jsonelement-tree-reader.md) · graph-confirmed · 1 edge(s)
+- [Type resolution and enums](nodes/type-resolution-and-enums.md) → [Object binding adapters](nodes/object-binding-adapters.md) · graph-confirmed · 2 edge(s)
+- [Type resolution and enums](nodes/type-resolution-and-enums.md) → [Serialization facade and writing](nodes/serialization-facade-and-writing.md) · graph-confirmed · 2 edge(s)
+- [Gson serialization facade](nodes/gson-serialization-facade.md) → [Generic type reflection](nodes/generic-type-reflection.md) · graph-only · 9 edge(s)
+- [Java time and SQL adapters](nodes/java-time-and-sql-adapters.md) → [Gson serialization facade](nodes/gson-serialization-facade.md) · graph-only · 8 edge(s)
+- [Object construction adapters](nodes/object-construction-adapters.md) → [Reflective adapter support](nodes/reflective-adapter-support.md) · graph-only · 7 edge(s)
+- [Gson builder configuration](nodes/gson-builder-configuration.md) → [Generic type reflection](nodes/generic-type-reflection.md) · graph-only · 4 edge(s)
+- [Java time and SQL adapters](nodes/java-time-and-sql-adapters.md) → [Null-safe atomic adapters](nodes/null-safe-atomic-adapters.md) · graph-only · 4 edge(s)
+- [Reflective adapter support](nodes/reflective-adapter-support.md) → [Generic type reflection](nodes/generic-type-reflection.md) · graph-only · 4 edge(s)
+- [Gson serialization facade](nodes/gson-serialization-facade.md) → [Stream serialization helpers](nodes/stream-serialization-helpers.md) · graph-only · 3 edge(s)
+- [JsonElement tree reader](nodes/jsonelement-tree-reader.md) → [JSON primitive values](nodes/json-primitive-values.md) · graph-only · 3 edge(s)
+- [Map type adapter factory](nodes/map-type-adapter-factory.md) → [Generic type reflection](nodes/generic-type-reflection.md) · graph-only · 3 edge(s)
+- [Map type adapter factory](nodes/map-type-adapter-factory.md) → [JSON primitive values](nodes/json-primitive-values.md) · graph-only · 3 edge(s)
+- [Public API utility classes](nodes/public-api-utility-classes.md) → [Gson serialization facade](nodes/gson-serialization-facade.md) · graph-only · 3 edge(s)
+- [Basic Java type adapters](nodes/basic-java-type-adapters.md) → [Internal Java utilities](nodes/internal-java-utilities.md) · graph-only · 2 edge(s)
+- [Core Gson default adapters](nodes/core-gson-default-adapters.md) → [Null-safe atomic adapters](nodes/null-safe-atomic-adapters.md) · graph-only · 2 edge(s)
+- [Generic type reflection](nodes/generic-type-reflection.md) → [Reflective adapter support](nodes/reflective-adapter-support.md) · graph-only · 2 edge(s)
+- [Gson annotation adapter support](nodes/gson-annotation-adapter-support.md) → [Generic type reflection](nodes/generic-type-reflection.md) · graph-only · 2 edge(s)
+- [Gson builder configuration](nodes/gson-builder-configuration.md) → [Stream serialization helpers](nodes/stream-serialization-helpers.md) · graph-only · 2 edge(s)
+- [JsonElement tree base](nodes/jsonelement-tree-base.md) → [JSON primitive values](nodes/json-primitive-values.md) · graph-only · 2 edge(s)
+- [Map type adapter factory](nodes/map-type-adapter-factory.md) → [Gson serialization facade](nodes/gson-serialization-facade.md) · graph-only · 2 edge(s)
+- [Null-safe atomic adapters](nodes/null-safe-atomic-adapters.md) → [Reflective adapter support](nodes/reflective-adapter-support.md) · graph-only · 2 edge(s)
+- [Object construction adapters](nodes/object-construction-adapters.md) → [Generic type reflection](nodes/generic-type-reflection.md) · graph-only · 2 edge(s)
+- [Public API utility classes](nodes/public-api-utility-classes.md) → [Stream serialization helpers](nodes/stream-serialization-helpers.md) · graph-only · 2 edge(s)
+- [Core Gson default adapters](nodes/core-gson-default-adapters.md) → [Basic Java type adapters](nodes/basic-java-type-adapters.md) · graph-only · 1 edge(s)
+- [Core Gson default adapters](nodes/core-gson-default-adapters.md) → [Gson serialization facade](nodes/gson-serialization-facade.md) · graph-only · 1 edge(s)
+- [Core Gson default adapters](nodes/core-gson-default-adapters.md) → [ISO-8601 date utility](nodes/iso-8601-date-utility.md) · graph-only · 1 edge(s)
+- [Enum runtime adapter selection](nodes/enum-runtime-adapter-selection.md) → [Gson serialization facade](nodes/gson-serialization-facade.md) · graph-only · 1 edge(s)
+- [Generic type reflection](nodes/generic-type-reflection.md) → [Gson serialization facade](nodes/gson-serialization-facade.md) · graph-only · 1 edge(s)
+- [Gson annotation adapter support](nodes/gson-annotation-adapter-support.md) → [Null-safe atomic adapters](nodes/null-safe-atomic-adapters.md) · graph-only · 1 edge(s)
+- [Gson annotation adapter support](nodes/gson-annotation-adapter-support.md) → [Object construction adapters](nodes/object-construction-adapters.md) · graph-only · 1 edge(s)
+- [Gson builder configuration](nodes/gson-builder-configuration.md) → [Gson serialization facade](nodes/gson-serialization-facade.md) · graph-only · 1 edge(s)
+- [Gson builder configuration](nodes/gson-builder-configuration.md) → [JsonElement tree base](nodes/jsonelement-tree-base.md) · graph-only · 1 edge(s)
+- [Gson serialization facade](nodes/gson-serialization-facade.md) → [Gson annotation adapter support](nodes/gson-annotation-adapter-support.md) · graph-only · 1 edge(s)
+- [Gson serialization facade](nodes/gson-serialization-facade.md) → [JSON primitive values](nodes/json-primitive-values.md) · graph-only · 1 edge(s)
+- [JSON token scanning](nodes/json-token-scanning.md) → [Reflective adapter support](nodes/reflective-adapter-support.md) · graph-only · 1 edge(s)
+- [JSON value consumption](nodes/json-value-consumption.md) → [Reflective adapter support](nodes/reflective-adapter-support.md) · graph-only · 1 edge(s)
+- [JSON writer formatting](nodes/json-writer-formatting.md) → [JsonElement tree base](nodes/jsonelement-tree-base.md) · graph-only · 1 edge(s)
+- [JSON writer formatting](nodes/json-writer-formatting.md) → [Ordered JSON array](nodes/ordered-json-array.md) · graph-only · 1 edge(s)
+- [JSON writer formatting](nodes/json-writer-formatting.md) → [Ordered JSON object map](nodes/ordered-json-object-map.md) · graph-only · 1 edge(s)
+- [JsonElement tree adapter](nodes/jsonelement-tree-adapter.md) → [JsonElement tree reader](nodes/jsonelement-tree-reader.md) · graph-only · 1 edge(s)
+- [JsonElement tree adapter](nodes/jsonelement-tree-adapter.md) → [Ordered JSON object map](nodes/ordered-json-object-map.md) · graph-only · 1 edge(s)
+- [JsonElement tree base](nodes/jsonelement-tree-base.md) → [Ordered JSON object map](nodes/ordered-json-object-map.md) · graph-only · 1 edge(s)
 
-Graph-only pairs are ranked by edge count; 32 omitted.
+Graph-only pairs are ranked by edge count; 18 omitted.
 
 ### Within containment
 

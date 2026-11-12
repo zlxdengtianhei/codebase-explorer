@@ -5,18 +5,19 @@
   "source_files": 4,
   "source_tokens": 34364,
   "modules": 4,
-  "units": 107,
-  "semantic_nodes": 15,
-  "published_pages": 16,
+  "units": 72,
+  "semantic_nodes": 6,
+  "published_pages": 7,
   "pending": [],
   "normalized": [],
   "unexplained_count": 0,
   "unexplained": [],
   "known_empty": [],
-  "wall_seconds": 283.65,
+  "wall_seconds": 959.047,
   "basis": {
     "cbe_version": "2.2.0.dev0",
     "models": [
+      "group/deepseek",
       "group/glm-5.3-flash"
     ],
     "source": {
@@ -47,27 +48,27 @@
   },
   "run_dir": "<RUN>",
   "index": "<RUN>/docs/INDEX.md",
-  "subagent_tasks": 11,
+  "subagent_tasks": 23,
   "deterministic_checks_ok": true,
   "tree": {
-    "leaves": 12,
-    "nodes": 15,
+    "leaves": 5,
+    "nodes": 6,
     "program_made_titles": 0,
     "naming_tasks": 2,
     "index": {
       "budget": 2000,
-      "tokens": 1281,
+      "tokens": 800,
       "over_budget": false,
-      "levels": 2,
-      "levels_shown": 2,
+      "levels": 1,
+      "levels_shown": 1,
       "files_per_node": 3,
       "path": "<RUN>/docs/INDEX.md"
     }
   },
   "node_dependencies": {
-    "graph_confirmed": 24,
+    "graph_confirmed": 7,
     "model_inferred": 0,
-    "graph_only": 26
+    "graph_only": 0
   },
   "within_containment": 0,
   "key_flows": 5,
@@ -75,30 +76,62 @@
   "layers": {
     "tokenizer": "o200k_base",
     "source_tokens": 34364,
-    "semantic_tokens": 25512,
+    "semantic_tokens": 15190,
     "semantic_breakdown": {
-      "model_body": 8920,
-      "signature_location": 3803,
-      "heading_anchor": 2482,
+      "model_body": 7250,
+      "signature_location": 2516,
+      "heading_anchor": 1700,
       "relations": 0,
-      "footer": 1380,
-      "index": 4484,
-      "node_text": 4443
+      "footer": 552,
+      "index": 1914,
+      "node_text": 1258
     },
-    "model_body_tokens": 8920,
-    "model_body_source_ratio": 0.259573972762193,
-    "published_markdown_source_ratio": 0.7424048422768013,
-    "deterministic_tokens": 299889,
-    "catalog_tokens": 299889,
+    "model_body_tokens": 7250,
+    "model_body_source_ratio": 0.21097660342218602,
+    "published_markdown_source_ratio": 0.4420323594459318,
+    "deterministic_tokens": 280645,
+    "catalog_tokens": 280645,
     "frozen_graph_tokens": 0,
     "frozen_graph_bytes": 11824246,
-    "semantic_source_ratio": 0.7424048422768013,
-    "deterministic_source_ratio": 8.726836223955303,
+    "semantic_source_ratio": 0.4420323594459318,
+    "deterministic_source_ratio": 8.166831567919916,
     "scope": "Breakdown partitions full Markdown BPE tokens by the first byte's line: model_body is published unit explain, summary, extras and uncertainties; signature_location includes shared source-file reference definitions (including ones used by relations); heading_anchor, relations, footer, INDEX and node_text (including labels/whitespace) partition the rest. model_body/source and published_markdown/source use complete frozen files. semantic: all published Markdown (node pages + INDEX, including navigation, signatures and commands); deterministic: catalog.json as serialized, including preserved prose copies and edge references, excluding the graph field; frozen graph is excluded from token ratios (frozen_graph_tokens=0), reported separately as frozen_graph_bytes using UTF-8 JSON with ensure_ascii=False and compact separators; complete graph evidence is expanded only with query --edges; source: complete frozen files counted once; context source chunks, host prompts, raw answers and summary.json excluded; layers are storage measures, not disjoint content classes"
   },
   "semantic_review": {
     "mode": "sample",
     "reviewed": [
+      {
+        "module": 0,
+        "decision": "needs_repair",
+        "issues": [
+          "grp:cJSON.h-platform-and-visibility-macros: says CJSON_PUBLIC expands to plain type, __declspec(dllexport) type, or __declspec(dllimport) type, but the source appends CJSON_STDCALL to each expansion.",
+          "grp:cJSON.h-platform-and-visibility-macros: says defining both CJSON_HIDE_SYMBOLS and CJSON_IMPORT_SYMBOLS leaves CJSON_PUBLIC undefined, but the CJSON_HIDE_SYMBOLS branch defines it first.",
+          "cJSON.h::module_region::cJSON_SetNumberValue::15296: claims the helper updates valueint per the header, but the header only declares the helper and does not document that side effect."
+        ],
+        "repair": "done"
+      },
+      {
+        "module": 1,
+        "decision": "needs_repair",
+        "issues": [
+          "cJSON_Utils.c::function::decode_pointer_inplace::10413: says an invalid escape leaves the string NUL-terminated at the current decoded position, but the early return skips the final terminator write.",
+          "cJSON_Utils.c::function::create_patches::29879: says leftover 'from' elements emit 'remove' with the index as suffix, but the leftover-from loop never increments index, so all such removals use the same index.",
+          "cJSON_Utils.c::function::generate_merge_patch::38582 and grp:cJSON_Utils.c-generatemergepatch-entry-points: say NULL when no changes are needed or trees are equal, but equal non-object inputs return a deep duplicate of 'to' instead.",
+          "cJSON_Utils.c::function::generate_merge_patch::38582: says objects are walked in key order but does not state that key matching uses strcmp, so case_sensitive=false still treats keys differing only by case as distinct.",
+          "cJSON_Utils.c::function::sort_list::13233: says NULL keys sort as 'greater', but compare_strings returns 1 for either NULL and the merge picks the second list on non-negative comparison, so NULL placement is not consistently greater.",
+          "cJSON_Utils.c::function::detach_path::11839: says object child detach calls cJSON_DetachItemFromObject but does not note that this ignores case_sensitive, so the flag only affects parent resolution.",
+          "grp:cJSON_Utils.c-generatemergepatch-entry-points: says the CaseSensitive variant is case-sensitive, but generate_merge_patch recurses through the case-insensitive public wrapper, so nested common keys are not case-sensitive."
+        ],
+        "repair": "done"
+      },
+      {
+        "module": 2,
+        "decision": "needs_repair",
+        "issues": [
+          "grp:cJSON_Utils.h-cjson-utils-public-header: attributes to the header comment that AddPatchToArray appends an operation/path/value entry, but the comment only calls it a utility for generating patch array entries; append semantics are not stated."
+        ],
+        "repair": "done"
+      },
       {
         "module": 3,
         "decision": "needs_repair",
@@ -109,11 +142,45 @@
       }
     ],
     "outcomes": {
-      "needs_repair": 1
+      "needs_repair": 4
     },
     "pending": [],
-    "escalated": null,
+    "escalated": {
+      "from": "review_4",
+      "issues": 1,
+      "added": [
+        "review_1",
+        "review_2",
+        "review_3"
+      ]
+    },
     "note": "an independent reviewer read the source for each reviewed batch; this is not a whole-map proof"
   },
-  "truth": "deterministic structure/coverage checks and the separate semantic review are different states; neither one proves prose truth"
+  "truth": "deterministic structure/coverage checks and the separate semantic review are different states; neither one proves prose truth",
+  "counts": {
+    "done": 15
+  },
+  "leased": [],
+  "failed": [],
+  "ready": 0,
+  "next_action": "done; open <RUN>/docs/INDEX.md, then run `cbe host cost --run-dir <RUN>`",
+  "usage_unknown": [],
+  "render_error": null,
+  "stopped": null,
+  "progress_log": "<RUN>/progress.log",
+  "model": "group/deepseek",
+  "input_token_basis": "provider prompt_tokens minus cached_tokens; cache reported separately",
+  "calls": 28,
+  "input_tokens": 305863,
+  "output_tokens": 180541,
+  "cache_tokens": 12352,
+  "token_totals_basis": "observed calls; missing usage is excluded, never estimated",
+  "calls_with_unknown_input": 0,
+  "calls_with_unknown_output": 0,
+  "observed_cache_tokens": 12352,
+  "calls_with_unknown_cache": 0,
+  "priced_usd": null,
+  "price_basis": "unknown; configure API price_per_million: [input, output, cache]",
+  "usage_complete": true,
+  "seconds": 1300.454
 }

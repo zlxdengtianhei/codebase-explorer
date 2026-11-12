@@ -5,21 +5,21 @@
   "source_files": 20,
   "source_tokens": 185053,
   "modules": 11,
-  "units": 474,
-  "semantic_nodes": 53,
-  "published_pages": 54,
+  "units": 472,
+  "semantic_nodes": 49,
+  "published_pages": 50,
   "pending": [],
   "normalized": [
-    "module_1",
-    "tree_top"
+    "module_1"
   ],
   "unexplained_count": 0,
   "unexplained": [],
   "known_empty": [],
-  "wall_seconds": 336.967,
+  "wall_seconds": 4787.594,
   "basis": {
     "cbe_version": "2.2.0.dev0",
     "models": [
+      "group/deepseek",
       "group/glm-5.3-flash"
     ],
     "source": {
@@ -50,16 +50,16 @@
   },
   "run_dir": "<RUN>",
   "index": "<RUN>/docs/INDEX.md",
-  "subagent_tasks": 27,
+  "subagent_tasks": 71,
   "deterministic_checks_ok": true,
   "tree": {
-    "leaves": 41,
-    "nodes": 53,
-    "program_made_titles": 1,
+    "leaves": 36,
+    "nodes": 49,
+    "program_made_titles": 0,
     "naming_tasks": 3,
     "index": {
       "budget": 5551,
-      "tokens": 3473,
+      "tokens": 3038,
       "over_budget": false,
       "levels": 3,
       "levels_shown": 3,
@@ -68,35 +68,35 @@
     }
   },
   "node_dependencies": {
-    "graph_confirmed": 24,
-    "model_inferred": 1,
-    "graph_only": 45
+    "graph_confirmed": 19,
+    "model_inferred": 0,
+    "graph_only": 25
   },
   "within_containment": 0,
-  "key_flows": 7,
+  "key_flows": 5,
   "candidate_flows": 24,
   "layers": {
     "tokenizer": "o200k_base",
     "source_tokens": 185053,
-    "semantic_tokens": 88173,
+    "semantic_tokens": 77088,
     "semantic_breakdown": {
-      "model_body": 36826,
-      "signature_location": 17148,
-      "heading_anchor": 11441,
-      "relations": 242,
-      "footer": 4876,
-      "index": 7438,
-      "node_text": 10202
+      "model_body": 29554,
+      "signature_location": 17398,
+      "heading_anchor": 11442,
+      "relations": 0,
+      "footer": 4508,
+      "index": 6063,
+      "node_text": 8123
     },
-    "model_body_tokens": 36826,
-    "model_body_source_ratio": 0.1990024479473448,
-    "published_markdown_source_ratio": 0.476474307360594,
-    "deterministic_tokens": 2990150,
-    "catalog_tokens": 2990150,
+    "model_body_tokens": 29554,
+    "model_body_source_ratio": 0.15970559785574942,
+    "published_markdown_source_ratio": 0.416572549485823,
+    "deterministic_tokens": 2899556,
+    "catalog_tokens": 2899556,
     "frozen_graph_tokens": 0,
     "frozen_graph_bytes": 36024564,
-    "semantic_source_ratio": 0.476474307360594,
-    "deterministic_source_ratio": 16.15834382582287,
+    "semantic_source_ratio": 0.416572549485823,
+    "deterministic_source_ratio": 15.668786780003567,
     "scope": "Breakdown partitions full Markdown BPE tokens by the first byte's line: model_body is published unit explain, summary, extras and uncertainties; signature_location includes shared source-file reference definitions (including ones used by relations); heading_anchor, relations, footer, INDEX and node_text (including labels/whitespace) partition the rest. model_body/source and published_markdown/source use complete frozen files. semantic: all published Markdown (node pages + INDEX, including navigation, signatures and commands); deterministic: catalog.json as serialized, including preserved prose copies and edge references, excluding the graph field; frozen graph is excluded from token ratios (frozen_graph_tokens=0), reported separately as frozen_graph_bytes using UTF-8 JSON with ensure_ascii=False and compact separators; complete graph evidence is expanded only with query --edges; source: complete frozen files counted once; context source chunks, host prompts, raw answers and summary.json excluded; layers are storage measures, not disjoint content classes"
   },
   "semantic_review": {
@@ -110,14 +110,160 @@
           "grp:format.h-uint128: attributes the high-half overflow assert to operator+=(uint64_t), but that overload is noexcept and asserts nothing; the FMT_ASSERT(new_hi >= hi_) lives in operator+=(uint128)."
         ],
         "repair": "done"
+      },
+      {
+        "module": 1,
+        "decision": "needs_repair",
+        "issues": [
+          "grp:format-inl.h-rotr: says r==0 leaves the value unchanged and that a full-width shift is avoided, but the code computes n << 32 (or n << 64) when r==0, which is undefined behavior rather than a no-op.",
+          "grp:format-inl.h-error-reporting-helpers: says do_report_error writes the message plus a newline, but the newline is only written when fwrite returns >0; a failed write emits no newline.",
+          "grp:format-inl.h-system-error-reporting: says report_system_error prints to stderr with a newline, but do_report_error only writes the newline when fwrite returns >0."
+        ],
+        "repair": "done"
+      },
+      {
+        "module": 2,
+        "decision": "needs_repair",
+        "issues": [
+          "grp:core.h-basic-specs-accessors: says each setter clears its field's bits before OR-ing, but set_upper, set_alt, and set_localized only OR the bit (and clear_alt clears it).",
+          "grp:core.h-check-for-duplicate: says names are pointer-equal, but the code compares named_args[i].name == arg_name, which converts the pointer to basic_string_view and compares contents.",
+          "grp:core.h-use-format-as-traits: says views are not auto-mapped for safety, but the trait only checks that the format_as result is arithmetic and does not exclude view types.",
+          "grp:core.h-fstring: says the const S& constructor performs the same view-lvalue static_assert as the array constructor, but it only runs the parse check and has no such static_assert.",
+          "grp:core.h-parse-format-specs: says only X/B set uppercase, but E/F/G/A also set uppercase before parsing the float presentation type.",
+          "include/fmt/core.h::function::detail.compare::14081: says it returns -1/0/1, but the memcmp path returns memcmp's unspecified negative/positive value.",
+          "grp:core.h-basic-string-view: says the template constructor accepts std-string-like types via data()/size(), but it also requires S::value_type to equal Char.",
+          "include/fmt/core.h::struct::FMT_END_EXPORT.type_mapper::38514: says long collapses to int or long long depending on sizeof, but long_short also requires FMT_BUILTIN_TYPES.",
+          "grp:core.h-parse-replacement-field: omits the failure when the format string ends immediately after '{', which calls on_error(\"invalid format string\").",
+          "grp:core.h-compile-parse-context: says check_dynamic_spec reports when the referenced argument exists and is non-integral, but it also requires types_ to be non-null."
+        ],
+        "repair": "done"
+      },
+      {
+        "module": 3,
+        "decision": "needs_repair",
+        "issues": [
+          "grp:chrono.h-to-nonnegative-int: says the integral overload rejects values ≥ upper, but the code rejects only values > upper (and the floating overload allows values below upper+1), so the stated [0, upper) contract is wrong.",
+          "grp:chrono.h-tm-field-accessors: says tm_hour12 maps h≥12 to h-12, but the code maps 12 to 12 (only 13–23 become 1–11).",
+          "grp:chrono.h-tm-writer-spec-handlers: says alternative-numeric paths delegate to format_localized, but on_utc_offset's alternative path calls format_utc_offset and hand-writes the colon instead.",
+          "include/fmt/chrono.h::class::detail.tm_writer::40480::s9: claims every on_* callback switches to locale_writer for non-classic/alternative numeric systems, but on_utc_offset, on_tz_name, on_iso_week_based_year, on_24_hour_time and on_iso_time do not follow that policy."
+        ],
+        "repair": "done"
+      },
+      {
+        "module": 4,
+        "decision": "needs_repair",
+        "issues": [
+          "include/fmt/ostream.h::function::FMT_BEGIN_NAMESPACE.write_buffer::1467: says any ostream write failure propagates as an exception from os.write, but the code only calls os.write without setting an exception mask, so a failed write may only set stream state.",
+          "include/fmt/ostream.h::function::vprint::3627: says a recognized file buffer causes the stream to be flushed, but the code flushes only when _isatty(fd) is true; non-tty file buffers fall through without flushing.",
+          "grp:std.h-bit-reference-formatter: says detection requires convertible-to-bool, nothrow-assignable-from-bool, and flip(), but is_bit_reference_like has a libc++ specialization forcing true for std::__bit_const_reference<C>, so the formatter can be enabled without those conditions.",
+          "grp:std.h-variant-formatter: says the catch writes 'valueless by exception' instead, but the code discards the iterator returned by detail::write, so for non-appending output iterators the following ')' overwrites the first character."
+        ],
+        "repair": "done"
+      },
+      {
+        "module": 5,
+        "decision": "needs_repair",
+        "issues": [
+          "grp:color.h-ansi-color-escape: says the emphasis constructor with no emphasis writes ESC '[' 'm', but the code overwrites the '[' with 'm' and produces ESC 'm'.",
+          "grp:args.h-dynamic-format-arg-store: says reference wrappers and non-string/cstring/custom types are stored by reference, but push_back(const T&) unwraps and passes them to emplace_arg, whose basic_format_arg stores built-in values by value; the named non-copy branch likewise stores built-in values by value."
+        ],
+        "repair": "done"
+      },
+      {
+        "module": 6,
+        "decision": "needs_repair",
+        "issues": [
+          "include/fmt/fmt-c.h::module_region::FMT_MAKE_ARG::3119: says pointers map to fmt_from_ptr, but the _Generic cases only map void* and const void*; other pointer types fall to fmt_unsupported_type.",
+          "include/fmt/fmt-c.h::module_region::FMT_MAKE_ARG::3119: says unsupported arguments fail at link time, but fmt_unsupported_type is declared with no parameters and the macro calls it with (x), so the failure is a compile-time argument-count error.",
+          "grp:fmt-c.h-c-api-argument-types: calls the union anonymous, but the source union is the named member `value`, so members are accessed through `arg.value` rather than directly on fmt_arg.",
+          "grp:ranges.h-range-formatter: says a remaining ':' after the switch delegates to the underlying parser, but the 's' case returns immediately after consuming 's', so following specs are not parsed."
+        ],
+        "repair": "done"
+      },
+      {
+        "module": 7,
+        "decision": "needs_repair",
+        "issues": [
+          "grp:printf.h-sprintf: says the char overload takes non-const argument references, but the source takes const T&.",
+          "grp:xchar.h-join-overloads: says every overload is enabled only when the deduced Char is not char, but the initializer_list overload has no such enable_if and is always available for wchar_t.",
+          "grp:printf.h-basic-printf-context and include/fmt/printf.h::function::FMT_BEGIN_EXPORT::392::s0: assert that arg() returns a disengaged/empty argument for an absent id, but the supplied source only delegates to args_.get and does not establish that fallback.",
+          "include/fmt/printf.h::function::detail.vprintf::13671: omits that a parsed argument index of 0 is rejected with \"argument not found\" before argument lookup."
+        ],
+        "repair": "done"
+      },
+      {
+        "module": 8,
+        "decision": "needs_repair",
+        "issues": [
+          "grp:compile.h-runtime-named-field: says it writes each matching named argument, but the fold short-circuits after the first match, so later matching named arguments are not written.",
+          "include/fmt/compile.h::function::FMT_END_EXPORT.compile_format_string::12204: says specs after an unresolved name return unknown_format, but the static_assert requires dynamic names to be allowed first; otherwise compilation fails instead of returning unknown_format."
+        ],
+        "repair": "done"
+      },
+      {
+        "module": 9,
+        "decision": "accepted",
+        "issues": [],
+        "repair": null
+      },
+      {
+        "module": 10,
+        "decision": "needs_repair",
+        "issues": [
+          "src/os.cc::function::file::9415: says _wsopen_s uses the default 0666 mode, but the source passes default_open_mode, which on Windows is _S_IREAD|_S_IWRITE (0600), not 0666.",
+          "src/os.cc::function::file::9415: says the helper is MSVC-Windows-only, but its source guard is _WIN32 && !__MINGW32__, so non-MinGW Windows toolchains also compile it."
+        ],
+        "repair": "done"
       }
     ],
     "outcomes": {
-      "needs_repair": 1
+      "needs_repair": 10,
+      "accepted": 1
     },
     "pending": [],
-    "escalated": null,
+    "escalated": {
+      "from": "review_1",
+      "issues": 2,
+      "added": [
+        "review_2",
+        "review_3",
+        "review_4",
+        "review_5",
+        "review_6",
+        "review_7",
+        "review_8",
+        "review_9",
+        "review_10",
+        "review_11"
+      ]
+    },
     "note": "an independent reviewer read the source for each reviewed batch; this is not a whole-map proof"
   },
-  "truth": "deterministic structure/coverage checks and the separate semantic review are different states; neither one proves prose truth"
+  "truth": "deterministic structure/coverage checks and the separate semantic review are different states; neither one proves prose truth",
+  "counts": {
+    "done": 36
+  },
+  "leased": [],
+  "failed": [],
+  "ready": 0,
+  "next_action": "done; open <RUN>/docs/INDEX.md, then run `cbe host cost --run-dir <RUN>`",
+  "usage_unknown": [],
+  "render_error": null,
+  "stopped": null,
+  "progress_log": "<RUN>/progress.log",
+  "model": "group/deepseek",
+  "input_token_basis": "provider prompt_tokens minus cached_tokens; cache reported separately",
+  "calls": 80,
+  "input_tokens": 2031570,
+  "output_tokens": 1170052,
+  "cache_tokens": null,
+  "token_totals_basis": "observed calls; missing usage is excluded, never estimated",
+  "calls_with_unknown_input": 2,
+  "calls_with_unknown_output": 2,
+  "observed_cache_tokens": 356992,
+  "calls_with_unknown_cache": 2,
+  "priced_usd": null,
+  "price_basis": "unknown; configure API price_per_million: [input, output, cache]",
+  "usage_complete": false,
+  "seconds": 7433.175
 }
