@@ -7,9 +7,9 @@
 <a href="https://github.com/zlxdengtianhei/codebase-explorer/actions/workflows/wheel-install.yml"><img alt="CI" src="https://github.com/zlxdengtianhei/codebase-explorer/actions/workflows/wheel-install.yml/badge.svg"></a>
 </p>
 
-<p align="center"><img src="https://github.com/zlxdengtianhei/codebase-explorer/releases/download/walkthrough-v2.2.0.dev0/hero-2.gif" alt="34 秒动图：代码单元连线、聚成模块、显示系统地图；打开一个模块页，再用 cbe source 打印原始代码行" width="100%"></p>
+https://github.com/user-attachments/assets/f0c3cc47-d0c2-4727-820e-65508c19408c
 
-<p align="center">34 秒：代码单元、连线、模块、地图、打开一个模块页、查看源码。<br><a href="https://zlxdengtianhei.github.io/codebase-explorer/?data=flask">打开可交互的地图</a> · <a href="https://zlxdengtianhei.github.io/codebase-explorer/film.html">▶ 看 2 分钟的配音讲解</a>（英文配音，页内有中文文字稿）</p>
+<p align="center">两分钟、带配音：Flask 从源码文件到模块地图，逐个看八个顶层模块，打开一个模块页，再用 <code>cbe find</code>、<code>cbe source</code> 查。<br><a href="https://zlxdengtianhei.github.io/codebase-explorer/?data=flask">打开可交互的地图</a> · <a href="https://zlxdengtianhei.github.io/codebase-explorer/film.html">同一支视频的网页版</a>（英文配音，页内有中英文字稿）</p>
 
 文件树只告诉你文件在哪，不告诉你每一块是干什么的。CBE（Codebase Explorer）读一个仓库，写出文件树缺的那部分：一页列出整棵模块树（module tree），每个模块一行，说明它负责什么；再给每个模块一页，讲清其中每个函数和类，并链接到准确的源码行。你可以直接读。编码 agent 用三条命令就能在里面查。
 
