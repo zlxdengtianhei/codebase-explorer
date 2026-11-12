@@ -40,7 +40,7 @@ node codefilm-record.mjs --out "$FRAMES" --fps "$FPS" --caption-out "$OUT/captio
 encode() {
   "$FFMPEG" -y -loglevel error -framerate "$FPS" -i "$FRAMES/frame_%05d.png" -i "$OUT/narration.wav" \
     -c:v libx264 -preset slow -crf "$1" -pix_fmt yuv420p -movflags +faststart \
-    -af loudnorm=I=-16:TP=-1.5:LRA=11 -c:a aac -b:a 96k -ac 1 -shortest "$OUT/flask-code.mp4"
+    -af loudnorm=I=-16:TP=-1.5:LRA=11 -ar 48000 -c:a aac -b:a 96k -ac 1 -shortest "$OUT/flask-code.mp4"
 }
 CRF_VALUE="${CRF:-24}"
 encode "$CRF_VALUE"

@@ -4,11 +4,46 @@
 import argparse
 import hashlib
 import json
+import re
 from pathlib import Path
 
 import numpy as np
 import soundfile as sf
 from kokoro_onnx import Kokoro
+
+
+def sentence_splits(samples, rate, text):
+    """Times (s from the clip start) of the pauses between sentences, or [] when not found.
+
+    Each boundary is the middle of the longest quiet run (at least 0.12 s) within 1.5 s of
+    where the sentence lengths put it. Captions use these instead of character shares."""
+    parts = [p for p in re.split(r"(?<=[.!?])\s+", text.strip()) if p]
+    if len(parts) < 2:
+        return []
+    frame = max(1, round(rate * 0.01))
+    count = len(samples) // frame
+    quiet = [float(np.abs(samples[i * frame:(i + 1) * frame]).max()) < 0.005 for i in range(count)]
+    runs, i = [], 0
+    while i < count:
+        if quiet[i]:
+            j = i
+            while j < count and quiet[j]:
+                j += 1
+            if j - i >= 12:
+                runs.append((i, j))
+            i = j
+        else:
+            i += 1
+    total, seen, splits = sum(len(p) for p in parts), 0, []
+    for part in parts[:-1]:
+        seen += len(part)
+        estimate = count * seen / total
+        near = [r for r in runs if abs((r[0] + r[1]) / 2 - estimate) <= 150]
+        if not near:
+            return []
+        best = max(near, key=lambda r: (r[1] - r[0], -abs((r[0] + r[1]) / 2 - estimate)))
+        splits.append((best[0] + best[1]) / 2 * frame / rate)
+    return splits
 
 
 def main():
@@ -85,7 +120,11 @@ def main():
         audio.append(samples)
         audio.append(np.zeros(padded_length - len(samples), dtype=np.float32))
         t1 = t0 + padded_length / rate
-        timeline.append({"id": entry["id"], "scene": entry["scene"], "t0": round(t0, 6), "t1": round(t1, 6)})
+        cue = {"id": entry["id"], "scene": entry["scene"], "t0": round(t0, 6), "t1": round(t1, 6)}
+        splits = sentence_splits(samples, rate, entry["say"])
+        if splits:
+            cue["splits"] = [round(t0 + split, 3) for split in splits]
+        timeline.append(cue)
         print(f"{entry['id']:>2}  {t0:7.3f}–{t1:7.3f}  ({t1 - t0:5.3f}s)")
         cursor = t1
         previous_scene = entry["scene"]

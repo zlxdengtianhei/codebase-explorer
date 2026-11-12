@@ -44,9 +44,13 @@ function sentences(caption) { return caption.split(/(?<=[.!?])\s+/).filter(Boole
 function captionSegments(cue, item) {
   const parts = sentences(item.caption || item.say);
   const total = parts.reduce((n, s) => n + s.length, 0);
+  // Measured pauses between sentences (make_audio.py) when there is one per boundary;
+  // otherwise each sentence gets its share of the characters.
+  const splits = Array.isArray(cue.splits) && cue.splits.length === parts.length - 1 ? cue.splits : null;
   let start = cue.t0;
   return parts.map((part, index) => {
-    const end = index === parts.length - 1 ? cue.t1 : start + (cue.t1 - cue.t0) * part.length / total;
+    const end = index === parts.length - 1 ? cue.t1
+      : splits ? splits[index] : start + (cue.t1 - cue.t0) * part.length / total;
     const segment = { id: cue.id, segment: index + 1, view: index, t0: start, t1: end, text: part, lines: wrap(part, `400 28px ${SANS}`, 1160) };
     start = end;
     return segment;
@@ -81,7 +85,8 @@ function drawHeader(S) {
   });
 }
 function unitLabel(signature) {
-  const lines = signature.split('\n');
+  // Comments are not part of the signature line shown under the file path.
+  const lines = signature.split('\n').map(l => l.replace(/\s+#.*$/, ''));
   const start = lines.findIndex(l => /^\s*(def|class)\s/.test(l));
   return (start >= 0 ? lines.slice(start) : lines).join(' ').replace(/\s+/g, ' ').trim();
 }
