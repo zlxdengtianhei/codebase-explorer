@@ -109,7 +109,8 @@ Without a graph, CBE still works. With one, the explanation tasks and the depend
 |---|---|---|
 | Works on real repositories | C, C++, Python, JavaScript, TypeScript, Java, Go, Ruby | Python imports use Grimp (the `graphs` extra); JavaScript and TypeScript imports use dependency-cruiser (Node.js). Go calls across packages can stay unresolved. Ruby's dynamic dispatch can bind a call to a method of the same name on another class: CBE marks such calls ambiguous, and some wrong bindings remain. |
 | Needs an extra tool | Rust, PHP | Rust needs `cargo` and a Cargo project layout. PHP needs `php` (7 or later). |
-| Fails on real repositories | C#, Kotlin | Joern 4.0.654 failed on a 55-file C# repository and a 146-file Kotlin repository. Two-file examples work, so small inputs may succeed. |
+| Builds, calls not resolved | C# | On a 55-file repository the graph builds (declarations, control flow, imports), but none of its 2,322 calls resolve to a method in the repository: 246 point outside it, the rest stay unresolved. |
+| Fails on real repositories | Kotlin | Joern 4.0.654 failed on a 146-file Kotlin repository. Two-file examples work, so small inputs may succeed. |
 | Not tested | Swift, TSX | |
 
 `cbe languages` prints the same status for each language as `call_graph`. Source parsing and chunking work for every language in the table whatever the call-graph status is. Tree-sitter grammars for 13 languages come with the default install and two extras. More on analyzers and graph options: [docs/reference.md](docs/reference.md#optional-graph-analyzers).
@@ -161,7 +162,7 @@ What we do not claim: that grouping by function lets an agent locate code more a
 ## Known limitations
 
 - The call graph needs Joern and Java 21 or newer. `cbe graph setup` downloads both (about 1.9 GB).
-- C# and Kotlin call graphs failed on real repositories under the pinned Joern version. Two-file examples work.
+- C# graphs build on real repositories, but their calls are not resolved to methods in the repository. Kotlin graphs fail on real repositories under the pinned Joern version; two-file examples work.
 - Ruby's dynamic dispatch can bind a call to the wrong class's method. CBE marks many of these as ambiguous, and some wrong bindings remain.
 - C and C++ files are not preprocessed. A header with many macros is cut into coarse chunks, and a macro can be taken for a function name.
 - A model writes the explanations. `cbe host verify` passing shows that the structure and references are consistent. It does not show that an explanation is correct. Check explanations against the source (`cbe source`).

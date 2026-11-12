@@ -109,7 +109,8 @@ flowchart LR
 |---|---|---|
 | 在真实仓库上能出图 | C、C++、Python、JavaScript、TypeScript、Java、Go、Ruby | Python 的导入用 Grimp（装 `graphs` 额外依赖）；JavaScript 和 TypeScript 的导入用 dependency-cruiser（要 Node.js）。Go 跨包的调用可能停在未解析。Ruby 的动态分派可能把调用绑到别的类里同名的方法上：CBE 把这类调用标成歧义，仍有一些错绑。 |
 | 要额外工具 | Rust、PHP | Rust 要有 `cargo` 和 Cargo 工程布局。PHP 要有 `php`（7 或更高版本）。 |
-| 在真实仓库上失败 | C#、Kotlin | Joern 4.0.654 在一个 55 个文件的 C# 仓库和一个 146 个文件的 Kotlin 仓库上建图失败。两个文件的小例子能跑，所以小输入可能成功。 |
+| 能建图、调用没解析 | C# | 在一个 55 个文件的仓库上能建图（声明、控制流、导入都有），但 2,322 条调用没有一条解析到仓内的方法：246 条指向仓外，其余没解析。 |
+| 在真实仓库上失败 | Kotlin | Joern 4.0.654 在一个 146 个文件的 Kotlin 仓库上建图失败。两个文件的小例子能跑，所以小输入可能成功。 |
 | 未测试 | Swift、TSX | |
 
 `cbe languages` 对每种语言打印同样的状态，字段名是 `call_graph`。不管调用图一栏写什么，表里每种语言的源码解析和切块都能用。CBE 的默认安装和两个额外依赖带有 13 种语言的 Tree-sitter 语法。分析器与建图选项见 [docs/reference.md](docs/reference.md#optional-graph-analyzers)。
@@ -161,7 +162,7 @@ flowchart LR
 ## 已知限制
 
 - 调用图依赖 Joern 和 Java 21 或更高版本。`cbe graph setup` 会把两者都下载下来（约 1.9 GB）。
-- C# 和 Kotlin 在真实仓库上用所钉的 Joern 版本建图失败。两个文件的小例子能跑。
+- C# 在真实仓库上能建图，但调用没有解析到仓内的方法。Kotlin 在真实仓库上用所钉的 Joern 版本建图失败；两个文件的小例子能跑。
 - Ruby 的动态分派可能把调用绑到错误的类的同名方法上。CBE 把其中许多标成歧义，仍有一些错绑。
 - C 和 C++ 文件不跑预处理。宏多的头文件会被切得很粗，宏可能被当成函数名。
 - 讲解由模型写。`cbe host verify` 通过，只说明结构和引用自洽，不说明讲解是对的。请用 `cbe source` 对照源码核实。

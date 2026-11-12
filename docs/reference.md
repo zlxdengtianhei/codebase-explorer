@@ -87,7 +87,7 @@ The graph adapters use [Joern](https://joern.io/), [Grimp](https://grimp.readthe
 | Ruby | Joern declarations | works | CBE passes `--no-default-exclude`, so `test`, `tests` and `spec` paths are analyzed. Dynamic dispatch can bind a call to a method of the same name on another class; CBE marks such calls ambiguous, and some wrong bindings remain. |
 | Rust | Joern declarations | needs `cargo` | The frontend runs `cargo` (on `PATH`) and needs a Cargo project layout; a flat source directory can fail. |
 | PHP | Joern declarations | needs `php` | An external PHP runtime (7 or later) must be on `PATH`. The local trial without it reported a failed analysis. |
-| C# | Joern declarations | known failure | Joern 4.0.654 failed on a real 55-file repository: the export script hit a null pointer error, and the build recorded a failed capability. A two-file test fixture works, so small inputs may succeed. |
+| C# | Joern declarations | builds, calls not resolved | On a real 55-file repository the build completes. Calls whose containing method Joern does not record (361 there, attribute operators) are left out and counted in the `calls_without_owner_omitted` diagnostic. None of the 2,322 exported calls resolves to a repository method: 246 are external and 2,076 unresolved. |
 | Kotlin | Joern declarations | known failure | Joern 4.0.654 failed on a real 146-file repository: `joern-parse` stopped with `key not found: MethodRef`, and the build recorded a failed capability. A two-file test fixture works, so small inputs may succeed. |
 | Swift | Joern declarations | untested | The frontend parses per file; the tested cross-file call remained external. |
 

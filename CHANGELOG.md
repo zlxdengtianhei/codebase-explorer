@@ -2,6 +2,10 @@
 
 ## 2.2.0.dev0 (unreleased)
 
+- C#: the graph build no longer stops on calls that Joern records without a containing
+  method (attribute operators); they are left out and counted in the
+  `calls_without_owner_omitted` diagnostic. On a 55-file repository the build now completes, but
+  no call resolves to a repository method yet.
 - `cbe host update-graph` can add or remove dataflow in a completed run without rerunning model
   tasks. It requires the same source manifest and exactly the same non-dataflow nodes and edges.
 - `summary.json` and `RUN.md` record their generation basis: CBE version, recorded models, source
