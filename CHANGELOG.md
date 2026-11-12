@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- C# column numbers, which Joern counts from 0 like its C# line numbers, now count from 1, as
+  in the C frontend and the rest of cbe. A call's column picks the symbol that makes the call.
+
 ## 2.2.0 (2026-11-12)
 
 - First release on PyPI: `uv tool install codebase-explorer`.

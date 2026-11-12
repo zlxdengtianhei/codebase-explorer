@@ -195,6 +195,9 @@ def test_c_sharp_calls_with_repository_types_in_the_signature_resolve(tmp_path: 
     # Lines are 1-based like every other language: the call is on line 11, NotNegative on line 5.
     edge = next(e for e in graph["edges"] if e["kind"] == "call" and "NotNegative(" in e.get("expression", ""))
     assert edge["line"] == 11
+    # Columns are 1-based too: the call expression starts at this column of line 11.
+    line_text = (repo / "Guard.cs").read_text(encoding="utf-8").splitlines()[10]
+    assert edge["column"] == line_text.index(edge["expression"].splitlines()[0][:20]) + 1
     method = next(n for n in graph["nodes"] if "GuardExtensions.NotNegative:" in n.get("name", ""))
     assert method["start_line"] == 5
 
