@@ -1181,6 +1181,8 @@ def _apply_submit(run_dir: Path, state: dict[str, Any], task: dict[str, Any], re
         if repair_id not in state["tasks"]:
             state["tasks"][repair_id] = _task(repair_id, "repair", task["module"], issues=value["issues"])
             log_event(run_dir, "queue", f"{repair_id} for {len(value['issues'])} review finding(s)", task=repair_id)
+        if state["review"] == "sample" and not state.get("review_escalated"):
+            _escalate_review(run_dir, state, task, len(value["issues"]))
     elif task["kind"] in {"module", "repair"}:
         # The skeleton and the names describe a fixed detail snapshot: a repair or a late module
         # changes the unit set, so the tree is made again.
@@ -1383,6 +1385,46 @@ def _mechanical_semantic_overview(state: dict[str, Any], tree: dict[str, Any]) -
                          "generated mechanically from the responsibility tree.")}
 
 
+def _escalate_review(run_dir: Path, state: dict[str, Any], task: dict[str, Any], issues: int) -> None:
+    """A sampled batch with findings means this run's writing is not reliable: review every batch.
+
+    Acceptance sampling's tightened inspection: a clean sample costs nothing extra; a sample with
+    defects pays for full review. Batches without units (known empty) have nothing to review."""
+    added = []
+    for module in state["modules"]:
+        review_id = f"review_{module['number'] + 1}"
+        if review_id in state["tasks"] or "known_empty" in _module_task(state, module["number"])["flags"]:
+            continue
+        state["tasks"][review_id] = _task(review_id, "review", module["number"])
+        added.append(review_id)
+    state["review_escalated"] = {"from": task["id"], "issues": issues, "added": added}
+    log_event(run_dir, "queue", f"{len(added)} more review(s): the sampled {task['id']} reported {issues} "
+              "issue(s), so every batch is reviewed", task=task["id"], added=added)
+
+
+def _review_note(run_dir: Path, state: dict[str, Any]) -> str:
+    """One RUN.md line: which batches a second model read, what it found, what was not read."""
+    batches = [m for m in state["modules"] if "known_empty" not in _module_task(state, m["number"])["flags"]]
+    review = _semantic_review_summary(run_dir, state)
+    done, found = review["reviewed"], sum(len(row["issues"]) for row in review["reviewed"])
+    if state["review"] == "none":
+        return "Review: none; no batch was read by a second model."
+    escalated = state.get("review_escalated")
+    if escalated:
+        return (f"Review: the sampled batch ({escalated['from']}) reported {escalated['issues']} issue(s), "
+                f"so every batch was reviewed: {len(done)} of {len(batches)} reviewed, {found} issue(s) in total"
+                + (f", {len(review['pending'])} still pending." if review["pending"] else "."))
+    if state["review"] == "sample":
+        if not done:
+            return "Review: one sampled batch, not reviewed yet."
+        row = done[0]
+        units = len((_module_output(run_dir, state, row["module"]) or {}).get("units") or [])
+        return (f"Review: sampled batch module_{row['module'] + 1} ({units} units), {len(row['issues'])} issue(s); "
+                f"the other {len(batches) - 1} batch(es) were not reviewed.")
+    return (f"Review: {len(done)} of {len(batches)} batches reviewed, {found} issue(s) in total"
+            + (f", {len(review['pending'])} still pending." if review["pending"] else "."))
+
+
 def _semantic_review_summary(run_dir: Path, state: dict[str, Any]) -> dict[str, Any]:
     """A separate record of the independent semantic review, not a validity score.
 
@@ -1408,7 +1450,7 @@ def _semantic_review_summary(run_dir: Path, state: dict[str, Any]) -> dict[str, 
     for row in reviewed:
         outcomes[row["decision"]] = outcomes.get(str(row["decision"]), 0) + 1
     return {"mode": state.get("review"), "reviewed": reviewed, "outcomes": outcomes,
-            "pending": pending,
+            "pending": pending, "escalated": state.get("review_escalated"),
             "note": "an independent reviewer read the source for each reviewed batch; "
                     "this is not a whole-map proof"}
 
@@ -1483,6 +1525,7 @@ def _render(run_dir: Path, state: dict[str, Any]) -> None:
                                "when the resumed `system` task completes.")
         index_notes += [f"CBE normalized the overview after a second invalid answer: {flag}"
                         for flag in system_task["flags"]]
+    index_notes.append(_review_note(run_dir, state))
     if pending:
         index_notes.append(f"{len(pending)} module page(s) are pending: {', '.join(pending)}.")
     known_empty = sorted(path for path, entry in (state.get("inventory") or {}).items()

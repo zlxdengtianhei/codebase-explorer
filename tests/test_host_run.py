@@ -205,6 +205,37 @@ def test_review_all_queues_repairs_before_the_overview(tmp_path: Path) -> None:
     assert "the negative check is missing" in repair_prompt
 
 
+def test_a_sampled_review_with_findings_escalates_to_every_batch(tmp_path: Path) -> None:
+    repo = _repo(tmp_path)
+    run_dir = Path(host_run.plan(repo, tmp_path / "run", review="sample", jobs=8)["run_dir"])
+    handed = _drive(run_dir, decision="needs_repair")
+    state = json.loads((run_dir / "host" / "state.json").read_text())
+    modules = state["modules"]
+    assert len(modules) >= 2
+    assert sum(task.startswith("review_") for task in handed) == len(modules)
+    assert sum(task.startswith("repair_") for task in handed) == len(modules)
+    assert handed[-1] == "system"
+    escalated = state["review_escalated"]
+    assert escalated["issues"] == 1 and len(escalated["added"]) == len(modules) - 1
+    summary = json.loads((run_dir / "summary.json").read_text())
+    assert summary["semantic_review"]["escalated"] == escalated
+    notes = (run_dir / "docs" / "RUN.md").read_text()
+    assert (f"Review: the sampled batch ({escalated['from']}) reported 1 issue(s), so every batch was reviewed: "
+            f"{len(modules)} of {len(modules)} reviewed, {len(modules)} issue(s) in total.") in notes
+    assert host_run.verify(run_dir)["ok"]
+
+
+def test_a_clean_sampled_review_stays_a_sample(tmp_path: Path) -> None:
+    repo = _repo(tmp_path)
+    run_dir = Path(host_run.plan(repo, tmp_path / "run", review="sample", jobs=8)["run_dir"])
+    handed = _drive(run_dir)
+    state = json.loads((run_dir / "host" / "state.json").read_text())
+    assert sum(task.startswith("review_") for task in handed) == 1 and "review_escalated" not in state
+    notes = (run_dir / "docs" / "RUN.md").read_text()
+    others = len(state["modules"]) - 1
+    assert f"0 issue(s); the other {others} batch(es) were not reviewed." in notes
+
+
 def test_source_drift_blocks_dispatch_and_fails_verify(tmp_path: Path) -> None:
     repo = _repo(tmp_path)
     run_dir = Path(host_run.plan(repo, tmp_path / "run", review="none")["run_dir"])
