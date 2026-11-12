@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
 # Build the narrated Flask source film from catalog ranges and exact source files.
+# Before running:
+#   - FLASK_CHECKOUT is a Flask clone checked out at 85c5d93, the commit examples/flask was made from;
+#   - KOKORO_MODEL and KOKORO_VOICES name the Kokoro-82M model and voices files (KOKORO_PYTHON can run it);
+#   - `npm install` once in showcase/ (the recorder uses Puppeteer);
+#   - Linux only: the script uses flock, /proc/loadavg and `stat -c`.
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 SOURCE_ROOT=""; OUT=""

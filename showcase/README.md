@@ -5,6 +5,7 @@ One static page, `index.html` + `app.js`, reads `data/<slug>.json` (made by `pre
 - Environment: `FFMPEG`, `CHROME` (else found on PATH), `CBE_PYTHON` (a Python that runs this checkout's `cbe`; the terminal scene then shows the real `cbe find` and `cbe source` output, read from the run folder next to the catalog, otherwise a fallback built from the catalog), `CRF`, `GIF_FPS` (12; use 10 if the GIF passes 8 MB), `GIF_COLORS` (64).
 - Interactive (hover a unit, click a module or a left-bar row, Esc to go back): `python3 -m http.server -d showcase`, open `/index.html?data=flask`.
 - Film mode: `?mode=play&data=flask` plays the 35 s script on a virtual clock; `window.__render(t)` draws the frame for time `t`, so frames repeat exactly.
+- Code film (two minutes on Flask's own code): `./make_codefilm.sh --source-root FLASK_CHECKOUT --out DIR` writes `flask-code.mp4`; the script is `tour/codefilm.en.json`. It needs Flask at `85c5d93`, `KOKORO_MODEL` and `KOKORO_VOICES`, `npm install` once, and Linux; the header of `make_codefilm.sh` lists these.
 - Narrated tour: `./make_tour.sh --data flask --lang en --out DIR` checks the script, synthesizes speech, and writes `walkthrough-flask.mp4`; set `KOKORO_PYTHON`, `KOKORO_MODEL`, `KOKORO_VOICES`, and `FFMPEG` as needed.
 - Tour preview: after generating its timing file, open `?mode=tour&data=flask&lang=en`; narration and captions are data in `tour/flask.en.json`, not page code.
 - The tour uses synthetic speech (Kokoro, `am_michael`); `tour/make_audio.py` can rebuild `narration.wav` and `timing.json` after a script edit.

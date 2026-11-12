@@ -41,7 +41,7 @@ https://github.com/user-attachments/assets/f0c3cc47-d0c2-4727-820e-65508c19408c
 
 https://github.com/user-attachments/assets/87b5b1c1-452e-48e0-af29-2e520391093a
 
-<p align="center">两分钟，讲 Flask 自己的代码，内容取自这些讲解：一个请求从 <code>wsgi_app</code> 到响应、两种上下文与 <code>current_app</code>／<code>request</code> 代理、蓝图、配置加载。画面上每一行都是讲解所指的那几行 Flask 源码。</p>
+<p align="center">两分钟，讲 Flask 自己的代码（英文配音与字幕），内容大多取自这些讲解：一个请求从 <code>wsgi_app</code> 到响应、两种上下文与 <code>current_app</code>／<code>request</code> 代理、蓝图、配置加载。画面上每一行都是 Flask 源码原文，标着文件与行号。十一步里有十步依据单元讲解；讲代理的那一步直接读 <code>globals.py</code>，示例里没有为它写讲解。</p>
 
 ## 快速上手
 

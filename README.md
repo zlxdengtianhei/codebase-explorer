@@ -41,7 +41,7 @@ Full example: [flask](examples/flask/docs/INDEX.md). More in [Examples and docs]
 
 https://github.com/user-attachments/assets/87b5b1c1-452e-48e0-af29-2e520391093a
 
-<p align="center">Two minutes on Flask's own code, built from these explanations: one request from <code>wsgi_app</code> to the response, the two contexts and the <code>current_app</code>/<code>request</code> proxies, blueprints, configuration. Every line on screen is Flask's source at the lines the explanation cites.</p>
+<p align="center">Two minutes on Flask's own code, mostly built from these explanations: one request from <code>wsgi_app</code> to the response, the two contexts and the <code>current_app</code>/<code>request</code> proxies, blueprints, configuration. Every line on screen is Flask's own source, with its file and line numbers. Ten of the eleven steps follow the unit explanations; the proxy step reads <code>globals.py</code> directly, which the example does not explain.</p>
 
 ## Quickstart
 

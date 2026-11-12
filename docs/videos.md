@@ -2,7 +2,7 @@
 
 ## Flask's own code, narrated (2 minutes)
 
-One request through Flask: `wsgi_app` pushes the request context, `full_dispatch_request` runs the before-request hooks and the view, `make_response` and `process_response` build the response, and the contexts pop. Then what the application and request contexts hold, how the `current_app` and `request` proxies find them, how blueprints defer registration, and how configuration is loaded. Each sentence cites a unit explanation in [examples/flask](../examples/flask/docs/INDEX.md) and the Flask source lines it rests on; the code on screen is that source, with the lines the sentence is about highlighted.
+One request through Flask: `wsgi_app` pushes the request context, `full_dispatch_request` runs the before-request hooks and the view, `make_response` and `process_response` build the response, and the contexts pop. Then what the application and request contexts hold, how the `current_app` and `request` proxies find them, how blueprints defer registration, and how configuration is loaded. Each sentence, except the two on the `current_app` and `request` proxies, cites a unit explanation in [examples/flask](../examples/flask/docs/INDEX.md) and the Flask source lines it rests on; `globals.py` has no unit explanation in the example, so those two rest on its source alone. The code on screen is that source, with the lines the sentence is about highlighted.
 
 - Watch: https://github.com/user-attachments/assets/87b5b1c1-452e-48e0-af29-2e520391093a
 - The voice is synthetic (Kokoro-82M, Apache-2.0). Script: [`showcase/tour/codefilm.en.json`](../showcase/tour/codefilm.en.json); rebuild with [`showcase/make_codefilm.sh`](../showcase/make_codefilm.sh).
