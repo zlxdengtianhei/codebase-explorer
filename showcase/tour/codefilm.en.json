@@ -1,0 +1,70 @@
+{
+  "items": [
+    {
+      "id": "1",
+      "scene": "entry",
+      "say": "A request enters Flask's W S G I app. It creates and pushes a request context, dispatches, calls the response, and pops the context in finally.",
+      "caption": "A WSGI request enters Flask.wsgi_app. It creates and pushes a request context, dispatches, calls the response, and pops the context in finally."
+    },
+    {
+      "id": "2",
+      "scene": "push",
+      "say": "Pushing it ensures an application context exists, opens the session, and matches the URL. The rule and view arguments are stored on the request.",
+      "caption": "Pushing it ensures an application context exists, opens the session, and matches the URL. The rule and view arguments are stored on the request."
+    },
+    {
+      "id": "3",
+      "scene": "dispatch",
+      "say": "Full dispatch request sends request-started and preprocesses. If that returns None, dispatch request calls the view.",
+      "caption": "full_dispatch_request sends request-started and preprocesses. If that returns None, dispatch_request calls the view."
+    },
+    {
+      "id": "4",
+      "scene": "before",
+      "say": "Before-request hooks run for the application and matched blueprints. The first non-None return short-circuits the remaining hooks and the view.",
+      "caption": "Before-request hooks run for the application and matched blueprints. The first non-None return short-circuits the remaining hooks and the view."
+    },
+    {
+      "id": "5",
+      "scene": "view",
+      "say": "Dispatch request finds the matched endpoint in view functions and calls it with URL arguments through ensure sync.",
+      "caption": "dispatch_request finds the matched endpoint in view_functions and calls it with URL arguments through ensure_sync."
+    },
+    {
+      "id": "6",
+      "scene": "response",
+      "say": "Finalize request calls make response. Strings and bytes become bodies; dictionaries and lists use the application's Jason provider.",
+      "caption": "finalize_request calls make_response. Strings and bytes become bodies; dictionaries and lists use the application's JSON provider."
+    },
+    {
+      "id": "7",
+      "scene": "after",
+      "say": "Process response runs after-request hooks and saves a non-null session. Back in w s g i app, teardown runs as the contexts pop.",
+      "caption": "process_response runs after-request hooks and saves a non-null session. Back in wsgi_app, teardown runs as the contexts pop."
+    },
+    {
+      "id": "8",
+      "scene": "contexts",
+      "say": "An application context holds the app, URL adapter, and g. A request context holds the request, routing state, session, flashes, and per-request after-functions.",
+      "caption": "An application context holds the app, URL adapter, and g. A request context holds the request, routing state, session, flashes, and per-request after-functions."
+    },
+    {
+      "id": "9",
+      "scene": "proxies",
+      "say": "Current app and request are Local Proxy objects over context variables. They resolve to the active context's app or request on each access.",
+      "caption": "current_app and request are LocalProxy objects over context variables. They resolve to the active context's app or request on each access."
+    },
+    {
+      "id": "10",
+      "scene": "blueprints",
+      "say": "A blueprint records routes as deferred callbacks. Registration merges its views and hooks into the app, then runs those callbacks.",
+      "caption": "A blueprint records routes as deferred callbacks. Registration merges its views and hooks into the app, then runs those callbacks."
+    },
+    {
+      "id": "11",
+      "scene": "config",
+      "say": "Config loads Python files, objects, mappings, data files, and environment variables. Most loaders keep uppercase keys; prefixed environment loading parses values and supports nested keys.",
+      "caption": "Config loads Python files, objects, mappings, data files, and environment variables. Most loaders keep uppercase keys; prefixed environment loading parses values and supports nested keys."
+    }
+  ]
+}

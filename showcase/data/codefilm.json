@@ -1,0 +1,1273 @@
+{
+  "name": "Flask",
+  "sourceRevision": "85c5d93cbd049c4bd0679c36fd1ddcae8c37b642",
+  "tops": [
+    "runtime-app-contexts-and-testing",
+    "sansio-app-and-scaffold-foundations",
+    "templates-views-and-wrappers",
+    "session-interface-and-cookies",
+    "configuration-loading",
+    "json-providers-and-helpers",
+    "tagged-json-serialization",
+    "command-line-and-public-helpers"
+  ],
+  "nodes": {
+    "app-and-request-context-management": {
+      "title": "App and Request Context Management",
+      "parent": "runtime-app-contexts-and-testing",
+      "children": [],
+      "capability": "Defines application and request contexts, the g namespace and context helpers that bind per-app and per-request state, URL matching and session opening."
+    },
+    "application-logging-setup": {
+      "title": "Application Logging Setup",
+      "parent": "sansio-app-base-and-logging",
+      "children": [],
+      "capability": "Creates and configures the application's logger and default handler, writing to the WSGI error stream with a standard format."
+    },
+    "blueprint-deferred-registration": {
+      "title": "Blueprint Deferred Registration",
+      "parent": "scaffold-and-blueprint-registration",
+      "children": [],
+      "capability": "Implements the sansio Blueprint, which records routes and callbacks as deferred functions and applies them, including app-wide Jinja and handler registrations, when registered on an app."
+    },
+    "cli-app-import-and-discovery": {
+      "title": "CLI App Import and Discovery",
+      "parent": "flask-cli-implementation",
+      "children": [],
+      "capability": "Imports modules and resolves application objects by name, attribute or factory string, searching a module for the Flask app when unnamed."
+    },
+    "cli-groups-and-built-in-commands": {
+      "title": "CLI Groups and Built-in Commands",
+      "parent": "flask-cli-implementation",
+      "children": [],
+      "capability": "Defines the app-context-aware Click groups, the top-level flask group, its entry point, and the routes and shell commands."
+    },
+    "cli-options-and-app-loading-info": {
+      "title": "CLI Options and App Loading Info",
+      "parent": "flask-cli-implementation",
+      "children": [],
+      "capability": "Supports the command line with Click parameter types, option callbacks, dotenv loading and the ScriptInfo object that tracks how to find the app."
+    },
+    "cli-run-command-and-command-discovery": {
+      "title": "CLI Run Command and Command Discovery",
+      "parent": "flask-cli-implementation",
+      "children": [],
+      "capability": "Runs the development server command and discovers commands from plugins and the user's app, loading and caching the application."
+    },
+    "command-line-and-public-helpers": {
+      "title": "Command Line and Public Helpers",
+      "parent": "flask-web-framework",
+      "children": [
+        "flask-cli-implementation",
+        "helpers-flask-blueprint-and-run"
+      ],
+      "capability": "Provides the user-facing command line interface together with public helper functions, the WSGI-aware Blueprint and the app run method that developers call directly."
+    },
+    "configuration-loading": {
+      "title": "Configuration Loading",
+      "parent": "flask-web-framework",
+      "children": [],
+      "capability": "Implements the Config dict and its loaders from Python files, objects, mappings, data files and environment variables, plus a config-backed attribute descriptor."
+    },
+    "exception-handler-lookup-and-dispatch": {
+      "title": "Exception Handler Lookup and Dispatch",
+      "parent": "flask-app-request-lifecycle",
+      "children": [],
+      "capability": "Finds registered error handlers and decides how HTTP and other exceptions raised during dispatch are handled, trapped or re-raised."
+    },
+    "flask-app-class-and-utilities": {
+      "title": "Flask App Class and Utilities",
+      "parent": "flask-app-request-lifecycle",
+      "children": [],
+      "capability": "Defines the concrete Flask WSGI application class and its supporting facilities for Jinja setup, teardown, file access, shell context, and test client and runner creation."
+    },
+    "flask-app-request-lifecycle": {
+      "title": "Flask App Request Lifecycle",
+      "parent": "runtime-app-contexts-and-testing",
+      "children": [
+        "flask-app-class-and-utilities",
+        "response-finalization-and-error-fallback",
+        "request-dispatch-cycle",
+        "exception-handler-lookup-and-dispatch",
+        "wsgi-entry-and-request-contexts"
+      ],
+      "capability": "Implements the concrete Flask application and its request lifecycle: WSGI entry, dispatch, response finalization and exception handling, grouped as the app's per-request pipeline."
+    },
+    "flask-cli-implementation": {
+      "title": "Flask CLI Implementation",
+      "parent": "command-line-and-public-helpers",
+      "children": [
+        "cli-options-and-app-loading-info",
+        "cli-groups-and-built-in-commands",
+        "cli-run-command-and-command-discovery",
+        "cli-app-import-and-discovery"
+      ],
+      "capability": "Implements the flask command line: parameter types, app loading and import discovery, the command groups, built-in commands and the development server command."
+    },
+    "flask-web-framework": {
+      "title": "Flask Web Framework",
+      "parent": null,
+      "children": [
+        "sansio-app-and-scaffold-foundations",
+        "runtime-app-contexts-and-testing",
+        "command-line-and-public-helpers",
+        "templates-views-and-wrappers",
+        "tagged-json-serialization",
+        "json-providers-and-helpers",
+        "session-interface-and-cookies",
+        "configuration-loading"
+      ],
+      "capability": "Implements the Flask WSGI micro-framework: application core, request handling, contexts, CLI, templating, sessions, JSON and configuration support, and testing tools."
+    },
+    "helpers-flask-blueprint-and-run": {
+      "title": "Helpers, Flask Blueprint and Run",
+      "parent": "command-line-and-public-helpers",
+      "children": [],
+      "capability": "Gathers public helper functions (url_for, redirect, flash, send_file, abort, debug flags), the WSGI-aware Blueprint, and the app's run method."
+    },
+    "json-providers-and-helpers": {
+      "title": "JSON Providers and Helpers",
+      "parent": "flask-web-framework",
+      "children": [],
+      "capability": "Defines the pluggable JSON provider interface, its default implementation, and module-level dumps, loads and jsonify functions that use the current app's provider."
+    },
+    "request-dispatch-cycle": {
+      "title": "Request Dispatch Cycle",
+      "parent": "flask-app-request-lifecycle",
+      "children": [],
+      "capability": "Runs the per-request cycle: preprocessing, dispatching to the view function, default OPTIONS response and routing exception handling."
+    },
+    "response-finalization-and-error-fallback": {
+      "title": "Response Finalization and Error Fallback",
+      "parent": "flask-app-request-lifecycle",
+      "children": [],
+      "capability": "Turns view return values into responses, runs post-processing and session saving, and handles unhandled exceptions, with sync wrappers for async views."
+    },
+    "runtime-app-contexts-and-testing": {
+      "title": "Runtime App, Contexts and Testing",
+      "parent": "flask-web-framework",
+      "children": [
+        "flask-app-request-lifecycle",
+        "test-client-and-cli-runner",
+        "app-and-request-context-management"
+      ],
+      "capability": "Covers the running application: the concrete Flask app and request lifecycle, the contexts that bind per-request state, and the tools for testing apps."
+    },
+    "sansio-app-and-scaffold-foundations": {
+      "title": "Sansio App and Scaffold Foundations",
+      "parent": "flask-web-framework",
+      "children": [
+        "scaffold-and-blueprint-registration",
+        "sansio-app-base-and-logging"
+      ],
+      "capability": "Provides the framework-agnostic foundations that the concrete Flask app and blueprints build on: shared scaffold registration, blueprint recording, app base setup and logging."
+    },
+    "sansio-app-base-and-logging": {
+      "title": "Sansio App Base and Logging",
+      "parent": "sansio-app-and-scaffold-foundations",
+      "children": [
+        "sansio-app-base-class",
+        "application-logging-setup"
+      ],
+      "capability": "Defines the framework-agnostic application base class and the logger setup it uses, covering app construction, configuration and Jinja environment preparation."
+    },
+    "sansio-app-base-class": {
+      "title": "Sansio App Base Class",
+      "parent": "sansio-app-base-and-logging",
+      "children": [],
+      "capability": "Defines the framework-agnostic App base class: construction, config and Jinja environment setup, template registrations, URL building support and teardown or shell registrations."
+    },
+    "scaffold-and-blueprint-registration": {
+      "title": "Scaffold and Blueprint Registration",
+      "parent": "sansio-app-and-scaffold-foundations",
+      "children": [
+        "scaffold-base-and-setup-decorators",
+        "blueprint-deferred-registration"
+      ],
+      "capability": "Defines how routes, handlers and callbacks are declared and deferred, through the shared Scaffold base and the sansio Blueprint that builds on it."
+    },
+    "scaffold-base-and-setup-decorators": {
+      "title": "Scaffold Base and Setup Decorators",
+      "parent": "scaffold-and-blueprint-registration",
+      "children": [],
+      "capability": "Provides the Scaffold base class shared by apps and blueprints, with route, error handler and callback registration decorators plus static folder and path helpers."
+    },
+    "session-interface-and-cookies": {
+      "title": "Session Interface and Cookies",
+      "parent": "flask-web-framework",
+      "children": [],
+      "capability": "Implements sessions: session classes, the abstract session interface and the default signed-cookie backend with cookie settings, expiry and save decisions."
+    },
+    "tagged-json-serialization": {
+      "title": "Tagged JSON Serialization",
+      "parent": "flask-web-framework",
+      "children": [],
+      "capability": "Implements TaggedJSONSerializer and its tag classes, which encode non-JSON types such as bytes, datetime, tuple and UUID into JSON-compatible structures and back."
+    },
+    "template-rendering-and-loading": {
+      "title": "Template Rendering and Loading",
+      "parent": "templates-views-and-wrappers",
+      "children": [],
+      "capability": "Handles Jinja integration: the app-bound environment, a loader spanning app and blueprints, and render and stream functions with signals and context processors."
+    },
+    "templates-views-and-wrappers": {
+      "title": "Templates, Views and Wrappers",
+      "parent": "flask-web-framework",
+      "children": [
+        "views-wrappers-signals-and-debug-aids",
+        "template-rendering-and-loading"
+      ],
+      "capability": "Groups the view-layer pieces: Jinja template rendering and loading with class-based views, request and response wrappers, signals and debugging aids."
+    },
+    "test-client-and-cli-runner": {
+      "title": "Test Client and CLI Runner",
+      "parent": "runtime-app-contexts-and-testing",
+      "children": [],
+      "capability": "Offers testing tools: an environment builder with app defaults, a context-aware test client with session editing, and an app-aware CLI runner."
+    },
+    "views-wrappers-signals-and-debug-aids": {
+      "title": "Views, Wrappers, Signals and Debug Aids",
+      "parent": "templates-views-and-wrappers",
+      "children": [],
+      "capability": "Provides class-based views, request and response wrapper classes, signals, debug helper errors and template loading diagnostics, plus the python -m entry point."
+    },
+    "wsgi-entry-and-request-contexts": {
+      "title": "WSGI Entry and Request Contexts",
+      "parent": "flask-app-request-lifecycle",
+      "children": [],
+      "capability": "Provides the WSGI entry points that create and push request contexts, dispatch, produce responses and always pop the context."
+    }
+  },
+  "items": [
+    {
+      "id": "1",
+      "scene": "entry",
+      "say": "A request enters Flask's W S G I app. It creates and pushes a request context, dispatches, calls the response, and pops the context in finally.",
+      "caption": "A WSGI request enters Flask.wsgi_app. It creates and pushes a request context, dispatches, calls the response, and pops the context in finally.",
+      "title": "Enter through wsgi_app",
+      "views": [
+        {
+          "node": "wsgi-entry-and-request-contexts",
+          "unit": "def wsgi_app(\n        self, environ: WSGIEnvironment, start_response: StartResponse\n    ) -> cabc.Iterable[bytes]:",
+          "unitId": "src/flask/app.py::method::Flask.wsgi_app::59470",
+          "blocks": [
+            {
+              "path": "src/flask/app.py",
+              "first": 1505,
+              "last": 1513,
+              "highlights": [
+                1505,
+                1507,
+                1508
+              ],
+              "lines": [
+                "        \"\"\"",
+                "        ctx = self.request_context(environ)",
+                "        error: BaseException | None = None",
+                "        try:",
+                "            try:",
+                "                ctx.push()",
+                "                response = self.full_dispatch_request()",
+                "            except Exception as e:",
+                "                error = e"
+              ],
+              "sha256": "5c6aa0151b0b8018732280761d27eda0c4c83378630e21faadd57b73783720a7"
+            }
+          ]
+        },
+        {
+          "node": "wsgi-entry-and-request-contexts",
+          "unit": "def wsgi_app(\n        self, environ: WSGIEnvironment, start_response: StartResponse\n    ) -> cabc.Iterable[bytes]:",
+          "unitId": "src/flask/app.py::method::Flask.wsgi_app::59470",
+          "blocks": [
+            {
+              "path": "src/flask/app.py",
+              "first": 1514,
+              "last": 1527,
+              "highlights": [
+                1514,
+                1526
+              ],
+              "lines": [
+                "                response = self.handle_exception(e)",
+                "            except:  # noqa: B001",
+                "                error = sys.exc_info()[1]",
+                "                raise",
+                "            return response(environ, start_response)",
+                "        finally:",
+                "            if \"werkzeug.debug.preserve_context\" in environ:",
+                "                environ[\"werkzeug.debug.preserve_context\"](_cv_app.get())",
+                "                environ[\"werkzeug.debug.preserve_context\"](_cv_request.get())",
+                "",
+                "            if error is not None and self.should_ignore_error(error):",
+                "                error = None",
+                "",
+                "            ctx.pop(error)"
+              ],
+              "sha256": "5c6aa0151b0b8018732280761d27eda0c4c83378630e21faadd57b73783720a7"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "2",
+      "scene": "push",
+      "say": "Pushing it ensures an application context exists, opens the session, and matches the URL. The rule and view arguments are stored on the request.",
+      "caption": "Pushing it ensures an application context exists, opens the session, and matches the URL. The rule and view arguments are stored on the request.",
+      "title": "Push the request context",
+      "views": [
+        {
+          "node": "app-and-request-context-management",
+          "unit": "def push(self) -> None:\n        # Before we push the request context we have to ensure that there\n        # is an application context.",
+          "unitId": "src/flask/ctx.py::method::RequestContext.push::12063",
+          "blocks": [
+            {
+              "path": "src/flask/ctx.py",
+              "first": 367,
+              "last": 390,
+              "highlights": [
+                370,
+                371,
+                372,
+                373,
+                374,
+                375,
+                376,
+                377,
+                378,
+                385,
+                386,
+                389,
+                390
+              ],
+              "lines": [
+                "    def push(self) -> None:",
+                "        # Before we push the request context we have to ensure that there",
+                "        # is an application context.",
+                "        app_ctx = _cv_app.get(None)",
+                "",
+                "        if app_ctx is None or app_ctx.app is not self.app:",
+                "            app_ctx = self.app.app_context()",
+                "            app_ctx.push()",
+                "        else:",
+                "            app_ctx = None",
+                "",
+                "        self._cv_tokens.append((_cv_request.set(self), app_ctx))",
+                "",
+                "        # Open the session at the moment that the request context is available.",
+                "        # This allows a custom open_session method to use the request context.",
+                "        # Only open a new session if this is the first time the request was",
+                "        # pushed, otherwise stream_with_context loses the session.",
+                "        if self.session is None:",
+                "            session_interface = self.app.session_interface",
+                "            self.session = session_interface.open_session(self.app, self.request)",
+                "",
+                "            if self.session is None:",
+                "                self.session = session_interface.make_null_session(self.app)",
+                ""
+              ],
+              "sha256": "b0f2b36a1aad831692eced32f44fcdcd424d503c930fa3381a40eb56ed9f5376"
+            }
+          ]
+        },
+        {
+          "node": "app-and-request-context-management",
+          "unit": "def match_request(self) -> None:",
+          "unitId": "src/flask/ctx.py::method::RequestContext.match_request::11664",
+          "blocks": [
+            {
+              "path": "src/flask/ctx.py",
+              "first": 357,
+              "last": 365,
+              "highlights": [
+                361,
+                362
+              ],
+              "lines": [
+                "    def match_request(self) -> None:",
+                "        \"\"\"Can be overridden by a subclass to hook into the matching",
+                "        of the request.",
+                "        \"\"\"",
+                "        try:",
+                "            result = self.url_adapter.match(return_rule=True)  # type: ignore",
+                "            self.request.url_rule, self.request.view_args = result  # type: ignore",
+                "        except HTTPException as e:",
+                "            self.request.routing_exception = e"
+              ],
+              "sha256": "b0f2b36a1aad831692eced32f44fcdcd424d503c930fa3381a40eb56ed9f5376"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "3",
+      "scene": "dispatch",
+      "say": "Full dispatch request sends request-started and preprocesses. If that returns None, dispatch request calls the view.",
+      "caption": "full_dispatch_request sends request-started and preprocesses. If that returns None, dispatch_request calls the view.",
+      "title": "Run the full dispatch cycle",
+      "views": [
+        {
+          "node": "request-dispatch-cycle",
+          "unit": "def full_dispatch_request(self) -> Response:",
+          "unitId": "src/flask/app.py::method::Flask.full_dispatch_request::36613",
+          "blocks": [
+            {
+              "path": "src/flask/app.py",
+              "first": 904,
+              "last": 920,
+              "highlights": [
+                911,
+                913,
+                914
+              ],
+              "lines": [
+                "    def full_dispatch_request(self) -> Response:",
+                "        \"\"\"Dispatches the request and on top of that performs request",
+                "        pre and postprocessing as well as HTTP exception catching and",
+                "        error handling.",
+                "",
+                "        .. versionadded:: 0.7",
+                "        \"\"\"",
+                "        self._got_first_request = True",
+                "",
+                "        try:",
+                "            request_started.send(self, _async_wrapper=self.ensure_sync)",
+                "            rv = self.preprocess_request()",
+                "            if rv is None:",
+                "                rv = self.dispatch_request()",
+                "        except Exception as e:",
+                "            rv = self.handle_user_exception(e)",
+                "        return self.finalize_request(rv)"
+              ],
+              "sha256": "5c6aa0151b0b8018732280761d27eda0c4c83378630e21faadd57b73783720a7"
+            }
+          ]
+        },
+        {
+          "node": "request-dispatch-cycle",
+          "unit": "def full_dispatch_request(self) -> Response:",
+          "unitId": "src/flask/app.py::method::Flask.full_dispatch_request::36613",
+          "blocks": [
+            {
+              "path": "src/flask/app.py",
+              "first": 904,
+              "last": 920,
+              "highlights": [
+                914,
+                915,
+                916,
+                920
+              ],
+              "lines": [
+                "    def full_dispatch_request(self) -> Response:",
+                "        \"\"\"Dispatches the request and on top of that performs request",
+                "        pre and postprocessing as well as HTTP exception catching and",
+                "        error handling.",
+                "",
+                "        .. versionadded:: 0.7",
+                "        \"\"\"",
+                "        self._got_first_request = True",
+                "",
+                "        try:",
+                "            request_started.send(self, _async_wrapper=self.ensure_sync)",
+                "            rv = self.preprocess_request()",
+                "            if rv is None:",
+                "                rv = self.dispatch_request()",
+                "        except Exception as e:",
+                "            rv = self.handle_user_exception(e)",
+                "        return self.finalize_request(rv)"
+              ],
+              "sha256": "5c6aa0151b0b8018732280761d27eda0c4c83378630e21faadd57b73783720a7"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "4",
+      "scene": "before",
+      "say": "Before-request hooks run for the application and matched blueprints. The first non-None return short-circuits the remaining hooks and the view.",
+      "caption": "Before-request hooks run for the application and matched blueprints. The first non-None return short-circuits the remaining hooks and the view.",
+      "title": "Before-request hooks",
+      "views": [
+        {
+          "node": "request-dispatch-cycle",
+          "unit": "def preprocess_request(self) -> ft.ResponseReturnValue | None:",
+          "unitId": "src/flask/app.py::method::Flask.preprocess_request::51235",
+          "blocks": [
+            {
+              "path": "src/flask/app.py",
+              "first": 1271,
+              "last": 1296,
+              "highlights": [
+                1282,
+                1288,
+                1289,
+                1290,
+                1291
+              ],
+              "lines": [
+                "    def preprocess_request(self) -> ft.ResponseReturnValue | None:",
+                "        \"\"\"Called before the request is dispatched. Calls",
+                "        :attr:`url_value_preprocessors` registered with the app and the",
+                "        current blueprint (if any). Then calls :attr:`before_request_funcs`",
+                "        registered with the app and the blueprint.",
+                "",
+                "        If any :meth:`before_request` handler returns a non-None value, the",
+                "        value is handled as if it was the return value from the view, and",
+                "        further request handling is stopped.",
+                "        \"\"\"",
+                "        names = (None, *reversed(request.blueprints))",
+                "",
+                "        for name in names:",
+                "            if name in self.url_value_preprocessors:",
+                "                for url_func in self.url_value_preprocessors[name]:",
+                "                    url_func(request.endpoint, request.view_args)",
+                "",
+                "        for name in names:",
+                "            if name in self.before_request_funcs:",
+                "                for before_func in self.before_request_funcs[name]:",
+                "                    rv = self.ensure_sync(before_func)()",
+                "",
+                "                    if rv is not None:",
+                "                        return rv  # type: ignore[no-any-return]",
+                "",
+                "        return None"
+              ],
+              "sha256": "5c6aa0151b0b8018732280761d27eda0c4c83378630e21faadd57b73783720a7"
+            }
+          ]
+        },
+        {
+          "node": "request-dispatch-cycle",
+          "unit": "def preprocess_request(self) -> ft.ResponseReturnValue | None:",
+          "unitId": "src/flask/app.py::method::Flask.preprocess_request::51235",
+          "blocks": [
+            {
+              "path": "src/flask/app.py",
+              "first": 1271,
+              "last": 1296,
+              "highlights": [
+                1291,
+                1292,
+                1293,
+                1294
+              ],
+              "lines": [
+                "    def preprocess_request(self) -> ft.ResponseReturnValue | None:",
+                "        \"\"\"Called before the request is dispatched. Calls",
+                "        :attr:`url_value_preprocessors` registered with the app and the",
+                "        current blueprint (if any). Then calls :attr:`before_request_funcs`",
+                "        registered with the app and the blueprint.",
+                "",
+                "        If any :meth:`before_request` handler returns a non-None value, the",
+                "        value is handled as if it was the return value from the view, and",
+                "        further request handling is stopped.",
+                "        \"\"\"",
+                "        names = (None, *reversed(request.blueprints))",
+                "",
+                "        for name in names:",
+                "            if name in self.url_value_preprocessors:",
+                "                for url_func in self.url_value_preprocessors[name]:",
+                "                    url_func(request.endpoint, request.view_args)",
+                "",
+                "        for name in names:",
+                "            if name in self.before_request_funcs:",
+                "                for before_func in self.before_request_funcs[name]:",
+                "                    rv = self.ensure_sync(before_func)()",
+                "",
+                "                    if rv is not None:",
+                "                        return rv  # type: ignore[no-any-return]",
+                "",
+                "        return None"
+              ],
+              "sha256": "5c6aa0151b0b8018732280761d27eda0c4c83378630e21faadd57b73783720a7"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "5",
+      "scene": "view",
+      "say": "Dispatch request finds the matched endpoint in view functions and calls it with URL arguments through ensure sync.",
+      "caption": "dispatch_request finds the matched endpoint in view_functions and calls it with URL arguments through ensure_sync.",
+      "title": "Resolve and call the view",
+      "views": [
+        {
+          "node": "request-dispatch-cycle",
+          "unit": "def dispatch_request(self) -> ft.ResponseReturnValue:",
+          "unitId": "src/flask/app.py::method::Flask.dispatch_request::35345",
+          "blocks": [
+            {
+              "path": "src/flask/app.py",
+              "first": 879,
+              "last": 902,
+              "highlights": [
+                890,
+                891,
+                892,
+                901,
+                902
+              ],
+              "lines": [
+                "    def dispatch_request(self) -> ft.ResponseReturnValue:",
+                "        \"\"\"Does the request dispatching.  Matches the URL and returns the",
+                "        return value of the view or error handler.  This does not have to",
+                "        be a response object.  In order to convert the return value to a",
+                "        proper response object, call :func:`make_response`.",
+                "",
+                "        .. versionchanged:: 0.7",
+                "           This no longer does the exception handling, this code was",
+                "           moved to the new :meth:`full_dispatch_request`.",
+                "        \"\"\"",
+                "        req = request_ctx.request",
+                "        if req.routing_exception is not None:",
+                "            self.raise_routing_exception(req)",
+                "        rule: Rule = req.url_rule  # type: ignore[assignment]",
+                "        # if we provide automatic options for this URL and the",
+                "        # request came with the OPTIONS method, reply automatically",
+                "        if (",
+                "            getattr(rule, \"provide_automatic_options\", False)",
+                "            and req.method == \"OPTIONS\"",
+                "        ):",
+                "            return self.make_default_options_response()",
+                "        # otherwise dispatch to the handler for that endpoint",
+                "        view_args: dict[str, t.Any] = req.view_args  # type: ignore[assignment]",
+                "        return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]"
+              ],
+              "sha256": "5c6aa0151b0b8018732280761d27eda0c4c83378630e21faadd57b73783720a7"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "6",
+      "scene": "response",
+      "say": "Finalize request calls make response. Strings and bytes become bodies; dictionaries and lists use the application's Jason provider.",
+      "caption": "finalize_request calls make_response. Strings and bytes become bodies; dictionaries and lists use the application's JSON provider.",
+      "title": "Make a response",
+      "views": [
+        {
+          "node": "response-finalization-and-error-fallback",
+          "unit": "def finalize_request(\n        self,\n        rv: ft.ResponseReturnValue | HTTPException,\n        from_error_handler: bool = False,\n    ) -> Response:",
+          "unitId": "src/flask/app.py::method::Flask.finalize_request::37229",
+          "blocks": [
+            {
+              "path": "src/flask/app.py",
+              "first": 939,
+              "last": 951,
+              "highlights": [
+                939,
+                941
+              ],
+              "lines": [
+                "        response = self.make_response(rv)",
+                "        try:",
+                "            response = self.process_response(response)",
+                "            request_finished.send(",
+                "                self, _async_wrapper=self.ensure_sync, response=response",
+                "            )",
+                "        except Exception:",
+                "            if not from_error_handler:",
+                "                raise",
+                "            self.logger.exception(",
+                "                \"Request finalizing failed with an error while handling an error\"",
+                "            )",
+                "        return response"
+              ],
+              "sha256": "5c6aa0151b0b8018732280761d27eda0c4c83378630e21faadd57b73783720a7"
+            }
+          ]
+        },
+        {
+          "node": "response-finalization-and-error-fallback",
+          "unit": "def make_response(self, rv: ft.ResponseReturnValue) -> Response:",
+          "unitId": "src/flask/app.py::method::Flask.make_response::45351",
+          "blocks": [
+            {
+              "path": "src/flask/app.py",
+              "first": 1214,
+              "last": 1233,
+              "highlights": [
+                1215,
+                1216,
+                1223,
+                1228,
+                1229
+              ],
+              "lines": [
+                "                \" return a valid response. The function either returned\"",
+                "                \" None or ended without a return statement.\"",
+                "            )",
+                "",
+                "        # make sure the body is an instance of the response class",
+                "        if not isinstance(rv, self.response_class):",
+                "            if isinstance(rv, (str, bytes, bytearray)) or isinstance(rv, cabc.Iterator):",
+                "                # let the response class set the status and headers instead of",
+                "                # waiting to do it manually, so that the class can handle any",
+                "                # special logic",
+                "                rv = self.response_class(",
+                "                    rv,  # pyright: ignore",
+                "                    status=status,",
+                "                    headers=headers,  # type: ignore[arg-type]",
+                "                )",
+                "                status = headers = None",
+                "            elif isinstance(rv, (dict, list)):",
+                "                rv = self.json.response(rv)",
+                "            elif isinstance(rv, BaseResponse) or callable(rv):",
+                "                # evaluate a WSGI callable, or coerce a different response"
+              ],
+              "sha256": "5c6aa0151b0b8018732280761d27eda0c4c83378630e21faadd57b73783720a7"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "7",
+      "scene": "after",
+      "say": "Process response runs after-request hooks and saves a non-null session. Back in w s g i app, teardown runs as the contexts pop.",
+      "caption": "process_response runs after-request hooks and saves a non-null session. Back in wsgi_app, teardown runs as the contexts pop.",
+      "title": "After-request work and teardown",
+      "views": [
+        {
+          "node": "response-finalization-and-error-fallback",
+          "unit": "def process_response(self, response: Response) -> Response:",
+          "unitId": "src/flask/app.py::method::Flask.process_response::52366",
+          "blocks": [
+            {
+              "path": "src/flask/app.py",
+              "first": 1310,
+              "last": 1324,
+              "highlights": [
+                1311,
+                1312,
+                1313,
+                1314,
+                1315,
+                1316,
+                1317,
+                1318,
+                1319,
+                1320,
+                1321,
+                1322
+              ],
+              "lines": [
+                "        \"\"\"",
+                "        ctx = request_ctx._get_current_object()  # type: ignore[attr-defined]",
+                "",
+                "        for func in ctx._after_request_functions:",
+                "            response = self.ensure_sync(func)(response)",
+                "",
+                "        for name in chain(request.blueprints, (None,)):",
+                "            if name in self.after_request_funcs:",
+                "                for func in reversed(self.after_request_funcs[name]):",
+                "                    response = self.ensure_sync(func)(response)",
+                "",
+                "        if not self.session_interface.is_null_session(ctx.session):",
+                "            self.session_interface.save_session(self, ctx.session, response)",
+                "",
+                "        return response"
+              ],
+              "sha256": "5c6aa0151b0b8018732280761d27eda0c4c83378630e21faadd57b73783720a7"
+            }
+          ]
+        },
+        {
+          "node": "wsgi-entry-and-request-contexts",
+          "unit": "def wsgi_app(\n        self, environ: WSGIEnvironment, start_response: StartResponse\n    ) -> cabc.Iterable[bytes]:",
+          "unitId": "src/flask/app.py::method::Flask.wsgi_app::59470",
+          "blocks": [
+            {
+              "path": "src/flask/app.py",
+              "first": 1514,
+              "last": 1527,
+              "highlights": [
+                1517,
+                1526
+              ],
+              "lines": [
+                "                response = self.handle_exception(e)",
+                "            except:  # noqa: B001",
+                "                error = sys.exc_info()[1]",
+                "                raise",
+                "            return response(environ, start_response)",
+                "        finally:",
+                "            if \"werkzeug.debug.preserve_context\" in environ:",
+                "                environ[\"werkzeug.debug.preserve_context\"](_cv_app.get())",
+                "                environ[\"werkzeug.debug.preserve_context\"](_cv_request.get())",
+                "",
+                "            if error is not None and self.should_ignore_error(error):",
+                "                error = None",
+                "",
+                "            ctx.pop(error)"
+              ],
+              "sha256": "5c6aa0151b0b8018732280761d27eda0c4c83378630e21faadd57b73783720a7"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "8",
+      "scene": "contexts",
+      "say": "An application context holds the app, URL adapter, and g. A request context holds the request, routing state, session, flashes, and per-request after-functions.",
+      "caption": "An application context holds the app, URL adapter, and g. A request context holds the request, routing state, session, flashes, and per-request after-functions.",
+      "title": "What the two contexts hold",
+      "views": [
+        {
+          "node": "app-and-request-context-management",
+          "unit": "class AppContext:",
+          "unitId": "grp:ctx.py-appcontext",
+          "blocks": [
+            {
+              "path": "src/flask/ctx.py",
+              "first": 238,
+              "last": 253,
+              "highlights": [
+                246,
+                247,
+                248,
+                249
+              ],
+              "lines": [
+                "class AppContext:",
+                "    \"\"\"The app context contains application-specific information. An app",
+                "    context is created and pushed at the beginning of each request if",
+                "    one is not already active. An app context is also pushed when",
+                "    running CLI commands.",
+                "    \"\"\"",
+                "",
+                "    def __init__(self, app: Flask) -> None:",
+                "        self.app = app",
+                "        self.url_adapter = app.create_url_adapter(None)",
+                "        self.g: _AppCtxGlobals = app.app_ctx_globals_class()",
+                "        self._cv_tokens: list[contextvars.Token[AppContext]] = []",
+                "",
+                "    def push(self) -> None:",
+                "        \"\"\"Binds the app context to the current context.\"\"\"",
+                "        self._cv_tokens.append(_cv_app.set(self))"
+              ],
+              "sha256": "b0f2b36a1aad831692eced32f44fcdcd424d503c930fa3381a40eb56ed9f5376"
+            }
+          ]
+        },
+        {
+          "node": "app-and-request-context-management",
+          "unit": "class RequestContext:",
+          "unitId": "src/flask/ctx.py::class::RequestContext::8798::s0",
+          "blocks": [
+            {
+              "path": "src/flask/ctx.py",
+              "first": 309,
+              "last": 335,
+              "highlights": [
+                317,
+                319,
+                321,
+                323,
+                325,
+                326,
+                327,
+                331
+              ],
+              "lines": [
+                "    def __init__(",
+                "        self,",
+                "        app: Flask,",
+                "        environ: WSGIEnvironment,",
+                "        request: Request | None = None,",
+                "        session: SessionMixin | None = None,",
+                "    ) -> None:",
+                "        self.app = app",
+                "        if request is None:",
+                "            request = app.request_class(environ)",
+                "            request.json_module = app.json",
+                "        self.request: Request = request",
+                "        self.url_adapter = None",
+                "        try:",
+                "            self.url_adapter = app.create_url_adapter(self.request)",
+                "        except HTTPException as e:",
+                "            self.request.routing_exception = e",
+                "        self.flashes: list[tuple[str, str]] | None = None",
+                "        self.session: SessionMixin | None = session",
+                "        # Functions that should be executed after the request on the response",
+                "        # object.  These will be called before the regular \"after_request\"",
+                "        # functions.",
+                "        self._after_request_functions: list[ft.AfterRequestCallable[t.Any]] = []",
+                "",
+                "        self._cv_tokens: list[",
+                "            tuple[contextvars.Token[RequestContext], AppContext | None]",
+                "        ] = []"
+              ],
+              "sha256": "b0f2b36a1aad831692eced32f44fcdcd424d503c930fa3381a40eb56ed9f5376"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "9",
+      "scene": "proxies",
+      "say": "Current app and request are Local Proxy objects over context variables. They resolve to the active context's app or request on each access.",
+      "caption": "current_app and request are LocalProxy objects over context variables. They resolve to the active context's app or request on each access.",
+      "title": "Proxies find the active objects",
+      "views": [
+        {
+          "node": "app-and-request-context-management",
+          "unit": "current_app / request",
+          "unitId": null,
+          "blocks": [
+            {
+              "path": "src/flask/globals.py",
+              "first": 24,
+              "last": 32,
+              "highlights": [
+                24,
+                28,
+                29
+              ],
+              "lines": [
+                "_cv_app: ContextVar[AppContext] = ContextVar(\"flask.app_ctx\")",
+                "app_ctx: AppContext = LocalProxy(  # type: ignore[assignment]",
+                "    _cv_app, unbound_message=_no_app_msg",
+                ")",
+                "current_app: Flask = LocalProxy(  # type: ignore[assignment]",
+                "    _cv_app, \"app\", unbound_message=_no_app_msg",
+                ")",
+                "g: _AppCtxGlobals = LocalProxy(  # type: ignore[assignment]",
+                "    _cv_app, \"g\", unbound_message=_no_app_msg"
+              ],
+              "sha256": "5dd419992b4198f22cf2df77b63c7aa4eec19b78286c068e3569057141da19ab"
+            },
+            {
+              "path": "src/flask/globals.py",
+              "first": 42,
+              "last": 50,
+              "highlights": [
+                42,
+                46,
+                47
+              ],
+              "lines": [
+                "_cv_request: ContextVar[RequestContext] = ContextVar(\"flask.request_ctx\")",
+                "request_ctx: RequestContext = LocalProxy(  # type: ignore[assignment]",
+                "    _cv_request, unbound_message=_no_req_msg",
+                ")",
+                "request: Request = LocalProxy(  # type: ignore[assignment]",
+                "    _cv_request, \"request\", unbound_message=_no_req_msg",
+                ")",
+                "session: SessionMixin = LocalProxy(  # type: ignore[assignment]",
+                "    _cv_request, \"session\", unbound_message=_no_req_msg"
+              ],
+              "sha256": "5dd419992b4198f22cf2df77b63c7aa4eec19b78286c068e3569057141da19ab"
+            }
+          ]
+        },
+        {
+          "node": "app-and-request-context-management",
+          "unit": "current_app / request",
+          "unitId": null,
+          "blocks": [
+            {
+              "path": "src/flask/globals.py",
+              "first": 24,
+              "last": 32,
+              "highlights": [
+                28,
+                29
+              ],
+              "lines": [
+                "_cv_app: ContextVar[AppContext] = ContextVar(\"flask.app_ctx\")",
+                "app_ctx: AppContext = LocalProxy(  # type: ignore[assignment]",
+                "    _cv_app, unbound_message=_no_app_msg",
+                ")",
+                "current_app: Flask = LocalProxy(  # type: ignore[assignment]",
+                "    _cv_app, \"app\", unbound_message=_no_app_msg",
+                ")",
+                "g: _AppCtxGlobals = LocalProxy(  # type: ignore[assignment]",
+                "    _cv_app, \"g\", unbound_message=_no_app_msg"
+              ],
+              "sha256": "5dd419992b4198f22cf2df77b63c7aa4eec19b78286c068e3569057141da19ab"
+            },
+            {
+              "path": "src/flask/globals.py",
+              "first": 42,
+              "last": 50,
+              "highlights": [
+                46,
+                47
+              ],
+              "lines": [
+                "_cv_request: ContextVar[RequestContext] = ContextVar(\"flask.request_ctx\")",
+                "request_ctx: RequestContext = LocalProxy(  # type: ignore[assignment]",
+                "    _cv_request, unbound_message=_no_req_msg",
+                ")",
+                "request: Request = LocalProxy(  # type: ignore[assignment]",
+                "    _cv_request, \"request\", unbound_message=_no_req_msg",
+                ")",
+                "session: SessionMixin = LocalProxy(  # type: ignore[assignment]",
+                "    _cv_request, \"session\", unbound_message=_no_req_msg"
+              ],
+              "sha256": "5dd419992b4198f22cf2df77b63c7aa4eec19b78286c068e3569057141da19ab"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "10",
+      "scene": "blueprints",
+      "say": "A blueprint records routes as deferred callbacks. Registration merges its views and hooks into the app, then runs those callbacks.",
+      "caption": "A blueprint records routes as deferred callbacks. Registration merges its views and hooks into the app, then runs those callbacks.",
+      "title": "Blueprints defer registration",
+      "views": [
+        {
+          "node": "blueprint-deferred-registration",
+          "unit": "@setupmethod\n    def record(self, func: DeferredSetupFunction) -> None:",
+          "unitId": "src/flask/sansio/blueprints.py::method::Blueprint.record::8831",
+          "blocks": [
+            {
+              "path": "src/flask/sansio/blueprints.py",
+              "first": 223,
+              "last": 230,
+              "highlights": [
+                230
+              ],
+              "lines": [
+                "    @setupmethod",
+                "    def record(self, func: DeferredSetupFunction) -> None:",
+                "        \"\"\"Registers a function that is called when the blueprint is",
+                "        registered on the application.  This function is called with the",
+                "        state as argument as returned by the :meth:`make_setup_state`",
+                "        method.",
+                "        \"\"\"",
+                "        self.deferred_functions.append(func)"
+              ],
+              "sha256": "4ea7beec4919fad6d67219bc883a027c3f38f1fd3fde72efe8d3637883ef1f03"
+            },
+            {
+              "path": "src/flask/sansio/blueprints.py",
+              "first": 423,
+              "last": 441,
+              "highlights": [
+                432,
+                433,
+                434
+              ],
+              "lines": [
+                "",
+                "        The URL rule is prefixed with the blueprint's URL prefix. The endpoint name,",
+                "        used with :func:`url_for`, is prefixed with the blueprint's name.",
+                "        \"\"\"",
+                "        if endpoint and \".\" in endpoint:",
+                "            raise ValueError(\"'endpoint' may not contain a dot '.' character.\")",
+                "",
+                "        if view_func and hasattr(view_func, \"__name__\") and \".\" in view_func.__name__:",
+                "            raise ValueError(\"'view_func' name may not contain a dot '.' character.\")",
+                "",
+                "        self.record(",
+                "            lambda s: s.add_url_rule(",
+                "                rule,",
+                "                endpoint,",
+                "                view_func,",
+                "                provide_automatic_options=provide_automatic_options,",
+                "                **options,",
+                "            )",
+                "        )"
+              ],
+              "sha256": "4ea7beec4919fad6d67219bc883a027c3f38f1fd3fde72efe8d3637883ef1f03"
+            }
+          ]
+        },
+        {
+          "node": "blueprint-deferred-registration",
+          "unit": "def register(self, app: App, options: dict[str, t.Any]) -> None:",
+          "unitId": "src/flask/sansio/blueprints.py::method::Blueprint.register::10928",
+          "blocks": [
+            {
+              "path": "src/flask/sansio/blueprints.py",
+              "first": 327,
+              "last": 345,
+              "highlights": [
+                334,
+                335,
+                337,
+                338
+              ],
+              "lines": [
+                "                endpoint=\"static\",",
+                "            )",
+                "",
+                "        # Merge blueprint data into parent.",
+                "        if first_bp_registration or first_name_registration:",
+                "            self._merge_blueprint_funcs(app, name)",
+                "",
+                "        for deferred in self.deferred_functions:",
+                "            deferred(state)",
+                "",
+                "        cli_resolved_group = options.get(\"cli_group\", self.cli_group)",
+                "",
+                "        if self.cli.commands:",
+                "            if cli_resolved_group is None:",
+                "                app.cli.commands.update(self.cli.commands)",
+                "            elif cli_resolved_group is _sentinel:",
+                "                self.cli.name = name",
+                "                app.cli.add_command(self.cli)",
+                "            else:"
+              ],
+              "sha256": "4ea7beec4919fad6d67219bc883a027c3f38f1fd3fde72efe8d3637883ef1f03"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "11",
+      "scene": "config",
+      "say": "Config loads Python files, objects, mappings, data files, and environment variables. Most loaders keep uppercase keys; prefixed environment loading parses values and supports nested keys.",
+      "caption": "Config loads Python files, objects, mappings, data files, and environment variables. Most loaders keep uppercase keys; prefixed environment loading parses values and supports nested keys.",
+      "title": "Load configuration",
+      "views": [
+        {
+          "node": "configuration-loading",
+          "unit": "def from_pyfile(\n        self, filename: str | os.PathLike[str], silent: bool = False\n    ) -> bool:",
+          "unitId": "src/flask/config.py::method::Config.from_pyfile::6295",
+          "blocks": [
+            {
+              "path": "src/flask/config.py",
+              "first": 202,
+              "last": 216,
+              "highlights": [
+                202,
+                203,
+                204,
+                205,
+                215
+              ],
+              "lines": [
+                "           `silent` parameter.",
+                "        \"\"\"",
+                "        filename = os.path.join(self.root_path, filename)",
+                "        d = types.ModuleType(\"config\")",
+                "        d.__file__ = filename",
+                "        try:",
+                "            with open(filename, mode=\"rb\") as config_file:",
+                "                exec(compile(config_file.read(), filename, \"exec\"), d.__dict__)",
+                "        except OSError as e:",
+                "            if silent and e.errno in (errno.ENOENT, errno.EISDIR, errno.ENOTDIR):",
+                "                return False",
+                "            e.strerror = f\"Unable to load configuration file ({e.strerror})\"",
+                "            raise",
+                "        self.from_object(d)",
+                "        return True"
+              ],
+              "sha256": "3e2a85d033da9ba1d6d051f8087d61a574c17b7d0d4b38cf10ec2bcf56fa92dd"
+            },
+            {
+              "path": "src/flask/config.py",
+              "first": 245,
+              "last": 254,
+              "highlights": [
+                246,
+                252,
+                253,
+                254
+              ],
+              "lines": [
+                "        See :ref:`config-dev-prod` for an example of class-based configuration",
+                "        using :meth:`from_object`.",
+                "",
+                "        :param obj: an import name or object",
+                "        \"\"\"",
+                "        if isinstance(obj, str):",
+                "            obj = import_string(obj)",
+                "        for key in dir(obj):",
+                "            if key.isupper():",
+                "                self[key] = getattr(obj, key)"
+              ],
+              "sha256": "3e2a85d033da9ba1d6d051f8087d61a574c17b7d0d4b38cf10ec2bcf56fa92dd"
+            }
+          ]
+        },
+        {
+          "node": "configuration-loading",
+          "unit": "def from_prefixed_env(\n        self, prefix: str = \"FLASK\", *, loads: t.Callable[[str], t.Any] = json.loads\n    ) -> bool:",
+          "unitId": "src/flask/config.py::method::Config.from_prefixed_env::4172",
+          "blocks": [
+            {
+              "path": "src/flask/config.py",
+              "first": 150,
+              "last": 166,
+              "highlights": [
+                153,
+                154,
+                157,
+                158,
+                161,
+                162,
+                163
+              ],
+              "lines": [
+                "        .. versionadded:: 2.1",
+                "        \"\"\"",
+                "        prefix = f\"{prefix}_\"",
+                "",
+                "        for key in sorted(os.environ):",
+                "            if not key.startswith(prefix):",
+                "                continue",
+                "",
+                "            value = os.environ[key]",
+                "            key = key.removeprefix(prefix)",
+                "",
+                "            try:",
+                "                value = loads(value)",
+                "            except Exception:",
+                "                # Keep the value as a string if loading failed.",
+                "                pass",
+                ""
+              ],
+              "sha256": "3e2a85d033da9ba1d6d051f8087d61a574c17b7d0d4b38cf10ec2bcf56fa92dd"
+            },
+            {
+              "path": "src/flask/config.py",
+              "first": 168,
+              "last": 180,
+              "highlights": [
+                168,
+                170,
+                171,
+                174,
+                175,
+                177,
+                178,
+                180
+              ],
+              "lines": [
+                "                # A non-nested key, set directly.",
+                "                self[key] = value",
+                "                continue",
+                "",
+                "            # Traverse nested dictionaries with keys separated by \"__\".",
+                "            current = self",
+                "            *parts, tail = key.split(\"__\")",
+                "",
+                "            for part in parts:",
+                "                # If an intermediate dict does not exist, create it.",
+                "                if part not in current:",
+                "                    current[part] = {}",
+                ""
+              ],
+              "sha256": "3e2a85d033da9ba1d6d051f8087d61a574c17b7d0d4b38cf10ec2bcf56fa92dd"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

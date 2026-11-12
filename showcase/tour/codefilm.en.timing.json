@@ -1,0 +1,74 @@
+{
+  "voice": "am_michael",
+  "speed": 1.08,
+  "sample_rate": 24000,
+  "duration": 112.6,
+  "items": [
+    {
+      "id": "1",
+      "scene": "entry",
+      "t0": 0.0,
+      "t1": 11.1
+    },
+    {
+      "id": "2",
+      "scene": "push",
+      "t0": 11.7,
+      "t1": 21.7
+    },
+    {
+      "id": "3",
+      "scene": "dispatch",
+      "t0": 22.3,
+      "t1": 30.1
+    },
+    {
+      "id": "4",
+      "scene": "before",
+      "t0": 30.7,
+      "t1": 39.1
+    },
+    {
+      "id": "5",
+      "scene": "view",
+      "t0": 39.7,
+      "t1": 46.9
+    },
+    {
+      "id": "6",
+      "scene": "response",
+      "t0": 47.5,
+      "t1": 56.7
+    },
+    {
+      "id": "7",
+      "scene": "after",
+      "t0": 57.3,
+      "t1": 67.0
+    },
+    {
+      "id": "8",
+      "scene": "contexts",
+      "t0": 67.6,
+      "t1": 79.3
+    },
+    {
+      "id": "9",
+      "scene": "proxies",
+      "t0": 79.9,
+      "t1": 89.4
+    },
+    {
+      "id": "10",
+      "scene": "blueprints",
+      "t0": 90.0,
+      "t1": 98.2
+    },
+    {
+      "id": "11",
+      "scene": "config",
+      "t0": 98.8,
+      "t1": 112.6
+    }
+  ]
+}
