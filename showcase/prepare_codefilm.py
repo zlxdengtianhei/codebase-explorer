@@ -62,7 +62,9 @@ SCENES = {
         "title": "After-request work and teardown",
         "views": [
             {"node": "response-finalization-and-error-fallback", "units": [APP + "process_response::52366"], "blocks": [("src/flask/app.py", 1311, 1324, [1313, 1314, 1316, 1319, 1321, 1322])]},
-            {"node": "wsgi-entry-and-request-contexts", "units": [APP + "wsgi_app::59470"], "blocks": [("src/flask/app.py", 1518, 1527, [1519, 1527])]},
+            {"node": "wsgi-entry-and-request-contexts", "units": [APP + "wsgi_app::59470"], "sourceOnly": True,
+             "label": "Flask.wsgi_app · RequestContext.pop",
+             "blocks": [("src/flask/app.py", 1518, 1527, [1519, 1527]), ("src/flask/ctx.py", 404, 410, [410])]},
         ],
     },
     "8": {
@@ -82,8 +84,10 @@ SCENES = {
     "10": {
         "title": "Blueprints defer registration",
         "views": [
-            {"node": "blueprint-deferred-registration", "units": [BP + "record::8831", BP + "add_url_rule::16654"], "blocks": [("src/flask/sansio/blueprints.py", 223, 230, [230]), ("src/flask/sansio/blueprints.py", 423, 441, [433, 434, 435, 436, 437, 438, 439])]},
-            {"node": "blueprint-deferred-registration", "units": [BP + "register::10928"], "blocks": [("src/flask/sansio/blueprints.py", 330, 335, [331, 332, 334, 335])]},
+            {"node": "blueprint-deferred-registration", "units": [BP + "record::8831", BP + "add_url_rule::16654"], "blocks": [("src/flask/sansio/blueprints.py", 223, 230, [230]), ("src/flask/sansio/blueprints.py", 412, 420, [413]), ("src/flask/sansio/blueprints.py", 433, 441, [433, 434, 435, 436, 437, 438, 439])]},
+            {"node": "blueprint-deferred-registration", "units": [BP + "register::10928", "grp:blueprints.py-merge-blueprint-funcs"],
+             "label": "Blueprint.register · Blueprint._merge_blueprint_funcs",
+             "blocks": [("src/flask/sansio/blueprints.py", 330, 335, [331, 332, 334, 335]), ("src/flask/sansio/blueprints.py", 399, 403, [399, 400, 402, 403])]},
         ],
     },
     "11": {
@@ -173,7 +177,7 @@ def main():
             def first_line(uid):
                 ranges = catalog["units"][uid].get("ranges") or [{"path": "", "lines": [[0, 0]]}]
                 return (ranges[0]["path"], ranges[0]["lines"][0][0])
-            label = (catalog["units"][primary]["signature"] if len(view["units"]) == 1 else
+            label = view.get("label") or (catalog["units"][primary]["signature"] if len(view["units"]) == 1 else
                      " · ".join(uid.split("::")[2] if uid.count("::") >= 2 else uid.removeprefix("grp:")
                                 for uid in sorted(view["units"], key=first_line))
                      if view["units"] else "current_app / request")

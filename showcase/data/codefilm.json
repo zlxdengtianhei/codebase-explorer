@@ -771,7 +771,7 @@
         },
         {
           "node": "wsgi-entry-and-request-contexts",
-          "unit": "def wsgi_app(\n        self, environ: WSGIEnvironment, start_response: StartResponse\n    ) -> cabc.Iterable[bytes]:",
+          "unit": "Flask.wsgi_app · RequestContext.pop",
           "unitId": "src/flask/app.py::method::Flask.wsgi_app::59470",
           "blocks": [
             {
@@ -795,6 +795,24 @@
                 "            ctx.pop(error)"
               ],
               "sha256": "5c6aa0151b0b8018732280761d27eda0c4c83378630e21faadd57b73783720a7"
+            },
+            {
+              "path": "src/flask/ctx.py",
+              "first": 404,
+              "last": 410,
+              "highlights": [
+                410
+              ],
+              "lines": [
+                "        clear_request = len(self._cv_tokens) == 1",
+                "",
+                "        try:",
+                "            if clear_request:",
+                "                if exc is _sentinel:",
+                "                    exc = sys.exc_info()[1]",
+                "                self.app.do_teardown_request(exc)"
+              ],
+              "sha256": "b0f2b36a1aad831692eced32f44fcdcd424d503c930fa3381a40eb56ed9f5376"
             }
           ]
         }
@@ -1037,7 +1055,27 @@
             },
             {
               "path": "src/flask/sansio/blueprints.py",
-              "first": 423,
+              "first": 412,
+              "last": 420,
+              "highlights": [
+                413
+              ],
+              "lines": [
+                "    @setupmethod",
+                "    def add_url_rule(",
+                "        self,",
+                "        rule: str,",
+                "        endpoint: str | None = None,",
+                "        view_func: ft.RouteCallable | None = None,",
+                "        provide_automatic_options: bool | None = None,",
+                "        **options: t.Any,",
+                "    ) -> None:"
+              ],
+              "sha256": "4ea7beec4919fad6d67219bc883a027c3f38f1fd3fde72efe8d3637883ef1f03"
+            },
+            {
+              "path": "src/flask/sansio/blueprints.py",
+              "first": 433,
               "last": 441,
               "highlights": [
                 433,
@@ -1049,16 +1087,6 @@
                 439
               ],
               "lines": [
-                "",
-                "        The URL rule is prefixed with the blueprint's URL prefix. The endpoint name,",
-                "        used with :func:`url_for`, is prefixed with the blueprint's name.",
-                "        \"\"\"",
-                "        if endpoint and \".\" in endpoint:",
-                "            raise ValueError(\"'endpoint' may not contain a dot '.' character.\")",
-                "",
-                "        if view_func and hasattr(view_func, \"__name__\") and \".\" in view_func.__name__:",
-                "            raise ValueError(\"'view_func' name may not contain a dot '.' character.\")",
-                "",
                 "        self.record(",
                 "            lambda s: s.add_url_rule(",
                 "                rule,",
@@ -1075,7 +1103,7 @@
         },
         {
           "node": "blueprint-deferred-registration",
-          "unit": "def register(self, app: App, options: dict[str, t.Any]) -> None:",
+          "unit": "Blueprint.register · Blueprint._merge_blueprint_funcs",
           "unitId": "src/flask/sansio/blueprints.py::method::Blueprint.register::10928",
           "blocks": [
             {
@@ -1095,6 +1123,25 @@
                 "",
                 "        for deferred in self.deferred_functions:",
                 "            deferred(state)"
+              ],
+              "sha256": "4ea7beec4919fad6d67219bc883a027c3f38f1fd3fde72efe8d3637883ef1f03"
+            },
+            {
+              "path": "src/flask/sansio/blueprints.py",
+              "first": 399,
+              "last": 403,
+              "highlights": [
+                399,
+                400,
+                402,
+                403
+              ],
+              "lines": [
+                "        for endpoint, func in self.view_functions.items():",
+                "            app.view_functions[endpoint] = func",
+                "",
+                "        extend(self.before_request_funcs, app.before_request_funcs)",
+                "        extend(self.after_request_funcs, app.after_request_funcs)"
               ],
               "sha256": "4ea7beec4919fad6d67219bc883a027c3f38f1fd3fde72efe8d3637883ef1f03"
             }
