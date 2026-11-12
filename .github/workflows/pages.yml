@@ -23,11 +23,13 @@ jobs:
           set -eu
           mkdir -p "$RUNNER_TEMP/site"
           cd showcase
+          # social.html and codefilm.html are recording pages for the social image and the code film.
           for page in *.html; do
-            [ "$page" = "social.html" ] || cp "$page" "$RUNNER_TEMP/site/"
+            case "$page" in social.html|codefilm.html) ;; *) cp "$page" "$RUNNER_TEMP/site/";; esac
           done
           cp app.js style.css "$RUNNER_TEMP/site/"
           cp -r data fonts vendor subtitles "$RUNNER_TEMP/site/"
+          rm -f "$RUNNER_TEMP/site/data/codefilm.json"
           touch "$RUNNER_TEMP/site/.nojekyll"
       - name: Check that every file a page refers to was collected
         run: |
