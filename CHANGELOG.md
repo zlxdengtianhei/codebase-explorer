@@ -2,6 +2,9 @@
 
 ## 2.2.0.dev0 (unreleased)
 
+- Node pages no longer repeat the `find`/`query`/`source` command block; it stays in `INDEX.md`
+  under "Read further", and each node page ends with one line pointing there. On flask the
+  pages are 1,550 tokens shorter (2.6%). Published examples keep the old footer.
 - `cbe query` and `cbe source` take the names the pages show: a group unit's heading without
   `grp:`, a unit heading or anchor, or a symbol name. One match is used and named on the first
   output line (`resolved: NAME -> ID`); several matches are listed and nothing is chosen.

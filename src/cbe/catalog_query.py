@@ -323,7 +323,7 @@ def layer_metrics(run_dir: Path) -> dict:
             stripped = line.strip()
             if stripped.startswith("### ") or '<a id="u-' in stripped:
                 in_units = True
-            if stripped.startswith("## Look up code"):
+            if stripped.startswith("Look up code:"):
                 in_footer = True
             if path.parent == run_dir / "docs":
                 category = "index"

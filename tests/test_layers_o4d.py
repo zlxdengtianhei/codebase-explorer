@@ -95,8 +95,9 @@ def test_every_page_title_finds_its_id_despite_many_incidental_matches(tmp_path)
         uid = next(uid for uid, row in catalog["units"].items() if row["anchor"] == "#" + anchor)
         assert uid in [row["id"] for row in catalog_query.find(run, title)]
         assert catalog_query.find(run, uid, limit=1)[0]["id"] == uid
-    footer = (run / "docs/nodes/root.md").read_text().split("## Look up code")[1]
-    assert 'cbe find --run-dir "$RUN" --term' in footer
+    footer = (run / "docs/nodes/root.md").read_text().split("Look up code:")[1]
+    assert "[INDEX.md](../INDEX.md)" in footer
+    assert 'cbe find --run-dir "$RUN" --term' in (run / "docs/INDEX.md").read_text()
     assert "按 [INDEX]" not in footer
 
 
@@ -165,9 +166,9 @@ def test_layer_metrics_count_footer_in_footer_category(tmp_path):
 
     run, _, _, _, _ = _run(tmp_path)
     page = (run / "docs/nodes/root.md").read_text()
-    before, footer = page.split("## Look up code", 1)
+    before, footer = page.split("Look up code:", 1)
     footer, references = footer.split("[f1]:", 1)
-    expected = count_section_tokens([("before", before), ("footer", "## Look up code" + footer),
+    expected = count_section_tokens([("before", before), ("footer", "Look up code:" + footer),
                                      ("references", "[f1]:" + references)])["footer"]
     metrics = catalog_query.layer_metrics(run)
     assert expected > 0

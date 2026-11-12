@@ -510,10 +510,9 @@ def _write_node_pages(prep: _RenderPrep) -> None:
             block = _build_unit_block(uid, prep.units, prep.owner, prep.dispositions,
                                      prep.nodes, prep.source_root, prep.name_of, source_links)
             lines += [f'<a id="{anchor(uid)}"></a>'] + block.splitlines() + [""]
-        lines += ["## Look up code", "", '`RUN` is the run directory. Find `ID` by a unit title on this page (exact names first):',
-                  '`cbe find --run-dir "$RUN" --term "UNIT_TITLE"`. Then use an `ID` from the results:',
-                  '`cbe query --run-dir "$RUN" --id "$ID"`; '
-                  '`cbe source --run-dir "$RUN" --id "$ID" --context 2`.', ""]
+        # The commands are written once, in INDEX.md; a page reached directly still points there.
+        lines += ["Look up code: the commands are under \"Read further\" in [INDEX.md](../INDEX.md); "
+                  "`cbe query` and `cbe source` take a unit title or anchor from this page.", ""]
         lines += [f"[{ref}]: {os.path.relpath(prep.source_root / path, prep.nodes_dir)}"
                   for path, ref in source_links.items()]
         (prep.nodes_dir / f"{nid}.md").write_text("\n".join(lines).strip() + "\n", encoding="utf-8")

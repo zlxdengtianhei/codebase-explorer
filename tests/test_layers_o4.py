@@ -41,8 +41,10 @@ def test_page_and_catalog_share_complete_records(tmp_path):
     assert "folds:" not in page and "kind:" not in page
     assert "### `class::" not in page and "### `function::" not in page
     assert "pkg/jobs.py:L" in page and "**Relations.**" not in page
-    assert "Look up code" in page and "cbe source --run-dir" in page
-    assert "## Read further" in (run / "docs/INDEX.md").read_text()
+    assert 'Look up code: the commands are under "Read further" in [INDEX.md](../INDEX.md)' in page
+    assert "cbe source --run-dir" not in page  # the commands are written once, in INDEX.md
+    index = (run / "docs/INDEX.md").read_text()
+    assert "## Read further" in index and "cbe source --run-dir" in index
     for uid, original in units.items():
         record = catalog["units"][uid]
         for field in ("explain", "extras", "relations", "uncertainties", "members"):
