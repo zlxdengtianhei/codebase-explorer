@@ -37,6 +37,12 @@ The start of a real `docs/INDEX.md`, generated for flask (unedited):
 
 Full example: [flask](examples/flask/docs/INDEX.md). More in [Examples and docs](#examples-and-docs).
 
+## Watch it explain Flask's code
+
+https://github.com/user-attachments/assets/87b5b1c1-452e-48e0-af29-2e520391093a
+
+<p align="center">Two minutes on Flask's own code, built from these explanations: one request from <code>wsgi_app</code> to the response, the two contexts and the <code>current_app</code>/<code>request</code> proxies, blueprints, configuration. Every line on screen is Flask's source at the lines the explanation cites.</p>
+
 ## Quickstart
 
 CBE is on PyPI as `codebase-explorer`. It needs Python 3.12 or 3.13. There are two ways to run it. Both end in the same `docs/` folder. The usual one is A: your coding agent loads the skill and does the work on your own subscription. B is for scripts and batch runs.

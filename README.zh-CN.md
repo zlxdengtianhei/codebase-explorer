@@ -37,6 +37,12 @@ https://github.com/user-attachments/assets/f0c3cc47-d0c2-4727-820e-65508c19408c
 
 完整示例：[flask](examples/flask/docs/INDEX.md)。其余见[示例与文档](#示例与文档)。
 
+## 看它讲 Flask 的代码
+
+https://github.com/user-attachments/assets/87b5b1c1-452e-48e0-af29-2e520391093a
+
+<p align="center">两分钟，讲 Flask 自己的代码，内容取自这些讲解：一个请求从 <code>wsgi_app</code> 到响应、两种上下文与 <code>current_app</code>／<code>request</code> 代理、蓝图、配置加载。画面上每一行都是讲解所指的那几行 Flask 源码。</p>
+
 ## 快速上手
 
 CBE 在 PyPI 上的包名是 `codebase-explorer`，需要 Python 3.12 或 3.13。有两种用法，最后都得到同一个 `docs/` 目录。常用的是 A：让你的编码 agent 加载 Skill 来做，花你自己的订阅额度。B 用于脚本和批量运行。
