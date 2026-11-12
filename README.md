@@ -85,20 +85,26 @@ Every other command and option is in [docs/reference.md](docs/reference.md).
 ## How it works
 
 ```mermaid
-flowchart LR
-  A["Freeze the source"] --> B["Tree-sitter splits it at syntax boundaries"]
+flowchart TD
+  A["Freeze the source: a hashed copy"] --> B["Tree-sitter splits every file at syntax boundaries"]
   B --> C["Joern builds call and import graph (optional)"]
-  C --> D["Model explains each code unit"]
-  D --> E["Program groups units into a module tree"]
-  E --> F["Model names each module"]
-  F --> G["Render INDEX.md, module pages, catalog.json"]
+  C --> D["Model explains each batch of code units,<br/>naming symbols by short numbers"]
+  D -->|"symbols skipped"| D2["Program asks again, only for those"]
+  D2 --> D
+  D -->|"every symbol answered"| R["Second model checks the largest batch<br/>against its source"]
+  R -->|"a finding"| R2["Second model reads every other batch too"]
+  R2 --> W["Model rewrites each flagged batch once"]
+  R -->|"no finding"| E["Program groups units into a module tree"]
+  W --> E
+  E --> F["Model names each module;<br/>it cannot add, drop or move a node"]
+  F --> G["Program renders INDEX.md, module pages, catalog.json"]
   classDef program fill:#dff7f3,stroke:#0f9b8e,color:#0f1b2d
   classDef model fill:#fff0cc,stroke:#c98a00,color:#0f1b2d
-  class A,B,C,E,G program
-  class D,F model
+  class A,B,C,D2,E,G program
+  class D,R,R2,W,F model
 ```
 
-Teal steps are ordinary code and make no model call. Amber steps are model calls.
+Teal steps are ordinary code and make no model call. Amber steps are model calls. The check shown is the default, `--review sample`.
 
 - **Freeze.** CBE keeps a hashed copy of the source, so every line number and quote can be checked later.
 - **Split.** Tree-sitter cuts each file at syntax boundaries. Every byte lands in some chunk.
@@ -107,6 +113,20 @@ Teal steps are ordinary code and make no model call. Amber steps are model calls
 - **Group.** The program, not the model, builds the module tree from calls and imports, location, and wording. The same input gives the same tree.
 - **Name.** The model gives each module a name, one line on what it is responsible for, and two or three sentences on how to read it. It cannot add, drop or move a node.
 - **Render.** The program writes `docs/INDEX.md`, one page per module, `DEPENDENCIES.md` and `RUN.md`, and the `catalog.json` that `find`, `query` and `source` read.
+
+After a run, a person or a coding agent reads the result like this:
+
+```mermaid
+flowchart LR
+  A["A: your coding agent loads the skill;<br/>its subagents write the explanations<br/>on your subscription"] --> D["docs/ in the run directory"]
+  B["B: cbe generate with an<br/>OpenAI-compatible endpoint"] --> D
+  D --> I["INDEX.md: the whole module tree on one page"]
+  I -->|"open a module"| M["Module page: each unit's signature,<br/>source link and explanation"]
+  I -->|"look up a name"| N["cbe find: the symbol's ID"]
+  M -->|"need the fact, not the prose"| N
+  N --> Q["cbe query: signature and calls"]
+  N --> S["cbe source: lines from the frozen copy,<br/>after each file's SHA-256 is checked"]
+```
 
 ## Code graph
 

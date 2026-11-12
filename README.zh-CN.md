@@ -85,20 +85,26 @@ cbe source --run-dir "$RUN" --id 'src/flask/helpers.py::function::url_for::6511'
 ## 怎样工作
 
 ```mermaid
-flowchart LR
-  A["冻结源码"] --> B["Tree-sitter 按语法边界切块"]
+flowchart TD
+  A["冻结源码：留一份带哈希的副本"] --> B["Tree-sitter 按语法边界切每个文件"]
   B --> C["Joern 出调用图与导入图（可选）"]
-  C --> D["模型写每个代码单元的讲解"]
-  D --> E["程序把单元聚成模块树"]
-  E --> F["模型给每个模块起名"]
-  F --> G["渲染 INDEX.md、模块页、catalog.json"]
+  C --> D["模型分批写代码单元的讲解，<br/>用短号指符号"]
+  D -->|"有符号被漏掉"| D2["程序再问一次，只问漏掉的"]
+  D2 --> D
+  D -->|"每个符号都有讲解"| R["另一个模型拿源码<br/>核最大的那一批"]
+  R -->|"查出错"| R2["其余各批也都读一遍"]
+  R2 --> W["查出错的批，模型各重写一次"]
+  R -->|"没查出错"| E["程序把单元聚成模块树"]
+  W --> E
+  E --> F["模型给每个模块起名；<br/>不能增删或移动节点"]
+  F --> G["程序渲染 INDEX.md、模块页、catalog.json"]
   classDef program fill:#dff7f3,stroke:#0f9b8e,color:#0f1b2d
   classDef model fill:#fff0cc,stroke:#c98a00,color:#0f1b2d
-  class A,B,C,E,G program
-  class D,F model
+  class A,B,C,D2,E,G program
+  class D,R,R2,W,F model
 ```
 
-青色的步骤是普通程序，不调模型；琥珀色的步骤要调模型。
+青色的步骤是普通程序，不调模型；琥珀色的步骤要调模型。图里的复查是缺省的 `--review sample`。
 
 - **冻结。** CBE 留一份带哈希的源码副本，之后每个行号和引用都能核对。
 - **切块。** Tree-sitter 按语法边界切每个文件，每个字节都落在某个块里，不调模型。
@@ -107,6 +113,20 @@ flowchart LR
 - **聚合。** 模块树由程序而不是模型来建，依据是调用与导入、位置和用词。同样的输入得到同一棵树。
 - **起名。** 模型给每个模块写名字、一句“负责什么”和两三句读法，不能增删或移动节点。
 - **渲染。** 程序写出 `docs/INDEX.md`、每个模块一页、`DEPENDENCIES.md` 和 `RUN.md`，以及 `find`、`query`、`source` 读的 `catalog.json`。
+
+跑完之后，人或编码 agent 这样读结果：
+
+```mermaid
+flowchart LR
+  A["A：编码 agent 加载 skill，<br/>它的子代理写讲解，<br/>用你自己的订阅额度"] --> D["运行目录里的 docs/"]
+  B["B：cbe generate 加一个<br/>OpenAI 兼容端点"] --> D
+  D --> I["INDEX.md：整棵模块树，一页"]
+  I -->|"点进一个模块"| M["模块页：每个单元的签名、<br/>源码链接和讲解"]
+  I -->|"按名字查"| N["cbe find：查到符号的 ID"]
+  M -->|"要的是事实，不是讲解"| N
+  N --> Q["cbe query：签名与调用"]
+  N --> S["cbe source：从冻结的副本里取行，<br/>先核每个文件的 SHA-256"]
+```
 
 ## 调用图
 
