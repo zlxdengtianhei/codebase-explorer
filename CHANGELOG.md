@@ -2,6 +2,12 @@
 
 ## 2.2.0.dev0 (unreleased)
 
+- The explanation prompt asks for direct writing instead of compression: three or more
+  conditions go on their own `- condition: outcome` lines, the signature is not restated, and
+  failure paths and side effects come first. On flask the explanation total stayed the same
+  (13,878 and 13,712 tokens) and the sampled review reported 5 and 0 issues (one run each).
+- The skill's metadata is checked against the Agent Skills specification: an offline test, and
+  `agentskills validate` (`skills-ref` 0.1.1) in the wheel-installation workflow.
 - C#: the graph build no longer stops on calls that Joern records without a containing
   method (attribute operators); they are left out and counted in the
   `calls_without_owner_omitted` diagnostic. On a 55-file repository the build now completes, but
