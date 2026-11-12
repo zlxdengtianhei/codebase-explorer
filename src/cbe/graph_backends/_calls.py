@@ -8,6 +8,22 @@ import posixpath
 import re
 
 
+_DOTTED_TYPE = re.compile(r"(?:[A-Za-z_]\w*\.)+([A-Za-z_]\w*)")
+
+
+def csharp_signature_key(full: str) -> str:
+    """One key for both spellings of a C# method's signature.
+
+    Joern's C# frontend writes a repository type with its namespace in the method's own full
+    name (``N.Guard.NotNull:T(N.IGuardClause,T)``) but without it in the full name of a call
+    to that method (``N.Guard.NotNull:T(IGuardClause,T)``). The method's qualified name before
+    the colon is kept as it is; inside the signature every dotted type name, generic
+    arguments included, is cut to its last component.
+    """
+    head, colon, signature = full.partition(":")
+    return head + colon + _DOTTED_TYPE.sub(r"\1", signature) if colon else full
+
+
 _UNKNOWN_NAMES = ("<unresolvedNamespace>", "<unresolvedName>", "<unresolvedSignature>",
                   "<unknownFullName>", "<empty>")
 
@@ -34,6 +50,8 @@ class CallResolver:
         self.by_file: dict[str, dict[str, list[int]]] = {}
         self.by_pair: dict[str, list[int]] = {}
         self.by_full: dict[str, list[int]] = {}
+        self.by_csharp_key: dict[str, list[int]] = {}
+        self.by_csharp_name: dict[str, list[int]] = {}
         self.internal_prefixes = set()
         self.classes = {"Self"}
         method_names = {m.get("fullName") for m in methods}
@@ -56,6 +74,9 @@ class CallResolver:
                     and not str(method.get("file", "")).endswith(".py")):
                 self.internal_prefixes.add(owner)
             self.by_full.setdefault(full, []).append(native)
+            if str(method.get("file", "")).endswith(".cs") and ":" in full:
+                self.by_csharp_key.setdefault(csharp_signature_key(full), []).append(native)
+                self.by_csharp_name.setdefault(full.partition(":")[0], []).append(native)
             by_file = self.by_file.setdefault(method.get("file", ""), {})
             by_file.setdefault(full.partition(":")[2], []).append(native)
             member = full.rsplit(":", 1)[-1]
@@ -155,6 +176,16 @@ class CallResolver:
         exact = self.by_full.get(full, [])
         if exact:
             return ("resolved" if len(exact) == 1 else "ambiguous", exact, [])
+        if str(call.get("callerFile", "")).endswith(".cs") and ":" in full:
+            matches = self.by_csharp_key.get(csharp_signature_key(full), [])
+            if matches:
+                # The frontend's signature for the call is not reliable enough to pick an
+                # overload (it types -1L and 0.0 as Int32), so an overloaded method is a
+                # candidate set, not a resolution.
+                overloads = self.by_csharp_name.get(full.partition(":")[0], [])
+                if len(matches) == 1 and len(overloads) == 1:
+                    return "resolved", matches, []
+                return "ambiguous", sorted(set(matches) | set(overloads)), []
         # A repository-qualified miss is analyzer guesswork, not a known
         # external target. Never salvage its last two components.
         if self._repository_qualified(full):

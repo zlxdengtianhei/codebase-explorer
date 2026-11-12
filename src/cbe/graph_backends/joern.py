@@ -411,6 +411,8 @@ def build_with_joern(
             diagnostics.append({"path": None, "code": "backend_error",
                                 "message": f"joern export unreadable for frontend {flag}: {exc}"})
             continue
+        if flag == "csharpsrc":
+            _one_based_lines(payload)
         payload["_languages"] = langs
         payload["_frontend"] = FRONTEND_NAME.get(flag, flag)
         payload["_repo_root"] = str(repo)
@@ -696,6 +698,22 @@ def _capability(language, graph, status, version, *, backend, limitations=None,
 def _failed_capabilities(language: str, backend: str, code: str) -> list[dict]:
     return [_capability(language, kind, "failed", None, backend=backend, limitations=code)
             for kind in ("call", "cfg", "dataflow", "import")]
+
+
+def _one_based_lines(value) -> None:
+    """Joern 4.0's C# frontend numbers lines from 0; every other frontend and CBE from 1.
+
+    Adds 1 to every known ``line`` of the export in place (a missing line stays -1)."""
+    if isinstance(value, dict):
+        line = value.get("line")
+        if isinstance(line, int) and not isinstance(line, bool) and line >= 0:
+            value["line"] = line + 1
+        for item in value.values():
+            if isinstance(item, (dict, list)):
+                _one_based_lines(item)
+    elif isinstance(value, list):
+        for item in value:
+            _one_based_lines(item)
 
 
 def _normalize(payload: dict, version: str, namespace: str = "cpg", *,

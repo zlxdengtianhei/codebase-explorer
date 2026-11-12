@@ -164,6 +164,42 @@ def test_c_sharp_extra_language(tmp_path: Path) -> None:
 
 
 @pytest.mark.skipif(not _JOERN_HOME, reason="CBE_JOERN_HOME is not set")
+def test_c_sharp_calls_with_repository_types_in_the_signature_resolve(tmp_path: Path) -> None:
+    # Joern writes repository types without their namespace in a call's full name and with it
+    # in the method's own full name; an extension method on a repository interface is the
+    # common case (ardalis/GuardClauses: 0 of 2,322 calls resolved before).
+    repo = tmp_path / "csharp_namespaced"
+    repo.mkdir()
+    (repo / "Guard.cs").write_text(
+        "namespace Shapes {\n"
+        "    public interface IGuard { }\n"
+        "    public sealed class Guard : IGuard { public static IGuard Against { get; } = new Guard(); }\n"
+        "    public static class GuardExtensions {\n"
+        "        public static int NotNegative(this IGuard guard, int value) {\n"
+        "            if (value < 0) { throw new System.ArgumentException(\"negative\"); }\n"
+        "            return value;\n"
+        "        }\n"
+        "    }\n"
+        "    public static class Use {\n"
+        "        public static int Run(int value) { return Guard.Against.NotNegative(value); }\n"
+        "    }\n"
+        "}\n",
+        encoding="utf-8",
+    )
+    graph = analyze_graph(repo, tmp_path / "cs_ns.json", backend="joern", languages=["c_sharp"],
+                          joern_home=_JOERN_HOME, timeout=600)
+    calls = _resolved_calls(graph)
+    targets = {call["target"].get("name", "") for call in calls}
+    assert any("GuardExtensions.NotNegative:" in name for name in targets), targets
+    assert any("Guard.get_Against:" in name for name in targets), targets
+    # Lines are 1-based like every other language: the call is on line 11, NotNegative on line 5.
+    edge = next(e for e in graph["edges"] if e["kind"] == "call" and "NotNegative(" in e.get("expression", ""))
+    assert edge["line"] == 11
+    method = next(n for n in graph["nodes"] if "GuardExtensions.NotNegative:" in n.get("name", ""))
+    assert method["start_line"] == 5
+
+
+@pytest.mark.skipif(not _JOERN_HOME, reason="CBE_JOERN_HOME is not set")
 def test_c_sharp_attribute_calls_without_owner_are_diagnosed(tmp_path: Path) -> None:
     repo = tmp_path / "csharp_attribute"
     repo.mkdir()
