@@ -89,8 +89,17 @@ def gaps(example: Path, row: dict, spec: dict, graph: Path | None = None) -> lis
         parts = [f"module {item['module']}: {item['decision']}, {len(item.get('issues') or [])} issue(s)"
                  + (f", repair {item['repair']}" if item.get("repair") else "") for item in reviewed]
         repaired = any(item.get("repair") for item in reviewed)
-        out.append("Sample review by a separate reader of the source read " + str(len(reviewed)) + " module batch(es) ("
-                   + "; ".join(parts) + ")." + (" The repaired text was not read again." if repaired else ""))
+        lead = ("Review by a separate reader of the source: the sampled batch had findings, so all "
+                if review.get("escalated") else "Sample review by a separate reader of the source: ")
+        second = spec.get("review_pass2")
+        if second:
+            # Measured once for the published examples: rewritten batches read again, rewritten once more, stopped.
+            tail = (f" The {second['rechecked']} rewritten batch(es) were read once more: {second['issues']} issue(s)"
+                    + (f"; {second['repaired']} batch(es) were rewritten again with the first and second findings "
+                       "together, and that text was not read again." if second["repaired"] else "."))
+        else:
+            tail = " The repaired text was not read again." if repaired else ""
+        out.append(lead + str(len(reviewed)) + " module batch(es) were read (" + "; ".join(parts) + ")." + tail)
     if row.get("program_made_titles"):
         out.append(f"{row['program_made_titles']} tree node title(s) were made by the program because the model did not name them.")
     index = (summary.get("tree") or {}).get("index") or {}
