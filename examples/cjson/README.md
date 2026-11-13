@@ -5,7 +5,7 @@ Upstream: https://github.com/DaveGamble/cJSON at `6d9f2443ab071f86e5d9b43025a409
 
 **Read.** Start at [docs/INDEX.md](docs/INDEX.md), then [Core JSON Parse and Print](docs/nodes/core-json-parse-and-print.md), [JSON Pointer Patch Utilities](docs/nodes/json-pointer-patch-utilities.md), [Public Utility API and Mutators](docs/nodes/public-utility-api-and-mutators.md). Each unit has an id for `cbe query`.
 
-**Search and inspect.** Run these inside this directory; `cbe` reads `catalog.json.gz` as it is. The example ships without the frozen source (`context.json`), so `cbe source` works only on a run you generate yourself.
+**Search and inspect.** Run these inside this directory; `cbe` reads `catalog.json.gz` as it is. This needs a CBE newer than 2.2.0 (the version on PyPI): until the next release, install it with `uv tool install git+https://github.com/zlxdengtianhei/codebase-explorer`. With 2.2.0, run `gzip -dk catalog.json.gz` first and pass the directory's absolute path. The example ships without the frozen source (`context.json`), so `cbe source` works only on a run you generate yourself.
 ```sh
 cbe find --run-dir . --term 'cJSON_InitHooks'
 cbe query --run-dir . --id 'cJSON.c::function::cJSON_InitHooks::5275'

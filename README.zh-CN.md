@@ -50,13 +50,13 @@ CBE 在 PyPI 上的包名是 `codebase-explorer`，需要 Python 3.12 或 3.13�
 
 **A. 常用方式：在你的编码 agent 里用，花你自己的订阅额度。** 下面的步骤以 Claude Code 为例；装上 Skill 后，由它的子代理（subagent）写讲解。
 
-1. 安装 CBE：`uv tool install codebase-explorer`（或 `pipx install codebase-explorer`）。
+1. 安装 CBE：`uv tool install codebase-explorer`（或 `pipx install codebase-explorer`）。PyPI 上是 2.2.0。第 7 步、`cbe stale`，以及 `find`、`query`、`source` 接受相对的 `--run-dir`，都比 2.2.0 新；下一版发布之前，要用这些请从 GitHub 装：`uv tool install git+https://github.com/zlxdengtianhei/codebase-explorer`。
 2. 可选，要调用图（call graph）时：`cbe graph setup` 会把 Joern 和 Java 运行时下载到你的用户缓存目录（约 1.9 GB；在 Linux x86_64 上测过，macOS 还没测）。
 3. 在你的项目里装 Skill：`cbe-install install --host claude-code`。
 4. 在那里启动 Claude Code，对它说：“Use the codebase-explorer skill to generate documentation for this repository.”
 5. agent 会先报出计划的文件数、token 数、模块数和任务数，再跑子代理，最后校验结果。
 6. 打开 `<run_dir>/docs/INDEX.md`，`run_dir` 由 agent 告诉你。
-7. agent 会问你要不要把三行指引写进这个仓的 `AGENTS.md` 或 `CLAUDE.md`。写了以后，之后进仓的 agent 会先读 `INDEX.md`（三个新开的 Claude Code 会话都是这样；见 [docs/running.md](docs/running.md#use-the-generated-docs-from-an-agent)）。
+7. （2.2.0 还没有，见第 1 步）agent 会问你要不要把三行指引写进这个仓的 `AGENTS.md` 或 `CLAUDE.md`。写了以后，之后进仓的 agent 会先读 `INDEX.md`（三个新开的 Claude Code 会话都是这样；见 [docs/running.md](docs/running.md#use-the-generated-docs-from-an-agent)）。
 
 别的 agent 加载的是同一个 Skill：`cbe-install install --host` 支持 `claude-code`、`opencode`、`pi`、`codex` 和 `dsh`。完整跑通过的有：Claude Code（见[成本](#成本)）；OpenCode 与 Pi，各 1 次，用的是一个 22 个文件的示例小仓（Pi 那次，各个任务是靠我们机器上的一个派发 Skill 分给另外的 Pi 会话做的；Pi 自己没有子代理）。`codex` 和 `dsh` 会装上 Skill，但我们没有完整跑过。详见 [docs/running.md](docs/running.md#generate-through-a-host-agent)。
 
@@ -196,7 +196,7 @@ flowchart LR
 - Ruby 的动态分派可能把调用绑到错误的类的同名方法上。CBE 把其中许多标成歧义，仍有一些错绑。
 - C 和 C++ 文件不跑预处理。宏多的头文件会被切得很粗，宏可能被当成函数名。
 - 讲解由模型写。`cbe host verify` 通过，只说明结构和引用自洽，不说明讲解是对的。请用 `cbe source` 对照源码核实。
-- 没有增量更新。源码变了，`cbe stale` 列出讲到变动文件的单元和模块页（按文件判）；要更新它们，重新生成。
+- 没有增量更新。源码变了，`cbe stale`（比 2.2.0 新，见快速上手第 1 步）列出讲到变动文件的单元和模块页（按文件判）；要更新它们，重新生成。
 
 ## 示例与文档
 

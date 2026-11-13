@@ -5,7 +5,7 @@ Upstream: https://github.com/google/gson at `e2292f9c9f2e07a4791827e8eea34aa7d80
 
 **Read.** Start at [docs/INDEX.md](docs/INDEX.md), then [Core configuration and adapters](docs/nodes/core-configuration-and-adapters.md), [Gson setup and defaults](docs/nodes/gson-setup-and-defaults.md), [Gson builder configuration](docs/nodes/gson-builder-configuration.md). Each unit has an id for `cbe query`.
 
-**Search and inspect.** Run these inside this directory; `cbe` reads `catalog.json.gz` as it is. The example ships without the frozen source (`context.json`), so `cbe source` works only on a run you generate yourself.
+**Search and inspect.** Run these inside this directory; `cbe` reads `catalog.json.gz` as it is. This needs a CBE newer than 2.2.0 (the version on PyPI): until the next release, install it with `uv tool install git+https://github.com/zlxdengtianhei/codebase-explorer`. With 2.2.0, run `gzip -dk catalog.json.gz` first and pass the directory's absolute path. The example ships without the frozen source (`context.json`), so `cbe source` works only on a run you generate yourself.
 ```sh
 cbe find --run-dir . --term 'toJson'
 cbe query --run-dir . --id 'gson/src/main/java/com/google/gson/Gson.java::method::Gson.toJson::25595'

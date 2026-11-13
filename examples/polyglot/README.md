@@ -5,7 +5,7 @@ Origin: synthetic fixture in this repository, manifest SHA-256 `6b19d76603fb65d1
 
 **Read.** Start at [docs/INDEX.md](docs/INDEX.md), then [Cross-Language Object Utilities](docs/nodes/cross-language-object-utilities.md), [Cross-Language Greeter Utilities](docs/nodes/cross-language-greeter-utilities.md), [PHP Swift Shape Examples](docs/nodes/php-swift-shape-examples.md). Each unit has an id for `cbe query`.
 
-**Search and inspect.** Run these inside this directory; `cbe` reads `catalog.json.gz` as it is. The example ships without the frozen source (`context.json`), so `cbe source` works only on a run you generate yourself.
+**Search and inspect.** Run these inside this directory; `cbe` reads `catalog.json.gz` as it is. This needs a CBE newer than 2.2.0 (the version on PyPI): until the next release, install it with `uv tool install git+https://github.com/zlxdengtianhei/codebase-explorer`. With 2.2.0, run `gzip -dk catalog.json.gz` first and pass the directory's absolute path. The example ships without the frozen source (`context.json`), so `cbe source` works only on a run you generate yourself.
 ```sh
 cbe find --run-dir . --term 'Worker'
 cbe query --run-dir . --id 'python_case.py::class::Worker::267::s0'
