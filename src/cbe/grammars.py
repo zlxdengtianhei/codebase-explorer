@@ -151,9 +151,9 @@ _JOERN_FRONTENDS: dict[str, tuple[str, ...]] = {
 _JOERN_TESTED = "Joern 4.0.654"
 _CALL_GRAPH: dict[str, dict[str, str]] = {
     **{name: {"status": "works"} for name in ("c", "cpp", "python", "javascript", "typescript", "java", "go", "ruby")},
-    "c_sharp": {"status": "known_failure",
-                "note": f"{_JOERN_TESTED}: failed on a real 55-file repository (the export script hit a null "
-                        "pointer error); a two-file test fixture works"},
+    "c_sharp": {"status": "partial",
+                "note": f"{_JOERN_TESTED}: builds on a real 55-file repository; a call to an overloaded "
+                        "method resolves only to the set of overloads"},
     "kotlin": {"status": "known_failure",
                "note": f"{_JOERN_TESTED}: failed on a real 146-file repository (joern-parse: key not found: "
                        "MethodRef); a two-file test fixture works"},

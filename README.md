@@ -142,7 +142,7 @@ Without a graph, CBE still works. With one, the explanation tasks and the depend
 | Fails on real repositories | Kotlin | Joern 4.0.654 failed on a 146-file Kotlin repository. Two-file examples work, so small inputs may succeed. |
 | Not tested | Swift, TSX | |
 
-`cbe languages` prints the same status for each language as `call_graph`. Source parsing and chunking work for every language in the table whatever the call-graph status is. Tree-sitter grammars for 13 languages come with the default install and two extras. More on analyzers and graph options: [docs/reference.md](docs/reference.md#optional-graph-analyzers).
+`cbe languages` prints the same status for each language as `call_graph`. Source parsing and chunking work for every language in the table whatever the call-graph status is. Tree-sitter grammars for 13 languages come with the default install and two extras. More on analyzers and graph options: [docs/reference.md](docs/reference.md#optional-graph-analyzers). What code graphs are, which ones CBE uses and why, and where each language is known to be wrong: [docs/code-graphs.md](docs/code-graphs.md).
 
 ## What it costs
 

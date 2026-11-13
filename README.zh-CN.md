@@ -142,7 +142,7 @@ flowchart LR
 | 在真实仓库上失败 | Kotlin | Joern 4.0.654 在一个 146 个文件的 Kotlin 仓库上建图失败。两个文件的小例子能跑，所以小输入可能成功。 |
 | 未测试 | Swift、TSX | |
 
-`cbe languages` 对每种语言打印同样的状态，字段名是 `call_graph`。不管调用图一栏写什么，表里每种语言的源码解析和切块都能用。CBE 的默认安装和两个额外依赖带有 13 种语言的 Tree-sitter 语法。分析器与建图选项见 [docs/reference.md](docs/reference.md#optional-graph-analyzers)。
+`cbe languages` 对每种语言打印同样的状态，字段名是 `call_graph`。不管调用图一栏写什么，表里每种语言的源码解析和切块都能用。CBE 的默认安装和两个额外依赖带有 13 种语言的 Tree-sitter 语法。分析器与建图选项见 [docs/reference.md](docs/reference.md#optional-graph-analyzers)。代码图是什么、CBE 用了哪几种、为什么，以及各语言已知会错在哪：[docs/code-graphs.zh-CN.md](docs/code-graphs.zh-CN.md)。
 
 ## 成本
 

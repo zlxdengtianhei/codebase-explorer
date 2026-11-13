@@ -233,7 +233,7 @@ def test_languages_report_call_graph_status():
     rows = {row["name"]: row["call_graph"] for row in available_languages()["languages"]}
     for name in ("c", "cpp", "python", "javascript", "typescript", "java", "go", "ruby"):
         assert rows[name] == {"status": "works"}
-    assert rows["c_sharp"]["status"] == "known_failure" and "4.0.654" in rows["c_sharp"]["note"]
+    assert rows["c_sharp"]["status"] == "partial" and "overloads" in rows["c_sharp"]["note"]
     assert rows["kotlin"]["status"] == "known_failure" and "MethodRef" in rows["kotlin"]["note"]
     assert rows["php"]["status"] == "needs_tool" and "php" in rows["php"]["note"]
     assert rows["rust"]["status"] == "needs_tool" and "cargo" in rows["rust"]["note"]
