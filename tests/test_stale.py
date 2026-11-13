@@ -75,3 +75,34 @@ def test_published_example_says_why_stale_cannot_run(capsys) -> None:
     example = Path(__file__).resolve().parents[1] / "examples" / "flask"
     assert cli.main(["stale", "--run-dir", str(example)]) == 2
     assert "published examples do not carry one" in capsys.readouterr().err
+
+
+def test_one_changed_file_marks_only_its_pages_in_a_multi_page_map(tmp_path: Path, capsys) -> None:
+    """Nine files in three directories give several module pages; a change in one file must not
+    mark the pages that hold none of its units (a fixture with one page cannot tell)."""
+    repo = tmp_path / "repo"
+    for folder, names in {"billing": ["invoice", "tax", "refund"], "auth": ["login", "token", "session"],
+                          "storage": ["disk", "cache", "blob"]}.items():
+        (repo / "src" / folder).mkdir(parents=True)
+        for name in names:
+            (repo / "src" / folder / f"{name}.py").write_text(
+                f"def {name}_open(x):\n    if x < 0:\n        raise ValueError('{name}')\n    return x + 1\n\n"
+                f"def {name}_close(y):\n    total = 0\n    for i in range(y):\n        total += {name}_open(i)\n"
+                f"    return total\n\nclass {name.title()}Store:\n    def put(self, k, v):\n        self.k = k\n"
+                f"        return {name}_close(v)\n", encoding="utf-8")
+    run_dir = Path(host_run.plan(repo, review="none", jobs=2, host="test")["run_dir"])
+    _drive(run_dir)
+    units = _catalog(run_dir)["units"]
+    all_pages = {unit["page"] for unit in units.values() if unit.get("page")}
+    assert len(all_pages) > 1
+
+    target = "src/auth/token.py"
+    path = repo / target
+    path.write_text(path.read_text().replace("return x + 1", "return x + 2"), encoding="utf-8")
+    code, report = _report(capsys, "--run-dir", str(run_dir))
+    assert code == 3 and report["changed_files"] == [target]
+    expected_units = {uid for uid, unit in units.items() if any(row["path"] == target for row in unit["ranges"])}
+    expected_pages = {units[uid]["page"] for uid in expected_units}
+    assert set(report["stale_units"]) == expected_units
+    assert set(report["stale_pages"]) == expected_pages
+    assert expected_pages < all_pages
