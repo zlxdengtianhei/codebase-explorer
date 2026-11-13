@@ -398,7 +398,8 @@ def _assert_paths_unchanged(state: dict[str, Any], paths: list[str]) -> None:
     must stop it exactly as the host dispatch refuses a drifted path."""
     changed = _drift(state, paths)
     if changed:
-        raise HostRunError(f"source changed since plan: {changed[0]}; start a new plan")
+        raise HostRunError(f"source changed since plan: {changed[0]}; `cbe stale` lists what it affects; "
+                           "start a new plan")
 
 
 @contextlib.contextmanager
@@ -836,7 +837,7 @@ def next_tasks(run_dir: Path, *, limit: int | None = None, owner: str | None = N
                 changed = _drift(state, state["modules"][task["module"]]["files"])
                 if changed:
                     raise HostRunError("source missing or changed since plan: " + ", ".join(changed[:10])
-                                       + "; start a new plan")
+                                       + "; `cbe stale` lists what it affects; start a new plan")
             prompt_path = state_dir(run_dir) / "tasks" / f"{task_id}.md"
             prompt_path.write_text(_prompt(run_dir, state, task), encoding="utf-8")
             (state_dir(run_dir) / "outbox" / f"{task_id}.json").unlink(missing_ok=True)
@@ -1336,7 +1337,8 @@ def resume(run_dir: Path, *, owner: str | None = None, retry_failed: bool = True
                **({"attempt_limits": limits} if limits else {}))
         _maybe_render(run_dir, state, refresh=False)
         return {"submitted": submitted, "released": released, "retried": retried, "changed_sources": changed[:50],
-                **({"warning": "sources changed since plan; start a new plan"} if changed else {}),
+                **({"warning": "sources changed since plan; `cbe stale --run-dir RUN` lists the affected "
+                               "units and pages; start a new plan"} if changed else {}),
                 **_summary(state)}
 
 

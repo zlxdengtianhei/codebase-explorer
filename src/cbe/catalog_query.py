@@ -76,6 +76,55 @@ def query_catalog(run_dir: Path) -> dict[str, Any]:
     return catalog
 
 
+def stale(run_dir: Path, repo: Path | None = None) -> dict[str, Any]:
+    """Which files, units and module pages of a run no longer match the source; no model call.
+
+    Judged per file: a changed file marks every unit with a range in it, even a unit
+    whose own lines did not change.
+    """
+    from cbe.batching import source_paths
+    from cbe.host_run import HostRunError, _drift, state_dir
+
+    state_path = state_dir(run_dir) / "state.json"
+    if not state_path.is_file():
+        raise HostRunError(f"no run state at {state_path}; cbe stale needs the run directory "
+                           "of a generation (published examples do not carry one)")
+    state = json.loads(state_path.read_text(encoding="utf-8"))
+    root = (repo or Path(state["repo"])).resolve()
+    planned = {row["path"] for row in state["files"]}
+    drifted = _drift({**state, "repo": str(root)})
+    removed = sorted(path for path in drifted if not (root / path).is_file())
+    changed = sorted(set(drifted) - set(removed))
+    added = sorted(rel for rel in (path.relative_to(root).as_posix() for path in source_paths(root))
+                   if rel not in planned)
+    catalog = json.loads(read_catalog_text(run_dir))
+    affected = set(changed) | set(removed)
+    units = sorted(uid for uid, unit in (catalog.get("units") or {}).items()
+                   if any(row.get("path") in affected for row in unit.get("ranges") or []))
+    pages = sorted({catalog["units"][uid]["page"] for uid in units if catalog["units"][uid].get("page")})
+    return {"fresh": not (changed or removed or added), "repo": str(root),
+            "snapshot": {"planned_at": state.get("created_at"), "files": len(planned)},
+            "judged_by": "file digest (SHA-256); every unit in a changed file counts as stale",
+            "changed_files": changed, "removed_files": removed, "new_files": added,
+            "stale_units": units, "stale_pages": pages}
+
+
+def stale_text(report: dict[str, Any]) -> str:
+    snapshot = report["snapshot"]
+    lines = [f"map: planned {snapshot['planned_at']} from {snapshot['files']} files of {report['repo']}"]
+    if report["fresh"]:
+        return "\n".join(lines + ["fresh: every planned file matches its digest and no new source file appeared"]) + "\n"
+    lines += [f"files: {len(report['changed_files'])} changed, {len(report['removed_files'])} removed, "
+              f"{len(report['new_files'])} new",
+              f"units: {len(report['stale_units'])} stale (judged per file: a changed file marks all its units)",
+              f"pages: {len(report['stale_pages'])} module page(s) describe changed code; trust the source there"]
+    for label, key, prefix in (("changed", "changed_files", ""), ("removed", "removed_files", ""),
+                               ("new", "new_files", ""), ("page", "stale_pages", "docs/"),
+                               ("unit", "stale_units", "")):
+        lines += [f"{label}: {prefix}{value}" for value in report[key]]
+    return "\n".join(lines) + "\n"
+
+
 def format_ranges(ranges: list[dict]) -> str:
     """Compact, unambiguous source coordinates for agent-facing text."""
     return ", ".join(f"{row['path']}:L{start}-L{end}"

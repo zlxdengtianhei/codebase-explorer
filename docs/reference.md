@@ -1,4 +1,4 @@
-# Reference: install, languages, code graph, find / query / source
+# Reference: install, languages, code graph, find / query / source / stale
 
 This page holds the command-level detail that the [README](../README.md) leaves out. For running a generation, resuming it and reading the run directory, see [running.md](running.md). Sections:
 
@@ -208,6 +208,23 @@ $ cbe source --run-dir /absolute/path/to/run --id 'cJSON.c::function::cJSON_Pars
 1229:     return cJSON_ParseWithOpts(value, 0, 0);
 1230: }
 ```
+
+`cbe stale --run-dir RUN [--repo REPO] [--json]` (or `cbe stale --repo REPO` for the repository's latest run) says which parts of a generated map no longer match the source. It calls no model. It compares each planned file's SHA-256 with the checkout, lists source files added since the plan (by the same rules `plan` uses), and maps changed or removed files to the units with a range in them and to those units' module pages. It judges per file: a change anywhere in a file marks every unit of that file. It exits 0 when the map is fresh and 3 when something is stale; published examples carry no run state, so it cannot run on them.
+
+```text
+$ cbe stale --repo /absolute/path/to/repo
+map: planned 2026-11-13T03:09:06Z from 3 files of /absolute/path/to/repo
+files: 1 changed, 0 removed, 1 new
+units: 3 stale (judged per file: a changed file marks all its units)
+pages: 1 module page(s) describe changed code; trust the source there
+changed: src/pkg/jobs.py
+new: src/pkg/extra.py
+page: docs/nodes/module-m1-83acda.md
+unit: src/pkg/jobs.py::function::reserve_run::15
+…
+```
+
+There is no incremental update yet: to refresh the stale pages, generate again.
 
 ## Command details
 

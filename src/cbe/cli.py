@@ -203,6 +203,12 @@ def build_parser() -> argparse.ArgumentParser:
     query_p.add_argument("--id")
     query_p.add_argument("--json", action="store_true", help="machine-readable object (no duplicate detail)")
     query_p.add_argument("--edges", default=None, help="expand frozen raw edges: all or comma-separated kinds")
+    stale_p = sub.add_parser("stale", help="List the files, units and module pages that no longer match the "
+                             "source (no model call); exit 3 when something is stale")
+    stale_p.add_argument("--run-dir", type=_run_dir, default=None)
+    stale_p.add_argument("--repo", type=_run_dir, default=None,
+                         help="use this repository's latest run and compare against this checkout")
+    stale_p.add_argument("--json", action="store_true", help="machine-readable report")
     source_p = sub.add_parser("source", help="Print frozen source by unit ID, symbol ID or file path; verify SHA-256 first")
     source_p.add_argument("--run-dir", type=_run_dir, required=True)
     source_p.add_argument("--id", required=True)
@@ -406,7 +412,16 @@ def main(argv: list[str] | None = None) -> int:
             value = _host(args)
             print(json.dumps(value, ensure_ascii=False, indent=2))
             return 3 if args.host_command == "verify" and not value["ok"] else 0
-        from cbe.catalog_query import find, find_text, query, query_text, source
+        from cbe.catalog_query import find, find_text, query, query_text, source, stale, stale_text
+
+        if args.command == "stale":
+            from cbe.host_run import latest_run
+
+            if args.run_dir is None and args.repo is None:
+                raise ValueError("cbe stale: pass --run-dir, or --repo to use the repository's latest run")
+            report = stale(args.run_dir or latest_run(args.repo), args.repo)
+            print(json.dumps(report, ensure_ascii=False, indent=2) if args.json else stale_text(report), end="")
+            return 0 if report["fresh"] else 3
 
         if args.command == "source":
             _require_frozen_context(args.run_dir, "source lines cannot be printed")

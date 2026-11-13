@@ -80,15 +80,18 @@ def _imports(path: str, source: str) -> set[str]:
     return names
 
 
-def scan(repo: Path) -> list[SourceFile]:
+def source_paths(repo: Path) -> list[Path]:
     """Every regular source file outside the excluded directories; symlinks are never followed."""
     suffixes = grammars.registered_suffixes() | grammars.FALLBACK_SUFFIXES
+    return [path for path in sorted(repo.rglob("*"))
+            if path.is_file() and not path.is_symlink() and path.suffix.lower() in suffixes
+            and not any(part in grammars.DEFAULT_EXCLUDE_DIR_NAMES for part in path.relative_to(repo).parts)]
+
+
+def scan(repo: Path) -> list[SourceFile]:
+    """Read and measure every file of ``source_paths``."""
     files: list[SourceFile] = []
-    for path in sorted(repo.rglob("*")):
-        if not path.is_file() or path.is_symlink() or path.suffix.lower() not in suffixes:
-            continue
-        if any(part in grammars.DEFAULT_EXCLUDE_DIR_NAMES for part in path.relative_to(repo).parts):
-            continue
+    for path in source_paths(repo):
         raw = path.read_bytes()
         try:
             source = raw.decode("utf-8")
