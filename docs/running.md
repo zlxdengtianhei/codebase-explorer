@@ -70,7 +70,7 @@ Get exact facts with `cbe find --run-dir .codebase-analysis/runs/RUN_NAME NAME`,
 `cbe stale --repo . --run-dir .codebase-analysis/runs/RUN_NAME` lists the pages that describe code changed after the map was made; for those, read the source.
 ```
 
-What this was checked on (2026-11-13): a flask checkout at the commit of the published example, with that example's map under `.codebase-analysis/runs/` and only these three lines in `CLAUDE.md`. Three fresh headless Claude Code sessions (Sonnet; no user settings, skills or MCP servers) were asked where Flask turns a view's return value into a response. In all three the first tool call read `docs/INDEX.md` and the second ran `cbe find`; all three named `Flask.make_response` and `Flask.finalize_request` with correct lines. This shows that the lines lead an agent to the map. It does not show that answers get better than without a map.
+What this was checked on (2026-11-13): a flask checkout at the commit of the published example, with that example's map under `.codebase-analysis/runs/` and only these three lines in `CLAUDE.md`. Three fresh headless Claude Code sessions (Sonnet; no user settings, user skills or MCP servers) were asked where Flask turns a view's return value into a response. In all three the first tool call read `docs/INDEX.md` and the second ran `cbe find`; all three named `Flask.make_response` and `Flask.finalize_request` with correct lines. This shows that the lines lead an agent to the map. It does not show that answers get better than without a map.
 
 A run directory's name changes with every generation, so the lines name a fallback; replace them after you generate again.
 

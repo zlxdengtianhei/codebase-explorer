@@ -269,5 +269,5 @@ def test_install_ends_with_the_agents_md_lines(tmp_path: Path, capsys) -> None:
     assert cli.main(["install", "--dir", str(tmp_path / "skills")]) == 0
     out = capsys.readouterr().out
     assert "AGENTS.md or CLAUDE.md" in out and "docs/INDEX.md" in out
-    assert "cbe stale --repo . --run-dir .codebase-analysis/runs/NEWEST" in out
+    assert "`cbe stale --repo .` lists" in out and out.count("Replace NEWEST with") == 2
     assert str(tmp_path) not in out.split("After the first generation", 1)[1]
