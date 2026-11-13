@@ -5,7 +5,7 @@ Upstream: https://github.com/pallets/flask at `85c5d93cbd049c4bd0679c36fd1ddcae8
 
 **Read.** Start at [docs/INDEX.md](docs/INDEX.md), then [Flask App Request Lifecycle](docs/nodes/flask-app-request-lifecycle.md), [Scaffold and Blueprint Registration](docs/nodes/scaffold-and-blueprint-registration.md), [App and Request Context Management](docs/nodes/app-and-request-context-management.md). Each unit has an id for `cbe query`.
 
-**Search and inspect.** Run these inside this directory; `cbe` reads `catalog.json.gz` as it is. This needs a CBE newer than 2.2.0 (the version on PyPI): until the next release, install it with `uv tool install git+https://github.com/zlxdengtianhei/codebase-explorer`. With 2.2.0, run `gzip -dk catalog.json.gz` first and pass the directory's absolute path. The example ships without the frozen source (`context.json`), so `cbe source` works only on a run you generate yourself.
+**Search and inspect.** Run these inside this directory; `cbe` reads `catalog.json.gz` as it is. This needs CBE 2.3.0 or newer (`uv tool install codebase-explorer`). With 2.2.0, run `gzip -dk catalog.json.gz` first and pass the directory's absolute path. The example ships without the frozen source (`context.json`), so `cbe source` works only on a run you generate yourself.
 ```sh
 cbe find --run-dir . --term 'dispatch_request'
 cbe query --run-dir . --id 'src/flask/app.py::method::Flask.dispatch_request::35345'

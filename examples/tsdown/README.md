@@ -5,7 +5,7 @@ Upstream: https://github.com/rolldown/tsdown at `2b1be7e0accdb1d6e903cd426426664
 
 **Read.** Start at [docs/INDEX.md](docs/INDEX.md), then [Package output and validation](docs/nodes/package-output-and-validation.md), [Dependency externalization utilities](docs/nodes/dependency-externalization-utilities.md), [Package export map generation](docs/nodes/package-export-map-generation.md). Each unit has an id for `cbe query`.
 
-**Search and inspect.** Run these inside this directory; `cbe` reads `catalog.json.gz` as it is. This needs a CBE newer than 2.2.0 (the version on PyPI): until the next release, install it with `uv tool install git+https://github.com/zlxdengtianhei/codebase-explorer`. With 2.2.0, run `gzip -dk catalog.json.gz` first and pass the directory's absolute path. The example ships without the frozen source (`context.json`), so `cbe source` works only on a run you generate yourself.
+**Search and inspect.** Run these inside this directory; `cbe` reads `catalog.json.gz` as it is. This needs CBE 2.3.0 or newer (`uv tool install codebase-explorer`). With 2.2.0, run `gzip -dk catalog.json.gz` first and pass the directory's absolute path. The example ships without the frozen source (`context.json`), so `cbe source` works only on a run you generate yourself.
 ```sh
 cbe find --run-dir . --term 'resolveConfig'
 cbe query --run-dir . --id 'src/config/index.ts::function::resolveConfig::639'

@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 2.3.0 (2026-11-13)
 
 - `cbe stale --run-dir RUN` (or `--repo REPO`) lists the files, units and module pages
   that no longer match the source, without a model call; exit 3 when something is stale.

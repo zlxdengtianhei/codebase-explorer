@@ -50,13 +50,13 @@ CBE is on PyPI as `codebase-explorer`. It needs Python 3.12 or 3.13. There are t
 
 **A. The usual way: inside your coding agent, on your own subscription.** The steps below use Claude Code; the skill makes its subagents write the explanations.
 
-1. Install CBE: `uv tool install codebase-explorer` (or `pipx install codebase-explorer`). PyPI has 2.2.0. Step 7, `cbe stale`, and a relative `--run-dir` for `find`, `query` and `source` are newer than 2.2.0; until the next release, install from GitHub to get them: `uv tool install git+https://github.com/zlxdengtianhei/codebase-explorer`.
+1. Install CBE: `uv tool install codebase-explorer` (or `pipx install codebase-explorer`). Step 7, `cbe stale`, and a relative `--run-dir` for `find`, `query` and `source` need 2.3.0 or newer.
 2. Optional, for the call graph: `cbe graph setup` downloads Joern and a Java runtime into your user cache directory (about 1.9 GB; tested on Linux x86_64, not yet on macOS).
 3. In your project, install the skill: `cbe-install install --host claude-code`.
 4. Start Claude Code there and ask: "Use the codebase-explorer skill to generate documentation for this repository."
 5. The agent prints the planned file, token, module and task counts, runs the subagents, and verifies the result.
 6. Open `<run_dir>/docs/INDEX.md`. The agent reports `run_dir`.
-7. The agent offers to add three lines (not in 2.2.0; see step 1) to the repository's `AGENTS.md` or `CLAUDE.md`. With them, later agents in the repository read `INDEX.md` first (three fresh Claude Code sessions did so; see [docs/running.md](docs/running.md#use-the-generated-docs-from-an-agent)).
+7. The agent offers to add three lines (2.3.0 or newer) to the repository's `AGENTS.md` or `CLAUDE.md`. With them, later agents in the repository read `INDEX.md` first (three fresh Claude Code sessions did so; see [docs/running.md](docs/running.md#use-the-generated-docs-from-an-agent)).
 
 Other agents load the same skill: `cbe-install install --host` takes `claude-code`, `opencode`, `pi`, `codex` and `dsh`. What has run end to end: Claude Code (see [What it costs](#what-it-costs)); OpenCode and Pi, once each on a 22-file sample repository (in the Pi run the tasks were handed to separate Pi sessions by a dispatch skill on our machine; Pi has no subagents of its own). `codex` and `dsh` install the skill, and we have not run them end to end. Details: [docs/running.md](docs/running.md#generate-through-a-host-agent).
 
@@ -196,7 +196,7 @@ What we do not claim: that grouping by function lets an agent locate code more a
 - Ruby's dynamic dispatch can bind a call to the wrong class's method. CBE marks many of these as ambiguous, and some wrong bindings remain.
 - C and C++ files are not preprocessed. A header with many macros is cut into coarse chunks, and a macro can be taken for a function name.
 - A model writes the explanations. `cbe host verify` passing shows that the structure and references are consistent. It does not show that an explanation is correct. Check explanations against the source (`cbe source`).
-- There are no incremental updates. When the source changes, `cbe stale` (newer than 2.2.0; see Quickstart step 1) lists the units and module pages that describe changed files (judged per file); to refresh them, generate again.
+- There are no incremental updates. When the source changes, `cbe stale` (2.3.0 or newer) lists the units and module pages that describe changed files (judged per file); to refresh them, generate again.
 
 ## Examples and docs
 

@@ -5,7 +5,7 @@ Upstream: https://github.com/fmtlib/fmt at `b4ffa39b9994c961418406f47358791d89a5
 
 **Read.** Start at [docs/INDEX.md](docs/INDEX.md), then [Core Formatting Internals](docs/nodes/core-formatting-internals.md), [Low-Level Formatting Primitives](docs/nodes/low-level-formatting-primitives.md), [Format Core Utilities](docs/nodes/format-core-utilities.md). Each unit has an id for `cbe query`.
 
-**Search and inspect.** Run these inside this directory; `cbe` reads `catalog.json.gz` as it is. This needs a CBE newer than 2.2.0 (the version on PyPI): until the next release, install it with `uv tool install git+https://github.com/zlxdengtianhei/codebase-explorer`. With 2.2.0, run `gzip -dk catalog.json.gz` first and pass the directory's absolute path. The example ships without the frozen source (`context.json`), so `cbe source` works only on a run you generate yourself.
+**Search and inspect.** Run these inside this directory; `cbe` reads `catalog.json.gz` as it is. This needs CBE 2.3.0 or newer (`uv tool install codebase-explorer`). With 2.2.0, run `gzip -dk catalog.json.gz` first and pass the directory's absolute path. The example ships without the frozen source (`context.json`), so `cbe source` works only on a run you generate yourself.
 ```sh
 cbe find --run-dir . --term 'vformat'
 cbe query --run-dir . --id 'include/fmt/color.h::function::vformat::21724'

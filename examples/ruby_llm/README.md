@@ -5,7 +5,7 @@ Upstream: https://github.com/crmne/ruby_llm at `1e315ab4b3f3a150c443dc9a17f50475
 
 **Read.** Start at [docs/INDEX.md](docs/INDEX.md), then [Provider Model Abstractions](docs/nodes/provider-model-abstractions.md), [Provider Composition And Registry](docs/nodes/provider-composition-and-registry.md), [Provider Integration Compositions](docs/nodes/provider-integration-compositions.md). Each unit has an id for `cbe query`.
 
-**Search and inspect.** Run these inside this directory; `cbe` reads `catalog.json.gz` as it is. This needs a CBE newer than 2.2.0 (the version on PyPI): until the next release, install it with `uv tool install git+https://github.com/zlxdengtianhei/codebase-explorer`. With 2.2.0, run `gzip -dk catalog.json.gz` first and pass the directory's absolute path. The example ships without the frozen source (`context.json`), so `cbe source` works only on a run you generate yourself.
+**Search and inspect.** Run these inside this directory; `cbe` reads `catalog.json.gz` as it is. This needs CBE 2.3.0 or newer (`uv tool install codebase-explorer`). With 2.2.0, run `gzip -dk catalog.json.gz` first and pass the directory's absolute path. The example ships without the frozen source (`context.json`), so `cbe source` works only on a run you generate yourself.
 ```sh
 cbe find --run-dir . --term 'Tool'
 cbe query --run-dir . --id 'lib/ruby_llm/tool.rb::class::RubyLLM.Tool::422::s0'
