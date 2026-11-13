@@ -1671,7 +1671,19 @@ def verify(run_dir: Path) -> dict[str, Any]:
             summary = json.loads(summary_path.read_text(encoding="utf-8"))
             summary.update(status=state["status"], deterministic_checks_ok=state["verify"]["ok"])
             write_json(summary_path, summary)
-        return state["verify"]
+        return {**state["verify"], **_agents_md(run_dir, state)} if state["verify"]["ok"] else state["verify"]
+
+
+def _agents_md(run_dir: Path, state: dict[str, Any]) -> dict[str, Any]:
+    """The lines that let the repository's later agents find this map (printed, never written)."""
+    from cbe import AGENTS_MD_NOTE, agents_md_lines
+
+    try:
+        relative = run_dir.resolve().relative_to(Path(state["repo"]).resolve()).as_posix()
+    except ValueError:
+        return {"agents_md": {"note": "The run directory is outside the repository, so there is no "
+                                      "repository-relative pointer to paste into AGENTS.md."}}
+    return {"agents_md": {"note": AGENTS_MD_NOTE, "lines": agents_md_lines(relative)}}
 
 
 def render(run_dir: Path) -> dict[str, Any]:

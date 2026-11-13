@@ -9,7 +9,7 @@ uv tool install --python 3.13 /path/to/codebase-explorer
 "$(uv tool dir --bin)/cbe-install" install --host codex --scope project   # .agents/skills/codebase-explorer
 ```
 
-Use `--scope user` for `~/.agents/skills`. Codex discovers skills in `.agents/skills` from the working directory up to the repository root and in `~/.agents/skills`; invoke it with `$codebase-explorer` or let Codex select it. To make it visible to every session in a repository, add one line to `AGENTS.md`: "For repository documentation maps, use the codebase-explorer skill."
+Use `--scope user` for `~/.agents/skills`. Codex discovers skills in `.agents/skills` from the working directory up to the repository root and in `~/.agents/skills`; invoke it with `$codebase-explorer` or let Codex select it. After a generation, `cbe host verify` prints three lines (`agents_md.lines`) that point later sessions at the map; ask the user whether to add them to the repository's `AGENTS.md`.
 
 `cbe host` writes only inside the run directory, by default `<repo>/.codebase-analysis/runs/`, so the `workspace-write` sandbox is enough. Subagents inherit the session's sandbox and approval mode.
 

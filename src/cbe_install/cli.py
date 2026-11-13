@@ -424,6 +424,11 @@ def main(argv: list[str] | None = None) -> int:
             command = shlex.quote(str(_runtime_python()))
             for module in RUNTIME_MODULES:
                 print(f"runtime {module}: {command} -m {module}")
+        if args.command == "install":
+            from cbe import AGENTS_MD_NOTE, agents_md_lines
+
+            print("\nAfter the first generation in a repository: " + AGENTS_MD_NOTE[0].lower()
+                  + AGENTS_MD_NOTE[1:] + "\n\n" + "\n".join(agents_md_lines()))
         return 0
     except (InstallError, OSError, EOFError) as exc:
         print(f"error: {exc}", file=sys.stderr)

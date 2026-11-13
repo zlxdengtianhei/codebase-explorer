@@ -60,27 +60,19 @@ The dependency view labels pairs as **graph-confirmed** (tree and resolved call/
 
 ## Use the generated docs from an agent
 
-Give an answering agent the documents as a map and the source as the authority, and tell it the order to use them in. Having the commands is not enough: in the evaluation, the agent that had CBE's documents and commands issued `find`/`query` in only 7 of 48 flask questions, executed them in 2 of 48 pytest questions, and ran them in 9 of 40 curl questions ([Q-A: flask](../evaluation/README.md#q-a-flask-e2), [Q-A: pytest](../evaluation/README.md#q-a-pytest-e3), [Q-A: curl](../evaluation/README.md#q-a-curl-e5)). A prompt such as this one states the order:
+Having the commands is not enough: in the evaluation, the agent that had CBE's documents and commands issued `find`/`query` in only 7 of 48 flask questions, executed them in 2 of 48 pytest questions, and ran them in 9 of 40 curl questions ([Q-A: flask](../evaluation/README.md#q-a-flask-e2), [Q-A: pytest](../evaluation/README.md#q-a-pytest-e3), [Q-A: curl](../evaluation/README.md#q-a-curl-e5)). So an agent should be told, when it enters the repository, that the map exists and in which order to use it.
+
+When `cbe host verify` passes, its output carries `agents_md.lines`: three lines with paths relative to the repository root. `cbe-install install` prints the same three lines in a generic form. Put them into the repository's `AGENTS.md` or `CLAUDE.md`; the skill asks the user once whether to do that. For a run in the default place they read:
 
 ```text
-The repository is at /absolute/path/to/repo. CBE documentation for it is in
-/absolute/path/to/run/docs, and the CBE run directory is /absolute/path/to/run.
-
-1. Read /absolute/path/to/run/docs/INDEX.md first. Choose the responsibility
-   node that matches the question and open its page in docs/nodes/.
-2. To locate a symbol, run
-     cbe find --run-dir /absolute/path/to/run --term NAME
-   and copy an id from the second column. Then run
-     cbe query --run-dir /absolute/path/to/run --id ID
-   Write the flag forms --term and --id; they are the stable interface.
-3. Before you answer, read the source lines that the page or query cites:
-     cbe source --run-dir /absolute/path/to/run --id ID --context 2
-   or open the file. The explanations are written by a model. Where they
-   disagree with the source, the source is right.
-4. Cite file paths and line ranges in the answer.
+This repository has a Codebase Explorer map in `.codebase-analysis/runs/RUN_NAME` (if it is gone, the newest directory under `.codebase-analysis/runs/`). Before you search the code, read its `docs/INDEX.md`, then the module page that fits the task.
+Get exact facts with `cbe find --run-dir .codebase-analysis/runs/RUN_NAME NAME`, then `cbe query` and `cbe source` with the same `--run-dir`. Where an explanation and the source disagree, the source is right.
+`cbe stale --repo . --run-dir .codebase-analysis/runs/RUN_NAME` lists the pages that describe code changed after the map was made; for those, read the source.
 ```
 
-This prompt was not part of the evaluation, so it is a suggestion, not a measured improvement. With the skill installed, the skill's "Read and query the result" section gives a Claude Code or Codex agent the same commands. You can ask, for example: "Use the codebase-explorer skill and the run at /absolute/path/to/run to answer: where does cJSON free a partially parsed tree?"
+What this was checked on (2026-11-13): a flask checkout at the commit of the published example, with that example's map under `.codebase-analysis/runs/` and only these three lines in `CLAUDE.md`. Three fresh headless Claude Code sessions (Sonnet; no user settings, skills or MCP servers) were asked where Flask turns a view's return value into a response. In all three the first tool call read `docs/INDEX.md` and the second ran `cbe find`; all three named `Flask.make_response` and `Flask.finalize_request` with correct lines. This shows that the lines lead an agent to the map. It does not show that answers get better than without a map.
+
+A run directory's name changes with every generation, so the lines name a fallback; replace them after you generate again.
 
 ## Generate through an API
 

@@ -180,3 +180,29 @@ def test_claude_code_page_names_the_agent_that_cbe_install_installs() -> None:
     subagent = next(line for line in page.splitlines() if line.startswith("- `subagent_type`"))
     assert "`cbe-writer` once `cbe-install`" in subagent
     assert "`general-purpose`" in subagent
+
+
+def test_verify_prints_repository_relative_agents_md_lines(tmp_path: Path) -> None:
+    repo = _repo(tmp_path)
+    run_dir = Path(host_run.plan(repo, review="none", jobs=2)["run_dir"])
+    _drive(run_dir)
+    result = host_run.verify(run_dir)
+    assert result["ok"]
+    lines = result["agents_md"]["lines"]
+    relative = run_dir.relative_to(repo).as_posix()
+    assert len(lines) == 3 and relative in lines[0] and "docs/INDEX.md" in lines[0]
+    text = "\n".join(lines)
+    assert str(tmp_path) not in text and Path.home().name not in text.replace(relative, "")
+    assert "cbe find --run-dir " + relative in text and "cbe stale --repo . --run-dir " + relative in text
+    # The pointer is printed, never stored with the checks.
+    assert "agents_md" not in json.loads((run_dir / "host" / "verify.json").read_text())
+
+
+def test_skill_starts_with_using_an_existing_map() -> None:
+    text = (SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
+    existing = text.index("## When the repository already has a map")
+    assert existing < text.index("## Host-driven generation") and existing < text.index("1. **Plan.**")
+    assert "responsibility" not in text
+    assert "cbe graph setup" in text and text.index("cbe graph setup") < text.index("1. **Plan.**")
+    assert "only after the subagent has written its result file" in text
+    assert "agents_md.lines" in text
