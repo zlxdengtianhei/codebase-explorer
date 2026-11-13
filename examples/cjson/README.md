@@ -5,9 +5,8 @@ Upstream: https://github.com/DaveGamble/cJSON at `6d9f2443ab071f86e5d9b43025a409
 
 **Read.** Start at [docs/INDEX.md](docs/INDEX.md), then [Core JSON Parse and Print](docs/nodes/core-json-parse-and-print.md), [JSON Pointer Patch Utilities](docs/nodes/json-pointer-patch-utilities.md), [Public Utility API and Mutators](docs/nodes/public-utility-api-and-mutators.md). Each unit has an id for `cbe query`.
 
-**Search and inspect.**
+**Search and inspect.** Run these inside this directory; `cbe` reads `catalog.json.gz` as it is. The example ships without the frozen source (`context.json`), so `cbe source` works only on a run you generate yourself.
 ```sh
-gzip -dk catalog.json.gz
 cbe find --run-dir . --term 'cJSON_InitHooks'
 cbe query --run-dir . --id 'cJSON.c::function::cJSON_InitHooks::5275'
 ```

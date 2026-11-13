@@ -11,14 +11,14 @@ https://github.com/user-attachments/assets/f0c3cc47-d0c2-4727-820e-65508c19408c
 
 <p align="center">两分钟、带配音：Flask 从源码文件到模块地图，逐个看八个顶层模块，打开一个模块页，再用 <code>cbe find</code>、<code>cbe source</code> 查。<br><a href="https://zlxdengtianhei.github.io/codebase-explorer/?data=flask">打开可交互的地图</a> · <a href="https://zlxdengtianhei.github.io/codebase-explorer/film.html">同一支视频的网页版</a>（英文配音，页内有中英文字稿）</p>
 
-文件树只告诉你文件在哪，不告诉你每一块是干什么的。CBE（Codebase Explorer）读一个仓库，写出文件树缺的那部分：一页列出整棵模块树（module tree），每个模块一行，说明它负责什么；再给每个模块一页，讲清其中每个函数和类，并链接到准确的源码行。你可以直接读。编码 agent 用三条命令就能在里面查。
+文件树只告诉你文件在哪，不告诉你每一块是干什么的。CBE（Codebase Explorer）读一个仓库，写出文件树缺的那部分：一页列出整棵模块树（module tree），每个模块一行，说明它负责什么；再给每个模块一页，讲清其中每个函数和类，并写明各自所在的文件与行范围。你可以直接读。编码 agent 用三条命令就能在里面查。
 
 **想试一下：** `uv tool install codebase-explorer`（需要 Python 3.12 或 3.13）。然后二选一：在 Claude Code 里用你自己的订阅生成；或在命令行接任意 OpenAI 兼容的端点生成（模型用 `--model` 指定）。步骤见[快速上手](#快速上手)。
 
 ## 能得到什么
 
 - **一页地图。** `docs/INDEX.md` 列出整棵模块树，每个模块一行。页面大小的上限，取 2,000 token 与源码 token 数的 3% 中较大的那个。
-- **一棵完整、每次都一样的树。** 树由程序建：互相调用或导入、位置相近、用词相近的代码单元（code unit）聚在一起。同样的输入得到同一棵树，没有空节点，也没有重复的模块。
+- **一棵完整的树。** 树由程序建：互相调用或导入、位置相近、用词相近的代码单元（code unit）聚在一起。讲解相同，树就相同；重新生成一次，讲解变了，分组也可能变。没有空节点，也没有重复的模块。
 - **每个模块一页。** 每个单元有签名、源码链接和模型写的讲解。讲解主要写给人读。
 - **确定的事实靠命令查，不靠模型。** 签名、调用和源码行，用 `cbe find`、`cbe query` 和 `cbe source` 现查。`cbe source` 打印的是冻结快照里的源码；打印之前先核对每个文件的 SHA-256 与冻结时记下的值。
 
@@ -27,12 +27,13 @@ https://github.com/user-attachments/assets/f0c3cc47-d0c2-4727-820e-65508c19408c
 ```markdown
 ## Modules
 
-- [**Request Serving Application Runtime**](nodes/request-serving-application-runtime.md) — Combines the concrete WSGI Flask application with request and response wrappers, templating, context lifecycle, and view-facing helpers needed to serve live requests. (136 units; `flask/app.py`, `helpers.py`, `wrappers.py`)
-  - [**Request Helper Utilities and Tests**](nodes/request-helper-utilities-and-tests.md) — Provides view-facing helpers for files, flashing, redirects, streaming, and URL building, plus proxy globals and signal definitions, with focused behavioral tests. (42 units; `helpers.py`, `test_helpers.py`, `flask/blueprints.py`)
-    - [**Helpers, globals, and signals**](nodes/helpers-globals-and-signals.md) — Provides view-facing helpers for sending files, flashing messages, redirecting, streaming, and URL building, plus proxy globals and Flask's blinker signal definitions. (26 units; `helpers.py`, `flask/blueprints.py`, `globals.py`)
-    - [**Helper behavior tests**](nodes/helper-behavior-tests.md) — Verifies aborter selection and dispatch, app redirect delegation, open_resource read modes and encoding, and context-free redirect fallback behavior. (11 units; `test_helpers.py`)
-    - [**File and URL tests**](nodes/file-and-url-tests.md) — Tests custom URL converters, send_file family behavior with path-like objects, stream_with_context lifetime, and url_for inside request contexts. (5 units; `test_helpers.py`, `test_converters.py`)
-  - [**WSGI Request Dispatch Core**](nodes/wsgi-request-dispatch-core.md) — Implements the WSGI-callable Flask class and its pipeline: request entry, URL-to-view matching, response finalization, error handler resolution, and test and async wiring. (35 units; `flask/app.py`, `test_async.py`, `sansio/app.py`)
+- [**Sansio App and Scaffold Foundations**](nodes/sansio-app-and-scaffold-foundations.md) — Provides the framework-agnostic foundations that the concrete Flask app and blueprints build on: shared scaffold registration, blueprint recording, app base setup and logging. (74 units)
+  - [**Scaffold and Blueprint Registration**](nodes/scaffold-and-blueprint-registration.md) — Defines how routes, handlers and callbacks are declared and deferred, through the shared Scaffold base and the sansio Blueprint that builds on it. (43 units)
+  - [**Sansio App Base and Logging**](nodes/sansio-app-base-and-logging.md) — Defines the framework-agnostic application base class and the logger setup it uses, covering app construction, configuration and Jinja environment preparation. (31 units)
+- [**Runtime App, Contexts and Testing**](nodes/runtime-app-contexts-and-testing.md) — Covers the running application: the concrete Flask app and request lifecycle, the contexts that bind per-request state, and the tools for testing apps. (64 units)
+  - [**Flask App Request Lifecycle**](nodes/flask-app-request-lifecycle.md) — Implements the concrete Flask application and its request lifecycle: WSGI entry, dispatch, response finalization and exception handling, grouped as the app's per-request pipeline. (34 units)
+  - [**Test Client and CLI Runner**](nodes/test-client-and-cli-runner.md) — Offers testing tools: an environment builder with app defaults, a context-aware test client with session editing, and an app-aware CLI runner. (15 units)
+  - [**App and Request Context Management**](nodes/app-and-request-context-management.md) — Defines application and request contexts, the g namespace and context helpers that bind per-app and per-request state, URL matching and session opening. (15 units)
 ```
 
 完整示例：[flask](examples/flask/docs/INDEX.md)。其余见[示例与文档](#示例与文档)。
@@ -50,11 +51,12 @@ CBE 在 PyPI 上的包名是 `codebase-explorer`，需要 Python 3.12 或 3.13�
 **A. 常用方式：在你的编码 agent 里用，花你自己的订阅额度。** 下面的步骤以 Claude Code 为例；装上 Skill 后，由它的子代理（subagent）写讲解。
 
 1. 安装 CBE：`uv tool install codebase-explorer`（或 `pipx install codebase-explorer`）。
-2. 可选，要调用图（call graph）时：`cbe graph setup` 会把 Joern 和 Java 运行时下载到你的用户缓存目录（约 1.9 GB；支持 Linux x86_64 和 macOS）。
+2. 可选，要调用图（call graph）时：`cbe graph setup` 会把 Joern 和 Java 运行时下载到你的用户缓存目录（约 1.9 GB；在 Linux x86_64 上测过，macOS 还没测）。
 3. 在你的项目里装 Skill：`cbe-install install --host claude-code`。
 4. 在那里启动 Claude Code，对它说：“Use the codebase-explorer skill to generate documentation for this repository.”
 5. agent 会先报出计划的文件数、token 数、模块数和任务数，再跑子代理，最后校验结果。
 6. 打开 `<run_dir>/docs/INDEX.md`，`run_dir` 由 agent 告诉你。
+7. agent 会问你要不要把三行指引写进这个仓的 `AGENTS.md` 或 `CLAUDE.md`。写了以后，之后进仓的 agent 会先读 `INDEX.md`（三个新开的 Claude Code 会话都是这样；见 [docs/running.md](docs/running.md#use-the-generated-docs-from-an-agent)）。
 
 别的 agent 加载的是同一个 Skill：`cbe-install install --host` 支持 `claude-code`、`opencode`、`pi`、`codex` 和 `dsh`。完整跑通过的有：Claude Code（见[成本](#成本)）；OpenCode 与 Pi，各 1 次，用的是一个 22 个文件的示例小仓（Pi 那次，各个任务是靠我们机器上的一个派发 Skill 分给另外的 Pi 会话做的；Pi 自己没有子代理）。`codex` 和 `dsh` 会装上 Skill，但我们没有完整跑过。详见 [docs/running.md](docs/running.md#generate-through-a-host-agent)。
 
@@ -110,7 +112,7 @@ flowchart TD
 - **切块。** Tree-sitter 按语法边界切每个文件，每个字节都落在某个块里，不调模型。
 - **讲解。** 模型分批写讲解。它用清单里的短号指符号，所以编不出 ID；模型漏掉的符号，由程序再问一次。
 - **复查。** 另一个模型读一批的源码，逐条核这一批的讲解：行为说错、条件或报错写错、讲的不是这个符号；不评文字好坏。查出的错交回重写一次。`--review` 定读几批：`none` 不读；`sample`（缺省）读最大的那一批，这一批查出任何错就把其余各批也都读一遍；`all` 每批都读。在 flask 上抽查一批占全程输入 token 的 14%，每批都读多约 80%。讲错多的仓，重写比复查本身贵：六个抽查查出错的示例上，每批都查、查出的批重写，输入 token 多 51%—176%，输出 token 变成原来的 4—10 倍，因为查出错的批要整批重写一遍。抽查干净时其余各批没人读，要紧的仓请用 `--review all`。`RUN.md` 写明读了哪几批、查出什么。复查后的重写和重新生成一样，可能让地图重新分组，模块页与页名会变；符号 ID（`cbe find`、`cbe query` 用的）只由源码决定，引用代码请用 ID，不要用页名。
-- **聚合。** 模块树由程序而不是模型来建，依据是调用与导入、位置和用词。同样的输入得到同一棵树。
+- **聚合。** 模块树由程序而不是模型来建，依据是调用与导入、位置和用词。讲解相同，树就相同。
 - **起名。** 模型给每个模块写名字、一句“负责什么”和两三句读法，不能增删或移动节点。
 - **渲染。** 程序写出 `docs/INDEX.md`、每个模块一页、`DEPENDENCIES.md` 和 `RUN.md`，以及 `find`、`query`、`source` 读的 `catalog.json`。
 
@@ -162,7 +164,8 @@ flowchart LR
 | 子代理任务 | 8 个：4 个讲解批、1 个抽样复核、2 个树命名、1 个总览。全部第一次回答就被收下 |
 | 墙钟 | 293 秒 |
 | `cbe host verify` | 15 项检查全部通过 |
-| token | 这次运行没有收集 |
+| 提示 token | 857,525，是源码 token 的 11.48 倍。缓存读每一轮都重算一次，所以不要和上面 API 路的表并排比 |
+| 输出 token | 69,130，是源码的 0.93 倍 |
 
 每张表都只是一个仓库、一次运行。用宿主 agent 跑时花的是你的订阅额度，不用 API 密钥。建图不调模型。更早的成本表覆盖到 170 万 token 的仓库，放在 [docs/running.md](docs/running.md#what-a-run-costs-the-earlier-table)；它是在改答案格式之前量的，不要和上表直接比。
 
@@ -189,11 +192,11 @@ flowchart LR
 ## 已知限制
 
 - 调用图依赖 Joern 和 Java 21 或更高版本。`cbe graph setup` 会把两者都下载下来（约 1.9 GB）。
-- C# 调用重载方法时只解析到这一组重载；在量过的那一个真实仓库上，约 43% 的调用仍没解析。Kotlin 在真实仓库上用所钉的 Joern 版本建图失败；两个文件的小例子能跑。
+- C# 调用重载方法时只解析到这一组重载。在 GuardClauses 上，2,322 条调用里 993 条标成没解析；其中约 955 条是仓外方法、`nameof` 或构造调用，仓内真连不上的 14 条。另一个仓库（MediatR）抽查了 10 对调用，都对。Kotlin 在真实仓库上用所钉的 Joern 版本建图失败；两个文件的小例子能跑。
 - Ruby 的动态分派可能把调用绑到错误的类的同名方法上。CBE 把其中许多标成歧义，仍有一些错绑。
 - C 和 C++ 文件不跑预处理。宏多的头文件会被切得很粗，宏可能被当成函数名。
 - 讲解由模型写。`cbe host verify` 通过，只说明结构和引用自洽，不说明讲解是对的。请用 `cbe source` 对照源码核实。
-- 没有增量更新：源码变了，要重新生成。
+- 没有增量更新。源码变了，`cbe stale` 列出讲到变动文件的单元和模块页（按文件判）；要更新它们，重新生成。
 
 ## 示例与文档
 

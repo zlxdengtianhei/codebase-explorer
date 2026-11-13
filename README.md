@@ -11,14 +11,14 @@ https://github.com/user-attachments/assets/f0c3cc47-d0c2-4727-820e-65508c19408c
 
 <p align="center">Two minutes, narrated: Flask from its source files to the module map, the eight top-level modules, one module page, then <code>cbe find</code> and <code>cbe source</code>.<br><a href="https://zlxdengtianhei.github.io/codebase-explorer/?data=flask">Try the interactive map</a> · <a href="https://zlxdengtianhei.github.io/codebase-explorer/film.html">The same video with its transcript (English and Chinese)</a></p>
 
-A file tree shows where files are, not what each part is for. CBE (Codebase Explorer) reads a repository and writes what the tree lacks: one page that lists the whole module tree with a line on what each module is responsible for, and a page per module that explains each function and class and links to the exact source lines. You read it. A coding agent can look things up in it with three commands.
+A file tree shows where files are, not what each part is for. CBE (Codebase Explorer) reads a repository and writes what the tree lacks: one page that lists the whole module tree with a line on what each module is responsible for, and a page per module that explains each function and class and gives the file and line range of each. You read it. A coding agent can look things up in it with three commands.
 
 **To try it:** `uv tool install codebase-explorer` (Python 3.12 or 3.13). Then generate inside Claude Code on your own subscription, or from the command line with any OpenAI-compatible endpoint (you name the model with `--model`). The steps are in [Quickstart](#quickstart).
 
 ## What you get
 
 - **A one-page map.** `docs/INDEX.md` shows the whole module tree, one line per module. Its size is capped at the larger of 2,000 tokens and 3% of the source's token count.
-- **A tree without gaps, the same every time.** A program builds it: units that call or import each other, sit close together and use similar words are grouped. The same input gives the same tree. There are no empty nodes and no duplicate modules.
+- **A tree without gaps.** A program builds it: units that call or import each other, sit close together and use similar words are grouped. The same explanations give the same tree; generating again can group the units differently, because the explanations are part of the input. There are no empty nodes and no duplicate modules.
 - **A page per module.** Each unit has its signature, a source link, and an explanation written by a model. The explanations are written for people to read.
 - **Facts from commands, not from the model.** Signatures, calls and source lines come from `cbe find`, `cbe query` and `cbe source`. `cbe source` prints from the frozen snapshot and checks each file's SHA-256 against the digest recorded at freeze time before printing anything.
 
@@ -27,12 +27,13 @@ The start of a real `docs/INDEX.md`, generated for flask (unedited):
 ```markdown
 ## Modules
 
-- [**Request Serving Application Runtime**](nodes/request-serving-application-runtime.md) — Combines the concrete WSGI Flask application with request and response wrappers, templating, context lifecycle, and view-facing helpers needed to serve live requests. (136 units; `flask/app.py`, `helpers.py`, `wrappers.py`)
-  - [**Request Helper Utilities and Tests**](nodes/request-helper-utilities-and-tests.md) — Provides view-facing helpers for files, flashing, redirects, streaming, and URL building, plus proxy globals and signal definitions, with focused behavioral tests. (42 units; `helpers.py`, `test_helpers.py`, `flask/blueprints.py`)
-    - [**Helpers, globals, and signals**](nodes/helpers-globals-and-signals.md) — Provides view-facing helpers for sending files, flashing messages, redirecting, streaming, and URL building, plus proxy globals and Flask's blinker signal definitions. (26 units; `helpers.py`, `flask/blueprints.py`, `globals.py`)
-    - [**Helper behavior tests**](nodes/helper-behavior-tests.md) — Verifies aborter selection and dispatch, app redirect delegation, open_resource read modes and encoding, and context-free redirect fallback behavior. (11 units; `test_helpers.py`)
-    - [**File and URL tests**](nodes/file-and-url-tests.md) — Tests custom URL converters, send_file family behavior with path-like objects, stream_with_context lifetime, and url_for inside request contexts. (5 units; `test_helpers.py`, `test_converters.py`)
-  - [**WSGI Request Dispatch Core**](nodes/wsgi-request-dispatch-core.md) — Implements the WSGI-callable Flask class and its pipeline: request entry, URL-to-view matching, response finalization, error handler resolution, and test and async wiring. (35 units; `flask/app.py`, `test_async.py`, `sansio/app.py`)
+- [**Sansio App and Scaffold Foundations**](nodes/sansio-app-and-scaffold-foundations.md) — Provides the framework-agnostic foundations that the concrete Flask app and blueprints build on: shared scaffold registration, blueprint recording, app base setup and logging. (74 units)
+  - [**Scaffold and Blueprint Registration**](nodes/scaffold-and-blueprint-registration.md) — Defines how routes, handlers and callbacks are declared and deferred, through the shared Scaffold base and the sansio Blueprint that builds on it. (43 units)
+  - [**Sansio App Base and Logging**](nodes/sansio-app-base-and-logging.md) — Defines the framework-agnostic application base class and the logger setup it uses, covering app construction, configuration and Jinja environment preparation. (31 units)
+- [**Runtime App, Contexts and Testing**](nodes/runtime-app-contexts-and-testing.md) — Covers the running application: the concrete Flask app and request lifecycle, the contexts that bind per-request state, and the tools for testing apps. (64 units)
+  - [**Flask App Request Lifecycle**](nodes/flask-app-request-lifecycle.md) — Implements the concrete Flask application and its request lifecycle: WSGI entry, dispatch, response finalization and exception handling, grouped as the app's per-request pipeline. (34 units)
+  - [**Test Client and CLI Runner**](nodes/test-client-and-cli-runner.md) — Offers testing tools: an environment builder with app defaults, a context-aware test client with session editing, and an app-aware CLI runner. (15 units)
+  - [**App and Request Context Management**](nodes/app-and-request-context-management.md) — Defines application and request contexts, the g namespace and context helpers that bind per-app and per-request state, URL matching and session opening. (15 units)
 ```
 
 Full example: [flask](examples/flask/docs/INDEX.md). More in [Examples and docs](#examples-and-docs).
@@ -50,11 +51,12 @@ CBE is on PyPI as `codebase-explorer`. It needs Python 3.12 or 3.13. There are t
 **A. The usual way: inside your coding agent, on your own subscription.** The steps below use Claude Code; the skill makes its subagents write the explanations.
 
 1. Install CBE: `uv tool install codebase-explorer` (or `pipx install codebase-explorer`).
-2. Optional, for the call graph: `cbe graph setup` downloads Joern and a Java runtime into your user cache directory (about 1.9 GB; Linux x86_64 and macOS).
+2. Optional, for the call graph: `cbe graph setup` downloads Joern and a Java runtime into your user cache directory (about 1.9 GB; tested on Linux x86_64, not yet on macOS).
 3. In your project, install the skill: `cbe-install install --host claude-code`.
 4. Start Claude Code there and ask: "Use the codebase-explorer skill to generate documentation for this repository."
 5. The agent prints the planned file, token, module and task counts, runs the subagents, and verifies the result.
 6. Open `<run_dir>/docs/INDEX.md`. The agent reports `run_dir`.
+7. The agent offers to add three lines to the repository's `AGENTS.md` or `CLAUDE.md`. With them, later agents in the repository read `INDEX.md` first (three fresh Claude Code sessions did so; see [docs/running.md](docs/running.md#use-the-generated-docs-from-an-agent)).
 
 Other agents load the same skill: `cbe-install install --host` takes `claude-code`, `opencode`, `pi`, `codex` and `dsh`. What has run end to end: Claude Code (see [What it costs](#what-it-costs)); OpenCode and Pi, once each on a 22-file sample repository (in the Pi run the tasks were handed to separate Pi sessions by a dispatch skill on our machine; Pi has no subagents of its own). `codex` and `dsh` install the skill, and we have not run them end to end. Details: [docs/running.md](docs/running.md#generate-through-a-host-agent).
 
@@ -110,7 +112,7 @@ Teal steps are ordinary code and make no model call. Amber steps are model calls
 - **Split.** Tree-sitter cuts each file at syntax boundaries. Every byte lands in some chunk.
 - **Explain.** The model writes the explanations batch by batch. It names symbols by the short numbers in a list, so it cannot invent an ID. The program asks again only for the symbols the model skipped.
 - **Check.** A second model reads one batch's source and checks its explanations against it: wrong behaviour, a wrong condition or error, or an explanation of the wrong symbol. It does not judge style. Findings are sent back for one rewrite. `--review` chooses how many batches are read: `none`; `sample` (the default: the largest batch, and every batch if that one has any finding); or `all`. On flask a sampled review was 14% of the run's input tokens; reading every batch adds about 80%. Where batches have many errors the rewrites cost more than the reading: on six examples whose sample had findings, reviewing every batch and rewriting the flagged ones added 51–176% to the run's input tokens and made its output tokens 4 to 10 times as large, because a flagged batch is written again in full. A clean sample leaves the other batches unread, so use `--review all` for a repository that matters. `RUN.md` says which batches were read and what was found. A rewrite after review, like any new run, can regroup the map: module pages and their names may change. Symbol IDs (`cbe find`, `cbe query`) depend only on the source, so link to code by ID, not by page name.
-- **Group.** The program, not the model, builds the module tree from calls and imports, location, and wording. The same input gives the same tree.
+- **Group.** The program, not the model, builds the module tree from calls and imports, location, and wording. The same explanations give the same tree.
 - **Name.** The model gives each module a name, one line on what it is responsible for, and two or three sentences on how to read it. It cannot add, drop or move a node.
 - **Render.** The program writes `docs/INDEX.md`, one page per module, `DEPENDENCIES.md` and `RUN.md`, and the `catalog.json` that `find`, `query` and `source` read.
 
@@ -162,7 +164,8 @@ The host-agent path, measured once on flask's `src/` (24 files, about 75k tokens
 | Subagent tasks | 8: 4 explanation batches, 1 sampled review, 2 tree-naming tasks, 1 overview. All were accepted on the first answer |
 | Wall clock | 293 seconds |
 | `cbe host verify` | all 15 checks passed |
-| Tokens | not collected for this run |
+| Prompt tokens | 857,525: 11.48 times the source tokens. Cache reads are counted again on every turn, so do not compare this with the API table above |
+| Output tokens | 69,130: 0.93 times the source tokens |
 
 Each table is one repository and one run. A host-agent run uses your subscription instead of an API key. Building the graph makes no model call. An older cost table for repositories up to 1.7 million tokens is in [docs/running.md](docs/running.md#what-a-run-costs-the-earlier-table); it was measured before the answer-format change, so do not compare it with the table above.
 
@@ -189,11 +192,11 @@ What we do not claim: that grouping by function lets an agent locate code more a
 ## Known limitations
 
 - The call graph needs Joern and Java 21 or newer. `cbe graph setup` downloads both (about 1.9 GB).
-- C# calls to overloaded methods resolve only to the set of overloads, and about 43% of the calls in the one real repository measured stay unresolved. Kotlin graphs fail on real repositories under the pinned Joern version; two-file examples work.
+- C# calls to overloaded methods resolve only to the set of overloads. On GuardClauses, 993 of 2,322 calls are marked unresolved; about 955 of those are calls to methods outside the repository, `nameof` or constructor calls, and 14 are calls inside the repository that CBE cannot link. A second repository (MediatR) was spot-checked: 10 sampled call pairs were right. Kotlin graphs fail on real repositories under the pinned Joern version; two-file examples work.
 - Ruby's dynamic dispatch can bind a call to the wrong class's method. CBE marks many of these as ambiguous, and some wrong bindings remain.
 - C and C++ files are not preprocessed. A header with many macros is cut into coarse chunks, and a macro can be taken for a function name.
 - A model writes the explanations. `cbe host verify` passing shows that the structure and references are consistent. It does not show that an explanation is correct. Check explanations against the source (`cbe source`).
-- There are no incremental updates: when the source changes, generate again.
+- There are no incremental updates. When the source changes, `cbe stale` lists the units and module pages that describe changed files (judged per file); to refresh them, generate again.
 
 ## Examples and docs
 

@@ -5,9 +5,8 @@ Origin: synthetic fixture in this repository, manifest SHA-256 `6b19d76603fb65d1
 
 **Read.** Start at [docs/INDEX.md](docs/INDEX.md), then [Cross-Language Object Utilities](docs/nodes/cross-language-object-utilities.md), [Cross-Language Greeter Utilities](docs/nodes/cross-language-greeter-utilities.md), [PHP Swift Shape Examples](docs/nodes/php-swift-shape-examples.md). Each unit has an id for `cbe query`.
 
-**Search and inspect.**
+**Search and inspect.** Run these inside this directory; `cbe` reads `catalog.json.gz` as it is. The example ships without the frozen source (`context.json`), so `cbe source` works only on a run you generate yourself.
 ```sh
-gzip -dk catalog.json.gz
 cbe find --run-dir . --term 'Worker'
 cbe query --run-dir . --id 'python_case.py::class::Worker::267::s0'
 ```
