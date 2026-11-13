@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+- `cbe stale --run-dir RUN` (or `--repo REPO`) lists the files, units and module pages
+  that no longer match the source, without a model call; exit 3 when something is stale.
+  It judges per file.
+- `cbe host verify`, when it passes, prints `agents_md.lines`: three lines with
+  repository-relative paths for the repository's AGENTS.md or CLAUDE.md, so later agents
+  read the map first. `cbe-install install` prints them in a generic form. The skill opens
+  with how to use an existing map and asks the user once whether to add the lines.
+- `find`, `query` and `source` accept a relative `--run-dir` and read `catalog.json.gz`,
+  so the commands in the example READMEs run as written.
+- `cbe host import-usage` writes the models it finds into `summary.json` and `RUN.md`.
+- `cbe languages` reports C# as `partial` (it builds; overloaded calls resolve to the
+  overload set) instead of `known_failure`.
+- New page `docs/code-graphs.md` (and Chinese): graph kinds, how others build code
+  graphs, what CBE uses and why, and per-language known errors.
 - C# column numbers, which Joern counts from 0 like its C# line numbers, now count from 1, as
   in the C frontend and the rest of cbe. A call's column picks the symbol that makes the call.
 
