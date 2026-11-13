@@ -192,7 +192,7 @@ What it catches and what it does not, from a replay on the seven example runs (n
 |---|---|---|
 | `cbe query --run-dir RUN --id cJSON_Pars` | `unknown unit, symbol or file: cJSON_Pars; first use cbe find --run-dir RUN --term cJSON_Pars` | Run `find` first and copy the ID from its second column. |
 | `cbe query --run-dir RUN --id parse` (a name several symbols share) | `parse matches 2 IDs; query one of them:` and the IDs, one per line | Query one of the listed IDs. |
-| `cbe find --run-dir runs/cjson/run --term x` | `cbe find: error: argument --run-dir: expected an absolute path, got runs/cjson/run` | Give the absolute run directory. |
+| `cbe find --run-dir runs/cjson --term x` (a directory without a catalog) | `no catalog.json in /…/runs/cjson: give the directory that holds catalog.json (a run directory or a published example)` | Give the run directory itself; `find`, `query` and `source` accept a relative path. |
 
 `find` and `query` also accept the search term or the ID as a bare argument; the flag forms `--term` and `--id` stay the stable interface.
 

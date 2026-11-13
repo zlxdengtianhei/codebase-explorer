@@ -55,8 +55,21 @@ def catalog_symbols(catalog: dict) -> dict[str, dict]:
     return records
 
 
+def read_catalog_text(run_dir: Path) -> str:
+    """``catalog.json``, or the ``catalog.json.gz`` that published examples ship instead."""
+    path = run_dir / "catalog.json"
+    if not path.is_file() and (run_dir / "catalog.json.gz").is_file():
+        import gzip
+
+        return gzip.decompress((run_dir / "catalog.json.gz").read_bytes()).decode("utf-8")
+    if not path.is_file():
+        raise FileNotFoundError(f"no catalog.json in {run_dir}: give the directory that holds "
+                                "catalog.json (a run directory or a published example)")
+    return path.read_text(encoding="utf-8")
+
+
 def query_catalog(run_dir: Path) -> dict[str, Any]:
-    catalog = json.loads((run_dir / "catalog.json").read_text(encoding="utf-8"))
+    catalog = json.loads(read_catalog_text(run_dir))
     if "symbol_index" not in catalog:
         raise SemanticError(RUN_VERSION_ERROR)
     catalog["symbols"] = catalog_symbols(catalog)

@@ -291,8 +291,12 @@ def test_import_claude_and_codex_usage_and_cost_report(tmp_path: Path) -> None:
             "input_tokens": 2, "cache_creation_input_tokens": 10, "cache_read_input_tokens": 100, "output_tokens": 60}}},
     ]
     (session / "agent-a1.jsonl").write_text("\n".join(json.dumps(line) for line in lines) + "\n")
+    assert "- Models: not recorded" in (run_dir / "docs" / "RUN.md").read_text()
     imported = usage.import_usage(run_dir, "claude-code", tmp_path / "claude")
     assert imported["tasks_with_exact_usage"] == 1
+    # The run was rendered before the import; the import writes the model into both records.
+    assert "- Models: `claude-sonnet-5-5`" in (run_dir / "docs" / "RUN.md").read_text()
+    assert json.loads((run_dir / "summary.json").read_text())["basis"]["models"] == ["claude-sonnet-5-5"]
 
     rollouts = tmp_path / "codex" / "2026" / "10" / "06"
     rollouts.mkdir(parents=True)
@@ -844,7 +848,7 @@ def test_update_graph_adds_dataflow_without_rerunning_a_complete_run(tmp_path: P
     notes = (run_dir / "docs/RUN.md").read_text()
     assert "## Generation basis" in notes
     assert f"- CBE version: `{state['cbe_version']}`" in notes
-    assert "- Models: none recorded" in notes
+    assert "- Models: not recorded (run `cbe host import-usage`)" in notes
     assert f"- Source: {len(state['files'])} files · SHA-256 `{source_digest}`" in notes
     assert (f"- Graph: SHA-256 `{result['new_graph_digest']}` · built by `test` 1 · "
             f"edges dataflow=1 · replaced yes, latest {result['updated_at']}") in notes

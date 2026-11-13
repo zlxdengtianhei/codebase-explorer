@@ -130,6 +130,8 @@ def import_usage(run_dir: Path, harness: str, root: Path | None = None) -> dict[
             raise HostRunError("harness must be claude-code or codex")
         for task_id, rows in found.items():
             state["tasks"][task_id]["exact_usage"] = rows
+        if found:
+            _record_models(run_dir, state)
         log_event(run_dir, "usage", f"imported exact {harness} usage for {sorted(found)}",
                harness=harness, tasks=sorted(found))
         missing = [task_id for task_id, task in state["tasks"].items()
@@ -137,6 +139,25 @@ def import_usage(run_dir: Path, harness: str, root: Path | None = None) -> dict[
         return {"harness": harness, "tasks_with_exact_usage": len(found),
                 "subagent_transcripts": sum(len(rows) for rows in found.values()),
                 "tasks_without_exact_usage": missing}
+
+
+def _record_models(run_dir: Path, state: dict[str, Any]) -> None:
+    """Write the imported models into an already rendered run's summary.json and RUN.md."""
+    from cbe.docs import models_line
+    from cbe.host_run import recorded_models
+
+    models = recorded_models(run_dir, state)
+    summary_path = run_dir / "summary.json"
+    if summary_path.is_file():
+        summary = json.loads(summary_path.read_text(encoding="utf-8"))
+        if isinstance(summary.get("basis"), dict):
+            summary["basis"]["models"] = models
+            write_json(summary_path, summary)
+    notes = run_dir / "docs" / "RUN.md"
+    if notes.is_file():
+        lines = notes.read_text(encoding="utf-8").split("\n")
+        notes.write_text("\n".join(models_line(models) if line.startswith("- Models: ") else line
+                                   for line in lines), encoding="utf-8")
 
 
 def _price_for(model: str, override: tuple[float, float, float, float] | None) -> tuple[tuple[float, ...] | None, str]:

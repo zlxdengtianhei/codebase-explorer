@@ -1462,8 +1462,8 @@ def _unexplained(state: dict[str, Any]) -> list[dict[str, str]]:
             for flag in task.get("flags") or [] if flag.startswith("unexplained: ")]
 
 
-def _basis(run_dir: Path, state: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
-    """The recorded inputs behind this rendering; never infer an unrecorded model."""
+def recorded_models(run_dir: Path, state: dict[str, Any]) -> list[str]:
+    """Models named by usage records or API call files; never infer an unrecorded model."""
     records = [record for task in state["tasks"].values()
                for record in [*(task.get("usage") or []), *(task.get("exact_usage") or [])]]
     models = {part.strip() for record in records for part in str(record.get("model") or "").split(",")
@@ -1475,6 +1475,12 @@ def _basis(run_dir: Path, state: dict[str, Any], context: dict[str, Any]) -> dic
             continue
         if isinstance(actual, str) and actual:
             models.add(actual)
+    return sorted(models)
+
+
+def _basis(run_dir: Path, state: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
+    """The recorded inputs behind this rendering."""
+    models = recorded_models(run_dir, state)
     source_rows = [{"path": row["path"], "digest": row["digest"]} for row in state["files"]]
     source_digest = hashlib.sha256(json.dumps(
         source_rows, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
@@ -1484,7 +1490,7 @@ def _basis(run_dir: Path, state: dict[str, Any], context: dict[str, Any]) -> dic
         "digest": state["context"]["graph_digest"], "backend": graph.get("backend"),
         "edge_counts": dict(sorted(Counter(edge.get("kind") for edge in graph.get("edges") or []).items())),
         "updated": bool(updates), "updated_at": updates[-1]["at"] if updates else None}
-    return {"cbe_version": state["cbe_version"], "models": sorted(models),
+    return {"cbe_version": state["cbe_version"], "models": models,
             "source": {"files": len(source_rows), "sha256": source_digest}, "graph": graph_basis}
 
 
@@ -1745,8 +1751,3 @@ def _status_markdown(state: dict[str, Any]) -> str:
                      f"{task['status']} | {task['attempts']} | {task['seconds'] if task['seconds'] is not None else ''} | "
                      f"{output} | {note.replace('|', '/')} |")
     return "\n".join(lines) + "\n"
-
-
-# ---------------------------------------------------------------- usage and cost
-
-

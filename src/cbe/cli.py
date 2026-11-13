@@ -15,6 +15,11 @@ def _abs(value: str) -> Path:
     return path
 
 
+def _run_dir(value: str) -> Path:
+    """Read-only lookups (find, query, source, stale) accept a relative run directory."""
+    return Path(value).expanduser().resolve()
+
+
 def _require_frozen_context(run_dir: Path, action: str, *, published_only: bool = False) -> None:
     """Say why a published example cannot do this. With ``published_only`` a directory that holds
     no catalog either (empty, mistyped) keeps the command's own error."""
@@ -30,8 +35,8 @@ class _UsageParser(argparse.ArgumentParser):
     def error(self, message: str) -> None:
         command = getattr(self, "example_command", self.prog.rsplit(" ", 1)[-1])
         if command in {"find", "query"} and "example:" not in message:
-            value = "LIMIT" if command == "find" else "grp:example"
-            message += f"; example: cbe {command} --run-dir /absolute/run {value}"
+            value = "NAME" if command == "find" else "ID"
+            message += f"; example: cbe {command} --run-dir RUN_DIR {value}"
         super().error(message)
 
 
@@ -185,7 +190,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     find_p = sub.add_parser("find", help="Search the generated symbol catalogue")
     find_p.set_defaults(usage_parser=find_p)
-    find_p.add_argument("--run-dir", type=_abs, required=True)
+    find_p.add_argument("--run-dir", type=_run_dir, required=True)
     find_p.add_argument("term_pos", nargs="?", metavar="TERM")
     find_p.add_argument("--term")
     find_p.add_argument("--limit", type=int, default=25)
@@ -193,13 +198,13 @@ def build_parser() -> argparse.ArgumentParser:
 
     query_p = sub.add_parser("query", help="Return explanation and evidence by unit ID, symbol ID or file path")
     query_p.set_defaults(usage_parser=query_p)
-    query_p.add_argument("--run-dir", type=_abs, required=True)
+    query_p.add_argument("--run-dir", type=_run_dir, required=True)
     query_p.add_argument("id_pos", nargs="?", metavar="ID")
     query_p.add_argument("--id")
     query_p.add_argument("--json", action="store_true", help="machine-readable object (no duplicate detail)")
     query_p.add_argument("--edges", default=None, help="expand frozen raw edges: all or comma-separated kinds")
     source_p = sub.add_parser("source", help="Print frozen source by unit ID, symbol ID or file path; verify SHA-256 first")
-    source_p.add_argument("--run-dir", type=_abs, required=True)
+    source_p.add_argument("--run-dir", type=_run_dir, required=True)
     source_p.add_argument("--id", required=True)
     source_p.add_argument("--context", type=int, default=0, metavar="N",
                           help="include N surrounding lines (nonnegative; default: 0)")

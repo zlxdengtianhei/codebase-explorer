@@ -590,9 +590,15 @@ def _write_dependencies(prep: _RenderPrep) -> None:
     (prep.docs_dir / "DEPENDENCIES.md").write_text("\n".join(dep_lines) + "\n", encoding="utf-8")
 
 
+def models_line(models: list[str]) -> str:
+    """RUN.md's model line; host runs learn their models only from ``cbe host import-usage``."""
+    return "- Models: " + (", ".join(f"`{model}`" for model in models)
+                           or "not recorded (run `cbe host import-usage`)")
+
+
 def _basis_lines(basis: dict) -> list[str]:
     lines = [f"- CBE version: `{basis['cbe_version']}`",
-             "- Models: " + (", ".join(f"`{model}`" for model in basis["models"]) or "none recorded"),
+             models_line(basis["models"]),
              f"- Source: {basis['source']['files']} files · SHA-256 `{basis['source']['sha256']}`"]
     graph = basis["graph"]
     if graph is None:

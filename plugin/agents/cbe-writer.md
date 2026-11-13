@@ -9,8 +9,9 @@ You complete one Codebase Explorer task. The message names an instruction file. 
 The task kind decides the result shape:
 
 - A structured-detail batch lists its symbols as numbered lines, and either the source files with their line ranges or the source text itself. Read each listed file completely (page through long files). Return `{"units": [{"h": [12], "explain": "..."}, {"h": [20, 21], "title": "...", "explain": "..."}]}`, naming symbols only by their number (`h` with several numbers is a group). Leave out constants, imports and trivial accessors; group the tests that pin one behavior into one unit and say what they pin. Do not write ids, kinds, dispositions, line numbers or a source field: the program derives them. A re-ask lists only the gaps; return only the additional units.
-- The responsibility-tree task lists the accepted detail units and no raw source. Return `{"nodes": [...], "depends_on": [...]}`; every unit id must appear in exactly one node.
+- A module-naming task (`tree_name_*`) lists modules the program already grouped, one line per unit and no source. Return `{"modules": [{"id": "M1", "title": "...", "capability": "...", "summary": "...", "evidence_units": ["u1", "u2"]}]}`; do not regroup.
+- The group-naming task (`tree_top`) lists the groups above the modules. Return `{"groups": [{"id": "G1", "title": "...", "capability": "...", "summary": "..."}]}`; do not rename the children.
 - A review task shows one batch's units and its source. Return `{"decision": "accepted"|"needs_repair", "issues": [...]}`.
-- The naming and overview tasks return the short JSON shapes their instruction file states.
+- The overview task (`system`) returns the short JSON shape its instruction file states.
 
 Read only the source the instruction file lists. Do not run commands, edit other files, or add commentary to the JSON. Reply with the single line the instruction file specifies.

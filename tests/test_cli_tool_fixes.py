@@ -39,7 +39,7 @@ def test_missing_or_conflicting_argument_has_example(run, capsys, command, flag,
 
 
 @pytest.mark.parametrize("command", ["find", "query"])
-@pytest.mark.parametrize("arguments", [["LIMIT"], ["--run-dir", "relative", "LIMIT"],
+@pytest.mark.parametrize("arguments", [["LIMIT"],
                                         ["--run-dir", "/absolute/run", "--typo", "LIMIT"]])
 def test_parser_errors_also_show_example(capsys, command, arguments):
     with pytest.raises(SystemExit) as exc:
@@ -109,3 +109,31 @@ def test_host_commands_on_a_directory_that_is_not_a_run_keep_their_own_error(tmp
         assert cli.main(["host", command, "--run-dir", str(tmp_path)]) != 0
         err = capsys.readouterr().err
         assert "published examples" not in err and "host plan" in err
+
+
+def test_lookups_accept_a_relative_run_dir_and_a_gzipped_catalog(run, capsys, monkeypatch):
+    """A published example ships catalog.json.gz; its README runs `cbe find --run-dir .` from inside it."""
+    import gzip
+
+    catalog = run / "catalog.json"
+    (run / "catalog.json.gz").write_bytes(gzip.compress(catalog.read_bytes()))
+    catalog.unlink()
+    monkeypatch.chdir(run)
+    assert cli.main(["find", "--run-dir", ".", "LIMIT"]) == 0
+    assert "grp:LIMIT" in capsys.readouterr().out
+    assert cli.main(["query", "--run-dir", ".", "grp:LIMIT"]) == 0
+    assert "A limit." in capsys.readouterr().out
+
+
+def test_lookup_without_catalog_says_what_is_missing(tmp_path, capsys):
+    assert cli.main(["find", "--run-dir", str(tmp_path), "x"]) == 2
+    error = capsys.readouterr().err
+    assert "no catalog.json" in error and "Errno" not in error
+
+
+def test_writer_agent_names_only_current_task_kinds():
+    from pathlib import Path
+
+    text = (Path(__file__).resolve().parents[1] / "plugin" / "agents" / "cbe-writer.md").read_text()
+    assert "responsibility-tree" not in text and '"depends_on"' not in text
+    assert "tree_name" in text and "tree_top" in text

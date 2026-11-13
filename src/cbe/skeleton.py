@@ -53,7 +53,7 @@ _ANCHOR_DIR = "\x00dir:"
 
 @dataclass(frozen=True)
 class Weights:
-    """Defaults picked on ruby_llm and gson (evaluation/tree/grid.py); not user configuration."""
+    """Defaults picked on ruby_llm and gson; not user configuration."""
     w_file: float = 1.0
     w_dir: float = 0.5
     w_text: float = 0.5
