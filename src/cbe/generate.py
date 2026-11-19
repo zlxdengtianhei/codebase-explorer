@@ -16,7 +16,7 @@ from typing import Any
 
 from cbe import batching, usage
 from cbe.api_completion import FIELDS, CSV_LOCK, invoke
-from cbe.model_settings import DEFAULT_API_CONFIG, load_config
+from cbe.model_settings import DEFAULT_API_CONFIG, load_config, task_overrides
 
 
 class GenerateError(ValueError):
@@ -255,7 +255,8 @@ def generate(repo: Path, run_dir: Path, *, model: str, config: Path | None = Non
                                          prompt=prompt,
                                          run_dir=run_dir, model=model, config=config,
                                          timeout=timeout, csv_path=csv_path,
-                                         overrides=api_overrides or None)
+                                         overrides={**api_overrides,
+                                                    **task_overrides(model, item["task"])} or None)
                     active[future] = (item, csv_task)
             if not active:
                 if stopped is None and preflight is None and paused:

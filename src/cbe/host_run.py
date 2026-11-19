@@ -35,6 +35,7 @@ retried on its own.
 from __future__ import annotations
 
 import contextlib
+import csv
 import gzip
 import hashlib
 import json
@@ -1189,11 +1190,13 @@ def _settle_layer(run_dir: Path, state: dict[str, Any], task: dict[str, Any], va
     subtrees = _subtrees(below)
     chunk = {"members": members, "candidates": task.get("candidates") or [members]}
     shape_retry = bool(task.get("shape_retry"))
+    _, edges = _aggregation_inputs(run_dir, state)
     if value is not None:
         try:
             groups, flags = layers.decode(
                 value, chunk, labels, level, subtrees,
-                allow_split=shape_retry or final, names=_layer_names(run_dir, state, task, below))
+                allow_split=shape_retry or final, names=_layer_names(run_dir, state, task, below),
+                edges=edges)
         except layers.LayerShapeError as exc:
             # Design 2.3: a group above 12 members, or a group of one, goes back to the
             # same author once; the next answer is cut or merged by the program instead.
@@ -1647,7 +1650,47 @@ def _basis(run_dir: Path, state: dict[str, Any], context: dict[str, Any]) -> dic
             "source": {"files": len(source_rows), "sha256": source_digest}, "graph": graph_basis}
 
 
-def _read_budget(state: dict[str, Any]) -> dict[str, Any]:
+def _provider_usage(run_dir: Path, state: dict[str, Any]) -> dict[str, Any]:
+    """What the provider reported: input + cache per call, and output tokens per task kind.
+
+    A host run keeps this in the tasks (``usage`` / ``exact_usage``); the script driver keeps
+    it in ``calls.csv``. The second reading matters because the program count and the
+    provider count differ by the tokenizer, and the judge reads both."""
+    read = output = 0
+    output_by_kind: Counter = Counter()
+
+    def counts(row: dict) -> tuple[int, int]:
+        incoming = (row.get("input") or row.get("input_tokens") or 0) \
+            + (row.get("cache") or row.get("cache_read_tokens") or 0)
+        return incoming, row.get("output") or row.get("output_tokens") or 0
+
+    for task in state["tasks"].values():
+        kind = f"layer_{task.get('level')}" if task["kind"] == "layer" else task["kind"]
+        for row in [*(task.get("usage") or []), *(task.get("exact_usage") or [])]:
+            incoming, produced = counts(row)
+            read += incoming
+            output += produced
+            output_by_kind[kind] += produced
+    csv_path = run_dir / "calls.csv"
+    if not read and csv_path.is_file():
+        with csv_path.open(encoding="utf-8", newline="") as handle:
+            rows = list(csv.DictReader(handle))
+        for row in rows:
+            name = row.get("task") or ""
+            kind = "layer" if name.startswith("layer_") else "overview" if name == "overview" else "detail"
+            try:
+                incoming = int(row.get("input_tokens") or 0) + int(row.get("cache_tokens") or 0)
+                produced = int(row.get("output_tokens") or 0)
+            except ValueError:
+                continue
+            read += incoming
+            output += produced
+            output_by_kind[kind] += produced
+    return {"read_tokens": read or None, "output_tokens": output or None,
+            "output_by_kind": dict(sorted(output_by_kind.items()))}
+
+
+def _read_budget(run_dir: Path, state: dict[str, Any]) -> dict[str, Any]:
     """What the run put before a model, counted by the program (o200k_base) per attempt.
 
     ``read_tokens`` is every prompt CBE built for a model call; ``source_read_tokens``
@@ -1664,17 +1707,22 @@ def _read_budget(state: dict[str, Any]) -> dict[str, Any]:
             source += entry.get("source_tokens") or 0
             by_kind[label] += entry.get("prompt_tokens") or 0
             source_by_kind[label] += entry.get("source_tokens") or 0
-    provider = sum((row.get("input") or 0) + (row.get("cache") or 0)
-                   for task in state["tasks"].values() for row in task.get("usage") or [])
+    provider = _provider_usage(run_dir, state)
     return {"read_tokens": read, "source_read_tokens": source, "source_tokens": total,
             "read_ratio": round(read / total, 3) if total else None,
             "source_read_ratio": round(source / total, 3) if total else None,
             "read_by_kind": dict(sorted(by_kind.items())),
             "source_read_by_kind": dict(sorted(source_by_kind.items())),
-            "provider_read_tokens": provider or None,
+            "provider_read_tokens": provider["read_tokens"],
+            "provider_read_ratio": (round(provider["read_tokens"] / total, 3)
+                                    if total and provider["read_tokens"] else None),
+            "output_tokens": provider["output_tokens"],
+            "output_by_kind": provider["output_by_kind"],
             "basis": ("program count (o200k_base) of every prompt CBE built for a model call; "
                       "source_read_tokens counts embedded source only; a host subagent reads its "
-                      "files itself and that read is not counted"),
+                      "files itself and that read is not counted; provider_read_tokens is the "
+                      "provider's own input + cache total, a second reading from a different "
+                      "tokenizer"),
             "targets": {"read_ratio_max": 2.0, "source_read_ratio_max": 1.2,
                         "hard_gate_source_ratio": SOURCE_BUDGET,
                         "small_repository_tokens": BUDGET_MIN_SOURCE},
@@ -1726,13 +1774,30 @@ def _clustering_report(run_dir: Path, state: dict[str, Any], context: dict) -> d
     return report
 
 
-def _detail_stats(units: dict) -> dict:
-    sizes = sorted(count_text_tokens(unit.get("explain") or "") for unit in units.values())
+def _size_stats(sizes: list[int]) -> dict:
     if not sizes:
         return {"count": 0, "mean": None, "median": None, "max": None}
-    middle = sizes[len(sizes) // 2] if len(sizes) % 2 else (sizes[len(sizes) // 2 - 1] + sizes[len(sizes) // 2]) / 2
-    return {"count": len(sizes), "mean": round(sum(sizes) / len(sizes), 1),
-            "median": middle, "max": sizes[-1]}
+    ordered = sorted(sizes)
+    middle = ordered[len(ordered) // 2] if len(ordered) % 2 else \
+        (ordered[len(ordered) // 2 - 1] + ordered[len(ordered) // 2]) / 2
+    return {"count": len(ordered), "mean": round(sum(ordered) / len(ordered), 1),
+            "median": middle, "max": ordered[-1]}
+
+
+def _detail_stats(units: dict) -> dict:
+    """Detail length: all units, and functions/methods apart from types and file remnants.
+
+    Design §4 names one target for regular functions (mean 25-60); a type or a file's
+    leftover regions may be shorter, so mixing them into one mean hides the answer."""
+    all_sizes = [count_text_tokens(unit.get("explain") or "") for unit in units.values()]
+    functions = [count_text_tokens(unit.get("explain") or "") for unit in units.values()
+                 if unit.get("kind") in {"function", "method"}]
+    other = [count_text_tokens(unit.get("explain") or "") for unit in units.values()
+             if unit.get("kind") not in {"function", "method"}]
+    stats = _size_stats(all_sizes)
+    stats["functions"] = _size_stats(functions)
+    stats["other"] = _size_stats(other)
+    return stats
 
 
 def _render(run_dir: Path, state: dict[str, Any]) -> None:
@@ -1797,7 +1862,7 @@ def _render(run_dir: Path, state: dict[str, Any]) -> None:
     for tid, count in sorted(unexplained.items()):
         index_notes.append(f"{tid}: {count} function/method/class symbol(s) were left without prose "
                            "because no model answer explained them.")
-    read_budget = _read_budget(state)
+    read_budget = _read_budget(run_dir, state)
     basis = _basis(run_dir, state, context)
     clustering = _clustering_report(run_dir, state, context)
     try:
@@ -1861,6 +1926,7 @@ def _render(run_dir: Path, state: dict[str, Any]) -> None:
                        "groups": sum(row["groups"] for row in shape),
                        "leaves": sum(1 for node in tree["nodes"] if node.get("unit_ids")),
                        "program_made_groups": made,
+                       "program_merged": sum(len(row["merged"]) for row in clustering["layers"]),
                        "program_split_parts": sum(1 for node in tree["nodes"]
                                                   if (node.get("note") or "").startswith("program-made part")),
                        "oversized_answers_sent_back": sum(row["retried"] for row in clustering["layers"]),

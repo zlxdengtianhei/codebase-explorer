@@ -174,6 +174,21 @@ def test_a_deepseek_model_turns_thinking_off_with_the_thinking_switch(tmp_path):
     assert body["thinking"] == {"type": "disabled"} and "reasoning_effort" not in body
 
 
+def test_layer_and_overview_tasks_ask_for_low_effort_not_thinking_off():
+    # The user's trade: write details cheaply without thinking, but let the two tasks that
+    # decide the tree and the whole page have a little reasoning.
+    from cbe import model_settings
+    model = "mistral/deepseek-v4-1-flash-1017"
+    assert model_settings.task_overrides(model, "layer_1_1") == {"thinking": None,
+                                                                  "reasoning_effort": "low"}
+    assert model_settings.task_overrides(model, "overview") == {"thinking": None,
+                                                                "reasoning_effort": "low"}
+    assert model_settings.task_overrides(model, "module_2") == {}
+    assert model_settings.task_overrides(model, "repair_1") == {}
+    # A model with no thinking switch is left alone: no invented effort level.
+    assert model_settings.task_overrides("other/model", "layer_1_1") == {}
+
+
 def test_cli_help_uses_current_model_defaults(tmp_path, monkeypatch, capsys):
     from cbe import cli, model_settings
     monkeypatch.setitem(model_settings.MODEL_DEFAULTS, "test/future-model", {

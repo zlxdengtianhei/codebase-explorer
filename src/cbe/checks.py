@@ -171,10 +171,34 @@ def _kebab(text: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
 
 
-def _group_id(title: Any, first: dict, taken: set[str]) -> str:
-    base = _kebab(title) if isinstance(title, str) else ""
-    base = base or _kebab(first["name"]) or "group"
-    stem = f"grp:{first['path'].rsplit('/', 1)[-1]}-{base}"
+def _group_id(title: Any, rows: list[dict], taken: set[str]) -> str:
+    """A group unit's id, readable at a glance: the member symbols it explains.
+
+    ``grp:debounce-and-debounced`` says what the page is about; the file-stem slug
+    (``grp:general.ts-debounce-helpers``) did not. Falls back to the author's title, then
+    to the first symbol, when the members have no name."""
+    names = [_kebab(row.get("name") or "") for row in rows]
+    names = [name for name in names if name]
+    # ``Pool`` and ``Pool.submit`` are one reading, not two: keep the longer name.
+    names = [name for name in names
+             if not any(name != other and name in other.split("-") and len(other) > len(name)
+                        for other in names)]
+    names = list(dict.fromkeys(names))
+    parts = [name.split("-") for name in names]
+    # ``cJSON_CreateNull``/``cJSON_CreateTrue`` share a prefix that says nothing new.
+    shared = 0
+    while len(parts) > 1 and all(len(part) > shared + 1 for part in parts) \
+            and len({part[shared] for part in parts}) == 1:
+        shared += 1
+    base = "-and-".join("-".join(part[shared:]) for part in parts[:3]) if names else ""
+    if len(base) > 48:  # a long type name still has to read as a name, not a fragment
+        base = base[:48].rsplit("-", 1)[0] or base[:48]
+        if base.endswith("-and"):
+            base = base[:-4]
+    if not base:
+        base = _kebab(title) if isinstance(title, str) else ""
+    base = base or _kebab(rows[0]["name"]) or "group"
+    stem = f"grp:{base}"
     uid, count = stem, 1
     while uid in taken:
         count += 1
@@ -194,7 +218,7 @@ def _decode_unit(raw: dict[str, Any], rows: list[dict], taken: set[str]) -> dict
         if len(first.get("ids") or []) > 1:
             unit["folded"] = [sid for sid in first["ids"] if sid != first["id"]]
     else:
-        unit = {"id": _group_id(raw.get("title"), first, taken), "kind": "group",
+        unit = {"id": _group_id(raw.get("title"), rows, taken), "kind": "group",
                 "members": [row["id"] for row in rows]}
         folded = [sid for row in rows for sid in row.get("ids") or [] if sid not in unit["members"]]
         if folded:
@@ -330,26 +354,43 @@ def detail_cap(source_tokens: int) -> int:
     return min(DETAIL_MAX_TOKENS, max(DETAIL_MIN_TOKENS, source_tokens // 2))
 
 
+def _names_member(name: str, text: str) -> bool:
+    """Does the sentence name this member? A method's short name counts too (``Pool.submit``)."""
+    lowered = name.lower()
+    if lowered in text:
+        return True
+    tail = lowered.rsplit(".", 1)[-1].split("(")[0].strip()
+    return len(tail) >= 4 and tail in text
+
+
 def cap_details(units: list[dict[str, Any]], tokens: dict[str, int],
                 table: list[dict] | None = None) -> list[str]:
     """Program check on length and named members; it never sends the answer back.
 
-    A unit longer than its cap is cut at a word boundary and flagged. A grouped unit
-    must name each member in its sentence (the user reads one sentence per symbol);
-    a member left unnamed is flagged for RUN.md."""
+    The cap follows the source a unit covers: for a group unit that is the sum of its
+    members' source, not a ``grp:`` id the token table never holds. A unit longer than
+    its cap is cut at a word boundary and flagged. A grouped unit must name each member
+    in its sentence (the user reads one sentence per symbol); a member left unnamed is
+    flagged for RUN.md."""
     flags: list[str] = []
     names = {row["id"]: row["name"] for row in table or []}
     for unit in units:
-        ids = [unit["id"], *(unit.get("members") or []), *(unit.get("folded") or [])]
-        cap = detail_cap(sum(tokens.get(sid, 0) for sid in ids))
+        members = [sid for sid in unit.get("members") or [] if sid]
+        folded = [sid for sid in unit.get("folded") or [] if sid]
+        covered = ([unit["id"]] if not members else []) + members + folded
+        cap = detail_cap(sum(tokens.get(sid, 0) for sid in covered))
         text = unit.get("explain") or ""
+        called = [names[sid] for sid in members if names.get(sid)]
+        sentence = " ".join(text.split()).lower()
+        missing = [name for name in called if not _names_member(name, sentence)]
         if count_text_tokens(text) > cap:
             unit["explain"] = cut_to_tokens(text, cap)
-            flags.append(f"{unit['id']}: explain cut to the {cap}-token length cap")
-        if unit.get("members"):
-            folded = " ".join(unit.get("explain") or "").lower()
-            missing = [names.get(sid, sid) for sid in unit["members"]
-                       if names.get(sid) and names[sid].lower() not in folded]
-            if missing:
-                flags.append(f"{unit['id']}: grouped unit does not name {', '.join(missing[:6])}")
+            note = f"{unit['id']}: explain cut to the {cap}-token length cap"
+            after = " ".join(unit["explain"].split()).lower()
+            dropped = [name for name in called if name not in missing and not _names_member(name, after)]
+            if dropped:
+                note += f"; the cut dropped the name(s) {', '.join(dropped[:6])}"
+            flags.append(note)
+        if missing:
+            flags.append(f"{unit['id']}: grouped unit does not name {', '.join(missing[:6])}")
     return flags

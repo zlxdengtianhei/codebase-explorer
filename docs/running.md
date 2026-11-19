@@ -52,7 +52,8 @@ The skill describes the complete loop and the result contracts. `host plan` acce
 
 Detail authors receive their assigned frozen source chunks, and nothing else from the graph: the source is read once, and a call edge never comes from a model prompt. Every function, method and class gets a short detail: one to three sentences, about 25 to 60 tokens, hard ceiling 100 and never more than half its own source; the program cuts an over-long one and flags it. A re-ask sends only the missing symbols and only their own source blocks; a run stops asking once the embedded source would pass 1.5 times the source (repositories of 20,000 tokens or more), and the rest is listed as unexplained. `summary.json` records `read_tokens`, `source_read_tokens`, `read_ratio` and `source_read_ratio`, with a breakdown by task kind; `RUN.md` prints the same reading.
 
-The model also builds the module tree, from the detail alone: `layer_1_<k>` tasks group the units into modules, the next layer groups those modules, and so on. How many layers exist follows from the answers; a layer with at most eight groups is the top, and one `overview` task writes the whole-repository page. The first layer's chunks hold about 12,000 tokens of detail and at most about 120 members, and the task says how many groups to expect (about one per eight members). The program's `skeleton` grouping is only a hint shown to a layer task, with call counts when the run has a graph. Each layer answer is checked by the program: every member in exactly one group, groups of 2 to 12, and a summary at most as long as its cap (150 tokens at the leaves, 300 above them, 500 for the overview). A summary is cut to its cap and flagged, never sent back. A group above twelve members, or a group of one, is sent back once, with the instruction to divide it by function into groups of four to twelve or to merge it with its closest neighbour; if the answer comes back wrong again the program fixes the shape: it cuts oversized groups along the candidate grouping (never by member order), writes each cut part's responsibility line and summary from that part's own members, and merges a group of one into its neighbour. An answer that does not partition its members is asked once more; when the last answer still leaves members out, its groups are kept and the leftovers join the group that holds their candidate group, and a chunk with no such home falls back to the program's candidate grouping, marked with a `note`. `RUN.md` lists the layers, every cut and merge the program made, and whether the run had a graph; without a graph the layer blocks carry no call counts, so the group-internal call note and the shared-utility hint do not apply. A repair or a late reading batch changes the detail, so the layers and the overview are made again.
+The model also builds the module tree, from the detail alone: `layer_1_<k>` tasks group the units into modules, the next layer groups those modules, and so on. How many layers exist follows from the answers; a layer with at most eight groups is the top, and one `overview` task writes the whole-repository page. The first layer's chunks hold about 12,000 tokens of detail and at most about 120 members, and the task says how many groups to expect (about one per eight members). The program's `skeleton` grouping is only a hint shown to a layer task, with call counts when the run has a graph. Each layer answer is checked by the program: every member in exactly one group, groups of 2 to 12, and a summary at most as long as its cap (150 tokens at the leaves, 300 above them, 500 for the overview). A summary is cut to its cap and flagged, never sent back. A group above twelve members, or a group of one, is sent back once, with the instruction to divide it by function into groups of four to twelve or to merge it with its closest neighbour; if the answer comes back wrong again the program fixes the shape: it cuts oversized groups along the candidate grouping (never by member order), writes each cut part's responsibility line and summary from that part's own members, and puts a group of one into the group it shares the most call edges with (same candidate group when there is no graph; answer order only as the last tie-break), then writes that group's line and summary again so they name what joined it (`also holds …`). A group of one is never merged by its position in the answer.
+An answer that does not partition its members is asked once more; when the last answer still leaves members out, its groups are kept and the leftovers join the group that holds their candidate group, and that group's line names them; a chunk with no such home falls back to the program's candidate grouping, marked with a `note`. `RUN.md` lists the layers, every cut and merge the program made with its count, and whether the run had a graph; without a graph the layer blocks carry no call counts, so the group-internal call note and the shared-utility hint do not apply. A repair or a late reading batch changes the detail, so the layers and the overview are made again.
 
 The dependency view labels pairs as **graph-confirmed** (tree and resolved call/import edges) or **graph-only** (graph only). Graph-confirmed counts edges between subtrees; graph-only counts direct node owners. **Containment** rows show resolved edges between ancestor direct units and a descendant subtree as `→ N / ← M`, relative to the listed pair. **Within containment** rows list direct owner pairs separately. Both containment categories stay out of Mermaid and the two dependency totals. Graph-only and within containment each keep their own top 40 pairs by edge count and report their own omitted count. `summary.json` records the full within containment count in `within_containment`. Program labels and navigation use English; model prose keeps its original language.
 
@@ -60,11 +61,15 @@ The dependency view labels pairs as **graph-confirmed** (tree and resolved call/
 
 ### Subagent effort: how low each host can go, and whether thinking can be off
 
-Detail, grouping and the overview are short writing jobs, so the skill starts each subagent at
-the lowest effort its host offers. "Lowest" and "off" are not the same thing, and the four hosts
-differ. The table gives what each host documents and what was checked locally on 2026-11-19
-(versions: claude 2.1.326, codex-cli 0.162.0-alpha.17.2, opencode 2.3.0, pi 1.5.2). The local
-checks read the CLIs' own help and configuration; they did not measure answer quality.
+Detail writing, grouping and the overview are short jobs, so the skill starts each subagent at
+the lowest effort its host offers. Two of them decide something, though: the layer tasks choose
+which members belong together and the overview says what the whole repository is. They keep the
+host's low level on purpose, while detail writing (a batch of facts read from source) gets
+the lowest setting, thinking off where the host allows it. "Lowest" and "off" are not the same
+thing, and the four hosts differ. The table gives what each host documents and what was checked
+locally on 2026-11-19 (versions: claude 2.1.326, codex-cli 0.162.0-alpha.17.2, opencode 2.3.0,
+pi 1.5.2). The local checks read the CLIs' own help and configuration; they did not measure
+answer quality.
 
 | Host or API | Can a subagent set its own effort? | Lowest level | Can thinking be off? | How |
 |---|---|---|---|---|
@@ -74,9 +79,12 @@ checks read the CLIs' own help and configuration; they did not measure answer qu
 | Pi | no built-in subagents; the example extension takes `model` | `off` | yes | `--thinking off`, or `model: provider/id:off` in the subagent file |
 | DeepSeek API (V4) | every request | `low` (as an effort level) | yes, through a switch: `thinking: {"type": "disabled"}` (Anthropic shape: `reasoning.effort: "none"`) | request body; with an OpenAI SDK, `thinking` goes in `extra_body` |
 
-DeepSeek's effort levels are `low`, `high` and `max`; it has no `none`. CBE therefore sends
-`thinking: {"type": "disabled"}` for a DeepSeek model and no `reasoning_effort`, and `--effort`
-only for models that accept a level.
+DeepSeek's effort levels are `low`, `high` and `max`; it has no `none`. CBE writes detail with
+`thinking: {"type": "disabled"}` and no `reasoning_effort`, because a detail is read from
+source and thinking only adds output tokens. The two judgement tasks (`layer_*`, `overview`)
+get `reasoning_effort: "low"` and no `thinking` switch, so DeepSeek may think a little where
+the choice of groups and the shape of the whole page matter. `--effort` sets `reasoning_effort`
+for models that accept one.
 
 Whether the explanations get worse without thinking was not measured. A run that answers this
 needs the same repository and model twice, once with the switch on and once off, compared on the
@@ -147,14 +155,14 @@ over the config, which takes precedence over model defaults. For example:
 
 ### API configuration keys
 
-The settings that CBE ships (the table above, for `zai/glm-5.3-flash`) apply only when the `--model` value is exactly that name. A DeepSeek model (any name that contains `deepseek`) gets CBE's non-thinking defaults: `thinking: {"type": "disabled"}` and no `reasoning_effort`. For any other model name, CBE sends no `reasoning_effort`, `thinking`, `response_format` or `output_max_tokens`, uses a 420-second timeout and the 20,000/25,000 batch sizes, and you set what the model needs with `--config`. The file is one JSON object. Any key outside this list is refused with exit code 2. `cbe generate --help` lists seven of these keys (`timeout` through `price_per_million`); the code accepts the others too.
+The settings that CBE ships (the table above, for `zai/glm-5.3-flash`) apply only when the `--model` value is exactly that name. A DeepSeek model (any name that contains `deepseek`) writes detail in CBE's non-thinking mode: `thinking: {"type": "disabled"}` and no `reasoning_effort`. Its `layer_*` and `overview` tasks send `reasoning_effort: "low"` instead and no `thinking` switch, because they decide the tree and the whole page. For any other model name, CBE sends no `reasoning_effort`, `thinking`, `response_format` or `output_max_tokens`, uses a 420-second timeout and the 20,000/25,000 batch sizes, and you set what the model needs with `--config`. The file is one JSON object. Any key outside this list is refused with exit code 2. `cbe generate --help` lists seven of these keys (`timeout` through `price_per_million`); the code accepts the others too.
 
 | Key | Meaning | Default for an unknown model name |
 |---|---|---|
 | `timeout` | Seconds per call (`--timeout` overrides it) | 420 |
 | `output_max_tokens` | Cap on output tokens, sent as the provider's `max_tokens`; counts reasoning tokens on most providers | not sent |
 | `reasoning_effort` | Sent as given, for example `"low"`; DeepSeek has no `"none"` level (see below) | not sent |
-| `thinking` | Sent as given in the request body, for example `{"type": "disabled"}`; this is the switch DeepSeek documents, and on an SDK it belongs in `extra_body` | not sent (DeepSeek models: `{"type": "disabled"}`) |
+| `thinking` | Sent as given in the request body, for example `{"type": "disabled"}`; this is the switch DeepSeek documents, and on an SDK it belongs in `extra_body` | not sent (DeepSeek detail tasks: `{"type": "disabled"}`; its layer and overview tasks send `reasoning_effort: "low"` instead) |
 | `response_format` | Sent as given, for example `{"type": "json_object"}` | not sent |
 | `batch_target_tokens` | Target source tokens per reading batch; must not exceed `batch_max_tokens` | 20,000 |
 | `batch_max_tokens` | Cap on source tokens per reading batch (a whole file stays intact) | 25,000 |

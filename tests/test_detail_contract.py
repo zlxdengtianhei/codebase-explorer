@@ -69,19 +69,37 @@ def test_one_number_is_the_symbol_itself_with_the_kind_from_the_inventory() -> N
 def test_several_numbers_make_one_group_with_a_generated_id() -> None:
     out = decode({"units": [{"h": [2, 3], "title": "Pool API!", "explain": "The pool."}]})
     group = out.units[0]
-    assert group["id"] == "grp:jobs.py-pool-api" and group["kind"] == "group"
+    # A group's id is made from its members' symbol names, never a file-stem slug.
+    assert group["id"] == "grp:pool-submit" and group["kind"] == "group"
     assert group["members"] == [ID[2], ID[3]]
 
 
 def test_group_without_title_is_named_after_its_first_member() -> None:
-    assert decode({"units": [{"h": [3, 2], "explain": "x."}]}).units[0]["id"] == "grp:jobs.py-pool-submit"
+    assert decode({"units": [{"h": [3, 2], "explain": "x."}]}).units[0]["id"] == "grp:pool-submit"
+
+
+def test_a_group_id_reads_as_names_not_a_file_stem() -> None:
+    # Second judge: ``grp:general.ts-debounce-helpers`` is a machine slug. The id is built
+    # from the members' names, without a shared prefix that says nothing and without a
+    # dangling fragment when it is long.
+    def gid(*names: str, known=()):
+        return checks._group_id("ignored", [{"name": name} for name in names], set(known))
+
+    assert gid("_CRT_SECURE_NO_DEPRECATE", "true", "false") == "grp:crt-secure-no-deprecate-and-true-and-false"
+    assert gid("cJSON_CreateNull", "cJSON_CreateTrue", "cJSON_CreateArray") == \
+        "grp:createnull-and-createtrue-and-createarray"
+    assert gid("CJSON_PUBLIC", "CJSON_PUBLIC", "CJSON_PUBLIC") == "grp:cjson-public"
+    assert gid("CJSON_PUBLIC", "CJSON_PUBLIC", known={"grp:cjson-public"}) == "grp:cjson-public-2"
+    long = gid("RolldownChunk", "RolldownCodeChunk", "ChunksByFormat")
+    assert long == "grp:rolldownchunk-and-rolldowncodechunk" and not long.endswith("-and")
 
 
 def test_group_ids_never_collide_with_each_other_or_with_known_units() -> None:
     out = decode({"units": [{"h": [1, 2], "title": "same", "explain": "a."},
                             {"h": [3, 4], "title": "same", "explain": "b."}]},
-                 known_ids={"grp:jobs.py-same-2"})
-    assert [u["id"] for u in out.units] == ["grp:jobs.py-same", "grp:jobs.py-same-3"]
+                 known_ids={"grp:reserve-and-pool"})
+    assert [u["id"] for u in out.units] == ["grp:reserve-and-pool-2",
+                                            "grp:pool-submit-and-module-top-level"]
 
 
 def test_unknown_number_is_removed_and_noted_but_the_unit_is_kept() -> None:
@@ -157,7 +175,7 @@ def test_every_symbol_gets_a_disposition_written_by_the_program() -> None:
     assert set(d) == {sid for row in TABLE for sid in row["ids"]}
     assert d[ID[1]] == {"how": "unit", "unit": ID[1]}
     assert d["pkg/jobs.py::reserve@5"] == {"how": "unit", "unit": ID[1]}
-    assert d[ID[2]] == d[ID[3]] == {"how": "grouped", "unit": "grp:jobs.py-pool"}
+    assert d[ID[2]] == d[ID[3]] == {"how": "grouped", "unit": "grp:pool-submit"}
     assert d[ID[4]] == {"how": "index_only", "unit": None, "reason": "not explained; indexed without prose"}
     assert payload["batch_notes"] == "n" and "batch_notes" not in checks.assemble_details(TABLE, units)
 
@@ -166,7 +184,7 @@ def test_a_grouped_unit_keeps_every_inventory_id_of_the_rows_it_covers() -> None
     # A grouped unit over a merged row (a declaration in parts) dispositions the parts too.
     out = decode({"units": [{"h": [1, 2], "title": "reserve and pool", "explain": "Both."}]})
     payload = checks.assemble_details(TABLE, out.units)
-    assert payload["dispositions"]["pkg/jobs.py::reserve@5"] == {"how": "grouped", "unit": "grp:jobs.py-reserve-and-pool"}
+    assert payload["dispositions"]["pkg/jobs.py::reserve@5"] == {"how": "grouped", "unit": "grp:reserve-and-pool"}
     assert out.units[0]["folded"] == ["pkg/jobs.py::reserve@5"]
 
 
@@ -226,6 +244,16 @@ def test_cap_details_flags_a_grouped_unit_that_does_not_name_a_member() -> None:
     units = decode({"units": [{"h": [1, 2], "title": "x", "explain": "Does something."}]}).units
     flags = checks.cap_details(units, {ID[1]: 60, ID[2]: 60}, TABLE)
     assert any("does not name" in flag for flag in flags)
+
+
+def test_cap_details_does_not_flag_a_group_that_names_every_member() -> None:
+    # The second judge saw this flag on a page that named both members: the old check ran on
+    # character-spaced text. A group's cap follows its members' source, too.
+    units = decode({"units": [{"h": [1, 2], "title": "x",
+                               "explain": "`reserve` returns a value; `Pool` holds the items."}]}).units
+    flags = checks.cap_details(units, {ID[1]: 60, ID[2]: 60}, TABLE)
+    assert not [flag for flag in flags if "does not name" in flag]
+    assert checks.detail_cap(120) <= checks.DETAIL_MAX_TOKENS
 
 
 # ------------------------------------------------------------ run level

@@ -27,9 +27,15 @@ is read once; the read budget is recorded and enforced.
   group of one, is asked again once; when the answer comes back wrong again the program
   cuts an oversized group along the `skeleton` candidate grouping (never by member order)
   and writes each cut part's responsibility line and summary from that part's own
-  members, and merges a group of one into a neighbour. When the last answer leaves
+  members, and puts a group of one into the group its call edges tie it to (same
+  candidate group without a graph; answer order only as the last tie-break), then writes
+  that group's line and summary again as "also holds `<title>`" instead of pretending the
+  author's sentence covered the newcomer. `summary.json.tree.program_merged` and the
+  `RUN.md` Clustering block count every merge, next to `program_made_groups`. When the
+  last answer leaves
   members out, the groups it placed are kept and the leftovers join their candidate
-  group. `docs/RUN.md` lists the layers, every cut and merge the program made, and
+  group, whose line names them. `docs/RUN.md` lists the layers, every cut and merge the
+  program made, and
   whether the run had a graph; without a graph the layer blocks carry no call counts.
   `tree_name_<k>` and `tree_top`, the Louvain tree that served them, and the
   model-written relations (and the `model-inferred` dependency label) are removed.
@@ -53,6 +59,21 @@ is read once; the read budget is recorded and enforced.
   same run gives the same film. Slides are one HTML page shot by headless Chrome, the voice
   is Kokoro-82M, `ffmpeg` encodes the result; `--plan-only` writes the script and the deck
   only. See `docs/videos.md`.
+- Subagents default to the lowest reasoning effort their host offers for detail writing,
+  written per host in the Skill and its Claude Code, Codex and OpenCode pages. The two
+  tasks that decide something get a level instead of thinking off: on the API path CBE
+  writes DeepSeek detail with `thinking: {"type": "disabled"}` and sends
+  `reasoning_effort: "low"` for `layer_*` and `overview` (DeepSeek has no `none` effort
+  level), and `--effort` sets `reasoning_effort` for models that accept one.
+- `summary.json` records a second read-budget reading: `provider_read_tokens` (the
+  provider's own input + cache total) and `provider_read_ratio`, next to the program
+  count, plus `output_tokens` per task kind. `RUN.md` prints both. The detail length
+  statistics are split into functions/methods and the rest, because design §4 gives
+  regular functions the 25-60 target and lets types and file remnants be shorter.
+- A grouped unit's id reads as its members' symbol names (`grp:debounce-and-debounced`),
+  not as a file-stem slug (`grp:general.ts-debounce-helpers`). `cap_details` no longer
+  false-flags a group that names every member (it compared against character-spaced
+  text), and a group's length cap follows the summed source of its members.
 - Subagents default to the lowest reasoning effort their host offers, written per host in
   the Skill and its Claude Code, Codex and OpenCode pages; the API driver turns DeepSeek's
   thinking off with `thinking: {"type": "disabled"}` (DeepSeek has no `none` effort level),

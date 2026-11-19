@@ -306,6 +306,10 @@ def invoke(*, task: str, attempt: int, prompt: str, run_dir: Path,
         settings = load_config(config, model)
         if overrides:
             settings.update(overrides)
+        # A ``None`` override drops a key the model defaults carried: a judgement task sends
+        # ``reasoning_effort: low`` instead of ``thinking: disabled`` (model_settings).
+        for key in [key for key, value in list(settings.items()) if value is None]:
+            del settings[key]
         base_url = settings.get("base_url")
         if not isinstance(base_url, str) or not base_url:
             raise ApiConfigError("API config needs a base_url")

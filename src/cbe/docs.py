@@ -519,6 +519,13 @@ def _write_run(prep: _RenderPrep) -> None:
                       f"(ratio {budget['source_read_ratio']}; target 1.2)",
                       "- By task: " + ", ".join(f"{kind} {count}" for kind, count in
                                                 budget["read_by_kind"].items()),
+                      *([f"- Provider receipts: {budget['provider_read_tokens']} tokens "
+                         f"(input + cache, ratio to source {budget['provider_read_ratio']})"]
+                        if budget.get("provider_read_tokens") else []),
+                      *(["- Output tokens by task: "
+                         + ", ".join(f"{kind} {count}" for kind, count in
+                                     (budget.get("output_by_kind") or {}).items())]
+                        if budget.get("output_by_kind") else []),
                       f"- Basis: {budget['basis']}"]
         if budget.get("gate_hit"):
             run_lines += ["- The 1.5x source hard gate was reached; the unexplained list below is the rest."]
@@ -547,6 +554,8 @@ def _clustering_lines(clustering: dict) -> list[str]:
                 + (f"; {row['parts']} part(s) cut by the program" if row.get("parts") else ""))
         if row.get("retried"):
             line += (f"; {row['retried']} oversized answer(s) were sent back once for division by function")
+        if row.get("merged"):
+            line += f"; {len(row['merged'])} group(s) merged by the program"
         lines.append(line)
         for item in row.get("split") or []:
             lines.append(f"  - program cut: {item}")

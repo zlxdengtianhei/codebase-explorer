@@ -898,7 +898,11 @@ def test_tree_waits_for_repairs_so_new_group_units_get_an_owner(tmp_path: Path) 
     with host_run.locked_state(run_dir) as locked:
         tree = host_run._semantic_tree(run_dir, locked)
     owned = {uid for node in tree["nodes"] for uid in node.get("unit_ids") or []}
-    assert {"grp:cli.py-extra-repair-1", "grp:test_jobs.py-extra-repair-2"} <= owned
+    repair_groups = {unit["id"]
+                     for path in (run_dir / "host" / "accepted").glob("repair_*.json")
+                     for unit in json.loads(path.read_text())["units"] if unit["kind"] == "group"}
+    assert len(repair_groups) >= 2
+    assert repair_groups <= owned
 
 
 def test_repair_may_reuse_its_own_module_group_ids(tmp_path: Path) -> None:
@@ -914,7 +918,6 @@ def test_repair_may_reuse_its_own_module_group_ids(tmp_path: Path) -> None:
         "def release_run(value):\n    return -value\n",
         encoding="utf-8")
     run_dir = Path(host_run.plan(repo, tmp_path / "run", review="all", jobs=4)["run_dir"])
-    group_id = "grp:jobs.py-helpers"
     repair_seen = False
     for _ in range(40):
         batch = host_run.next_tasks(run_dir)
@@ -940,6 +943,8 @@ def test_repair_may_reuse_its_own_module_group_ids(tmp_path: Path) -> None:
             assert result["accepted"], result
     assert repair_seen
     repaired = json.loads((run_dir / "host" / "accepted" / "repair_1.json").read_text())
+    original = json.loads((run_dir / "host" / "accepted" / "module_1.json").read_text())
+    group_id = next(unit["id"] for unit in original["units"] if unit["kind"] == "group")
     assert group_id in {unit["id"] for unit in repaired["units"]}  # the repair rebuilt its own module's group
     state = json.loads((run_dir / "host" / "state.json").read_text())
     assert state["status"] == "complete" and state["verify"]["ok"], state["verify"]["checks"]
@@ -1070,7 +1075,10 @@ def test_resume_new_group_drops_the_grouping_and_asks_the_overview_again(tmp_pat
     assert cli.main(["host", "resume", "--run-dir", str(run_dir)]) == 0
     state = json.loads(state_path.read_text())
     assert state["tasks"]["module_1"]["status"] == "done"
-    assert "grp:cli.py-new-helper" in json.loads((run_dir / "catalog.json").read_text())["units"]
+    units = json.loads((run_dir / "catalog.json").read_text())["units"]
+    # A group id reads as its members' names, not as a file-stem slug (second judge).
+    assert any(uid.startswith("grp:") for uid in units)
+    assert all(".py-" not in uid for uid in units if uid.startswith("grp:"))
     # The changed detail invalidates the layers and the overview: both are asked again.
     assert state["tasks"].get("overview") is None and not (accepted / "overview.json").exists()
     batch = host_run.next_tasks(run_dir)["tasks"]

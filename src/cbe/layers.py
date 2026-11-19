@@ -220,7 +220,8 @@ def _record(row: dict, subtree: list[str], members: list[str], level: int) -> tu
 
 def decode(answer: dict, chunk: dict, labels: dict[str, str], level: int,
            subtrees: dict[str, list[str]], *, allow_split: bool = False,
-           names: dict[str, str] | None = None) -> tuple[list[dict], list[str]]:
+           names: dict[str, str] | None = None,
+           edges: list[dict] | None = None) -> tuple[list[dict], list[str]]:
     """Decode one layer answer against its chunk (see design 2.3's program checks).
 
     ``subtrees`` maps a member id above the leaf layer to the units it covers.
@@ -295,7 +296,7 @@ def decode(answer: dict, chunk: dict, labels: dict[str, str], level: int,
             "Merge each of them with its closest neighbour, keep every other group as it is, "
             "and answer with the same JSON shape.")
     groups, shaped = _shape_groups(groups, minimum, level, subtrees,
-                                   list(chunk.get("candidates") or []), names or {})
+                                   list(chunk.get("candidates") or []), names or {}, edges)
     return groups, flags + shaped
 
 
@@ -329,6 +330,7 @@ def _place_left_out(groups: list[dict], left_out: list[str], candidates: list[li
         home["members"] = home["members"] + piece
         home["subtree"] = _subtree_for(home["members"], level, subtrees)
         home["id"] = _gid(home["subtree"])
+        _add_holds(home, [names.get(uid) or uid for uid in piece], level)
         remaining = [uid for uid in remaining if uid not in set(piece)]
         flags.append(f"member(s) the answer left out were placed in {home['title']!r}: "
                      + ", ".join(names.get(uid) or uid for uid in piece[:6]))
@@ -339,50 +341,193 @@ def _subtree_for(members: list[str], level: int, subtrees: dict[str, list[str]])
     return list(members) if level == 1 else [u for member in members for u in subtrees.get(member, [])]
 
 
+def _units_under(group: dict, level: int, subtrees: dict[str, list[str]]) -> list[str]:
+    """The inventory ids a group covers, one level up or down."""
+    return _subtree_for(group["members"], level, subtrees)
+
+
+def _group_ties(groups: list[dict], level: int, subtrees: dict[str, list[str]],
+                edges: list[dict] | None) -> dict[tuple[int, int], int]:
+    """Call edges between two groups, both directions, keyed by their answer positions."""
+    owner: dict[str, int] = {}
+    for index, group in enumerate(groups):
+        for uid in _units_under(group, level, subtrees):
+            owner.setdefault(uid, index)
+    counted: Counter = Counter()
+    for edge in edges or []:
+        a, b = owner.get(edge.get("from")), owner.get(edge.get("to"))
+        if a is None or b is None or a == b:
+            continue
+        counted[a, b] += edge.get("count") or 1
+        counted[b, a] += edge.get("count") or 1
+    return dict(counted)
+
+
+def _candidate_index(groups: list[dict], candidates: list[list[str]], level: int) -> dict[str, int]:
+    """``{member: candidate number}`` at the leaf layer; empty above it (no candidates there)."""
+    if level != 1 or not candidates:
+        return {}
+    inside = {uid for group in groups for uid in group["members"]}
+    return {uid: index for index, candidate in enumerate(candidates)
+            for uid in candidate if uid in inside}
+
+
+def _shared_candidates(a: dict, b: dict, candidate_of: dict[str, int]) -> int:
+    first = {candidate_of[uid] for uid in a["members"] if uid in candidate_of}
+    second = {candidate_of[uid] for uid in b["members"] if uid in candidate_of}
+    return len(first & second)
+
+
+def _hold_note(held: list[str], shown: int) -> str:
+    """``Also holds `a`, `b` and 3 more.`` - bounded, so one bad answer cannot flood a page."""
+    listed = ", ".join(f"`{label}`" for label in held[:shown])
+    if len(held) > shown:
+        listed += f" and {len(held) - shown} more"
+    return f"Also holds {listed}."
+
+
+def _clause_cut(text: str, words: int) -> str:
+    """Trim to ``words`` but end a sentence, or the previous comma, never mid-clause."""
+    pieces = _trim_words(text, words).split()
+    if len(pieces) >= len(text.split()):
+        return text
+    for mark in (".", ";", ","):
+        for index in range(len(pieces) - 1, 2, -1):
+            if pieces[index].endswith(mark):
+                return " ".join(pieces[:index + 1]).rstrip(",;")
+    return " ".join(pieces).rstrip(",;") + "."
+
+
+def _add_holds(group: dict, labels: list[str], level: int) -> None:
+    """Say in the group's own sentence what the program also put in it (design 2.3).
+
+    The author's sentence stays as written; it is not pretended to cover the added
+    members, so the page names them instead of claiming the old sentence is enough. A
+    summary gets the same sentence, so the reader of index or page is not misled."""
+    fresh = [label for label in labels if label]
+    if not fresh:
+        return
+    group.setdefault("_capability_base", group["capability"])
+    group.setdefault("_summary_base", group["summary"])
+    held: list[str] = group.setdefault("_holds", [])
+    for label in fresh:
+        if label not in held:
+            held.append(label)
+    shown = 5
+    note = _hold_note(held, shown)
+    while shown > 1 and len(note.split()) > CAPABILITY_WORDS - 12:
+        shown -= 1
+        note = _hold_note(held, shown)
+    capability = _clause_cut(group["_capability_base"], max(8, CAPABILITY_WORDS - len(note.split())))
+    group["capability"] = f"{capability} {note}"
+    summary = group["_summary_base"]
+    reserve = count_text_tokens(" " + note)
+    cap = summary_cap(level)
+    if count_text_tokens(summary) + reserve > cap:
+        summary = _trim_tokens(summary, max(1, cap - reserve))
+    group["summary"] = f"{summary} {note}"
+
+
+def _drop_merge_notes(groups: list[dict]) -> list[dict]:
+    for group in groups:
+        for key in ("_capability_base", "_summary_base", "_holds"):
+            group.pop(key, None)
+    return groups
+
+
+def _merge_undersized(groups: list[dict], minimum: int, level: int, subtrees: dict[str, list[str]],
+                      candidates: list[list[str]], names: dict[str, str],
+                      edges: list[dict] | None) -> tuple[list[dict], list[str]]:
+    """Place a group below ``minimum`` in the group it is tied to - never by answer order.
+
+    Design 2.3 and the second judge: a single-member group does not join the group that
+    happens to be listed before it. The program prefers the group it shares the most call
+    edges with; with no edges it prefers the group that holds members of the same
+    candidate group; answer order is only the last tie-break. The host's sentence and
+    summary are written again (``_add_holds``) so the page names the added group. When no
+    group has room below the ceiling, one member moves instead of merging."""
+    flags: list[str] = []
+    current = [dict(group) for group in groups]
+    while len(current) > 1:
+        small = [index for index, group in enumerate(current) if len(group["members"]) < minimum]
+        if not small:
+            break
+        ties = _group_ties(current, level, subtrees, edges)
+        candidate_of = _candidate_index(current, candidates, level)
+        # Prefer a host that is still below the expected group size, so one bad answer
+        # cannot fill a single host to the ceiling while other groups stay alone.
+        choices: list[tuple[tuple[int, int, int, int], int, int]] = []
+        for index in small:
+            for other_index, other in enumerate(current):
+                if other_index == index:
+                    continue
+                if len(current[index]["members"]) + len(other["members"]) > MAX_GROUP:
+                    continue
+                score = (ties.get((index, other_index), 0),
+                         _shared_candidates(current[index], other, candidate_of),
+                         len(other["members"]), -abs(other_index - index))
+                choices.append((score, index, other_index))
+        roomy = [choice for choice in choices
+                 if len(current[choice[2]]["members"]) < MEMBERS_PER_GROUP]
+        best = max(roomy or choices, default=None)
+        if best is None:
+            moved = _move_one_member(current, small[0], ties, minimum, level, subtrees, names, flags)
+            if not moved:
+                break
+            continue
+        score, index, host_index = best
+        host, extra = current[host_index], current[index]
+        host["members"] = host["members"] + extra["members"]
+        host["subtree"] = _subtree_for(host["members"], level, subtrees)
+        host["id"] = _gid(host["subtree"])
+        _add_holds(host, [extra.get("title") or extra["id"]], level)
+        reason = (f"{score[0]} call edge(s) to it" if score[0]
+                  else "same candidate group" if score[1] else "next to it in the answer")
+        flags.append(f"group {extra['title']!r} merged into {host['title']!r} "
+                     f"(it was too small; {reason})")
+        # Keep the earlier position: the published order follows the answer, not the merge.
+        current[min(index, host_index)] = host
+        current.pop(max(index, host_index))
+    return current, flags
+
+
+def _move_one_member(groups: list[dict], index: int, ties: dict[tuple[int, int], int],
+                     minimum: int, level: int, subtrees: dict[str, list[str]],
+                     names: dict[str, str], flags: list[str]) -> bool:
+    """No group has room: take one member from the closest group that can spare it."""
+    donors = [other for other in range(len(groups))
+              if other != index and len(groups[other]["members"]) > minimum]
+    if not donors:
+        return False
+    donor = max(donors, key=lambda other: (ties.get((index, other), 0), len(groups[other]["members"])))
+    moved = groups[donor]["members"].pop()
+    groups[index]["members"].append(moved)
+    for target in (groups[index], groups[donor]):
+        target["subtree"] = _subtree_for(target["members"], level, subtrees)
+        target["id"] = _gid(target["subtree"])
+    label = names.get(moved) or skeleton.symbol_words(moved) or moved
+    _add_holds(groups[index], [label], level)
+    flags.append(f"group {groups[index]['title']!r} took one member from {groups[donor]['title']!r} "
+                 "(it would have been a group of one)")
+    return True
+
+
 def _shape_groups(groups: list[dict], minimum: int, level: int, subtrees: dict[str, list[str]],
-                  candidates: list[list[str]], names: dict[str, str]) -> tuple[list[dict], list[str]]:
+                  candidates: list[list[str]], names: dict[str, str],
+                  edges: list[dict] | None = None) -> tuple[list[dict], list[str]]:
     """Program checks on size: merge a group of one, cut one above the ceiling by candidates.
 
     Design 2.3: a model answer that comes back too large a second time is cut by the
     program's candidate grouping, not by member order; each part's responsibility and
     summary are written again from that part's own members, never repeated from the
-    parent group."""
+    parent group. A group of one is merged by its call edges (``_merge_undersized``),
+    not by its position in the answer."""
     flags: list[str] = []
-    merged: list[dict] = []
-    for group in groups:
-        members = group["members"]
-        if (len(members) < minimum and merged
-                and len(merged[-1]["members"]) + len(members) <= MAX_GROUP):
-            previous = merged[-1]
-            previous["members"] = previous["members"] + members
-            previous["subtree"] = _subtree_for(previous["members"], level, subtrees)
-            previous["id"] = _gid(previous["subtree"])
-            flags.append(f"group {group['title']!r} merged into {previous['title']!r} (it was too small)")
-            continue
-        merged.append(dict(group))
-    if len(merged) > 1 and len(merged[0]["members"]) < minimum:
-        first = merged.pop(0)
-        merged[0]["members"] = first["members"] + merged[0]["members"]
-        merged[0]["subtree"] = _subtree_for(merged[0]["members"], level, subtrees)
-        merged[0]["id"] = _gid(merged[0]["subtree"])
-        flags.append(f"group {first['title']!r} merged into {merged[0]['title']!r} (it was too small)")
-    # A group of one whose neighbours were both full takes one member from the biggest
-    # neighbour, so no published group stays below two members.
-    for index, group in enumerate(merged):
-        if len(group["members"]) >= minimum or minimum < MIN_GROUP:
-            continue
-        donors = [i for i in (index - 1, index + 1)
-                  if 0 <= i < len(merged) and len(merged[i]["members"]) > minimum]
-        if not donors:
-            continue
-        donor = max(donors, key=lambda i: len(merged[i]["members"]))
-        moved = merged[donor]["members"].pop()
-        group["members"] = group["members"] + [moved]
-        for target in (group, merged[donor]):
-            target["subtree"] = _subtree_for(target["members"], level, subtrees)
-            target["id"] = _gid(target["subtree"])
-        flags.append(f"group {group['title']!r} took one member from {merged[donor]['title']!r} "
-                     "(it would have been a group of one)")
+    merged = [dict(group) for group in groups]
+    if minimum > 1 and len(merged) > 1:
+        merged, merge_flags = _merge_undersized(merged, minimum, level, subtrees, candidates,
+                                                names, edges)
+        flags += merge_flags
     shaped: list[dict] = []
     for group in merged:
         members = group["members"]
@@ -398,7 +543,7 @@ def _shape_groups(groups: list[dict], minimum: int, level: int, subtrees: dict[s
                            "title": f"{group['title']} ({index})", "capability": capability,
                            "summary": summary, "note": "program-made part (the group exceeded the member limit twice)"})
         flags.append(f"group {group['title']!r} split into {len(parts)} program groups (the {MAX_GROUP}-member limit)")
-    return shaped, flags
+    return _drop_merge_notes(shaped), flags
 
 
 def _cut_by_candidates(members: list[str], candidates: list[list[str]],

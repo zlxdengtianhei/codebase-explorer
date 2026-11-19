@@ -43,15 +43,42 @@ class ApiConfigError(ValueError):
     pass
 
 
-#: Design 2.5: DeepSeek runs in its non-thinking mode, with room for a whole batch answer.
-#: DeepSeek has no ``reasoning_effort: none``: the switch is ``thinking: {"type": "disabled"}``
-#: (docs/running.md, "Subagent effort"). An effort level is sent only when the user asks for one.
+#: Design 2.5: a detail task runs DeepSeek in its non-thinking mode, with room for a
+#: whole batch answer. DeepSeek has no ``reasoning_effort: none``: the switch is
+#: ``thinking: {"type": "disabled"}`` (docs/running.md, "Subagent effort").
 DEEPSEEK_DEFAULTS: dict[str, Any] = {
     "timeout": 1800,
     "output_max_tokens": 32768,
     "thinking": {"type": "disabled"},
     "response_format": {"type": "json_object"},
 }
+
+#: The two task kinds that decide something: which members belong together, and what the
+#: whole repository is. They get a low effort instead of thinking off, because the
+#: judgement is where a little reasoning pays off; detail tasks write from source, and
+#: stay non-thinking (the user asked for cheaper output where it is cheap).
+JUDGEMENT_TASKS = ("layer", "overview")
+
+
+def task_kind(task: str) -> str:
+    """``layer``, ``overview`` or ``detail`` for a task id (``layer_2_1``, ``module_3``)."""
+    if task == "overview":
+        return "overview"
+    if task.startswith("layer_"):
+        return "layer"
+    return "detail"
+
+
+def task_overrides(model: str, task: str) -> dict[str, Any]:
+    """Per-task request settings: a judgement task asks for low effort, not thinking off.
+
+    Detail tasks keep the model defaults. A model with no thinking switch (unknown
+    models, GLM) is left alone. ``None`` tells the caller to drop the key."""
+    if task_kind(task) not in JUDGEMENT_TASKS:
+        return {}
+    if "thinking" not in model_defaults(model):
+        return {}
+    return {"thinking": None, "reasoning_effort": "low"}
 
 
 def model_defaults(model: str) -> dict[str, Any]:

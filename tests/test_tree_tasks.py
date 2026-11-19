@@ -172,6 +172,43 @@ def test_a_single_child_layer_is_skipped():
     assert tree["nodes"][0]["unit_ids"] == ids
 
 
+def test_a_single_group_merges_by_its_call_edges_not_by_answer_order():
+    # The second judge's blocker: a group of one joined the group listed before it, so unrelated
+    # subsystems ended up in one top-level group. Edges decide now, and the host's sentence
+    # names the group that joined it.
+    members = ["g1", "g2", "g3", "g4", "g5"]
+    labels = {member: member for member in members}
+    subtrees = {member: [f"u{index}"] for index, member in enumerate(members, 1)}
+    answer = {"groups": [
+        {"title": "Alpha", "capability": "Does alpha.", "summary": "Alpha part.", "members": ["g1", "g2"]},
+        {"title": "Beta", "capability": "Does beta.", "summary": "Beta part.", "members": ["g3", "g4"]},
+        {"title": "Gamma", "capability": "Does gamma.", "summary": "Gamma part.", "members": ["g5"]}]}
+    edges = [{"from": "u1", "to": "u2", "kind": "call", "count": 1},
+             {"from": "u5", "to": "u3", "kind": "call", "count": 3}]
+    groups, flags = layers.decode(answer, {"members": members}, labels, 2, subtrees,
+                                  allow_split=True, names={"g5": "Gamma", "g3": "Beta"}, edges=edges)
+    assert [group["title"] for group in groups] == ["Alpha", "Beta"]
+    assert groups[1]["members"] == ["g3", "g4", "g5"]
+    assert "Also holds `Gamma`" in groups[1]["capability"]
+    assert "Also holds `Gamma`" in groups[1]["summary"]
+    assert any("call edge" in flag and "Gamma" in flag for flag in flags)
+
+
+def test_a_single_group_without_edges_joins_its_candidate_group():
+    # No graph: the next signal is the program's candidate grouping, not the answer's order.
+    members = ["u1", "u2", "u3", "u4", "u5"]
+    labels = {member: member for member in members}
+    candidates = [members[:2], members[2:]]
+    answer = {"groups": [
+        {"title": "First", "capability": "One.", "summary": "First part.", "members": ["u1", "u2"]},
+        {"title": "Second", "capability": "Two.", "summary": "Second part.", "members": ["u3", "u4"]},
+        {"title": "Lone", "capability": "Three.", "summary": "Lone part.", "members": ["u5"]}]}
+    groups, flags = layers.decode(answer, {"members": members, "candidates": candidates},
+                                  labels, 1, {}, allow_split=True)
+    assert [group["members"] for group in groups] == [["u1", "u2"], ["u3", "u4", "u5"]]
+    assert any("same candidate group" in flag for flag in flags)
+
+
 def test_a_run_groups_layer_by_layer_and_writes_the_overview_last(tmp_path):
     run = Path(host_run.plan(_repo(tmp_path), tmp_path / "run", review="none", jobs=8)["run_dir"])
     handed = _drive(run)
