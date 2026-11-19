@@ -7,11 +7,18 @@ is read once; the read budget is recorded and enforced.
 
 - One detail for every function, method and class: the 40-token "index only" rule is
   gone, and a tiny member gets one phrase. A detail is 1 to 3 sentences, about 25 to
-  60 tokens, hard ceiling 100 and never more than half its own source; the program cuts
-  an over-long one and flags it. One symbol is one detail: the chunks a grammar cut out
-  of one declaration (overloads, a long function) are merged into one numbered row before
-  the model sees them, and a file's leftover regions become one file-level entry. A type
-  alias or an interface gets one short phrase.
+  60 tokens: the first sentence says what it does and what it returns or changes, then
+  only a unit whose source branches or has a caller prerequisite writes the one or two
+  conditions that matter most ("when X, it does Y"). The ceiling is 60 tokens when the
+  unit's own source shows no branch and 100 when it does (per-language pattern table;
+  an unlisted language keeps 100). A unit over its ceiling is asked again once, alone and
+  with only its own source, for a shorter answer that keeps the conditions; a second
+  over-long answer is cut at the last complete sentence that fits, never ending in "…".
+  The rewrite counts are in `summary.json` (`explain_length`) and `RUN.md`. One symbol is
+  one detail: the chunks a grammar cut out of one declaration (overloads, a long
+  function) are merged into one numbered row before the model sees them, and a file's
+  leftover regions become one file-level entry. A type alias or an interface gets one
+  short phrase.
 - The read budget is in `summary.json`: `read_tokens`, `source_read_tokens`,
   `read_ratio`, `source_read_ratio`, with a breakdown by task kind and the basis of the
   count. A re-ask sends only the missing symbols' source blocks. A run stops asking for

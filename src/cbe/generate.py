@@ -103,8 +103,8 @@ def _verify_embedded_source(run_dir: Path, task_id: str, prompt: str,
     paths = _embedded_paths(state, task_id)
     if not paths:
         return
-    if "SYMBOLS STILL WITHOUT A DETAIL" in prompt:
-        # A gap-fill prompt carries only the missing symbols' source blocks by design.
+    if "SYMBOLS STILL WITHOUT A DETAIL" in prompt or "REWRITE THESE DETAILS SHORTER" in prompt:
+        # A gap-fill or too-long re-ask carries only the affected symbols' source blocks by design.
         if not source_tokens:
             raise SourceNotEmbedded("the gap-fill prompt carries no source text; the model was not called")
         return

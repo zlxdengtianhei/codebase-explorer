@@ -19,8 +19,16 @@ def test_one_detail_for_every_function_method_and_class(model_instructions):
 def test_length_is_bounded_and_follows_the_source(model_instructions):
     assert "1 to 3 sentences, about 25 to 60 tokens" in model_instructions
     assert "Hard ceiling: 100 tokens" in model_instructions
-    assert "never more than half the symbol's own source tokens" in model_instructions
-    assert "a small symbol still gets about 25 tokens of room" in model_instructions
+    assert "a unit whose source has no branch stays within 60" in model_instructions
+    assert "Do not drop a condition to fit the length" in model_instructions
+
+
+def test_the_branch_rule_is_stated_before_the_length_limit(model_instructions):
+    # The packet's writing rule: first what it does and returns, then the one or two
+    # conditions that matter most, written as "when X, it does Y".
+    assert 'as "when X, it does Y"' in model_instructions
+    assert "an if/elif/else or except case, a match arm, a conditional expression" in model_instructions
+    assert "do not retell the statements line by line" in model_instructions
 
 
 def test_the_sentence_starts_with_the_subject_and_skips_the_signature(model_instructions):

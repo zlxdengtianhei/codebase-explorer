@@ -32,8 +32,11 @@ DETAIL_STYLE = """DETAIL STYLE:
 - A run of trivial members of one class may share one grouped unit, but the sentence must name every symbol it covers (write the symbol's name).
 - A file-level entry (its name ends in "module code") covers everything in the file that is not a function, method or class: one sentence saying what the file holds.
 - A type alias or an interface gets one short phrase saying what it stands for.
-- Length: 1 to 3 sentences, about 25 to 60 tokens. Hard ceiling: 100 tokens, and never more than half the symbol's own source tokens; a small symbol still gets about 25 tokens of room.
-- Start with the subject: "`parse_config` reads the file and ...". Say what it does, what it returns or changes, and what happens on failure. Do not restate the signature, parameter names or types.
+- Start with the subject: "`parse_config` reads the file and ...". The first sentence says what it does and what it returns or changes.
+- Then, only if this unit's own source has a branch or a caller requirement, add the one or two that matter most as "when X, it does Y": an if/elif/else or except case, a match arm, a conditional expression, a default value, or something the caller must already hold (an app context, a lock, an unprocessed input). Name the condition, not the statement.
+- Length: 1 to 3 sentences, about 25 to 60 tokens. Hard ceiling: 100 tokens; a unit whose source has no branch stays within 60. Do not drop a condition to fit the length: a shorter answer that loses the branch is worse than a longer one that keeps it.
+- When the same step runs over two sets under different conditions or in different orders, write one clause for each set. Do not merge two different rules into one phrase: the reader cannot tell them apart.
+- Do not restate the signature, parameter names or types, and do not retell the statements line by line.
 - A grouped unit needs a short `title` (2 to 6 words) and one `explain` that covers the group. Every symbol in the group must appear by name in that text.
 - Do not write call relations: call edges come from the program's graph, never from you.
 - `uncertainties` (optional list of strings): only a real boundary the source does not settle.
@@ -142,8 +145,9 @@ def gap_detail_prompt(paths: list[str], inventory: dict[str, dict], gaps: list[d
         '{"units":[{"h":[12],"explain":"..."},{"h":[20,21],"title":"...","explain":"..."}]}',
         "Name symbols by the numbers below only. One unit per symbol, or one grouped unit whose "
         "sentence names every symbol in it.",
-        "Length: 1 to 3 sentences, about 25 to 60 tokens, hard ceiling 100 and at most half the "
-        "symbol's source; a tiny symbol gets one short phrase. Start with the subject; do not "
+        "Length: 1 to 3 sentences, about 25 to 60 tokens, hard ceiling 100 (60 when the source has no "
+        "branch). First sentence: what the symbol does and what it returns or changes; then the one "
+        "or two conditions that matter most, as 'when X, it does Y'. Start with the subject; do not "
         "restate the signature or parameter types. Do not write call relations.",
         "",
         "SYMBOLS STILL WITHOUT A DETAIL (number, kind, name):",
@@ -228,6 +232,65 @@ def embedded_source_tokens(paths: list[str], chunks: list[dict] | None,
                            if c.get("path") == path and c.get("id") in only)
         total += count_text_tokens(text)
     return total
+
+
+def shorten_prompt(rows: list[dict], units: list[dict[str, Any]], caps: dict[str, int],
+                   *, chunks: list[dict] | None = None, source_root: Path | None = None,
+                   embed: bool = True) -> str:
+    """The one re-ask a too-long explanation gets: only those units, and their own source.
+
+    ``rows`` are the batch-table rows of the symbols the units cover, ``units`` the units
+    whose explanation was over its cap, ``caps`` the cap of each. The earlier detail is
+    shown so the model shortens it instead of writing from scratch, and the instruction
+    names the conditions it must keep: a shorter answer that loses a branch is the failure
+    this re-ask exists to avoid."""
+    from cbe.token_budget import count_text_tokens
+    header = ["REWRITE THESE DETAILS SHORTER: the details below came back above their length cap and are "
+              "written again once. Use ONLY the supplied source and the earlier detail.",
+              "",
+              'OUTPUT: exactly one JSON object, no Markdown fences, no commentary: '
+              '{"units":[{"h":[12],"explain":"..."}]}',
+              "Name symbols by the numbers below only.",
+              "Keep what the earlier detail got right: what the symbol does, what it returns or changes, and "
+              "the one or two conditions that matter most (an if/except case, a match arm, a default value, "
+              "or a caller prerequisite), written as 'when X, it does Y'. Write more compactly: drop "
+              "restatements of the signature, step-by-step narration and repeated context. Do NOT drop a "
+              "condition to save tokens; a shorter detail that loses the branch is worse than a long one. "
+              "A grouped unit must still name every symbol it covers.",
+              "",
+              "LIMITS AND EARLIER DETAILS (number, kind, name, target tokens, earlier detail):"]
+    by_id = {row["id"]: row for row in rows}
+    for unit in units:
+        cap = caps.get(unit["id"], 60)
+        used = count_text_tokens(unit.get("explain") or "")
+        target = max(20, int(cap * 0.8))
+        covered = [sid for sid in [*([unit["id"]] if not unit.get("members") else []),
+                                   *(unit.get("members") or []), *(unit.get("folded") or [])]
+                   if sid in by_id]
+        shown = ", ".join(f"h={by_id[sid]['n']} {by_id[sid]['kind']} `{by_id[sid]['name']}`" for sid in covered)
+        header.append(f"- {shown}: at most {target} tokens (cap {cap}; the earlier one used {used})")
+        header.append(f"  earlier: {' '.join((unit.get('explain') or '').split())}")
+        if unit.get("members"):
+            names = [f"`{by_id[sid]['name']}`" for sid in unit["members"] if sid in by_id]
+            header.append("  this unit covers several symbols; the rewrite must name each one: " + ", ".join(names))
+    body = [*header, "", "SOURCE OF THESE SYMBOLS (verbatim; these only, nothing else):"]
+    chunk_by_id = {chunk["id"]: chunk for chunk in chunks or []}
+    if embed:
+        for row in rows:
+            chunk = chunk_by_id.get(row["id"])
+            text = (chunk or {}).get("text") or ""
+            body += [f"==== {row['path']} :: {row['name']} ====",
+                     text or "(source text was not available; shorten the earlier detail only)"]
+    else:
+        body[body.index("SOURCE OF THESE SYMBOLS (verbatim; these only, nothing else):")] = \
+            "SOURCE FILES AND LINES (read only these spans):"
+        for row in rows:
+            chunk = chunk_by_id.get(row["id"])
+            target = str((source_root or Path(".")) / row["path"])
+            span = (f"L{chunk['start_line']}-L{chunk['end_line']}" if chunk
+                    else ",".join(f"L{a}-L{b}" for a, b in row["lines"]))
+            body.append(f"- {target} ({span})")
+    return "\n".join(body)
 
 
 LAYER_INSTRUCTIONS = """You group code units into a module tree of a codebase. You see no source code: you see one line per code unit (what it does) or the summary of a group from the layer below, plus a program's candidate grouping and call counts.

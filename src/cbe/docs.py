@@ -527,6 +527,12 @@ def _write_run(prep: _RenderPrep) -> None:
                                      (budget.get("output_by_kind") or {}).items())]
                         if budget.get("output_by_kind") else []),
                       f"- Basis: {budget['basis']}"]
+        length = budget.get("explain_length") or {}
+        if length:
+            run_lines += [f"- Detail length: {length.get('units_asked_again', 0)} explanation(s) over their cap "
+                          f"were sent back once for a shorter one that keeps the conditions "
+                          f"({length.get('asked_again', 0)} ask(s)); the program cut "
+                          f"{length.get('truncated', 0)} at a sentence end"]
         if budget.get("gate_hit"):
             run_lines += ["- The 1.5x source hard gate was reached; the unexplained list below is the rest."]
     docs_tokens = sum(count_text_tokens(path.read_text(encoding="utf-8"))

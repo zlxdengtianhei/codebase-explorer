@@ -771,7 +771,8 @@ def _detail_task(run_dir: Path, state: dict[str, Any], task: dict[str, Any], *, 
     """The detail task for one reading batch, built from the verified frozen context.
 
     ``gaps`` makes it a gap-fill ask: only the missing symbols and only their own
-    source blocks (design 2.2), never the whole batch again."""
+    source blocks (design 2.2), never the whole batch again. A task whose earlier answer
+    was too long gets ``shorten``: only those units, with their own source."""
     paths = list(state["modules"][task["module"]]["files"])
     _assert_paths_unchanged(state, paths)
     context = _verified_context(run_dir, state)
@@ -779,6 +780,17 @@ def _detail_task(run_dir: Path, state: dict[str, Any], task: dict[str, Any], *, 
     chunks = context.get("chunks") or []
     diagnostics = [row for row in context.get("diagnostics") or [] if row.get("path") in wanted]
     source_root = Path(state["repo"])
+    shorten = _shorten_units(run_dir, task)
+    if shorten:
+        partial = _load_partial(run_dir, task["id"])
+        table = _detail_table(state, task)
+        sources = _detail_sources(run_dir, state, table)
+        units = [unit for unit in partial["units"] if unit["id"] in set(shorten)]
+        covered = {sid for unit in units for sid in checks.covered_ids([unit], table)} | set(shorten)
+        rows = [row for row in table if row["id"] in covered]
+        caps = {unit["id"]: checks.unit_cap(unit, sources) for unit in units}
+        return prompts.shorten_prompt(rows, units, caps, chunks=chunks, source_root=source_root,
+                                      embed=embed)
     if gaps:
         missing, invalid, problem = gaps
         return prompts.gap_detail_prompt(
@@ -796,6 +808,14 @@ def _detail_source_tokens(run_dir: Path, state: dict[str, Any], task: dict[str, 
         return 0  # the host subagent reads the files itself; that read is not measured here
     context = _verified_context(run_dir, state)
     paths = list(state["modules"][task["module"]]["files"])
+    shorten = _shorten_units(run_dir, task)
+    if shorten:
+        partial = _load_partial(run_dir, task["id"])
+        table = _detail_table(state, task)
+        sources = _detail_sources(run_dir, state, table)
+        units = [unit for unit in partial["units"] if unit["id"] in set(shorten)]
+        covered = {sid for unit in units for sid in checks.covered_ids([unit], table)} | set(shorten)
+        return sum(sources[sid]["tokens"] for sid in covered if sid in sources)
     only = {row["id"] for row in gaps[0]} if gaps else None
     return prompts.embedded_source_tokens(paths, context.get("chunks") or [],
                                           Path(state["repo"]), only=only)
@@ -884,10 +904,15 @@ def _record_sent(task: dict[str, Any], text: str, source_tokens: int) -> None:
 def _prompt(run_dir: Path, state: dict[str, Any], task: dict[str, Any]) -> tuple[str, int]:
     rules, body, source = _body(run_dir, state, task, embed=False)
     outbox = state_dir(run_dir) / "outbox" / f"{task['id']}.json"
+    # A too-long re-ask already carries the earlier detail in its body; adding the previous
+    # error and the raw output would only invite a copy of the long text back.
+    note = _retry_note(run_dir, state, task)
+    if note is None and not _shorten_units(run_dir, task):
+        note = _previous_error(task)
     text = (f"# Codebase Explorer task `{task['id']}` (run {state['run_tag']})\n\n{rules}\n\n"
             f"When you are done, write exactly one JSON object (no Markdown fences, no commentary) to this "
             f"file, creating or replacing it:\n{outbox}\n\nThen reply with the single line: DONE {task['id']}\n"
-            f"{_retry_note(run_dir, state, task) or _previous_error(task)}\n---\n\n{body}")
+            f"{note or ''}\n---\n\n{body}")
     return text, source
 
 
@@ -900,7 +925,7 @@ def completion_prompt(run_dir: Path, task_id: str) -> tuple[str, int]:
         note = _retry_note(run_dir, state, task)
         if note is not None:
             prompt += note
-        elif task["errors"]:
+        elif task["errors"] and not _shorten_units(run_dir, task):
             prompt += "\n\nPrevious completion failed. Correct it now. Original error: " + task["errors"][-1][:2000]
             # A grouping retry gets the whole member list again anyway; repeating its previous
             # answer would only add tokens to the read budget and invite copying it back.
@@ -994,6 +1019,39 @@ def _detail_table(state: dict[str, Any], task: dict[str, Any]) -> list[dict]:
     return symbols.batch_table(state["modules"][task["module"]]["files"], state["inventory"])
 
 
+def _detail_sources(run_dir: Path, state: dict[str, Any], table: list[dict]) -> dict[str, dict]:
+    """Per symbol: its source tokens, its source text and its language, from the frozen context.
+
+    The length cap follows the source a unit covers (``checks.detail_cap``), so the program
+    reads the same frozen chunks the model was given, never the file on disk."""
+    by_id = {chunk["id"]: chunk for chunk in _verified_context(run_dir, state).get("chunks") or []}
+    sources: dict[str, dict] = {}
+    for row in table:
+        ids = row.get("ids") or [row["id"]]
+        rows = [by_id[sid] for sid in ids if sid in by_id]
+        text = "".join(chunk.get("text") or "" for chunk in rows)
+        languages = {chunk.get("language") for chunk in rows if chunk.get("language")}
+        sources[row["id"]] = {
+            "tokens": sum(count_text_tokens(chunk.get("text") or "") for chunk in rows),
+            "text": text,
+            "language": languages.pop() if len(languages) == 1 else "",
+        }
+    return sources
+
+
+def _length_counters(state: dict[str, Any]) -> dict[str, int]:
+    """Program counters for the detail length rule, printed in summary.json and RUN.md."""
+    return state.setdefault("explain_length", {"asked_again": 0, "units_asked_again": 0, "truncated": 0})
+
+
+def _shorten_units(run_dir: Path, task: dict[str, Any]) -> list[str]:
+    """Unit ids a task was sent back once for: they are too long (empty when none)."""
+    path = _partial_path(run_dir, task["id"])
+    if not path.is_file():
+        return []
+    return list(json.loads(path.read_text(encoding="utf-8")).get("shorten") or [])
+
+
 def _gaps(run_dir: Path, state: dict[str, Any], table: list[dict], units: list[dict]) -> list[dict]:
     """Symbols no unit explains yet: every function, method and class (see ``checks.find_gaps``)."""
     return checks.find_gaps(table, units)
@@ -1078,8 +1136,13 @@ def _ground_answer(run_dir: Path, state: dict[str, Any], table: list[dict], deco
 
 
 def _retry_note(run_dir: Path, state: dict[str, Any], task: dict[str, Any]) -> str | None:
-    """The note a detail re-ask appends: only what is still missing."""
+    """The note a detail re-ask appends: only what is still missing.
+
+    A too-long re-ask carries its whole instruction in the body (the earlier text and the
+    per-unit limits), so it gets no gap note."""
     if task["kind"] not in DETAIL_KINDS:
+        return None
+    if _shorten_units(run_dir, task):
         return None
     gap_inputs = _gap_inputs(run_dir, state, task)
     if gap_inputs is None:
@@ -1099,13 +1162,30 @@ def _settle_detail(run_dir: Path, state: dict[str, Any], task: dict[str, Any], v
         return error, None, []  # a provider-side failure: no answer to decode; saved units wait
     table = _detail_table(state, task)
     partial = _load_partial(run_dir, task["id"])
+    sources = _detail_sources(run_dir, state, table)
+    shorten = list(partial.get("shorten") or [])
     decoded = None
     if value is not None:
         try:
-            decoded = checks.decode_details(value, table, have=partial["units"],
-                                            known_ids=_known_unit_ids(run_dir, state, exclude=task["module"]))
+            decoded = checks.decode_details(value, table,
+                                            have=[] if shorten else partial["units"],
+                                            known_ids=frozenset() if shorten
+                                            else _known_unit_ids(run_dir, state, exclude=task["module"]))
         except ValueError as exc:
             error = f"schema_error:{exc}"
+    if decoded is not None and shorten:
+        # A too-long answer written again: only the units sent back may change, and a rewrite
+        # whose names do not occur in the source keeps the earlier text (the program then cuts it).
+        _ground_answer(run_dir, state, table, decoded, True)
+        kept = [unit for unit in decoded.units if not unit.get("ungrounded")]
+        targets = [unit for unit in partial["units"] if unit["id"] in set(shorten)]
+        _, shorten_flags = checks.apply_shortened(targets, kept)
+        partial["flags"] += decoded.flags + shorten_flags
+        partial["shorten"] = []
+        partial["decoded"] = True
+        partial["shortened"] = True
+        decoded = None
+    shorten_done = bool(partial.pop("shortened", False))
     if decoded is not None:
         grounding_error = _ground_answer(run_dir, state, table, decoded, final)
         partial["units"] += decoded.units
@@ -1117,38 +1197,60 @@ def _settle_detail(run_dir: Path, state: dict[str, Any], task: dict[str, Any], v
             _partial_path(run_dir, task["id"]).parent.mkdir(exist_ok=True)
             write_json(_partial_path(run_dir, task["id"]), partial)
             return grounding_error, None, []
-    gaps = _gaps(run_dir, state, table, partial["units"])
-    budget_stop = bool(gaps) and not final and _budget_gate(
-        state, _gap_source_tokens(run_dir, state, gaps))
-    if decoded is not None and not gaps:
-        # A rejected unit alone never earns a re-ask: if its symbols mattered they are gaps, and
-        # a unit that names no symbol (a stray string in the list) has nothing to recover.
-        error = None
-        partial["flags"] += [f"invalid unit h={row['h']}: {row['why']}" for row in decoded.invalid]
-    elif (not final and not budget_stop) or not partial["decoded"]:
-        if decoded is not None:
-            _partial_path(run_dir, task["id"]).parent.mkdir(exist_ok=True)
-            write_json(_partial_path(run_dir, task["id"]), partial)
-            error = (f"incomplete: {len(gaps)} symbol(s) with logic still without a unit "
-                     f"{[row['n'] for row in gaps][:20]}; {len(decoded.invalid)} unit(s) rejected")
-        return error, None, []
-    else:
-        error = None
-        if budget_stop:
-            state["budget_gated"] = True
-            log_event(run_dir, "budget", f"{task['id']}: the source read budget is spent; "
-                      f"{len(gaps)} symbol(s) stay unexplained", task=task["id"])
-            partial["flags"].append("source read budget reached: the remaining gaps were not asked again")
-        partial["flags"] += [f"invalid unit h={row['h']}: {row['why']}" for row in partial["invalid"]]
-        partial["flags"] += [f"unexplained: {row['id']}" for row in gaps]
+    gaps: list[dict] = []
+    budget_stop = False
+    if not shorten_done:
+        gaps = _gaps(run_dir, state, table, partial["units"])
+        budget_stop = bool(gaps) and not final and _budget_gate(
+            state, _gap_source_tokens(run_dir, state, gaps))
+        if decoded is not None and not gaps:
+            # A rejected unit alone never earns a re-ask: if its symbols mattered they are gaps, and
+            # a unit that names no symbol (a stray string in the list) has nothing to recover.
+            error = None
+            partial["flags"] += [f"invalid unit h={row['h']}: {row['why']}" for row in decoded.invalid]
+        elif (not final and not budget_stop) or not partial["decoded"]:
+            if decoded is not None:
+                _partial_path(run_dir, task["id"]).parent.mkdir(exist_ok=True)
+                write_json(_partial_path(run_dir, task["id"]), partial)
+                error = (f"incomplete: {len(gaps)} symbol(s) with logic still without a unit "
+                         f"{[row['n'] for row in gaps][:20]}; {len(decoded.invalid)} unit(s) rejected")
+            return error, None, []
+        else:
+            error = None
+            if budget_stop:
+                state["budget_gated"] = True
+                log_event(run_dir, "budget", f"{task['id']}: the source read budget is spent; "
+                          f"{len(gaps)} symbol(s) stay unexplained", task=task["id"])
+                partial["flags"].append("source read budget reached: the remaining gaps were not asked again")
+            partial["flags"] += [f"invalid unit h={row['h']}: {row['why']}" for row in partial["invalid"]]
+            partial["flags"] += [f"unexplained: {row['id']}" for row in gaps]
     _partial_path(run_dir, task["id"]).unlink(missing_ok=True)
     payload = checks.assemble_details(table, partial["units"], notes=partial["notes"])
-    chunk_tokens = {chunk["id"]: count_text_tokens(chunk.get("text") or "")
-                    for chunk in _verified_context(run_dir, state).get("chunks") or []}
-    source_tokens = {row["id"]: sum(chunk_tokens.get(sid, 0)
-                                    for sid in row.get("ids") or [row["id"]])
-                     for row in table}
-    partial["flags"] += checks.cap_details(payload["units"], source_tokens, table)
+    over = checks.over_long_units(payload["units"], sources)
+    wanted = sum(checks.unit_source(unit, sources)[0] for unit in payload["units"]
+                 if unit["id"] in {row["id"] for row in over})
+    if over and not partial.get("shorten_used") and not final and not _budget_gate(state, wanted):
+        # The one re-ask: only these units go back, with their own source and the demand to keep
+        # the conditions. A second over-long answer is cut, never asked again.
+        partial["shorten"] = [row["id"] for row in over]
+        partial["shorten_used"] = True
+        _partial_path(run_dir, task["id"]).parent.mkdir(exist_ok=True)
+        write_json(_partial_path(run_dir, task["id"]), partial)
+        counters = _length_counters(state)
+        counters["asked_again"] += 1
+        counters["units_asked_again"] += len(over)
+        log_event(run_dir, "shorten", f"{task['id']}: {len(over)} explanation(s) over their length cap; "
+                  f"asking once for a shorter one that keeps the conditions (cap "
+                  + ", ".join(f"{row['cap']} for {row['id']}" for row in over[:6]) + ")",
+                  task=task["id"])
+        return (f"too_long: {len(over)} unit(s) over their length cap {[row['id'] for row in over][:10]}; "
+                "rewrite only those, shorter, keeping their conditions"), None, []
+    flags, cut_ids = checks.cap_details(payload["units"], sources, table)
+    partial["flags"] += flags
+    if cut_ids:
+        _length_counters(state)["truncated"] += len(cut_ids)
+        log_event(run_dir, "shorten", f"{task['id']}: {len(cut_ids)} explanation(s) cut at a sentence end "
+                  "after the shorter answer still did not fit", task=task["id"])
     return None, payload, partial["flags"]
 
 
@@ -1726,6 +1828,7 @@ def _read_budget(run_dir: Path, state: dict[str, Any]) -> dict[str, Any]:
             "targets": {"read_ratio_max": 2.0, "source_read_ratio_max": 1.2,
                         "hard_gate_source_ratio": SOURCE_BUDGET,
                         "small_repository_tokens": BUDGET_MIN_SOURCE},
+            "explain_length": dict(_length_counters(state)),
             "gate_hit": bool(state.get("budget_gated"))}
 
 
@@ -1909,6 +2012,7 @@ def _render(run_dir: Path, state: dict[str, Any]) -> None:
                          "index_tokens": meta["index"]["tokens"],
                          "target_max": 0.7, "target": 0.6},
                "detail_tokens": _detail_stats(units),
+               "explain_length": dict(read_budget.get("explain_length") or {}),
                "layer_shape": shape,
                "budget_gated": bool(state.get("budget_gated"))}
     ungrounded_count = sum(bool(unit.get("ungrounded")) for unit in units.values())

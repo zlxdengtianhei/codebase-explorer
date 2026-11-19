@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import importlib
 import json
+import re
 
 import pytest
 
 from cbe import checks, host_run, symbols
 from cbe.api_completion import Completion, _csv_row
+from cbe.token_budget import count_text_tokens
 from test_generate import _semantic_answer, _tiny_repo
 from test_semantic import _inventory
 
@@ -227,22 +229,92 @@ def test_the_prompt_asks_for_every_symbol_and_names_grouped_members() -> None:
     assert "the tests that pin one behavior" not in text  # no separate test-file rule any more
 
 
-def test_detail_length_caps_follow_the_source() -> None:
-    assert checks.detail_cap(0) == checks.DETAIL_MIN_TOKENS
-    assert checks.detail_cap(1_000) == checks.DETAIL_MAX_TOKENS
-    assert checks.detail_cap(80) == 40
+def _sources(language: str = "python", text: str = "value = compute()\n",
+             tokens: int = 60) -> dict[str, dict]:
+    """Per-symbol source facts, one shape for every id in the hand-written table."""
+    return {sid: {"tokens": tokens, "text": text, "language": language} for sid in ID.values()}
 
 
-def test_cap_details_cuts_a_long_explanation_and_flags_it() -> None:
-    units = decode({"units": [{"h": [1], "explain": "word " * 400}]}).units
-    flags = checks.cap_details(units, {ID[1]: 60}, TABLE)
-    assert flags and "length cap" in flags[0]
-    assert len(units[0]["explain"].split()) < 200
+def test_detail_caps_follow_whether_the_source_branches() -> None:
+    assert checks.detail_cap("value = compute()\n", "python") == checks.DETAIL_PLAIN_MAX_TOKENS
+    for text in ("if value < 0:\n    raise ValueError()\n",
+                 "try:\n    x = 1\nexcept OSError:\n    pass\n",
+                 "return 1 if ready else 2\n",
+                 "match command:\n    case 'x':\n        pass\n",
+                 "def run(a, b=1):\n    return a\n"):
+        assert checks.detail_cap(text, "python") == checks.DETAIL_MAX_TOKENS, text
+
+
+def test_a_language_the_program_cannot_read_keeps_the_loose_cap() -> None:
+    # No pattern table means the program cannot tell whether the source branches, so it does
+    # not hold the answer to the plain cap.
+    assert checks.detail_cap("value = compute()\n", "cobol") == checks.DETAIL_MAX_TOKENS
+    assert checks.detail_cap("value = compute()\n", "") == checks.DETAIL_MAX_TOKENS
+
+
+def test_a_branch_other_languages_read_keeps_the_loose_cap_too() -> None:
+    assert checks.detail_cap("if err != nil {\n\treturn err\n}\n", "go") == checks.DETAIL_MAX_TOKENS
+    assert checks.detail_cap("fn run(x: u8) -> u8 {\n    if x > 0 { x } else { 0 }\n}\n", "rust") == checks.DETAIL_MAX_TOKENS
+    assert checks.detail_cap("x = a ? b : c;\n", "javascript") == checks.DETAIL_MAX_TOKENS
+
+
+def test_cap_details_cuts_a_long_explanation_at_a_sentence_and_counts_it() -> None:
+    units = decode({"units": [{"h": [1], "explain": "Reserve a value. " * 40}]}).units
+    flags, cut = checks.cap_details(units, _sources(), TABLE)
+    assert cut == [units[0]["id"]] and flags and "sentence end" in flags[0]
+    assert not units[0]["explain"].endswith("…")
+    assert count_text_tokens(units[0]["explain"]) <= checks.DETAIL_PLAIN_MAX_TOKENS
+
+
+def test_cut_at_sentence_never_leaves_an_ellipsis() -> None:
+    cut = checks.cut_at_sentence("One sentence. " * 50, 30)
+    assert cut.endswith(".") and "…" not in cut and count_text_tokens(cut) <= 30
+    # A single sentence longer than the cap has no complete sentence to keep; it ends at a
+    # whole word with a period, still without "…".
+    single = checks.cut_at_sentence("word " * 100, 20)
+    assert single.endswith(".") and "…" not in single and count_text_tokens(single) <= 20
+    assert checks.cut_at_sentence("Short one.", 60) == "Short one."
+
+
+def test_over_long_units_names_only_the_units_over_their_own_cap() -> None:
+    units = decode({"units": [{"h": [1], "explain": "Short."},
+                              {"h": [2, 3], "title": "pool",
+                               "explain": "Long explanation of a thing. " * 15}]}).units
+    over = checks.over_long_units(units, _sources())
+    assert [row["id"] for row in over] == [units[1]["id"]]
+    assert over[0]["cap"] == checks.DETAIL_PLAIN_MAX_TOKENS
+    # A branch in the source raises that unit's cap, and a short answer under it is not flagged.
+    assert checks.over_long_units(units, _sources(text="if x:\n    return 1\n")) == []
+
+
+def test_a_shorter_answer_lands_on_the_unit_it_was_asked_for() -> None:
+    units = decode({"units": [{"h": [1], "explain": "Long."},
+                              {"h": [2, 3], "title": "pool", "explain": "Also long."}]}).units
+    rewrite = decode({"units": [{"h": [2, 3], "title": "pool", "explain": "Keeps the pool."}]}).units
+    merged, flags = checks.apply_shortened(units, rewrite)
+    assert merged[1]["explain"] == "Keeps the pool." and merged[1]["id"] == units[1]["id"]
+    assert merged[0]["explain"] == "Long." and not flags
+
+
+def test_the_shorten_prompt_carries_only_those_units_and_their_limits() -> None:
+    from cbe import prompts
+    units = decode({"units": [{"h": [1], "explain": "Reserve a value, refusing negatives."}]}).units
+    rows = [row for row in TABLE if row["id"] in checks.covered_ids(units, TABLE) or row["id"] == units[0]["id"]]
+    chunks = [{"id": row["id"], "path": row["path"], "language": "python",
+               "text": "def reserve(value):\n    return value\n", "start_line": 1, "end_line": 2}
+              for row in rows]
+    text = prompts.shorten_prompt(rows, units, {units[0]["id"]: 60}, chunks=chunks)
+    assert "REWRITE THESE DETAILS SHORTER" in text
+    assert "at most 48 tokens (cap 60" in text
+    assert "earlier: Reserve a value, refusing negatives." in text
+    assert "==== pkg/jobs.py :: reserve ====" in text
+    assert "Pool" not in text.split("SOURCE OF THESE SYMBOLS")[1]
+    assert "Do NOT drop a condition to save tokens" in text
 
 
 def test_cap_details_flags_a_grouped_unit_that_does_not_name_a_member() -> None:
     units = decode({"units": [{"h": [1, 2], "title": "x", "explain": "Does something."}]}).units
-    flags = checks.cap_details(units, {ID[1]: 60, ID[2]: 60}, TABLE)
+    flags, _ = checks.cap_details(units, _sources(), TABLE)
     assert any("does not name" in flag for flag in flags)
 
 
@@ -251,9 +323,8 @@ def test_cap_details_does_not_flag_a_group_that_names_every_member() -> None:
     # character-spaced text. A group's cap follows its members' source, too.
     units = decode({"units": [{"h": [1, 2], "title": "x",
                                "explain": "`reserve` returns a value; `Pool` holds the items."}]}).units
-    flags = checks.cap_details(units, {ID[1]: 60, ID[2]: 60}, TABLE)
+    flags, _ = checks.cap_details(units, _sources(), TABLE)
     assert not [flag for flag in flags if "does not name" in flag]
-    assert checks.detail_cap(120) <= checks.DETAIL_MAX_TOKENS
 
 
 # ------------------------------------------------------------ run level
@@ -381,3 +452,83 @@ def test_an_answer_with_a_gap_is_marked_incomplete_in_calls_csv(tmp_path, monkey
     with (tmp_path / "run" / "calls.csv").open(newline="", encoding="utf-8") as stream:
         rows = [(r["task"], r["attempt"], r["result"]) for r in csv.DictReader(stream) if r["task"] == "module_1"]
     assert rows == [("module_1", "1", "incomplete"), ("module_1", "2", "ok")]
+
+
+# ------------------------------------------------- length: re-ask once, then cut
+
+
+def test_a_too_long_explanation_is_asked_again_once_with_only_that_unit(tmp_path, monkeypatch) -> None:
+    long_tasks: set[str] = set()
+    shorten_prompts: list[str] = []
+
+    def behave(task, attempt, prompt):
+        if "REWRITE THESE DETAILS SHORTER" in prompt:
+            shorten_prompts.append(prompt)
+            numbers = re.findall(r"h=(\d+)", prompt)
+            return {"units": [{"h": [int(number)], "explain": "Does the job."} for number in numbers]}
+        value = _semantic_answer(prompt)
+        if task.startswith("module_") and task not in long_tasks:
+            long_tasks.add(task)
+            return {"units": [{"h": unit["h"], "explain": "It does the job. " * 40} for unit in value["units"]]}
+        return value
+
+    _model(monkeypatch, behave)
+    result = generator.generate(_tiny_repo(tmp_path), tmp_path / "run", model="m", review="none", jobs=1)
+    assert result["status"] == "complete"
+    assert result["explain_length"]["asked_again"] == len(long_tasks) == len(shorten_prompts)
+    assert result["explain_length"]["units_asked_again"] >= len(shorten_prompts)
+    assert result["explain_length"]["truncated"] == 0
+    assert all("SYMBOLS (this batch" not in prompt for prompt in shorten_prompts)
+    assert all("Does the job" not in prompt for prompt in shorten_prompts)  # the earlier detail is shown
+    run_md = (tmp_path / "run" / "docs" / "RUN.md").read_text(encoding="utf-8")
+    assert "sent back once for a shorter one that keeps the conditions" in run_md
+    summary = json.loads((tmp_path / "run" / "summary.json").read_text(encoding="utf-8"))
+    assert summary["explain_length"]["asked_again"] == len(long_tasks)
+
+
+def test_a_shorter_answer_that_still_does_not_fit_is_cut_and_not_asked_twice(tmp_path, monkeypatch) -> None:
+    asked: set[str] = set()
+
+    def behave(task, attempt, prompt):
+        if "REWRITE THESE DETAILS SHORTER" in prompt:
+            numbers = re.findall(r"h=(\d+)", prompt)
+            return {"units": [{"h": [int(number)], "explain": "Still far too long. " * 40}
+                              for number in numbers]}
+        value = _semantic_answer(prompt)
+        if task.startswith("module_") and task not in asked:
+            asked.add(task)
+            return {"units": [{"h": unit["h"], "explain": "It does the job. " * 40} for unit in value["units"]]}
+        return value
+
+    _model(monkeypatch, behave)
+    result = generator.generate(_tiny_repo(tmp_path), tmp_path / "run", model="m", review="none", jobs=1)
+    assert result["status"] == "complete"
+    assert result["explain_length"]["asked_again"] == len(asked)  # one re-ask per task, never two
+    assert result["explain_length"]["truncated"] >= 1
+    for page in (tmp_path / "run" / "docs" / "nodes").glob("*.md"):
+        assert "…" not in page.read_text(encoding="utf-8"), page.name
+
+
+def test_the_shorten_prompt_names_the_symbols_a_group_must_keep() -> None:
+    from cbe import prompts
+    units = decode({"units": [{"h": [2, 3], "title": "pool", "explain": "Also long."}]}).units
+    rows = [row for row in TABLE if row["id"] in units[0]["members"]]
+    chunks = [{"id": row["id"], "path": row["path"], "language": "python",
+               "text": "def submit(self):\n    return 1\n", "start_line": 1, "end_line": 2}
+              for row in rows]
+    text = prompts.shorten_prompt(rows, units, {units[0]["id"]: 100}, chunks=chunks)
+    assert "the rewrite must name each one: `Pool`, `Pool.submit`" in text
+
+
+def test_the_shorten_prompt_for_a_host_agent_lists_files_and_spans() -> None:
+    from pathlib import Path
+    from cbe import prompts
+    units = decode({"units": [{"h": [1], "explain": "Long."}]}).units
+    rows = [row for row in TABLE if row["id"] == units[0]["id"]]
+    chunks = [{"id": row["id"], "path": row["path"], "language": "python", "text": "x = 1\n",
+               "start_line": 3, "end_line": 9} for row in rows]
+    text = prompts.shorten_prompt(rows, units, {units[0]["id"]: 60}, chunks=chunks,
+                                 source_root=Path("/repo"), embed=False)
+    assert "SOURCE FILES AND LINES (read only these spans):" in text
+    assert "- /repo/pkg/jobs.py (L3-L9)" in text
+    assert "SOURCE OF THESE SYMBOLS" not in text

@@ -323,9 +323,98 @@ def assemble_details(table: list[dict], units: list[dict[str, Any]], *, notes: s
 
 # ------------------------------------------------------- detail length caps
 
-DETAIL_MAX_TOKENS = 100   # hard ceiling for one unit's explanation
-DETAIL_MIN_TOKENS = 25    # a small function still gets about this much room
-DETAIL_TARGET = (25, 60)  # the range a normal detail should fall in
+DETAIL_MAX_TOKENS = 100        # hard ceiling for one unit's explanation that has branches
+DETAIL_PLAIN_MAX_TOKENS = 60   # ceiling for a unit whose own source shows no branch
+DETAIL_MIN_TOKENS = 25         # a small function still gets about this much room
+DETAIL_TARGET = (25, 60)       # the range a normal detail should fall in
+
+#: What counts as a branch in one language: a construct that makes the unit do different
+#: things on different input. Each pattern is matched against the unit's own source text.
+#: A language missing here gets ``DETAIL_MAX_TOKENS``: the program cannot tell whether that
+#: source branches, so it does not hold the answer to the plain cap.
+BRANCH_PATTERNS: dict[str, tuple[str, ...]] = {
+    "python": (
+        r"^[ \t]*(?:if|elif|else|except|finally|match|case)\b",
+        r"\bif\b[^:\n]*\belse\b",                          # a conditional expression
+        r"def[ \t]+[A-Za-z_]\w*[ \t]*\([^)]*=[^)=]",           # a default argument
+    ),
+    "javascript": (
+        r"^[ \t]*(?:if|else|switch|case|catch|finally|try|for|while|do)\b",
+        r"\?[^\n:]*:",                                       # a conditional expression
+        r"\?\?",                                             # nullish choice
+        r"\([^)]*=[^)=,]",                                   # a default parameter
+    ),
+    "typescript": (
+        r"^[ \t]*(?:if|else|switch|case|catch|finally|try|for|while|do)\b",
+        r"\?[^\n:]*:",
+        r"\?\?",
+        r"\([^)]*=[^)=,]",
+    ),
+    "java": (
+        r"^[ \t]*(?:if|else|switch|case|catch|finally|try|for|while|do)\b",
+        r"\?[^\n:]*:",
+    ),
+    "go": (
+        r"^[ \t]*(?:if|else|switch|case|select|for)\b",
+    ),
+    "ruby": (
+        r"^[ \t]*(?:if|elsif|else|unless|case|when|rescue|ensure)\b",
+        r"\?[^\n:]*:",
+        r"def[ \t]+[\w.]+[ \t]*\([^)]*=[^)=]",
+    ),
+    "c": (
+        r"^[ \t]*(?:if|else|switch|case|catch|try|do)\b",
+        r"\?[^\n:]*:",
+        r"\([^)]*=[^)=,]",
+    ),
+    "cpp": (
+        r"^[ \t]*(?:if|else|switch|case|catch|try|do)\b",
+        r"\?[^\n:]*:",
+        r"\([^)]*=[^)=,]",
+    ),
+    "c_sharp": (
+        r"^[ \t]*(?:if|else|switch|case|catch|finally|try|for|foreach|while|do)\b",
+        r"\?[^\n:]*:",
+        r"\?\?",
+        r"\([^)]*=[^)=,]",
+    ),
+    "kotlin": (
+        r"^[ \t]*(?:if|else|when|try|catch|finally|for|while|do)\b",
+        r"\?:",                                             # the Elvis operator
+        r"\([^)]*=[^)=,]",
+    ),
+    "rust": (
+        r"^[ \t]*(?:if|else|match|while|for|loop)\b",
+        r"\.\s*(?:unwrap_or|unwrap_or_else|unwrap_or_default)\b",
+    ),
+    "php": (
+        r"^[ \t]*(?:if|else|elseif|switch|case|catch|finally|try|foreach|for|while)\b",
+        r"\?[^\n:]*:",
+        r"\([^)]*=[^)=,]",
+    ),
+    "swift": (
+        r"^[ \t]*(?:if|else|switch|case|guard|catch|defer|for|while)\b",
+        r"\?[^\n:]*:",
+        r"\?\?",
+        r"\([^)]*=[^)=,]",
+    ),
+}
+BRANCH_PATTERNS["tsx"] = BRANCH_PATTERNS["typescript"]
+
+
+def source_branches(text: str, language: str) -> bool:
+    """Does this source text show a branch, in a language the program can read?
+
+    An unknown language answers True, so its cap stays ``DETAIL_MAX_TOKENS``."""
+    patterns = BRANCH_PATTERNS.get(language)
+    if patterns is None:
+        return True
+    return any(re.search(pattern, text, re.MULTILINE) for pattern in patterns)
+
+
+def detail_cap(text: str, language: str) -> int:
+    """A unit's explanation ceiling: 60 tokens when its source has no branch, else 100."""
+    return DETAIL_MAX_TOKENS if source_branches(text, language) else DETAIL_PLAIN_MAX_TOKENS
 
 
 def cut_to_tokens(text: str, cap: int) -> str:
@@ -349,9 +438,81 @@ def cut_to_tokens(text: str, cap: int) -> str:
     return cut + "…"
 
 
-def detail_cap(source_tokens: int) -> int:
-    """A unit's explanation may use at most half its own source, floor 25, ceiling 100 tokens."""
-    return min(DETAIL_MAX_TOKENS, max(DETAIL_MIN_TOKENS, source_tokens // 2))
+def cut_at_sentence(text: str, cap: int) -> str:
+    """Last-resort cut: the last complete sentence that fits, else a word end with a period.
+
+    It never ends in "…": a reader must not have to guess whether the model stopped or the
+    program did. A source sentence longer than the cap has no complete sentence to keep, so
+    that case ends at the last whole word."""
+    if count_text_tokens(text) <= cap:
+        return text.strip()
+    best = None
+    for match in re.finditer(r"[.!?。！？](?=\s|$)", text):
+        if count_text_tokens(text[:match.end()]) <= cap:
+            best = match.end()
+    if best is not None:
+        return text[:best].strip()
+    words = text.split()
+    while words and count_text_tokens(" ".join(words) + ".") > cap:
+        words.pop()
+    return " ".join(words).rstrip(",;:—-") + "."
+
+
+def _covered_ids(unit: dict[str, Any]) -> list[str]:
+    """The inventory ids a unit's explanation covers (its own symbol, or its members)."""
+    members = [sid for sid in unit.get("members") or [] if sid]
+    folded = [sid for sid in unit.get("folded") or [] if sid]
+    return ([unit["id"]] if not members else []) + members + folded
+
+
+def unit_source(unit: dict[str, Any], sources: dict[str, dict]) -> tuple[int, str, str]:
+    """(source tokens, source text, language) of one unit, from its covered symbols.
+
+    A unit whose symbols span two languages reports ``""``, which keeps the loose cap."""
+    rows = [sources[sid] for sid in _covered_ids(unit) if sid in sources]
+    tokens = sum(row.get("tokens") or 0 for row in rows)
+    text = "".join(row.get("text") or "" for row in rows)
+    languages = {row.get("language") for row in rows if row.get("language")}
+    language = languages.pop() if len(languages) == 1 else ""
+    return tokens, text, language
+
+
+def unit_cap(unit: dict[str, Any], sources: dict[str, dict]) -> int:
+    """The length ceiling of one unit, from its own source."""
+    _, text, language = unit_source(unit, sources)
+    return detail_cap(text, language)
+
+
+def over_long_units(units: list[dict[str, Any]], sources: dict[str, dict]) -> list[dict[str, Any]]:
+    """Units whose explanation is above its own cap, longest overage first."""
+    over = []
+    for unit in units:
+        cap = unit_cap(unit, sources)
+        used = count_text_tokens(unit.get("explain") or "")
+        if used > cap:
+            over.append({"id": unit["id"], "cap": cap, "tokens": used})
+    return sorted(over, key=lambda row: row["tokens"] - row["cap"], reverse=True)
+
+
+def apply_shortened(units: list[dict[str, Any]], shortened: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], list[str]]:
+    """Put a shortened answer in place of the units it rewrites.
+
+    Units are matched by the symbols they cover, not by id: a group's id is program-made
+    and the answer only carries symbol numbers. A rewrite for a unit that was not sent
+    back is ignored and flagged, so it cannot slip in a change to another unit."""
+    by_key = {frozenset(_covered_ids(unit)): unit for unit in units}
+    flags: list[str] = []
+    for new in shortened:
+        old = by_key.get(frozenset(_covered_ids(new)))
+        if old is None:
+            flags.append(f"shortened answer ignored: no unit covers {', '.join(_covered_ids(new))[:120]}")
+            continue
+        old["explain"] = new["explain"]
+        if new.get("extras"):
+            old["extras"] = new["extras"]
+        if new.get("uncertainties"):
+            old["uncertainties"] = new["uncertainties"]
+    return units, flags
 
 
 def _names_member(name: str, text: str) -> bool:
@@ -363,29 +524,31 @@ def _names_member(name: str, text: str) -> bool:
     return len(tail) >= 4 and tail in text
 
 
-def cap_details(units: list[dict[str, Any]], tokens: dict[str, int],
-                table: list[dict] | None = None) -> list[str]:
-    """Program check on length and named members; it never sends the answer back.
+def cap_details(units: list[dict[str, Any]], sources: dict[str, dict],
+                table: list[dict] | None = None) -> tuple[list[str], list[str]]:
+    """Last-resort program check on length and named members; it never sends the answer back.
 
-    The cap follows the source a unit covers: for a group unit that is the sum of its
-    members' source, not a ``grp:`` id the token table never holds. A unit longer than
-    its cap is cut at a word boundary and flagged. A grouped unit must name each member
-    in its sentence (the user reads one sentence per symbol); a member left unnamed is
-    flagged for RUN.md."""
+    The cap comes from the source a unit covers (``detail_cap``: 60 tokens without a branch,
+    100 with one). A unit still longer than its cap -- the shorter re-ask did not fit it, or
+    there was no re-ask -- is cut at the last complete sentence that fits and flagged. A
+    grouped unit must name each member in its sentence (the user reads one sentence per
+    symbol); a member left unnamed is flagged for RUN.md.
+
+    Returns ``(flags, cut_ids)`` so the run can count how many explanations the program cut."""
     flags: list[str] = []
+    cut_ids: list[str] = []
     names = {row["id"]: row["name"] for row in table or []}
     for unit in units:
         members = [sid for sid in unit.get("members") or [] if sid]
-        folded = [sid for sid in unit.get("folded") or [] if sid]
-        covered = ([unit["id"]] if not members else []) + members + folded
-        cap = detail_cap(sum(tokens.get(sid, 0) for sid in covered))
+        cap = unit_cap(unit, sources)
         text = unit.get("explain") or ""
         called = [names[sid] for sid in members if names.get(sid)]
         sentence = " ".join(text.split()).lower()
         missing = [name for name in called if not _names_member(name, sentence)]
         if count_text_tokens(text) > cap:
-            unit["explain"] = cut_to_tokens(text, cap)
-            note = f"{unit['id']}: explain cut to the {cap}-token length cap"
+            unit["explain"] = cut_at_sentence(text, cap)
+            cut_ids.append(unit["id"])
+            note = f"{unit['id']}: explain cut at a sentence end to the {cap}-token length cap"
             after = " ".join(unit["explain"].split()).lower()
             dropped = [name for name in called if name not in missing and not _names_member(name, after)]
             if dropped:
@@ -393,4 +556,4 @@ def cap_details(units: list[dict[str, Any]], tokens: dict[str, int],
             flags.append(note)
         if missing:
             flags.append(f"{unit['id']}: grouped unit does not name {', '.join(missing[:6])}")
-    return flags
+    return flags, cut_ids
