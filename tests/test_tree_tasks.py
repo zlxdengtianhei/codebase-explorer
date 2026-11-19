@@ -235,6 +235,9 @@ def test_an_oversized_group_is_asked_back_once_then_cut_by_the_candidates(tmp_pa
     assert not first["accepted"] and "Divide each of them by function" in first["error"]
     again = host_run.next_tasks(run)["tasks"]
     assert [item["task"] for item in again] == [batch[0]["task"]]  # the same author, one more try
+    # The retry names every oversized group and does not repeat the previous answer.
+    retry_prompt, _ = host_run.completion_prompt(run, batch[0]["task"])
+    assert "the limit is 12 members" in retry_prompt and "original_output" not in retry_prompt
     Path(again[0]["output_file"]).write_text(json.dumps(big))
     second = host_run.submit(run, again[0]["task"])
     assert second["accepted"] and any("split into" in flag for flag in second["flags"])

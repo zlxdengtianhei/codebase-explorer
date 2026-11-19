@@ -901,8 +901,10 @@ def completion_prompt(run_dir: Path, task_id: str) -> tuple[str, int]:
             prompt += note
         elif task["errors"]:
             prompt += "\n\nPrevious completion failed. Correct it now. Original error: " + task["errors"][-1][:2000]
+            # A grouping retry gets the whole member list again anyway; repeating its previous
+            # answer would only add tokens to the read budget and invite copying it back.
             previous = state_dir(run_dir) / "raw" / f"{task_id}.attempt-{task['attempts']}.txt"
-            if previous.is_file():
+            if previous.is_file() and task["kind"] not in LAYER_KINDS:
                 prompt += "; original_output:" + previous.read_text(encoding="utf-8")[:8000]
         _record_sent(task, prompt, source)
         return prompt, source
