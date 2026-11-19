@@ -46,5 +46,5 @@ cbe video --run-dir RUN_DIR --out FILM_DIR [--modules 2] [--seconds 175] [--plan
 - The text is assembled rather than rewritten by a model because the map's own prose is already
   written for readers, and a rewrite would add a model call, a cost and a run-to-run difference for
   no measured gain.
-- Example: the tsdown-src map in this round (43 files, 173 functions, 5 systems, 47 pages) makes a
-  2:54 film, 3.4 MB, from 15 lines of narration.
+- Example: the tsdown map in this round (43 files, 138 functions, 3 systems, 51 pages)
+  makes the 2:55 film at the top of the README, 3.4 MB, from 14 lines of narration.

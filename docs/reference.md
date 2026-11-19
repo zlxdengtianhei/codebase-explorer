@@ -232,6 +232,8 @@ There is no incremental update yet: to refresh the stale pages, generate again.
 |---|---|
 | `cbe host update-graph --run-dir RUN --graph GRAPH` | Replace the frozen graph of a completed run without rerunning model tasks. |
 
+`cbe video --run-dir RUN --out DIR` makes a narrated film from a finished run's map: no model call, the script assembled from the map's own text. Options and outputs are in [videos.md](videos.md).
+
 Use `update-graph` to add or remove dataflow after a run: build the graph again with `cbe graph build --with-dataflow` (the whole build took 93 and 103 seconds on two of the example repositories, against 86 and 52 without dataflow), then run it. The explanations are not written again, and they do not need to be: the prompts never used dataflow. The run must be complete, must have been
 planned with a graph, and must have an intact frozen context. The new graph must pass the usual
 source and quality checks. Its `source_manifest` must match. After removing dataflow nodes and

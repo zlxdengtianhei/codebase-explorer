@@ -1,5 +1,5 @@
 <h1 align="center"><img src="docs/media/logo.svg" width="40" height="40" alt="" align="absmiddle">&nbsp;Codebase Explorer</h1>
-<p align="center">Codebase Explorer 把一个源码仓变成一页模块地图和逐模块的讲解：人能读，编码 agent 能查。</p>
+<p align="center">Codebase Explorer 把一个源码仓变成分层的模块地图：人从上往下读得进去，编码 agent 在里面查得到东西。</p>
 <p align="center"><a href="README.md">English</a> | <b>简体中文</b></p>
 <p align="center">
 <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
@@ -7,74 +7,69 @@
 <a href="https://github.com/zlxdengtianhei/codebase-explorer/actions/workflows/wheel-install.yml"><img alt="CI" src="https://github.com/zlxdengtianhei/codebase-explorer/actions/workflows/wheel-install.yml/badge.svg"></a>
 </p>
 
-https://github.com/user-attachments/assets/f0c3cc47-d0c2-4727-820e-65508c19408c
+<!-- 3.0 的片子。发布本 README 时把文件 walkthrough-tsdown-3.0.mp4 传到该 release。 -->
+https://github.com/zlxdengtianhei/codebase-explorer/releases/download/walkthrough-3.0.0.dev0/walkthrough-tsdown-3.0.mp4
 
-<p align="center">两分钟、带配音：Flask 从源码文件到模块地图，逐个看八个顶层模块，打开一个模块页，再用 <code>cbe find</code>、<code>cbe source</code> 查。<br><a href="https://zlxdengtianhei.github.io/codebase-explorer/?data=flask">打开可交互的地图</a> · <a href="https://zlxdengtianhei.github.io/codebase-explorer/film.html">同一支视频的网页版</a>（英文配音，页内有中英文字稿）</p>
+<p align="center">2 分 55 秒、带配音，一条命令生成、不调模型：tsdown 的地图从它的讲解里长出来，三个系统，两个模块一路讲到函数，最后是 <code>cbe find</code>、<code>cbe query</code> 和 <code>cbe source</code>。<br><a href="https://zlxdengtianhei.github.io/codebase-explorer/?data=flask">打开可交互的地图</a> · <a href="docs/videos.md">全部片子与各自的生成方法</a></p>
 
-文件树只告诉你文件在哪，不告诉你每一块是干什么的。CBE（Codebase Explorer）读一个仓库，写出文件树缺的那部分：一页列出整棵模块树（module tree），每个模块一行，说明它负责什么；再给每个模块一页，讲清其中每个函数和类，并写明各自所在的文件与行范围。你可以直接读。编码 agent 用三条命令就能在里面查。
+文件树只告诉你文件在哪，不告诉你每一块是干什么的。CBE 把仓库读一遍，给每个函数、方法和类写一段短讲解，再只拿这些讲解、一层一层聚成树：整个仓是干什么的、有哪几个系统、每个系统里的模块、模块里的函数。页面上放的是文字；签名、调用边和源码行用三条命令查，所以页面短，事实准。人从顶往下读这张地图；编码 agent 从 `docs/INDEX.md` 起，按名字查。
 
 **想试一下：** `uv tool install codebase-explorer`（需要 Python 3.12 或 3.13）。然后二选一：在 Claude Code 里用你自己的订阅生成；或在命令行接任意 OpenAI 兼容的端点生成（模型用 `--model` 指定）。步骤见[快速上手](#快速上手)。
 
 ## 能得到什么
 
-- **一页地图。** `docs/INDEX.md` 列出整棵模块树，每个模块一行。页面大小的上限，取 2,000 token 与源码 token 数的 3% 中较大的那个。
-- **一棵完整的树。** 树由程序建：互相调用或导入、位置相近、用词相近的代码单元（code unit）聚在一起。讲解相同，树就相同；重新生成一次，讲解变了，分组也可能变。没有空节点，也没有重复的模块。
-- **每个模块一页。** 每个单元有签名、源码链接和模型写的讲解。讲解主要写给人读。
-- **确定的事实靠命令查，不靠模型。** 签名、调用和源码行，用 `cbe find`、`cbe query` 和 `cbe source` 现查。`cbe source` 打印的是冻结快照里的源码；打印之前先核对每个文件的 SHA-256 与冻结时记下的值。
+- **一次读得完的地图。** `docs/INDEX.md` 先列每个系统，下面缩进列它的模块，每个一行说明它负责什么。整页控制在约 1,500 token；两层放不下时只列顶层，并在页上说明原因。
+- **每个模块一页，只有文字。** 模块页写它负责什么、一段摘要、有哪些孩子；叶子页再给每个函数、方法和类一段讲解。叶子页标题下还写一行成员所在的文件，按成员多少排：3.0 的实验里，模型读没写路径的页面时猜错过文件路径。
+- **树从讲解里长出来，一层一层。** 模型聚的是讲解，不是源码；每一层由程序检查。有几层由模型的回答决定：某层不超过八组，就是顶层。
+- **事实来自命令，不来自模型。** `cbe find`、`cbe query` 和 `cbe source` 按页面上的名字查。`cbe source` 从冻结的快照打印，打印前核对每个文件的 SHA-256 是否与冻结时记下的一致。
+- **一条命令生成讲解视频。** `cbe video` 把一次跑完的结果变成两三分钟带画面和配音的片子。讲稿由程序从地图自己的文字拼出来，所以不调模型，同一份结果每次得到同一支片子。
 
-下面是为 flask 生成的真实 `docs/INDEX.md` 开头（未改动，原文为英文）：
+下面是真实生成的 `docs/INDEX.md` 开头（tsdown，未改动）：
 
 ```markdown
 ## Modules
 
-- [**Sansio App and Scaffold Foundations**](nodes/sansio-app-and-scaffold-foundations.md) — Provides the framework-agnostic foundations that the concrete Flask app and blueprints build on: shared scaffold registration, blueprint recording, app base setup and logging. (74 units)
-  - [**Scaffold and Blueprint Registration**](nodes/scaffold-and-blueprint-registration.md) — Defines how routes, handlers and callbacks are declared and deferred, through the shared Scaffold base and the sansio Blueprint that builds on it. (43 units)
-  - [**Sansio App Base and Logging**](nodes/sansio-app-base-and-logging.md) — Defines the framework-agnostic application base class and the logger setup it uses, covering app construction, configuration and Jinja environment preparation. (31 units)
-- [**Runtime App, Contexts and Testing**](nodes/runtime-app-contexts-and-testing.md) — Covers the running application: the concrete Flask app and request lifecycle, the contexts that bind per-request state, and the tools for testing apps. (64 units)
-  - [**Flask App Request Lifecycle**](nodes/flask-app-request-lifecycle.md) — Implements the concrete Flask application and its request lifecycle: WSGI entry, dispatch, response finalization and exception handling, grouped as the app's per-request pipeline. (34 units)
-  - [**Test Client and CLI Runner**](nodes/test-client-and-cli-runner.md) — Offers testing tools: an environment builder with app defaults, a context-aware test client with session editing, and an app-aware CLI runner. (15 units)
-  - [**App and Request Context Management**](nodes/app-and-request-context-management.md) — Defines application and request contexts, the g namespace and context helpers that bind per-app and per-request state, URL matching and session opening. (15 units)
+- [**Build execution and lifecycle**](nodes/build-execution-and-lifecycle.md) — Runs resolved configs through build pipelines, coordinating cleaning, watching, restarts, and bundle disposal.
+  - [**Build execution and lifecycle \(Build orchestration\)**](nodes/build-execution-and-lifecycle-build-orchestratio.md) — Runs resolved configs through build pipelines, coordinating cleaning, watching, restarts, and bundle disposal.
+  - [**Legacy warning and shortcuts**](nodes/legacy-warning-and-shortcuts.md) — Warns about legacy CommonJS usage and handles interactive keyboard shortcuts with guarded action execution.
+- [**Filesystem and copy operations**](nodes/filesystem-and-copy-operations.md) — Provides shared filesystem helpers and resolves and executes copy rules with glob expansion and destination computation.
+  - [**Filesystem and copy operations \(Filesystem utilities\)**](nodes/filesystem-and-copy-operations-filesystem-utilit.md) — Provides shared filesystem helpers and resolves and executes copy rules with glob expansion and destination computation.
+  - [**Entry and target resolution**](nodes/entry-and-target-resolution.md) — Normalizes build entries and resolves targets and tsconfig files from options or package metadata.
 ```
 
-完整示例：[flask](examples/flask/docs/INDEX.md)。其余见[示例与文档](#示例与文档)。
-
-## 看它讲 Flask 的代码
-
-https://github.com/user-attachments/assets/87b5b1c1-452e-48e0-af29-2e520391093a
-
-<p align="center">两分钟，讲 Flask 自己的代码（英文配音与字幕），内容大多取自这些讲解：一个请求从 <code>wsgi_app</code> 到响应、两种上下文与 <code>current_app</code>／<code>request</code> 代理、蓝图、配置加载。画面上每一行都是 Flask 源码原文，标着文件与行号。十一步里有十步依据单元讲解；讲代理的那一步直接读 <code>globals.py</code>，示例里没有为它写讲解。</p>
+完整示例：[flask](examples/flask/docs/INDEX.md)。更多见[示例与文档](#示例与文档)。
 
 ## 快速上手
 
-CBE 在 PyPI 上的包名是 `codebase-explorer`，需要 Python 3.12 或 3.13。有两种用法，最后都得到同一个 `docs/` 目录。常用的是 A：让你的编码 agent 加载 Skill 来做，花你自己的订阅额度。B 用于脚本和批量运行。
+CBE 在 PyPI 上叫 `codebase-explorer`，需要 Python 3.12 或 3.13。有两种跑法，结果都是同一个 `docs/` 目录。常用的是 A：编码 agent 读 skill，用你自己的订阅干完活。B 给脚本和批量跑用。
 
-**A. 常用方式：在你的编码 agent 里用，花你自己的订阅额度。** 下面的步骤以 Claude Code 为例；装上 Skill 后，由它的子代理（subagent）写讲解。
+**A. 常用：在编码 agent 里，用你自己的订阅。** 下面以 Claude Code 为例；skill 让子代理用它所在宿主能开的最低思考强度写讲解。
 
-1. 安装 CBE：`uv tool install codebase-explorer`（或 `pipx install codebase-explorer`）。PyPI 上是 2.2.0。第 7 步、`cbe stale`，以及 `find`、`query`、`source` 接受相对的 `--run-dir`，都比 2.2.0 新；下一版发布之前，要用这些请从 GitHub 装：`uv tool install git+https://github.com/zlxdengtianhei/codebase-explorer`。
-2. 可选，要调用图（call graph）时：`cbe graph setup` 会把 Joern 和 Java 运行时下载到你的用户缓存目录（约 1.9 GB；在 Linux x86_64 上测过，macOS 还没测）。
-3. 在你的项目里装 Skill：`cbe-install install --host claude-code`。
-4. 在那里启动 Claude Code，对它说：“Use the codebase-explorer skill to generate documentation for this repository.”
-5. agent 会先报出计划的文件数、token 数、模块数和任务数，再跑子代理，最后校验结果。
-6. 打开 `<run_dir>/docs/INDEX.md`，`run_dir` 由 agent 告诉你。
-7. （2.2.0 还没有，见第 1 步）agent 会问你要不要把三行指引写进这个仓的 `AGENTS.md` 或 `CLAUDE.md`。写了以后，之后进仓的 agent 会先读 `INDEX.md`（三个新开的 Claude Code 会话都是这样；见 [docs/running.md](docs/running.md#use-the-generated-docs-from-an-agent)）。
+1. 安装：`uv tool install codebase-explorer`（或 `pipx install codebase-explorer`）。`find`、`query`、`source` 用相对 `--run-dir`，以及 `cbe stale`，需要 2.3.0 或更新；3.0 多了 `cbe video`。
+2. 可选，要调用图才需要：`cbe graph setup` 把 Joern 和 Java 运行时下载到你的用户缓存目录（约 1.9 GB；在 Linux x86_64 上测过，macOS 还没测）。
+3. 在项目里装 skill：`cbe-install install --host claude-code`。
+4. 在那里启动 Claude Code，说：“Use the codebase-explorer skill to generate documentation for this repository.”
+5. agent 先报这次计划的文件数、token 数、模块数和任务数，再跑子代理，最后核验结果。
+6. 打开 `<run_dir>/docs/INDEX.md`。`run_dir` 由 agent 报出。
+7. agent 会问要不要往仓库的 `AGENTS.md` 或 `CLAUDE.md` 加三行（2.3.0 或更新）。加了以后，之后在这个仓里干活的 agent 会先读 `INDEX.md`（三个新开的 Claude Code 会话这样做过；见 [docs/running.md](docs/running.md#use-the-generated-docs-from-an-agent)）。
 
-别的 agent 加载的是同一个 Skill：`cbe-install install --host` 支持 `claude-code`、`opencode`、`pi`、`codex` 和 `dsh`。完整跑通过的有：Claude Code（见[成本](#成本)）；OpenCode 与 Pi，各 1 次，用的是一个 22 个文件的示例小仓（Pi 那次，各个任务是靠我们机器上的一个派发 Skill 分给另外的 Pi 会话做的；Pi 自己没有子代理）。`codex` 和 `dsh` 会装上 Skill，但我们没有完整跑过。详见 [docs/running.md](docs/running.md#generate-through-a-host-agent)。
+别的 agent 装同一个 skill：`cbe-install install --host` 接受 `claude-code`、`opencode`、`pi`、`codex` 和 `dsh`。端到端跑过的：Claude Code（见[成本](#成本)）；OpenCode 和 Pi 各在一个 22 文件的样本仓上跑过一次（Pi 那次的任务由我们机器上的派发 skill 交给独立的 Pi 会话，Pi 自己没有子代理）；OpenCode 还跑了[效果怎样](#效果怎样)里的 3.0 对比。`codex` 和 `dsh` 能装 skill，我们没端到端跑过。细节见 [docs/running.md](docs/running.md#generate-through-a-host-agent)。
 
-**B. 用于脚本和批量运行：在命令行里用，接任何兼容 OpenAI 的端点。** 没有缺省模型，必须给 `--model`。
+**B. 给脚本和批量跑：在命令行接任意 OpenAI 兼容的端点。** 没有缺省模型：必须用 `--model` 指定。
 
-1. 按上面的第 1 步安装 CBE。
-2. 把密钥放进环境变量：`export CBE_API_KEY=...`
+1. 按上面第 1 步安装。
+2. 把 key 放进环境变量：`export CBE_API_KEY=...`
 3. 可选：建调用图（`cbe graph setup`，再 `cbe graph build /abs/repo --output /abs/graph.json`）。
-4. 生成。路径要写绝对路径：
+4. 生成。路径要用绝对路径：
 
    ```sh
    cbe generate /abs/repo --model MODEL --base-url https://your-endpoint.example/v1 \
      --api-key-env CBE_API_KEY --graph /abs/graph.json --run-dir /abs/run
    ```
 
-5. 打开 `/abs/run/docs/INDEX.md`。不要调用图时，去掉 `--graph`。
+5. 打开 `/abs/run/docs/INDEX.md`。去掉 `--graph` 就是不建调用图跑。
 
-然后查东西。`RUN` 是运行目录的绝对路径，ID 取 `find` 输出的第二列：
+然后按名字查。`RUN` 是运行目录的绝对路径，ID 是 `find` 输出的第二列：
 
 ```sh
 cbe find   --run-dir "$RUN" --term url_for
@@ -82,129 +77,133 @@ cbe query  --run-dir "$RUN" --id 'src/flask/helpers.py::function::url_for::6511'
 cbe source --run-dir "$RUN" --id 'src/flask/helpers.py::function::url_for::6511' --context 2
 ```
 
-其余命令和参数见 [docs/reference.md](docs/reference.md)。
+其余命令和选项见 [docs/reference.md](docs/reference.md)。
 
 ## 怎样工作
 
 ```mermaid
 flowchart TD
-  A["冻结源码：留一份带哈希的副本"] --> B["Tree-sitter 按语法边界切每个文件"]
-  B --> C["Joern 出调用图与导入图（可选）"]
-  C --> D["模型分批写代码单元的讲解，<br/>用短号指符号"]
-  D -->|"有符号被漏掉"| D2["程序再问一次，只问漏掉的"]
+  A["冻结源码：一份带哈希的副本"] --> B["Tree-sitter 在每个文件里按语法边界切开"]
+  B --> C["Joern 建调用与 import 图（可选）"]
+  C --> D["模型给每个函数、方法、类写一段短讲解，<br/>一批一批写"]
+  D -->|"有符号被跳过"| D2["程序只补问那几个；<br/>源码的读取不超过源码的 1.5 倍"]
   D2 --> D
-  D -->|"每个符号都有讲解"| R["另一个模型拿源码<br/>核最大的那一批"]
-  R -->|"查出错"| R2["其余各批也都读一遍"]
-  R2 --> W["查出错的批，模型各重写一次"]
-  R -->|"没查出错"| E["程序把单元聚成模块树"]
-  W --> E
-  E --> F["模型只读讲解，一层层分组；<br/>程序逐层检查"]
-  F --> G["程序渲染 INDEX.md、模块页、catalog.json"]
+  D --> F["模型一层一层把讲解分组；<br/>它不读源码，只读讲解和下一层"]
+  F --> E["程序检查这一层：每个成员归一组、<br/>每组 2 到 12 个成员、摘要不超上限"]
+  E -->|"还要往上一层"| F
+  E -->|"只剩八组以内：到顶了"| G["模型读顶层各组，写整仓那一页"]
+  G --> H["程序写出 INDEX.md、模块页、catalog.json"]
   classDef program fill:#dff7f3,stroke:#0f9b8e,color:#0f1b2d
   classDef model fill:#fff0cc,stroke:#c98a00,color:#0f1b2d
-  class A,B,C,D2,E,G program
-  class D,R,R2,W,F model
+  class A,B,C,D2,E,H program
+  class D,F,G model
 ```
 
-青色的步骤是普通程序，不调模型；琥珀色的步骤要调模型。图里的复查缺省不跑，要用时加 `--review`。
+青色步骤是普通程序，不调模型。黄色步骤调模型。
 
-- **冻结。** CBE 留一份带哈希的源码副本，之后每个行号和引用都能核对。
-- **切块。** Tree-sitter 按语法边界切每个文件，每个字节都落在某个块里，不调模型。
-- **讲解。** 模型分批写讲解。它用清单里的短号指符号，所以编不出 ID；模型漏掉的符号，由程序再问一次。
-- **复查（缺省不跑）。** 加 `--review` 才跑。另一个模型读一批的源码，逐条核这一批的讲解：行为说错、条件或报错写错、讲的不是这个符号；不评文字好坏。查出的错交回重写一次。`--review` 定读几批：`none`（缺省）不读；只写 `--review` 时读最大的那一批，这一批查出任何错就把其余各批也都读一遍；`all` 每批都读。在 flask 上抽查一批占全程输入 token 的 14%，每批都读多约 80%。讲错多的仓，重写比复查本身贵：六个抽查查出错的示例上，每批都查、查出的批重写，输入 token 多 51%—176%，输出 token 变成原来的 4—10 倍，因为查出错的批要整批重写一遍。抽查干净时其余各批没人读，要紧的仓请用 `--review all`。`RUN.md` 写明读了哪几批、查出什么。复查后的重写和重新生成一样，可能让地图重新分组，模块页与页名会变；符号 ID（`cbe find`、`cbe query` 用的）只由源码决定，引用代码请用 ID，不要用页名。
-- **聚合。** 模型只读讲解（或下一层的一句“负责什么”）和程序给的候选分组与调用数，把函数聚成模块，再把这些模块聚成上一层，一层层往上。程序检查每层答案：每个成员恰好归一组、每组 2—12 个、摘要篇幅有上限。有几层由答案决定；某一层只有 8 组及以下就收到顶。
-- **收顶。** 模型用顶层各组写整体用途页：给谁用、解决什么、从哪读起。某层答案不能用时先退回一次，再不行由程序按候选分组切开并标出来。
-- **渲染。** 程序写出 `docs/INDEX.md`、每个模块一页、`DEPENDENCIES.md` 和 `RUN.md`，以及 `find`、`query`、`source` 读的 `catalog.json`。
+- **冻结。** CBE 留一份带哈希的源码副本，之后每个行号、每句引用都能核。
+- **切分。** Tree-sitter 按语法边界切每个文件。每个字节都落在某一块里。
+- **讲解。** 只有这一步读源码。模型给每个函数、方法和类写一段讲解：一到三句，约 25 到 60 token。符号用清单里的短编号点名，它造不出 ID。模型跳过的符号，程序只补问那几个。运行中嵌入的源码要超过源码的 1.5 倍时不再补问，缺的列为“未讲”。
+- **分组。** 模型读讲解、从不读源码，把讲解聚成模块：每组一个两到六词的标题、一句负责什么、两三句摘要。它还拿到程序给的候选分组和调用次数，可以拆、并、挪。再往上一层，把那些模块按同样办法聚。每层答完由程序检查：每个成员恰好归一组、每组 2 到 12 个成员、摘要不超上限。超过十二个成员的组先退回一次；再错，程序按候选分组切开并标注结果。某层只剩八组以内，就是顶层。
+- **收顶。** 模型读顶层各组，写整仓那一页：谁在用这些代码、它解决什么、从哪读起。
+- **渲染。** 程序写出 `docs/INDEX.md`、每个模块一页、`DEPENDENCIES.md` 和 `RUN.md`，以及 `find`、`query`、`source` 读的 `catalog.json`。`RUN.md` 写明有哪几层、程序切过并过什么、读了预算。
+
+复查讲解是可选项，缺省关掉：`--review`（单写 = 抽最大的一批看，那批有问题就全看）或 `--review all` 让第二个模型对着源码检查讲解，被点出的批整批重写一次。在 flask 上抽查一次是这次输入 token 的 14%，全看要多约 80%（两个数都是 2.3.0 量的，复查代码这轮没改）。哪几批看过、看到什么，写在 `RUN.md` 里。
 
 跑完之后，人或编码 agent 这样读结果：
 
 ```mermaid
 flowchart LR
-  A["A：编码 agent 加载 skill，<br/>它的子代理写讲解，<br/>用你自己的订阅额度"] --> D["运行目录里的 docs/"]
-  B["B：cbe generate 加一个<br/>OpenAI 兼容端点"] --> D
-  D --> I["INDEX.md：整棵模块树，一页"]
-  I -->|"点进一个模块"| M["模块页：每个单元的签名、<br/>源码链接和讲解"]
-  I -->|"按名字查"| N["cbe find：查到符号的 ID"]
-  M -->|"要的是事实，不是讲解"| N
+  A["A：编码 agent 读 skill；<br/>它的子代理写讲解、做分组"] --> D["运行目录里的 docs/"]
+  B["B：cbe generate 接<br/>OpenAI 兼容端点"] --> D
+  D --> I["INDEX.md：各系统，以及每个模块一行"]
+  I -->|"打开一个模块"| M["模块页：它负责什么，<br/>每个函数一段讲解"]
+  I -->|"按名字查"| N["cbe find：符号的 ID"]
+  M -->|"要事实，不要散文"| N
   N --> Q["cbe query：签名与调用"]
-  N --> S["cbe source：从冻结的副本里取行，<br/>先核每个文件的 SHA-256"]
+  N --> S["cbe source：从冻结副本打印源码，<br/>打印前核对每个文件的 SHA-256"]
 ```
 
-## 调用图
+## 生成讲解视频
 
-没有图，CBE 照样能用。有图时，讲解任务和依赖视图还会得到静态的导入、调用和控制流证据。图由 [Joern](https://joern.io/) 生成，它需要 Java 21 或更高版本。`cbe graph setup` 会下载所钉版本的 Joern；机器上找不到合适的 Java 时，也会下载一个 Java 运行时，都放进你的用户缓存目录（合计约 1.9 GB）。`cbe graph setup --check` 不下载，只报告装了什么。之后 `cbe graph build` 写出 `--graph` 要用的图文件。它默认不导出数据流，要导出就加 `--with-dataflow`：生成过程不读数据流，而它在 flask 上占了图文件的一半以上（41 MB 里的 23 MB）。要手动装 Joern，见 [docs/reference.md](docs/reference.md#optional-graph-analyzers)。
+```sh
+cbe video --run-dir "$RUN" --out /abs/film [--modules 2] [--seconds 175] [--plan-only]
+```
 
-| 状态 | 语言 | 条件 |
-|---|---|---|
-| 在真实仓库上能出图 | C、C++、Python、JavaScript、TypeScript、Java、Go、Ruby | Python 的导入用 Grimp（装 `graphs` 额外依赖）；JavaScript 和 TypeScript 的导入用 dependency-cruiser（要 Node.js）。Go 跨包的调用可能停在未解析。Ruby 的动态分派可能把调用绑到别的类里同名的方法上：CBE 把这类调用标成歧义，仍有一些错绑。 |
-| 要额外工具 | Rust、PHP | Rust 要有 `cargo` 和 Cargo 工程布局。PHP 要有 `php`（7 或更高版本）。 |
-| 能建图、调用部分解析 | C# | 在一个 55 个文件的仓库上能建图（声明、控制流、导入都有）。2,322 条调用里，689 条解析到仓内的一个方法，394 条解析到一组重载（Joern 的 C# 前端推不准实参类型，分不出是哪个重载）；246 条指向仓外，993 条没解析。 |
-| 在真实仓库上失败 | Kotlin | Joern 4.0.654 在一个 146 个文件的 Kotlin 仓库上建图失败。两个文件的小例子能跑，所以小输入可能成功。 |
-| 未测试 | Swift、TSX | |
+片子照地图的阅读顺序走：先整体用途，再逐个系统，再挑两个模块一路讲到函数，最后一页讲三条查代码的命令。它只读一次跑完的结果，讲稿从这次结果自己的文字拼出来，所以不调模型，同一份结果加同样的参数每次得到同一支片子。画面是一页 HTML 由无头 Chrome 逐条截图；声音是 Kokoro-82M；最后由 ffmpeg 编码。`--plan-only` 只写讲稿和画面，不截图、不配音。模型文件、浏览器、ffmpeg 的选项与每样产物：见 [docs/videos.md](docs/videos.md)。
 
-`cbe languages` 对每种语言打印同样的状态，字段名是 `call_graph`。不管调用图一栏写什么，表里每种语言的源码解析和切块都能用。CBE 的默认安装和两个额外依赖带有 13 种语言的 Tree-sitter 语法。分析器与建图选项见 [docs/reference.md](docs/reference.md#optional-graph-analyzers)。代码图是什么、CBE 用了哪几种、为什么，以及各语言已知会错在哪：[docs/code-graphs.zh-CN.md](docs/code-graphs.zh-CN.md)。
+本页顶部那支是 tsdown 的：14 条讲稿、2 分 55 秒、3.4 MB，没调一次模型。
 
 ## 成本
 
-在 flask（含测试）上量得：65 个文件，125k token。模型是 GLM-5.3-Flash，用 `cbe generate` 调用，一次跑完。
+下面是 API 路两次运行，`cbe generate` 配 DeepSeek V4.1 Flash，每仓各跑一次，不开复查：
 
-| 指标 | 读数 |
-|---|---|
-| 提示 token | 源码 token 的 3.2–3.4 倍 |
-| 输出 token | 约为源码 token 的 0.9 倍 |
-| 模型写的讲解正文 | 约为源码 token 的 30% |
-| 答案被拒后重问所占的提示 token | 约 22%（改答案格式之前是 43%；那次还因上游限流中途停下） |
+| 读数 | tsdown（43 个文件，源码 38.7k token） | cJSON（4 个文件，源码 34.4k token） |
+|---|---:|---:|
+| 模型输入 token ÷ 源码 token | 1.93 | 1.84 |
+| 模型读的源码 token ÷ 源码 token（源码只读一遍） | 1.00 | 1.00 |
+| 页面 token ÷ 源码 token | 0.49 | 0.46 |
+| 墙钟 | 155 秒 | 132 秒 |
 
-这些读数是经一个兼容 OpenAI 的网关调用 GLM-5.3-Flash 量的。CBE 只对它认识的模型名自带缺省设置（例如 `reasoning_effort: low`）。换成别的模型名时，要用 `--config` 给出需要的设置；全部的键见 [docs/running.md](docs/running.md#api-configuration-keys)（英文）。
+这条路上模型只看到 CBE 发的东西，所以 `read_ratio` 就是全部输入。两次都跑完（`complete`），程序检查全过，嵌入源码 1.5 倍源码的上限一次没碰到。
 
-宿主 agent 这条路，在 flask 的 `src/`（24 个文件，约 7.5 万 token）上量过一次，用无界面的 Claude Code（`claude -p`）和 Sonnet 子代理：
+对 2.3.0，flask 与 tsdown 在 OpenCode 上用 DeepSeek V4.1 Flash（两版同一模型，子代理用宿主缺省强度，都不建调用图）：
 
-| 指标 | 读数 |
-|---|---|
-| 子代理任务（CBE 2.3.0） | 8 个：4 个讲解批、1 个抽样复核、2 个树命名、1 个总览。全部第一次回答就被收下 |
-| 墙钟 | 293 秒 |
-| `cbe host verify` | 15 项检查全部通过 |
-| 提示 token | 857,525，是源码 token 的 11.48 倍。缓存读每一轮都重算一次，所以不要和上面 API 路的表并排比 |
-| 输出 token | 69,130，是源码的 0.93 倍 |
+| 读数 | 2.3.0，flask / tsdown | 3.0.0.dev0，flask / tsdown |
+|---|---|---|
+| 墙钟，从计划到最后一次出页 | 2,765 秒 / 1,986 秒 | 888 秒 / 662 秒 |
+| 子代理任务数 | 19 / 15 | 10 / 8 |
+| 宿主记下的提示词 token（主会话 + 全部子代理） | 8.92 M / 4.80 M | 3.77 M / 2.78 M |
+| 页面 token ÷ 源码 token | 0.59 / 0.75 | 0.37 / 0.47 |
 
-每张表都只是一个仓库、一次运行。用宿主 agent 跑时花的是你的订阅额度，不用 API 密钥。建图不调模型。更早的成本表覆盖到 170 万 token 的仓库，放在 [docs/running.md](docs/running.md#what-a-run-costs-the-earlier-table)；它是在改答案格式之前量的，不要和上表直接比。
+也就是快约三倍、宿主侧提示词约少一半、页面约为源码的一半。四次运行的 `cbe host verify` 全过。提示词 token 把每轮的缓存读取重复计入，所以这张表内部的数可以比，不要和上面 API 那张比。
+
+建调用图不调模型。更早的、到 170 万 token 仓的成本表和 2.3.0 的读数在 [docs/running.md](docs/running.md#what-a-run-costs-the-earlier-table) 与 [CHANGELOG.md](CHANGELOG.md)。
 
 ## 效果怎样
 
-我们量了什么，量出了什么。每条都有前提；表格在 [`evaluation/tree/results/`](evaluation/tree/results/)。
+这里的数都是本机量的；本轮的表在 3.0 那次任务的记录里，更早的在 [`evaluation/tree/results/`](evaluation/tree/results/)。
 
-最先读的那一页变小了。下表是这一页的大小（`o200k_base` token），在三个完整运行上量得；“之前”一列是上一版的树：
+- **树。** 上面两次 3.0 运行都没有空节点、没有同级重名模块，tsdown 3 层、cJSON 2 层。层数不是目标：它由模型分出的组数决定，到八组以内为止。
+- **找要改的函数。** 每仓 10 道真题（“某件事在哪儿做”），用 `cbe find`、`cbe query`、`cbe source` 就能答；同一模型下，2.3.0 与 3.0.0.dev0 各在一个干净会话里答一次。命中：3.0 在 flask 答中 29 个里的 25 个、tsdown 27 个里的 27 个；2.3.0 是 23/29 与 25/27。3.0 的答案还顺带列出更多相关函数（45 对 32、43 对 34），所以命中更多、精度更低。读的 token：3.0 在 flask 上少一半，在 tsdown 上多 2.5 倍。两个仓方向相反，所以**两版在命中与 token 上都分不出高下**。纯文字页面量到的一个代价：3.0 的一份答案猜错了一个文件路径，一次 `cbe find` 就能改对。
+- **2.3.0 的、本轮没重测。** 那轮在三个仓上测的树也没有空节点；抽样核对的调用标签与源码一致；每仓 30 个真实提交的问法没有显示“程序建的树”比普通目录列表更能找到要改的代码，只有在目录很平的仓里有收窄。这些读数与条件在 [evaluation/README.md](evaluation/README.md)。
 
-| 仓库 | 之前 | 现在 | 空节点 之前 / 现在 |
-|---|---:|---:|---:|
-| flask | 16,076 | 3,078 | 22 / 0 |
-| ruby_llm | 15,938 | 2,074 | 8 / 0 |
-| gson | 12,643 | 2,514 | 16 / 0 |
+我们不声称的：按功能聚合让 agent 定位更准；CBE 让 agent 的回答更好。上面的读数都没显示这两点。
 
-- **树的结构。** 在上面三个仓库里，新树没有空节点，也没有重复的模块。之前的树分别有 22、8、16 个空节点。
-- **调用的标签。** 在七个仓库里，每种状态各抽 10 条边，回源码核对。例如 cJSON 的 307 条“未解析”调用全是宏，现在不再算调用；fmt 里标成“仓外”的调用从 2,748 条降到 22 条。
-- **树能不能帮你找到该读的代码？** 我们从五个仓库各取 30 条真实提交，请三种模型回答“这次改动该看哪三个模块”。新树和旧树分不出好坏。与只给目录列表相比，目录本来就有层次的仓库里，模块树没有明显差别；只有目录很平的仓库（flask、fmt）里它才缩小了要读的范围：选出的三个模块约占源码的 40%，覆盖了约 0.75–0.8 的改动行。
-- **这把尺子有多可信。** 它自己也吵：同一个问题再问一遍，模型的答案完全一致的只有 30 次里的 9 到 23 次。
-- **更早的问答评测**（那时的 CBE 还没有程序建的树）。在 flask 和 pytest 上（各 48 题），带 CBE 文档和命令的 agent 与只读源码的 agent 得分没有差别，而且很少去跑那些命令。在 curl 上有一次探索性读数，带 CBE 的一方得分更高（+5.60 分，区间 [+0.90, +10.82]），它附带的限制写在 [evaluation/README.md](evaluation/README.md) 里。
+## 调用图
 
-我们不声称：按功能聚合能让 agent 比用目录树定位得更准，也不声称 CBE 能提高 agent 的回答质量。上面的测量没有证明这两件事。
+不建图 CBE 也能用。建了图，讲解任务和依赖视图还会拿到静态的 import、call、控制流证据。图由 [Joern](https://joern.io/) 建，需要 Java 21 或更新。`cbe graph setup` 把固定版本的 Joern 下载到你的用户缓存目录；找不到合适的 Java 时连 Java 运行时一起下（合计约 1.9 GB）。`cbe graph setup --check` 不下载，只报装了哪些。`cbe graph build` 写出 `--graph` 收的图文件。它缺省不导出 dataflow，因为生成时不读，而在 flask 上它占图文件一多半（41 MB 里 23 MB）；要导出加 `--with-dataflow`。手工装 Joern 见 [docs/reference.md](docs/reference.md#optional-graph-analyzers)。
+
+| 状态 | 语言 | 条件 |
+|---|---|---|
+| 在真实仓上能用 | C、C++、Python、JavaScript、TypeScript、Java、Go、Ruby | Python 的 import 用 Grimp（`graphs` 额外依赖）；JavaScript 与 TypeScript 的 import 用 dependency-cruiser（需要 Node.js）。Go 跨包的调用可能解析不出。Ruby 的动态派发可能把调用绑到另一个类的同名方法上：CBE 把这类调用标成 ambiguous，仍有绑错的。 |
+| 要另装工具 | Rust、PHP | Rust 要 `cargo` 和 Cargo 项目布局。PHP 要 `php`（7 或更新）。 |
+| 能建图，调用只解析一部分 | C# | 在一个 55 文件的仓上建成了图（声明、控制流、import）。2,322 个调用里，689 个解析到一个仓内方法、394 个解析到一组重载（Joern 的 C# 前端类型信息不够，挑不出是哪个重载）；246 个指向仓外，993 个仍未解析。 |
+| 在真实仓上失败 | Kotlin | Joern 4.0.654 在一个 146 文件的 Kotlin 仓上失败。两文件的例子能成，所以小输入可能成功。 |
+| 没测 | Swift、TSX | |
+
+`cbe languages` 按语言打印与 `call_graph` 列相同的状态。不管调用图状态如何，上表每种语言的源码解析和切分都能用。13 种语言的 tree-sitter 语法随缺省安装，另有两种在额外依赖里。分析器与图选项见 [docs/reference.md](docs/reference.md#optional-graph-analyzers)。调用图是什么、CBE 用哪些、为什么，以及每种语言已知错在哪：见 [docs/code-graphs.md](docs/code-graphs.md)。
 
 ## 已知限制
 
-- 调用图依赖 Joern 和 Java 21 或更高版本。`cbe graph setup` 会把两者都下载下来（约 1.9 GB）。
-- C# 调用重载方法时只解析到这一组重载。在 GuardClauses 上，2,322 条调用里 993 条标成没解析；其中约 955 条是仓外方法、`nameof` 或构造调用，仓内真连不上的 14 条。另一个仓库（MediatR）抽查了 10 对调用，都对。Kotlin 在真实仓库上用所钉的 Joern 版本建图失败；两个文件的小例子能跑。
-- Ruby 的动态分派可能把调用绑到错误的类的同名方法上。CBE 把其中许多标成歧义，仍有一些错绑。
-- C 和 C++ 文件不跑预处理。宏多的头文件会被切得很粗，宏可能被当成函数名。
-- 讲解由模型写。`cbe host verify` 通过，只说明结构和引用自洽，不说明讲解是对的。请用 `cbe source` 对照源码核实。
-- 没有增量更新。源码变了，`cbe stale`（比 2.2.0 新，见快速上手第 1 步）列出讲到变动文件的单元和模块页（按文件判）；要更新它们，重新生成。
+- **宿主路会把源码读两遍。** 在编码 agent 里，子代理为了写讲解自己读源码文件，CBE 只数自己发的提示词；上面 1.93 与 1.84 是 API 路的读数。3.0 的宿主运行因此没有 `source_read_tokens`。那边诚实的数是宿主记的提示词总量，它比 2.3.0 少一半。
+- **3.0 与 2.3.0 在“找代码”上分不出。** 每仓 10 道题、各一个会话、两个仓、两版：命中只差两个函数，读的 token 在两个仓上方向相反。要更多轮才能说清。
+- **关掉思考对讲解质量的影响没测。** 3.0 让子代理用宿主能开的最低思考强度，API 路上把 DeepSeek 的思考关掉。开思考时讲解质量怎样，我们没有 A/B 读数。
+- 调用图要 Joern 和 Java 21 或更新。`cbe graph setup` 两者都下（约 1.9 GB）。
+- C# 对重载方法的调用只解析到一组重载。在 GuardClauses 上，2,322 个调用里 993 个标为未解析；其中约 955 个是调仓外方法、`nameof` 或构造函数，14 个是仓内 CBE 连不上的调用。另抽一个仓（MediatR）核过：抽 10 对调用，全对。Kotlin 在固定版本的 Joern 下在真实仓上失败；两文件的例子能成。
+- Ruby 的动态派发可能把调用绑到错的类的方法上。CBE 把许多这类标成 ambiguous，仍有绑错的。
+- C 与 C++ 文件不做预处理。宏多的头文件会被切成粗块，宏可能被当成函数名。
+- 讲解由模型写。`cbe host verify` 通过只说明结构与引用自洽，不说明讲解正确。要对着源码核讲解（`cbe source`）。
+- 没有增量更新。源码变了，`cbe stale` 列出受影响的单元和模块页（按文件判）；要刷新就重新生成。
+- `cbe video` 要无头 Chrome、Kokoro-82M 模型与 voices 文件、ffmpeg。讲稿是从地图文字拼的，不是改写的，所以行文好坏取决于地图本身。
 
 ## 示例与文档
 
-- 生成好的文档：[flask](examples/flask/docs/INDEX.md)、[cJSON](examples/cjson/)、[fmt](examples/fmt/)、[gson](examples/gson/)、[ruby_llm](examples/ruby_llm/)、[tsdown](examples/tsdown/)、[polyglot](examples/polyglot/)。每个示例的 README 写明了生成它的 CBE 提交；多数由较早的版本生成。
-- [docs/reference.md](docs/reference.md)：安装选项、语言、图分析器、`find`、`query`、`source`、命名声明覆盖（英文）。
-- [docs/running.md](docs/running.md)：宿主 agent 与 API 两种运行方式、运行目录、续跑与校验、成本细账、排错（英文）。
-- [docs/videos.md](docs/videos.md)：讲解视频（英文）。
-- [evaluation/README.md](evaluation/README.md) 与 [CHANGELOG.md](CHANGELOG.md)（英文）。
+- 生成好的文档：[flask](examples/flask/docs/INDEX.md)、[cJSON](examples/cjson/)、[fmt](examples/fmt/)、[gson](examples/gson/)、[ruby_llm](examples/ruby_llm/)、[tsdown](examples/tsdown/)、[polyglot](examples/polyglot/)。每个示例的 README 写明由哪个 CBE 提交生成；多数是更早的版本。
+- [docs/reference.md](docs/reference.md)：安装选项、语言、图分析器、`find`、`query`、`source`、具名声明的覆盖。
+- [docs/running.md](docs/running.md)：宿主路与 API 路、运行目录、续跑与核验、成本细节、排查。
+- [docs/videos.md](docs/videos.md)：有哪些片子，`cbe video` 怎样做一支。
+- [evaluation/README.md](evaluation/README.md) 与 [CHANGELOG.md](CHANGELOG.md)。
 
 ## 开发与许可
 
@@ -213,4 +212,4 @@ uv sync --python 3.13 --group dev
 uv run pytest -q
 ```
 
-需要真实分析器的测试，要先配好那个分析器。本产品的许可证是 [MIT](LICENSE)；外部分析器和语法包保留各自的许可证。
+要真分析器的测试需要先配好那个分析器。产品许可是 [MIT](LICENSE)；外部分析器与语法包各用自己的许可。

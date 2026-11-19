@@ -42,6 +42,17 @@ is read once; the read budget is recorded and enforced.
   `query` and `source` still resolve names from the pages.
   `summary.json` records the page-token ratio; a run on a repository of 20,000 tokens or
   more is checked against 0.7x the source.
+- A leaf page names the files its members live in, on one line under the title, most
+  members first: five names at most, then the count. The 3.0 locator experiment had a
+  model guess a wrong file path on pages that carried none. `INDEX.md` shows two levels,
+  every system and each module's one line, and keeps to 1,500 tokens; when two levels
+  pass that, it lists the top level only and says so.
+- `cbe video --run-dir RUN --out DIR` films one finished run's map: the overall purpose,
+  every system, two modules taken down to their functions, then the three look-up
+  commands. The script is assembled from the map's own text, so no model is called and the
+  same run gives the same film. Slides are one HTML page shot by headless Chrome, the voice
+  is Kokoro-82M, `ffmpeg` encodes the result; `--plan-only` writes the script and the deck
+  only. See `docs/videos.md`.
 - Subagents default to the lowest reasoning effort their host offers, written per host in
   the Skill and its Claude Code, Codex and OpenCode pages; the API driver turns DeepSeek's
   thinking off with `thinking: {"type": "disabled"}` (DeepSeek has no `none` effort level),

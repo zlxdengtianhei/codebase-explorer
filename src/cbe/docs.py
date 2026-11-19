@@ -165,19 +165,40 @@ def _graph_coverage(graph: dict | None, source_root: Path) -> list[str]:
     return lines
 
 
-INDEX_MIN_TOKENS = 2000   # the entry page may use at least this many tokens ...
-INDEX_SHARE = 0.03        # ... or this share of the source's tokens
-FILES_SHOWN = 3
+INDEX_BUDGET = 1500      # tokens the entry page may use before it drops to one level
+INDEX_SHOWN_LEVELS = 2   # top-level groups, then one line per child
+FILES_SHOWN = 5          # file names on a leaf page before they are counted
+
+
+def member_files(unit_ids: list[str], symbol_records: dict) -> list[tuple[str, int]]:
+    """Files a leaf page's members live in, most members first, then by path."""
+    counts: dict[str, int] = {}
+    for uid in unit_ids:
+        file = (symbol_records.get(uid) or {}).get("file") or (uid.split("::", 1)[0] if "::" in uid else "")
+        if file:
+            counts[file] = counts.get(file, 0) + 1
+    return sorted(counts.items(), key=lambda pair: (-pair[1], pair[0]))
+
+
+def files_line(counts: list[tuple[str, int]]) -> str:
+    """The line under a leaf page's title: where its members live (the experiment showed a model
+    guessing file paths on pages that carried none)."""
+    line = "Files: " + ", ".join(f"`{path}`" for path, _ in counts[:FILES_SHOWN])
+    if len(counts) > FILES_SHOWN:
+        line += f" and {len(counts) - FILES_SHOWN} more ({len(counts)} files)"
+    return line + "."
 
 
 def _entry_page(*, repo: str, nodes: dict, children: dict, roots: list[str],
                 overview: str | None, owner: dict, name_of: Callable[[str], str],
-                budget: int) -> tuple[str, dict]:
-    """INDEX.md: the overview, the module tree with one capability line per node, and the three
-    commands written once (design 2.4). No file lists, unit counts or flows: structure lives in
-    DEPENDENCIES.md and the catalog, not in the reading path.
+                budget: int = INDEX_BUDGET) -> tuple[str, dict]:
+    """INDEX.md: the overview, the module tree two levels deep (top-level groups, then one
+    capability line per child), and the three commands written once (design 2.4). No file lists,
+    unit counts or flows: structure lives in DEPENDENCIES.md and the catalog, not in the reading
+    path.
 
-    Over the token budget the deepest levels fold away; they stay on the node pages."""
+    A page over ``budget`` tokens keeps the top level only and says why; deeper levels stay on the
+    node pages."""
     from cbe.token_budget import count_text_tokens
 
     top = [kid for root in roots for kid in (children.get(root) or [])] or roots
@@ -197,13 +218,17 @@ def _entry_page(*, repo: str, nodes: dict, children: dict, roots: list[str],
                 rows += module_lines(kid, level + 1, shown)
         return rows
 
-    def page(shown: int) -> str:
+    def page(shown: int, two_level_tokens: int | None = None) -> str:
         lines = [f"# {repo}: code map", ""]
         if (overview or "").strip():
             lines += [literal_links(overview.strip()), ""]
         lines += ["## Modules", ""]
         for nid in top:
             lines += module_lines(nid, 0, shown)
+        if two_level_tokens is not None:
+            lines += ["", f"Two levels would take about {two_level_tokens:,} tokens, over this page's "
+                      f"{budget:,}-token budget, so only the top level is listed here. "
+                      "Each module page lists its own children."]
         lines += ["", "## Read further", "",
                   "`RUN` is this run directory. Signatures, call edges and source are looked up here, "
                   "not printed on the pages:", "",
@@ -213,11 +238,13 @@ def _entry_page(*, repo: str, nodes: dict, children: dict, roots: list[str],
                   "", "More: [DEPENDENCIES.md](DEPENDENCIES.md) · [RUN.md](RUN.md)"]
         return "\n".join(lines) + "\n"
 
-    for shown in range(levels, 0, -1):
-        text = page(shown)
+    shown = min(INDEX_SHOWN_LEVELS, levels)
+    text = page(shown)
+    tokens = count_text_tokens(text)
+    if tokens > budget and shown > 1:
+        shown = 1
+        text = page(1, two_level_tokens=tokens)
         tokens = count_text_tokens(text)
-        if tokens <= budget:
-            break
     return text, {"budget": budget, "tokens": tokens, "over_budget": tokens > budget, "levels": levels,
                   "levels_shown": shown}
 
@@ -358,11 +385,15 @@ def _prepare_render(*, run_dir: Path, source_root: Path, inventory: dict, units:
 
 
 def _write_node_pages(prep: _RenderPrep) -> None:
-    """One Markdown page per tree node under ``docs/nodes``: title, prose, children, and a leaf
-    module's function details. Signatures, line links, anchors, relation rows and repeated
-    commands are gone (design 2.4); the commands are written once in INDEX.md."""
+    """One Markdown page per tree node under ``docs/nodes``: title, the files its members live in,
+    prose, children, and a leaf module's function details. Signatures, line links, anchors, relation
+    rows and repeated commands are gone (design 2.4); the commands are written once in INDEX.md."""
     for nid, node in prep.nodes.items():
         lines = [f"# {node.get('title') or nid}", ""]
+        counts = member_files([uid for uid in node.get("unit_ids") or [] if uid in prep.units],
+                              prep.symbol_records)
+        if counts:
+            lines += [files_line(counts), ""]
         if (node.get("capability") or "").strip():
             lines += [literal_links(node["capability"].strip()), ""]
         if (node.get("summary") or "").strip():
@@ -387,8 +418,7 @@ def _write_index(prep: _RenderPrep) -> dict:
     roots = [nid for nid, node in prep.nodes.items() if not node.get("parent")]
     index_text, index_meta = _entry_page(
         repo=prep.source_root.name, nodes=prep.nodes, children=prep.children, roots=roots,
-        overview=(prep.overview or {}).get("overview"), owner=prep.owner, name_of=prep.name_of,
-        budget=max(INDEX_MIN_TOKENS, int(INDEX_SHARE * (prep.source_tokens or 0))))
+        overview=(prep.overview or {}).get("overview"), owner=prep.owner, name_of=prep.name_of)
     (prep.docs_dir / "INDEX.md").write_text(index_text, encoding="utf-8")
     return index_meta
 
