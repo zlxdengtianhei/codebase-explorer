@@ -64,7 +64,8 @@ def build_parser() -> argparse.ArgumentParser:
     generate_p.add_argument("--api-key-env", default=None, help="environment variable containing the API key")
     generate_p.add_argument("--jobs", type=int, default=4)
     generate_p.add_argument("--effort", default=None,
-                            help="reasoning effort sent to models that support it; DeepSeek defaults to none")
+                            help="reasoning effort for models that accept one (low, high or max); "
+                                 "DeepSeek defaults to thinking disabled")
     generate_p.add_argument("--review", nargs="?", const="sample", choices=REVIEW_MODES,
                             default=DEFAULT_REVIEW,
                             help="separate reviewer and rewriter; off unless given (bare --review = sample)")
@@ -73,7 +74,7 @@ def build_parser() -> argparse.ArgumentParser:
     generate_p.add_argument("--timeout", type=int, default=None,
                             help="seconds per call; overrides API config/model default (otherwise 420). "
                                  "API model defaults: " + json.dumps(MODEL_DEFAULTS, sort_keys=True) +
-                                 "; override via --config JSON keys timeout,output_max_tokens,reasoning_effort,"
+                                 "; override via --config JSON keys timeout,output_max_tokens,reasoning_effort,thinking,"
                                  "response_format,batch_target_tokens,batch_max_tokens,price_per_million")
 
     host_p = sub.add_parser("host", help="Host-agent driven generation: the CLI plans and checks, "

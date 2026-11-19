@@ -32,7 +32,8 @@ def json_object(text: str) -> dict[str, Any]:
     return value
 
 
-UNIT_KINDS = {"class", "function", "method", "group", "module_region"}
+UNIT_KINDS = {"class", "function", "method", "group", "module_region", "module_residual",
+              "type_alias", "interface"}
 EXTRA_TOPICS = {"condition", "failure", "side_effect", "field", "contract"}
 
 
@@ -97,19 +98,6 @@ def _as_text(value: Any) -> str:
     if isinstance(value, (list, dict)):
         return json.dumps(value, ensure_ascii=False, indent=2)
     return str(value)
-
-
-def _fit(value: dict[str, Any], key: str, limit: int, flags: list[str], *, label: str | None = None) -> None:
-    label = label or key
-    text = value.get(key)
-    if not isinstance(text, str):
-        if text is not None:
-            flags.append(f"{label} was {type(text).__name__}; converted to text")
-        text = _as_text(text)
-    if len(text) > limit:
-        flags.append(f"{label} truncated from {len(text)} to {limit} characters")
-        text = truncate(text, limit)
-    value[key] = text
 
 
 def normalize_review(value: Any) -> list[str]:
@@ -195,13 +183,22 @@ def _group_id(title: Any, first: dict, taken: set[str]) -> str:
 
 
 def _decode_unit(raw: dict[str, Any], rows: list[dict], taken: set[str]) -> dict[str, Any]:
-    """The internal unit for one answer unit whose ``h`` and ``explain`` are valid."""
+    """The internal unit for one answer unit whose ``h`` and ``explain`` are valid.
+
+    ``folded`` holds the other inventory ids of the same symbol: the grammar's parts
+    of one declaration, and a file's leftover regions (design 2.1: one detail per
+    symbol, one per file for what is left)."""
     first = rows[0]
     if len(rows) == 1:
         unit: dict[str, Any] = {"id": first["id"], "kind": first["kind"]}
+        if len(first.get("ids") or []) > 1:
+            unit["folded"] = [sid for sid in first["ids"] if sid != first["id"]]
     else:
         unit = {"id": _group_id(raw.get("title"), first, taken), "kind": "group",
                 "members": [row["id"] for row in rows]}
+        folded = [sid for row in rows for sid in row.get("ids") or [] if sid not in unit["members"]]
+        if folded:
+            unit["folded"] = folded
     unit["explain"] = raw["explain"].strip()
     unit["extras"] = [{"topic": _normalize_choice(extra.get("topic"), EXTRA_TOPICS, "contract")[0],
                        "note": extra["note"].strip()}
@@ -284,11 +281,16 @@ def assemble_details(table: list[dict], units: list[dict[str, Any]], *, notes: s
     dispositions: dict[str, dict[str, Any]] = {}
     for unit in units:
         if unit["kind"] == "group":
-            dispositions.update({sid: {"how": "grouped", "unit": unit["id"]} for sid in unit["members"]})
+            for sid in [*unit["members"], *(unit.get("folded") or [])]:
+                dispositions[sid] = {"how": "grouped", "unit": unit["id"]}
         else:
-            dispositions[unit["id"]] = {"how": "unit", "unit": unit["id"]}
+            for sid in [unit["id"], *(unit.get("folded") or [])]:
+                dispositions[sid] = {"how": "unit", "unit": unit["id"]}
     for row in table:
-        dispositions.setdefault(row["id"], {"how": "index_only", "unit": None, "reason": NOT_EXPLAINED})
+        # A row may stand for several inventory ids (one symbol's parts, a file's leftover
+        # regions); every one of them gets the row's disposition, explained or not.
+        for sid in [row["id"], *(row.get("ids") or [])]:
+            dispositions.setdefault(sid, {"how": "index_only", "unit": None, "reason": NOT_EXPLAINED})
     payload: dict[str, Any] = {"units": units, "dispositions": dispositions}
     if notes:
         payload["batch_notes"] = notes
@@ -338,7 +340,7 @@ def cap_details(units: list[dict[str, Any]], tokens: dict[str, int],
     flags: list[str] = []
     names = {row["id"]: row["name"] for row in table or []}
     for unit in units:
-        ids = [unit["id"], *(unit.get("members") or [])]
+        ids = [unit["id"], *(unit.get("members") or []), *(unit.get("folded") or [])]
         cap = detail_cap(sum(tokens.get(sid, 0) for sid in ids))
         text = unit.get("explain") or ""
         if count_text_tokens(text) > cap:

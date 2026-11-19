@@ -34,7 +34,7 @@ from typing import Any
 
 from cbe.checks import json_object
 
-from cbe.model_settings import ApiConfigError, DEFAULT_API_CONFIG, OPTIONAL_REQUEST_KEYS, load_config
+from cbe.model_settings import ApiConfigError, OPTIONAL_REQUEST_KEYS, load_config
 
 
 #: calls.csv columns; unknown usage stays an empty field, never zero.
@@ -391,7 +391,8 @@ def invoke(*, task: str, attempt: int, prompt: str, run_dir: Path,
         json.dumps({"endpoint": log_endpoint, "model": model, "status": status,
                     "actual_model": actual_model,
                     "request_settings": {key: settings[key] for key in
-                                         ("output_max_tokens", "reasoning_effort", "response_format") if key in settings},
+                                         ("output_max_tokens", "reasoning_effort", "thinking", "response_format")
+                                         if key in settings},
                     "timeout": timeout,
                     "finish_reason": finish_reason, "choice": choice,
                     "usage": usage, "provider_usage": provider_usage,

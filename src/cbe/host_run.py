@@ -46,7 +46,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterator
 
-from cbe import aggregation, batching, catalog_query, checks, docs, grounding, layers, prompts, symbols, treename
+from cbe import (aggregation, batching, catalog_query, checks, docs, grounding, layers, prompts,
+                  skeleton, symbols, treename)
 from cbe import __version__
 from cbe import source_context
 from cbe.grammars import ContextError
@@ -807,7 +808,9 @@ def _layer_body(run_dir: Path, state: dict[str, Any], task: dict[str, Any]) -> s
         chunk = {"members": members, "candidates": task.get("candidates") or [members]}
         labels = layers.labels_for(members, unit_layer=True)
         blocks = layers.leaf_blocks(records, chunk, labels, edges)
-        return prompts.layer_prompt(1, blocks, "functions, methods and classes")
+        return prompts.layer_prompt(1, blocks, "functions, methods and classes",
+                                    member_count=len(members),
+                                    expected_groups=layers.expected_groups(len(members)))
     below = _groups_at(run_dir, state, level - 1)
     chosen = [row for row in below if row["id"] in set(members)]
     labels = layers.labels_for(members, unit_layer=False)
@@ -1025,7 +1028,7 @@ def _budget_gate(state: dict[str, Any], extra_source: int) -> bool:
 
 def _gap_source_tokens(run_dir: Path, state: dict[str, Any], gaps: list[dict]) -> int:
     if state.get("driver") == "script":
-        wanted = {row["id"] for row in gaps}
+        wanted = {sid for row in gaps for sid in row.get("ids") or [row["id"]]}
         return sum(count_text_tokens(chunk.get("text") or "")
                    for chunk in _verified_context(run_dir, state).get("chunks") or []
                    if chunk["id"] in wanted)
@@ -1044,7 +1047,7 @@ def _ground_answer(run_dir: Path, state: dict[str, Any], table: list[dict], deco
                                  for symbol in entry.get("symbols") or [])
     suspects = {}
     for unit in decoded.units:
-        ids = [unit["id"], *(unit.get("members") or [])]
+        ids = [unit["id"], *(unit.get("members") or []), *(unit.get("folded") or [])]
         text = [chunks[sid].get("text") or "" for sid in ids if sid in chunks]
         text += [by_id[sid]["path"] for sid in ids if sid in by_id] + ids
         missing = grounding.ungrounded(unit["explain"], "\n".join(text), names)
@@ -1137,20 +1140,43 @@ def _settle_detail(run_dir: Path, state: dict[str, Any], task: dict[str, Any], v
         partial["flags"] += [f"unexplained: {row['id']}" for row in gaps]
     _partial_path(run_dir, task["id"]).unlink(missing_ok=True)
     payload = checks.assemble_details(table, partial["units"], notes=partial["notes"])
-    source_tokens = {row["id"]: count_text_tokens(chunk.get("text") or "")
-                     for row in table
-                     for chunk in _verified_context(run_dir, state).get("chunks") or []
-                     if chunk["id"] == row["id"]}
+    chunk_tokens = {chunk["id"]: count_text_tokens(chunk.get("text") or "")
+                    for chunk in _verified_context(run_dir, state).get("chunks") or []}
+    source_tokens = {row["id"]: sum(chunk_tokens.get(sid, 0)
+                                    for sid in row.get("ids") or [row["id"]])
+                     for row in table}
     partial["flags"] += checks.cap_details(payload["units"], source_tokens, table)
     return None, payload, partial["flags"]
+
+
+def _layer_names(run_dir: Path, state: dict[str, Any], task: dict[str, Any],
+                 below: list[dict] | None) -> dict[str, str]:
+    """Display names of a layer task's members: symbol names at the leaves, group titles above.
+
+    A program-cut part names its own members with these (design 2.3); a file's leftover
+    regions have no symbol name, so they are named after the file."""
+    if (task.get("level") or 1) == 1:
+        records, _ = _aggregation_inputs(run_dir, state)
+        names: dict[str, str] = {}
+        for uid in task.get("members") or []:
+            name = skeleton.symbol_words(uid).strip()
+            if not name:
+                paths = skeleton.unit_paths(records.get(uid) or {}) or [uid.split("::", 1)[0]]
+                name = f"{Path(paths[0]).name} module code"
+            names[uid] = name
+        return names
+    return {group["id"]: group.get("title") or group["id"] for group in below or []}
 
 
 def _settle_layer(run_dir: Path, state: dict[str, Any], task: dict[str, Any], value: dict[str, Any] | None,
                   error: str | None, final: bool) -> tuple[str | None, dict[str, Any] | None, list[str]]:
     """Decode one layer answer (see ``layers.decode`` and design 2.3's program checks).
 
-    An unusable answer is asked again once; after that the chunk is grouped by the
-    program's candidates and the groups carry a program-made note, so the run always
+    A group above 12 members is asked again once, with the instruction to divide it by
+    function; a second oversized answer is cut by the program's candidate grouping. An
+    answer that does not partition the members is asked again once; on the last answer the
+    groups it placed are kept and its leftovers join their candidate group. A chunk with
+    no such home is grouped by the program's candidates and marked, so the run always
     ends with a usable layer."""
     if value is None and not (error or "").startswith("schema_error"):
         return error, None, []  # a provider-side failure: no answer to decode
@@ -1160,9 +1186,17 @@ def _settle_layer(run_dir: Path, state: dict[str, Any], task: dict[str, Any], va
     below = _groups_at(run_dir, state, level - 1) if level > 1 else None
     subtrees = _subtrees(below)
     chunk = {"members": members, "candidates": task.get("candidates") or [members]}
+    shape_retry = bool(task.get("shape_retry"))
     if value is not None:
         try:
-            groups, flags = layers.decode(value, chunk, labels, level, subtrees)
+            groups, flags = layers.decode(
+                value, chunk, labels, level, subtrees,
+                allow_split=shape_retry or final, names=_layer_names(run_dir, state, task, below))
+        except layers.LayerShapeError as exc:
+            # Design 2.3: a group above 12 members, or a group of one, goes back to the
+            # same author once; the next answer is cut or merged by the program instead.
+            task["shape_retry"] = True
+            error = f"schema_error:{exc}"
         except layers.LayerError as exc:
             error = f"schema_error:{exc}"
         else:
@@ -1657,6 +1691,39 @@ def _layer_shape(run_dir: Path, state: dict[str, Any]) -> list[dict]:
     return shape
 
 
+def _clustering_report(run_dir: Path, state: dict[str, Any], context: dict) -> dict:
+    """What RUN.md says about the grouping: layers, program cuts and merges, and the graph.
+
+    Design 2.3: the structure is the model's unless the program had to cut or merge a
+    group; the reader sees which, and that call counts were unavailable without a graph."""
+    from cbe.graph import graph_state
+    report: dict[str, Any] = {"layers": [],
+                              "graph": graph_state(context.get("graph"))[0] == "provided"}
+    for level, groups in enumerate(_layer_levels(run_dir, state), 1):
+        ids = _layer_task_ids(state, level)
+        split: list[str] = []
+        merged: list[str] = []
+        fallback: list[str] = []
+        for tid in ids:
+            task = state["tasks"][tid]
+            for flag in task.get("flags") or []:
+                if " split into " in flag:
+                    split.append(flag)
+                elif " merged into " in flag:
+                    merged.append(flag)
+                elif flag.startswith("program-made grouping"):
+                    fallback.append(f"{tid}: {flag}")
+        report["layers"].append({"level": level, "tasks": len(ids), "groups": len(groups),
+                                 "program_made": sum(1 for group in groups
+                                                     if group.get("note")
+                                                     and not group["note"].startswith("program-made part")),
+                                 "parts": sum(1 for group in groups
+                                              if (group.get("note") or "").startswith("program-made part")),
+                                 "retried": sum(1 for tid in ids if state["tasks"][tid].get("shape_retry")),
+                                 "split": split, "merged": merged, "fallback": fallback})
+    return report
+
+
 def _detail_stats(units: dict) -> dict:
     sizes = sorted(count_text_tokens(unit.get("explain") or "") for unit in units.values())
     if not sizes:
@@ -1687,7 +1754,8 @@ def _render(run_dir: Path, state: dict[str, Any]) -> None:
     elif open_layers:
         index_notes.append("The module tree is still being grouped; these tasks are not finished: "
                            + ", ".join(open_layers) + ".")
-    made = sum(1 for node in tree.get("nodes") or [] if node.get("note"))
+    made = sum(1 for node in tree.get("nodes") or []
+               if node.get("note") and not (node["note"] or "").startswith("program-made part"))
     if made:
         index_notes.append(f"{made} group(s) are program-made because no usable clustering answer "
                            "was accepted for them (see RUN.md and the task flags).")
@@ -1729,11 +1797,12 @@ def _render(run_dir: Path, state: dict[str, Any]) -> None:
                            "because no model answer explained them.")
     read_budget = _read_budget(state)
     basis = _basis(run_dir, state, context)
+    clustering = _clustering_report(run_dir, state, context)
     try:
         meta = docs.render(run_dir=run_dir, source_root=Path(state["repo"]),
                                inventory=state.get("inventory") or {}, units=units,
                                dispositions=dispositions, tree=tree, index_notes=index_notes,
-                               overview=overview, read_budget=read_budget,
+                               overview=overview, read_budget=read_budget, clustering=clustering,
                                graph=context.get("graph"), context=context, basis=basis,
                                source_tokens=source_tokens,
                                languages={row["path"]: row.get("language") or "unknown" for row in context["files"]})
@@ -1790,6 +1859,9 @@ def _render(run_dir: Path, state: dict[str, Any]) -> None:
                        "groups": sum(row["groups"] for row in shape),
                        "leaves": sum(1 for node in tree["nodes"] if node.get("unit_ids")),
                        "program_made_groups": made,
+                       "program_split_parts": sum(1 for node in tree["nodes"]
+                                                  if (node.get("note") or "").startswith("program-made part")),
+                       "oversized_answers_sent_back": sum(row["retried"] for row in clustering["layers"]),
                        "layer_tasks": sum(task["kind"] == "layer" for task in state["tasks"].values()),
                        "index": meta["index"]}
     summary["node_dependencies"] = meta["relationship_counts"]

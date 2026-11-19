@@ -1,15 +1,15 @@
 """Program-computed module skeleton: units + edges in, a tree of modules out.
 
 Pure function. It calls no model, reads and writes no file, and knows nothing
-about the task state machine. A model later only names the modules (``treename``).
+about the task state machine. Its grouping is only a candidate hint for the model's
+layered clustering (``layers``); it is never published as the tree.
 
 How the tree is computed
 ------------------------
 1. One undirected weighted graph.  Nodes are units plus "anchors" (one per file,
    one per directory) that only pull units of the same file or directory
    together; anchors are dropped from the result.
-   * dependency edges: ``1 + ln(count)``; model-inferred relations use
-     ``Weights.relation``; an edge into a unit is divided by
+   * dependency edges: ``1 + ln(count)``; an edge into a unit is divided by
      ``ln(e + in_degree(unit))`` so a helper that everybody calls does not glue
      everybody together;
    * position: unit - file ``w_file``, file - directory ``w_dir``,
@@ -58,7 +58,6 @@ class Weights:
     w_dir: float = 0.5
     w_text: float = 0.5
     text_floor: float = 0.25
-    relation: float = 0.5
 
 
 # ---------------------------------------------------------------- graph ----
@@ -174,8 +173,7 @@ def _build_graph(units: dict, edges: list[dict], w: Weights):
         a, b = e.get("from"), e.get("to")
         if a not in units or b not in units or a == b:
             continue
-        base = w.relation if e.get("kind") == "relation" else 1.0
-        weight = base * (1 + math.log(max(int(e.get("count") or 1), 1))) / math.log(math.e + len(indeg[b]))
+        weight = (1 + math.log(max(int(e.get("count") or 1), 1))) / math.log(math.e + len(indeg[b]))
         if weight > 0:
             acc[(a, b) if a < b else (b, a)] += weight
     dep = dict(acc)

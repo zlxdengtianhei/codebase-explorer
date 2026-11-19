@@ -19,7 +19,9 @@ DEFAULT_API_CONFIG: dict[str, Any] = {
     "extra_headers": {},
 }
 #: Provider request fields sent only when configured; ``api_completion`` reads exactly these.
-OPTIONAL_REQUEST_KEYS = ("response_format", "top_p", "reasoning_effort")
+#: ``thinking`` is the switch DeepSeek documents for its OpenAI-compatible API; the
+#: request body is the body, so a field here lands where an SDK's ``extra_body`` would.
+OPTIONAL_REQUEST_KEYS = ("response_format", "top_p", "reasoning_effort", "thinking")
 #: Every config key the code reads. ``load_config`` rejects anything else.
 ALLOWED_API_CONFIG_KEYS = frozenset(DEFAULT_API_CONFIG) | frozenset(OPTIONAL_REQUEST_KEYS) | {
     "timeout", "output_max_tokens", "batch_target_tokens", "batch_max_tokens",
@@ -42,10 +44,12 @@ class ApiConfigError(ValueError):
 
 
 #: Design 2.5: DeepSeek runs in its non-thinking mode, with room for a whole batch answer.
+#: DeepSeek has no ``reasoning_effort: none``: the switch is ``thinking: {"type": "disabled"}``
+#: (docs/running.md, "Subagent effort"). An effort level is sent only when the user asks for one.
 DEEPSEEK_DEFAULTS: dict[str, Any] = {
     "timeout": 1800,
     "output_max_tokens": 32768,
-    "reasoning_effort": "none",
+    "thinking": {"type": "disabled"},
     "response_format": {"type": "json_object"},
 }
 

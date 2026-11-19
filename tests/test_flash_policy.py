@@ -163,6 +163,17 @@ def test_only_source_batch_max_uses_batching_constants_and_clamps_target(tmp_pat
         load_config(config, "other/model")
 
 
+def test_a_deepseek_model_turns_thinking_off_with_the_thinking_switch(tmp_path):
+    # Design 2.5: DeepSeek has no ``none`` effort level; the switch is ``thinking``.
+    from cbe import model_settings
+    from cbe.api_completion import _request_body
+    settings = model_settings.load_config(tmp_path / "none.json", "mistral/deepseek-v4-1-flash-1017")
+    assert settings["thinking"] == {"type": "disabled"}
+    assert "reasoning_effort" not in settings
+    body = _request_body("mistral/deepseek-v4-1-flash-1017", "prompt", settings)
+    assert body["thinking"] == {"type": "disabled"} and "reasoning_effort" not in body
+
+
 def test_cli_help_uses_current_model_defaults(tmp_path, monkeypatch, capsys):
     from cbe import cli, model_settings
     monkeypatch.setitem(model_settings.MODEL_DEFAULTS, "test/future-model", {

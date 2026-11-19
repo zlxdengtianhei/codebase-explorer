@@ -35,7 +35,7 @@ from pathlib import Path
 from .identity import repository_files, file_id
 from ._calls import CallResolver
 from .resolution import go_modules
-from .toolchain import MIN_JAVA_MAJOR, JavaInstall, find_joern, java_environment, setup_hint  # noqa: F401
+from .toolchain import MIN_JAVA_MAJOR, JavaInstall, java_environment, setup_hint  # noqa: F401
 
 #: language id (canonical, matches ``cbe.source_context``) -> Joern frontend
 #: flag.  ``pythonsrc``/``javasrc`` are the source frontends; ``python``/``java``

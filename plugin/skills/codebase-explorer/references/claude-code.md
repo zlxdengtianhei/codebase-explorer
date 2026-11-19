@@ -26,7 +26,7 @@ For each task from `cbe host next`, call the Agent tool with:
 - `prompt`: the task's `dispatch_message`, exactly.
 - `subagent_type`: `cbe-writer` once `cbe-install` (or the plugin) has installed it; the plugin's copy may be listed as `codebase-explorer:cbe-writer`. If the Agent tool does not list it, use `general-purpose`.
 - `model`: the model the user chose. If the user did not choose, `sonnet` is enough for detail, grouping and overview tasks.
-- `effort: "low"`: set it when the Agent tool takes it. Detail, grouping and the overview are short writing jobs; low effort is the default the design asks for. If the user asked for another level, follow the user.
+- `effort: "low"`: set it when the Agent tool takes it. Detail, grouping and the overview are short writing jobs; low effort is the default the design asks for. If the user asked for another level, follow the user. Low is the lowest level Claude Code has: the accepted values are `low`, `medium`, `high`, `xhigh` and `max`. There is no per-subagent thinking switch, and `none` or `off` is not a value (`claude --effort none` warns and keeps the default). On Opus 5.5, Sonnet 5.5, Haiku 5.5 and the Fable models, thinking cannot be turned off at all; the model decides per step from the effort level. The `/tasks` view shows the effort level a running subagent got.
 
 Issue one Agent call per task of a `next` batch, all in a single message, so the subagents run concurrently. `next` also returns a re-ask of a rejected task: start a new subagent for it too, with the same `description` and `prompt`.
 

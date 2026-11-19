@@ -7,7 +7,7 @@
 - A code graph stores facts about code as nodes and edges. Each kind of graph answers one kind of question: which file depends on which, which function calls which, in what order statements run, where a value flows.
 - CBE can build four kinds: import, call, control flow (CFG) and, only on request, data flow. All are optional; without a graph CBE still writes the map.
 - Joern makes the call, CFG and data-flow edges. Grimp (Python) and dependency-cruiser (JavaScript, TypeScript) resolve imports. Tree-sitter makes no edges: it cuts files into chunks and finds the symbols.
-- CBE then groups code units into modules with Louvain community detection. A model only names the modules.
+- CBE then groups code units into modules: a model reads each unit's detail and groups them layer by layer, and a Louvain grouping is only a candidate hint it may follow or change.
 - CBE does not use SCIP or language-server indexes, CodeQL, or a ranked symbol map. Section 3 gives the reasons where they were recorded.
 - Call edges are the weakest part. "Resolved" means the analyzer linked the call to one target; it does not prove the link is right. Section 4 lists the errors we know of.
 
@@ -39,7 +39,7 @@ CBE gives each call and import edge a status: `resolved`, `ambiguous`, `unresolv
 - **Tree-sitter** cuts every file at syntax boundaries and finds the symbols. Every byte lands in a chunk.
 - **Joern 4.0.654** gives calls, CFG and, on request, data flow. With Java it is about 1.9 GB; `cbe graph setup` installs Joern, and a Java runtime when no Java 21 or newer is found, into your user cache ([Code graph](../README.md#code-graph)). CBE runs analyzers and does not write its own (`src/cbe/graph.py`: "It never re-implements a language analyzer").
 - **Grimp** gives the Python import graph (the `graphs` extra). **dependency-cruiser** gives the JavaScript and TypeScript import graph (needs Node.js).
-- **Louvain** (networkx, fixed seed) groups the units into modules. Edge weights come from calls and imports, shared files and directories, and similar wording. An edge into a unit is divided by `ln(e + in_degree)`, so a helper that everybody calls does not pull everybody into one module (`src/cbe/skeleton.py`). The grouping also uses the relations the explanation model reported; the dependency view labels a module pair found only that way model-inferred.
+- **Louvain** (networkx, fixed seed) makes a candidate grouping of the units. Edge weights come from calls and imports, shared files and directories, and similar wording. An edge into a unit is divided by `ln(e + in_degree)`, so a helper that everybody calls does not pull everybody into one module (`src/cbe/skeleton.py`). The candidate grouping is a hint for the model's layered clustering; the published tree is the model's answer.
 
 | Route | Used? | Why not |
 |---|---|---|

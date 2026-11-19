@@ -8,7 +8,10 @@ is read once; the read budget is recorded and enforced.
 - One detail for every function, method and class: the 40-token "index only" rule is
   gone, and a tiny member gets one phrase. A detail is 1 to 3 sentences, about 25 to
   60 tokens, hard ceiling 100 and never more than half its own source; the program cuts
-  an over-long one and flags it.
+  an over-long one and flags it. One symbol is one detail: the chunks a grammar cut out
+  of one declaration (overloads, a long function) are merged into one numbered row before
+  the model sees them, and a file's leftover regions become one file-level entry. A type
+  alias or an interface gets one short phrase.
 - The read budget is in `summary.json`: `read_tokens`, `source_read_tokens`,
   `read_ratio`, `source_read_ratio`, with a breakdown by task kind and the basis of the
   count. A re-ask sends only the missing symbols' source blocks. A run stops asking for
@@ -16,21 +19,33 @@ is read once; the read budget is recorded and enforced.
   unexplained.
 - The module tree is made by the model from the detail alone: `layer_<n>_<k>` tasks
   group it, the layer count follows from the answers (a layer with at most eight groups
-  is the top), and one `overview` task writes the L0 page. The program checks each
-  answer (every member once, 2 to 12 members, summary length caps); an unusable answer
-  is asked again once, then the program groups by the `skeleton` candidates and marks
-  the groups. `tree_name_<k>` and `tree_top`, the Louvain tree that served them, and the
-  model-written relations are removed.
+  is the top), and one `overview` task writes the L0 page. A leaf chunk holds about
+  12,000 tokens of detail and at most about 120 members, and its task says how many
+  groups to expect (about one per eight members). The program checks each answer (every
+  member once, 2 to 12 members, a summary at most as long as its cap: 150 tokens at the
+  leaves, 300 above them, 500 for the overview). A group above twelve members, or a
+  group of one, is asked again once; when the answer comes back wrong again the program
+  cuts an oversized group along the `skeleton` candidate grouping (never by member order)
+  and writes each cut part's responsibility line and summary from that part's own
+  members, and merges a group of one into a neighbour. When the last answer leaves
+  members out, the groups it placed are kept and the leftovers join their candidate
+  group. `docs/RUN.md` lists the layers, every cut and merge the program made, and
+  whether the run had a graph; without a graph the layer blocks carry no call counts.
+  `tree_name_<k>` and `tree_top`, the Louvain tree that served them, and the
+  model-written relations (and the `model-inferred` dependency label) are removed.
 - Review and repair are off by default: `--review` (bare = sample) or `--review all`
   turns them on for `cbe host plan` and `cbe generate`.
 - Pages are prose only: signature lines, source links and their definitions, anchors,
   relation rows and the repeated footer are gone from node pages; INDEX writes the three
-  commands once. `find`, `query` and `source` still resolve names from the pages.
+  commands once. A function's heading is its symbol name (never `path:symbol`, never a
+  line range); a file's leftover regions are one `X module code` heading. `find`,
+  `query` and `source` still resolve names from the pages.
   `summary.json` records the page-token ratio; a run on a repository of 20,000 tokens or
   more is checked against 0.7x the source.
-- Subagents default to low reasoning effort in the Skill and both host pages; the API
-  driver sends `reasoning_effort: low` for DeepSeek (non-thinking), and `--effort`
-  overrides it.
+- Subagents default to the lowest reasoning effort their host offers, written per host in
+  the Skill and its Claude Code, Codex and OpenCode pages; the API driver turns DeepSeek's
+  thinking off with `thinking: {"type": "disabled"}` (DeepSeek has no `none` effort level),
+  and `--effort` sets `reasoning_effort` for models that accept one.
 
 ## 2.3.0 (2026-11-13)
 

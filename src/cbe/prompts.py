@@ -30,6 +30,8 @@ NO_FILE_RULES = (
 DETAIL_STYLE = """DETAIL STYLE:
 - Write one detail for every function, method and class in the list. A tiny one (a getter, a setter, a one-line predicate) gets one short phrase; do not skip it.
 - A run of trivial members of one class may share one grouped unit, but the sentence must name every symbol it covers (write the symbol's name).
+- A file-level entry (its name ends in "module code") covers everything in the file that is not a function, method or class: one sentence saying what the file holds.
+- A type alias or an interface gets one short phrase saying what it stands for.
 - Length: 1 to 3 sentences, about 25 to 60 tokens. Hard ceiling: 100 tokens, and never more than half the symbol's own source tokens; a small symbol still gets about 25 tokens of room.
 - Start with the subject: "`parse_config` reads the file and ...". Say what it does, what it returns or changes, and what happens on failure. Do not restate the signature, parameter names or types.
 - A grouped unit needs a short `title` (2 to 6 words) and one `explain` that covers the group. Every symbol in the group must appear by name in that text.
@@ -244,18 +246,26 @@ Return groups. Each group has:
 
 Rules:
 - Group size: 2 to 12 members. Do not return a group of one; merge it with its closest neighbour.
+- Check every group against that size before you answer. A candidate group above 12 members becomes two or three groups of 4 to 12; together they still cover its members.
 - Follow the work, not the directory names. A candidate group is only a hint: you may split it, merge it or move a member.
 - A function called from 20 or more places may go into a shared-utilities group.
 - Write prose, not a listing: no call counts, symbols, file paths or generated labels in the sentences.
+
+The task body tells you how many members this chunk has and about how many groups that implies. Count the groups from the work, not from that hint.
 
 Answer with one JSON object and nothing else:
 {"groups": [{"title": "...", "capability": "...", "summary": "...", "members": ["u1", "u2"], "why": "..."}]}
 """
 
 
-def layer_prompt(level: int, blocks: list[str], member_noun: str) -> str:
+def layer_prompt(level: int, blocks: list[str], member_noun: str,
+                 member_count: int | None = None, expected_groups: int | None = None) -> str:
     """One layer task: the instruction plus this chunk's member blocks."""
-    return (LAYER_INSTRUCTIONS + f"\nThis is layer {level}; its members are {member_noun}.\n\nMEMBERS:\n\n"
+    hint = ""
+    if member_count and expected_groups:
+        hint = (f"\nThis chunk has {member_count} members; expect about {expected_groups} groups "
+                f"of 2 to 12 members each.\n")
+    return (LAYER_INSTRUCTIONS + f"\nThis is layer {level}; its members are {member_noun}.{hint}\n\nMEMBERS:\n\n"
             + "\n\n".join(blocks))
 
 

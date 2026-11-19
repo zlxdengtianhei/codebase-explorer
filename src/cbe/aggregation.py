@@ -58,8 +58,7 @@ def relationship_view(tree: dict, edges: list[dict], graph: dict | None, *, grap
 
     state, reason = graph_state(graph)
     membership = {uid: n["id"] for n in tree.get("nodes", []) for uid in n.get("unit_ids", [])}
-    resolved = [e for e in edges if e["kind"] in {"call", "import"}
-                and e.get("provenance") != "model_inferred"] if state == "provided" else []
+    resolved = [e for e in edges if e["kind"] in {"call", "import"}] if state == "provided" else []
     nodes = {n["id"]: n for n in tree.get("nodes", [])}
     ancestors = {}
     for nid in nodes:
@@ -105,14 +104,13 @@ def relationship_view(tree: dict, edges: list[dict], graph: dict | None, *, grap
     dependencies = [{"from": a, "to": b,
                      "source": "containment" if contains(a, b) and (a, b) in model else
                                "graph_confirmed" if counts[a, b] and (a, b) in model else
-                               "model_inferred" if (a, b) in model else
                                "within_containment" if contains(a, b) else "graph_only",
                      "count": counts[a, b],
                      **({"reverse_count": reverse_counts[a, b]} if contains(a, b) and (a, b) in model else {}),
                      "containment": contains(a, b), "kinds": dict(sorted(kinds[a, b].items())),
                      "basis": model.get((a, b), ""), "description": ""} for a, b in pairs]
     totals = {source: sum(e["source"] == source for e in dependencies)
-              for source in ("graph_confirmed", "model_inferred", "graph_only")}
+              for source in ("graph_confirmed", "graph_only")}
     totals["graph_only"] = len(graph_only)
     return {"dependencies": dependencies, "counts": totals,
             "within_containment_count": len(within_containment),

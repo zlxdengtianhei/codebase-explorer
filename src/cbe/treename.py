@@ -117,7 +117,7 @@ def dependencies(tree: Tree, edges: list[dict]) -> list[dict]:
         pa, pb = path_of.get(edge["from"]), path_of.get(edge["to"])
         if not pa or not pb or edge["from"] == edge["to"]:
             continue
-        if edge.get("kind") not in ("call", "import") or edge.get("provenance") == "model_inferred":
+        if edge.get("kind") not in ("call", "import"):
             continue
         depth = next((i for i, (x, y) in enumerate(zip(pa, pb)) if x != y), None)
         if depth is not None:

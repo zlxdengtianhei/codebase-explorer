@@ -9,7 +9,8 @@ turns the detail into a tree:
   layer task;
 * ``blocks`` - what one task sees: members, candidate groups, call counts;
 * ``decode`` - one layer answer into groups, with the program checks of design
-  2.3 (each member once, 2-12 members, summary length caps);
+  2.3 (each member once, 2-12 members, summary length caps); a group above 12
+  members is sent back once so its author can divide it by function;
 * ``fallback_groups`` - what the program makes of a chunk whose answer stays
   unusable (design 2.3: fall back to the candidate grouping, not to a re-ask);
 * ``assemble`` - the layers into the published tree.
@@ -24,6 +25,7 @@ from __future__ import annotations
 
 import hashlib
 from collections import Counter
+from pathlib import Path
 
 from cbe import skeleton, treename
 from cbe.records import summary_sentence
@@ -31,22 +33,35 @@ from cbe.treename import normalize_title
 from cbe.token_budget import count_text_tokens
 
 LAYER_BATCH_TOKENS = 12_000
+#: Design 2.3: one leaf chunk holds about this many members, so one author can group it.
+MAX_CHUNK_MEMBERS = 120
 MIN_GROUP = 2
 MAX_GROUP = 12
 TOP_MAX = 8
-#: Summary cap by height above the leaf layer (design 2.3's 80-150 / 150-300).
-SUMMARY_CAPS = {1: 100, 2: 150}
-SUMMARY_CAP_TOP = 300
+#: Summary caps by the layer above the leaves (design 2.3: 150 / 300 / 500 tokens).
+SUMMARY_CAPS = {1: 150, 2: 300}
+SUMMARY_CAP_TOP = 500
 CAPABILITY_WORDS = 45
 TITLE_WORDS = 9
+#: Design 2.3: a chunk of N members is expected to become about N/8 groups.
+MEMBERS_PER_GROUP = 8
 
 
 class LayerError(ValueError):
     """A layer answer cannot be used at all."""
 
 
+class LayerShapeError(LayerError):
+    """A group is below two or above twelve members: the same author is asked to fix its shape."""
+
+
 def summary_cap(level: int) -> int:
-    return SUMMARY_CAPS.get(level, 150 if level == 2 else SUMMARY_CAP_TOP)
+    return SUMMARY_CAPS.get(level, SUMMARY_CAPS[2] if level == 2 else SUMMARY_CAP_TOP)
+
+
+def expected_groups(members: int) -> int:
+    """The count the chunk hint names (design 2.3: about one group per eight members)."""
+    return max(1, round(members / MEMBERS_PER_GROUP))
 
 
 def candidate_groups(units: dict, edges: list[dict]) -> list[list[str]]:
@@ -60,16 +75,21 @@ def _member_tokens(unit: dict) -> int:
 
 
 def leaf_chunks(units: dict, candidates: list[list[str]]) -> list[dict]:
-    """Cut the detail into chunks of about ``LAYER_BATCH_TOKENS``, keeping candidates whole."""
-    chunks, current, used = [], [], 0
+    """Cut the detail into chunks of about ``LAYER_BATCH_TOKENS`` and ``MAX_CHUNK_MEMBERS``,
+    keeping candidates whole (design 2.3: a chunk small enough for the model to group)."""
+    chunks, current, used, members = [], [], 0, 0
     for candidate in candidates:
-        size = sum(_member_tokens(units[uid]) for uid in candidate if uid in units) + 60
-        if current and used + size > LAYER_BATCH_TOKENS:
+        inside = [uid for uid in candidate if uid in units]
+        size = sum(_member_tokens(units[uid]) for uid in inside) + 60
+        too_big = current and (used + size > LAYER_BATCH_TOKENS
+                              or members + len(inside) > MAX_CHUNK_MEMBERS)
+        if too_big:
             chunks.append({"members": [uid for group in current for uid in group],
                            "candidates": list(current)})
-            current, used = [], 0
+            current, used, members = [], 0, 0
         current.append(list(candidate))
         used += size
+        members += len(inside)
     if current:
         chunks.append({"members": [uid for group in current for uid in group],
                        "candidates": list(current)})
@@ -119,9 +139,14 @@ def leaf_blocks(units: dict, chunk: dict, labels: dict[str, str], edges: list[di
             unit = units.get(uid)
             if unit is None:
                 continue
-            path = (skeleton.unit_paths(unit) or ["?"])[0]
+            # The file name keeps the locality hint; the directory does not, because the
+            # answer follows the work and not the tree. The symbol name is skipped when the
+            # detail already opens with it (design 2.1 starts every detail with its subject).
+            path = Path((skeleton.unit_paths(unit) or ["?"])[0]).name
+            name = skeleton.symbol_words(uid).strip()
             text = " ".join((summary_sentence(unit) or "").split())
-            lines.append(f"  {labels[uid]}: {path} · {skeleton.symbol_words(uid) or 'group'} · {text}")
+            head = f"  {labels[uid]}: {path} · " + (f"{name} · " if name and name.lower() not in text.lower() else "")
+            lines.append(head + text)
         out = sorted(((b, n) for (a, b), n in ties.items() if a == label), key=lambda t: (-t[1], t[0]))
         into = sorted(((a, n) for (a, b), n in ties.items() if b == label), key=lambda t: (-t[1], t[0]))
         if out:
@@ -194,10 +219,14 @@ def _record(row: dict, subtree: list[str], members: list[str], level: int) -> tu
 
 
 def decode(answer: dict, chunk: dict, labels: dict[str, str], level: int,
-           subtrees: dict[str, list[str]]) -> tuple[list[dict], list[str]]:
+           subtrees: dict[str, list[str]], *, allow_split: bool = False,
+           names: dict[str, str] | None = None) -> tuple[list[dict], list[str]]:
     """Decode one layer answer against its chunk (see design 2.3's program checks).
 
     ``subtrees`` maps a member id above the leaf layer to the units it covers.
+    A group above ``MAX_GROUP`` members, or one below two, is sent back once
+    (``LayerShapeError``) so the same author can divide or merge it; only when it comes
+    back wrong again (``allow_split``) does the program cut it, by the candidate grouping.
     Raises ``LayerError`` when the answer does not partition the members."""
     rows = answer.get("groups") if isinstance(answer, dict) else None
     if not isinstance(rows, list):
@@ -235,27 +264,89 @@ def decode(answer: dict, chunk: dict, labels: dict[str, str], level: int,
         groups.append(group)
     missing = [label for member, label in labels.items() if member not in seen]
     repeated = [label for member, label in labels.items() if seen[member] > 1]
-    if missing:
+    if missing and not allow_split:
         problems.append(f"modules without a group: {', '.join(missing[:20])}")
     if repeated:
         problems.append(f"modules in more than one group: {', '.join(repeated[:20])}")
     if problems:
         raise LayerError("; ".join(problems))
+    left_out = [member for member in members_in_order(labels) if seen[member] == 0]
+    if left_out:
+        groups, placed, still = _place_left_out(groups, left_out, list(chunk.get("candidates") or []),
+                                               level, subtrees, names or {})
+        flags += placed
+        if still:
+            raise LayerError("modules without a group: "
+                             + ", ".join(labels[uid] for uid in still[:20]))
     minimum = MIN_GROUP if len(labels) >= MIN_GROUP else 1
-    groups, shaped = _shape_groups(groups, minimum, level, subtrees)
+    oversized = [group for group in groups if len(group["members"]) > MAX_GROUP]
+    undersized = [group for group in groups if len(group["members"]) < minimum] if minimum > 1 else []
+    if oversized and not allow_split:
+        listed = "; ".join(f"{group['title']!r} has {len(group['members'])}" for group in oversized[:6])
+        more = f" and {len(oversized) - 6} more" if len(oversized) > 6 else ""
+        raise LayerShapeError(
+            f"the limit is {MAX_GROUP} members and these groups are larger: {listed}{more}. "
+            f"Divide each of them by function into groups of 4 to {MAX_GROUP} members, keep every other "
+            "group as it is, and answer with the same JSON shape.")
+    if undersized and not allow_split:
+        listed = ", ".join(repr(group["title"]) for group in undersized[:6])
+        raise LayerShapeError(
+            f"every group needs 2 to {MAX_GROUP} members and these have one: {listed}. "
+            "Merge each of them with its closest neighbour, keep every other group as it is, "
+            "and answer with the same JSON shape.")
+    groups, shaped = _shape_groups(groups, minimum, level, subtrees,
+                                   list(chunk.get("candidates") or []), names or {})
     return groups, flags + shaped
+
+
+def members_in_order(labels: dict[str, str]) -> list[str]:
+    """The chunk's members in the order the prompt lists them (labels are u1, u2 ... or g1 ...)."""
+    return [member for member, _ in sorted(labels.items(), key=lambda item: int(item[1][1:]))]
+
+
+def _place_left_out(groups: list[dict], left_out: list[str], candidates: list[list[str]], level: int,
+                    subtrees: dict[str, list[str]],
+                    names: dict[str, str]) -> tuple[list[dict], list[str], list[str]]:
+    """Put members a final answer left out into the group that holds their candidate.
+
+    Design 2.3 asks once more for an answer that does not partition the members; when the
+    last answer still leaves some out, its own groups are kept and the leftovers join the
+    groups that already hold most of their candidate group. A leftover with no such home
+    keeps the program's candidate grouping (the whole-chunk fallback)."""
+    flags: list[str] = []
+    remaining = list(left_out)
+    for candidate in candidates:
+        piece = [uid for uid in candidate if uid in remaining]
+        if not piece:
+            continue
+        home, overlap = None, 0
+        for group in groups:
+            shared = len(set(group["members"]) & set(candidate))
+            if shared > overlap:
+                home, overlap = group, shared
+        if home is None:
+            continue  # no model group follows this candidate: the caller falls back per chunk
+        home["members"] = home["members"] + piece
+        home["subtree"] = _subtree_for(home["members"], level, subtrees)
+        home["id"] = _gid(home["subtree"])
+        remaining = [uid for uid in remaining if uid not in set(piece)]
+        flags.append(f"member(s) the answer left out were placed in {home['title']!r}: "
+                     + ", ".join(names.get(uid) or uid for uid in piece[:6]))
+    return groups, flags, remaining
 
 
 def _subtree_for(members: list[str], level: int, subtrees: dict[str, list[str]]) -> list[str]:
     return list(members) if level == 1 else [u for member in members for u in subtrees.get(member, [])]
 
 
-def _shape_groups(groups: list[dict], minimum: int, level: int,
-                  subtrees: dict[str, list[str]]) -> tuple[list[dict], list[str]]:
-    """Program checks on size: merge a group of one, split one above the ceiling.
+def _shape_groups(groups: list[dict], minimum: int, level: int, subtrees: dict[str, list[str]],
+                  candidates: list[list[str]], names: dict[str, str]) -> tuple[list[dict], list[str]]:
+    """Program checks on size: merge a group of one, cut one above the ceiling by candidates.
 
-    Design 2.3 lets the program cut an answer rather than lose it: the model's
-    titles and grouping survive, and each final group is inside 2..12."""
+    Design 2.3: a model answer that comes back too large a second time is cut by the
+    program's candidate grouping, not by member order; each part's responsibility and
+    summary are written again from that part's own members, never repeated from the
+    parent group."""
     flags: list[str] = []
     merged: list[dict] = []
     for group in groups:
@@ -275,25 +366,127 @@ def _shape_groups(groups: list[dict], minimum: int, level: int,
         merged[0]["subtree"] = _subtree_for(merged[0]["members"], level, subtrees)
         merged[0]["id"] = _gid(merged[0]["subtree"])
         flags.append(f"group {first['title']!r} merged into {merged[0]['title']!r} (it was too small)")
+    # A group of one whose neighbours were both full takes one member from the biggest
+    # neighbour, so no published group stays below two members.
+    for index, group in enumerate(merged):
+        if len(group["members"]) >= minimum or minimum < MIN_GROUP:
+            continue
+        donors = [i for i in (index - 1, index + 1)
+                  if 0 <= i < len(merged) and len(merged[i]["members"]) > minimum]
+        if not donors:
+            continue
+        donor = max(donors, key=lambda i: len(merged[i]["members"]))
+        moved = merged[donor]["members"].pop()
+        group["members"] = group["members"] + [moved]
+        for target in (group, merged[donor]):
+            target["subtree"] = _subtree_for(target["members"], level, subtrees)
+            target["id"] = _gid(target["subtree"])
+        flags.append(f"group {group['title']!r} took one member from {merged[donor]['title']!r} "
+                     "(it would have been a group of one)")
     shaped: list[dict] = []
     for group in merged:
         members = group["members"]
         if len(members) <= MAX_GROUP:
             shaped.append(group)
             continue
-        parts: list[list[str]] = [members[i:i + MAX_GROUP] for i in range(0, len(members), MAX_GROUP)]
-        while len(parts) > 1 and len(parts[-1]) < minimum:
-            parts[-1].insert(0, parts[-2].pop())
+        parts = (_cut_by_candidates(members, candidates, minimum) if level == 1 and candidates
+                 else _pack(members))
         for index, part in enumerate(parts, 1):
             subtree = _subtree_for(part, level, subtrees)
-            names = [name for name in (skeleton.symbol_words(uid).strip() for uid in subtree[:3]) if name]
-            capability = group["capability"]
-            if names:
-                capability = f"{capability} Part {index} covers {', '.join(names)}."
+            capability, summary = _segment_texts(group, part, index, len(parts), level, subtrees, names)
             shaped.append({**group, "id": _gid(subtree), "members": part, "subtree": subtree,
-                           "title": f"{group['title']} ({index})", "capability": capability})
+                           "title": f"{group['title']} ({index})", "capability": capability,
+                           "summary": summary, "note": "program-made part (the group exceeded the member limit twice)"})
         flags.append(f"group {group['title']!r} split into {len(parts)} program groups (the {MAX_GROUP}-member limit)")
     return shaped, flags
+
+
+def _cut_by_candidates(members: list[str], candidates: list[list[str]],
+                      minimum: int) -> list[list[str]]:
+    """Cut an oversized group along the program's candidate grouping (design 2.3)."""
+    inside, chosen = set(members), set()
+    parts: list[list[str]] = []
+    for candidate in candidates:
+        piece = [uid for uid in candidate if uid in inside]
+        if not piece:
+            continue
+        chosen |= set(piece)
+        parts.extend([piece] if len(piece) <= MAX_GROUP else _pack(piece))
+    leftover = [uid for uid in members if uid not in chosen]
+    if leftover:
+        parts.extend([leftover] if len(leftover) <= MAX_GROUP else _pack(leftover))
+    return _fit_sizes(parts, minimum)
+
+
+def _fit_sizes(parts: list[list[str]], minimum: int) -> list[list[str]]:
+    """Keep every part between ``minimum`` and ``MAX_GROUP`` after a cut.
+
+    A part that is too small takes one member from a neighbour that can spare it; when no
+    neighbour can spare one, it joins a neighbour that has room. Moving a member is
+    preferred to joining, because joining two pieces of twelve would publish thirteen."""
+    out = [list(part) for part in parts if part]
+    split: list[list[str]] = []
+    for part in out:
+        split.extend([part] if len(part) <= MAX_GROUP else _pack(part))
+    out = split
+    for index, part in enumerate(out):
+        while len(part) < minimum:
+            donors = [i for i in (index - 1, index + 1)
+                      if 0 <= i < len(out) and i != index and len(out[i]) > minimum]
+            if not donors:
+                break
+            part.insert(0, out[max(donors, key=lambda i: len(out[i]))].pop())
+    merged: list[list[str]] = []
+    for part in out:
+        if not merged:
+            merged.append(part)
+            continue
+        if len(part) < minimum:
+            need = minimum - len(part)
+            while need > 0 and len(merged[-1]) > minimum:
+                part.insert(0, merged[-1].pop())
+                need -= 1
+            if len(part) >= minimum:
+                merged.append(part)
+                continue
+            if len(merged[-1]) + len(part) <= MAX_GROUP:
+                merged[-1].extend(part)
+                continue
+        merged.append(part)
+    if len(merged) > 1 and len(merged[0]) < minimum:
+        first = merged[0]
+        need = minimum - len(first)
+        while need > 0 and len(merged[1]) > minimum:
+            first.append(merged[1].pop(0))
+            need -= 1
+        if len(first) >= minimum:
+            pass
+        elif len(merged[1]) + len(first) <= MAX_GROUP:
+            first_part = merged.pop(0)
+            merged[0][:0] = first_part
+    return merged
+
+
+def _segment_texts(group: dict, part: list[str], index: int, total: int, level: int,
+                   subtrees: dict[str, list[str]], names: dict[str, str]) -> tuple[str, str]:
+    """A cut part's responsibility and summary, written from its own members (design 2.3).
+
+    Members are named once each, however many inventory ids they cover; the parent
+    group's sentence is not repeated, because it describes the whole group."""
+    listed: list[str] = []
+    for member in part:
+        for uid in ([member] if level == 1 else subtrees.get(member) or [member]):
+            label = (names.get(uid) or skeleton.symbol_words(uid) or "").strip()
+            if label and label not in listed:
+                listed.append(label)
+    shown = listed[:6]
+    listing = ", ".join(f"`{name}`" for name in shown)
+    if len(listed) > len(shown):
+        listing += f" and {len(listed) - len(shown)} more"
+    if not listing:
+        listing = f"{len(part)} units"
+    return (f"Part {index} of {total} of {group['title']}: it holds {listing}.",
+            f"Part {index} of {group['title']}, holding {listing}.")
 
 
 def _pack(members: list[str], size: int = MAX_GROUP) -> list[list[str]]:

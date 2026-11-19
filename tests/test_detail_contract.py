@@ -14,8 +14,9 @@ from test_semantic import _inventory
 
 generator = importlib.import_module("cbe.generate")
 
-# Numbers of the hand-written inventory in test_semantic: 1 reserve, 2 reserve@5 (both functions),
-# 3 Pool (class), 4 Pool.submit (method), 5 module top-level (module_region).
+# Numbers of the hand-written inventory in test_semantic. The two ``reserve`` chunks are one
+# symbol (design 2.1: a declaration the grammar cut into parts is one detail), so the table has
+# four rows: 1 reserve (both chunks), 2 Pool (class), 3 Pool.submit (method), 4 module top-level.
 TABLE = symbols.batch_table(["pkg/jobs.py"], _inventory())
 ID = {row["n"]: row["id"] for row in TABLE}
 
@@ -25,25 +26,55 @@ def decode(answer, **kwargs):
 
 
 def test_numbers_follow_prompt_order_and_start_at_one() -> None:
-    assert [row["n"] for row in TABLE] == [1, 2, 3, 4, 5]
-    assert [row["name"] for row in TABLE][:2] == ["reserve", "reserve"]  # overloads are told apart by lines
+    assert [row["n"] for row in TABLE] == [1, 2, 3, 4]
+    assert [row["name"] for row in TABLE] == ["reserve", "Pool", "Pool.submit", "<module top-level>"]
+
+
+def test_the_chunks_of_one_symbol_are_one_row_and_one_detail() -> None:
+    # Design 2.1: an overload pair (or a declaration the grammar cut apart) is one symbol, so
+    # the model sees one number; the decoder keeps every inventory id that row explains.
+    row = TABLE[0]
+    assert row["ids"] == ["pkg/jobs.py::reserve", "pkg/jobs.py::reserve@5"]
+    out = decode({"units": [{"h": [1], "explain": "Reserves a value, refusing negatives."}]})
+    assert out.units[0]["id"] == row["id"] and out.units[0]["kind"] == "function"
+    assert out.units[0]["folded"] == ["pkg/jobs.py::reserve@5"]
+    payload = checks.assemble_details(TABLE, out.units)
+    assert payload["dispositions"]["pkg/jobs.py::reserve@5"] == {"how": "unit", "unit": row["id"]}
+    assert checks.find_gaps(TABLE, out.units) == [row for row in TABLE
+                                                  if row["kind"] in {"function", "method", "class"}][1:]
+
+
+def test_the_leftover_regions_of_one_file_are_one_row() -> None:
+    # Design 2.1: what a file holds outside its declarations is one file-level entry.
+    inventory = {"pkg/x.py": {"tokens": 10, "sha256": "", "nlines": 9, "symbols": [
+        {"id": "pkg/x.py::module_residual::::0", "name": "x", "kind": "module_residual", "parent": None,
+         "lines": [[1, 2]]},
+        {"id": "pkg/x.py::module_residual::::30", "name": "x", "kind": "module_residual", "parent": None,
+         "lines": [[5, 6]]},
+        {"id": "pkg/x.py::function::run::60", "name": "run", "kind": "function", "parent": None,
+         "lines": [[7, 8]]}]}}
+    table = symbols.batch_table(["pkg/x.py"], inventory)
+    assert [row["ids"] for row in table] == [["pkg/x.py::module_residual::::0",
+                                              "pkg/x.py::module_residual::::30"],
+                                             ["pkg/x.py::function::run::60"]]
+    assert table[0]["kind"] == "module_residual" and table[0]["lines"] == [[1, 2], [5, 6]]
 
 
 def test_one_number_is_the_symbol_itself_with_the_kind_from_the_inventory() -> None:
-    out = decode({"units": [{"h": [3], "explain": "A pool."}, {"h": [5], "explain": "Top level."}]})
-    assert [(u["id"], u["kind"]) for u in out.units] == [(ID[3], "class"), (ID[5], "module_region")]
+    out = decode({"units": [{"h": [2], "explain": "A pool."}, {"h": [4], "explain": "Top level."}]})
+    assert [(u["id"], u["kind"]) for u in out.units] == [(ID[2], "class"), (ID[4], "module_region")]
     assert not out.invalid and not out.flags
 
 
 def test_several_numbers_make_one_group_with_a_generated_id() -> None:
-    out = decode({"units": [{"h": [3, 4], "title": "Pool API!", "explain": "The pool."}]})
+    out = decode({"units": [{"h": [2, 3], "title": "Pool API!", "explain": "The pool."}]})
     group = out.units[0]
     assert group["id"] == "grp:jobs.py-pool-api" and group["kind"] == "group"
-    assert group["members"] == [ID[3], ID[4]]
+    assert group["members"] == [ID[2], ID[3]]
 
 
 def test_group_without_title_is_named_after_its_first_member() -> None:
-    assert decode({"units": [{"h": [4, 3], "explain": "x."}]}).units[0]["id"] == "grp:jobs.py-pool-submit"
+    assert decode({"units": [{"h": [3, 2], "explain": "x."}]}).units[0]["id"] == "grp:jobs.py-pool-submit"
 
 
 def test_group_ids_never_collide_with_each_other_or_with_known_units() -> None:
@@ -54,33 +85,33 @@ def test_group_ids_never_collide_with_each_other_or_with_known_units() -> None:
 
 
 def test_unknown_number_is_removed_and_noted_but_the_unit_is_kept() -> None:
-    out = decode({"units": [{"h": [3, 99, "x"], "explain": "A pool."}]})
-    assert out.units[0]["id"] == ID[3] and not out.invalid
+    out = decode({"units": [{"h": [2, 99, "x"], "explain": "A pool."}]})
+    assert out.units[0]["id"] == ID[2] and not out.invalid
     assert any("99" in flag for flag in out.flags) and any("'x'" in flag for flag in out.flags)
 
 
 def test_a_number_in_two_units_stays_with_the_first() -> None:
-    out = decode({"units": [{"h": [3], "explain": "first."}, {"h": [3, 4], "explain": "second."}]})
-    assert [u["id"] for u in out.units] == [ID[3], ID[4]]  # the second unit lost 3, so it is now just symbol 4
+    out = decode({"units": [{"h": [2], "explain": "first."}, {"h": [2, 3], "explain": "second."}]})
+    assert [u["id"] for u in out.units] == [ID[2], ID[3]]  # the second unit lost 2, so it is now just symbol 3
     assert out.units[1]["explain"] == "second." and any("already in an earlier unit" in f for f in out.flags)
 
 
 def test_a_unit_whose_symbols_are_all_taken_is_ignored_not_re_asked() -> None:
-    out = decode({"units": [{"h": [3], "explain": "first."}, {"h": [3], "explain": "again."}]})
+    out = decode({"units": [{"h": [2], "explain": "first."}, {"h": [2], "explain": "again."}]})
     assert len(out.units) == 1 and not out.invalid and any("ignored" in flag for flag in out.flags)
 
 
 @pytest.mark.parametrize("unit,why", [
-    ({"h": [3], "explain": "  "}, "empty explain"),
-    ({"h": [3]}, "empty explain"),
+    ({"h": [2], "explain": "  "}, "empty explain"),
+    ({"h": [2]}, "empty explain"),
     ({"h": [], "explain": "x."}, "no symbol number"),
     ({"h": [77], "explain": "x."}, "no symbol number"),
     ({"explain": "x."}, "no symbol number"),
     ("not an object", "not an object"),
 ])
 def test_an_unusable_unit_is_reported_and_the_other_units_are_kept(unit, why) -> None:
-    out = decode({"units": [unit, {"h": [4], "explain": "Kept."}]})
-    assert [u["id"] for u in out.units] == [ID[4]]
+    out = decode({"units": [unit, {"h": [3], "explain": "Kept."}]})
+    assert [u["id"] for u in out.units] == [ID[3]]
     assert len(out.invalid) == 1 and why in out.invalid[0]["why"]
 
 
@@ -97,7 +128,7 @@ def test_an_empty_units_list_is_a_valid_answer() -> None:
 
 def test_model_written_relations_are_ignored() -> None:
     # Design 2.1: call edges come from the graph, never from the model.
-    out = decode({"units": [{"h": [4], "explain": "Submits.", "relations": [
+    out = decode({"units": [{"h": [3], "explain": "Submits.", "relations": [
         {"to": 1, "kind": "call", "basis": "reserve(value)"}]}]})
     assert out.units[0]["relations"] if False else "relations" not in out.units[0]
 
@@ -113,27 +144,44 @@ def test_optional_fields_are_tolerated_and_unknown_fields_ignored() -> None:
 
 
 def test_later_answers_add_to_earlier_units_without_repeating_them() -> None:
-    first = decode({"units": [{"h": [3], "explain": "pool."}]})
-    second = decode({"units": [{"h": [3], "explain": "again."}, {"h": [4], "explain": "submit."}]}, have=first.units)
-    assert [u["id"] for u in second.units] == [ID[4]]
-    assert checks.covered_ids(first.units + second.units, TABLE) == {ID[3], ID[4]}
+    first = decode({"units": [{"h": [2], "explain": "pool."}]})
+    second = decode({"units": [{"h": [2], "explain": "again."}, {"h": [3], "explain": "submit."}]}, have=first.units)
+    assert [u["id"] for u in second.units] == [ID[3]]
+    assert checks.covered_ids(first.units + second.units, TABLE) == {ID[2], ID[3]}
 
 
 def test_every_symbol_gets_a_disposition_written_by_the_program() -> None:
-    units = decode({"units": [{"h": [1], "explain": "r."}, {"h": [3, 4], "title": "pool", "explain": "p."}]}).units
+    units = decode({"units": [{"h": [1], "explain": "r."}, {"h": [2, 3], "title": "pool", "explain": "p."}]}).units
     payload = checks.assemble_details(TABLE, units, notes="n")
     d = payload["dispositions"]
-    assert set(d) == set(ID.values())
+    assert set(d) == {sid for row in TABLE for sid in row["ids"]}
     assert d[ID[1]] == {"how": "unit", "unit": ID[1]}
-    assert d[ID[3]] == d[ID[4]] == {"how": "grouped", "unit": "grp:jobs.py-pool"}
-    assert d[ID[2]] == d[ID[5]] == {"how": "index_only", "unit": None, "reason": "not explained; indexed without prose"}
+    assert d["pkg/jobs.py::reserve@5"] == {"how": "unit", "unit": ID[1]}
+    assert d[ID[2]] == d[ID[3]] == {"how": "grouped", "unit": "grp:jobs.py-pool"}
+    assert d[ID[4]] == {"how": "index_only", "unit": None, "reason": "not explained; indexed without prose"}
     assert payload["batch_notes"] == "n" and "batch_notes" not in checks.assemble_details(TABLE, units)
 
 
+def test_a_grouped_unit_keeps_every_inventory_id_of_the_rows_it_covers() -> None:
+    # A grouped unit over a merged row (a declaration in parts) dispositions the parts too.
+    out = decode({"units": [{"h": [1, 2], "title": "reserve and pool", "explain": "Both."}]})
+    payload = checks.assemble_details(TABLE, out.units)
+    assert payload["dispositions"]["pkg/jobs.py::reserve@5"] == {"how": "grouped", "unit": "grp:jobs.py-reserve-and-pool"}
+    assert out.units[0]["folded"] == ["pkg/jobs.py::reserve@5"]
+
+
+def test_an_unexplained_row_still_dispositions_every_id_it_stands_for() -> None:
+    # A merged row that no unit explains must not lose its folded inventory ids.
+    units = decode({"units": [{"h": [2], "explain": "A pool."}]}).units
+    payload = checks.assemble_details(TABLE, units)
+    assert payload["dispositions"]["pkg/jobs.py::reserve@5"] == {
+        "how": "index_only", "unit": None, "reason": "not explained; indexed without prose"}
+
+
 def test_gap_guard_flags_every_function_method_and_class() -> None:
-    # No size rule any more: 1 and 2 are functions, 3 a class, 4 a method. 5 is a module region
+    # No size rule: 1 is a function (two chunks), 2 a class, 3 a method. 4 is a module region
     # (imports/constants) and is indexed without prose, like a pure constant.
-    assert [row["n"] for row in checks.find_gaps(TABLE, [])] == [1, 2, 3, 4]
+    assert [row["n"] for row in checks.find_gaps(TABLE, [])] == [1, 2, 3]
 
 
 def test_gap_guard_ignores_what_a_unit_or_group_already_explains() -> None:

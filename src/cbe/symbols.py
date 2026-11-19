@@ -11,7 +11,7 @@ import hashlib
 from pathlib import Path
 from typing import Iterable
 
-from cbe import grammars, source_context
+from cbe import grammars
 from cbe.checks import UNIT_KINDS
 from cbe.token_budget import count_text_tokens
 
@@ -122,15 +122,47 @@ def ensure_chunk_coverage(context: dict, repo: Path, paths: list[str]) -> dict:
     return context
 
 
+def _merge_key(symbol: dict) -> tuple[str, ...]:
+    """What makes two inventory chunks one explained symbol (design 2.1).
+
+    A grammar cuts one declaration into several chunks (a long function, overloads);
+    they carry the same name, or the same declaration id for the ``::s<N>`` parts.
+    The leftover regions of one file are one symbol: what the file holds."""
+    kind = symbol["kind"]
+    if kind == "module_residual":
+        return ("residual",)
+    if kind in {"function", "method", "class", "type_alias", "interface"}:
+        return (kind, symbol["name"])
+    return ("chunk", symbol["id"])
+
+
+def _symbol_rows(path: str, symbols: list[dict]) -> list[dict]:
+    """One row per symbol: the chunks of one symbol are merged before the model sees them."""
+    rows: dict[tuple[str, ...], dict] = {}
+    for symbol in symbols:
+        key = _merge_key(symbol)
+        row = rows.get(key)
+        if row is None:
+            rows[key] = {"id": symbol["id"], "path": path, "kind": symbol["kind"],
+                         "name": symbol["name"], "lines": [list(pair) for pair in symbol["lines"]],
+                         "ids": [symbol["id"]]}
+            continue
+        row["ids"].append(symbol["id"])
+        row["lines"].extend(list(pair) for pair in symbol["lines"] if list(pair) not in row["lines"])
+    return list(rows.values())
+
+
 def batch_table(paths: Iterable[str], inventory: dict[str, dict]) -> list[dict]:
     """The short-number table of one detail batch.
 
-    Rows are ``{n, id, path, kind, name, lines}``; ``n`` counts from 1 in
+    Rows are ``{n, id, path, kind, name, lines, ids}``; ``n`` counts from 1 in
     prompt order (files as given, symbols as inventoried), so the prompt and the
-    answer decoder derive the same numbers from the frozen inventory."""
+    answer decoder derive the same numbers from the frozen inventory. ``ids``
+    lists every inventory id the row explains: one per declaration the grammar cut
+    into parts, all of a file's leftover regions in one row (design 2.1: one detail
+    per symbol, one per file for what is left)."""
     rows: list[dict] = []
     for path in paths:
-        for symbol in inventory[path]["symbols"]:
-            rows.append({"n": len(rows) + 1, "id": symbol["id"], "path": path, "kind": symbol["kind"],
-                         "name": symbol["name"], "lines": symbol["lines"]})
+        for row in _symbol_rows(path, inventory[path]["symbols"]):
+            rows.append({"n": len(rows) + 1, **row})
     return rows

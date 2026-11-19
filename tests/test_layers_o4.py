@@ -103,7 +103,9 @@ def test_agent_query_prose_once_and_json_opt_in(tmp_path, capsys):
     residuals = [uid for uid in catalog["short_names"] if "::module_residual::" in uid]
     assert residuals
     for uid in residuals:
-        assert "module code (L" in catalog["short_names"][uid]
+        # Design 2.4: a page heading is a name, never a full id and never a line range.
+        name = catalog["short_names"][uid]
+        assert "module code" in name and "(L" not in name and "::" not in name
 
 
 def test_frozen_source_crlf_and_utf8_round_trip(tmp_path):

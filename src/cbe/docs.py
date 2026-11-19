@@ -24,7 +24,6 @@ from cbe.treename import normalize_title
 # a chunk never has to fit a model context alone because batches group many.
 SCHEMA = "cbe-semantic/1"
 DEPENDENCY_STYLES = {"graph_confirmed": ("graph-confirmed", "-->"),
-                     "model_inferred": ("model-inferred", "-.->"),
                      "graph_only": ("graph-only", "==>")}
 
 
@@ -75,13 +74,6 @@ def code_text(text: str) -> str:
     width = max((len(run) for run in re.findall(r"`+", text)), default=0) + 1
     fence = "`" * width
     return f"{fence} {text} {fence}"
-
-
-def inline_code(text: str) -> str:
-    """Compact code span: padded only where the text itself touches a backtick."""
-    fence = "`" * (max((len(run) for run in re.findall(r"`+", text)), default=0) + 1)
-    pad = " " if text.startswith("`") or text.endswith("`") else ""
-    return f"{fence}{pad}{text}{pad}{fence}"
 
 
 def _build_unit_block(uid: str, units: dict, name_of: Callable[[str], str]) -> str:
@@ -178,32 +170,6 @@ INDEX_SHARE = 0.03        # ... or this share of the source's tokens
 FILES_SHOWN = 3
 
 
-def _rank_files(units: dict, ranges_map: dict, members: list[str]) -> list[str]:
-    """File names of a node's subtree, the ones with most unit lines first."""
-    lines: dict[str, int] = {}
-    for uid in members:
-        for rng in ranges_map.get(uid) or units.get(uid, {}).get("ranges") or []:
-            lines[rng["path"]] = lines.get(rng["path"], 0) + sum(b - a + 1 for a, b in rng["lines"])
-    return [path for path, _ in sorted(lines.items(), key=lambda item: (-item[1], item[0]))]
-
-
-def _short_names(paths) -> dict[str, str]:
-    """The shortest trailing part of each path that no other path shares (``a/b.py``, ``b.py`` ...)."""
-    split = {path: path.split("/") for path in set(paths)}
-    depth = max((len(parts) for parts in split.values()), default=1)
-    names: dict[str, str] = {}
-    for width in range(1, depth + 1):
-        count: dict[str, int] = {}
-        for parts in split.values():
-            key = "/".join(parts[-width:])
-            count[key] = count.get(key, 0) + 1
-        for path, parts in split.items():
-            key = "/".join(parts[-width:])
-            if path not in names and (count[key] == 1 or width >= len(parts)):
-                names[path] = key
-    return names
-
-
 def _entry_page(*, repo: str, nodes: dict, children: dict, roots: list[str],
                 overview: str | None, owner: dict, name_of: Callable[[str], str],
                 budget: int) -> tuple[str, dict]:
@@ -276,6 +242,7 @@ class _RenderPrep:
     basis: dict | None
     source_tokens: int | None
     read_budget: dict | None
+    clustering: dict | None
     docs_dir: Path
     nodes_dir: Path
     nodes: dict
@@ -308,7 +275,8 @@ def _prepare_render(*, run_dir: Path, source_root: Path, inventory: dict, units:
                     dispositions: dict, tree: dict, languages: dict[str, str],
                     index_notes: list[str] | None = None, overview: dict | None = None,
                     graph: dict | None = None, context: dict | None = None, basis: dict | None = None,
-                    source_tokens: int | None = None, read_budget: dict | None = None) -> _RenderPrep:
+                    source_tokens: int | None = None, read_budget: dict | None = None,
+                    clustering: dict | None = None) -> _RenderPrep:
     """Build the tree views, records, display names and relations every writer needs."""
     docs_dir = run_dir / "docs"
     nodes_dir = docs_dir / "nodes"
@@ -345,17 +313,22 @@ def _prepare_render(*, run_dir: Path, source_root: Path, inventory: dict, units:
     ranges_map = {uid: record["ranges"] for uid, record in units.items()}
     names = {}
     taken: set[str] = set()
-    for uid in sorted(set(units) | set(dispositions)):
+    for uid in sorted(units):
         symbol = symbol_records.get(uid, {})
         base = symbol.get("name") or short_name(uid)
         parts = uid.split("::")
         if symbol.get("kind") == "method" and len(parts) > 2 and "." in parts[2]:
             base = parts[2]
         if "::module_residual::" in uid or symbol.get("kind") == "module_residual":
-            spans = symbol["ranges"][0]["lines"]
-            base = f"{Path(symbol['file']).name} module code (L{spans[0][0]}–L{spans[-1][1]})"
+            # A file's leftover regions have no symbol name: the file is the name.
+            base = f"{Path(symbol.get('file') or uid.split('::', 1)[0]).name} module code"
         if base in taken:
-            base = f"{uid.split('::', 1)[0]}:{base}"
+            # Same name twice in the repository: the file tells them apart, then a number.
+            file = Path(symbol.get("file") or uid.split("::", 1)[0]).name
+            stem = f"{base} ({file})" if file else base
+            base, extra = stem, 2
+            while base in taken:
+                base, extra = f"{stem} {extra}", extra + 1
         name = base
         suffix = 2
         while name in taken:
@@ -376,7 +349,7 @@ def _prepare_render(*, run_dir: Path, source_root: Path, inventory: dict, units:
     return _RenderPrep(run_dir=run_dir, source_root=source_root, inventory=inventory,
                        dispositions=dispositions, tree=tree, languages=languages,
                        index_notes=index_notes, overview=overview, graph=graph, context=context, basis=basis,
-                       source_tokens=source_tokens, read_budget=read_budget,
+                       source_tokens=source_tokens, read_budget=read_budget, clustering=clustering,
                        docs_dir=docs_dir, nodes_dir=nodes_dir,
                        nodes=nodes, children=children, owner=owner, units=units,
                        symbol_records=symbol_records, sources=sources, ranges_map=ranges_map,
@@ -429,7 +402,7 @@ def _write_dependencies(prep: _RenderPrep) -> None:
                  "Arrows point from a user to its dependency. Containment is structural, not a dependency. "
                  "Graph-confirmed pairs appear in both the tree and resolved call/import edges. "
                  "Graph-only pairs appear only in the graph.",
-                 "Graph-confirmed and model-inferred pairs count edges between two subtrees. "
+                 "Graph-confirmed pairs count edges between two subtrees. "
                  "Graph-only pairs count edges between direct node owners. "
                  "Containment rows show resolved edges between ancestor direct units and a descendant subtree in both directions. "
                  "Within containment rows count direct owner pairs separately. Neither kind of containment row appears in Mermaid or the three dependency totals."]
@@ -525,9 +498,41 @@ def _write_run(prep: _RenderPrep) -> None:
     run_lines += ["", "## Pages", "",
                   f"- Published Markdown: {docs_tokens} tokens"
                   + (f" (ratio to source {ratio:.2f}; target 0.6, hard 0.7)" if ratio is not None else "")]
+    if prep.clustering:
+        run_lines += ["", "## Clustering", ""] + _clustering_lines(prep.clustering)
     if prep.index_notes:
         run_lines += ["", "## Generation notes", ""] + [f"- {item}" for item in prep.index_notes]
     (prep.docs_dir / "RUN.md").write_text("\n".join(run_lines) + "\n", encoding="utf-8")
+
+
+def _clustering_lines(clustering: dict) -> list[str]:
+    """RUN.md's clustering lines: the layers, what the program cut or merged, and the graph.
+
+    Design 2.3: the reader must see where the structure is the model's and where the
+    program had to step in, and whether call counts were available at all."""
+    lines: list[str] = []
+    for row in clustering.get("layers") or []:
+        line = (f"- Layer {row['level']}: {row['groups']} group(s) from {row['tasks']} task(s)"
+                + (f"; {row['program_made']} program-made" if row.get("program_made") else "")
+                + (f"; {row['parts']} part(s) cut by the program" if row.get("parts") else ""))
+        if row.get("retried"):
+            line += (f"; {row['retried']} oversized answer(s) were sent back once for division by function")
+        lines.append(line)
+        for item in row.get("split") or []:
+            lines.append(f"  - program cut: {item}")
+        for item in row.get("merged") or []:
+            lines.append(f"  - program merge: {item}")
+        for item in row.get("fallback") or []:
+            lines.append(f"  - program-made grouping: {item}")
+    if not lines:
+        lines.append("- No grouping layer ran.")
+    if clustering.get("graph"):
+        lines.append("- Call counts came from the analysis graph; group blocks showed the call "
+                     "counts in and out, and a group with no calls inside is noted.")
+    else:
+        lines.append("- No graph was provided to this run, so the grouping blocks carried no call "
+                     "counts: the group-internal call note and the shared-utility hint did not apply.")
+    return lines
 
 
 def _write_catalog(prep: _RenderPrep) -> dict:
@@ -608,7 +613,8 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
            dispositions: dict, tree: dict, languages: dict[str, str],
            index_notes: list[str] | None = None, overview: dict | None = None,
            graph: dict | None = None, context: dict | None = None, basis: dict | None = None,
-           source_tokens: int | None = None, read_budget: dict | None = None) -> dict:
+           source_tokens: int | None = None, read_budget: dict | None = None,
+           clustering: dict | None = None) -> dict:
     """Render node pages, INDEX.md, DEPENDENCIES.md, RUN.md and a catalog under ``run_dir/docs``.
 
     ``languages`` maps each path to the language frozen in the source context,
@@ -618,7 +624,8 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
     prep = _prepare_render(run_dir=run_dir, source_root=source_root, inventory=inventory,
                            units=units, dispositions=dispositions, tree=tree, languages=languages,
                            index_notes=index_notes, overview=overview, graph=graph, context=context,
-                           basis=basis, source_tokens=source_tokens, read_budget=read_budget)
+                           basis=basis, source_tokens=source_tokens, read_budget=read_budget,
+                           clustering=clustering)
     _write_node_pages(prep)
     index_meta = _write_index(prep)
     _write_dependencies(prep)
@@ -841,6 +848,9 @@ def verify(run_dir: Path, inventory: dict, units: dict, dispositions: dict,
             shape_problems.append(f"{nid}: {len(kids)} children")
         if not kids and not node.get("unit_ids"):
             shape_problems.append(f"{nid}: empty leaf")
+        # Design 2.3: a group holds 2 to 12 members, the leaf layer's units included.
+        if not kids and len(node.get("unit_ids") or []) > 12:
+            shape_problems.append(f"{nid}: {len(node['unit_ids'])} units")
     _add_check(checks, "group_sizes_within_bounds", not shape_problems or not units,
                {"problem_nodes": shape_problems[:12]})
     source_tokens = sum(entry.get("tokens", 0) for entry in inventory.values())

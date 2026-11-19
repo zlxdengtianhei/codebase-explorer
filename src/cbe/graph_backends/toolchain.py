@@ -14,7 +14,6 @@ Lookup order used by ``cbe graph build``:
 from __future__ import annotations
 
 import hashlib
-import json
 import os
 import platform
 import re
