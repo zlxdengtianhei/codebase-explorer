@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>code map film</title>
+<style>
+  @font-face { font-family: plex; src: url("fonts/IBMPlexSans-Regular.woff2"); }
+  @font-face { font-family: plex; font-weight: 600; src: url("fonts/IBMPlexSans-SemiBold.woff2"); }
+  @font-face { font-family: plexmono; src: url("fonts/IBMPlexMono-Regular.woff2"); }
+  @font-face { font-family: plexmono; font-weight: 500; src: url("fonts/IBMPlexMono-Medium.woff2"); }
+  html, body { margin: 0; width: 1920px; height: 1080px; background: #040a12; color: #c9d6e6;
+               overflow: hidden; font-family: plex, "Helvetica Neue", Arial, sans-serif; }
+  #stage { position: relative; width: 1920px; height: 1080px; padding: 56px 96px 96px;
+           box-sizing: border-box; }
+  header { display: flex; justify-content: space-between; align-items: baseline;
+           font-size: 24px; color: #7f93aa; letter-spacing: .01em; }
+  header .brand { color: #f2f7ff; font-weight: 600; font-size: 26px; }
+  header .brand span { color: #8fe3d6; }
+  main { position: absolute; left: 96px; right: 96px; top: 150px; bottom: 96px; }
+  h1 { font-size: 104px; line-height: 1.02; margin: 18px 0 0; color: #f2f7ff; font-weight: 600;
+       letter-spacing: -.02em; }
+  h2 { font-size: 60px; line-height: 1.1; margin: 0 0 28px; color: #f2f7ff; font-weight: 600;
+       letter-spacing: -.015em; }
+  h2 b { color: #8fe3d6; font-weight: 600; }
+  .kicker { font-size: 24px; color: #8fe3d6; letter-spacing: .16em; text-transform: uppercase; }
+  .lede { font-size: 30px; line-height: 1.5; color: #c9d6e6; margin: 34px 0 0; max-width: 1360px; }
+  .stats { display: flex; gap: 84px; margin-top: 86px; }
+  .stats div { display: flex; flex-direction: column; gap: 6px; }
+  .stats b { font-size: 64px; font-weight: 600; color: #f2f7ff; line-height: 1; }
+  .stats span { font-size: 22px; color: #7f93aa; }
+  .systems { display: flex; flex-direction: column; gap: 20px; max-width: 1180px; }
+  .sys { border-left: 3px solid #24384d; padding: 4px 0 4px 26px; height: 118px;
+         box-sizing: border-box; }
+  .sys.on { border-left-color: #8fe3d6; }
+  .sys .t { font-size: 36px; font-weight: 600; color: #f2f7ff; }
+  .sys .c { font-size: 25px; line-height: 1.45; color: #9db0c6; margin-top: 8px; max-width: 1100px; }
+  .sys.pending { opacity: .18; }
+  .aside { position: absolute; right: 0; top: 8px; width: 470px; text-align: right; }
+  .aside div { font-size: 22px; color: #7f93aa; margin-bottom: 22px; }
+  .aside b { display: block; font-size: 52px; font-weight: 600; color: #f2f7ff; line-height: 1.1; }
+  .crumb { font-size: 24px; color: #7f93aa; letter-spacing: .04em; margin-bottom: 14px; }
+  .crumb i { color: #8fe3d6; font-style: normal; }
+  .cap { font-size: 27px; line-height: 1.5; color: #9db0c6; margin: 0 0 34px; max-width: 1360px; }
+  .fns { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 22px; }
+  .fns li { display: flex; gap: 34px; align-items: baseline; border-left: 3px solid #24384d;
+            padding-left: 26px; }
+  .fns li.on { border-left-color: #8fe3d6; }
+  .fns .nm { font-family: plexmono, monospace; font-size: 26px; color: #8fe3d6; flex: 0 0 330px;
+             word-break: break-word; }
+  .fns .dt { font-size: 25px; line-height: 1.45; color: #c9d6e6; }
+  .note { position: absolute; left: 0; bottom: 6px; font-size: 21px; color: #5f7389; }
+  .cmds { display: flex; flex-direction: column; gap: 30px; margin-top: 12px; }
+  .cmds .row { display: flex; flex-direction: column; gap: 8px; }
+  .cmds code { font-family: plexmono, monospace; font-size: 30px; color: #f2f7ff; }
+  .cmds span { font-size: 23px; color: #7f93aa; }
+  .end { position: absolute; left: 0; bottom: 6px; font-size: 21px; color: #5f7389; }
+  .hidden { visibility: hidden; }
+  #bar { position: absolute; left: 0; right: 0; bottom: 0; height: 5px; background: #0b1c28; }
+  #fill { height: 5px; background: #8fe3d6; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <header><span class="brand">Codebase <span>Explorer</span></span><span id="where"></span></header>
+  <main id="main"></main>
+  <div id="bar"><div id="fill"></div></div>
+</div>
+<script>
+const PLAN = __PLAN__;
+const esc = (text) => String(text).replace(/[&<>]/g, (c) => ({"&": "&amp;", "<": "&lt;", ">": "&gt;"}[c]));
+const state = Math.max(0, Math.min(PLAN.items.length - 1, parseInt((location.hash || "#0").slice(1), 10) || 0));
+const item = PLAN.items[state];
+const slide = item.slide;
+const reveal = item.reveal || {};
+const stats = PLAN.stats;
+
+document.getElementById("where").textContent = PLAN.project + " · code map";
+document.title = PLAN.project + " · code map";
+
+function title() {
+  return `<div class="kicker">built from explanations</div>
+    <h1>${esc(PLAN.project)}</h1>
+    <p class="lede">${esc(PLAN.overview)}</p>
+    <div class="stats">
+      <div><b>${stats.files}</b><span>source files</span></div>
+      <div><b>${stats.figures}</b><span>functions, methods, classes</span></div>
+      <div><b>${stats.systems}</b><span>systems</span></div>
+      <div><b>${stats.pages}</b><span>pages</span></div>
+    </div>`;
+}
+
+function map() {
+  const shown = reveal.systems === undefined ? 0 : reveal.systems;
+  const rows = PLAN.systems.map((s, i) => {
+    const on = i < shown;
+    return `<div class="sys ${on ? "on" : "pending"}">
+      <div class="t">${esc(s.title)}</div><div class="c">${esc(s.capability)}</div></div>`;
+  }).join("");
+  return `<h2>The map has <b>${PLAN.systems.length}</b> parts.</h2>
+    <div class="systems">${rows}</div>
+    <div class="aside">
+      <div><b>${stats.systems}</b>systems</div>
+      <div><b>${stats.modules}</b>modules</div>
+      <div><b>${stats.figures}</b>unit details</div>
+    </div>`;
+}
+
+function module() {
+  const m = PLAN.modules.find((row) => row.id === slide.module) || PLAN.modules[0];
+  const shown = reveal.functions === undefined ? 0 : reveal.functions;
+  const rows = m.functions.map((f, i) => {
+    const on = i < shown;
+    return `<li class="${on ? "on" : "pending"}"><div class="nm">${esc(f.name)}</div>
+      <div class="dt">${on ? esc(f.detail) : ""}</div></li>`;
+  }).join("");
+  return `<div class="crumb">${esc(m.system)} <i>/</i></div>
+    <h2>${esc(m.title)}</h2>
+    <p class="cap">${esc(m.capability)}</p>
+    <ul class="fns">${rows}</ul>
+    <div class="note">${m.units} units in this module · ${m.functions.length} narrated</div>`;
+}
+
+function closing() {
+  return `<h2>Everything else is one command away.</h2>
+    <div class="cmds">
+      <div class="row"><code>cbe find --run-dir RUN --term "NAME"</code><span>locate a unit, symbol or file by name</span></div>
+      <div class="row"><code>cbe query --run-dir RUN --id "ID"</code><span>the explanation and evidence of one unit</span></div>
+      <div class="row"><code>cbe source --run-dir RUN --id "ID" --context 2</code><span>the frozen source, digest checked</span></div>
+    </div>
+    <div class="end">Map of ${esc(PLAN.project)} · Codebase Explorer</div>`;
+}
+
+const drawers = {title, map, module, closing};
+const main = document.getElementById("main");
+const pending = main.querySelectorAll(".pending");
+main.innerHTML = (drawers[slide.kind] || title)();
+document.getElementById("fill").style.width = `${Math.round(100 * (state + 1) / PLAN.items.length)}%`;
+</script>
+</body>
+</html>

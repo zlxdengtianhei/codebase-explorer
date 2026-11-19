@@ -221,6 +221,28 @@ def build_parser() -> argparse.ArgumentParser:
     source_p.add_argument("--id", required=True)
     source_p.add_argument("--context", type=int, default=0, metavar="N",
                           help="include N surrounding lines (nonnegative; default: 0)")
+    from cbe.video import DEFAULT_MODULES as VIDEO_MODULES, DEFAULT_SECONDS as VIDEO_SECONDS
+
+    video_p = sub.add_parser("video", help="Make a narrated short film from a completed run's map: "
+                            "overall purpose, the systems, then two modules down to their functions")
+    video_p.add_argument("--run-dir", type=_abs, required=True, help="a run directory holding catalog.json")
+    video_p.add_argument("--out", type=_abs, required=True, help="directory for the script, deck, slides, video")
+    video_p.add_argument("--modules", type=int, default=None,
+                         help=f"modules taken down to functions (default {VIDEO_MODULES})")
+    video_p.add_argument("--seconds", type=int, default=None,
+                         help="target length; later function lines are dropped to fit "
+                              f"(default {VIDEO_SECONDS})")
+    video_p.add_argument("--speed", type=float, default=1.06, help="speech speed passed to make_audio.py")
+    video_p.add_argument("--plan-only", action="store_true",
+                         help="write the script and the deck, then stop (no Chrome, no speech, no ffmpeg)")
+    video_p.add_argument("--showcase", type=_abs, default=None,
+                         help="showcase directory holding fonts/ and tour/make_audio.py (default: this checkout)")
+    video_p.add_argument("--chrome", default=None, help="browser binary for the slides; default: CHROME, then google-chrome")
+    video_p.add_argument("--ffmpeg", default="ffmpeg")
+    video_p.add_argument("--kokoro-model", type=_abs, default=None, help="Kokoro ONNX model (default: $KOKORO_MODEL)")
+    video_p.add_argument("--kokoro-voices", type=_abs, default=None, help="Kokoro voices file (default: $KOKORO_VOICES)")
+    video_p.add_argument("--kokoro-python", default=None,
+                         help="Python that imports kokoro_onnx, numpy and soundfile (default: $KOKORO_PYTHON)")
     for source_parser in (generate_p, host_plan, context_build, graph_build):
         source_parser.add_argument("--header-language", choices=("c", "cpp"), default=None,
                                    help="interpret .h files as C or C++ when planning source context")
@@ -416,6 +438,16 @@ def main(argv: list[str] | None = None) -> int:
             print(json.dumps(value, ensure_ascii=False, indent=2))
             # 3 means docs were rendered but some tasks are still pending.
             return 0 if value.get("status") == "complete" else 3
+        if args.command == "video":
+            from cbe.video import DEFAULT_MODULES, DEFAULT_SECONDS, make_film
+
+            value = make_film(args.run_dir, args.out, showcase=args.showcase,
+                              modules=args.modules or DEFAULT_MODULES,
+                              seconds=args.seconds or DEFAULT_SECONDS, speed=args.speed,
+                              chrome=args.chrome, ffmpeg=args.ffmpeg, kokoro_python=args.kokoro_python,
+                              model=args.kokoro_model, voices=args.kokoro_voices, plan_only=args.plan_only)
+            print(json.dumps(value, ensure_ascii=False, indent=2))
+            return 0
         if args.command == "host":
             value = _host(args)
             print(json.dumps(value, ensure_ascii=False, indent=2))
