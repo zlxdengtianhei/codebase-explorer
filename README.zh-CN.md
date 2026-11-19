@@ -10,11 +10,11 @@
 <!-- 3.0 的片子。发布本 README 时把文件 walkthrough-tsdown-3.0.mp4 传到该 release。 -->
 https://github.com/zlxdengtianhei/codebase-explorer/releases/download/walkthrough-3.0.0.dev0/walkthrough-tsdown-3.0.mp4
 
-<p align="center">2 分 55 秒、带配音，一条命令生成、不调模型：tsdown 的地图从它的讲解里长出来，三个系统，两个模块一路讲到函数，最后是 <code>cbe find</code>、<code>cbe query</code> 和 <code>cbe source</code>。<br><a href="https://zlxdengtianhei.github.io/codebase-explorer/?data=flask">打开可交互的地图</a> · <a href="docs/videos.md">全部片子与各自的生成方法</a></p>
+<p align="center">2 分 25 秒、带配音，一条命令生成、不调模型：tsdown 的地图从它的讲解里长出来，六个系统，再挑一个模块讲到它的两个函数，最后是 <code>cbe find</code>、<code>cbe query</code> 和 <code>cbe source</code>。<br><a href="https://zlxdengtianhei.github.io/codebase-explorer/?data=flask">打开可交互的地图</a> · <a href="docs/videos.md">全部片子与各自的生成方法</a></p>
 
 文件树只告诉你文件在哪，不告诉你每一块是干什么的。CBE 把仓库读一遍，给每个函数、方法和类写一段短讲解，再只拿这些讲解、一层一层聚成树：整个仓是干什么的、有哪几个系统、每个系统里的模块、模块里的函数。页面上放的是文字；签名、调用边和源码行用三条命令查，所以页面短，事实准。人从顶往下读这张地图；编码 agent 从 `docs/INDEX.md` 起，按名字查。
 
-**想试一下：** `uv tool install codebase-explorer`（需要 Python 3.12 或 3.13）。然后二选一：在 Claude Code 里用你自己的订阅生成；或在命令行接任意 OpenAI 兼容的端点生成（模型用 `--model` 指定）。步骤见[快速上手](#快速上手)。
+**想试一下：** 3.0 从 GitHub 装：`uv tool install git+https://github.com/zlxdengtianhei/codebase-explorer`（需要 Python 3.12 或 3.13）；PyPI 上仍是 2.3.0。然后二选一：在 Claude Code 里用你自己的订阅生成；或在命令行接任意 OpenAI 兼容的端点生成（模型用 `--model` 指定）。步骤见[快速上手](#快速上手)。
 
 ## 能得到什么
 
@@ -24,28 +24,30 @@ https://github.com/zlxdengtianhei/codebase-explorer/releases/download/walkthroug
 - **事实来自命令，不来自模型。** `cbe find`、`cbe query` 和 `cbe source` 按页面上的名字查。`cbe source` 从冻结的快照打印，打印前核对每个文件的 SHA-256 是否与冻结时记下的一致。
 - **一条命令生成讲解视频。** `cbe video` 把一次跑完的结果变成两三分钟带画面和配音的片子。讲稿由程序从地图自己的文字拼出来，所以不调模型，同一份结果每次得到同一支片子。
 
-下面是真实生成的 `docs/INDEX.md` 开头（tsdown，未改动）：
+下面是真实生成的 `docs/INDEX.md` 里那一节 `Modules`（tsdown，最终 3.0 运行，未改动）：
 
 ```markdown
 ## Modules
 
-- [**Build execution and lifecycle**](nodes/build-execution-and-lifecycle.md) — Runs resolved configs through build pipelines, coordinating cleaning, watching, restarts, and bundle disposal.
-  - [**Build execution and lifecycle \(Build orchestration\)**](nodes/build-execution-and-lifecycle-build-orchestratio.md) — Runs resolved configs through build pipelines, coordinating cleaning, watching, restarts, and bundle disposal.
-  - [**Legacy warning and shortcuts**](nodes/legacy-warning-and-shortcuts.md) — Warns about legacy CommonJS usage and handles interactive keyboard shortcuts with guarded action execution.
-- [**Filesystem and copy operations**](nodes/filesystem-and-copy-operations.md) — Provides shared filesystem helpers and resolves and executes copy rules with glob expansion and destination computation.
-  - [**Filesystem and copy operations \(Filesystem utilities\)**](nodes/filesystem-and-copy-operations-filesystem-utilit.md) — Provides shared filesystem helpers and resolves and executes copy rules with glob expansion and destination computation.
-  - [**Entry and target resolution**](nodes/entry-and-target-resolution.md) — Normalizes build entries and resolves targets and tsconfig files from options or package metadata.
+- [**Build execution and output**](nodes/build-execution-and-output.md) — Coordinates build orchestration, hooks, option and plugin assembly, output naming and addons, reports, and executable packaging workflows.
+- [**Configuration resolution and types**](nodes/configuration-resolution-and-types.md) — Resolves user and workspace configuration, loads files, merges defaults, and defines public and resolved configuration models.
+- [**Package dependencies and validation**](nodes/package-dependencies-and-validation.md) — Classifies dependency externalization, coordinates package bundles, generates exports, reads metadata, and runs lint and type validation.
+- [**Filesystem and asset pipeline**](nodes/filesystem-and-asset-pipeline.md) — Handles entry resolution, watch-mode chunks, output cleaning, shared filesystem helpers, and asset copy rules.
+- [**Shared utilities and logging**](nodes/shared-utilities-and-logging.md) — Provides reusable general helpers, shared utility types, and logger construction, formatting, and output behavior.
+- [**Command and interactive UI**](nodes/command-and-interactive-ui.md) — Exposes command-line entry and debug controls, starts the optional devtools UI, and handles watch-interface shortcuts.
 ```
+
+那一页停在一层，并在页上写了原因：两层要约 2,014 token，超过这页 1,500 token 的预算。两层放得下时，页面会把每个模块列在它的系统下面；每个模块页再列自己的孩子。
 
 完整示例：[flask](examples/flask/docs/INDEX.md)。更多见[示例与文档](#示例与文档)。
 
 ## 快速上手
 
-CBE 在 PyPI 上叫 `codebase-explorer`，需要 Python 3.12 或 3.13。有两种跑法，结果都是同一个 `docs/` 目录。常用的是 A：编码 agent 读 skill，用你自己的订阅干完活。B 给脚本和批量跑用。
+CBE 在 PyPI 上叫 `codebase-explorer`，那里最新的版本是 2.3.0。3.0 还没上 PyPI：第 1 步从 GitHub 装。CBE 需要 Python 3.12 或 3.13。有两种跑法，结果都是同一个 `docs/` 目录。常用的是 A：编码 agent 读 skill，用你自己的订阅干完活。B 给脚本和批量跑用。
 
-**A. 常用：在编码 agent 里，用你自己的订阅。** 下面以 Claude Code 为例；skill 让子代理用它所在宿主能开的最低思考强度写讲解。
+**A. 常用：在编码 agent 里，用你自己的订阅。** 下面以 Claude Code 为例；skill 让子代理用它所在宿主能开的最低思考强度写讲解，宿主允许就关掉思考。分层与总览这两类任务要做决定（树的形状、整仓那一页），所以给它们宿主的低档而不是关思考。
 
-1. 安装：`uv tool install codebase-explorer`（或 `pipx install codebase-explorer`）。`find`、`query`、`source` 用相对 `--run-dir`，以及 `cbe stale`，需要 2.3.0 或更新；3.0 多了 `cbe video`。
+1. 安装。要 3.0 的地图与 `cbe video`，从 GitHub 装：`uv tool install git+https://github.com/zlxdengtianhei/codebase-explorer`（或 `pipx install git+https://github.com/zlxdengtianhei/codebase-explorer`）。`uv tool install codebase-explorer`（`pipx install codebase-explorer`）装到的是 2.3.0，没有 `cbe video`。`find`、`query`、`source` 用相对 `--run-dir`，以及 `cbe stale`，需要 2.3.0 或更新。
 2. 可选，要调用图才需要：`cbe graph setup` 把 Joern 和 Java 运行时下载到你的用户缓存目录（约 1.9 GB；在 Linux x86_64 上测过，macOS 还没测）。
 3. 在项目里装 skill：`cbe-install install --host claude-code`。
 4. 在那里启动 Claude Code，说：“Use the codebase-explorer skill to generate documentation for this repository.”
@@ -130,9 +132,9 @@ flowchart LR
 cbe video --run-dir "$RUN" --out /abs/film [--modules 2] [--seconds 175] [--plan-only]
 ```
 
-片子照地图的阅读顺序走：先整体用途，再逐个系统，再挑两个模块一路讲到函数，最后一页讲三条查代码的命令。它只读一次跑完的结果，讲稿从这次结果自己的文字拼出来，所以不调模型，同一份结果加同样的参数每次得到同一支片子。画面是一页 HTML 由无头 Chrome 逐条截图；声音是 Kokoro-82M；最后由 ffmpeg 编码。`--plan-only` 只写讲稿和画面，不截图、不配音。模型文件、浏览器、ffmpeg 的选项与每样产物：见 [docs/videos.md](docs/videos.md)。
+片子照地图的阅读顺序走：先整体用途，再逐个系统，再挑最多两个模块一路讲到函数，最后一页讲三条查代码的命令。它只读一次跑完的结果，讲稿从这次结果自己的文字拼出来，所以不调模型，同一份结果加同样的参数每次得到同一支片子。画面是一页 HTML 由无头 Chrome 逐条截图；声音是 Kokoro-82M；最后由 ffmpeg 编码。`--plan-only` 只写讲稿和画面，不截图、不配音。模型文件、浏览器、ffmpeg 的选项与每样产物：见 [docs/videos.md](docs/videos.md)。
 
-本页顶部那支是 tsdown 的：14 条讲稿、2 分 55 秒、3.4 MB，没调一次模型。
+本页顶部那支是 tsdown 最终那次运行的：12 条讲稿、2 分 25 秒、2.98 MB，没调一次模型。
 
 ## 成本
 
@@ -140,12 +142,12 @@ cbe video --run-dir "$RUN" --out /abs/film [--modules 2] [--seconds 175] [--plan
 
 | 读数 | tsdown（43 个文件，源码 38.7k token） | cJSON（4 个文件，源码 34.4k token） |
 |---|---:|---:|
-| 模型输入 token ÷ 源码 token | 1.93 | 1.84 |
+| 模型输入 token ÷ 源码 token（程序口径） | 1.61 | 1.51 |
 | 模型读的源码 token ÷ 源码 token（源码只读一遍） | 1.00 | 1.00 |
-| 页面 token ÷ 源码 token | 0.49 | 0.46 |
-| 墙钟 | 155 秒 | 132 秒 |
+| 页面 token ÷ 源码 token | 0.45 | 0.45 |
+| 墙钟 | 239 秒 | 191 秒 |
 
-这条路上模型只看到 CBE 发的东西，所以 `read_ratio` 就是全部输入。两次都跑完（`complete`），程序检查全过，嵌入源码 1.5 倍源码的上限一次没碰到。
+这条路上模型只看到 CBE 发的东西，所以 `read_ratio` 就是全部输入。服务商回执（另一个分词器，第二种口径）把同两次运行算成源码的 1.68 与 1.60 倍。两次都跑完（`complete`），程序检查全过，嵌入源码 1.5 倍源码的上限一次没碰到。
 
 对 2.3.0，flask 与 tsdown 在 OpenCode 上用 DeepSeek V4.1 Flash（两版同一模型，子代理用宿主缺省强度，都不建调用图）：
 
@@ -156,7 +158,7 @@ cbe video --run-dir "$RUN" --out /abs/film [--modules 2] [--seconds 175] [--plan
 | 宿主记下的提示词 token（主会话 + 全部子代理） | 8.92 M / 4.80 M | 3.77 M / 2.78 M |
 | 页面 token ÷ 源码 token | 0.59 / 0.75 | 0.37 / 0.47 |
 
-也就是快约三倍、宿主侧提示词约少一半、页面约为源码的一半。四次运行的 `cbe host verify` 全过。提示词 token 把每轮的缓存读取重复计入，所以这张表内部的数可以比，不要和上面 API 那张比。
+3.0 那一列是最后一轮修复前的那一版；这套对比没有在最终版上重跑。它显示的是快约三倍、宿主侧提示词约少一半、页面约为源码的一半。四次运行的 `cbe host verify` 全过。提示词 token 把每轮的缓存读取重复计入，所以这张表内部的数可以比，不要和上面 API 那张比。
 
 建调用图不调模型。更早的、到 170 万 token 仓的成本表和 2.3.0 的读数在 [docs/running.md](docs/running.md#what-a-run-costs-the-earlier-table) 与 [CHANGELOG.md](CHANGELOG.md)。
 
@@ -164,8 +166,8 @@ cbe video --run-dir "$RUN" --out /abs/film [--modules 2] [--seconds 175] [--plan
 
 这里的数都是本机量的；本轮的表在 3.0 那次任务的记录里，更早的在 [`evaluation/tree/results/`](evaluation/tree/results/)。
 
-- **树。** 上面两次 3.0 运行都没有空节点、没有同级重名模块，tsdown 3 层、cJSON 2 层。层数不是目标：它由模型分出的组数决定，到八组以内为止。
-- **找要改的函数。** 每仓 10 道真题（“某件事在哪儿做”），用 `cbe find`、`cbe query`、`cbe source` 就能答；同一模型下，2.3.0 与 3.0.0.dev0 各在一个干净会话里答一次。命中：3.0 在 flask 答中 29 个里的 25 个、tsdown 27 个里的 27 个；2.3.0 是 23/29 与 25/27。3.0 的答案还顺带列出更多相关函数（45 对 32、43 对 34），所以命中更多、精度更低。读的 token：3.0 在 flask 上少一半，在 tsdown 上多 2.5 倍。两个仓方向相反，所以**两版在命中与 token 上都分不出高下**。纯文字页面量到的一个代价：3.0 的一份答案猜错了一个文件路径，一次 `cbe find` 就能改对。
+- **树。** 上面两次 3.0 运行都没有空节点、没有重名的页面标题，两棵都 2 层，顶层各 6 组。层数不是目标：它由模型分出的组数决定，到八组以内为止。
+- **找要改的函数。** 每仓 10 道真题（“某件事在哪儿做”），用 `cbe find`、`cbe query`、`cbe source` 就能答；同一模型下，2.3.0 与 3.0.0.dev0 各在一个干净会话里答一次（3.0 那次用的是最后一轮修复前的那一版）。命中：3.0 在 flask 答中 29 个里的 25 个、tsdown 27 个里的 27 个；2.3.0 是 23/29 与 25/27。3.0 的答案还顺带列出更多相关函数（45 对 32、43 对 34），所以命中更多、精度更低。读的 token：3.0 在 flask 上少一半，在 tsdown 上多 2.5 倍。两个仓方向相反，所以**两版在命中与 token 上都分不出高下**。纯文字页面量到的一个代价：3.0 的一份答案猜错了一个文件路径，一次 `cbe find` 就能改对。
 - **2.3.0 的、本轮没重测。** 那轮在三个仓上测的树也没有空节点；抽样核对的调用标签与源码一致；每仓 30 个真实提交的问法没有显示“程序建的树”比普通目录列表更能找到要改的代码，只有在目录很平的仓里有收窄。这些读数与条件在 [evaluation/README.md](evaluation/README.md)。
 
 我们不声称的：按功能聚合让 agent 定位更准；CBE 让 agent 的回答更好。上面的读数都没显示这两点。
@@ -186,9 +188,9 @@ cbe video --run-dir "$RUN" --out /abs/film [--modules 2] [--seconds 175] [--plan
 
 ## 已知限制
 
-- **宿主路会把源码读两遍。** 在编码 agent 里，子代理为了写讲解自己读源码文件，CBE 只数自己发的提示词；上面 1.93 与 1.84 是 API 路的读数。3.0 的宿主运行因此没有 `source_read_tokens`。那边诚实的数是宿主记的提示词总量，它比 2.3.0 少一半。
+- **宿主路会把源码读两遍。** 在编码 agent 里，子代理为了写讲解自己读源码文件，CBE 只数自己发的提示词；上面 1.61 与 1.51 是 API 路的读数。3.0 的宿主运行因此没有 `source_read_tokens`。那边诚实的数是宿主记的提示词总量，它比 2.3.0 少一半。
 - **3.0 与 2.3.0 在“找代码”上分不出。** 每仓 10 道题、各一个会话、两个仓、两版：命中只差两个函数，读的 token 在两个仓上方向相反。要更多轮才能说清。
-- **关掉思考对讲解质量的影响没测。** 3.0 让子代理用宿主能开的最低思考强度，API 路上把 DeepSeek 的思考关掉。开思考时讲解质量怎样，我们没有 A/B 读数。
+- **关掉思考对讲解质量的影响没测。** 3.0 让子代理用宿主能开的最低思考强度写讲解，宿主允许就关掉思考；分层与总览两类任务给宿主的低档。开思考时讲解质量怎样，我们没有 A/B 读数。
 - 调用图要 Joern 和 Java 21 或更新。`cbe graph setup` 两者都下（约 1.9 GB）。
 - C# 对重载方法的调用只解析到一组重载。在 GuardClauses 上，2,322 个调用里 993 个标为未解析；其中约 955 个是调仓外方法、`nameof` 或构造函数，14 个是仓内 CBE 连不上的调用。另抽一个仓（MediatR）核过：抽 10 对调用，全对。Kotlin 在固定版本的 Joern 下在真实仓上失败；两文件的例子能成。
 - Ruby 的动态派发可能把调用绑到错的类的方法上。CBE 把许多这类标成 ambiguous，仍有绑错的。

@@ -74,10 +74,11 @@ is read once; the read budget is recorded and enforced.
   not as a file-stem slug (`grp:general.ts-debounce-helpers`). `cap_details` no longer
   false-flags a group that names every member (it compared against character-spaced
   text), and a group's length cap follows the summed source of its members.
-- Subagents default to the lowest reasoning effort their host offers, written per host in
-  the Skill and its Claude Code, Codex and OpenCode pages; the API driver turns DeepSeek's
-  thinking off with `thinking: {"type": "disabled"}` (DeepSeek has no `none` effort level),
-  and `--effort` sets `reasoning_effort` for models that accept one.
+- The two judgement tasks, `layer_*` and `overview`, run at the host's low level instead
+  of thinking off, because they decide the tree and the whole page; detail writing stays
+  at the lowest effort the host offers.
+- A group of one joins the group its call edges tie it to (the same candidate group when
+  the run has no graph), and the program writes that group's line and summary again.
 
 ## 2.3.0 (2026-11-13)
 

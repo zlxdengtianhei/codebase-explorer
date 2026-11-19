@@ -10,11 +10,11 @@
 <!-- The 3.0 film. The release asset is uploaded when this README is published; the file is walkthrough-tsdown-3.0.mp4. -->
 https://github.com/zlxdengtianhei/codebase-explorer/releases/download/walkthrough-3.0.0.dev0/walkthrough-tsdown-3.0.mp4
 
-<p align="center">2 minutes 55 seconds, narrated, made by one command and no model call: the map of tsdown from its explanations, three systems, two modules taken down to their functions, then <code>cbe find</code>, <code>cbe query</code> and <code>cbe source</code>.<br><a href="https://zlxdengtianhei.github.io/codebase-explorer/?data=flask">Try the interactive map</a> · <a href="docs/videos.md">All films and how each is made</a></p>
+<p align="center">2 minutes 25 seconds, narrated, made by one command and no model call: the map of tsdown from its explanations, its six systems, one module taken down to two of its functions, then <code>cbe find</code>, <code>cbe query</code> and <code>cbe source</code>.<br><a href="https://zlxdengtianhei.github.io/codebase-explorer/?data=flask">Try the interactive map</a> · <a href="docs/videos.md">All films and how each is made</a></p>
 
 A file tree shows where files are, not what each part is for. CBE reads a repository once, writes one short explanation for every function, method and class, and then groups those explanations into a tree, one layer at a time: what the repository is for, its systems, their modules, and the functions under them. The pages hold prose. Signatures, call edges and source lines are looked up with three commands, so the pages stay short and the facts stay exact. A person reads the map from the top. A coding agent starts at `docs/INDEX.md` and looks up names.
 
-**To try it:** `uv tool install codebase-explorer` (Python 3.12 or 3.13). Then generate inside Claude Code on your own subscription, or from the command line with any OpenAI-compatible endpoint (you name the model with `--model`). The steps are in [Quickstart](#quickstart).
+**To try it:** `uv tool install git+https://github.com/zlxdengtianhei/codebase-explorer` for 3.0 (Python 3.12 or 3.13); PyPI still carries 2.3.0. Then generate inside Claude Code on your own subscription, or from the command line with any OpenAI-compatible endpoint (you name the model with `--model`). The steps are in [Quickstart](#quickstart).
 
 ## What you get
 
@@ -24,28 +24,30 @@ A file tree shows where files are, not what each part is for. CBE reads a reposi
 - **Facts from commands, not from the model.** `cbe find`, `cbe query` and `cbe source` resolve names from the pages. `cbe source` prints from the frozen snapshot and checks each file's SHA-256 against the digest recorded at freeze time before printing anything.
 - **A narrated film in one command.** `cbe video` turns a finished run into a two-to-three-minute film with voice and slides. The program assembles the script from the map's own text, so the film calls no model and the same run gives the same film.
 
-The start of a real `docs/INDEX.md`, generated for tsdown (unedited):
+The `Modules` section of a real `docs/INDEX.md`, generated for tsdown by the final 3.0 run (unedited):
 
 ```markdown
 ## Modules
 
-- [**Build execution and lifecycle**](nodes/build-execution-and-lifecycle.md) — Runs resolved configs through build pipelines, coordinating cleaning, watching, restarts, and bundle disposal.
-  - [**Build execution and lifecycle \(Build orchestration\)**](nodes/build-execution-and-lifecycle-build-orchestratio.md) — Runs resolved configs through build pipelines, coordinating cleaning, watching, restarts, and bundle disposal.
-  - [**Legacy warning and shortcuts**](nodes/legacy-warning-and-shortcuts.md) — Warns about legacy CommonJS usage and handles interactive keyboard shortcuts with guarded action execution.
-- [**Filesystem and copy operations**](nodes/filesystem-and-copy-operations.md) — Provides shared filesystem helpers and resolves and executes copy rules with glob expansion and destination computation.
-  - [**Filesystem and copy operations \(Filesystem utilities\)**](nodes/filesystem-and-copy-operations-filesystem-utilit.md) — Provides shared filesystem helpers and resolves and executes copy rules with glob expansion and destination computation.
-  - [**Entry and target resolution**](nodes/entry-and-target-resolution.md) — Normalizes build entries and resolves targets and tsconfig files from options or package metadata.
+- [**Build execution and output**](nodes/build-execution-and-output.md) — Coordinates build orchestration, hooks, option and plugin assembly, output naming and addons, reports, and executable packaging workflows.
+- [**Configuration resolution and types**](nodes/configuration-resolution-and-types.md) — Resolves user and workspace configuration, loads files, merges defaults, and defines public and resolved configuration models.
+- [**Package dependencies and validation**](nodes/package-dependencies-and-validation.md) — Classifies dependency externalization, coordinates package bundles, generates exports, reads metadata, and runs lint and type validation.
+- [**Filesystem and asset pipeline**](nodes/filesystem-and-asset-pipeline.md) — Handles entry resolution, watch-mode chunks, output cleaning, shared filesystem helpers, and asset copy rules.
+- [**Shared utilities and logging**](nodes/shared-utilities-and-logging.md) — Provides reusable general helpers, shared utility types, and logger construction, formatting, and output behavior.
+- [**Command and interactive UI**](nodes/command-and-interactive-ui.md) — Exposes command-line entry and debug controls, starts the optional devtools UI, and handles watch-interface shortcuts.
 ```
+
+That page stops at the top level and says why: two levels would take about 2,014 tokens, over its 1,500-token budget. When two levels fit, the page lists each module under its system; each module page lists its own children.
 
 Full example: [flask](examples/flask/docs/INDEX.md). More in [Examples and docs](#examples-and-docs).
 
 ## Quickstart
 
-CBE is on PyPI as `codebase-explorer`. It needs Python 3.12 or 3.13. There are two ways to run it. Both end in the same `docs/` folder. The usual one is A: your coding agent loads the skill and does the work on your own subscription. B is for scripts and batch runs.
+CBE is on PyPI as `codebase-explorer`, and the newest release there is 2.3.0. 3.0 is not on PyPI yet: step 1 installs it from GitHub. CBE needs Python 3.12 or 3.13. There are two ways to run it. Both end in the same `docs/` folder. The usual one is A: your coding agent loads the skill and does the work on your own subscription. B is for scripts and batch runs.
 
-**A. The usual way: inside your coding agent, on your own subscription.** The steps below use Claude Code; the skill makes its subagents write the explanations at the lowest reasoning effort their host offers.
+**A. The usual way: inside your coding agent, on your own subscription.** The steps below use Claude Code; the skill makes its subagents write the explanations at the lowest reasoning effort their host offers, with thinking off where the host allows it. The layer and overview tasks decide something (the tree, the whole-repository page), so they get the host's low level instead of thinking off.
 
-1. Install CBE: `uv tool install codebase-explorer` (or `pipx install codebase-explorer`). A relative `--run-dir` for `find`, `query` and `source`, and `cbe stale`, need 2.3.0 or newer; 3.0 adds `cbe video`.
+1. Install CBE. For the 3.0 map and `cbe video`, install from GitHub: `uv tool install git+https://github.com/zlxdengtianhei/codebase-explorer` (or `pipx install git+https://github.com/zlxdengtianhei/codebase-explorer`). `uv tool install codebase-explorer` (`pipx install codebase-explorer`) gives 2.3.0, which has no `cbe video`. A relative `--run-dir` for `find`, `query` and `source`, and `cbe stale`, need 2.3.0 or newer.
 2. Optional, for the call graph: `cbe graph setup` downloads Joern and a Java runtime into your user cache directory (about 1.9 GB; tested on Linux x86_64, not yet on macOS).
 3. In your project, install the skill: `cbe-install install --host claude-code`.
 4. Start Claude Code there and ask: "Use the codebase-explorer skill to generate documentation for this repository."
@@ -130,9 +132,9 @@ flowchart LR
 cbe video --run-dir "$RUN" --out /abs/film [--modules 2] [--seconds 175] [--plan-only]
 ```
 
-The film follows the map's reading path: the overall purpose, then every system, then two modules taken down to their functions, then one page for the three look-up commands. It reads one finished run and nothing else; the script is assembled from that run's own text, so no model is called and the same run with the same options gives the same film. Slides are one HTML page shot by headless Chrome; the voice is Kokoro-82M, and ffmpeg encodes the result. `--plan-only` stops after the script and the slides. Options for model files, browser and ffmpeg, and what each output is: [docs/videos.md](docs/videos.md).
+The film follows the map's reading path: the overall purpose, then every system, then up to two modules taken down to their functions, then one page for the three look-up commands. It reads one finished run and nothing else; the script is assembled from that run's own text, so no model is called and the same run with the same options gives the same film. Slides are one HTML page shot by headless Chrome; the voice is Kokoro-82M, and ffmpeg encodes the result. `--plan-only` stops after the script and the slides. Options for model files, browser and ffmpeg, and what each output is: [docs/videos.md](docs/videos.md).
 
-The film at the top of this page is tsdown's: 14 lines, 2 minutes 55 seconds, 3.4 MB, and no model call.
+The film at the top of this page is tsdown's final run: 12 lines of narration, 2 minutes 25 seconds, 2.98 MB, and no model call.
 
 ## What it costs
 
@@ -140,12 +142,12 @@ Two runs through the API path, `cbe generate` with DeepSeek V4.1 Flash, one run 
 
 | Measure | tsdown (43 files, 38.7k source tokens) | cJSON (4 files, 34.4k source tokens) |
 |---|---:|---:|
-| Model input tokens ÷ source tokens | 1.93 | 1.84 |
+| Model input tokens ÷ source tokens (the program's count) | 1.61 | 1.51 |
 | Source tokens read by the model ÷ source tokens (the source is read once) | 1.00 | 1.00 |
-| Page tokens ÷ source tokens | 0.49 | 0.46 |
-| Wall clock | 155 s | 132 s |
+| Page tokens ÷ source tokens | 0.45 | 0.45 |
+| Wall clock | 239 s | 191 s |
 
-On this path the model sees only what CBE sends, so `read_ratio` is the whole input. Both runs finished `complete` with the deterministic checks passing. The 1.5-times-sources cap on embedded source was never reached.
+On this path the model sees only what CBE sends, so `read_ratio` is the whole input. The provider's own receipt, a second reading from a different tokenizer, puts the same runs at 1.68 and 1.60 times the source. Both runs finished `complete` with the deterministic checks passing. The 1.5-times-sources cap on embedded source was never reached.
 
 Against 2.3.0, on flask and tsdown through OpenCode with DeepSeek V4.1 Flash (the same model for both versions, subagents at the host's default effort, no call graph):
 
@@ -156,7 +158,7 @@ Against 2.3.0, on flask and tsdown through OpenCode with DeepSeek V4.1 Flash (th
 | Prompt tokens the host recorded (main session + all subagents) | 8.92 M / 4.80 M | 3.77 M / 2.78 M |
 | Page tokens ÷ source tokens | 0.59 / 0.75 | 0.37 / 0.47 |
 
-That is about three times faster, about half the host-side prompt tokens, and pages about half the size of the source. The `cbe host verify` checks passed on all four runs. Prompt tokens count cache reads again on every turn, so compare them within this table, not with the API table above.
+The 3.0 column comes from the 3.0 build before its last round of fixes; that comparison was not re-run on the final build. It shows a build about three times faster, about half the host-side prompt tokens, and pages about half the size of the source. The `cbe host verify` checks passed on all four runs. Prompt tokens count cache reads again on every turn, so compare them within this table, not with the API table above.
 
 Building the graph makes no model call. An older cost table for repositories up to 1.7 million tokens and the 2.3.0 numbers are in [docs/running.md](docs/running.md#what-a-run-costs-the-earlier-table) and [CHANGELOG.md](CHANGELOG.md).
 
@@ -164,8 +166,8 @@ Building the graph makes no model call. An older cost table for repositories up 
 
 Everything here was measured on this machine; the tables are in the task records of the 3.0 round and the older ones in [`evaluation/tree/results/`](evaluation/tree/results/).
 
-- **The tree.** Both 3.0 runs above finished with no empty nodes and no duplicate modules, with 3 layers on tsdown and 2 on cJSON. Layer count is not a target: it follows from how many groups the model makes and stops at eight or fewer.
-- **Finding the functions to change.** 10 real questions per repository ("where does X happen"), answerable with `cbe find`, `cbe query` and `cbe source`, asked in one clean session each for 2.3.0 and for 3.0.0.dev0 on the same model. Hits: 3.0 found 25 of 29 expected functions on flask and 27 of 27 on tsdown; 2.3.0 found 23 of 29 and 25 of 27. The 3.0 answers also listed more related functions (45 vs 32, 43 vs 34), so they hit more and are less precise. Reading tokens: 3.0 used half on flask and 2.5 times as much on tsdown. The two repositories point in opposite directions, so **we cannot tell the two versions apart on either hits or tokens**. One measured cost of prose-only pages: one 3.0 answer guessed a wrong file path, which one `cbe find` would have corrected.
+- **The tree.** Both 3.0 runs above finished with no empty nodes and no duplicate page titles, each tree 2 layers deep with 6 groups at the top. Layer count is not a target: it follows from how many groups the model makes and stops at eight or fewer.
+- **Finding the functions to change.** 10 real questions per repository ("where does X happen"), answerable with `cbe find`, `cbe query` and `cbe source`, asked in one clean session each for 2.3.0 and for 3.0.0.dev0 on the same model (the 3.0 session ran on the build before its last round of fixes). Hits: 3.0 found 25 of 29 expected functions on flask and 27 of 27 on tsdown; 2.3.0 found 23 of 29 and 25 of 27. The 3.0 answers also listed more related functions (45 vs 32, 43 vs 34), so they hit more and are less precise. Reading tokens: 3.0 used half on flask and 2.5 times as much on tsdown. The two repositories point in opposite directions, so **we cannot tell the two versions apart on either hits or tokens**. One measured cost of prose-only pages: one 3.0 answer guessed a wrong file path, which one `cbe find` would have corrected.
 - **From 2.3.0, unchanged this round.** The 2.3.0 trees had no empty nodes on the three repositories measured then; sampled call-labelled edges matched the source; and 30 real commits per repository did not show that the program-built tree finds the code better than a plain directory listing except where directories are flat. Those readings, with their conditions, are in [evaluation/README.md](evaluation/README.md).
 
 What we do not claim: that grouping by function lets an agent locate code better than a directory tree does, or that CBE improves an agent's answers. The measurements above do not show either.
@@ -186,9 +188,9 @@ Without a graph, CBE still works. With one, the explanation tasks and the depend
 
 ## Known limitations
 
-- **The host path reads source twice.** Through a coding agent, the subagents read the source files themselves to write the detail, and CBE counts only its own prompts; the 1.93 and 1.84 above are API-path readings. The 3.0 host runs wrote no `source_read_tokens` for that reason. The host-side prompt total is the honest number there, and it halved against 2.3.0.
+- **The host path reads source twice.** Through a coding agent, the subagents read the source files themselves to write the detail, and CBE counts only its own prompts; the 1.61 and 1.51 above are API-path readings. The 3.0 host runs wrote no `source_read_tokens` for that reason. The host-side prompt total is the honest number there, and it halved against 2.3.0.
 - **We cannot tell 3.0 from 2.3.0 on locating code.** 10 questions per repository, one session each, two repositories, two versions: the hits differ by two functions and the reading tokens disagree between the repositories. More runs are needed.
-- **The effect of thinking off on explanation quality is not measured.** 3.0 defaults subagents to their host's lowest reasoning effort and turns DeepSeek's thinking off on the API path. We have no A/B reading of detail quality with thinking on.
+- **The effect of thinking off on explanation quality is not measured.** 3.0 writes detail at the lowest reasoning effort the host offers, with thinking off where the host allows it, and its layer and overview tasks get the host's low level. We have no A/B reading of detail quality with thinking on.
 - The call graph needs Joern and Java 21 or newer. `cbe graph setup` downloads both (about 1.9 GB).
 - C# calls to overloaded methods resolve only to the set of overloads. On GuardClauses, 993 of 2,322 calls are marked unresolved; about 955 of those are calls to methods outside the repository, `nameof` or constructor calls, and 14 are calls inside the repository that CBE cannot link. A second repository (MediatR) was spot-checked: 10 sampled call pairs were right. Kotlin graphs fail on real repositories under the pinned Joern version; two-file examples work.
 - Ruby's dynamic dispatch can bind a call to the wrong class's method. CBE marks many of these as ambiguous, and some wrong bindings remain.
