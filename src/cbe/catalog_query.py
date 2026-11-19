@@ -188,6 +188,8 @@ def resolve_name(catalog: dict[str, Any], name: str) -> str | None:
         [f"grp:{term}"] if f"grp:{term}" in catalog["symbols"] else [],
         sorted(uid for uid, unit in units.items()
                if names.get(uid) == term or (unit.get("anchor") or "").lstrip("#") == anchor),
+        sorted(nid for nid, node in (catalog.get("nodes") or {}).items()
+               if term in {nid, node.get("title")}),
         sorted(sid for sid, record in catalog["symbols"].items()
                if term in {record.get("name"), record.get("display_name"),
                            sid.split("::")[2] if sid.count("::") >= 2 else None}),

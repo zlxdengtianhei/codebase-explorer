@@ -159,6 +159,14 @@ def test_json_queries_preserve_file_metadata_and_inventory_names(tmp_path, capsy
         assert file[key] == catalog["files"]["pkg/jobs.py"][key]
 
 
+def test_a_node_title_from_a_page_resolves_to_its_page(tmp_path):
+    run, _, _, _, _ = _run(tmp_path)
+    catalog = json.loads((run / "catalog.json").read_text())
+    title, node = next(iter(catalog["nodes"].items()))
+    record = catalog_query.query(run, node["title"])
+    assert record["id"] == title and record["children"] == node["children"]
+
+
 def test_layer_metrics_report_no_footer_or_relation_rows_on_30_pages(tmp_path):
     run, _, _, _, _ = _run(tmp_path)
     page = (run / "docs/nodes/root.md").read_text()
