@@ -610,6 +610,21 @@ def assemble(levels: list[list[dict]], overview: dict | None, repo: str, edges: 
                 record["note"] = "program-made title (a sibling had the same title)"
                 title = candidate
             used.add(normalize_title(title))
+    # A promoted child can carry its parent's title; the reader needs two names, not one twice.
+    for parent, kids in children.items():
+        parent_title = normalize_title(records[parent].get("title") or "")
+        if not parent_title:
+            continue
+        for kid in kids:
+            record = records[kid]
+            if normalize_title(record.get("title")) != parent_title:
+                continue
+            hint = next((records[member]["title"] for member in record.get("members") or []
+                         if member in records), "")
+            if not hint and record.get("subtree"):
+                hint = skeleton.symbol_words(record["subtree"][0])
+            record["title"] = f"{record['title']} ({hint})" if hint else f"{record['title']} (part)"
+            record["note"] = "program-made title (the parent had the same title)"
     nodes = []
     leaf_ids = {group["id"] for group in levels[0]}
     order = [group for groups in levels for group in groups] + ([records[root_id]]
