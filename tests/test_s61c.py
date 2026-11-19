@@ -58,25 +58,25 @@ def _gap(run, tid):
 
 @pytest.mark.parametrize('kind',['module','repair'])
 def test_detail_gets_third_answer_with_only_the_gap_in_the_follow_up(tmp_path, monkeypatch, kind):
-    monkeypatch.setattr(checks, 'GAP_MIN_TOKENS', 1)
     run, item = _target(tmp_path, kind)
     tid = item['task']
     gap = _gap(run, tid)
-    first_ask = host_run.completion_prompt(run, tid)
+    first_ask, _ = host_run.completion_prompt(run, tid)
     value = _semantic_answer(first_ask)
     value['units'] = [unit for unit in value['units'] if unit['h'] != [gap['n']]]
     first = _answer(run, item, value)
     assert not first['accepted'] and first['task_status']=='pending'
     item = _next(run,tid)
-    prompt = host_run.completion_prompt(run,tid)
-    assert prompt.startswith(first_ask) and f"{gap['n']} function {gap['name']}" in prompt[len(first_ask):]
+    prompt, _ = host_run.completion_prompt(run,tid)
+    # The gap-fill ask carries only the missing symbol's source, not the whole batch.
+    assert "SYMBOLS STILL WITHOUT A DETAIL" in prompt and f"{gap['n']} function {gap['name']}" in prompt
+    assert "SOURCE OF THESE SYMBOLS" in prompt and prompt.count("==== ") == 1
     second = _answer(run,item,UNUSABLE)
     assert not second['accepted'] and second['task_status']=='pending'
     assert not (run/f'host/accepted/{tid}.json').exists()
     item = _next(run,tid)
-    prompt = host_run.completion_prompt(run,tid)
-    follow_up = prompt[len(first_ask):]
-    assert 'no units list' in follow_up and f"{gap['n']} function {gap['name']}" in follow_up
+    prompt, _ = host_run.completion_prompt(run,tid)
+    assert 'no units list' in prompt and f"{gap['n']} function {gap['name']}" in prompt
     third = _answer(run,item,{'units': [{'h': [gap['n']], 'explain': 'The missing unit.'}]})
     assert third['accepted'] and third['attempts']==3 and not third['normalized']
     accepted = json.loads((run/f'host/accepted/{tid}.json').read_text())
@@ -129,7 +129,7 @@ def test_detail_resume_and_retry_grant_three_fresh_answers(tmp_path,kind,recover
     assert '1/3 this round' in log and '2/3 this round' in log
 
 
-@pytest.mark.parametrize('kind',['tree_name','system','review'])
+@pytest.mark.parametrize('kind',['layer','overview','review'])
 def test_other_task_kinds_still_have_two_answers_and_two_after_retry(tmp_path,kind):
     run,item=_target(tmp_path,kind)
     tid=item['task']

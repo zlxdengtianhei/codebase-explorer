@@ -99,7 +99,9 @@ def test_render_publishes_node_pages_source_links_and_a_compatible_catalog(tmp_p
     index = (run_dir / "docs" / "INDEX.md").read_text(encoding="utf-8")
     assert "](nodes/root.md)" in index
     page = (run_dir / "docs" / "nodes" / "root.md").read_text(encoding="utf-8")
-    assert "pkg/jobs.py" in page and "L1-L" in page  # program-derived source link
+    # 3.0 pages are prose only: the source link and its definition are gone.
+    assert "L1-L" not in page and "[f1]:" not in page and "](#" not in page
+    assert "### `" in page
     catalog = json.loads((run_dir / "catalog.json").read_text(encoding="utf-8"))
     assert catalog["units"] and catalog["symbols"]["pkg/jobs.py::Pool"]["file"] == "pkg/jobs.py"
     checks = {row["check"]: row["ok"] for row in
@@ -239,19 +241,18 @@ def test_queries_on_a_catalog_from_another_version_say_so(tmp_path) -> None:
             call()
 
 
-@pytest.mark.parametrize("damage", ["wrong_target", "missing_group", "missing_anchor"])
+@pytest.mark.parametrize("damage", ["wrong_page", "missing_group", "missing_page"])
 def test_verification_rejects_broken_published_navigation(tmp_path, damage) -> None:
     run, inventory, units, dispositions, tree, members, group, _ = _grouped_run(tmp_path)
     catalog_path = run / "catalog.json"
     catalog = json.loads(catalog_path.read_text())
-    if damage == "wrong_target":
-        catalog["symbol_index"][members[0]]["anchor"] = "#u-wrong-target"
+    if damage == "wrong_page":
+        catalog["symbol_index"][members[0]]["page"] = "nodes/missing-page.md"
     elif damage == "missing_group":
         catalog["units"].pop(group)
         catalog["symbol_index"].pop(group)
     else:
-        page = run / "docs/nodes/root.md"
-        page.write_text(page.read_text().replace(f'<a id="{docs.anchor(group)}"></a>', ""))
+        (run / "docs/nodes/root.md").unlink()
     catalog_path.write_text(json.dumps(catalog))
     checks = {row["check"]: row for row in docs.verify(run, inventory, units, dispositions, tree)}
     assert not checks["catalog_navigation_resolves"]["ok"], checks

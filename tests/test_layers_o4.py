@@ -40,8 +40,9 @@ def test_page_and_catalog_share_complete_records(tmp_path):
     assert "KEEP THIS EVIDENCE" not in page
     assert "folds:" not in page and "kind:" not in page
     assert "### `class::" not in page and "### `function::" not in page
-    assert "pkg/jobs.py:L" in page and "**Relations.**" not in page
-    assert 'Look up code: the commands are under "Read further" in [INDEX.md](../INDEX.md)' in page
+    # Design 2.4: no signature, source link, anchor, relation row or footer on a page.
+    assert "pkg/jobs.py:L" not in page and "**Relations.**" not in page
+    assert "<a id=" not in page and "[f1]:" not in page and "Look up code:" not in page
     assert "cbe source --run-dir" not in page  # the commands are written once, in INDEX.md
     index = (run / "docs/INDEX.md").read_text()
     assert "## Read further" in index and "cbe source --run-dir" in index
@@ -175,18 +176,19 @@ def test_fallback_snapshot_keeps_exact_unsupported_source_after_repo_is_gone(tmp
     assert "create table jobs" in capsys.readouterr().out
 
 
-def test_summary_prompt_and_tree_naming_use_summary_without_full_explanation():
-    from cbe import prompts, treename
+def test_summary_and_layer_blocks_use_the_summary_sentence():
+    from cbe import layers, prompts
     from cbe.records import summary_sentence
-    unit = {"id": "a.py::f", "kind": "function", "explain": "First. Second.", "ranges": [{"path": "a.py"}]}
+    unit = {"id": "a.py::function::f::0", "kind": "function", "explain": "First. Second.",
+            "ranges": [{"path": "a.py"}]}
     assert summary_sentence(unit) == "First."
     unit["summary"] = "Chosen."
     assert summary_sentence(unit) == "Chosen."
-    tree = treename.Tree([{"id": "m1", "parent": None, "unit_ids": ["a.py::f"], "level": 0}])
-    block = "\n".join(treename.name_blocks(["m1"], tree, {"a.py::f": unit}, []))
-    assert "Chosen." in block and "Second." not in block
+    chunk = {"members": [unit["id"]], "candidates": [[unit["id"]]]}
+    blocks = layers.leaf_blocks({unit["id"]: unit}, chunk, {unit["id"]: "u1"}, [])
+    assert "Chosen." in blocks[0] and "Second." not in blocks[0]
     prompt = prompts.detail_prompt(["a.py"], {"a.py": {"symbols": []}})
-    assert "Do not emit a separate summary field" in prompt and "25 words" in prompt
+    assert "1 to 3 sentences, about 25 to 60 tokens" in prompt
 
 
 def test_full_signatures_are_not_limited_to_prompt_signature_budget(tmp_path):
@@ -245,8 +247,10 @@ def test_summary_metrics_use_the_published_artifacts_and_frozen_source(tmp_path)
     assert "Markdown" in expected["scope"]
     assert sum(expected["semantic_breakdown"].values()) == expected["semantic_tokens"]
     assert expected["semantic_breakdown"]["model_body"] > 0
-    assert expected["semantic_breakdown"]["signature_location"] > 0
     assert expected["semantic_breakdown"]["heading_anchor"] > 0
+    # 3.0 pages carry no signatures, source links, relation rows or footer.
+    for empty in ("signature_location", "relations", "footer"):
+        assert expected["semantic_breakdown"][empty] == 0
     assert expected["model_body_source_ratio"] == expected["model_body_tokens"] / expected["source_tokens"]
     assert summary["layers"]["semantic_source_ratio"] == expected["semantic_tokens"] / expected["source_tokens"]
 

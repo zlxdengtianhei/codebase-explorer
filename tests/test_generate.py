@@ -16,18 +16,21 @@ from cbe.api_completion import Completion
 generator = importlib.import_module("cbe.generate")
 
 
-def _semantic_answer(prompt: str) -> dict:
+def _semantic_answer(prompt) -> dict:
     """One valid semantic-stage answer, chosen from the prompt's own content."""
-    from test_host_run import _detail_from_prompt, _system_answer, _tree_name_from_prompt, _tree_top_from_prompt
-    if "MODULES:\n\n" in prompt:
-        return _tree_name_from_prompt(prompt)
-    if "GROUPS:\n\n" in prompt:
-        return _tree_top_from_prompt(prompt)
-    if "DOCUMENTATION (structured units)" in prompt:
+    from test_host_run import (_detail_from_prompt, _gap_from_prompt, _layer_from_prompt)
+
+    if isinstance(prompt, tuple):
+        prompt = prompt[0]
+    if "TASK: Check these structured detail units" in prompt:
         return {"decision": "accepted", "issues": []}
+    if "SYMBOLS STILL WITHOUT A DETAIL" in prompt:
+        return _gap_from_prompt(prompt)
+    if "This is layer" in prompt:
+        return _layer_from_prompt(prompt)
     if "SYMBOLS (this batch" in prompt:
         return _detail_from_prompt(prompt)
-    return {"overview": "A small work reservation package.", **_system_answer(prompt)}
+    return {"overview": "A small work reservation package."}
 
 
 def test_generate_renders_and_accounts_for_each_physical_call(tmp_path, monkeypatch) -> None:
@@ -62,20 +65,20 @@ def test_generate_renders_and_accounts_for_each_physical_call(tmp_path, monkeypa
     assert "apiKey" not in json.dumps(api_config)
     assert result["source_files"] == 2
     assert result["modules"] == 2
-    assert result["calls"] == len(seen) == 5   # two reading batches, one review, one naming batch, the overview
-    assert result["input_tokens"] == 1000
-    assert result["cache_tokens"] == 5
+    assert result["calls"] == len(seen) == 4   # two reading batches, one grouping layer, the overview
+    assert result["input_tokens"] == 800
+    assert result["cache_tokens"] == 4
     assert result["status"] == "complete"
     index = (run_dir / "docs" / "INDEX.md").read_text(encoding="utf-8")
     assert "## Modules" in index
     pages = "".join(path.read_text(encoding="utf-8")
                      for path in (run_dir / "docs" / "nodes").glob("*.md"))
-    assert "src/pkg/jobs.py" in pages
+    assert "reserve_run" in pages and "### `" in pages
     assert str(tmp_path) not in index
     matches = catalog_query.find(run_dir, "reserve_run")
     assert matches and catalog_query.query(run_dir, matches[0]["id"])["file"] == "src/pkg/jobs.py"
     with (run_dir / "calls.csv").open(newline="", encoding="utf-8") as stream:
-        assert len(list(csv.DictReader(stream))) == 5
+        assert len(list(csv.DictReader(stream))) == 4
 
 
 def test_crlf_source_is_embedded_verbatim_and_the_run_completes(tmp_path, monkeypatch) -> None:
@@ -201,7 +204,7 @@ def test_generate_renders_partial_run_and_resume_finishes_pending_parts(tmp_path
             _csv_row(kwargs["csv_path"], {"task": task, "attempt": attempt, "input_tokens": 5, "output_tokens": 1,
                                           "cache_tokens": 0, "result": "invalid_json:prose", "seconds": 0.01})
             return Completion(None, "invalid_json:prose", "Here is the module summary in prose.", None, 0.01)
-        if task == "system_overview":
+        if task == "overview":
             value = {"overview": "A tiny package with jobs pages. " * 100}
         else:
             value = _semantic_answer(kwargs["prompt"])
@@ -213,20 +216,20 @@ def test_generate_renders_partial_run_and_resume_finishes_pending_parts(tmp_path
     code = cli.main(["generate", str(repo), "--run-dir", str(run_dir), "--model", "example/model", "--jobs", "2"])
     first = json.loads(capsys.readouterr().out)
     assert code == 3 and first["status"] == "partial" and first["pending"] == ["module_2"]
-    assert first["normalized"] == ["system"]
+    assert first["normalized"] == ["overview"]
     notes = (run_dir / "docs" / "RUN.md").read_text(encoding="utf-8")
     assert "## Generation notes" in notes and "module_2" in notes
     with (run_dir / "calls.csv").open(newline="", encoding="utf-8") as stream:
         results = {(row["task"], row["attempt"]): row["result"] for row in csv.DictReader(stream)}
-    assert results[("system_overview", "1")] == "schema_error"
-    assert results[("system_overview", "2")] == "normalized"
+    assert results[("overview", "1")] == "schema_error"
+    assert results[("overview", "2")] == "normalized"
     assert "fail" in (run_dir / "progress.log").read_text(encoding="utf-8")
 
     seen.clear()
     code = cli.main(["generate", str(repo), "--resume", "--run-dir", str(run_dir), "--model", "example/model"])
     second = json.loads(capsys.readouterr().out)
     assert code == 0 and second["status"] == "complete" and second["pending"] == []
-    assert seen[0] == "module_2" and "system_overview" in seen  # the overview is redone to cover module_2
+    assert "module_2" in seen and "overview" in seen  # the overview is redone to cover module_2
     assert "are pending" not in (run_dir / "docs" / "RUN.md").read_text(encoding="utf-8")
 
 
@@ -301,10 +304,10 @@ def test_preflight_stops_the_run_before_a_call_when_a_body_is_missing(tmp_path, 
     real_prompt = host_run.completion_prompt
 
     def empty_bodies(rd, task_id):
-        prompt = real_prompt(rd, task_id)
+        prompt, source = real_prompt(rd, task_id)
         for path in ("src/pkg/jobs.py", "tests/test_jobs.py"):
             prompt = prompt.replace((repo / path).read_text(encoding="utf-8"), "")
-        return prompt
+        return prompt, source
 
     monkeypatch.setattr(host_run, "completion_prompt", empty_bodies)
     called: dict[str, str] = {}
@@ -350,7 +353,8 @@ def test_preflight_accepts_files_that_are_empty_by_design(tmp_path) -> None:
     state = json.loads((run_dir / "host" / "state.json").read_text(encoding="utf-8"))
     for number in range(len(state["modules"])):
         task_id = f"module_{number + 1}"
-        generator._verify_embedded_source(run_dir, task_id, host_run.completion_prompt(run_dir, task_id))
+        prompt, source = host_run.completion_prompt(run_dir, task_id)
+        generator._verify_embedded_source(run_dir, task_id, prompt, source)
 
 
 def test_per_call_delivery_failure_fails_the_module(tmp_path, monkeypatch) -> None:
@@ -415,11 +419,11 @@ def test_generate_resume_rejects_a_different_graph(tmp_path) -> None:
 
 
 def test_overview_is_short_and_its_limit_is_shared_by_prompt_and_check() -> None:
-    # The overview opens the entry page: 2 to 4 sentences, not a page of navigation.
-    limit = checks.system_limit()
-    checks.check_system({"overview": "Overview. " * 100, "dependency_descriptions": [], "key_flows": []}, limit)
+    # The overview is the whole-repository page: bounded, and the same bound is checked.
+    limit = checks.overview_limit()
+    checks.check_overview({"overview": "Overview. " * 20}, limit)
     with pytest.raises(ValueError, match=f"at most {limit}"):
-        checks.check_system({"overview": "n" * (limit + 1), "dependency_descriptions": [], "key_flows": []}, limit)
+        checks.check_overview({"overview": "word " * (limit + 50)}, limit)
 
 
 def test_scan_keeps_own_source_in_build_dist_vendor_hidden_and_minified(tmp_path) -> None:

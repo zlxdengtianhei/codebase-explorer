@@ -202,7 +202,7 @@ def test_skill_starts_with_using_an_existing_map() -> None:
     text = (SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
     existing = text.index("## When the repository already has a map")
     assert existing < text.index("## Host-driven generation") and existing < text.index("1. **Plan.**")
-    assert "responsibility" not in text
+    assert "tree_name" not in text and "tree_top" not in text
     assert "cbe graph setup" in text and text.index("cbe graph setup") < text.index("1. **Plan.**")
     assert "only after the subagent has written its result file" in text
     assert "agents_md.lines" in text

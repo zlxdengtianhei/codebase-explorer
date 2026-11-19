@@ -41,12 +41,26 @@ class ApiConfigError(ValueError):
     pass
 
 
+#: Design 2.5: DeepSeek runs in its non-thinking mode, with room for a whole batch answer.
+DEEPSEEK_DEFAULTS: dict[str, Any] = {
+    "timeout": 1800,
+    "output_max_tokens": 32768,
+    "reasoning_effort": "none",
+    "response_format": {"type": "json_object"},
+}
+
+
 def model_defaults(model: str) -> dict[str, Any]:
     """Defaults for a model: the exact name, else the same model under another gateway prefix."""
     if model in MODEL_DEFAULTS:
         return MODEL_DEFAULTS[model]
     name = model.rsplit("/", 1)[-1]
-    return next((row for key, row in MODEL_DEFAULTS.items() if key.rsplit("/", 1)[-1] == name), {})
+    row = next((row for key, row in MODEL_DEFAULTS.items() if key.rsplit("/", 1)[-1] == name), None)
+    if row is not None:
+        return row
+    if "deepseek" in model.lower():
+        return DEEPSEEK_DEFAULTS
+    return {}
 
 
 def load_config(path: Path, model: str = "") -> dict[str, Any]:

@@ -14,4 +14,4 @@ def test_derived_cache_cannot_change_tree_evidence(tmp_path):
     first = next(iter(cached["records"].values()))
     first["summary"] = "FORGED CACHE EVIDENCE"
     path.write_text(json.dumps(cached))
-    assert "FORGED CACHE EVIDENCE" not in host_run.completion_prompt(run, "tree_name_1")
+    assert "FORGED CACHE EVIDENCE" not in host_run.completion_prompt(run, "layer_1_1")[0]

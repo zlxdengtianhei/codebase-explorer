@@ -85,20 +85,18 @@ def test_every_page_title_finds_its_id_despite_many_incidental_matches(tmp_path)
     run, _, _, _, _ = _run(tmp_path)
     path = run / "catalog.json"
     catalog = json.loads(path.read_text())
-    titles = re.findall(r'<a id="(u-[0-9a-f]+)"></a>\n### `([^`]+)`',
-                        (run / "docs/nodes/root.md").read_text())
+    titles = re.findall(r"(?m)^### `([^`]+)`$", (run / "docs/nodes/root.md").read_text())
+    assert titles
     # Incidental matches must not crowd a named unit out of the default limit.
-    catalog["symbols"] = {**{f"noise-{i}": {"name": f"noise-{i}", "explain": " ".join(t for _, t in titles)}
+    catalog["symbols"] = {**{f"noise-{i}": {"name": f"noise-{i}", "explain": " ".join(titles)}
                             for i in range(40)}, **catalog["symbols"]}
     path.write_text(json.dumps(catalog))
-    for anchor, title in titles:
-        uid = next(uid for uid, row in catalog["units"].items() if row["anchor"] == "#" + anchor)
-        assert uid in [row["id"] for row in catalog_query.find(run, title)]
-        assert catalog_query.find(run, uid, limit=1)[0]["id"] == uid
-    footer = (run / "docs/nodes/root.md").read_text().split("Look up code:")[1]
-    assert "[INDEX.md](../INDEX.md)" in footer
+    for title in titles:
+        assert title in [row["name"] for row in catalog_query.find(run, title)]
+    # A page reached directly has no repeated command block; INDEX writes it once.
+    page = (run / "docs/nodes/root.md").read_text()
+    assert "Look up code:" not in page
     assert 'cbe find --run-dir "$RUN" --term' in (run / "docs/INDEX.md").read_text()
-    assert "按 [INDEX]" not in footer
 
 
 @pytest.mark.parametrize("summary", [None, "Chosen summary.", "First sentence."])
@@ -114,7 +112,7 @@ def test_page_keeps_complete_explanation_with_or_without_summary(tmp_path, summa
                 units=units, dispositions={sid: {"how": "unit", "unit": sid} for sid in ids},
                 tree=tree, languages={"pkg/jobs.py": "python"}, context=context)
     page = (run / "docs/nodes/root.md").read_text()
-    body = page.split(f'<a id="{docs.anchor(uid)}"></a>')[1].split('<a id="')[0]
+    body = page.split("### `", 1)[1].split("### `", 1)[0]
     for sentence in ("First sentence.", "Second sentence with the essential boundary.",
                      "Final paragraph about failure."):
         assert body.count(sentence) == 1
@@ -161,31 +159,16 @@ def test_json_queries_preserve_file_metadata_and_inventory_names(tmp_path, capsy
         assert file[key] == catalog["files"]["pkg/jobs.py"][key]
 
 
-def test_layer_metrics_count_footer_in_footer_category(tmp_path):
-    from cbe.token_budget import count_section_tokens
-
+def test_layer_metrics_report_no_footer_or_relation_rows_on_30_pages(tmp_path):
     run, _, _, _, _ = _run(tmp_path)
     page = (run / "docs/nodes/root.md").read_text()
-    before, footer = page.split("Look up code:", 1)
-    footer, references = footer.split("[f1]:", 1)
-    expected = count_section_tokens([("before", before), ("footer", "Look up code:" + footer),
-                                     ("references", "[f1]:" + references)])["footer"]
+    assert "Look up code:" not in page and "[f1]:" not in page
     metrics = catalog_query.layer_metrics(run)
-    assert expected > 0
-    assert metrics["semantic_breakdown"]["footer"] == expected
+    assert metrics["semantic_breakdown"]["footer"] == 0
+    assert metrics["semantic_breakdown"]["relations"] == 0
+    assert metrics["semantic_breakdown"]["signature_location"] == 0
+    assert metrics["page_tokens"] == metrics["semantic_tokens"]
     assert sum(metrics["semantic_breakdown"].values()) == metrics["semantic_tokens"]
-
-
-def test_layer_metrics_keep_english_relation_links_in_relations(tmp_path):
-    from cbe.token_budget import count_section_tokens
-
-    run, _, _, _, _ = _run(tmp_path)
-    page = (run / "docs/nodes/root.md").read_text()
-    sections = [("relations" if re.search(r": \[.*\](?:\(|\[)", line.strip()) else "other", line)
-                for line in page.splitlines(keepends=True)]
-    expected = count_section_tokens(sections).get("relations", 0)
-    assert expected > 0
-    assert catalog_query.layer_metrics(run)["semantic_breakdown"]["relations"] == expected
 
 
 def test_method_titles_keep_their_declaring_class(tmp_path):

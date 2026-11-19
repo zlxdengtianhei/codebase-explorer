@@ -1,5 +1,37 @@
 # Changelog
 
+## 3.0.0.dev0 (unreleased)
+
+Detail first, then the model groups only the detail, one layer at a time. The source
+is read once; the read budget is recorded and enforced.
+
+- One detail for every function, method and class: the 40-token "index only" rule is
+  gone, and a tiny member gets one phrase. A detail is 1 to 3 sentences, about 25 to
+  60 tokens, hard ceiling 100 and never more than half its own source; the program cuts
+  an over-long one and flags it.
+- The read budget is in `summary.json`: `read_tokens`, `source_read_tokens`,
+  `read_ratio`, `source_read_ratio`, with a breakdown by task kind and the basis of the
+  count. A re-ask sends only the missing symbols' source blocks. A run stops asking for
+  gaps once the embedded source would pass 1.5 times the source; the rest is listed as
+  unexplained.
+- The module tree is made by the model from the detail alone: `layer_<n>_<k>` tasks
+  group it, the layer count follows from the answers (a layer with at most eight groups
+  is the top), and one `overview` task writes the L0 page. The program checks each
+  answer (every member once, 2 to 12 members, summary length caps); an unusable answer
+  is asked again once, then the program groups by the `skeleton` candidates and marks
+  the groups. `tree_name_<k>` and `tree_top`, the Louvain tree that served them, and the
+  model-written relations are removed.
+- Review and repair are off by default: `--review` (bare = sample) or `--review all`
+  turns them on for `cbe host plan` and `cbe generate`.
+- Pages are prose only: signature lines, source links and their definitions, anchors,
+  relation rows and the repeated footer are gone from node pages; INDEX writes the three
+  commands once. `find`, `query` and `source` still resolve names from the pages.
+  `summary.json` records the page-token ratio; a run on a repository of 20,000 tokens or
+  more is checked against 0.7x the source.
+- Subagents default to low reasoning effort in the Skill and both host pages; the API
+  driver sends `reasoning_effort: low` for DeepSeek (non-thinking), and `--effort`
+  overrides it.
+
 ## 2.3.0 (2026-11-13)
 
 - `cbe stale --run-dir RUN` (or `--repo REPO`) lists the files, units and module pages

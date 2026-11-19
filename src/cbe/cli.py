@@ -63,7 +63,11 @@ def build_parser() -> argparse.ArgumentParser:
     generate_p.add_argument("--base-url", default=None, help="OpenAI-compatible API base URL")
     generate_p.add_argument("--api-key-env", default=None, help="environment variable containing the API key")
     generate_p.add_argument("--jobs", type=int, default=4)
-    generate_p.add_argument("--review", choices=REVIEW_MODES, default=DEFAULT_REVIEW)
+    generate_p.add_argument("--effort", default=None,
+                            help="reasoning effort sent to models that support it; DeepSeek defaults to none")
+    generate_p.add_argument("--review", nargs="?", const="sample", choices=REVIEW_MODES,
+                            default=DEFAULT_REVIEW,
+                            help="separate reviewer and rewriter; off unless given (bare --review = sample)")
     generate_p.add_argument("--resume", action="store_true",
                             help="continue the run in --run-dir (default: the repository's latest run)")
     generate_p.add_argument("--timeout", type=int, default=None,
@@ -79,7 +83,9 @@ def build_parser() -> argparse.ArgumentParser:
     host_plan.add_argument("repo", type=lambda value: Path(value).expanduser().resolve())
     host_plan.add_argument("--run-dir", type=_abs, default=None)
     host_plan.add_argument("--graph", type=_abs, default=None, help="analyzed graph matching this source snapshot")
-    host_plan.add_argument("--review", choices=REVIEW_MODES, default=DEFAULT_REVIEW)
+    host_plan.add_argument("--review", nargs="?", const="sample", choices=REVIEW_MODES,
+                           default=DEFAULT_REVIEW,
+                           help="separate reviewer and rewriter; off unless given (bare --review = sample)")
     host_plan.add_argument("--jobs", type=int, default=4, help="maximum concurrently dispatched subagents")
     host_plan.add_argument("--host", default="other", help="label only, e.g. claude-code or codex")
     for name, text in (("next", "Lease ready tasks up to the concurrency limit and write their instruction files"),
@@ -403,6 +409,7 @@ def main(argv: list[str] | None = None) -> int:
                     raise ValueError("header language differs from the frozen context; start a new plan")
             value = generate(repo, run_dir, model=args.model, config=args.config,
                              jobs=args.jobs, review=args.review, timeout=args.timeout, default_timeout=420,
+                             effort=args.effort,
                              resume=args.resume, graph_path=args.graph,
                              api_base_url=args.base_url, api_key_env=args.api_key_env)
             print(json.dumps(value, ensure_ascii=False, indent=2))

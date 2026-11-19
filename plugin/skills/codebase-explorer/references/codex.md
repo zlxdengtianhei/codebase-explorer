@@ -17,7 +17,7 @@ Use `--scope user` for `~/.agents/skills`. Codex discovers skills in `.agents/sk
 
 Codex's multi-agent tools start subagents (`multi_agent` feature, on by default). For each task from `cbe host next`:
 
-- call `spawn_agent` with `task_name` set to the task's `codex_task_name` (`cbe_<run_tag>_<task>`), `message` set to the task's `dispatch_message`, and `fork_turns: "none"` so the subagent starts with a clean context.
+- call `spawn_agent` with `task_name` set to the task's `codex_task_name` (`cbe_<run_tag>_<task>`), `message` set to the task's `dispatch_message`, and `fork_turns: "none"` so the subagent starts with a clean context. Use the low reasoning setting for these subagents: detail, grouping and the overview are short writing jobs.
 - after spawning the whole batch, wait for the subagents (`wait_agent`), then `submit` each task. Submit every finished task before you call `next` again, because `next` counts a task as running until it is submitted.
 - `next` also returns a re-ask of a rejected task. Spawn a new subagent for it like any other task.
 

@@ -49,7 +49,7 @@ def test_titles_escaped_in_outline_children_parent_and_dependencies(tmp_path):
     expected_root = r"Root \[x\] \(detail\) \\\\ \*literal\*"
     expected_child = r"Child \] text \[z\]"
     root = (tmp_path / "docs/nodes/root.md").read_text()
-    assert f"[{expected_child}](child.md)" in root.split("**Children.**")[1].split("**Depends on.**")[0]
-    assert f"[{expected_child}](child.md)" in root.split("**Depends on.**")[1]
-    assert f"Parent: [{expected_root}](root.md)" in (tmp_path / "docs/nodes/child.md").read_text()
+    assert f"[{expected_child}](child.md)" in root.split("**Children.**")[1]
     assert f"**{expected_child}**" in (tmp_path / "docs/INDEX.md").read_text()
+    # Dependencies live in DEPENDENCIES.md now, not on the reading path.
+    assert f"[{expected_child}]" in (tmp_path / "docs/DEPENDENCIES.md").read_text()

@@ -25,7 +25,8 @@ For each task from `cbe host next`, call the Agent tool with:
 - `description`: the task's `description` field, exactly (`cbe <run_tag> <task>`). `import-usage` matches transcripts by it.
 - `prompt`: the task's `dispatch_message`, exactly.
 - `subagent_type`: `cbe-writer` once `cbe-install` (or the plugin) has installed it; the plugin's copy may be listed as `codebase-explorer:cbe-writer`. If the Agent tool does not list it, use `general-purpose`.
-- `model`: the model the user chose. If the user did not choose, `sonnet` is enough for module, naming, and overview tasks.
+- `model`: the model the user chose. If the user did not choose, `sonnet` is enough for detail, grouping and overview tasks.
+- `effort: "low"`: set it when the Agent tool takes it. Detail, grouping and the overview are short writing jobs; low effort is the default the design asks for. If the user asked for another level, follow the user.
 
 Issue one Agent call per task of a `next` batch, all in a single message, so the subagents run concurrently. `next` also returns a re-ask of a rejected task: start a new subagent for it too, with the same `description` and `prompt`.
 

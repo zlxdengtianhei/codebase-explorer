@@ -71,7 +71,7 @@ def test_model_link_shaped_text_is_literal_and_generated_links_still_checked(tmp
     run = tmp_path / "run"
     docs.render(run_dir=run, source_root=repo, inventory=inventory, units=units,
                 dispositions=payload["dispositions"], tree=tree, languages={"pkg/jobs.py": "python"},
-                system=system)
+                overview=system)
     page = (run / "docs" / ("INDEX.md" if field == "overview" else "nodes/root.md")).read_text()
     assert r"preserve_context']\(ctx)" in page
     if field == "explain":

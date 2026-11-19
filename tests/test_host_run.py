@@ -57,49 +57,40 @@ def _group_first(value: dict, title: str, count: int = 2) -> dict:
     return {**value, "units": [merged, *units[count:]]}
 
 
-def _tree_name_from_prompt(prompt: str) -> dict:
-    """Play the namer of leaf modules: one record per ``## M<k>`` block, titles that differ across batches."""
-    body = prompt.split("MODULES:\n\n", 1)[1]
-    rows = []
-    for block in re.split(r"(?m)^(?=## M\d+ )", body):
-        head = re.match(r"## (M\d+) ", block)
-        if head:
-            tag = hashlib.md5(block.encode()).hexdigest()[:6]
-            rows.append({"id": head[1], "title": f"Module {head[1]} {tag}",
-                         "capability": f"Handles the work of {head[1]}.",
-                         "summary": "Come here for this work. It holds the units.",
-                         "evidence_units": re.findall(r"(?m)^  (u\d+):", block)[:2]})
-    return {"modules": rows}
+def _layer_from_prompt(prompt: str) -> dict:
+    """Play the grouper: every member above the blocks goes into a group of two or three."""
+    members = re.findall(r"(?m)^[ \t]+(u\d+):", prompt)
+    if not members:
+        members = re.findall(r"(?m)^## (g\d+) —", prompt)
+    groups = [members[i:i + 3] for i in range(0, len(members), 3)]
+    if len(groups) > 1 and len(groups[-1]) == 1:
+        last = groups.pop()
+        groups[-1].extend(last)
+    tag = hashlib.md5(prompt.encode()).hexdigest()[:4]
+    return {"groups": [{"title": f"Area {tag} {index + 1}",
+                        "capability": "These members share one responsibility.",
+                        "summary": "Come here for this work. The members divide it.",
+                        "members": group} for index, group in enumerate(groups)]}
 
 
-def _tree_top_from_prompt(prompt: str) -> dict:
-    return {"groups": [{"id": label, "title": f"Group {label} area",
-                        "capability": "Groups several modules that share one responsibility.",
-                        "summary": "Come here to see how the modules divide the work."}
-                       for label in re.findall(r"(?m)^## (G\d+) ", prompt)]}
-
-
-def _system_answer(prompt):
-    view = json.loads(prompt.split("RELATIONSHIPS: ", 1)[1].split("\nNODE SUMMARIES:", 1)[0])
-    candidates = view["candidate_flows"]
-    return {"dependency_descriptions": [{"from": e["from"], "to": e["to"], "description": "Uses its service."}
-                                         for e in view["dependencies"][:1]],
-            "key_flows": [{"name": f"Flow {i}", "description": "Runs the operation.",
-                           "steps": candidates[i % len(candidates)]} for i in range(3)] if candidates else []}
+def _gap_from_prompt(prompt: str) -> dict:
+    """Play the author of a gap-fill ask: answer exactly the listed symbols."""
+    section = prompt.split("SYMBOLS STILL WITHOUT A DETAIL", 1)[1].split("\n\n", 1)[0]
+    rows = re.findall(r"(?m)^(\d+) (function|method|class) (\S+)$", section)
+    return {"units": [{"h": [int(number)], "explain": f"Unit {name} does its job."}
+                      for number, _, name in rows]}
 
 
 def _answer(task: dict, prompt: str, *, decision: str = "accepted") -> dict:
     """Play the subagent: answer from the instruction file alone."""
     kind = task["kind"]
     if kind in {"module", "repair"}:
-        return _detail_from_prompt(prompt)
-    if kind == "tree_name":
-        return _tree_name_from_prompt(prompt)
-    if kind == "tree_top":
-        return _tree_top_from_prompt(prompt)
+        return _gap_from_prompt(prompt) if "SYMBOLS STILL WITHOUT A DETAIL" in prompt else _detail_from_prompt(prompt)
+    if kind == "layer":
+        return _layer_from_prompt(prompt)
     if kind == "review":
         return {"decision": decision, "issues": ["the negative check is missing"] if decision != "accepted" else []}
-    return {"overview": "A tiny job reservation package.", **_system_answer(prompt)}
+    return {"overview": "A tiny job reservation package. Start at the modules below."}
 
 
 def _drive(run_dir: Path, *, decision: str = "accepted") -> list[str]:
@@ -131,9 +122,8 @@ def test_full_host_run_renders_verifies_and_is_queryable(tmp_path: Path) -> None
     assert [item["task"] for item in first["tasks"]] == ["module_1", "module_2"]
     host_run.release(run_dir)
     handed = _drive(run_dir)
-    assert handed[-1] == "system"
-    assert "tree_top" not in handed, "a one-module repository has nothing to group"
-    assert handed.index("tree_name_1") < handed.index("system")
+    assert handed[-1] == "overview"
+    assert handed.index("layer_1_1") < handed.index("overview")
     assert sum(task.startswith("review_") for task in handed) == 1
 
     state = json.loads((run_dir / "host" / "state.json").read_text())
@@ -200,7 +190,7 @@ def test_review_all_queues_repairs_before_the_overview(tmp_path: Path) -> None:
     modules = json.loads((run_dir / "host" / "state.json").read_text())["modules"]
     assert sum(task.startswith("review_") for task in handed) == len(modules)
     assert sum(task.startswith("repair_") for task in handed) == len(modules)
-    assert handed[-1] == "system"
+    assert handed[-1] == "overview"
     repair_prompt = (run_dir / "host" / "tasks" / "repair_1.md").read_text()
     assert "the negative check is missing" in repair_prompt
 
@@ -214,7 +204,7 @@ def test_a_sampled_review_with_findings_escalates_to_every_batch(tmp_path: Path)
     assert len(modules) >= 2
     assert sum(task.startswith("review_") for task in handed) == len(modules)
     assert sum(task.startswith("repair_") for task in handed) == len(modules)
-    assert handed[-1] == "system"
+    assert handed[-1] == "overview"
     escalated = state["review_escalated"]
     assert escalated["issues"] == 1 and len(escalated["added"]) == len(modules) - 1
     summary = json.loads((run_dir / "summary.json").read_text())
@@ -302,7 +292,7 @@ def test_import_claude_and_codex_usage_and_cost_report(tmp_path: Path) -> None:
     rollouts.mkdir(parents=True)
     events = [
         {"type": "session_meta", "payload": {"source": {"subagent": {"thread_spawn": {
-            "parent_thread_id": "p", "agent_path": f"/root/cbe_{tag}_system"}}}}},
+            "parent_thread_id": "p", "agent_path": f"/root/cbe_{tag}_overview"}}}}},
         {"type": "turn_context", "payload": {"model": "gpt-6.1-sol"}},
         {"type": "event_msg", "payload": {"type": "token_count", "info": {"total_token_usage": {
             "input_tokens": 900, "cached_input_tokens": 600, "output_tokens": 50, "reasoning_output_tokens": 20}}}},
@@ -317,13 +307,13 @@ def test_import_claude_and_codex_usage_and_cost_report(tmp_path: Path) -> None:
     assert rows["module_1"]["basis"] == "exact"
     assert rows["module_1"]["cache_write_tokens"] == 110 and rows["module_1"]["output_tokens"] == 100
     assert rows["module_1"]["harness_reported_total_tokens"] == 1000
-    assert rows["system"]["cache_read_tokens"] == 600 and rows["system"]["input_tokens"] == 300
-    assert rows["system"]["models"] == ["gpt-6.1-sol"]
+    assert rows["overview"]["cache_read_tokens"] == 600 and rows["overview"]["input_tokens"] == 300
+    assert rows["overview"]["models"] == ["gpt-6.1-sol"]
     host_run.render(run_dir)
     assert json.loads((run_dir / "summary.json").read_text())["basis"]["models"] == [
         "claude-sonnet-5-5", "gpt-6.1-sol"]
     assert rows["module_1"]["usd_api_equivalent"] > 0
-    assert rows["system"]["usd_api_equivalent"] is None
+    assert rows["overview"]["usd_api_equivalent"] is None
     assert report["totals"]["usd"] is None
     assert report["estimate_usd"] is None
     assert "dollar totals are unknown" in report["statement"]
@@ -332,7 +322,7 @@ def test_import_claude_and_codex_usage_and_cost_report(tmp_path: Path) -> None:
 
     supplied = usage.cost(run_dir, price=(1.0, 2.0, 3.0, 4.0))
     priced = {row["task"]: row for row in supplied["tasks"]}
-    assert priced["system"]["usd_api_equivalent"] == 0.0028
+    assert priced["overview"]["usd_api_equivalent"] == 0.0028
     assert supplied["totals"]["usd"] > 0
     assert supplied["price_basis"] == ["price given on the command line"]
 
@@ -390,7 +380,6 @@ def test_gaps_are_re_asked_alone_and_the_last_answer_indexes_what_stays_unexplai
     """Replaces the final-answer normalizer test: an answer with a gap is not accepted whole or
     thrown away. The re-ask lists only the gap, and after the last answer the symbol that nobody
     explained is indexed without prose, flagged ``unexplained``, and the run still completes."""
-    monkeypatch.setattr(checks, "GAP_MIN_TOKENS", 1)  # the tiny test functions count as having logic
     repo = _repo(tmp_path)
     run_dir = Path(host_run.plan(repo, tmp_path / "run", review="none", jobs=8)["run_dir"])
     batch = host_run.next_tasks(run_dir)["tasks"]
@@ -421,17 +410,17 @@ def test_gaps_are_re_asked_alone_and_the_last_answer_indexes_what_stays_unexplai
     assert accepted["dispositions"][gap_row["id"]]["how"] == "index_only"
     assert gap_row["id"] not in {unit["id"] for unit in accepted["units"]}
     tree_item = host_run.next_tasks(run_dir)["tasks"][0]
-    assert tree_item["kind"] == "tree_name"
+    assert tree_item["kind"] == "layer"
     _answer_task(run_dir, tree_item, _good(tree_item, run_dir))
     system = host_run.next_tasks(run_dir)["tasks"][0]
-    assert system["kind"] == "system"
+    assert system["kind"] == "overview"
     overview = "A tiny package that reserves job runs. " * 80  # far above the cap
     _answer_task(run_dir, system, {"overview": overview})
     _answer_task(run_dir, host_run.next_tasks(run_dir)["tasks"][0], {"overview": overview})
     state = json.loads((run_dir / "host" / "state.json").read_text())
     assert state["status"] == "complete" and state["verify"]["ok"]
     notes = (run_dir / "docs" / "RUN.md").read_text()
-    assert "## Generation notes" in notes and "overview truncated" in notes
+    assert "## Generation notes" in notes and "overview trimmed" in notes
     assert "Accepted with repairs or gaps" in notes and "left without prose" in notes
     summary = json.loads((run_dir / "summary.json").read_text())
     assert summary["unexplained"] == [{"task": target["task"], "symbol": gap_row["id"]}]
@@ -455,8 +444,7 @@ def test_unusable_module_renders_partial_and_resume_finishes_it(tmp_path: Path) 
     assert result["task_status"] == "failed"
     _drive(run_dir)  # the review of a finished module and the overview still run
     state = json.loads((run_dir / "host" / "state.json").read_text())
-    assert state["status"] == "partial" and state["tasks"]["system"]["status"] == "done"
-    assert state["tasks"]["system"]["covered"] and broken["task"] not in [f"module_{n + 1}" for n in state["tasks"]["system"]["covered"]]
+    assert state["status"] == "partial" and state["tasks"]["overview"]["status"] == "done"
     checks = {row["check"]: row["ok"] for row in state["verify"]["checks"]}
     assert not checks["all_tasks_done"] and checks["each_file_in_exactly_one_module"]
     assert not checks["semantic_dispositions_cover_inventory"]
@@ -468,7 +456,7 @@ def test_unusable_module_renders_partial_and_resume_finishes_it(tmp_path: Path) 
     _drive(run_dir)
     state = json.loads((run_dir / "host" / "state.json").read_text())
     assert state["status"] == "complete" and state["verify"]["ok"]
-    assert broken["task"] in [f"module_{n + 1}" for n in state["tasks"]["system"]["covered"]]
+    assert broken["task"].startswith("module_")
     assert "are pending" not in (run_dir / "docs" / "RUN.md").read_text()
 
 
@@ -480,15 +468,15 @@ def test_failed_overview_falls_back_and_is_retried_on_its_own(tmp_path: Path) ->
         if not batch:
             break
         for item in batch:
-            _answer_task(run_dir, item, "{}" if item["kind"] == "system" else _good(item, run_dir))
+            _answer_task(run_dir, item, "{}" if item["kind"] == "overview" else _good(item, run_dir))
     state = json.loads((run_dir / "host" / "state.json").read_text())
-    assert state["tasks"]["system"]["status"] == "failed" and state["status"] == "partial"
+    assert state["tasks"]["overview"]["status"] == "failed" and state["status"] == "partial"
     notes = (run_dir / "docs" / "RUN.md").read_text()
-    assert "is mechanical" in notes and "`system` task is failed" in notes
-    host_run.retry(run_dir, "system")
+    assert "is mechanical" in notes and "`overview` task is failed" in notes
+    host_run.retry(run_dir, "overview")
     item = host_run.next_tasks(run_dir)["tasks"][0]
-    assert item["task"] == "system"
-    _answer_task(run_dir, item, _good(item, run_dir))
+    assert item["task"] == "overview"
+    _answer_task(run_dir, item, _answer({"kind": "overview"}, Path(item["prompt_file"]).read_text()))
     state = json.loads((run_dir / "host" / "state.json").read_text())
     assert state["status"] == "complete"
     assert "is mechanical" not in (run_dir / "docs" / "RUN.md").read_text()
@@ -503,7 +491,7 @@ def test_script_prompt_embeds_source_and_host_task_lists_paths(tmp_path: Path) -
     checked = 0
     for item in host_run.next_tasks(run_dir)["tasks"]:
         module = state["modules"][int(item["task"].split("_")[1]) - 1]
-        script = host_run.completion_prompt(run_dir, item["task"])
+        script, _ = host_run.completion_prompt(run_dir, item["task"])
         hosted = Path(item["prompt_file"]).read_text(encoding="utf-8")
         for path in module["files"]:
             text = (repo / path).read_text(encoding="utf-8")
@@ -572,59 +560,6 @@ def test_graph_query_accepts_frozen_context_json(tmp_path: Path, capsys):
     assert {node["id"] for node in result["nodes"]} == {"n-0", "n-1"}
 
 
-def test_plan_freezes_graph_and_detail_prompt_carries_it(tmp_path: Path) -> None:
-    repo = _repo(tmp_path)
-    graph_path = tmp_path / "graph.json"
-    graph_path.write_text(json.dumps(_graph_for(repo, ["src/pkg/jobs.py", "src/pkg/cli.py"])), encoding="utf-8")
-    run_dir = Path(host_run.plan(repo, tmp_path / "run", review="none", graph_path=graph_path)["run_dir"])
-    state = json.loads((run_dir / "host" / "state.json").read_text())
-    assert state["context"]["graph_present"] is True and state["context"]["schema"] == "cbe-context/1"
-    module = next(row for row in state["modules"] if "src/pkg/jobs.py" in row["files"])
-    prompt = host_run.completion_prompt(run_dir, f"module_{module['number'] + 1}")
-    assert "Batch-internal resolved calls" in prompt or "Graph: internal=" in prompt
-    assert "n-0" not in prompt  # Joern ids no longer leak into author evidence
-
-
-def test_host_graph_file_and_review_repair_share_frozen_evidence(tmp_path: Path):
-    repo = _repo(tmp_path)
-    graph_path = tmp_path / "graph.json"
-    graph_path.write_text(json.dumps(_graph_for(repo, ["src/pkg/jobs.py", "src/pkg/cli.py"])))
-    run_dir = Path(host_run.plan(repo, tmp_path / "run", review="all", graph_path=graph_path)["run_dir"])
-    state = json.loads((run_dir / "host" / "state.json").read_text())
-    module = next(row for row in state["modules"] if "src/pkg/jobs.py" in row["files"])
-    number = module["number"]
-    detail = state["tasks"][f"module_{number + 1}"]
-    # Tool-free construction must not create graph artifacts or mention a file.
-    script = host_run.completion_prompt(run_dir, detail["id"])
-    assert "tool-free; omitted evidence cannot be inspected" in script
-    assert ".graph.txt" not in script and "graph query" not in script
-    assert not list((run_dir / "host" / "tasks").glob("*.graph.txt"))
-    full = None
-    expected = None
-    seen = set()
-    for _ in range(30):
-        batch = host_run.next_tasks(run_dir)
-        if not batch["tasks"]:
-            break
-        for item in batch["tasks"]:
-            body = Path(item["prompt_file"]).read_text()
-            kind = item["kind"]
-            if kind in {"module", "review", "repair"} and item["task"].endswith(f"_{number + 1}"):
-                target = run_dir / "host" / "tasks" / f"module_{number + 1}.graph.txt"
-                assert target.is_file() and str(target) in body
-                assert "graph query" not in body
-                section = body.split("Graph access:", 1)[1].split("SOURCE FILES", 1)[0]
-                if expected is None:
-                    expected, full = section, target.read_text()
-                    assert "Omitted: none" in full
-                assert section == expected and target.read_text() == full
-                seen.add(kind)
-            decision = "needs_repair" if kind == "review" and "repair" not in seen else "accepted"
-            Path(item["output_file"]).write_text(json.dumps(_answer(item, body, decision=decision)))
-            result = host_run.submit(run_dir, item["task"])
-            assert result["accepted"], result
-    assert seen == {"module", "review", "repair"}
-
 
 
 def test_plan_rejects_a_graph_that_does_not_match_the_source(tmp_path: Path) -> None:
@@ -635,62 +570,6 @@ def test_plan_rejects_a_graph_that_does_not_match_the_source(tmp_path: Path) -> 
     graph_path.write_text(json.dumps(graph), encoding="utf-8")
     with pytest.raises(host_run.HostRunError, match="source context build failed"):
         host_run.plan(repo, tmp_path / "run", review="none", graph_path=graph_path)
-
-
-def test_script_driver_carries_the_graph_into_the_module_prompt(tmp_path: Path, monkeypatch) -> None:
-    from cbe.api_completion import Completion, _csv_row
-    repo = _repo(tmp_path)
-    graph_path = tmp_path / "graph.json"
-    graph = _graph_for(repo, ["src/pkg/jobs.py", "src/pkg/cli.py"])
-    graph["edges"] = [{"id": "visible-call", "kind": "call", "status": "resolved",
-                       "source": "n-0", "target": "n-0", "path": "src/pkg/jobs.py", "line": 8,
-                       "column": 5}]
-    graph_path.write_text(json.dumps(graph), encoding="utf-8")
-    seen: dict[str, str] = {}
-
-    def fake_invoke(**kwargs):
-        seen[kwargs["task"]] = kwargs["prompt"]
-        prompt = kwargs["prompt"]
-        if "MODULES:\n\n" in prompt:
-            value = _tree_name_from_prompt(prompt)
-        elif "GROUPS:\n\n" in prompt:
-            value = _tree_top_from_prompt(prompt)
-        elif "SYMBOLS (this batch" in prompt:
-            value = _detail_from_prompt(prompt)
-        elif "DOCUMENTATION (structured units)" in prompt:
-            value = {"decision": "accepted", "issues": []}
-        else:
-            value = {"overview": "A package.", **_system_answer(prompt)}
-        _csv_row(kwargs["csv_path"], {"task": kwargs["task"], "attempt": kwargs["attempt"],
-                                      "input_tokens": 500, "output_tokens": 2, "cache_tokens": 0,
-                                      "result": "ok", "seconds": 0.01})
-        return Completion(value, None, json.dumps(value), {"input": 500, "output": 2, "cache": 0}, 0.01)
-
-    monkeypatch.setattr("cbe.generate.invoke", fake_invoke)
-    from cbe.generate import generate
-    result = generate(repo, tmp_path / "run", model="example/model", jobs=2, graph_path=graph_path)
-    assert result["status"] == "complete"
-    module_prompts = [prompt for task, prompt in seen.items()
-                      if task.startswith("module_") and task[7:].isdigit()]
-    assert module_prompts and any("Batch-internal resolved calls: 1 " in prompt or "Graph: internal=1," in prompt
-                                  for prompt in module_prompts)
-    assert all(".graph.txt" not in prompt and "graph query" not in prompt for prompt in module_prompts)
-    assert not list((tmp_path / "run" / "host" / "tasks").glob("*.graph.txt"))
-    for task_file in (tmp_path / "run" / "host" / "tasks").glob("*.md"):
-        assert "graph evidence file" not in task_file.read_text()
-
-
-@pytest.mark.parametrize("graph", [None, {"schema": "wrong"},
-    {"schema": "cbe-graph/1", "nodes": [], "edges": [], "capabilities": []}])
-def test_graph_status_does_not_invite_file_reads(graph):
-    if graph and graph.get("schema") == "cbe-graph/1":
-        from cbe.graph import graph_quality
-        graph["quality"] = graph_quality(graph)
-    prompt = prompts.detail_prompt(["a.py"], {"a.py": {"symbols": []}}, graph=graph,
-                                   embed=False, graph_file="/missing.graph.txt")
-    assert "Graph access:" not in prompt
-    assert "/missing.graph.txt" not in prompt
-
 
 def test_summary_reports_structure_and_semantic_review_separately(tmp_path: Path) -> None:
     repo = _repo(tmp_path)
@@ -1002,17 +881,17 @@ def test_tree_waits_for_repairs_so_new_group_units_get_an_owner(tmp_path: Path) 
                 value = _detail_from_prompt(prompt)
                 if kind == "repair":
                     value = _group_first(value, f"extra-{item['task']}")
-            elif kind in {"tree_name", "tree_top"}:
-                value = _answer({"kind": kind}, prompt)
+            elif kind == "layer":
+                value = _layer_from_prompt(prompt)
             elif kind == "review":
                 value = {"decision": "needs_repair", "issues": ["group the helper"]}
             else:
-                value = {"overview": "A tiny package.", **_system_answer(prompt)}
+                value = {"overview": "A tiny package."}
             Path(item["output_file"]).write_text(json.dumps(value), encoding="utf-8")
             result = host_run.submit(run_dir, item["task"], usage={"total_tokens": 1000})
             assert result["accepted"], result
-    assert handed.count("tree_name_1") == 1
-    assert all(handed.index(task) < handed.index("tree_name_1")
+    assert handed.count("layer_1_1") == 1
+    assert all(handed.index(task) < handed.index("layer_1_1")
                for task in handed if task.startswith(("review_", "repair_")))
     state = json.loads((run_dir / "host" / "state.json").read_text())
     assert state["status"] == "complete" and state["verify"]["ok"], state["verify"]["checks"]
@@ -1050,12 +929,12 @@ def test_repair_may_reuse_its_own_module_group_ids(tmp_path: Path) -> None:
                 repair_seen = True
                 value = _group_first(_detail_from_prompt(prompt), "helpers")
                 value["units"][0]["explain"] = "Grouped helpers, revised."
-            elif kind in {"tree_name", "tree_top"}:
-                value = _answer({"kind": kind}, prompt)
+            elif kind == "layer":
+                value = _layer_from_prompt(prompt)
             elif kind == "review":
                 value = {"decision": "needs_repair", "issues": ["revise the group"]}
             else:
-                value = {"overview": "A tiny package.", **_system_answer(prompt)}
+                value = {"overview": "A tiny package."}
             Path(item["output_file"]).write_text(json.dumps(value), encoding="utf-8")
             result = host_run.submit(run_dir, item["task"], usage={"total_tokens": 1000})
             assert result["accepted"], result
@@ -1075,34 +954,12 @@ def test_empty_module_does_not_shortcut_the_tree_before_real_modules_finish(tmp_
     run_dir = Path(host_run.plan(repo, tmp_path / "run", review="none", jobs=2)["run_dir"])
     host_run.next_tasks(run_dir)  # auto-completes the empty batch, leases the real one
     state = json.loads((run_dir / "host" / "state.json").read_text())
-    assert not any(task["kind"] in host_run.TREE_KINDS for task in state["tasks"].values())
-    assert state["tasks"]["system"]["status"] == "pending"
+    assert not any(task["kind"] in host_run.LAYER_KINDS for task in state["tasks"].values())
     assert not (run_dir / "host" / "accepted" / "tree.json").exists()
     host_run.release(run_dir)  # hand the leased task back before driving
     _drive(run_dir)
     state = json.loads((run_dir / "host" / "state.json").read_text())
     assert state["status"] == "complete" and state["verify"]["ok"]
-
-
-def test_module_with_no_graph_node_gets_an_explicit_no_local_node_statement(tmp_path: Path) -> None:
-    """A graph that anchors only one file must not read as an empty graph for a
-    module whose files it never analyzed; the frozen full graph is projected."""
-    repo = _repo(tmp_path)
-    graph_path = tmp_path / "graph.json"
-    graph_path.write_text(json.dumps(_graph_for(repo, ["src/pkg/jobs.py"])), encoding="utf-8")
-    run_dir = Path(host_run.plan(repo, tmp_path / "run", review="none", graph_path=graph_path)["run_dir"])
-    state = json.loads((run_dir / "host" / "state.json").read_text())
-    module = next(row for row in state["modules"] if "src/pkg/jobs.py" not in row["files"])
-    prompt = host_run.completion_prompt(run_dir, f"module_{module['number'] + 1}")
-    assert "no graph node anchors the listed file(s)" in prompt
-    assert "not an empty graph and not a missing graph" in prompt
-    assert "Graph access:" not in prompt
-    host_run.release(run_dir)
-    _drive(run_dir)
-    assert not (run_dir / "host/tasks" / f"module_{module['number'] + 1}.graph.txt").exists()
-    anchored = next(row for row in state["modules"] if "src/pkg/jobs.py" in row["files"])
-    anchored_prompt = host_run.completion_prompt(run_dir, f"module_{anchored['number'] + 1}")
-    assert "Batch-internal resolved calls" in anchored_prompt or "Graph: internal=" in anchored_prompt
 
 
 @pytest.mark.parametrize("tamper", ["whitespace", "value"])
@@ -1188,54 +1045,38 @@ def test_details_run_in_parallel_and_the_naming_tasks_wait_for_all_of_them(tmp_p
     details = [item for item in batch if item["kind"] == "module"]
     state = json.loads((run_dir / "host/state.json").read_text())
     assert len(details) == len(state["modules"]) == len(batch)
-    before = {item["task"]: host_run.completion_prompt(run_dir, item["task"]) for item in details}
+    before = {item["task"]: host_run.completion_prompt(run_dir, item["task"])[0] for item in details}
     for item in details[:-1]:
         _answer_task(run_dir, item, _good(item, run_dir))
     assert host_run.next_tasks(run_dir)["tasks"] == []  # one reading batch is still out
     _answer_task(run_dir, details[-1], _good(details[-1], run_dir))
     for item in details:
-        assert host_run.completion_prompt(run_dir, item["task"]).encode() == before[item["task"]].encode()
-    assert [item["kind"] for item in host_run.next_tasks(run_dir)["tasks"]] == ["tree_name"]
+        assert host_run.completion_prompt(run_dir, item["task"])[0].encode() == before[item["task"]].encode()
+    assert [item["kind"] for item in host_run.next_tasks(run_dir)["tasks"]] == ["layer"]
 
 
-@pytest.mark.parametrize("accepted_system", [True, False])
-def test_resume_new_group_preserves_last_accepted_system(tmp_path, accepted_system):
+def test_resume_new_group_drops_the_grouping_and_asks_the_overview_again(tmp_path):
     run_dir = Path(host_run.plan(_repo(tmp_path), tmp_path / "run", review="none", jobs=8)["run_dir"])
     _drive(run_dir)
     accepted = run_dir / "host/accepted"
-    unit_ids = sorted(json.loads((run_dir / "catalog.json").read_text())["units"])
-    system_path = accepted / "system.json"
-    system = {"overview": "Previously accepted overview.",
-              "dependency_descriptions": [],
-              "key_flows": [{"name": "Saved flow", "description": "Preserved flow explanation.",
-                             "steps": unit_ids[:2]}]}
-    if accepted_system:
-        system_path.write_text(json.dumps(system))
-    else:
-        system_path.unlink()
+    assert (accepted / "overview.json").is_file()
     state_path = run_dir / "host/state.json"
     state = json.loads(state_path.read_text())
-    task = state["tasks"]["module_1"]
-    task["status"] = "leased"
-    state["tasks"]["system"]["covered"] = []
+    state["tasks"]["module_1"]["status"] = "leased"
+
     state_path.write_text(json.dumps(state))
-    detail = _group_first(_detail_from_prompt(host_run.completion_prompt(run_dir, "module_1")), "new-helper")
+    detail = _group_first(_detail_from_prompt(host_run.completion_prompt(run_dir, "module_1")[0]), "new-helper")
     (run_dir / "host/outbox/module_1.json").write_text(json.dumps(detail))
     assert cli.main(["host", "resume", "--run-dir", str(run_dir)]) == 0
     state = json.loads(state_path.read_text())
     assert state["tasks"]["module_1"]["status"] == "done"
-    assert state["tasks"]["system"]["status"] == "pending"
     assert "grp:cli.py-new-helper" in json.loads((run_dir / "catalog.json").read_text())["units"]
-    index = (run_dir / "docs/INDEX.md").read_text()
-    notes = (run_dir / "docs/RUN.md").read_text()
-    if accepted_system:
-        assert "Previously accepted overview." in index
-        assert "Preserved flow explanation." in index
-        assert "The overview was written before some modules finished" in notes
-    else:
-        assert "The overview is mechanical" in notes
-        assert "Previously accepted overview." not in index
-        assert "The overview was written before some modules finished" not in notes
+    # The changed detail invalidates the layers and the overview: both are asked again.
+    assert state["tasks"].get("overview") is None and not (accepted / "overview.json").exists()
+    batch = host_run.next_tasks(run_dir)["tasks"]
+    assert [item["kind"] for item in batch] == ["layer"]
+    assert "A tiny job reservation package" not in (run_dir / "docs/INDEX.md").read_text()
+
 
 
 def test_plan_covers_every_nonempty_file_byte_for_byte_with_one_inventory(tmp_path: Path) -> None:

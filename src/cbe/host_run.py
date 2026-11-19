@@ -20,11 +20,11 @@ kept, and a re-ask lists only the gaps (symbols with logic that no unit explains
 units that were rejected). After the last attempt the remaining gaps are indexed
 without prose and flagged ``unexplained``; the task still completes.
 
-The module tree is made by the program: once all detail is settled ``skeleton.build``
-freezes its structure into the run state, and ``tree_name_<k>`` tasks (batches of leaf
-modules) and one ``tree_top`` task (all internal nodes) only name it (``treename``). Those
-answers are decoded node by node like detail answers; a node that stays unnamed after the
-last attempt gets a program-made title and the task still completes.
+The module tree is made by the model, one layer at a time, from the detail only
+(``layers``): once all detail is settled, ``layer_<n>_<k>`` tasks group it, the layers grow
+until a layer has at most eight groups, and one ``overview`` task writes the whole-repository
+page. No task after the detail reads source again. An unusable layer answer is re-asked once;
+after that the program groups the chunk by the skeleton candidates and marks the groups.
 
 Other tasks are re-asked with the exact error, and a usable final answer is normalized and
 flagged. Only an unusable final answer marks a task failed. Finished batches always
@@ -39,7 +39,6 @@ import gzip
 import hashlib
 import json
 import os
-import re
 import secrets
 import time
 from collections import Counter
@@ -47,7 +46,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterator
 
-from cbe import aggregation, batching, catalog_query, checks, docs, grounding, projection, prompts, skeleton, symbols, treename
+from cbe import aggregation, batching, catalog_query, checks, docs, grounding, layers, prompts, symbols, treename
 from cbe import __version__
 from cbe import source_context
 from cbe.grammars import ContextError
@@ -60,11 +59,14 @@ RUN_VERSION_ERROR = catalog_query.RUN_VERSION_ERROR
 MAX_ATTEMPTS = 2
 DETAIL_MAX_ATTEMPTS = 3
 REVIEW_MODES = ("none", "sample", "all")
-# One switch for both drivers: change to "all" to review every module by default.
-DEFAULT_REVIEW = "sample"
-TREE_KINDS = ("tree_name", "tree_top")
+# Design 2.2: a separate reviewer and a rewriter are off by default; --review opens them.
+DEFAULT_REVIEW = "none"
+LAYER_KINDS = {"layer", "overview"}
+#: Design 2.2's hard gate: running source tokens sent may not pass this multiple of the source.
+SOURCE_BUDGET = 1.5
+#: Smaller repositories report the read ratio but are not held to it (fixed prompt overhead).
+BUDGET_MIN_SOURCE = 20_000
 FALLBACK_CODES = ("source_reassembly_fallback", "context_fallback")   # diagnostics kept in the run state
-ORDER = {"module": 1, "repair": 2, "tree_name": 3, "tree_top": 3, "review": 4, "system": 5}
 
 
 class HostRunError(ValueError):
@@ -189,34 +191,81 @@ def _semantic_units(run_dir: Path, state: dict[str, Any]) -> tuple[dict[str, dic
     return units, dispositions
 
 
-def _tree_names(run_dir: Path, state: dict[str, Any]) -> dict[str, dict]:
-    """Records of every node a finished tree task has named, by node id."""
-    names: dict[str, dict] = {}
-    for tid, task in state["tasks"].items():
-        if task["kind"] in TREE_KINDS and task["status"] == "done":
-            names.update((_accepted(run_dir, tid) or {}).get("names") or {})
-    return names
-
-
 def _semantic_tree(run_dir: Path, state: dict[str, Any]) -> dict[str, Any]:
-    """The tree as far as it is named: the frozen skeleton with the accepted names, program-made
-    titles for the rest. Before the skeleton is frozen it is built from the units finished so far."""
-    records, edges = _aggregation_inputs(run_dir, state)
-    fingerprint = _detail_fingerprint(run_dir, state)
-    frozen = state.get("skeleton")
-    if frozen and frozen["input_digest"] == fingerprint:
-        nodes = frozen["nodes"]
-    else:
-        cached = getattr(state, "tree_cache", None)
-        if cached is None or cached[0] != fingerprint:
-            cached = fingerprint, skeleton.build(records, edges)["nodes"]
-            if isinstance(state, _RunState):
-                state.tree_cache = cached
-        nodes = cached[1]
-    if not nodes:
+    """The tree as far as the layers have grouped it: accepted groups, program-made ones for a
+    failed layer task, nothing for a pending one."""
+    levels = _layer_levels(run_dir, state)
+    if not levels:
         return treename.empty_tree()
-    return treename.assemble(treename.Tree(nodes), _tree_names(run_dir, state), records, edges,
-                             Path(state["repo"]).name)
+    overview = None
+    task = state["tasks"].get("overview")
+    if task is not None and task["status"] == "done":
+        overview = _accepted(run_dir, "overview")
+    _, edges = _aggregation_inputs(run_dir, state)
+    return layers.assemble(levels, overview, Path(state["repo"]).name, edges)
+
+
+def _order(task: dict[str, Any]) -> tuple:
+    """Dispatch order: detail, then layer by layer from the leaves, then the overview."""
+    kind = task["kind"]
+    if kind in {"module", "repair"}:
+        return (1 if kind == "module" else 2, task["module"] or 0)
+    if kind == "layer":
+        return (3, task.get("level") or 0, task.get("chunk") or 0)
+    if kind == "review":
+        return (4, task["module"] or 0)
+    if kind == "overview":
+        return (5, 0)
+    return (9, 0)
+
+
+def _layer_task_ids(state: dict[str, Any], level: int) -> list[str]:
+    rows = [(task.get("chunk") or 0, tid) for tid, task in state["tasks"].items()
+            if task["kind"] == "layer" and task.get("level") == level]
+    return [tid for _, tid in sorted(rows)]
+
+
+def _subtrees(below: list[dict] | None) -> dict[str, list[str]]:
+    return {group["id"]: group.get("subtree") or [] for group in below or []}
+
+
+def _layer_groups(run_dir: Path, state: dict[str, Any], level: int,
+                  below: list[dict] | None) -> list[dict]:
+    """One layer's groups, in chunk order; a failed chunk falls back to the program grouping."""
+    groups: list[dict] = []
+    subtrees = _subtrees(below)
+    for tid in _layer_task_ids(state, level):
+        task = state["tasks"][tid]
+        if task["status"] == "done":
+            accepted = _accepted(run_dir, tid) or {}
+            if isinstance(accepted.get("groups"), list):
+                groups += accepted["groups"]
+                continue
+        if task["status"] == "failed":
+            records, _ = _aggregation_inputs(run_dir, state) if level == 1 else ({}, None)
+            groups += layers.fallback_groups({"members": task.get("members") or []}, level, records,
+                                             subtrees, task.get("candidates"),
+                                             {row["id"]: row for row in below or []})
+    return groups
+
+
+def _layer_levels(run_dir: Path, state: dict[str, Any]) -> list[list[dict]]:
+    levels: list[list[dict]] = []
+    level = 1
+    while _layer_task_ids(state, level):
+        levels.append(_layer_groups(run_dir, state, level, levels[-1] if levels else None))
+        level += 1
+    return levels
+
+
+def _groups_at(run_dir: Path, state: dict[str, Any], level: int) -> list[dict]:
+    below = None
+    for number in range(1, level + 1):
+        groups = _layer_groups(run_dir, state, number, below)
+        if number == level:
+            return groups
+        below = groups
+    return []
 
 
 def _detail_fingerprint(run_dir: Path, state: dict[str, Any]) -> str:
@@ -284,45 +333,71 @@ def _wall_seconds(run_dir: Path, state: dict[str, Any]) -> float:
     return round(time.time() - epoch(state["created_at"]), 3)
 
 
-def _invalidate_tree(run_dir: Path, state: dict[str, Any]) -> None:
-    """Drop the frozen skeleton, its naming tasks and their answers (the detail changed)."""
-    for tid in [tid for tid, task in state["tasks"].items() if task["kind"] in TREE_KINDS]:
-        del state["tasks"][tid]
-        (state_dir(run_dir) / "accepted" / f"{tid}.json").unlink(missing_ok=True)
-        _partial_path(run_dir, tid).unlink(missing_ok=True)
-    state.pop("skeleton", None)
+def _invalidate_clustering(run_dir: Path, state: dict[str, Any]) -> None:
+    """Drop the layer tasks and their answers (the detail changed); the next call makes them again."""
+    for tid, task in list(state["tasks"].items()):
+        if task["kind"] in LAYER_KINDS:
+            del state["tasks"][tid]
+            (state_dir(run_dir) / "accepted" / f"{tid}.json").unlink(missing_ok=True)
+            _partial_path(run_dir, tid).unlink(missing_ok=True)
+    state.pop("clustering", None)
 
 
-def _prepare_tree(run_dir: Path, state: dict[str, Any]) -> None:
-    """Once all detail and review is settled, freeze the skeleton and make the naming tasks.
+def _prepare_layers(run_dir: Path, state: dict[str, Any]) -> None:
+    """Once all detail and review is settled, group it layer by layer (design 2.3).
 
-    The same detail finds the same skeleton in the run state; changed detail (a late module, a
-    repair) drops it and starts over."""
+    Layer 1 tasks group units. A layer whose groups number at most ``layers.TOP_MAX``
+    is the top and gets one ``overview`` task. The layer count follows from the
+    answers; nothing is fixed in advance. Changed detail drops the grouping."""
     tasks = state["tasks"]
     if not _done_modules(state) or not all(
             _settled(state, task) for task in tasks.values() if task["kind"] in {"module", "repair", "review"}):
         return
     fingerprint = _detail_fingerprint(run_dir, state)
-    if (state.get("skeleton") or {}).get("input_digest") == fingerprint:
-        return
-    units, edges = _aggregation_inputs(run_dir, state)
-    if not units and not state.get("skeleton"):
+    clustering = state.get("clustering")
+    if not clustering or clustering.get("input") != fingerprint:
+        _invalidate_clustering(run_dir, state)
+        clustering = state["clustering"] = {"input": fingerprint}
+    records, edges = _aggregation_inputs(run_dir, state)
+    if not records:
         return  # an empty run: _auto_complete_empty_modules published its one-node tree
-    _invalidate_tree(run_dir, state)
-    if not units:
+    if not _layer_task_ids(state, 1):
+        chunks = layers.leaf_chunks(records, layers.candidate_groups(records, edges))
+        chunks = chunks or [{"members": sorted(records), "candidates": [sorted(records)]}]
+        for number, chunk in enumerate(chunks, 1):
+            tid = f"layer_1_{number}"
+            tasks[tid] = _task(tid, "layer", level=1, chunk=number,
+                               members=chunk["members"], candidates=chunk["candidates"])
+        clustering["chunks"] = {1: len(chunks)}
+        log_event(run_dir, "queue", f"layer 1: {len(chunks)} grouping task(s) for {len(records)} units",
+                  level=1, tasks=len(chunks))
         return
-    frozen = {**treename.freeze(units, edges), "input_digest": fingerprint}
-    state["skeleton"] = frozen
-    for number in range(len(frozen["batches"])):
-        tid = f"tree_name_{number + 1}"
-        tasks[tid] = _task(tid, "tree_name", batch=number)
-    parents = {node["parent"] for node in frozen["nodes"]}
-    leaves = sum(node["id"] not in parents for node in frozen["nodes"])
-    if leaves > 1:
-        tasks["tree_top"] = _task("tree_top", "tree_top")
-    log_event(run_dir, "queue", f"module skeleton frozen: {leaves} modules in {len(frozen['nodes'])} nodes; "
-              f"{len(frozen['batches'])} naming batch(es)" + (", then tree_top" if leaves > 1 else ""),
-              leaves=leaves, nodes=len(frozen["nodes"]), batches=len(frozen["batches"]))
+    level, below = 1, None
+    while True:
+        ids = _layer_task_ids(state, level)
+        if not ids or not all(_settled(state, tasks[tid]) for tid in ids):
+            return
+        groups = _layer_groups(run_dir, state, level, below)
+        if len(groups) <= layers.TOP_MAX:
+            if "overview" not in tasks:
+                tasks["overview"] = _task("overview", "overview")
+                log_event(run_dir, "queue", f"top layer is {level} with {len(groups)} group(s); "
+                          "the overview is next", level=level, groups=len(groups))
+            return
+        next_ids = _layer_task_ids(state, level + 1)
+        if not next_ids:
+            chunks = layers.group_chunks(groups)
+            for number, chunk in enumerate(chunks, 1):
+                tid = f"layer_{level + 1}_{number}"
+                tasks[tid] = _task(tid, "layer", level=level + 1, chunk=number,
+                                   members=chunk["members"])
+            clustering.setdefault("chunks", {})[level + 1] = len(chunks)
+            log_event(run_dir, "queue", f"layer {level + 1}: {len(chunks)} grouping task(s) for "
+                      f"{len(groups)} groups of layer {level}", level=level + 1, tasks=len(chunks))
+            return
+        if not all(_settled(state, tasks[tid]) for tid in next_ids):
+            return
+        below, level = groups, level + 1
 
 
 def _known_unit_ids(run_dir: Path, state: dict[str, Any], *, exclude: int | None = None) -> set[str]:
@@ -383,13 +458,13 @@ def _auto_complete_empty_modules(run_dir: Path, state: dict[str, Any]) -> list[s
         # repository; before that the real units are still in flight.
         units, _ = _semantic_units(run_dir, state)
         if not units:
-            system = state["tasks"].get("system")
-            if system is not None and system["status"] == "pending":
-                write_json(state_dir(run_dir) / "accepted" / "system.json",
+            overview = state["tasks"].setdefault("overview", _task("overview", "overview"))
+            if overview["status"] == "pending":
+                write_json(state_dir(run_dir) / "accepted" / "overview.json",
                             _mechanical_semantic_overview(state, {"nodes": []}))
-                system["status"], system["output"] = "done", "host/accepted/system.json"
-                log_event(run_dir, "accept", "system auto-completed mechanically: no units in this "
-                       "run", task="system")
+                overview["status"], overview["output"] = "done", "host/accepted/overview.json"
+                log_event(run_dir, "accept", "overview auto-completed mechanically: no units in this "
+                       "run", task="overview")
     return completed
 
 
@@ -554,7 +629,6 @@ def plan(repo: Path, run_dir: Path | None = None, *, review: str = DEFAULT_REVIE
         reviewed = modules if review == "all" else []
     for module in reviewed:
         tasks[f"review_{module.number + 1}"] = _task(f"review_{module.number + 1}", "review", module.number)
-    tasks["system"] = _task("system", "system")
     state = {
         "schema": SCHEMA, "cbe_version": __version__, "run_tag": secrets.token_hex(3),
         "repo": str(repo), "run_dir": str(run_dir), "host": host, "driver": driver,
@@ -660,35 +734,28 @@ def _settled(state: dict[str, Any], task: dict[str, Any]) -> bool:
         return True
     if task["kind"] in {"review", "repair"}:
         return _module_task(state, task["module"])["status"] == "failed"
-    if task["kind"] == "system":
-        others = [other for other in state["tasks"].values() if other["kind"] != "system"]
-        return all(_settled(state, other) for other in others) and not _done_modules(state)
     return False
 
 
 def _ready(state: dict[str, Any]) -> list[str]:
-    tasks = state["tasks"]
-    tree_names = [task for task in tasks.values() if task["kind"] == "tree_name"]
+    """Pending tasks that can run now. Layer tasks are created only when the layer below is
+    settled, and the overview only when the top layer is known (``_prepare_layers``)."""
     ready = []
-    for task_id, task in tasks.items():
+    for task_id, task in state["tasks"].items():
         if task["status"] != "pending":
             continue
         kind = task["kind"]
-        if kind in {"module", "repair", "tree_name"}:
-            # Detail prompts use only the frozen context and inventory; tree_name tasks exist only
-            # for a skeleton frozen after all detail and review settled.
+        if kind in {"module", "repair"}:
             ok = True
-        elif kind == "tree_top":
-            ok = all(other["status"] in {"done", "failed"} for other in tree_names)
+        elif kind in {"layer", "overview"}:
+            ok = True
         elif kind == "review":
             ok = _module_task(state, task["module"])["status"] == "done"
         else:
-            others = [other for other in tasks.values() if other["kind"] != "system"]
-            ok = bool(_done_modules(state)) and bool(state.get("skeleton")) \
-                and all(_settled(state, other) for other in others)
+            ok = False
         if ok:
             ready.append(task_id)
-    return sorted(ready, key=lambda task_id: (ORDER[tasks[task_id]["kind"]], tasks[task_id]["module"] or 0))
+    return sorted(ready, key=lambda task_id: _order(state["tasks"][task_id]))
 
 
 def _labels(state: dict[str, Any], task_id: str) -> dict[str, str]:
@@ -697,49 +764,77 @@ def _labels(state: dict[str, Any], task_id: str) -> dict[str, str]:
 
 
 def _detail_task(run_dir: Path, state: dict[str, Any], task: dict[str, Any], *, embed: bool,
-                 with_diagnostics: bool, issues: list[str] | None = None) -> str:
-    """The detail task for one reading batch, built from the verified frozen context."""
+                 with_diagnostics: bool = True, gaps: tuple | None = None,
+                 issues: list[str] | None = None) -> str:
+    """The detail task for one reading batch, built from the verified frozen context.
+
+    ``gaps`` makes it a gap-fill ask: only the missing symbols and only their own
+    source blocks (design 2.2), never the whole batch again."""
     paths = list(state["modules"][task["module"]]["files"])
     _assert_paths_unchanged(state, paths)
     context = _verified_context(run_dir, state)
     wanted = set(paths)
     chunks = context.get("chunks") or []
     diagnostics = [row for row in context.get("diagnostics") or [] if row.get("path") in wanted]
-    graph_file = None
-    graph = context.get("graph")
-    has_evidence = (projection.graph_state(graph)[0] == "provided"
-                    and any(n.get("path") in wanted for n in graph.get("nodes", [])))
-    if not embed and state.get("driver") != "script" and has_evidence:
-        # The canonical detail file is shared with review and repair for this
-        # module: identical frozen evidence, independent of task id or issues.
-        target = state_dir(run_dir) / "tasks" / f"module_{task['module'] + 1}.graph.txt"
-        lines = projection.graph_prompt_lines(
-            context.get("graph"), paths, embed=False, inventory=state["inventory"],
-            chunks=chunks, source_tokens=None, max_tokens=None)
-        target.write_text("\n".join(lines), encoding="utf-8")
-        graph_file = str(target)
+    source_root = Path(state["repo"])
+    if gaps:
+        missing, invalid, problem = gaps
+        return prompts.gap_detail_prompt(
+            paths, state["inventory"], missing, chunks=chunks, source_root=source_root,
+            invalid=invalid, problem=problem, embed=embed)
     return prompts.detail_prompt(
-        paths, state["inventory"], chunks=chunks, source_root=Path(state["repo"]),
-        graph=context.get("graph"), graph_file=graph_file,
+        paths, state["inventory"], chunks=chunks, source_root=source_root,
         context_diagnostics=diagnostics if with_diagnostics else None, issues=issues, embed=embed)
 
 
-def _system_inputs(run_dir: Path, state: dict[str, Any]) -> tuple[list[dict], int, dict, dict]:
-    """Use the same tree, evidence and character limit for prompt and acceptance."""
-    units, edges = _aggregation_inputs(run_dir, state)
-    tree = _semantic_tree(run_dir, state)
-    nodes = tree.get("nodes") or []
-    view = aggregation.relationship_view(tree, edges, _verified_context(run_dir, state).get("graph"))
-    return nodes, checks.system_limit(), view, units
+def _detail_source_tokens(run_dir: Path, state: dict[str, Any], task: dict[str, Any], *,
+                          embed: bool, gaps: tuple | None = None) -> int:
+    """Program count of the source text this detail prompt puts before the model."""
+    if not embed:
+        return 0  # the host subagent reads the files itself; that read is not measured here
+    context = _verified_context(run_dir, state)
+    paths = list(state["modules"][task["module"]]["files"])
+    only = {row["id"] for row in gaps[0]} if gaps else None
+    return prompts.embedded_source_tokens(paths, context.get("chunks") or [],
+                                          Path(state["repo"]), only=only)
 
 
-def _body(run_dir: Path, state: dict[str, Any], task: dict[str, Any], *, embed: bool) -> tuple[str, str]:
-    """Return (rules, task body); ``embed`` puts source in the prompt for tool-free completions.
+def _layer_body(run_dir: Path, state: dict[str, Any], task: dict[str, Any]) -> str:
+    records, edges = _aggregation_inputs(run_dir, state)
+    level = task.get("level") or 1
+    members = list(task.get("members") or [])
+    if level == 1:
+        chunk = {"members": members, "candidates": task.get("candidates") or [members]}
+        labels = layers.labels_for(members, unit_layer=True)
+        blocks = layers.leaf_blocks(records, chunk, labels, edges)
+        return prompts.layer_prompt(1, blocks, "functions, methods and classes")
+    below = _groups_at(run_dir, state, level - 1)
+    chosen = [row for row in below if row["id"] in set(members)]
+    labels = layers.labels_for(members, unit_layer=False)
+    membership = {unit: row["id"] for row in below for unit in row.get("subtree") or []}
+    return prompts.layer_prompt(level, layers.group_blocks(chosen, labels, edges, membership),
+                                "groups from the layer below")
 
-    Script completions embed each file once (``embed=True``); host subagents get
-    the absolute paths and the authoritative chunk line ranges instead, so the
-    source is never sent twice. A missing graph is stated as not provided.
-    """
+
+def _overview_body(run_dir: Path, state: dict[str, Any]) -> str:
+    levels = _layer_levels(run_dir, state)
+    top = levels[-1] if levels else []
+    blocks = []
+    for group in top:
+        lines = [f"## {group.get('title') or group['id']}",
+                 f"capability: {' '.join((group.get('capability') or '').split())}",
+                 f"summary: {' '.join((group.get('summary') or '').split())}"]
+        blocks.append("\n".join(lines))
+    return prompts.overview_prompt(Path(state["repo"]).name, blocks)
+
+
+def _body(run_dir: Path, state: dict[str, Any], task: dict[str, Any], *,
+          embed: bool) -> tuple[str, str, int]:
+    """Return (rules, task body, source tokens sent); ``embed`` puts source in a tool-free prompt.
+
+    Script completions embed the source of a detail batch once (``embed=True``).
+    Host subagents get absolute paths and the chunk line ranges, so the text is not
+    sent twice. Layer and overview tasks never read source."""
     kind = task["kind"]
     reading = prompts.NO_FILE_RULES if embed or state.get("driver") == "script" else prompts.FILE_TASK_RULES
     no_source = prompts.NO_FILE_RULES
@@ -748,35 +843,20 @@ def _body(run_dir: Path, state: dict[str, Any], task: dict[str, Any], *, embed: 
                       "Do not run shell commands, scripts, or interpreters, not even to assemble or check the JSON: "
                       "in the user's harness each one asks for permission, and this task does not need them.")
     if kind in {"module", "repair"}:
-        return reading, _detail_task(run_dir, state, task, embed=embed, with_diagnostics=True,
-                                     issues=task.get("issues") if kind == "repair" else None)
-    if kind in TREE_KINDS:
-        return no_source, _tree_body(run_dir, state, task)
+        gaps = _gap_inputs(run_dir, state, task)
+        return (reading, _detail_task(run_dir, state, task, embed=embed, gaps=gaps,
+                                      issues=task.get("issues") if kind == "repair" else None),
+                _detail_source_tokens(run_dir, state, task, embed=embed, gaps=gaps))
+    if kind == "layer":
+        return no_source, _layer_body(run_dir, state, task), 0
+    if kind == "overview":
+        return no_source, _overview_body(run_dir, state), 0
     if kind == "review":
         units = _module_output(run_dir, state, task["module"])
-        return reading, prompts.review_prompt(
-            units, _detail_task(run_dir, state, task, embed=embed, with_diagnostics=False))
-    nodes, limit, view, _ = _system_inputs(run_dir, state)
-    return no_source, prompts.system_prompt(nodes, limit, view)
-
-
-def _tree_names_for_top(run_dir: Path, state: dict[str, Any], tree: "treename.Tree", records: dict) -> dict[str, dict]:
-    """Every leaf's record: the accepted one, or a program-made one when its naming task has not finished."""
-    names = _tree_names(run_dir, state)
-    for leaf in tree.leaves():
-        if leaf not in names:
-            names[leaf] = treename.program_record(records, tree.members(leaf))
-    return names
-
-
-def _tree_body(run_dir: Path, state: dict[str, Any], task: dict[str, Any]) -> str:
-    records, edges = _aggregation_inputs(run_dir, state)
-    tree = treename.Tree(state["skeleton"]["nodes"])
-    if task["kind"] == "tree_name":
-        batch = state["skeleton"]["batches"][task["batch"]]
-        return prompts.tree_name_prompt(treename.name_blocks(batch, tree, records, edges))
-    names = _tree_names_for_top(run_dir, state, tree, records)
-    return prompts.tree_top_prompt(Path(state["repo"]).name, treename.top_blocks(tree, names, edges))
+        return (reading, prompts.review_prompt(
+            units, _detail_task(run_dir, state, task, embed=embed, with_diagnostics=False)),
+            _detail_source_tokens(run_dir, state, task, embed=embed))
+    raise HostRunError(f"unknown task kind {kind}")
 
 
 def _previous_error(task: dict[str, Any]) -> str:
@@ -786,30 +866,43 @@ def _previous_error(task: dict[str, Any]) -> str:
             + task["errors"][-1][:2000] + "\n")
 
 
-def _prompt(run_dir: Path, state: dict[str, Any], task: dict[str, Any]) -> str:
-    rules, body = _body(run_dir, state, task, embed=False)
+def _record_sent(task: dict[str, Any], text: str, source_tokens: int) -> None:
+    """Remember what this attempt sent (design 2.2's read accounting), once per attempt."""
+    entry = {"attempt": task["attempts"] + 1, "prompt_tokens": count_text_tokens(text),
+             "source_tokens": source_tokens}
+    sent = task.setdefault("sent", [])
+    if sent and sent[-1]["attempt"] == entry["attempt"]:
+        sent[-1] = entry
+    else:
+        sent.append(entry)
+
+
+def _prompt(run_dir: Path, state: dict[str, Any], task: dict[str, Any]) -> tuple[str, int]:
+    rules, body, source = _body(run_dir, state, task, embed=False)
     outbox = state_dir(run_dir) / "outbox" / f"{task['id']}.json"
-    return (f"# Codebase Explorer task `{task['id']}` (run {state['run_tag']})\n\n{rules}\n\n"
+    text = (f"# Codebase Explorer task `{task['id']}` (run {state['run_tag']})\n\n{rules}\n\n"
             f"When you are done, write exactly one JSON object (no Markdown fences, no commentary) to this "
             f"file, creating or replacing it:\n{outbox}\n\nThen reply with the single line: DONE {task['id']}\n"
             f"{_retry_note(run_dir, state, task) or _previous_error(task)}\n---\n\n{body}")
+    return text, source
 
 
-def completion_prompt(run_dir: Path, task_id: str) -> str:
-    """The same task as one tool-free completion: source is embedded."""
+def completion_prompt(run_dir: Path, task_id: str) -> tuple[str, int]:
+    """The same task as one tool-free completion: the detail source is embedded."""
     with locked_state(run_dir) as state:
         task = state["tasks"][task_id]
-        _, body = _body(run_dir, state, task, embed=True)
+        _, body, source = _body(run_dir, state, task, embed=True)
         prompt = prompts.TOOL_FREE_RULES + "\n\n" + body
         note = _retry_note(run_dir, state, task)
         if note is not None:
-            prompt += note  # the first-ask text stays byte-identical, so the provider's prefix cache can serve it
+            prompt += note
         elif task["errors"]:
             prompt += "\n\nPrevious completion failed. Correct it now. Original error: " + task["errors"][-1][:2000]
             previous = state_dir(run_dir) / "raw" / f"{task_id}.attempt-{task['attempts']}.txt"
             if previous.is_file():
                 prompt += "; original_output:" + previous.read_text(encoding="utf-8")[:8000]
-        return prompt
+        _record_sent(task, prompt, source)
+        return prompt, source
 
 
 def next_tasks(run_dir: Path, *, limit: int | None = None, owner: str | None = None,
@@ -817,7 +910,7 @@ def next_tasks(run_dir: Path, *, limit: int | None = None, owner: str | None = N
     with locked_state(run_dir) as state:
         _verified_context(run_dir, state)
         _auto_complete_empty_modules(run_dir, state)
-        _prepare_tree(run_dir, state)
+        _prepare_layers(run_dir, state)
         now = time.time()
         if reclaim_after is not None:
             for task in state["tasks"].values():
@@ -839,13 +932,14 @@ def next_tasks(run_dir: Path, *, limit: int | None = None, owner: str | None = N
                     raise HostRunError("source missing or changed since plan: " + ", ".join(changed[:10])
                                        + "; `cbe stale` lists what it affects; start a new plan")
             prompt_path = state_dir(run_dir) / "tasks" / f"{task_id}.md"
-            prompt_path.write_text(_prompt(run_dir, state, task), encoding="utf-8")
+            prompt_text, prompt_source = _prompt(run_dir, state, task)
+            prompt_path.write_text(prompt_text, encoding="utf-8")
+            if state.get("driver") != "script":
+                _record_sent(task, prompt_text, prompt_source)
             (state_dir(run_dir) / "outbox" / f"{task_id}.json").unlink(missing_ok=True)
             stamp = _now()
             task["status"], task["leased_at"] = "leased", stamp
             task["lease"] = {"id": secrets.token_hex(4), "at": stamp, "owner": owner or state["host"]}
-            if task["kind"] == "system":
-                task["covered"] = _done_modules(state)
             labels = _labels(state, task_id)
             handed.append({
                 "task": task_id, "kind": task["kind"], "attempt": task["attempts"] + 1,
@@ -870,19 +964,9 @@ def _checks(run_dir: Path, state: dict[str, Any], task: dict[str, Any]) -> tuple
     """(strict check, normalizer) for a non-detail task; both mutate the value they accept."""
     if task["kind"] == "review":
         return checks.check_review, checks.normalize_review
-    _, limit, view, units = _system_inputs(run_dir, state)
-    shown = prompts.system_relationship_context(view)
-    options = dict(unit_ids=set(units), dependencies=shown["dependencies"],
-                   has_candidates=bool(shown["candidate_flows"]))
-    repaired = False
-    def strict(value):
-        checks.check_system(value, limit, normalized=repaired, **options)
-    def normalize(value):
-        nonlocal repaired
-        flags = checks.normalize_system(value, limit, **options)
-        repaired = True
-        return flags
-    return strict, normalize
+    limit = checks.overview_limit()
+    return (lambda value: checks.check_overview(value, limit),
+            lambda value: checks.normalize_overview(value, limit))
 
 
 DETAIL_KINDS = {"module", "repair"}
@@ -897,8 +981,6 @@ def _load_partial(run_dir: Path, task_id: str) -> dict[str, Any]:
     path = _partial_path(run_dir, task_id)
     if path.is_file():
         return json.loads(path.read_text(encoding="utf-8"))
-    if task_id.startswith("tree_"):
-        return {"good": {}, "errors": {}}
     return {"units": [], "flags": [], "invalid": [], "notes": "", "decoded": False}
 
 
@@ -907,11 +989,47 @@ def _detail_table(state: dict[str, Any], task: dict[str, Any]) -> list[dict]:
 
 
 def _gaps(run_dir: Path, state: dict[str, Any], table: list[dict], units: list[dict]) -> list[dict]:
-    """Symbols with logic that no unit explains yet (see ``checks.find_gaps``)."""
-    wanted = {row["id"] for row in table if row["kind"] in checks.GAP_KINDS}
-    tokens = {chunk["id"]: count_text_tokens(chunk.get("text") or "")
-              for chunk in _verified_context(run_dir, state).get("chunks") or [] if chunk["id"] in wanted}
-    return checks.find_gaps(table, units, tokens)
+    """Symbols no unit explains yet: every function, method and class (see ``checks.find_gaps``)."""
+    return checks.find_gaps(table, units)
+
+
+def _gap_inputs(run_dir: Path, state: dict[str, Any], task: dict[str, Any]) -> tuple | None:
+    """The gaps of a task whose earlier answer was kept, in the shape the prompt needs."""
+    if not _partial_path(run_dir, task["id"]).is_file():
+        return None
+    partial = _load_partial(run_dir, task["id"])
+    if not partial.get("decoded"):
+        return None
+    gaps = _gaps(run_dir, state, _detail_table(state, task), partial["units"])
+    problem = (task["errors"][-1][:300] if task["errors"]
+               and task["errors"][-1].startswith(("schema_error", "ungrounded")) else None)
+    return gaps, partial.get("invalid") or [], problem
+
+
+def _source_spent(state: dict[str, Any]) -> int:
+    """Source tokens every dispatched attempt has put before a model so far."""
+    return sum(entry.get("source_tokens") or 0 for task in state["tasks"].values()
+               for entry in task.get("sent") or [])
+
+
+def _budget_gate(state: dict[str, Any], extra_source: int) -> bool:
+    """Design 2.2's hard gate: do not start a gap-fill that would pass 1.5x the source.
+
+    The gate is a real-repository budget; below ``BUDGET_MIN_SOURCE`` the fixed prompt
+    overhead makes it meaningless, so such a run only reports its ratio."""
+    total = sum(row["tokens"] for row in state["files"])
+    if total < BUDGET_MIN_SOURCE:
+        return False
+    return _source_spent(state) + extra_source > SOURCE_BUDGET * total
+
+
+def _gap_source_tokens(run_dir: Path, state: dict[str, Any], gaps: list[dict]) -> int:
+    if state.get("driver") == "script":
+        wanted = {row["id"] for row in gaps}
+        return sum(count_text_tokens(chunk.get("text") or "")
+                   for chunk in _verified_context(run_dir, state).get("chunks") or []
+                   if chunk["id"] in wanted)
+    return 0
 
 
 def _ground_answer(run_dir: Path, state: dict[str, Any], table: list[dict], decoded, final: bool) -> str | None:
@@ -953,33 +1071,14 @@ def _ground_answer(run_dir: Path, state: dict[str, Any], table: list[dict], deco
             "Check every explanation against the source under its number and answer again.")
 
 
-def _tree_nodes(state: dict[str, Any], task: dict[str, Any], tree: "treename.Tree") -> dict[str, str]:
-    """``{label: node}`` of the nodes a tree task names."""
-    if task["kind"] == "tree_name":
-        return treename.name_context(state["skeleton"]["batches"][task["batch"]], tree)[0]
-    return treename.top_context(tree)
-
-
-def _tree_retry_note(run_dir: Path, state: dict[str, Any], task: dict[str, Any]) -> str:
-    partial = _load_partial(run_dir, task["id"])
-    labels = _tree_nodes(state, task, treename.Tree(state["skeleton"]["nodes"]))
-    pending = [label for label, node in labels.items() if node not in partial["good"]]
-    return prompts.tree_retry_note(pending, [m for node, rows in partial["errors"].items() for m in rows],
-                                   sorted(r["title"] for r in partial["good"].values()))
-
-
 def _retry_note(run_dir: Path, state: dict[str, Any], task: dict[str, Any]) -> str | None:
-    """The follow-up that a re-ask appends: for a detail task only the gaps, for a tree task only the
-    nodes that were rejected."""
-    if task["kind"] not in DETAIL_KINDS | set(TREE_KINDS) or not _partial_path(run_dir, task["id"]).is_file():
+    """The note a detail re-ask appends: only what is still missing."""
+    if task["kind"] not in DETAIL_KINDS:
         return None
-    if task["kind"] in TREE_KINDS:
-        return _tree_retry_note(run_dir, state, task)
-    partial = _load_partial(run_dir, task["id"])
-    table = _detail_table(state, task)
-    problem = (task["errors"][-1][:300] if task["errors"]
-               and task["errors"][-1].startswith(("schema_error", "ungrounded")) else None)
-    return prompts.gap_note(_gaps(run_dir, state, table, partial["units"]), partial["invalid"], problem)
+    gap_inputs = _gap_inputs(run_dir, state, task)
+    if gap_inputs is None:
+        return None
+    return prompts.gap_note(*gap_inputs)
 
 
 def _settle_detail(run_dir: Path, state: dict[str, Any], task: dict[str, Any], value: dict[str, Any] | None,
@@ -1013,12 +1112,14 @@ def _settle_detail(run_dir: Path, state: dict[str, Any], task: dict[str, Any], v
             write_json(_partial_path(run_dir, task["id"]), partial)
             return grounding_error, None, []
     gaps = _gaps(run_dir, state, table, partial["units"])
+    budget_stop = bool(gaps) and not final and _budget_gate(
+        state, _gap_source_tokens(run_dir, state, gaps))
     if decoded is not None and not gaps:
         # A rejected unit alone never earns a re-ask: if its symbols mattered they are gaps, and
         # a unit that names no symbol (a stray string in the list) has nothing to recover.
         error = None
         partial["flags"] += [f"invalid unit h={row['h']}: {row['why']}" for row in decoded.invalid]
-    elif not final or not partial["decoded"]:
+    elif (not final and not budget_stop) or not partial["decoded"]:
         if decoded is not None:
             _partial_path(run_dir, task["id"]).parent.mkdir(exist_ok=True)
             write_json(_partial_path(run_dir, task["id"]), partial)
@@ -1027,56 +1128,75 @@ def _settle_detail(run_dir: Path, state: dict[str, Any], task: dict[str, Any], v
         return error, None, []
     else:
         error = None
+        if budget_stop:
+            state["budget_gated"] = True
+            log_event(run_dir, "budget", f"{task['id']}: the source read budget is spent; "
+                      f"{len(gaps)} symbol(s) stay unexplained", task=task["id"])
+            partial["flags"].append("source read budget reached: the remaining gaps were not asked again")
         partial["flags"] += [f"invalid unit h={row['h']}: {row['why']}" for row in partial["invalid"]]
         partial["flags"] += [f"unexplained: {row['id']}" for row in gaps]
     _partial_path(run_dir, task["id"]).unlink(missing_ok=True)
-    return None, checks.assemble_details(table, partial["units"], notes=partial["notes"]), partial["flags"]
+    payload = checks.assemble_details(table, partial["units"], notes=partial["notes"])
+    source_tokens = {row["id"]: count_text_tokens(chunk.get("text") or "")
+                     for row in table
+                     for chunk in _verified_context(run_dir, state).get("chunks") or []
+                     if chunk["id"] == row["id"]}
+    partial["flags"] += checks.cap_details(payload["units"], source_tokens, table)
+    return None, payload, partial["flags"]
 
 
-def _settle_tree(run_dir: Path, state: dict[str, Any], task: dict[str, Any], value: dict[str, Any] | None,
-                 error: str | None, final: bool) -> tuple[str | None, dict[str, Any] | None, list[str]]:
-    """Decode one tree_name or tree_top answer node by node (see ``treename``).
+def _settle_layer(run_dir: Path, state: dict[str, Any], task: dict[str, Any], value: dict[str, Any] | None,
+                  error: str | None, final: bool) -> tuple[str | None, dict[str, Any] | None, list[str]]:
+    """Decode one layer answer (see ``layers.decode`` and design 2.3's program checks).
 
-    Same contract as ``_settle_detail``: the good nodes are kept, a re-ask names only the rest, and
-    after the last answer every node still unnamed gets a program-made title, so the task completes."""
+    An unusable answer is asked again once; after that the chunk is grouped by the
+    program's candidates and the groups carry a program-made note, so the run always
+    ends with a usable layer."""
     if value is None and not (error or "").startswith("schema_error"):
-        return error, None, []  # a provider-side failure: no answer to decode; saved nodes wait
-    records, _ = _aggregation_inputs(run_dir, state)
-    tree = treename.Tree(state["skeleton"]["nodes"])
-    labels = _tree_nodes(state, task, tree)
-    partial = _load_partial(run_dir, task["id"])
-    pending = set(labels.values()) - set(partial["good"])
-    taken = {treename.normalize_title(r["title"]) for r in partial["good"].values()}
-    problems: dict[str, list[str]] = {}
+        return error, None, []  # a provider-side failure: no answer to decode
+    level = task.get("level") or 1
+    members = list(task.get("members") or [])
+    labels = layers.labels_for(members, unit_layer=level == 1)
+    below = _groups_at(run_dir, state, level - 1) if level > 1 else None
+    subtrees = _subtrees(below)
+    chunk = {"members": members, "candidates": task.get("candidates") or [members]}
     if value is not None:
         try:
-            if task["kind"] == "tree_name":
-                good, problems = treename.decode_names(value, state["skeleton"]["batches"][task["batch"]], tree,
-                                                       pending, taken)
-            else:
-                good, problems = treename.decode_top(value, tree, _tree_names_for_top(run_dir, state, tree, records),
-                                                     pending, taken)
-            partial["good"].update(good)
+            groups, flags = layers.decode(value, chunk, labels, level, subtrees)
+        except layers.LayerError as exc:
+            error = f"schema_error:{exc}"
+        else:
+            return None, {"groups": groups}, flags
+    if not final:
+        return error or "no usable answer", None, []
+    records, _ = _aggregation_inputs(run_dir, state) if level == 1 else ({}, None)
+    groups = layers.fallback_groups(chunk, level, records, subtrees,
+                                    task.get("candidates"),
+                                    {row["id"]: row for row in below or []})
+    return None, {"groups": groups}, [
+        f"program-made grouping for {len(groups)} group(s): {(error or 'no usable answer')[:300]}"]
+
+
+def _settle_overview(run_dir: Path, state: dict[str, Any], task: dict[str, Any],
+                     value: dict[str, Any] | None, error: str | None,
+                     final: bool) -> tuple[str | None, dict[str, Any] | None, list[str]]:
+    """Check (or, on the last answer, repair) the whole-repository overview text."""
+    limit = checks.overview_limit()
+    if value is not None:
+        try:
+            checks.check_overview(value, limit)
+            return None, {"overview": value["overview"].strip()}, []
         except ValueError as exc:
             error = f"schema_error:{exc}"
-    pending -= set(partial["good"])
-    if not pending:
-        error, flags = None, []
-    elif not final:
-        if partial["good"]:
-            _partial_path(run_dir, task["id"]).parent.mkdir(exist_ok=True)
-            write_json(_partial_path(run_dir, task["id"]), {**partial, "errors": problems})
-        shown = "; ".join(m for rows in problems.values() for m in rows)[:300] or (error or "")
-        return f"incomplete: {len(pending)} of {len(labels)} node(s) not named: {shown}", None, []
-    else:
-        error, flags = None, []
-        for label, node in labels.items():
-            if node in pending:
-                partial["good"][node] = treename.program_record(records, tree.members(node))
-                why = "; ".join(problems.get(node, [])) or "no usable answer"
-                flags.append(f"program-made title for {label}: {why}"[:300])
-    _partial_path(run_dir, task["id"]).unlink(missing_ok=True)
-    return None, {"names": partial["good"]}, flags
+    if not final:
+        return error, None, []
+    if value is None:
+        return error, None, []
+    try:
+        flags = checks.normalize_overview(value, limit)
+    except ValueError as exc:
+        return f"schema_error:{exc}", None, []
+    return None, {"overview": value["overview"]}, flags
 
 
 def _usage_entry(usage: dict[str, Any] | None, attempt: int) -> dict[str, Any] | None:
@@ -1108,20 +1228,22 @@ def _apply_submit(run_dir: Path, state: dict[str, Any], task: dict[str, Any], re
     value: dict[str, Any] | None = None
     flags: list[str] = []
     detail = task["kind"] in DETAIL_KINDS
-    naming = task["kind"] in TREE_KINDS
-    if not (detail or naming):
+    naming = task["kind"] == "layer"
+    if not (detail or naming or task["kind"] == "overview"):
         strict, normalize = _checks(run_dir, state, task)
     if error is None:
         try:
             value = checks.json_object(raw or "")
-            if not (detail or naming):
+            if not (detail or naming or task["kind"] == "overview"):
                 strict(value)
         except (ValueError, TypeError) as exc:
             error, value = f"schema_error:{exc}", None
     if detail:
         error, value, flags = _settle_detail(run_dir, state, task, value, error, final)
     elif naming:
-        error, value, flags = _settle_tree(run_dir, state, task, value, error, final)
+        error, value, flags = _settle_layer(run_dir, state, task, value, error, final)
+    elif task["kind"] == "overview":
+        error, value, flags = _settle_overview(run_dir, state, task, value, error, final)
     elif error is not None and final:
         # Answers without delivered source or with provider truncation must
         # never be resurrected by the final-attempt normalizer.
@@ -1185,18 +1307,11 @@ def _apply_submit(run_dir: Path, state: dict[str, Any], task: dict[str, Any], re
         if state["review"] == "sample" and not state.get("review_escalated"):
             _escalate_review(run_dir, state, task, len(value["issues"]))
     elif task["kind"] in {"module", "repair"}:
-        # The skeleton and the names describe a fixed detail snapshot: a repair or a late module
-        # changes the unit set, so the tree is made again.
-        if state.get("skeleton"):
-            _invalidate_tree(run_dir, state)
-        system = state["tasks"]["system"]
-        if system["status"] == "done" and (task["kind"] == "repair"
-                                            or task["module"] not in system.get("covered", [])):
-            # The overview was written without this module's current output; ask
-            # for a fresh one.
-            system["status"], system["attempt_base"] = "pending", system["attempts"]
-            log_event(run_dir, "queue", "system again so the overview covers the newly finished module", task="system")
-    _maybe_render(run_dir, state, force=task["kind"] == "system")
+        # The layers describe a fixed detail snapshot: a repair or a late module changes
+        # the unit set, so the grouping is made again when the next call asks for it.
+        if state.get("clustering"):
+            _invalidate_clustering(run_dir, state)
+    _maybe_render(run_dir, state, force=task["kind"] == "overview")
     return {"accepted": True, "task": task["id"], "attempts": attempt, "task_status": "done",
             "normalized": bool(flags), "flags": flags}
 
@@ -1496,6 +1611,61 @@ def _basis(run_dir: Path, state: dict[str, Any], context: dict[str, Any]) -> dic
             "source": {"files": len(source_rows), "sha256": source_digest}, "graph": graph_basis}
 
 
+def _read_budget(state: dict[str, Any]) -> dict[str, Any]:
+    """What the run put before a model, counted by the program (o200k_base) per attempt.
+
+    ``read_tokens`` is every prompt CBE built for a model call; ``source_read_tokens``
+    is the part of it that is embedded source (design 2.2). A host subagent reads its
+    files itself, so that read is not in this number and the basis says so."""
+    total = sum(row["tokens"] for row in state["files"])
+    read = source = 0
+    by_kind: Counter = Counter()
+    source_by_kind: Counter = Counter()
+    for task in state["tasks"].values():
+        label = f"layer_{task.get('level')}" if task["kind"] == "layer" else task["kind"]
+        for entry in task.get("sent") or []:
+            read += entry.get("prompt_tokens") or 0
+            source += entry.get("source_tokens") or 0
+            by_kind[label] += entry.get("prompt_tokens") or 0
+            source_by_kind[label] += entry.get("source_tokens") or 0
+    provider = sum((row.get("input") or 0) + (row.get("cache") or 0)
+                   for task in state["tasks"].values() for row in task.get("usage") or [])
+    return {"read_tokens": read, "source_read_tokens": source, "source_tokens": total,
+            "read_ratio": round(read / total, 3) if total else None,
+            "source_read_ratio": round(source / total, 3) if total else None,
+            "read_by_kind": dict(sorted(by_kind.items())),
+            "source_read_by_kind": dict(sorted(source_by_kind.items())),
+            "provider_read_tokens": provider or None,
+            "basis": ("program count (o200k_base) of every prompt CBE built for a model call; "
+                      "source_read_tokens counts embedded source only; a host subagent reads its "
+                      "files itself and that read is not counted"),
+            "targets": {"read_ratio_max": 2.0, "source_read_ratio_max": 1.2,
+                        "hard_gate_source_ratio": SOURCE_BUDGET,
+                        "small_repository_tokens": BUDGET_MIN_SOURCE},
+            "gate_hit": bool(state.get("budget_gated"))}
+
+
+def _layer_shape(run_dir: Path, state: dict[str, Any]) -> list[dict]:
+    """The tree's shape as produced: one row per layer and its group sizes."""
+    shape = []
+    levels = _layer_levels(run_dir, state)
+    for index, groups in enumerate(levels, 1):
+        shape.append({"level": index, "groups": len(groups),
+                      "members_per_group": sorted(len(group["members"]) for group in groups),
+                      "summary_tokens_max": max((count_text_tokens(group.get("summary") or "")
+                                                 for group in groups), default=0)})
+    return shape
+
+
+def _detail_stats(units: dict) -> dict:
+    sizes = sorted(count_text_tokens(unit.get("explain") or "") for unit in units.values())
+    if not sizes:
+        return {"count": 0, "mean": None, "median": None, "max": None}
+    middle = sizes[len(sizes) // 2] if len(sizes) % 2 else (sizes[len(sizes) // 2 - 1] + sizes[len(sizes) // 2]) / 2
+    return {"count": len(sizes), "mean": round(sum(sizes) / len(sizes), 1),
+            "median": middle, "max": sizes[-1]}
+
+
 def _render(run_dir: Path, state: dict[str, Any]) -> None:
     try:
         context = _verified_context(run_dir, state)
@@ -1506,33 +1676,34 @@ def _render(run_dir: Path, state: dict[str, Any]) -> None:
         log_event(run_dir, "render", f"failed: {exc}", error=str(exc))
         return
     units, dispositions = _semantic_units(run_dir, state)
+    source_tokens = sum(row["tokens"] for row in state["files"])
     pending = [f"module_{row['number'] + 1}" for row in state["modules"]
                if _module_output(run_dir, state, row["number"]) is None]
     index_notes: list[str] = []
-    open_tree = [tid for tid, task in state["tasks"].items() if task["kind"] in TREE_KINDS and task["status"] != "done"]
-    if open_tree:
-        index_notes.append("Module names come from the program (frequent words and the main directory) "
-                           "where these tasks are not finished: " + ", ".join(open_tree)
-                           + "; resume the run to finish them.")
-    elif units and not state.get("skeleton"):
-        index_notes.append("The module tree is a program grouping with program-made names: it is not frozen "
-                           "yet because reading is not finished.")
+    open_layers = [tid for tid, task in state["tasks"].items()
+                   if task["kind"] in LAYER_KINDS and task["status"] not in {"done", "failed"}]
+    if units and not _layer_task_ids(state, 1):
+        index_notes.append("The module tree is not built yet: reading is not finished.")
+    elif open_layers:
+        index_notes.append("The module tree is still being grouped; these tasks are not finished: "
+                           + ", ".join(open_layers) + ".")
     made = sum(1 for node in tree.get("nodes") or [] if node.get("note"))
     if made:
-        index_notes.append(f"{made} module title(s) are program-made (frequent words and main directory) "
-                           "because no usable model name was accepted for them.")
-    system_task = state["tasks"]["system"]
-    system = _accepted(run_dir, "system")
-    if system is None:
-        index_notes.append("The overview is mechanical because the `system` task is "
-                           + ("failed; resume the run to retry it." if system_task["status"] == "failed"
+        index_notes.append(f"{made} group(s) are program-made because no usable clustering answer "
+                           "was accepted for them (see RUN.md and the task flags).")
+    overview_task = state["tasks"].get("overview")
+    overview = _accepted(run_dir, "overview")
+    if overview is None:
+        index_notes.append("The overview is mechanical because the `overview` task is "
+                           + ("failed; resume the run to retry it."
+                              if overview_task is not None and overview_task["status"] == "failed"
                               else "not finished yet."))
     else:
-        if system_task["status"] != "done":
-            index_notes.append("The overview was written before some modules finished; it will update "
-                               "when the resumed `system` task completes.")
-        index_notes += [f"CBE normalized the overview after a second invalid answer: {flag}"
-                        for flag in system_task["flags"]]
+        index_notes += [f"CBE normalized the overview after an invalid answer: {flag}"
+                        for flag in (overview_task or {}).get("flags") or []]
+    if state.get("budget_gated"):
+        index_notes.append("The source read budget (1.5x the source) was reached, so some symbols "
+                           "were left without detail; the list is in RUN.md under unexplained.")
     index_notes.append(_review_note(run_dir, state))
     if pending:
         index_notes.append(f"{len(pending)} module page(s) are pending: {', '.join(pending)}.")
@@ -1556,14 +1727,15 @@ def _render(run_dir: Path, state: dict[str, Any]) -> None:
     for tid, count in sorted(unexplained.items()):
         index_notes.append(f"{tid}: {count} function/method/class symbol(s) were left without prose "
                            "because no model answer explained them.")
+    read_budget = _read_budget(state)
     basis = _basis(run_dir, state, context)
     try:
         meta = docs.render(run_dir=run_dir, source_root=Path(state["repo"]),
                                inventory=state.get("inventory") or {}, units=units,
                                dispositions=dispositions, tree=tree, index_notes=index_notes,
-                               system=system or _mechanical_semantic_overview(state, tree),
+                               overview=overview, read_budget=read_budget,
                                graph=context.get("graph"), context=context, basis=basis,
-                               source_tokens=sum(row["tokens"] for row in state["files"]),
+                               source_tokens=source_tokens,
                                languages={row["path"]: row.get("language") or "unknown" for row in context["files"]})
     except symbols.SemanticError as exc:
         state["render_error"] = str(exc)
@@ -1577,20 +1749,32 @@ def _render(run_dir: Path, state: dict[str, Any]) -> None:
     if not complete and not all(_settled(state, task) for task in state["tasks"].values()):
         state["status"] = "running"
     published_pages = meta["nodes"] + 1
+    shape = _layer_shape(run_dir, state)
     summary = {"status": state["status"], "driver": state.get("driver", "host"), "host": state["host"],
-               "source_files": len(state["files"]),
-               "source_tokens": sum(row["tokens"] for row in state["files"]),
+               "source_files": len(state["files"]), "source_tokens": source_tokens,
                "modules": len(state["modules"]), "units": meta["units_rendered"],
                "semantic_nodes": meta["nodes"], "published_pages": published_pages,
-               "pending": pending + open_tree + (["system"] if system_task["status"] != "done" else []),
+               "pending": pending + open_layers + (["overview"] if overview is None else []),
                "normalized": normalized,
                "unexplained_count": len(unexplained_rows),
                "unexplained": unexplained_rows,
                "known_empty": sorted(task["id"] for task in state["tasks"].values()
-                                    if "known_empty" in task["flags"]),
+                                     if "known_empty" in task["flags"]),
                "wall_seconds": _wall_seconds(run_dir, state), "basis": basis,
                "run_dir": str(run_dir), "index": str(run_dir / "docs" / "INDEX.md"),
-               "subagent_tasks": sum(task["attempts"] for task in state["tasks"].values())}
+               "subagent_tasks": sum(task["attempts"] for task in state["tasks"].values()),
+               "read_tokens": read_budget["read_tokens"],
+               "source_read_tokens": read_budget["source_read_tokens"],
+               "read_ratio": read_budget["read_ratio"],
+               "source_read_ratio": read_budget["source_read_ratio"],
+               "read_budget": read_budget,
+               "pages": {"tokens": meta["page_tokens"],
+                         "ratio": round(meta["page_tokens"] / source_tokens, 3) if source_tokens else None,
+                         "index_tokens": meta["index"]["tokens"],
+                         "target_max": 0.7, "target": 0.6},
+               "detail_tokens": _detail_stats(units),
+               "layer_shape": shape,
+               "budget_gated": bool(state.get("budget_gated"))}
     ungrounded_count = sum(bool(unit.get("ungrounded")) for unit in units.values())
     if ungrounded_count:
         summary["ungrounded_count"] = ungrounded_count
@@ -1602,14 +1786,14 @@ def _render(run_dir: Path, state: dict[str, Any]) -> None:
         state["status"] = "partial"
     summary["status"] = state["status"]
     summary["deterministic_checks_ok"] = state["verify"]["ok"]
-    summary["tree"] = {"leaves": sum(1 for node in tree["nodes"] if node.get("unit_ids")),
-                       "nodes": len(tree["nodes"]), "program_made_titles": made,
-                       "naming_tasks": sum(task["kind"] in TREE_KINDS for task in state["tasks"].values()),
+    summary["tree"] = {"levels": len(shape),
+                       "groups": sum(row["groups"] for row in shape),
+                       "leaves": sum(1 for node in tree["nodes"] if node.get("unit_ids")),
+                       "program_made_groups": made,
+                       "layer_tasks": sum(task["kind"] == "layer" for task in state["tasks"].values()),
                        "index": meta["index"]}
     summary["node_dependencies"] = meta["relationship_counts"]
     summary["within_containment"] = meta["within_containment_count"]
-    summary["key_flows"] = meta["key_flows"]
-    summary["candidate_flows"] = meta["candidate_flows"]
     summary["layers"] = catalog_query.layer_metrics(run_dir)
     summary["semantic_review"] = _semantic_review_summary(run_dir, state)
     summary["truth"] = ("deterministic structure/coverage checks and the separate semantic review are "
@@ -1753,7 +1937,7 @@ def _status_markdown(state: dict[str, Any]) -> str:
              "Counts: " + ", ".join(f"{key} {value}" for key, value in sorted(counts.items())), "",
              *correction_lines, "",
              "| Task | Module | State | Attempts | Seconds | Output | Note |", "|---|---|---|---:|---:|---|---|"]
-    for task in sorted(state["tasks"].values(), key=lambda row: (ORDER.get(row["kind"], 0), row["module"] or 0)):
+    for task in sorted(state["tasks"].values(), key=_order):
         output = task["output"] or ""
         task_unexplained = sum(row["task"] == task["id"] for row in unexplained)
         shape_flags = [flag for flag in task["flags"] if not flag.startswith("unexplained: ")]

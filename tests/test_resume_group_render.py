@@ -8,13 +8,9 @@ def test_render_flow_with_new_group_not_owned_by_old_tree(tmp_path):
     docs.render(run_dir=tmp_path, source_root=tmp_path, inventory={}, units=units,
                 dispositions={}, languages={},
                 tree={"nodes": [{"id": "root", "title": "Root", "unit_ids": ["grp:existing"]}]},
-                system={"overview": "Overview",
-                        "key_flows": [{"name": "Float conversion",
-                        "description": "Convert a floating point value.",
-                        "steps": ["grp:existing", "grp:format-h-dragon"]}]})
-    index = (tmp_path / "docs/INDEX.md").read_text()
-    assert "Convert a floating point value." in index
-    assert "`existing` → (model-inferred) → `format-h-dragon` (not assigned to a node)" in index
+                overview={"overview": "Overview"})
+    assert (tmp_path / "docs/INDEX.md").read_text().startswith("# ")
+    # The group the tree does not own is still a query target; it has no page.
     assert catalog_query.query(tmp_path, "grp:format-h-dragon")["page"] is None
 
 

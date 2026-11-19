@@ -95,13 +95,11 @@ def test_an_empty_units_list_is_a_valid_answer() -> None:
     assert decode({"units": []}).units == []
 
 
-def test_relations_use_numbers_inside_the_batch_and_keep_outside_names_verbatim() -> None:
+def test_model_written_relations_are_ignored() -> None:
+    # Design 2.1: call edges come from the graph, never from the model.
     out = decode({"units": [{"h": [4], "explain": "Submits.", "relations": [
-        {"to": 1, "kind": "call", "basis": "reserve(value)"},
-        {"to": "json.dumps", "kind": ["use"], "basis": "outside"},
-        {"to": 99, "kind": "call"}, {"to": "", "kind": "call"}, "junk", {"kind": "call"}]}]})
-    assert out.units[0]["relations"] == [{"target": ID[1], "kind": "call", "basis": "reserve(value)"},
-                                         {"target": "json.dumps", "kind": "use", "basis": "outside"}]
+        {"to": 1, "kind": "call", "basis": "reserve(value)"}]}]})
+    assert out.units[0]["relations"] if False else "relations" not in out.units[0]
 
 
 def test_optional_fields_are_tolerated_and_unknown_fields_ignored() -> None:
@@ -132,43 +130,54 @@ def test_every_symbol_gets_a_disposition_written_by_the_program() -> None:
     assert payload["batch_notes"] == "n" and "batch_notes" not in checks.assemble_details(TABLE, units)
 
 
-TOKENS = {ID[1]: 60, ID[2]: 39, ID[3]: 40, ID[4]: 500, ID[5]: 900}
-
-
-def test_gap_guard_flags_unexplained_logic_by_kind_and_size() -> None:
-    # 1 is a long function, 2 a short one (39 < 40), 3 a class of exactly the threshold, 4 a long method,
-    # 5 a long module_region: only functions, methods and classes of at least 40 tokens count.
-    assert [row["n"] for row in checks.find_gaps(TABLE, [], TOKENS)] == [1, 3, 4]
+def test_gap_guard_flags_every_function_method_and_class() -> None:
+    # No size rule any more: 1 and 2 are functions, 3 a class, 4 a method. 5 is a module region
+    # (imports/constants) and is indexed without prose, like a pure constant.
+    assert [row["n"] for row in checks.find_gaps(TABLE, [])] == [1, 2, 3, 4]
 
 
 def test_gap_guard_ignores_what_a_unit_or_group_already_explains() -> None:
-    units = decode({"units": [{"h": [1], "explain": "r."}, {"h": [3, 4], "title": "pool", "explain": "p."}]}).units
-    assert checks.find_gaps(TABLE, units, TOKENS) == []
+    units = decode({"units": [{"h": [1], "explain": "r."}, {"h": [2, 3, 4], "title": "pool", "explain": "p."}]}).units
+    assert checks.find_gaps(TABLE, units) == []
 
 
 def test_gap_guard_treats_test_files_like_any_other() -> None:
     """Tests carry information too (which behavior is pinned where), so a test function that no
-    unit mentions is a gap like any other; the prompt asks for tests to come in as groups."""
+    unit mentions is a gap like any other; one grouped unit closes both."""
     table = symbols.batch_table(["tests/test_x.py"], {"tests/test_x.py": {"symbols": [
         {"id": "tests/test_x.py::test_a", "name": "test_a", "kind": "function", "parent": None, "lines": [[1, 30]]},
         {"id": "tests/test_x.py::test_b", "name": "test_b", "kind": "function", "parent": None, "lines": [[31, 33]]}]}})
-    tokens = {"tests/test_x.py::test_a": 900, "tests/test_x.py::test_b": 12}
-    assert [row["name"] for row in checks.find_gaps(table, [], tokens)] == ["test_a"]
+    assert [row["name"] for row in checks.find_gaps(table, [])] == ["test_a", "test_b"]
     group = checks.decode_details({"units": [{"h": [1, 2], "title": "x behavior", "explain": "Pins x."}]}, table).units
-    assert checks.find_gaps(table, group, tokens) == []
+    assert checks.find_gaps(table, group) == []
 
 
-def test_the_prompt_asks_for_tests_to_be_grouped_by_the_behavior_they_pin() -> None:
+def test_the_prompt_asks_for_every_symbol_and_names_grouped_members() -> None:
     from cbe import prompts
     text = prompts.detail_prompt(["pkg/jobs.py"], _inventory())
-    assert "Tests are no exception: group the tests that pin the same behavior into one unit" in text
-    assert "every class needs its own explanation, either as its own unit or, when it is grouped" in text
-    assert "test cases and trivial accessors" not in text and "Test functions and trivial accessors" not in text
-    assert "tests that pin the same behavior go in one group" in prompts.gap_note(TABLE[:1], [])
+    assert "Write one detail for every function, method and class" in text
+    assert "the sentence must name every symbol it covers" in text
+    assert "Do not write call relations" in text
+    assert "the tests that pin one behavior" not in text  # no separate test-file rule any more
 
 
-def test_the_threshold_is_not_negligible() -> None:
-    assert 20 <= checks.GAP_MIN_TOKENS <= 80
+def test_detail_length_caps_follow_the_source() -> None:
+    assert checks.detail_cap(0) == checks.DETAIL_MIN_TOKENS
+    assert checks.detail_cap(1_000) == checks.DETAIL_MAX_TOKENS
+    assert checks.detail_cap(80) == 40
+
+
+def test_cap_details_cuts_a_long_explanation_and_flags_it() -> None:
+    units = decode({"units": [{"h": [1], "explain": "word " * 400}]}).units
+    flags = checks.cap_details(units, {ID[1]: 60}, TABLE)
+    assert flags and "length cap" in flags[0]
+    assert len(units[0]["explain"].split()) < 200
+
+
+def test_cap_details_flags_a_grouped_unit_that_does_not_name_a_member() -> None:
+    units = decode({"units": [{"h": [1, 2], "title": "x", "explain": "Does something."}]}).units
+    flags = checks.cap_details(units, {ID[1]: 60, ID[2]: 60}, TABLE)
+    assert any("does not name" in flag for flag in flags)
 
 
 # ------------------------------------------------------------ run level
@@ -190,7 +199,6 @@ def test_a_run_with_another_schema_says_to_start_a_new_plan(tmp_path) -> None:
 def test_old_format_answers_are_not_accepted(tmp_path, monkeypatch) -> None:
     """A full-id answer with dispositions has no ``h``: its units are rejected, so the symbols
     with logic are gaps and nothing is published."""
-    monkeypatch.setattr(checks, "GAP_MIN_TOKENS", 1)
     run = tmp_path / "run"
     host_run.plan(_tiny_repo(tmp_path), run, review="none", jobs=1, driver="script")
     state = json.loads((run / "host" / "state.json").read_text())
@@ -284,7 +292,6 @@ def test_a_rejected_unit_alone_costs_no_re_ask_but_is_flagged(tmp_path, monkeypa
 
 def test_an_answer_with_a_gap_is_marked_incomplete_in_calls_csv(tmp_path, monkeypatch) -> None:
     import csv
-    monkeypatch.setattr(checks, "GAP_MIN_TOKENS", 1)
 
     def behave(task, attempt, prompt):
         answer = _semantic_answer(prompt)

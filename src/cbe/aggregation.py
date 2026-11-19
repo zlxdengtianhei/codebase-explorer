@@ -32,14 +32,8 @@ def unit_edges(records: dict, edge_table: dict) -> list[dict]:
             counts[source, target, edge["kind"]] += 1
     # File-level imports without two source-coordinate unit owners are not
     # unit edges: they are never attributed to an arbitrary function in the imported file.
-    for uid, unit in records.items():
-        for relation in unit.get("relations") or []:
-            target = owners.get(relation.get("target"))
-            if target and target != uid:
-                counts[uid, target, "relation"] += 1
-    return [{"from": a, "to": b, "kind": kind, "count": n,
-                      **({"provenance": "model_inferred"} if kind == "relation" else {})}
-                     for (a, b, kind), n in sorted(counts.items())]
+    return [{"from": a, "to": b, "kind": kind, "count": n}
+            for (a, b, kind), n in sorted(counts.items())]
 
 
 def roll_up_edges(edges: list[dict], membership: dict[str, str]) -> list[dict]:
@@ -48,8 +42,7 @@ def roll_up_edges(edges: list[dict], membership: dict[str, str]) -> list[dict]:
         a, b = membership.get(e["from"]), membership.get(e["to"])
         if a and b and a != b:
             counts[a, b, e["kind"]] += e["count"]
-    return [{"from": a, "to": b, "kind": k, "count": n,
-             **({"provenance": "model_inferred"} if k == "relation" else {})}
+    return [{"from": a, "to": b, "kind": k, "count": n}
             for (a, b, k), n in sorted(counts.items())]
 
 
@@ -92,8 +85,6 @@ def relationship_view(tree: dict, edges: list[dict], graph: dict | None, *, grap
     graph_only = sorted((p for p in unmentioned if not contains(*p)), key=lambda p: (-counts[p], p))
     within_containment = sorted((p for p in unmentioned if contains(*p)), key=lambda p: (-counts[p], p))
     reverse_counts = {}
-    inferred_counts = {}
-    relations = [e for e in edges if e["kind"] == "relation"]
     for a, b in model:
         if contains(a, b):
             ancestor, descendant = (a, b) if a in ancestors[b] else (b, a)
@@ -110,8 +101,6 @@ def relationship_view(tree: dict, edges: list[dict], graph: dict | None, *, grap
                 pair_kinds[edge["kind"]] += edge["count"]
         counts[a, b] = sum(pair_kinds.values())
         kinds[a, b] = pair_kinds
-        inferred_counts[a, b] = sum(edge["count"] for edge in roll_up_edges(relations, pair_membership)
-                                    if (edge["from"], edge["to"]) == (a, b))
     pairs = sorted(model) + graph_only[:graph_only_limit] + within_containment[:within_containment_limit]
     dependencies = [{"from": a, "to": b,
                      "source": "containment" if contains(a, b) and (a, b) in model else
@@ -120,7 +109,6 @@ def relationship_view(tree: dict, edges: list[dict], graph: dict | None, *, grap
                                "within_containment" if contains(a, b) else "graph_only",
                      "count": counts[a, b],
                      **({"reverse_count": reverse_counts[a, b]} if contains(a, b) and (a, b) in model else {}),
-                     "inferred_count": inferred_counts.get((a, b), 0),
                      "containment": contains(a, b), "kinds": dict(sorted(kinds[a, b].items())),
                      "basis": model.get((a, b), ""), "description": ""} for a, b in pairs]
     totals = {source: sum(e["source"] == source for e in dependencies)
@@ -130,54 +118,4 @@ def relationship_view(tree: dict, edges: list[dict], graph: dict | None, *, grap
             "within_containment_count": len(within_containment),
             "within_containment_omitted": max(0, len(within_containment) - within_containment_limit),
             "graph_only_omitted": max(0, len(graph_only) - graph_only_limit),
-            "graph_state": state, "graph_reason": reason,
-            "candidate_flows": candidate_flows(resolved)}
-
-
-def candidate_flows(edges: list[dict], *, max_entries: int = 12, max_depth: int = 6,
-                    max_flows: int = 24) -> list[list[str]]:
-    """Stable bounded DFS from zero-incoming units, ranked by outgoing count.
-
-    Depth counts units (six steps). Cycles end at the last unique unit. Pure
-    cyclic components have no entry and intentionally yield no candidates.
-    """
-    adjacency = defaultdict(Counter)
-    incoming = set()
-    for e in edges:
-        if e["kind"] == "call" and e.get("provenance") != "model_inferred" and e["from"] != e["to"]:
-            adjacency[e["from"]][e["to"]] += e["count"]
-            incoming.add(e["to"])
-    entries = sorted(adjacency.keys() - incoming,
-                     key=lambda uid: (-sum(adjacency[uid].values()), uid))[:max_entries]
-    result = []
-    def visit(path):
-        if len(result) >= max_flows:
-            return
-        targets = sorted((uid for uid in adjacency[path[-1]] if uid not in path),
-                         key=lambda uid: (-adjacency[path[-1]][uid], uid))
-        if len(path) >= max_depth or not targets:
-            if len(path) > 1:
-                result.append(path)
-            return
-        for uid in targets:
-            if len(result) >= max_flows:
-                break
-            visit(path + [uid])
-    for uid in entries:
-        visit([uid])
-    return result
-
-
-def annotate_relationships(view: dict, system: dict, edges: list[dict]) -> dict:
-    """Publish model prose separately from the program's evidence labels."""
-    descriptions = {(e["from"], e["to"]): e["description"]
-                    for e in system.get("dependency_descriptions", [])}
-    calls = {(e["from"], e["to"]) for e in edges if e["kind"] == "call"
-             and e.get("provenance") != "model_inferred"} if view["graph_state"] == "provided" else set()
-    flows = []
-    for flow in system.get("key_flows", []):
-        steps = flow["steps"]
-        flows.append({**flow, "inferred_steps": [i for i in range(1, len(steps))
-                                                if (steps[i-1], steps[i]) not in calls]})
-    return {**view, "dependencies": [{**e, "description": descriptions.get((e["from"], e["to"]), "")}
-                                      for e in view["dependencies"]], "key_flows": flows}
+            "graph_state": state, "graph_reason": reason}

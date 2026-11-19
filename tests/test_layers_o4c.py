@@ -30,31 +30,23 @@ def test_find_is_a_bounded_locator_in_text_and_json(tmp_path, capsys):
     assert catalog_query.find(run, "no such match") == []
 
 
-def test_each_unit_source_link_resolves_and_file_target_is_shared(tmp_path):
+def test_each_unit_locates_its_source_without_a_link_on_the_page(tmp_path):
     run, ids, units, inventory, _ = _run(tmp_path)
-    page = run / "docs/nodes/root.md"
-    text = page.read_text()
-    definitions = dict(re.findall(r"^\[([^\]]+)\]: (.+)$", text, re.MULTILINE))
-    assert len(definitions) == 1
-    locations = re.findall(r"^`[^\n]+` · \[(pkg/jobs.py:L\d+-L\d+)\]\[([^\]]+)\]$", text, re.MULTILINE)
-    assert len(locations) == len(ids)
-    for location, ref in locations:
-        assert ref in definitions and "#" not in definitions[ref]
-        assert (page.parent / definitions[ref]).resolve() == (tmp_path / "repo/pkg/jobs.py").resolve()
-        assert (page.parent / definitions[ref]).is_file()
+    page = (run / "docs/nodes/root.md").read_text()
+    assert "<a id=" not in page and "[f1]:" not in page and "pkg/jobs.py:L" not in page
     catalog = json.loads((run / "catalog.json").read_text())
     tree = {"nodes": [{"id": nid, **node} for nid, node in catalog["nodes"].items()]}
     def check():
         return next(c for c in docs.verify(run, inventory, units, catalog["dispositions"], tree)
                     if c["check"] == "relative_links_resolve")
     assert check()["ok"]
-    literal = "\nself.error_handler_spec[name][c] and table[None][code][exc_class].\n" \
-              "`handlers[x][f999]`\n\n```py\nvalue[a][f998]\n[f997]: missing-example.py\n```\n"
-    page.write_text(text + literal)
-    assert check()["ok"]
-    page.write_text(text.replace("][f1]", "][f999]"))
-    assert not check()["ok"]
-    page.write_text(text.replace(definitions["f1"], "missing-source.py"))
+    for uid in ids:
+        record = catalog_query.query(run, uid)
+        assert record["ranges"] and record["page"]
+        assert "def reserve" in catalog_query.source(run, uid) or "class Pool" in catalog_query.source(run, uid) \
+            or "def submit" in catalog_query.source(run, uid)
+    page_text = page + "\n[broken generated navigation](missing-page.md)\n"
+    (run / "docs/nodes/root.md").write_text(page_text)
     assert not check()["ok"]
 
 

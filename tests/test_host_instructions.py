@@ -22,7 +22,7 @@ def _instruction_files(tmp_path: Path) -> dict[str, str]:
         for item in batch:
             prompt = Path(item["prompt_file"]).read_text(encoding="utf-8")
             seen.setdefault(item["kind"], prompt)
-            seen.setdefault("script:" + item["kind"], host_run.completion_prompt(run_dir, item["task"]))
+            seen.setdefault("script:" + item["kind"], host_run.completion_prompt(run_dir, item["task"])[0])
             Path(item["output_file"]).write_text(json.dumps(_answer({"kind": item["kind"]}, prompt)), encoding="utf-8")
             assert host_run.submit(run_dir, item["task"])["accepted"]
     return seen
@@ -51,7 +51,7 @@ def test_review_instruction_asks_for_strings_and_its_example_is_a_valid_answer(t
 
 def test_nonreading_host_tasks_write_json_with_file_tools_without_commands(tmp_path: Path) -> None:
     seen = _instruction_files(tmp_path)
-    for kind in ('tree_name', 'system'):
+    for kind in ('layer', 'overview'):
         text = seen[kind]
         assert 'your file-writing tool to write the result JSON' in text
         assert 'Do not run shell commands, scripts, or interpreters' in text

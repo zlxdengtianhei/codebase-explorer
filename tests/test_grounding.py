@@ -68,7 +68,7 @@ def test_ungrounded_batch_discards_all_of_this_answer(tmp_path: Path) -> None:
     assert partial["units"] == [] and len(partial["invalid"]) == 3
     again = host_run.next_tasks(run)["tasks"][0]
     prompt = Path(again["prompt_file"]).read_text()
-    assert "Your last answer could not be used: ungrounded: 3 explanation(s)" in prompt
+    assert "The last answer could not be used: ungrounded: 3 explanation(s)" in prompt
     assert "names missing_name, not found in the source under these numbers" in prompt
     assert _answer_task(run, again, _good(again, run))["accepted"]
 

@@ -136,4 +136,4 @@ def test_writer_agent_names_only_current_task_kinds():
 
     text = (Path(__file__).resolve().parents[1] / "plugin" / "agents" / "cbe-writer.md").read_text()
     assert "responsibility-tree" not in text and '"depends_on"' not in text
-    assert "tree_name" in text and "tree_top" in text
+    assert "layer_" in text and "overview" in text

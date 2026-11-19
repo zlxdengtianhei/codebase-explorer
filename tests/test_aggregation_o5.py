@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from cbe import aggregation, host_run, source_context, treename
+from cbe import aggregation, host_run, layers, source_context, treename
 from cbe.symbols import inventory_from_context
 from cbe.token_budget import count_text_tokens
 from test_host_run import _answer, _drive, _repo
@@ -35,18 +35,20 @@ def test_tree_receives_summaries_and_counted_resolved_edges(tmp_path):
                   for i, (line, status) in enumerate([(2, "resolved"), (3, "resolved"), (2, "ambiguous")])]}
     units[a]["relations"] = [{"target": b, "kind": "use", "basis": "dynamic dispatch"}]
     records, edges = aggregation.inputs(units, dispositions, inventory, context)
-    assert edges == [{"from": a, "to": b, "kind": "call", "count": 2},
-                     {"from": a, "to": b, "kind": "relation", "count": 1, "provenance": "model_inferred"}]
-    tree = treename.Tree(treename.freeze(records, edges)["nodes"])
-    block = "\n".join(treename.name_blocks(tree.leaves(), tree, records, edges))
+    # Model-written relations are gone: only resolved call edges remain.
+    assert edges == [{"from": a, "to": b, "kind": "call", "count": 2}]
+    candidates = layers.candidate_groups(records, edges)
+    chunk = {"members": [uid for group in candidates for uid in group], "candidates": candidates}
+    labels = layers.labels_for(chunk["members"], unit_layer=True)
+    block = "\n".join(layers.leaf_blocks(records, chunk, labels, edges))
     assert "SECRET" not in block and "Owns a capability." in block
-    assert "file a.py" in block
+    assert "a.py" in block
 
 
 def test_small_host_keeps_one_tree(tmp_path):
     run = Path(host_run.plan(_repo(tmp_path), tmp_path / "run", review="none")["run_dir"])
     handed = _drive(run)
-    assert [t for t in handed if t.startswith("tree")] == ["tree_name_1"]
+    assert [t for t in handed if t.startswith("layer")] == ["layer_1_1"]
 
 
 @pytest.mark.parametrize("failed_module", [False, True], ids=["repair", "failed-module"])
@@ -65,7 +67,7 @@ def test_single_tree_waits_for_review_and_repair(tmp_path, failed_module):
         assert result["accepted"] == (item["task"] != failed_id)
     reviews = []
     for item in host_run.next_tasks(run)["tasks"]:
-        assert item["kind"] in {"module", "review"}  # no tree before reviews
+        assert item["kind"] in {"module", "review"}  # no grouping before reviews
         if item["task"] == failed_id:
             assert submit(item, {})["task_status"] == "pending"
         else:
@@ -90,10 +92,10 @@ def test_single_tree_waits_for_review_and_repair(tmp_path, failed_module):
         accepted = json.loads((run / "host" / "accepted" / f"{item['task']}.json").read_text())
         repaired_ids += [unit["id"] for unit in accepted["units"]]
     tree = host_run.next_tasks(run)["tasks"]
-    assert [item["task"] for item in tree] == ["tree_name_1"]
+    assert [item["task"] for item in tree] == ["layer_1_1"]
     prompt = Path(tree[0]["prompt_file"]).read_text()
     assert prompt.count("Repaired capability ready for aggregation.") == len(repaired_ids)
     assert submit(tree[0], _answer(tree[0], prompt))["accepted"]
-    assert _drive(run) == ["system"]
+    assert _drive(run) == ["overview"]
     state = json.loads((run / "host/state.json").read_text())
     assert state["status"] == ("partial" if failed_module else "complete")

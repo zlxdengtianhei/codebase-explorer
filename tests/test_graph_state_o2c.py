@@ -24,8 +24,8 @@ def audited(value):
 
 @pytest.mark.parametrize("value,state,prompt_text,index_text", [
     (FAILED, "failed", "analysis failed or was unavailable", "No graph backend succeeded"),
-    (audited(EMPTY), "empty", "provided and successfully empty", "The graph is empty. No relations are graph-confirmed"),
-    (audited(EMPTY_PARTIAL_FAILURE), "empty", "provided and successfully empty", "The graph is empty. No relations are graph-confirmed"),
+    (audited(EMPTY), "empty", "provided and successfully empty", "The graph is empty: it has no call or import edges"),
+    (audited(EMPTY_PARTIAL_FAILURE), "empty", "provided and successfully empty", "The graph is empty: it has no call or import edges"),
     (None, "absent", "not provided", "No graph was provided"),
     (audited({"schema": "cbe-graph/1", "nodes": [], "edges": [], "capabilities": [
         {"language": "ruby", "graph": "call", "status": "unsupported"}]}),

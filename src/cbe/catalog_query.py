@@ -7,7 +7,6 @@
 from __future__ import annotations
 
 import json
-import re
 from pathlib import Path
 from typing import Any
 
@@ -375,32 +374,21 @@ def layer_metrics(run_dir: Path) -> dict:
                                   if line.strip())
         for item in unit.get("uncertainties") or []:
             body_lines.update(line.strip() for line in f"- {item}".splitlines() if line.strip())
-    breakdown = dict.fromkeys(("model_body", "signature_location", "heading_anchor", "relations",
+    breakdown = dict.fromkeys(("model_body", "heading_anchor", "signature_location", "relations",
                                "footer", "index", "node_text"), 0)
     for path in sorted((run_dir / "docs").rglob("*.md")):
         sections = []
         in_units = False
-        in_footer = False
         for line in path.read_text(encoding="utf-8").splitlines(keepends=True):
             stripped = line.strip()
-            if stripped.startswith("### ") or '<a id="u-' in stripped:
+            if stripped.startswith("### "):
                 in_units = True
-            if stripped.startswith("Look up code:"):
-                in_footer = True
             if path.parent == run_dir / "docs":
                 category = "index"
-            elif re.match(r"\[f\d+\]: ", stripped):
-                category = "signature_location"
-            elif in_footer:
-                category = "footer"
+            elif stripped.startswith("### "):
+                category = "heading_anchor"
             elif in_units and stripped in body_lines:
                 category = "model_body"
-            elif stripped.startswith(("### ", '<a id="u-')):
-                category = "heading_anchor"
-            elif in_units and re.match(r"`.*` · \[", stripped):
-                category = "signature_location"
-            elif in_units and re.search(r": \[.*\](?:\(|\[)", stripped):
-                category = "relations"
             else:
                 category = "node_text"
             sections.append((category, line))
@@ -418,16 +406,18 @@ def layer_metrics(run_dir: Path) -> dict:
             "model_body_tokens": breakdown["model_body"],
             "model_body_source_ratio": breakdown["model_body"] / source_tokens if source_tokens else None,
             "published_markdown_source_ratio": semantic / source_tokens if source_tokens else None,
+            "page_tokens": semantic,
+            "page_source_ratio": semantic / source_tokens if source_tokens else None,
             "deterministic_tokens": deterministic,
             "catalog_tokens": catalog_tokens, "frozen_graph_tokens": graph_tokens,
             "frozen_graph_bytes": graph_bytes,
             "semantic_source_ratio": semantic / source_tokens if source_tokens else None,
             "deterministic_source_ratio": deterministic / source_tokens if source_tokens else None,
             "scope": "Breakdown partitions full Markdown BPE tokens by the first byte's line: model_body "
-                     "is published unit explain, summary, extras and uncertainties; signature_location includes "
-                     "shared source-file reference definitions (including ones used by relations); "
-                     "heading_anchor, relations, footer, INDEX and node_text (including labels/whitespace) "
-                     "partition the rest. model_body/source and published_markdown/source use complete frozen files. "
+                     "is published unit explain, summary, extras and uncertainties; heading_anchor is the "
+                     "'### name' line of a unit; INDEX and node_text (labels, headings, whitespace) partition "
+                     "the rest. signature_location, relations and footer are kept for older runs and are zero "
+                     "on 3.0 pages. model_body/source and published_markdown/source use complete frozen files. "
                      "semantic: all published Markdown (node pages + INDEX, including navigation, "
                      "signatures and commands); deterministic: catalog.json as serialized, including "
                      "preserved prose copies and edge references, excluding the graph field; frozen graph "

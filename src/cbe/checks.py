@@ -18,6 +18,8 @@ import re
 from dataclasses import dataclass, field
 from typing import Any
 
+from cbe.token_budget import count_text_tokens
+
 
 def json_object(text: str) -> dict[str, Any]:
     stripped = text.strip()
@@ -31,76 +33,41 @@ def json_object(text: str) -> dict[str, Any]:
 
 
 UNIT_KINDS = {"class", "function", "method", "group", "module_region"}
-RELATION_KINDS = {"call", "inherit", "override", "import", "raise", "use",
-                  "contract", "group"}
 EXTRA_TOPICS = {"condition", "failure", "side_effect", "field", "contract"}
 
 
-def system_limit() -> int:
-    """The overview is 2 to 4 sentences; the entry page has a token budget."""
-    return 1200
+def overview_limit() -> int:
+    """The overview (L0) is the whole-repository page: at most this many tokens."""
+    return 500
 
 
-DEPENDENCY_EVIDENCE_WORDS = re.compile(
-    r"\b(?:graph[-_ ]?(?:confirmed|only)|model[-_ ]?inferred)\b"
-    r"|\bresolved\s+(?:calls?|edges?|imports?)\b"
-    r"|\b\d+\s+(?:(?:static|resolved|call|import)\s+)*(?:calls?|edges?)\b"
-    r"|\b(?:within[-_ ]containment|containment)\b"
-    r"|图确认|模型推断|图有未描述|包含关系|包含内|\d+\s*条(?:调用|边)", re.IGNORECASE)
+def check_overview(value: dict[str, Any], limit: int = 500) -> None:
+    text = value.get("overview")
+    if not isinstance(text, str) or not text.strip():
+        raise ValueError("overview must be a nonempty string")
+    if count_text_tokens(text) > limit:
+        raise ValueError(f"overview must be at most {limit} tokens")
 
 
-def check_system(value: dict[str, Any], limit: int = 2000, *, unit_ids=None, dependencies=None,
-                 has_candidates: bool = False, normalized: bool = False) -> None:
-    errors = []
-    if not isinstance(value.get("overview"), str) or not value["overview"].strip() or len(value["overview"]) > limit:
-        errors.append(f"overview must be a nonempty concise string of at most {limit} characters")
-    descriptions = value.get("dependency_descriptions")
-    flows = value.get("key_flows")
-    if not isinstance(descriptions, list):
-        errors.append("dependency_descriptions must be a list")
-        descriptions = []
-    if not isinstance(flows, list):
-        errors.append("key_flows must be a list")
-        flows = []
-    pairs = None if dependencies is None else {(e["from"], e["to"]) for e in dependencies}
-    for row in descriptions:
-        if (not isinstance(row, dict) or not isinstance(row.get("from"), str)
-                or not isinstance(row.get("to"), str) or not isinstance(row.get("description"), str)
-                or not row["description"].strip() or len(row["description"]) > 300
-                or (pairs is not None and (row["from"], row["to"]) not in pairs)):
-            errors.append("dependency description must name an existing pair and one sentence (<=300 characters)")
-            continue
-        if DEPENDENCY_EVIDENCE_WORDS.search(row["description"]):
-            errors.append(f"dependency {row['from']} -> {row['to']}: describe who uses whom for what; "
-                          "omit evidence/source words and edge counts (the program supplies them)")
-    if pairs and not descriptions and not normalized:
-        errors.append("describe at least one existing dependency")
-    if (has_candidates and not (normalized and len(flows) <= 7) and not 3 <= len(flows) <= 7) or (not has_candidates and flows):
-        errors.append("key_flows must contain 3-7 flows when candidates exist, otherwise []")
-    flow_errors = []
-    flow_ids = []
-    for index, row in enumerate(flows):
-        if (not isinstance(row, dict) or any(not isinstance(row.get(k), str) or not row[k].strip()
-                                           or len(row[k]) > 300 for k in ("name", "description"))
-                or not isinstance(row.get("steps"), list) or not 2 <= len(row["steps"]) <= 8
-                or any(not isinstance(uid, str) or (unit_ids is not None and uid not in unit_ids)
-                       for uid in row["steps"])):
-            bad_ids = ([uid for uid in row.get("steps", [])
-                        if not isinstance(uid, str) or (unit_ids is not None and uid not in unit_ids)]
-                       if isinstance(row, dict) and isinstance(row.get("steps"), list) else [])
-            name = row.get("name", "") if isinstance(row, dict) else ""
-            flow_errors.append(f"key flow {index + 1} {name!r}: invalid unit ids {bad_ids!r}")
-            flow_ids.append(f"key flow {index + 1}: invalid unit ids {bad_ids!r}")
-    if flow_errors:
-        hint = ("each flow needs name, one sentence, and 2-8 existing unit ids; "
-                "steps are unit ids from candidates, not node ids")
-        # The host returns only the first 2,000 characters to the model. Put all
-        # offending ids first; drop names before losing a later flow's ids.
-        if len("; ".join(flow_errors + [hint] + errors)) > 2000:
-            flow_errors = flow_ids
-        errors = flow_errors + [hint] + errors
-    if errors:
-        raise ValueError("; ".join(errors))
+def normalize_overview(value: Any, limit: int = 500) -> list[str]:
+    if not isinstance(value, dict):
+        raise ValueError("overview result is not a JSON object")
+    flags: list[str] = []
+    text = value.get("overview")
+    if not isinstance(text, str):
+        text = _as_text(text)
+        flags.append("overview was not a string; converted to text")
+    text = text.strip()
+    if not text:
+        raise ValueError("overview result has no overview")
+    if count_text_tokens(text) > limit:
+        words = text.split()
+        while words and count_text_tokens(" ".join(words) + "…") > limit:
+            words.pop()
+        flags.append(f"overview trimmed to {limit} tokens")
+        text = " ".join(words).rstrip(",;:") + "…"
+    value["overview"] = text
+    return flags
 
 
 def check_review(value: dict[str, Any]) -> None:
@@ -145,49 +112,6 @@ def _fit(value: dict[str, Any], key: str, limit: int, flags: list[str], *, label
     value[key] = text
 
 
-def normalize_system(value: Any, limit: int, *, unit_ids=None, dependencies=None,
-                     has_candidates: bool = False) -> list[str]:
-    if not isinstance(value, dict):
-        raise ValueError("overview result is not a JSON object")
-    flags: list[str] = []
-    _fit(value, "overview", limit, flags)
-    if not value["overview"].strip():
-        raise ValueError("overview result has no overview")
-    # Preserve each independently valid row after the final rejected answer.
-    for key in ("dependency_descriptions", "key_flows"):
-        rows = value.get(key)
-        if not isinstance(rows, list):
-            value[key] = []
-            flags.append(f"{key} normalized to empty: must be a list")
-            continue
-        retained = []
-        for index, row in enumerate(rows):
-            probe = {**value, "dependency_descriptions": [], "key_flows": []}
-            probe[key] = [row]
-            try:
-                check_system(probe, limit, unit_ids=unit_ids, dependencies=dependencies,
-                             has_candidates=has_candidates, normalized=True)
-            except ValueError as exc:
-                if key == "key_flows":
-                    reason = str(exc).replace("key flow 1 ", f"key flow {index + 1} ")
-                    flags.append(f"key_flows[{index + 1}] removed: {reason}")
-                else:
-                    flags.append(f"{key}[{index + 1}] removed: {exc}")
-            else:
-                retained.append(row)
-        if key == "key_flows" and len(retained) > 7:
-            flags.append(f"key_flows trimmed from {len(retained)} to 7")
-            retained = retained[:7]
-        value[key] = retained
-        if key == "key_flows" and has_candidates and len(retained) < 3:
-            flags.append(f"key_flows retained {len(retained)} valid flows (fewer than 3) after final invalid answer")
-        elif not retained and dependencies and key == "dependency_descriptions":
-            flags.append("dependency_descriptions empty after final invalid answer")
-    check_system(value, limit, unit_ids=unit_ids, dependencies=dependencies,
-                 has_candidates=has_candidates, normalized=True)
-    return flags
-
-
 def normalize_review(value: Any) -> list[str]:
     if not isinstance(value, dict):
         raise ValueError("review result is not a JSON object")
@@ -226,9 +150,8 @@ def _normalize_choice(value: Any, allowed: "set[str] | frozenset[str]",
 # what it can, unit by unit; only a non-object answer or a missing ``units``
 # list voids the whole answer.
 
-#: A function, method or class whose own source has at least this many tokens and
-#: that no unit mentions is a gap to re-ask, not an automatic index_only entry.
-GAP_MIN_TOKENS = 40
+#: Every function, method and class must have a detail; a symbol of these kinds that
+#: no unit explains is a gap to re-ask (a tiny one gets a one-phrase unit).
 GAP_KINDS = {"function", "method", "class"}
 NOT_EXPLAINED = "not explained; indexed without prose"
 
@@ -271,7 +194,7 @@ def _group_id(title: Any, first: dict, taken: set[str]) -> str:
     return uid
 
 
-def _decode_unit(raw: dict[str, Any], rows: list[dict], by_number: dict[int, dict], taken: set[str]) -> dict[str, Any]:
+def _decode_unit(raw: dict[str, Any], rows: list[dict], taken: set[str]) -> dict[str, Any]:
     """The internal unit for one answer unit whose ``h`` and ``explain`` are valid."""
     first = rows[0]
     if len(rows) == 1:
@@ -284,20 +207,6 @@ def _decode_unit(raw: dict[str, Any], rows: list[dict], by_number: dict[int, dic
                        "note": extra["note"].strip()}
                       for extra in raw.get("extras") or []
                       if isinstance(extra, dict) and isinstance(extra.get("note"), str) and extra["note"].strip()]
-    relations = []
-    for rel in raw.get("relations") or []:
-        if not isinstance(rel, dict):
-            continue
-        number = _number(rel.get("to"))
-        target = by_number[number]["id"] if number in by_number else (
-            rel["to"].strip() if number is None and isinstance(rel.get("to"), str) and rel["to"].strip() else None)
-        if target is None:
-            continue
-        relation = {"target": target, "kind": _normalize_choice(rel.get("kind", "use"), RELATION_KINDS, "use")[0]}
-        if isinstance(rel.get("basis"), str):
-            relation["basis"] = rel["basis"]
-        relations.append(relation)
-    unit["relations"] = relations
     unit["uncertainties"] = [item for item in raw.get("uncertainties") or [] if isinstance(item, str)]
     return unit
 
@@ -318,7 +227,6 @@ def decode_details(payload: Any, table: list[dict], *, have: list[dict[str, Any]
         raise ValueError("answer has no units list")
     have = have or []
     by_number = {row["n"]: row for row in table}
-    by_id = {row["id"]: row for row in table}
     taken_symbols = covered_ids(have, table)
     taken_ids = {unit["id"] for unit in have} | set(known_ids)
     out = Decoded()
@@ -352,7 +260,7 @@ def decode_details(payload: Any, table: list[dict], *, have: list[dict[str, Any]
         if not isinstance(raw.get("explain"), str) or not raw["explain"].strip():
             out.invalid.append({"h": shown, "why": f"{label} has an empty explain"})
             continue
-        unit = _decode_unit(raw, symbols, by_number, taken_ids)
+        unit = _decode_unit(raw, symbols, taken_ids)
         taken_symbols |= {row["id"] for row in symbols}
         taken_ids.add(unit["id"])
         out.units.append(unit)
@@ -361,14 +269,11 @@ def decode_details(payload: Any, table: list[dict], *, have: list[dict[str, Any]
     return out
 
 
-def find_gaps(table: list[dict], units: list[dict[str, Any]], tokens: dict[str, int]) -> list[dict]:
-    """Symbols with logic that no unit mentions: functions, methods and classes
-    outside test files whose own source is at least ``GAP_MIN_TOKENS`` tokens.
-    Everything else that no unit mentions is simply indexed without prose."""
+def find_gaps(table: list[dict], units: list[dict[str, Any]]) -> list[dict]:
+    """Symbols no unit mentions: every function, method and class (a tiny one gets a
+    one-phrase unit). Constants and module regions are indexed without prose."""
     done = covered_ids(units, table)
-    return [row for row in table
-            if row["id"] not in done and row["kind"] in GAP_KINDS
-            and tokens.get(row["id"], 0) >= GAP_MIN_TOKENS]
+    return [row for row in table if row["id"] not in done and row["kind"] in GAP_KINDS]
 
 
 def assemble_details(table: list[dict], units: list[dict[str, Any]], *, notes: str = "") -> dict[str, Any]:
@@ -388,3 +293,61 @@ def assemble_details(table: list[dict], units: list[dict[str, Any]], *, notes: s
     if notes:
         payload["batch_notes"] = notes
     return payload
+
+
+# ------------------------------------------------------- detail length caps
+
+DETAIL_MAX_TOKENS = 100   # hard ceiling for one unit's explanation
+DETAIL_MIN_TOKENS = 25    # a small function still gets about this much room
+DETAIL_TARGET = (25, 60)  # the range a normal detail should fall in
+
+
+def cut_to_tokens(text: str, cap: int) -> str:
+    """Cut prose to ``cap`` tokens at a sentence end when one fits, else at a word end."""
+    if count_text_tokens(text) <= cap:
+        return text
+    best = None
+    for match in re.finditer(r"[.!?。！？](?=\s|$)", text):
+        if count_text_tokens(text[:match.end()]) <= cap:
+            best = match.end()
+    if best is not None and best >= len(text) // 3:
+        return text[:best].strip()
+    words = text.split()
+    while words and count_text_tokens(" ".join(words) + "…") > cap:
+        words.pop()
+    cut = " ".join(words).rstrip(",;:")
+    # Prefer dropping the unfinished last clause over ending mid-phrase with "…".
+    boundary = max((cut.rfind(mark) for mark in (", ", "; ", " — ")), default=-1)
+    if boundary >= len(cut) // 2:
+        return cut[:boundary].rstrip() + "."
+    return cut + "…"
+
+
+def detail_cap(source_tokens: int) -> int:
+    """A unit's explanation may use at most half its own source, floor 25, ceiling 100 tokens."""
+    return min(DETAIL_MAX_TOKENS, max(DETAIL_MIN_TOKENS, source_tokens // 2))
+
+
+def cap_details(units: list[dict[str, Any]], tokens: dict[str, int],
+                table: list[dict] | None = None) -> list[str]:
+    """Program check on length and named members; it never sends the answer back.
+
+    A unit longer than its cap is cut at a word boundary and flagged. A grouped unit
+    must name each member in its sentence (the user reads one sentence per symbol);
+    a member left unnamed is flagged for RUN.md."""
+    flags: list[str] = []
+    names = {row["id"]: row["name"] for row in table or []}
+    for unit in units:
+        ids = [unit["id"], *(unit.get("members") or [])]
+        cap = detail_cap(sum(tokens.get(sid, 0) for sid in ids))
+        text = unit.get("explain") or ""
+        if count_text_tokens(text) > cap:
+            unit["explain"] = cut_to_tokens(text, cap)
+            flags.append(f"{unit['id']}: explain cut to the {cap}-token length cap")
+        if unit.get("members"):
+            folded = " ".join(unit.get("explain") or "").lower()
+            missing = [names.get(sid, sid) for sid in unit["members"]
+                       if names.get(sid) and names[sid].lower() not in folded]
+            if missing:
+                flags.append(f"{unit['id']}: grouped unit does not name {', '.join(missing[:6])}")
+    return flags

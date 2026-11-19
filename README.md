@@ -98,7 +98,7 @@ flowchart TD
   R2 --> W["Model rewrites each flagged batch once"]
   R -->|"no finding"| E["Program groups units into a module tree"]
   W --> E
-  E --> F["Model names each module;<br/>it cannot add, drop or move a node"]
+  E --> F["Model groups the detail, one layer<br/>at a time; the program checks each layer"]
   F --> G["Program renders INDEX.md, module pages, catalog.json"]
   classDef program fill:#dff7f3,stroke:#0f9b8e,color:#0f1b2d
   classDef model fill:#fff0cc,stroke:#c98a00,color:#0f1b2d
@@ -106,14 +106,14 @@ flowchart TD
   class D,R,R2,W,F model
 ```
 
-Teal steps are ordinary code and make no model call. Amber steps are model calls. The check shown is the default, `--review sample`.
+Teal steps are ordinary code and make no model call. Amber steps are model calls. The check shown is off by default: add `--review`.
 
 - **Freeze.** CBE keeps a hashed copy of the source, so every line number and quote can be checked later.
 - **Split.** Tree-sitter cuts each file at syntax boundaries. Every byte lands in some chunk.
 - **Explain.** The model writes the explanations batch by batch. It names symbols by the short numbers in a list, so it cannot invent an ID. The program asks again only for the symbols the model skipped.
-- **Check.** A second model reads one batch's source and checks its explanations against it: wrong behaviour, a wrong condition or error, or an explanation of the wrong symbol. It does not judge style. Findings are sent back for one rewrite. `--review` chooses how many batches are read: `none`; `sample` (the default: the largest batch, and every batch if that one has any finding); or `all`. On flask a sampled review was 14% of the run's input tokens; reading every batch adds about 80%. Where batches have many errors the rewrites cost more than the reading: on six examples whose sample had findings, reviewing every batch and rewriting the flagged ones added 51–176% to the run's input tokens and made its output tokens 4 to 10 times as large, because a flagged batch is written again in full. A clean sample leaves the other batches unread, so use `--review all` for a repository that matters. `RUN.md` says which batches were read and what was found. A rewrite after review, like any new run, can regroup the map: module pages and their names may change. Symbol IDs (`cbe find`, `cbe query`) depend only on the source, so link to code by ID, not by page name.
-- **Group.** The program, not the model, builds the module tree from calls and imports, location, and wording. The same explanations give the same tree.
-- **Name.** The model gives each module a name, one line on what it is responsible for, and two or three sentences on how to read it. It cannot add, drop or move a node.
+- **Check (off by default).** `--review` turns it on: a second model reads one batch's source and checks its explanations against it: wrong behaviour, a wrong condition or error, or an explanation of the wrong symbol. It does not judge style. Findings are sent back for one rewrite. `--review` chooses how many batches are read: `none` (the default); a bare `--review` samples the largest batch, and every batch if that one has any finding; or `--review all`. On flask a sampled review was 14% of the run's input tokens; reading every batch adds about 80%. Where batches have many errors the rewrites cost more than the reading: on six examples whose sample had findings, reviewing every batch and rewriting the flagged ones added 51–176% to the run's input tokens and made its output tokens 4 to 10 times as large, because a flagged batch is written again in full. A clean sample leaves the other batches unread, so use `--review all` for a repository that matters. `RUN.md` says which batches were read and what was found. A rewrite after review, like any new run, can regroup the map: module pages and their names may change. Symbol IDs (`cbe find`, `cbe query`) depend only on the source, so link to code by ID, not by page name.
+- **Group.** The model groups the detail into modules, then groups those modules into the next layer, and so on. It sees only the detail (or the layer below's one-line responsibilities) plus a program candidate grouping and call counts. The program checks every answer: each member in exactly one group, 2 to 12 members, bounded summaries. How many layers exist follows from the answers; a layer with at most eight groups is the top.
+- **Sum up.** The model writes the whole-repository page from the top groups: who uses the code, what it solves, and where to start reading. An unusable grouping answer is asked again once, then the program groups by its candidates and marks the result.
 - **Render.** The program writes `docs/INDEX.md`, one page per module, `DEPENDENCIES.md` and `RUN.md`, and the `catalog.json` that `find`, `query` and `source` read.
 
 After a run, a person or a coding agent reads the result like this:
@@ -161,7 +161,7 @@ The host-agent path, measured once on flask's `src/` (24 files, about 75k tokens
 
 | Measure | Reading |
 |---|---|
-| Subagent tasks | 8: 4 explanation batches, 1 sampled review, 2 tree-naming tasks, 1 overview. All were accepted on the first answer |
+| Subagent tasks (CBE 2.3.0) | 8: 4 explanation batches, 1 sampled review, 2 tree-naming tasks, 1 overview. All were accepted on the first answer |
 | Wall clock | 293 seconds |
 | `cbe host verify` | all 15 checks passed |
 | Prompt tokens | 857,525: 11.48 times the source tokens. Cache reads are counted again on every turn, so do not compare this with the API table above |

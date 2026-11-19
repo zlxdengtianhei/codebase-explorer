@@ -167,7 +167,8 @@ def test_index_coverage_without_successful_graph(tmp_path, mode):
     docs.render(run_dir=tmp_path, source_root=tmp_path, inventory={}, units={}, dispositions={},
                 tree={"nodes": []}, languages={}, graph=value)
     index = (tmp_path / "docs/RUN.md").read_text()
-    assert "## Graph coverage" in index and ("inferred by the model from source" in index or "rely on model inference" in index)
+    assert "## Graph coverage" in index and ("no call or import edges" in index
+                                             or "Source: static analysis graph" in index)
     if mode == "missing":
         assert "No graph was provided" in index
     elif mode == "failed":

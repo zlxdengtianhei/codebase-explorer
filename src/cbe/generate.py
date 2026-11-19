@@ -89,7 +89,8 @@ def _embedded_paths(state: dict[str, Any], task_id: str) -> list[str]:
     return list(state["modules"][task["module"]]["files"])
 
 
-def _verify_embedded_source(run_dir: Path, task_id: str, prompt: str) -> None:
+def _verify_embedded_source(run_dir: Path, task_id: str, prompt: str,
+                            source_tokens: int | None = None) -> None:
     """Pre-flight before each script-driver model call: every file the task's
     prompt must embed is present in the prompt with its full body, read back
     from disk and checked against the plan digest.
@@ -101,6 +102,11 @@ def _verify_embedded_source(run_dir: Path, task_id: str, prompt: str) -> None:
     state = json.loads((run_dir / "host" / "state.json").read_text(encoding="utf-8"))
     paths = _embedded_paths(state, task_id)
     if not paths:
+        return
+    if "SYMBOLS STILL WITHOUT A DETAIL" in prompt:
+        # A gap-fill prompt carries only the missing symbols' source blocks by design.
+        if not source_tokens:
+            raise SourceNotEmbedded("the gap-fill prompt carries no source text; the model was not called")
         return
     planned = {row["path"]: row for row in state["files"]}
     repo = Path(state["repo"])
@@ -133,8 +139,8 @@ def _call_delivery_problem(run_dir: Path, task_id: str,
     paths = _embedded_paths(state, task_id)
     if not paths:
         return None
-    planned = {row["path"]: row["tokens"] for row in state["files"]}
-    sent = sum(planned[path] for path in paths)
+    task = state["tasks"].get(task_id) or {}
+    sent = (task.get("sent") or [{}])[-1].get("source_tokens") or 0
     reported = (usage.get("input") or 0) + (usage.get("cache") or 0)
     if sent <= 0 or reported >= DELIVERY_FLOOR * sent:
         return None
@@ -144,8 +150,8 @@ def _call_delivery_problem(run_dir: Path, task_id: str,
 
 def _csv_task(task_id: str, review: str) -> str:
     """Keep calls.csv task names comparable with earlier script runs."""
-    if task_id == "system":
-        return "system_overview"
+    if task_id == "overview":
+        return "overview"
     if review == "sample" and task_id.startswith(("review_", "repair_")):
         return "sample_review" if task_id.startswith("review_") else "sample_repair"
     return task_id
@@ -153,7 +159,7 @@ def _csv_task(task_id: str, review: str) -> str:
 
 def generate(repo: Path, run_dir: Path, *, model: str, config: Path | None = None,
              jobs: int = 4, review: str | None = None, timeout: int | None = None,
-             resume: bool = False,
+             resume: bool = False, effort: str | None = None,
              graph_path: Path | None = None, api_base_url: str | None = None,
              api_key_env: str | None = None, default_timeout: int = 360) -> dict[str, Any]:
     """Script driver: the shared run state, with each task as one tool-free completion.
@@ -201,6 +207,8 @@ def generate(repo: Path, run_dir: Path, *, model: str, config: Path | None = Non
         api_overrides["base_url"] = api_base_url
     if api_key_env:
         api_overrides["api_key_env"] = api_key_env
+    if effort:
+        api_overrides["reasoning_effort"] = effort
     previous_wall = 0.0
     if resume and (run_dir / "summary.json").is_file():
         previous_wall = json.loads((run_dir / "summary.json").read_text(encoding="utf-8")).get("wall_seconds", 0)
@@ -233,8 +241,8 @@ def generate(repo: Path, run_dir: Path, *, model: str, config: Path | None = Non
                 for item in batch:
                     csv_task = _csv_task(item["task"], review)
                     try:
-                        prompt = host_run.completion_prompt(run_dir, item["task"])
-                        _verify_embedded_source(run_dir, item["task"], prompt)
+                        prompt, prompt_source = host_run.completion_prompt(run_dir, item["task"])
+                        _verify_embedded_source(run_dir, item["task"], prompt, prompt_source)
                     except (SourceNotEmbedded, host_run.HostRunError, OSError) as exc:
                         # The prompt cannot carry this module's source (unreadable,
                         # drifted, or bodies missing), so the model must not be
