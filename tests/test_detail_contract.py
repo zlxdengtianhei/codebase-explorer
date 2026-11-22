@@ -520,6 +520,29 @@ def test_the_shorten_prompt_names_the_symbols_a_group_must_keep() -> None:
     assert "the rewrite must name each one: `Pool`, `Pool.submit`" in text
 
 
+def test_the_shorten_prompt_carries_every_chunk_of_a_multi_chunk_unit() -> None:
+    """A unit made of several frozen chunks (a module residual, a folded group) is shown whole.
+
+    The delivery check counts the tokens of every chunk the unit covers; a re-ask that
+    embedded only the first chunk was rejected as ``source_not_delivered`` on each attempt
+    and left the run partial (cJSON.h's residual has 21 chunks)."""
+    from pathlib import Path
+    from cbe import prompts
+    units = decode({"units": [{"h": [1], "explain": "Long."}]}).units
+    first = next(row for row in TABLE if row["id"] == units[0]["id"])
+    row = {**first, "ids": [first["id"], first["id"] + "::part2"]}
+    chunks = [{"id": first["id"], "path": first["path"], "language": "python",
+               "text": "FIRST_PART = 1\n", "start_line": 1, "end_line": 1},
+              {"id": first["id"] + "::part2", "path": first["path"], "language": "python",
+               "text": "SECOND_PART = 2\n", "start_line": 40, "end_line": 41}]
+    text = prompts.shorten_prompt([row], units, {units[0]["id"]: 60}, chunks=chunks)
+    source = text.split("SOURCE OF THESE SYMBOLS")[1]
+    assert "FIRST_PART = 1" in source and "SECOND_PART = 2" in source
+    spans = prompts.shorten_prompt([row], units, {units[0]["id"]: 60}, chunks=chunks,
+                                   source_root=Path("/repo"), embed=False)
+    assert "- /repo/pkg/jobs.py (L1-L1,L40-L41)" in spans
+
+
 def test_the_shorten_prompt_for_a_host_agent_lists_files_and_spans() -> None:
     from pathlib import Path
     from cbe import prompts

@@ -275,19 +275,24 @@ def shorten_prompt(rows: list[dict], units: list[dict[str, Any]], caps: dict[str
             header.append("  this unit covers several symbols; the rewrite must name each one: " + ", ".join(names))
     body = [*header, "", "SOURCE OF THESE SYMBOLS (verbatim; these only, nothing else):"]
     chunk_by_id = {chunk["id"]: chunk for chunk in chunks or []}
+
+    def row_chunks(row: dict) -> list[dict]:
+        # Every chunk the unit covers, as the length cap and the delivery check count them
+        # (host_run._detail_sources); a module residual is often many chunks.
+        return [chunk_by_id[sid] for sid in row.get("ids") or [row["id"]] if sid in chunk_by_id]
+
     if embed:
         for row in rows:
-            chunk = chunk_by_id.get(row["id"])
-            text = (chunk or {}).get("text") or ""
+            text = "".join(chunk.get("text") or "" for chunk in row_chunks(row))
             body += [f"==== {row['path']} :: {row['name']} ====",
                      text or "(source text was not available; shorten the earlier detail only)"]
     else:
         body[body.index("SOURCE OF THESE SYMBOLS (verbatim; these only, nothing else):")] = \
             "SOURCE FILES AND LINES (read only these spans):"
         for row in rows:
-            chunk = chunk_by_id.get(row["id"])
+            found = row_chunks(row)
             target = str((source_root or Path(".")) / row["path"])
-            span = (f"L{chunk['start_line']}-L{chunk['end_line']}" if chunk
+            span = (",".join(f"L{chunk['start_line']}-L{chunk['end_line']}" for chunk in found) if found
                     else ",".join(f"L{a}-L{b}" for a, b in row["lines"]))
             body.append(f"- {target} ({span})")
     return "\n".join(body)
