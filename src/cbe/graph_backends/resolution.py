@@ -176,7 +176,7 @@ class ImportResolver:
                 extensions = (".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx", ".mts", ".cts")
                 candidates = [stem] + [stem + ext for ext in extensions] + [stem + "/index" + ext for ext in extensions]
                 # TypeScript source commonly imports the emitted JS filename.
-                replacements = {".js": (".ts", ".tsx"), ".mjs": (".mts",), ".cjs": (".cts",)}
+                replacements = {".js": (".ts", ".tsx", ".d.ts"), ".mjs": (".mts", ".d.mts"), ".cjs": (".cts", ".d.cts")}
                 for emitted, sources in replacements.items():
                     if stem.endswith(emitted):
                         candidates.extend(stem[:-len(emitted)] + ext for ext in sources)
@@ -264,6 +264,35 @@ def import_token(text: str, suffix: str, suffix_map=None) -> str | None:
     return text if text and not re.search(r"[\s()#]", text) else None
 
 
+JS_IMPORT_SUFFIXES = (".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs", ".mts", ".cts")
+#: How far past its first line a JS/TS import declaration is read for its specifier.
+JS_IMPORT_MAX_LINES = 80
+_JS_SPECIFIER = re.compile(r"""\bfrom\s*["'][^"']+["']""")
+
+
+def complete_js_import(repo: Path, edge: dict) -> dict:
+    """The whole declaration for a JS/TS import whose expression stops at its first line.
+
+    Joern reports a multi-line ``import {`` declaration by its first line, so the module
+    specifier is missing and the edge stays unresolved. Read the file from that line to the
+    first ``from '...'`` (at most ``JS_IMPORT_MAX_LINES`` lines); any other case returns the
+    edge unchanged."""
+    path, line, text = edge.get("path") or "", edge.get("line"), (edge.get("expression") or "").strip()
+    if (not path.endswith(JS_IMPORT_SUFFIXES) or not isinstance(line, int) or line < 1
+            or not re.match(r"(?:import|export)\b", text) or re.search(r"""["']""", text)):
+        return edge
+    try:
+        lines = (repo / path).read_text(encoding="utf-8").splitlines()[line - 1:line - 1 + JS_IMPORT_MAX_LINES]
+    except (OSError, UnicodeDecodeError):
+        return edge
+    if not lines or not lines[0].strip().startswith(text):
+        return edge  # the file is not the one Joern read; keep what it reported
+    for end in range(1, len(lines) + 1):
+        if _JS_SPECIFIER.search(" ".join(lines[:end])):
+            return {**edge, "expression": " ".join(" ".join(lines[:end]).split())}
+    return edge
+
+
 def resolve_declarations(repo: Path, nodes: list[dict], edges: list[dict], *, files=None, diagnostics=None, suffix_map=None) -> tuple[list[dict], list[dict]]:
     resolver = ImportResolver(repo, files, suffix_map)
     known = {n["id"] for n in nodes}
@@ -272,6 +301,7 @@ def resolve_declarations(repo: Path, nodes: list[dict], edges: list[dict], *, fi
         if edge.get("kind") != "import" or edge.get("backend") != "joern":
             result.append(edge)
             continue
+        edge = complete_js_import(repo, edge)
         for index, (status, target) in enumerate(resolver.resolve(edge.get("path") or "", edge.get("expression") or "")):
             target_id = (file_id(target, resolver.files) if status == "resolved" else external_id(target)) if target else None
             if target_id and target_id not in known:
