@@ -12,8 +12,8 @@ cbe query --run-dir . --id 'src/flask/app.py::method::Flask.dispatch_request::35
 ```
 Real output from a scratch copy of this directory (first lines; paths replaced):
 ```text
-Flask.dispatch_request | src/flask/app.py::method::Flask.dispatch_request::35345 | method | src/flask/app.py:L879-L902 | Dispatches the current request to its view function, returning the view's raw…
 Flask.raise_routing_exception | src/flask/app.py::method::Flask.raise_routing_exception::19427 | method | src/flask/app.py:L478-L504 | Re-raises the routing exception stored on the request, except in…
+Flask.handle_user_exception | src/flask/app.py::method::Flask.handle_user_exception::31441 | method | src/flask/app.py:L779-L809 | Decides how an exception raised during dispatch is handled: returns…
 
 Flask.dispatch_request  src/flask/app.py::method::Flask.dispatch_request::35345
 signature: def dispatch_request(self) -> ft.ResponseReturnValue:
