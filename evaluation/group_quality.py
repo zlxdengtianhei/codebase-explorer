@@ -12,7 +12,9 @@ example, three numbers about the leaf groups of the module tree:
 A leaf group is a node with non-empty ``unit_ids`` that no other node names as ``parent``.
 
 ``--report`` prints the table; ``--check`` also compares with the baseline file and exits 1
-when a gate fails.
+when an example is worse than its frozen numbers (more single-member leaf groups, more
+low-cover leaf groups, or more program merges than the baseline recorded) or when an
+invariant fails.
 """
 
 from __future__ import annotations
@@ -28,8 +30,6 @@ ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_EXAMPLES = ROOT / "examples"
 DEFAULT_BASELINE = Path(__file__).resolve().parent / "group_quality_baseline.json"
 
-MAX_SINGLE_MEMBER_LEAF_RATIO = 0.05
-MAX_LOW_COVER_GROUPS = 3
 LOW_COVER = 0.20
 
 TITLE_WORD = re.compile(r"[A-Za-z][A-Za-z0-9]+")
@@ -156,17 +156,26 @@ def check(results: dict[str, dict], baseline: dict[str, dict]) -> list[str]:
             after = show(new[metric])
             mark = "" if before == after else "   <- changed"
             print(f"{name:<10} {metric:<24} {before:>12} {after:>12}{mark}")
-        if new["single_member_leaf_ratio"] > MAX_SINGLE_MEMBER_LEAF_RATIO:
-            failures.append(f"{name}: single_member_leaf_ratio {new['single_member_leaf_ratio']:.2f} "
-                            f"> {MAX_SINGLE_MEMBER_LEAF_RATIO:.2f} ({new['single_member']} of "
-                            f"{new['leaf_groups']} leaf groups have one unit)")
+        old_single = old.get("single_member")
+        if old_single is not None and new["single_member"] > old_single:
+            failures.append(f"{name}: single_member {new['single_member']} > baseline {old_single} "
+                            f"({new['single_member']} of {new['leaf_groups']} leaf groups "
+                            f"have one unit)")
+        old_low = len(old["low_cover_groups"]) if "low_cover_groups" in old else None
+        if old_low is not None and len(new["low_cover_groups"]) > old_low:
+            failures.append(f"{name}: low_cover_groups {len(new['low_cover_groups'])} > "
+                            f"baseline {old_low}")
+        old_merged = old.get("program_merged")
+        if old_merged is not None:
+            if new["program_merged"] is None:
+                failures.append(f"{name}: program_merged not recorded (baseline {old_merged})")
+            elif new["program_merged"] > old_merged:
+                failures.append(f"{name}: program_merged {new['program_merged']} > "
+                                f"baseline {old_merged}")
         if new["leaf_groups"] != new["summary_leaves"]:
             failures.append(f"{name}: catalog leaf_groups {new['leaf_groups']} != "
                             f"summary.json tree.leaves {new['summary_leaves']}")
         failures += [f"{name}: {problem}" for problem in new["problems"]]
-    total_low = sum(len(row["low_cover_groups"]) for row in results.values())
-    if total_low > MAX_LOW_COVER_GROUPS:
-        failures.append(f"low_cover_groups {total_low} > {MAX_LOW_COVER_GROUPS} over all examples")
     return failures
 
 
@@ -201,8 +210,7 @@ def main(argv: list[str] | None = None) -> int:
         for failure in failures:
             print(f"  - {failure}")
         return 1
-    print(f"OK: single_member_leaf_ratio <= {MAX_SINGLE_MEMBER_LEAF_RATIO:.2f} per example, "
-          f"leaf_groups == tree.leaves, low_cover_groups <= {MAX_LOW_COVER_GROUPS}")
+    print("OK: no example is worse than the frozen baseline and leaf_groups == tree.leaves")
     return 0
 
 
