@@ -1,6 +1,6 @@
 [project]
 name = "codebase-explorer"
-version = "3.0.0rc1"
+version = "3.0.0rc2"
 description = "Source-grounded, navigable documentation for software repositories"
 dynamic = ["readme"]
 license = "MIT"
@@ -74,7 +74,7 @@ pattern = '\]\(((?:docs|examples|evaluation)/[^)]*|LICENSE|CHANGELOG\.md)\)'
 replacement = '](https://github.com/zlxdengtianhei/codebase-explorer/blob/v$HFPR_VERSION/\1)'
 
 [[tool.hatch.metadata.hooks.fancy-pypi-readme.substitutions]]
-pattern = 'href="(README\.zh-CN\.md|LICENSE|pyproject\.toml)"'
+pattern = 'href="(README\.zh-CN\.md|LICENSE|pyproject\.toml|(?:docs|examples|evaluation)/[^"]+)"'
 replacement = 'href="https://github.com/zlxdengtianhei/codebase-explorer/blob/v$HFPR_VERSION/\1"'
 
 [[tool.hatch.metadata.hooks.fancy-pypi-readme.substitutions]]

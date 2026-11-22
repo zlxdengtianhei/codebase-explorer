@@ -1,9 +1,10 @@
 # Changelog
 
-## 3.0.0rc1 (2026-11-22, pre-release)
+## 3.0.0rc2 (2026-11-22, pre-release)
 
 A release candidate: install it with `pip install --pre codebase-explorer` or
-`pip install codebase-explorer==3.0.0rc1`. 3.0.0 follows after a full re-run of the
+`pip install codebase-explorer==3.0.0rc2`. (The 3.0.0rc1 tag was never published: the PyPI
+long description still had a relative `docs/` link; rc2 rewrites those links too.) 3.0.0 follows after a full re-run of the
 examples.
 
 - An explicit `--effort` (or `effort`/`thinking` in `--config`) now wins over the
