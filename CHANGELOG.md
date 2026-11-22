@@ -1,6 +1,18 @@
 # Changelog
 
-## 3.0.0.dev0 (unreleased)
+## 3.0.0rc1 (2026-11-22, pre-release)
+
+A release candidate: install it with `pip install --pre codebase-explorer` or
+`pip install codebase-explorer==3.0.0rc1`. 3.0.0 follows after a full re-run of the
+examples.
+
+- An explicit `--effort` (or `effort`/`thinking` in `--config`) now wins over the
+  per-task defaults (#17).
+- The flask and gson example READMEs quote `cbe find` output from the current ranking
+  again (#16); a test runs the README commands and compares the quoted lines by position (#14).
+- CI checks: a size budget for source lines, file length and function length (#12), and a
+  group-quality check that no example gets worse than its frozen baseline (#13).
+
 
 Detail first, then the model groups only the detail, one layer at a time. The source
 is read once; the read budget is recorded and enforced.
