@@ -1,5 +1,26 @@
 # Changelog
 
+## 3.0.0 (2026-11-22)
+
+3.0 re-run end to end on six repositories before release: Python (flask, requests),
+TypeScript with JavaScript (tsdown, Chart.js) and C (cJSON, zlib), two runs each with the
+default flow. All twelve runs finished `complete` with no unexplained unit and passed
+`cbe host verify`. Reads were 1.40 to 1.68 times the source, embedded source 1.00 to 1.11
+times, and entry pages 613 to 1,455 tokens, all inside the existing limits.
+
+- A unit split into several chunks is re-asked with every chunk when its explanation is
+  too long; before, only the first chunk was embedded and the delivery check refused the
+  answer, so cJSON ended `partial` (#18).
+- JavaScript and TypeScript: a multi-line `import { … } from '…'` is read to its
+  specifier, and a `.js` import may name a `.d.ts` file. Unresolved import edges fell
+  from 88 to 2 on tsdown and from 74 to 1 on Chart.js (#19).
+- Measured on Chart.js with CodeWikiBench (61 rubric items, DeepSeek V4.1 Flash, same
+  judges for all): coverage 0.917 for CBE, 0.896 to 0.921 for DeepWiki and 0.927 for
+  CodeWiki 2.0; the difference is inside the judges' noise. With the same model and input
+  as CodeWiki 2.0, CBE used about 2% of the prompt tokens, about a quarter of the cost and
+  about a tenth of the wall time. CBE explains the source only, so build, packaging and
+  framework-integration topics score low (0.27).
+
 ## 3.0.0rc2 (2026-11-22, pre-release)
 
 A release candidate: install it with `pip install --pre codebase-explorer` or
