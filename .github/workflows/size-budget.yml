@@ -1,0 +1,16 @@
+name: Size budget
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  size-budget:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.1.0
+      - name: Create a virtual environment
+        run: uv venv "$RUNNER_TEMP/venv"
+      - name: Check src/ against the size budget
+        run: |
+          source "$RUNNER_TEMP/venv/bin/activate"
+          python evaluation/size_budget.py --check
