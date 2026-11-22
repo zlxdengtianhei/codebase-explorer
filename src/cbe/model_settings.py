@@ -69,11 +69,34 @@ def task_kind(task: str) -> str:
     return "detail"
 
 
-def task_overrides(model: str, task: str) -> dict[str, Any]:
+#: The request keys a user may set to choose how much a model reasons.
+EFFORT_KEYS = ("reasoning_effort", "thinking")
+
+
+def explicit_effort(path: Path | None, effort: str | None = None) -> dict[str, Any]:
+    """The effort keys the user chose: ``reasoning_effort``/``thinking`` from the config
+    file, then ``--effort`` (which wins for ``reasoning_effort``)."""
+    loaded = _read_user_config(path) if path is not None else {}
+    chosen = {key: loaded[key] for key in EFFORT_KEYS if key in loaded}
+    if effort:
+        chosen["reasoning_effort"] = effort
+    return chosen
+
+
+def task_overrides(model: str, task: str, explicit: dict[str, Any] | None = None) -> dict[str, Any]:
     """Per-task request settings: a judgement task asks for low effort, not thinking off.
 
     Detail tasks keep the model defaults. A model with no thinking switch (unknown
-    models, GLM) is left alone. ``None`` tells the caller to drop the key."""
+    models, GLM) is left alone. ``None`` tells the caller to drop the key.
+
+    ``explicit`` (see ``explicit_effort``) wins over all of this for every task: an
+    explicit ``reasoning_effort`` is sent as given and replaces the built-in thinking
+    switch, unless the user also set ``thinking``."""
+    if explicit:
+        chosen = dict(explicit)
+        if chosen.get("reasoning_effort") is not None:
+            chosen.setdefault("thinking", None)
+        return chosen
     if task_kind(task) not in JUDGEMENT_TASKS:
         return {}
     if "thinking" not in model_defaults(model):
@@ -94,20 +117,26 @@ def model_defaults(model: str) -> dict[str, Any]:
     return {}
 
 
+def _read_user_config(path: Path) -> dict[str, Any]:
+    """The user's JSON settings as written (``{}`` when there is no file)."""
+    if not path.is_file():
+        return {}
+    try:
+        loaded = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ApiConfigError(f"API config is not valid JSON: {exc}") from exc
+    if not isinstance(loaded, dict):
+        raise ApiConfigError("API config must be a JSON object")
+    unknown = sorted(set(loaded) - ALLOWED_API_CONFIG_KEYS)
+    if unknown:
+        raise ApiConfigError(f"unknown API config keys: {', '.join(unknown)}")
+    return loaded
+
+
 def load_config(path: Path, model: str = "") -> dict[str, Any]:
     """Merge transport defaults < model defaults < user JSON settings."""
     value = {**DEFAULT_API_CONFIG, **model_defaults(model)}
-    if path.is_file():
-        try:
-            loaded = json.loads(path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError) as exc:
-            raise ApiConfigError(f"API config is not valid JSON: {exc}") from exc
-        if not isinstance(loaded, dict):
-            raise ApiConfigError("API config must be a JSON object")
-        unknown = sorted(set(loaded) - ALLOWED_API_CONFIG_KEYS)
-        if unknown:
-            raise ApiConfigError(f"unknown API config keys: {', '.join(unknown)}")
-        value.update(loaded)
+    value.update(_read_user_config(path))
     for key in ("timeout", "output_max_tokens", "batch_target_tokens", "batch_max_tokens"):
         if key in value and (type(value[key]) is not int or value[key] < 1):
             raise ApiConfigError(f"{key} must be a positive integer")

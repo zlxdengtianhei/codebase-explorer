@@ -83,8 +83,13 @@ DeepSeek's effort levels are `low`, `high` and `max`; it has no `none`. CBE writ
 `thinking: {"type": "disabled"}` and no `reasoning_effort`, because a detail is read from
 source and thinking only adds output tokens. The two judgement tasks (`layer_*`, `overview`)
 get `reasoning_effort: "low"` and no `thinking` switch, so DeepSeek may think a little where
-the choice of groups and the shape of the whole page matter. `--effort` sets `reasoning_effort`
-for models that accept one.
+the choice of groups and the shape of the whole page matter. These are defaults: an effort the
+user chose wins on every task. `--effort` sets `reasoning_effort` for models that accept one, on
+every task, over a `reasoning_effort` in the `--config` file. An explicit `reasoning_effort`
+(from `--effort` or `--config`) replaces the built-in thinking switch, so a DeepSeek detail task
+sends that effort and no `thinking`, unless the `--config` file sets `thinking` itself; then both
+are sent as given. A `thinking` set in `--config` is sent as given on every task, and the
+judgement tasks then add no `reasoning_effort: "low"`.
 
 Whether the explanations get worse without thinking was not measured. A run that answers this
 needs the same repository and model twice, once with the switch on and once off, compared on the
