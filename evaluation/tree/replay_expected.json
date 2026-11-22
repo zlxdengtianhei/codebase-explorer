@@ -1,0 +1,516 @@
+{
+ "measured_on": "667929f",
+ "command": "run.py row <repo> T0 --no-c",
+ "rows": [
+  {
+   "repo": "ruby_llm",
+   "leaf_modules": 19,
+   "A.empty": 0,
+   "B1.leaf.q": 0.8044786467906411,
+   "B2.leaf.q": 0.11697494873684261,
+   "row": {
+    "repo": "ruby_llm",
+    "tree": "T0-ruby_llm",
+    "matched_to": null,
+    "A": {
+     "nodes": 27,
+     "empty": 0,
+     "sibling_dup_title": 0,
+     "dup_title_anywhere": 0,
+     "dup_capability": 0,
+     "near_dup_capability_pairs": 0,
+     "unit_cover_faults": 0,
+     "uncovered_source_files": 2,
+     "uncovered_source_lines": 12,
+     "nontest_lines": 11107
+    },
+    "levels": {
+     "leaf": {
+      "modules": 19
+     },
+     "up1": {
+      "modules": 10
+     },
+     "top": {
+      "modules": 7
+     }
+    },
+    "B1": {
+     "leaf": {
+      "q": 0.8044786467906411,
+      "rand": -0.008557527314272756,
+      "groups": 19,
+      "edge_weight": 391.0
+     },
+     "up1": {
+      "q": 0.7925347165442402,
+      "rand": -0.01393131476987548,
+      "groups": 10,
+      "edge_weight": 391.0
+     },
+     "top": {
+      "q": 0.7387477842243314,
+      "rand": -0.012168287753219823,
+      "groups": 7,
+      "edge_weight": 391.0
+     }
+    },
+    "B1_with_relations": {
+     "leaf": {
+      "q": 0.8044786467906411,
+      "rand": -0.008557527314272756,
+      "groups": 19,
+      "edge_weight": 391.0
+     },
+     "up1": {
+      "q": 0.7925347165442402,
+      "rand": -0.01393131476987548,
+      "groups": 10,
+      "edge_weight": 391.0
+     },
+     "top": {
+      "q": 0.7387477842243314,
+      "rand": -0.012168287753219823,
+      "groups": 7,
+      "edge_weight": 391.0
+     }
+    },
+    "B2": {
+     "leaf": {
+      "q": 0.11697494873684261,
+      "rand_unit": -0.013326978274643965,
+      "rand_file": -0.01960024310410986,
+      "groups": 19,
+      "pair_weight": 307.5,
+      "files_in_graph": 111
+     },
+     "up1": {
+      "q": 0.14523620322000538,
+      "rand_unit": -0.01271018895410497,
+      "rand_file": -0.019887756062651765,
+      "groups": 10,
+      "pair_weight": 307.5,
+      "files_in_graph": 111
+     },
+     "top": {
+      "q": 0.1394058758030436,
+      "rand_unit": -0.012167795704595596,
+      "rand_file": -0.016424125393192112,
+      "groups": 7,
+      "pair_weight": 307.5,
+      "files_in_graph": 111
+     }
+    },
+    "C": {}
+   }
+  },
+  {
+   "repo": "gson",
+   "leaf_modules": 30,
+   "A.empty": 0,
+   "B1.leaf.q": 0.7070332179836565,
+   "B2.leaf.q": 0.02826933662223778,
+   "row": {
+    "repo": "gson",
+    "tree": "T0-gson",
+    "matched_to": null,
+    "A": {
+     "nodes": 44,
+     "empty": 0,
+     "sibling_dup_title": 0,
+     "dup_title_anywhere": 0,
+     "dup_capability": 0,
+     "near_dup_capability_pairs": 0,
+     "unit_cover_faults": 0,
+     "uncovered_source_files": 7,
+     "uncovered_source_lines": 232,
+     "nontest_lines": 19506
+    },
+    "levels": {
+     "leaf": {
+      "modules": 30
+     },
+     "up1": {
+      "modules": 14
+     },
+     "top": {
+      "modules": 9
+     }
+    },
+    "B1": {
+     "leaf": {
+      "q": 0.7070332179836565,
+      "rand": -0.008154230104125939,
+      "groups": 30,
+      "edge_weight": 717.0
+     },
+     "up1": {
+      "q": 0.738365341409756,
+      "rand": -0.009039679899783888,
+      "groups": 14,
+      "edge_weight": 717.0
+     },
+     "top": {
+      "q": 0.7195660673540962,
+      "rand": -0.007337477881585999,
+      "groups": 9,
+      "edge_weight": 717.0
+     }
+    },
+    "B1_with_relations": {
+     "leaf": {
+      "q": 0.7070332179836565,
+      "rand": -0.008154230104125939,
+      "groups": 30,
+      "edge_weight": 717.0
+     },
+     "up1": {
+      "q": 0.738365341409756,
+      "rand": -0.009039679899783888,
+      "groups": 14,
+      "edge_weight": 717.0
+     },
+     "top": {
+      "q": 0.7195660673540962,
+      "rand": -0.007337477881585999,
+      "groups": 9,
+      "edge_weight": 717.0
+     }
+    },
+    "B2": {
+     "leaf": {
+      "q": 0.02826933662223778,
+      "rand_unit": -0.009708830062020831,
+      "rand_file": -0.0339901441325453,
+      "groups": 30,
+      "pair_weight": 586.0,
+      "files_in_graph": 79
+     },
+     "up1": {
+      "q": 0.036758751881639476,
+      "rand_unit": -0.009980584721525786,
+      "rand_file": -0.03505070998396479,
+      "groups": 14,
+      "pair_weight": 586.0,
+      "files_in_graph": 79
+     },
+     "top": {
+      "q": 0.09013435344673074,
+      "rand_unit": -0.009165492474072145,
+      "rand_file": -0.0337025340493056,
+      "groups": 9,
+      "pair_weight": 586.0,
+      "files_in_graph": 79
+     }
+    },
+    "C": {}
+   }
+  },
+  {
+   "repo": "tsdown",
+   "leaf_modules": 13,
+   "A.empty": 0,
+   "B1.leaf.q": 0.48534217608612074,
+   "B2.leaf.q": 0.004031221032269966,
+   "row": {
+    "repo": "tsdown",
+    "tree": "T0-tsdown",
+    "matched_to": null,
+    "A": {
+     "nodes": 17,
+     "empty": 0,
+     "sibling_dup_title": 0,
+     "dup_title_anywhere": 0,
+     "dup_capability": 0,
+     "near_dup_capability_pairs": 0,
+     "unit_cover_faults": 0,
+     "uncovered_source_files": 6,
+     "uncovered_source_lines": 710,
+     "nontest_lines": 5535
+    },
+    "levels": {
+     "leaf": {
+      "modules": 13
+     },
+     "up1": {
+      "modules": 8
+     },
+     "top": {
+      "modules": 8
+     }
+    },
+    "B1": {
+     "leaf": {
+      "q": 0.48534217608612074,
+      "rand": -0.02034513968986287,
+      "groups": 13,
+      "edge_weight": 204.0
+     },
+     "up1": {
+      "q": 0.4911812764321415,
+      "rand": -0.021291890939382285,
+      "groups": 8,
+      "edge_weight": 204.0
+     },
+     "top": {
+      "q": 0.4911812764321415,
+      "rand": -0.021291890939382285,
+      "groups": 8,
+      "edge_weight": 204.0
+     }
+    },
+    "B1_with_relations": {
+     "leaf": {
+      "q": 0.48534217608612074,
+      "rand": -0.02034513968986287,
+      "groups": 13,
+      "edge_weight": 204.0
+     },
+     "up1": {
+      "q": 0.4911812764321415,
+      "rand": -0.021291890939382285,
+      "groups": 8,
+      "edge_weight": 204.0
+     },
+     "top": {
+      "q": 0.4911812764321415,
+      "rand": -0.021291890939382285,
+      "groups": 8,
+      "edge_weight": 204.0
+     }
+    },
+    "B2": {
+     "leaf": {
+      "q": 0.004031221032269966,
+      "rand_unit": -0.025807586777702025,
+      "rand_file": -0.050961271041399234,
+      "groups": 13,
+      "pair_weight": 156.0,
+      "files_in_graph": 37
+     },
+     "up1": {
+      "q": 0.033584328116845585,
+      "rand_unit": -0.023275585238808315,
+      "rand_file": -0.048254516139131544,
+      "groups": 8,
+      "pair_weight": 156.0,
+      "files_in_graph": 37
+     },
+     "top": {
+      "q": 0.033584328116845585,
+      "rand_unit": -0.023275585238808315,
+      "rand_file": -0.048254516139131544,
+      "groups": 8,
+      "pair_weight": 156.0,
+      "files_in_graph": 37
+     }
+    },
+    "C": {}
+   }
+  },
+  {
+   "repo": "fmt",
+   "leaf_modules": 36,
+   "A.empty": 0,
+   "B1.leaf.q": 0.42414062499999994,
+   "B2.leaf.q": -0.04186819898769231,
+   "row": {
+    "repo": "fmt",
+    "tree": "T0-fmt",
+    "matched_to": null,
+    "A": {
+     "nodes": 49,
+     "empty": 0,
+     "sibling_dup_title": 0,
+     "dup_title_anywhere": 0,
+     "dup_capability": 0,
+     "near_dup_capability_pairs": 0,
+     "unit_cover_faults": 0,
+     "uncovered_source_files": 3,
+     "uncovered_source_lines": 216,
+     "nontest_lines": 17978
+    },
+    "levels": {
+     "leaf": {
+      "modules": 36
+     },
+     "up1": {
+      "modules": 14
+     },
+     "top": {
+      "modules": 9
+     }
+    },
+    "B1": {
+     "leaf": {
+      "q": 0.42414062499999994,
+      "rand": -0.054934606481481484,
+      "groups": 36,
+      "edge_weight": 240.0
+     },
+     "up1": {
+      "q": 0.454453125,
+      "rand": -0.05662413194444445,
+      "groups": 14,
+      "edge_weight": 240.0
+     },
+     "top": {
+      "q": 0.4422395833333334,
+      "rand": -0.0536875,
+      "groups": 9,
+      "edge_weight": 240.0
+     }
+    },
+    "B1_with_relations": {
+     "leaf": {
+      "q": 0.42414062499999994,
+      "rand": -0.054934606481481484,
+      "groups": 36,
+      "edge_weight": 240.0
+     },
+     "up1": {
+      "q": 0.454453125,
+      "rand": -0.05662413194444445,
+      "groups": 14,
+      "edge_weight": 240.0
+     },
+     "top": {
+      "q": 0.4422395833333334,
+      "rand": -0.0536875,
+      "groups": 9,
+      "edge_weight": 240.0
+     }
+    },
+    "B2": {
+     "leaf": {
+      "q": -0.04186819898769231,
+      "rand_unit": -0.008635954194296691,
+      "rand_file": -0.15803170569232633,
+      "groups": 36,
+      "pair_weight": 1144.0,
+      "files_in_graph": 16
+     },
+     "up1": {
+      "q": -0.10689139480281026,
+      "rand_unit": -0.00786984403532751,
+      "rand_file": -0.15807264717120487,
+      "groups": 14,
+      "pair_weight": 1144.0,
+      "files_in_graph": 16
+     },
+     "top": {
+      "q": -0.06430727179583917,
+      "rand_unit": -0.006559045472416425,
+      "rand_file": -0.145277877837974,
+      "groups": 9,
+      "pair_weight": 1144.0,
+      "files_in_graph": 16
+     }
+    },
+    "C": {}
+   }
+  },
+  {
+   "repo": "flask",
+   "leaf_modules": 32,
+   "A.empty": 22,
+   "B1.leaf.q": 0.41765410980284434,
+   "B2.leaf.q": -0.034776573943408426,
+   "row": {
+    "repo": "flask",
+    "tree": "T0-flask",
+    "matched_to": null,
+    "A": {
+     "nodes": 76,
+     "empty": 22,
+     "sibling_dup_title": 0,
+     "dup_title_anywhere": 24,
+     "dup_capability": 14,
+     "near_dup_capability_pairs": 22,
+     "unit_cover_faults": 0,
+     "uncovered_source_files": 2,
+     "uncovered_source_lines": 126,
+     "nontest_lines": 9159
+    },
+    "levels": {
+     "leaf": {
+      "modules": 32
+     },
+     "up1": {
+      "modules": 9
+     },
+     "top": {
+      "modules": 2
+     }
+    },
+    "B1": {
+     "leaf": {
+      "q": 0.41765410980284434,
+      "rand": -0.016672909721268423,
+      "groups": 46,
+      "edge_weight": 283.0
+     },
+     "up1": {
+      "q": 0.5244478018204748,
+      "rand": -0.020633919764262258,
+      "groups": 10,
+      "edge_weight": 283.0
+     },
+     "top": {
+      "q": 0.22117893843099556,
+      "rand": -0.009428885365031411,
+      "groups": 2,
+      "edge_weight": 283.0
+     }
+    },
+    "B1_with_relations": {
+     "leaf": {
+      "q": 0.41765410980284434,
+      "rand": -0.016672909721268423,
+      "groups": 46,
+      "edge_weight": 283.0
+     },
+     "up1": {
+      "q": 0.5244478018204748,
+      "rand": -0.020633919764262258,
+      "groups": 10,
+      "edge_weight": 283.0
+     },
+     "top": {
+      "q": 0.22117893843099556,
+      "rand": -0.009428885365031411,
+      "groups": 2,
+      "edge_weight": 283.0
+     }
+    },
+    "B2": {
+     "leaf": {
+      "q": -0.034776573943408426,
+      "rand_unit": -0.013287425833019,
+      "rand_file": -0.11280247204310064,
+      "groups": 46,
+      "pair_weight": 153.5,
+      "files_in_graph": 22
+     },
+     "up1": {
+      "q": -0.0920990555263065,
+      "rand_unit": -0.012255478638206356,
+      "rand_file": -0.09300806352658365,
+      "groups": 10,
+      "pair_weight": 153.5,
+      "files_in_graph": 22
+     },
+     "top": {
+      "q": -0.11690447659317377,
+      "rand_unit": -0.0064330701708437635,
+      "rand_file": -0.05943021864686814,
+      "groups": 2,
+      "pair_weight": 153.5,
+      "files_in_graph": 22
+     }
+    },
+    "C": {}
+   }
+  }
+ ]
+}
