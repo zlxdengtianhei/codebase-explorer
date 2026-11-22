@@ -48,13 +48,11 @@ def run(command: str, cwd: Path) -> subprocess.CompletedProcess[str]:
 
 def unmatched(quoted: list[str], output: list[str]) -> list[str]:
     missing = []
-    for line in quoted:
-        if line.endswith(ELLIPSIS):
-            prefix = line[:-len(ELLIPSIS)]
-            ok = any(out.startswith(prefix) for out in output)
-        else:
-            ok = line in output
-        if not ok:
+    for i, line in enumerate(quoted):
+        prefix = line.rstrip()
+        if prefix.endswith(ELLIPSIS):
+            prefix = prefix[:-len(ELLIPSIS)].rstrip()
+        if i >= len(output) or not output[i].startswith(prefix):
             missing.append(line)
     return missing
 
