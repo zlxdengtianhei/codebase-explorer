@@ -12,8 +12,8 @@ cbe query --run-dir . --id 'gson/src/main/java/com/google/gson/Gson.java::method
 ```
 Real output from a scratch copy of this directory (first lines; paths replaced):
 ```text
-Gson.toJson | gson/src/main/java/com/google/gson/Gson.java::method::Gson.toJson::25595 | method | gson/src/main/java/com/google/gson/Gson.java:L565-L570 | Serializes an object to a JSON string, using…
 Gson.getAdapter | gson/src/main/java/com/google/gson/Gson.java::method::Gson.getAdapter::16136 | method | gson/src/main/java/com/google/gson/Gson.java:L340-L399 | Resolves and caches a TypeAdapter fo…
+gson/src/main/java/com/google/gson/Gson.java:Gson (3) | gson/src/main/java/com/google/gson/Gson.java::class::Gson::7521::s11 | class | gson/src/main/java/com/google/gson/Gson.java:L503-L519 | These d…
 
 Gson.toJson  gson/src/main/java/com/google/gson/Gson.java::method::Gson.toJson::25595
 signature: public String toJson(Object src)
