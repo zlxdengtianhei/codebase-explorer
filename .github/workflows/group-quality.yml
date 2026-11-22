@@ -1,0 +1,21 @@
+name: Group quality (frozen example answers)
+# Reads examples/*/catalog.json.gz and summary.json only: no model call, no network, no key.
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  group-quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.1.0
+      - name: Install Python and pytest
+        run: |
+          uv venv --python 3.13 "$RUNNER_TEMP/venv"
+          uv pip install --python "$RUNNER_TEMP/venv/bin/python" pytest
+          echo "$RUNNER_TEMP/venv/bin" >> "$GITHUB_PATH"
+      - name: Group-quality check against the baseline
+        run: python evaluation/group_quality.py --check
+      - name: Group-quality test
+        run: python -m pytest tests/test_group_quality.py -q -p no:cacheprovider

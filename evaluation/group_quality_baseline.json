@@ -1,0 +1,72 @@
+{
+  "cjson": {
+    "leaf_groups": 5,
+    "single_member": 0,
+    "single_member_leaf_ratio": 0.0,
+    "summary_leaves": 5,
+    "program_merged": null,
+    "low_cover_groups": []
+  },
+  "flask": {
+    "leaf_groups": 22,
+    "single_member": 0,
+    "single_member_leaf_ratio": 0.0,
+    "summary_leaves": 22,
+    "program_merged": null,
+    "low_cover_groups": []
+  },
+  "fmt": {
+    "leaf_groups": 36,
+    "single_member": 0,
+    "single_member_leaf_ratio": 0.0,
+    "summary_leaves": 36,
+    "program_merged": null,
+    "low_cover_groups": []
+  },
+  "gson": {
+    "leaf_groups": 30,
+    "single_member": 0,
+    "single_member_leaf_ratio": 0.0,
+    "summary_leaves": 30,
+    "program_merged": null,
+    "low_cover_groups": [
+      {
+        "node": "public-api-utility-classes",
+        "title": "Public API utility classes",
+        "members": 21,
+        "cover": 0.14
+      }
+    ]
+  },
+  "polyglot": {
+    "leaf_groups": 10,
+    "single_member": 0,
+    "single_member_leaf_ratio": 0.0,
+    "summary_leaves": 10,
+    "program_merged": null,
+    "low_cover_groups": []
+  },
+  "ruby_llm": {
+    "leaf_groups": 19,
+    "single_member": 0,
+    "single_member_leaf_ratio": 0.0,
+    "summary_leaves": 19,
+    "program_merged": null,
+    "low_cover_groups": [
+      {
+        "node": "media-and-auxiliary-operations",
+        "title": "Media And Auxiliary Operations",
+        "members": 12,
+        "cover": 0.0
+      }
+    ]
+  },
+  "tsdown": {
+    "leaf_groups": 13,
+    "single_member": 0,
+    "single_member_leaf_ratio": 0.0,
+    "summary_leaves": 13,
+    "program_merged": null,
+    "low_cover_groups": []
+  }
+}
