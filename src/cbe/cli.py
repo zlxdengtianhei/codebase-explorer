@@ -64,8 +64,12 @@ def build_parser() -> argparse.ArgumentParser:
     generate_p.add_argument("--api-key-env", default=None, help="environment variable containing the API key")
     generate_p.add_argument("--jobs", type=int, default=4)
     generate_p.add_argument("--effort", default=None,
-                            help="reasoning effort for models that accept one (low, high or max); "
-                                 "DeepSeek defaults to thinking disabled")
+                            help="reasoning effort for models that accept one (low, high or max), "
+                                 "sent as reasoning_effort on every task; it wins over the API config and "
+                                 "the per-task defaults, and replaces DeepSeek's default thinking switch "
+                                 "unless the API config sets thinking. When neither sets an effort or thinking, "
+                                 "DeepSeek detail tasks send thinking disabled and layer/overview tasks "
+                                 "reasoning_effort low")
     generate_p.add_argument("--review", nargs="?", const="sample", choices=REVIEW_MODES,
                             default=DEFAULT_REVIEW,
                             help="separate reviewer and rewriter; off unless given (bare --review = sample)")

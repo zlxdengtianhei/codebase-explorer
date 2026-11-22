@@ -16,7 +16,7 @@ from typing import Any
 
 from cbe import batching, usage
 from cbe.api_completion import FIELDS, CSV_LOCK, invoke
-from cbe.model_settings import DEFAULT_API_CONFIG, load_config, task_overrides
+from cbe.model_settings import DEFAULT_API_CONFIG, explicit_effort, load_config, task_overrides
 
 
 class GenerateError(ValueError):
@@ -207,8 +207,8 @@ def generate(repo: Path, run_dir: Path, *, model: str, config: Path | None = Non
         api_overrides["base_url"] = api_base_url
     if api_key_env:
         api_overrides["api_key_env"] = api_key_env
-    if effort:
-        api_overrides["reasoning_effort"] = effort
+    # What the user chose (config file, then --effort) wins over the per-task defaults.
+    chosen_effort = explicit_effort(config, effort)
     previous_wall = 0.0
     if resume and (run_dir / "summary.json").is_file():
         previous_wall = json.loads((run_dir / "summary.json").read_text(encoding="utf-8")).get("wall_seconds", 0)
@@ -256,7 +256,8 @@ def generate(repo: Path, run_dir: Path, *, model: str, config: Path | None = Non
                                          run_dir=run_dir, model=model, config=config,
                                          timeout=timeout, csv_path=csv_path,
                                          overrides={**api_overrides,
-                                                    **task_overrides(model, item["task"])} or None)
+                                                    **task_overrides(model, item["task"],
+                                                                     chosen_effort)} or None)
                     active[future] = (item, csv_task)
             if not active:
                 if stopped is None and preflight is None and paused:
