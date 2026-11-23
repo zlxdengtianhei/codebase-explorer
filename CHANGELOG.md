@@ -6,7 +6,9 @@
   no longer refused at plan time ("graph anchors repo source not covered by
   source_manifest: package.json"). Joern makes a file node for `package.json`; it is in the
   graph's configuration manifest, whose hashes are checked against the disk, so it now counts
-  as covered, and a changed `package.json` is still refused as configuration drift.
+  as covered, and a changed `package.json` is still refused as configuration drift. A name that
+  the source reader also takes (`setup.py` is in both lists) is not covered this way: it still
+  goes through the source manifest and the frozen hash, so a graph cannot mix snapshots.
 
 ## 3.0.0 (2026-11-22)
 

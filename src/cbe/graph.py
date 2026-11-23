@@ -231,9 +231,13 @@ def check_graph_source(repo: Path, graph: dict[str, Any], frozen_hashes: dict[st
                                       "boundary source drifted: content hash differs from current source")
     # An analyzer may also anchor a build file it read (Joern's JavaScript frontend makes a file
     # node for package.json). Those are in the configuration manifest, whose hashes
-    # validate_graph_provenance has just checked against the disk.
+    # validate_graph_provenance has just checked against the disk. A name that is also a source
+    # file (setup.py is both) is not covered this way: its bytes go through the source manifest
+    # and the frozen hash, so a graph cannot mix snapshots.
+    sources = suffix_languages()
     manifested |= {row["path"] for row in (graph.get("provenance") or {}).get("config_manifest") or []
-                   if isinstance(row, dict) and isinstance(row.get("path"), str)}
+                   if isinstance(row, dict) and isinstance(row.get("path"), str)
+                   and os.path.splitext(row["path"])[1].lower() not in sources}
     unmanifested: set[str] = set()
     # A path that is not a non-empty string cannot name repository source; such
     # anchors stay external, as an unknown path does.
