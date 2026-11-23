@@ -8,6 +8,7 @@ red on a wrong partition or a wrong graph decision.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -773,6 +774,21 @@ def test_graph_rejects_unmanifested_repo_source(tmp_path):
     assert excinfo.value.code == "graph_unmanifested_source"
     assert excinfo.value.details["paths"] == ["sample.py"]
 
+    # A build file the analyzer read and hashed (Joern: package.json) may be a file node.
+    config = tmp_path / "config_repo"
+    config.mkdir()
+    (config / "sample.py").write_bytes((FIXTURES / "sample.py").read_bytes())
+    (config / "package.json").write_text('{"name": "x"}\n')
+    from cbe.graph import discover_config, discover_sources
+    node = {"id": "file:package.json", "kind": "file", "path": "package.json"}
+    graph_path.write_text(json.dumps({"schema": "cbe-graph/1", "source_manifest": discover_sources(config),
+                                      "provenance": {"config_manifest": discover_config(config)},
+                                      "nodes": [node], "edges": []}))
+    assert build_context(config, paths=["sample.py"], graph_path=graph_path)["graph_status"] == "provided"
+    (config / "package.json").write_text('{"name": "y"}\n')
+    with pytest.raises(ContextError):
+        build_context(config, paths=["sample.py"], graph_path=graph_path)
+
     # A valid empty graph is still accepted.
     empty = tmp_path / "empty.json"
     empty.write_text(json.dumps({"schema": "cbe-graph/1", "source_manifest": [], "nodes": [], "edges": []}))
@@ -791,6 +807,36 @@ def test_graph_rejects_unmanifested_repo_source(tmp_path):
         )
     )
     assert build_context(FIXTURES, paths=["sample.py"], graph_path=external)["graph_status"] == "provided"
+
+
+def test_graph_rejects_a_config_name_that_is_also_source(tmp_path):
+    """A name in both manifests is source: the frozen hash, not the disk, decides."""
+
+    from cbe.graph import check_graph_source, discover_config
+
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "setup.py").write_text("from setuptools import setup\nsetup(name='b', version='2.0')\n")
+    (repo / "sample.py").write_text("def run():\n    return 1\n")
+    frozen = {"setup.py": "0" * 64,
+              "sample.py": hashlib.sha256((repo / "sample.py").read_bytes()).hexdigest()}
+    graph = {"schema": "cbe-graph/1",
+             "source_manifest": [{"path": "sample.py", "sha256": frozen["sample.py"]}],
+             "provenance": {"config_manifest": discover_config(repo)},
+             "nodes": [{"id": "file:setup.py", "kind": "file", "path": "setup.py"},
+                       {"id": "file:sample.py", "kind": "file", "path": "sample.py"}],
+             "edges": []}
+    with pytest.raises(ContextError) as excinfo:
+        check_graph_source(repo, graph, frozen)
+    assert excinfo.value.code == "graph_unmanifested_source"
+    assert excinfo.value.details["paths"] == ["setup.py"]
+
+    # The same file listed in the source manifest is compared with the frozen hash and refused.
+    graph["source_manifest"].append({"path": "setup.py",
+                                     "sha256": hashlib.sha256((repo / "setup.py").read_bytes()).hexdigest()})
+    with pytest.raises(GraphSourceMismatch) as mismatch:
+        check_graph_source(repo, graph, frozen)
+    assert mismatch.value.details["path"] == "setup.py"
 
 
 def test_grammar_override_after_cache_is_effective(tmp_path):
