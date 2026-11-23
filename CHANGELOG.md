@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 3.1.0 (2026-11-23)
 
 - Optional build page: `--build-page [TOKENS]` on `cbe generate` and `cbe host plan`, or
   `"build_page"` in the API config, adds `docs/BUILD.md`, how to install, build, test,
