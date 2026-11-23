@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- A Joern graph of a JavaScript or TypeScript repository with `package.json` at its root is
+  no longer refused at plan time ("graph anchors repo source not covered by
+  source_manifest: package.json"). Joern makes a file node for `package.json`; it is in the
+  graph's configuration manifest, whose hashes are checked against the disk, so it now counts
+  as covered, and a changed `package.json` is still refused as configuration drift.
+
 ## 3.0.0 (2026-11-22)
 
 3.0 re-run end to end on six repositories before release: Python (flask, requests),
