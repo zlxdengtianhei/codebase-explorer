@@ -136,6 +136,17 @@ The film follows the map's reading path: the overall purpose, then every system,
 
 The film at the top of this page is tsdown's final run: 12 lines of narration, 2 minutes 25 seconds, 2.98 MB, and no model call.
 
+## Optional: a page on building and integrating
+
+```sh
+cbe generate /abs/repo --model MODEL --base-url URL --api-key-env CBE_API_KEY --build-page
+cbe host plan . --build-page        # the same in your coding agent
+```
+
+CBE explains the source, and the source rarely says how to install the project, build it, embed it in a framework or move to the next major version; the README, `docs/` and the build manifests do. `--build-page` (or `"build_page": true` in the API config file) adds one model task that reads those files, never the source, and writes `docs/BUILD.md`; `INDEX.md` links to it. The facts at the top of the page (name, version, scripts, peer dependencies, targets) are read by the program. Each point the model writes cites the file and lines it comes from, and the program refuses a citation to a file or line the task was not shown. The task reads at most 24,000 tokens by default (`--build-page 40000` sets another budget): the README and the manifests first, then documentation files in turn by topic, and the page lists what was read and what was skipped. It is off by default; without it a run reads and writes exactly what it did before.
+
+Measured on Chart.js (`src/` as in the 3.0 re-run, plus its README, `package.json`, `composer.json` and the Markdown under `docs/`; DeepSeek V4.1 Flash; one run): the task read 24,591 tokens (the README, two manifests and 10 documentation files; 128 files skipped) and wrote 7,275, about $0.008 at list prices out of $0.20 for the whole run. It runs beside the explanation batches; this one took 65 seconds. The read ratio was 1.78 against 1.67 and 1.68 without the page. With CodeWikiBench (61 rubric items, two judges, DeepSeek V4.1 Flash and GLM 5.3 Flash) the "Development and Integration" item rose from 0.27 to 0.87, both when the page was added to an earlier run's pages and in the new run; DeepWiki scored 0.67 and 0.87 on the same item. Its framework-integration and migration leaves went from 0 to 1, and accessibility stayed at 0: the page does not cover it. The rubric was written from Chart.js's own documentation, which the page now reads, so the item shows that those topics are covered, not that the page is better written. The budget is fixed, so it weighs more on a small repository: 24,000 tokens is 0.7 times cJSON's source.
+
 ## What it costs
 
 Two runs through the API path, `cbe generate` with DeepSeek V4.1 Flash, one run each and no review:
@@ -196,6 +207,7 @@ Without a graph, CBE still works. With one, the explanation tasks and the depend
 - Ruby's dynamic dispatch can bind a call to the wrong class's method. CBE marks many of these as ambiguous, and some wrong bindings remain.
 - C and C++ files are not preprocessed. A header with many macros is cut into coarse chunks, and a macro can be taken for a function name.
 - A model writes the explanations. `cbe host verify` passing shows that the structure and references are consistent. It does not show that an explanation is correct. Check explanations against the source (`cbe source`).
+- `docs/BUILD.md` (`--build-page`) is written from documentation, which can be older than the code. The program checks that every cited file and line exists, not that the lines say what the point says, and CBE does not run the commands the page names.
 - There are no incremental updates. When the source changes, `cbe stale` lists the units and module pages that describe changed files (judged per file); to refresh them, generate again.
 - `cbe video` needs headless Chrome, the Kokoro-82M model and its voices file, and ffmpeg. The script is assembled from the map's text rather than rewritten, so its wording is only as good as the map's.
 

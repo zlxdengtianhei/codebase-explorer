@@ -2,8 +2,8 @@
   "measured_on": "667929f (2026-11-21)",
   "limits": {
     "total_lines": {
-      "limit": 15600,
-      "reason": "src/**/*.py measured 15,271 lines; ~330 lines of headroom so growth beyond that is argued for in a diff."
+      "limit": 16000,
+      "reason": "src/**/*.py measured 15,271 lines; ~330 lines of headroom so growth beyond that is argued for in a diff. Raised to 16,000 with the optional build page (--build-page, 2026-11-23): src/cbe/build_page.py and its wiring add about 370 lines (15,342 -> 15,713 with the graph config-file fix) for a feature that is off by default; the same ~290 lines of headroom remain."
     },
     "max_file_lines": {
       "limit": 2300,

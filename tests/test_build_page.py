@@ -115,10 +115,12 @@ def test_check_rejects_and_normalize_keeps_only_cited_points(tmp_path) -> None:
 def test_collect_cuts_the_readme_and_reports_what_it_skipped(tmp_path) -> None:
     repo = _repo(tmp_path)
     (repo / "README.md").write_text("".join(f"line {n}\n" for n in range(1, 400)), encoding="utf-8")
-    inputs = build_page.collect(repo, 200)
+    inputs = build_page.collect(repo, 1000)                        # README may take half: 500
     readme = inputs["files"][0]
     assert readme["path"] == "README.md" and 0 < readme["shown_lines"] < readme["lines"] == 399
-    assert inputs["read_tokens"] <= 200 and {row["path"] for row in inputs["skipped"]} >= {"docs/colors.md"}
+    assert readme["tokens"] <= 500 and inputs["read_tokens"] <= 1000
+    colors = next(row for row in inputs["files"] if row["path"] == "docs/colors.md")
+    assert colors["tokens"] <= 250 and colors["shown_lines"] < colors["lines"]   # a quarter, cut after a line
     with pytest.raises(ValueError):
         build_page.collect(repo, 0)
 

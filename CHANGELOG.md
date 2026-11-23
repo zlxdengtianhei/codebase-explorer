@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- Optional build page: `--build-page [TOKENS]` on `cbe generate` and `cbe host plan`, or
+  `"build_page"` in the API config, adds `docs/BUILD.md`, how to install, build, test,
+  package, integrate and migrate. One extra task reads the README, part of `docs/` and the
+  build manifests (never source, at most 24,000 tokens by default); every point cites the
+  lines it comes from and the program checks each citation; the manifest facts are read by
+  the program. Off by default, and a run without it is byte for byte unchanged (every prompt
+  and every output file compared on tsdown and flask). On Chart.js the task read 24,591
+  tokens and cost about $0.008 of a $0.20 run; CodeWikiBench's "Development and Integration" item rose from
+  0.27 to 0.87 (DeepWiki 0.67 to 0.87).
 - A Joern graph of a JavaScript or TypeScript repository with `package.json` at its root is
   no longer refused at plan time ("graph anchors repo source not covered by
   source_manifest: package.json"). Joern makes a file node for `package.json`; it is in the

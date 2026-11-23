@@ -242,6 +242,24 @@ command exits 2 without changing the run; start a new plan for that graph. An id
 prints `nothing to update`. A successful update refreshes the context fingerprints and renders
 the documents again.
 
+`--build-page [TOKENS]` on `cbe generate` and `cbe host plan` (or `"build_page": true` or a token
+count in the API config file) adds `docs/BUILD.md`, how to install, build, test, package,
+integrate and migrate. It is off by default, and a run without it is unchanged. The plan reads,
+never from source: the root README (up to half of TOKENS), the build manifests at the root
+(`package.json`, `pyproject.toml`, `setup.cfg`, `setup.py`, `Cargo.toml`, `go.mod`,
+`CMakeLists.txt`, `Makefile`, `meson.build`, `pom.xml`, `build.gradle(.kts)`, `composer.json`,
+`Gemfile`; each up to 4,000 tokens), root documents whose names name such a topic, and Markdown,
+reStructuredText, AsciiDoc and text files under `docs/` or `doc/`, taken in turn by topic
+(install, build, package, integrate, migrate; each up to a quarter of TOKENS, cut after a whole
+line). TOKENS defaults to 24,000 and counts the numbered lines the task sees. The text is frozen
+in `host/build_inputs.json`. One `build` task, queued first and run beside the detail, writes
+points under fixed topics; each point cites `PATH:START-END` line ranges of the files it was
+shown, and the program refuses a citation that names another file or a line outside the shown
+range (re-asked once, then the point is dropped and flagged). The facts at the top of the page
+(name, version, scripts, peer dependencies, console scripts, extras, CMake and Make targets) are
+read by the program. The page ends with the files read and skipped. `INDEX.md` links to it,
+`summary.json` has a `build_page` entry, and the read budget counts the task under `build`.
+
 `cbe find --run-dir "$RUN" LIMIT` accepts the same search term as `--term LIMIT`.
 `cbe query --run-dir "$RUN" "$ID"` accepts the same ID as `--id "$ID"`.
 The flag forms and JSON output remain compatible. If both forms are supplied,
