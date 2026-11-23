@@ -366,15 +366,19 @@ def _prepare_layers(run_dir: Path, state: dict[str, Any]) -> None:
     if not records:
         return  # an empty run: _auto_complete_empty_modules published its one-node tree
     if not _layer_task_ids(state, 1):
-        chunks = layers.leaf_chunks(records, layers.candidate_groups(records, edges))
-        chunks = chunks or [{"members": sorted(records), "candidates": [sorted(records)]}]
+        planned = layers.leaf_plan(records, edges)
+        chunks = layers.leaf_chunks(records, planned["candidates"], planned["linked"])
+        chunks = chunks or [{"members": sorted(records), "candidates": [sorted(records)],
+                             "linked": []}]
         for number, chunk in enumerate(chunks, 1):
             tid = f"layer_1_{number}"
             tasks[tid] = _task(tid, "layer", level=1, chunk=number,
-                               members=chunk["members"], candidates=chunk["candidates"])
+                               members=chunk["members"], candidates=chunk["candidates"],
+                               linked=chunk.get("linked") or [])
         clustering["chunks"] = {1: len(chunks)}
         log_event(run_dir, "queue", f"layer 1: {len(chunks)} grouping task(s) for {len(records)} units",
-                  level=1, tasks=len(chunks))
+                  level=1, tasks=len(chunks), linked_sets=len(planned["linked"]),
+                  linked_sets_too_large=len(planned["oversized"]))
         return
     level, below = 1, None
     while True:
@@ -857,7 +861,8 @@ def _layer_body(run_dir: Path, state: dict[str, Any], task: dict[str, Any]) -> s
     level = task.get("level") or 1
     members = list(task.get("members") or [])
     if level == 1:
-        chunk = {"members": members, "candidates": task.get("candidates") or [members]}
+        chunk = {"members": members, "candidates": task.get("candidates") or [members],
+                 "linked": task.get("linked") or []}
         labels = layers.labels_for(members, unit_layer=True)
         blocks = layers.leaf_blocks(records, chunk, labels, edges)
         return prompts.layer_prompt(1, blocks, "functions, methods and classes",
@@ -1327,7 +1332,8 @@ def _settle_layer(run_dir: Path, state: dict[str, Any], task: dict[str, Any], va
     labels = layers.labels_for(members, unit_layer=level == 1)
     below = _groups_at(run_dir, state, level - 1) if level > 1 else None
     subtrees = _subtrees(below)
-    chunk = {"members": members, "candidates": task.get("candidates") or [members]}
+    chunk = {"members": members, "candidates": task.get("candidates") or [members],
+             "linked": task.get("linked") or []}
     shape_retry = bool(task.get("shape_retry"))
     _, edges = _aggregation_inputs(run_dir, state)
     if value is not None:
