@@ -3,7 +3,7 @@
   "limits": {
     "total_lines": {
       "limit": 16300,
-      "reason": "src/**/*.py measured 15,271 lines; raised to 16,000 with the optional build page (--build-page, 2026-11-23), which left 148 lines of headroom. Raised to 16,300 with the must-link merge (2026-11-23): src measures 16,203 with it (+351: src/cbe/mustlink.py 294 lines and 63 net lines of wiring in layers.py, host_run.py and prompts.py), leaving 97 lines of headroom. The merge is 294 lines of name and path rules plus the union-find that keeps a linked set in one candidate; it was not folded into layers.py because that file is already 842 lines and would pass the 1,000-line mark. `evaluation/size_budget.py --report` prints those totals."
+      "reason": "src/**/*.py measured 15,271 lines; raised to 16,000 with the optional build page (--build-page, 2026-11-23), which left 148 lines of headroom. Raised to 16,300 with the must-link merge (2026-11-23): src measures 16,230 with it (+378: src/cbe/mustlink.py 321 lines and 57 net lines of wiring in layers.py, host_run.py and prompts.py), leaving 70 lines of headroom. The merge is 294 lines of name and path rules plus the union-find that keeps a linked set in one candidate; it was not folded into layers.py because that file is already 842 lines and would pass the 1,000-line mark. `evaluation/size_budget.py --report` prints those totals."
     },
     "max_file_lines": {
       "limit": 2300,

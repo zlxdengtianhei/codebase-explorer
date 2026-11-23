@@ -75,6 +75,46 @@ def test_a_name_shared_by_many_files_is_a_word_not_a_module():
     assert counted["skipped"] == {"a name used by too many files": 1}
 
 
+def test_two_init_files_are_not_paired_through_a_bare_region_name():
+    """flask shape: both files are ``__init__.py``, a stem that names the place and not a
+    subject, and the only name they share is the module region of ``app = Flask(...)``.
+    Pairing them put two unrelated files in one candidate and made the answer check reject
+    a correct split."""
+    units = _units(("examples/js_example/__init__.py", "module_region", "app"),
+                   ("tests/test_apps/blueprintapp/__init__.py", "module_region", "app"),
+                   ("examples/js_example/__init__.py", "class", "Example"),
+                   ("tests/test_apps/blueprintapp/__init__.py", "function", "check"))
+    uids = [uid for uid in units if "module_region::app" in uid]
+    counted = mustlink.links(units, [])
+    assert counted["pairs"] == []
+    assert counted["skipped"] == {"test file named after a generic stem": 1}
+    # The pair was what put the two files in one candidate: without it they stay apart.
+    merged = mustlink.merge([[uids[0]], [uids[1]]], counted["pairs"], max_group=12)
+    assert merged["candidates"] == [[uids[0]], [uids[1]]]
+
+
+def test_a_bare_region_name_does_not_link_a_test_to_its_subject():
+    units = _units(("src/widgets.py", "module_region", "app"),
+                   ("src/widgets.py", "function", "render"),
+                   ("tests/test_widgets.py", "module_region", "app"),
+                   ("tests/test_widgets.py", "function", "render"))
+    counted = mustlink.links(units, [])
+    assert counted["pairs"] == [(_unit("src/widgets.py", "function", "render", 1),
+                                  _unit("tests/test_widgets.py", "function", "render", 3))]
+
+
+def test_a_test_named_after_a_generic_stem_is_not_linked_by_name():
+    units = _units(("index.js", "function", "load"), ("test/index.test.js", "function", "load"),
+                   ("src/store.js", "function", "save"), ("test/store.test.js", "function", "save"))
+    counted = mustlink.links(units, [])
+    assert counted["pairs"] == [(_unit("src/store.js", "function", "save", 2),
+                                  _unit("test/store.test.js", "function", "save", 3))]
+    # The name is the weak signal, not the edge: a run that resolved a call still links them.
+    edge = {"from": _unit("test/index.test.js", "function", "load", 1),
+            "to": _unit("index.js", "function", "load", 0), "kind": "call", "count": 1}
+    assert len(mustlink.links(units, [edge])["pairs"]) == 2
+
+
 def test_merge_moves_units_and_leaves_other_candidates_alone():
     a, b, c, d, e = ("a", "b", "c", "d", "e")
     candidates = [[a, b], [c, d], [e]]

@@ -10,7 +10,11 @@ merges, before the chunking, the unit sets that must end up in one candidate:
   by an ``interface`` / ``type_alias`` unit, and the class, function or method of the
   same name in the code file that implements it;
 * **test / subject** - a unit in a test file and the unit of the same name in the file
-  the test file is named after;
+  the test file is named after, or the unit a run's graph shows the test calling. A test
+  file whose stem names no subject (``__init__``, ``index``, ``main``: see
+  ``GENERIC_STEMS``) is paired by the graph only, and two region units are not paired on
+  a shared name: ``app = Flask(__name__)`` in two unrelated ``__init__.py`` files is not
+  a test and its subject;
 * **header / source** - a unit declared in ``x.h`` and the unit of the same name
   defined in ``x.c`` (also ``.hpp`` / ``.cpp`` and the C++ spellings).
 
@@ -46,6 +50,15 @@ _TEST_MARKERS = ("tests.", "test.", "spec.", "test_", "_test", "_spec")
 #: A name found in more code files than this is a word, not a module: linking it would
 #: put unrelated work in one candidate (``Options``, ``Config``, ``init``).
 MAX_NAME_FILES = 4
+#: Stems that name the file's place, not a subject: every ``__init__.py`` in a repository
+#: shares the stem ``__init__``, so a test file named after one would be paired with
+#: whichever ``__init__.py`` came last. A test with such a stem is still linked by a
+#: resolved edge, never by the file name.
+GENERIC_STEMS = frozenset({"__init__", "__main__", "index", "mod", "main", "conftest", "setup"})
+#: Kinds that name a region of a file rather than a symbol. Their name is a local
+#: variable (``app = Flask(__name__)``) or the file name, so it must not decide that two
+#: files are about each other.
+REGION_KINDS = frozenset({"module_region", "module_residual"})
 
 
 def _parts(uid: str) -> tuple[str, str, str]:
@@ -183,22 +196,36 @@ def links(units: dict, edges: list[dict] | None = None) -> dict:
     # named after, or an edge a run resolved from the test into the subject.
     subjects: dict[str, list[str]] = defaultdict(list)
     for path in by_file:
-        if not is_test_path(path):
-            subjects[_stem(path)].append(path)
+        if is_test_path(path) or _stem(path) in GENERIC_STEMS:
+            continue
+        subjects[_stem(path)].append(path)
     for path in sorted(by_file):
         if not is_test_path(path):
+            continue
+        if _stem(path) in GENERIC_STEMS:
+            skipped["test file named after a generic stem"] += 1
             continue
         before = families["test/subject"]
         for subject in subjects.get(_stem(path), []):
             if subject == path:
                 continue
+            # A region is named after a local variable or the file, not a symbol. Two regions
+            # that share a name (flask's ``app = Flask(__name__)`` in two ``__init__.py``
+            # files) are two variables that happen to be called the same, not a test and its
+            # subject. A region named after a function or class the other file defines is a
+            # link (Chart.js: a ``describe('_filterBetween', ...)`` block against the
+            # function of that name).
             names = {_parts(other)[2].strip().lower() for other in by_file[subject]} - {"", "<region>"}
             for uid in by_file[path]:
                 name = _parts(uid)[2].strip().lower()
-                if name and name in names:
-                    for other in by_file[subject]:
-                        if _parts(other)[2].strip().lower() == name:
-                            add(uid, other, "test/subject")
+                if not name or name not in names:
+                    continue
+                for other in by_file[subject]:
+                    if _parts(other)[2].strip().lower() != name:
+                        continue
+                    if kind_of.get(uid) in REGION_KINDS and kind_of.get(other) in REGION_KINDS:
+                        continue
+                    add(uid, other, "test/subject")
         if families["test/subject"] == before:
             skipped["test file whose units match no subject unit"] += 1
     test_files = {path for path in by_file if is_test_path(path)}
