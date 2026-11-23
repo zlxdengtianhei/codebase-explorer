@@ -27,7 +27,7 @@ import hashlib
 from collections import Counter
 from pathlib import Path
 
-from cbe import skeleton, treename
+from cbe import mustlink, skeleton, treename
 from cbe.records import summary_sentence
 from cbe.treename import normalize_title
 from cbe.token_budget import count_text_tokens
@@ -64,19 +64,36 @@ def expected_groups(members: int) -> int:
     return max(1, round(members / MEMBERS_PER_GROUP))
 
 
-def candidate_groups(units: dict, edges: list[dict]) -> list[list[str]]:
-    """The program's leaf grouping, a hint only (``skeleton`` output)."""
+def leaf_plan(units: dict, edges: list[dict]) -> dict:
+    """What the leaf layer starts from: the candidate grouping, and the linked unit sets.
+
+    ``skeleton`` gives candidate groups (a hint only, design 2.3). ``mustlink`` then
+    merges the candidates that hold units which must be grouped together - a declaration
+    and its implementation, a test and what it tests, a header and its source - so that
+    chunking cannot put them in front of two different authors. The merged candidates
+    are still only a hint; the model may split them."""
     nodes = skeleton.build(units, edges)["nodes"]
-    return [sorted(node["unit_ids"]) for node in nodes if node.get("unit_ids")]
+    hinted = [sorted(node["unit_ids"]) for node in nodes if node.get("unit_ids")]
+    merged = mustlink.merge(hinted, mustlink.links(units, edges)["pairs"], max_group=MAX_GROUP)
+    return merged
+
+
+def candidate_groups(units: dict, edges: list[dict]) -> list[list[str]]:
+    """The program's leaf grouping, a hint only (``skeleton`` output, merged by ``mustlink``)."""
+    return leaf_plan(units, edges)["candidates"]
 
 
 def _member_tokens(unit: dict) -> int:
     return count_text_tokens(summary_sentence(unit)) + 8
 
 
-def leaf_chunks(units: dict, candidates: list[list[str]]) -> list[dict]:
+def leaf_chunks(units: dict, candidates: list[list[str]],
+                linked: list[list[str]] | None = None) -> list[dict]:
     """Cut the detail into chunks of about ``LAYER_BATCH_TOKENS`` and ``MAX_CHUNK_MEMBERS``,
-    keeping candidates whole (design 2.3: a chunk small enough for the model to group)."""
+    keeping candidates whole (design 2.3: a chunk small enough for the model to group).
+
+    A candidate is never split, so a ``mustlink`` set inside it is never split either.
+    Each chunk carries the linked sets it holds (``linked``), for the answer check."""
     chunks, current, used, members = [], [], 0, 0
     for candidate in candidates:
         inside = [uid for uid in candidate if uid in units]
@@ -93,6 +110,9 @@ def leaf_chunks(units: dict, candidates: list[list[str]]) -> list[dict]:
     if current:
         chunks.append({"members": [uid for group in current for uid in group],
                        "candidates": list(current)})
+    for chunk in chunks:
+        members_here = set(chunk["members"])
+        chunk["linked"] = [list(group) for group in linked or [] if set(group) <= members_here]
     return chunks
 
 
@@ -128,13 +148,19 @@ def _edge_table(edges: list[dict], membership: dict[str, str]) -> dict[tuple[str
 
 
 def leaf_blocks(units: dict, chunk: dict, labels: dict[str, str], edges: list[dict]) -> list[str]:
-    """One block per candidate group: its member detail, and calls in and out of it."""
+    """One block per candidate group: its member detail, and calls in and out of it.
+
+    A candidate that holds a ``mustlink`` set says so in its heading, because the model
+    may split a candidate group and must not split that set."""
     candidate_of = {uid: f"C{i + 1}" for i, group in enumerate(chunk["candidates"]) for uid in group}
     ties = _edge_table(edges, candidate_of)
+    linked = [set(group) for group in chunk.get("linked") or []]
     blocks = []
     for index, group in enumerate(chunk["candidates"]):
         label = f"C{index + 1}"
-        lines = [f"## {label}  ({len(group)} units; candidate group, not fixed)"]
+        kept = sum(1 for group_units in linked if group_units <= set(group))
+        note = f"; keep {kept} linked set(s) in one group" if kept else ""
+        lines = [f"## {label}  ({len(group)} units; candidate group, not fixed{note})"]
         for uid in group:
             unit = units.get(uid)
             if unit is None:
@@ -280,6 +306,19 @@ def decode(answer: dict, chunk: dict, labels: dict[str, str], level: int,
             raise LayerError("modules without a group: "
                              + ", ".join(labels[uid] for uid in still[:20]))
     minimum = MIN_GROUP if len(labels) >= MIN_GROUP else 1
+    split = _split_links(groups, list(chunk.get("linked") or []))
+    if split and not allow_split:
+        listed = ", ".join(labels.get(uid, uid) for uid in split[0][:6])
+        more = f" ({len(split)} set(s) in all)" if len(split) > 1 else ""
+        raise LayerShapeError(
+            "the program linked these units in the source (a declaration and its implementation, "
+            "a test and what it tests, a header and its source) and they must stay in one group: "
+            f"{listed}{more}. Put each linked set in one group, keep every other group as it is, "
+            "and answer with the same JSON shape.")
+    if split:
+        flags.append("the program linked " + ", ".join(
+            " ".join(labels.get(uid, uid) for uid in group[:4]) for group in split[:3])
+            + " but the answer put them in different groups; the answer was kept as it came back")
     oversized = [group for group in groups if len(group["members"]) > MAX_GROUP]
     undersized = [group for group in groups if len(group["members"]) < minimum] if minimum > 1 else []
     if oversized and not allow_split:
@@ -298,6 +337,17 @@ def decode(answer: dict, chunk: dict, labels: dict[str, str], level: int,
     groups, shaped = _shape_groups(groups, minimum, level, subtrees,
                                    list(chunk.get("candidates") or []), names or {}, edges)
     return groups, flags + shaped
+
+
+def _split_links(groups: list[dict], linked: list[list[str]]) -> list[list[str]]:
+    """The linked sets an answer put in more than one group (``mustlink``)."""
+    split = []
+    for units in linked:
+        wanted = set(units)
+        homes = sum(1 for group in groups if wanted & set(group["members"]))
+        if homes > 1:
+            split.append(list(units))
+    return split
 
 
 def members_in_order(labels: dict[str, str]) -> list[str]:

@@ -316,6 +316,7 @@ Rules:
 - Group size: 2 to 12 members. Do not return a group of one; merge it with its closest neighbour.
 - Check every group against that size before you answer. A candidate group above 12 members becomes two or three groups of 4 to 12; together they still cover its members.
 - Follow the work, not the directory names. A candidate group is only a hint: you may split it, merge it or move a member.
+- A candidate group headed "keep N linked set(s) in one group" holds units the program linked in the source: a type declaration and its implementation, a test and what it tests, or a header and its source. Those units stay in one group; split or move the rest of that candidate as the work needs.
 - A function called from 20 or more places may go into a shared-utilities group.
 - Write prose, not a listing: no call counts, symbols, file paths or generated labels in the sentences.
 
