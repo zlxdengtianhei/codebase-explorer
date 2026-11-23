@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+- Optional build page: `--build-page [TOKENS]` on `cbe generate` and `cbe host plan`, or
+  `"build_page"` in the API config, adds `docs/BUILD.md`, how to install, build, test,
+  package, integrate and migrate. One extra task reads the README, part of `docs/` and the
+  build manifests (never source, at most 24,000 tokens by default); every point cites the
+  lines it comes from and the program checks each citation. Facts the program reads from a
+  manifest it parses (name, version, scripts, dependencies, targets) sit at the top of the
+  page, each with the line of its own key, and the page names the manifests they came from;
+  one it does not parse (`pom.xml`, `build.gradle(.kts)`, `Gemfile`, `setup.py`,
+  `meson.build`) is read into the task's input only. Off by default, and a run without it is
+  byte for byte unchanged: on tsdown and on flask, every prompt and every output file under
+  `docs/`, `catalog.json`, `context.json`, `DEPENDENCIES.md` and `summary.json` (its
+  wall-clock field aside) compared the same, with the run's task names; `calls.csv` and
+  `progress.log` carry timings and were not compared. On Chart.js the task read 13 files,
+  23,967 of the 24,000 tokens, in a prompt of 24,591 (the extra 624 are the task
+  instruction), and wrote 7,275: 7.6% of the run's 325,137 prompt tokens. CodeWikiBench's
+  "Development and Integration" item rose from 0.27 to 0.87 (DeepWiki 0.67 to 0.87) — one
+  repository, one run, 61 rubric items — and the rubric was written from Chart.js's own
+  documentation, which this page now reads, so the item shows that those topics are covered,
+  not that the page is better written.
 - A Joern graph of a JavaScript or TypeScript repository with `package.json` at its root is
   no longer refused at plan time ("graph anchors repo source not covered by
   source_manifest: package.json"). Joern makes a file node for `package.json`; it is in the
