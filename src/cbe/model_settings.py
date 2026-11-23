@@ -25,7 +25,7 @@ OPTIONAL_REQUEST_KEYS = ("response_format", "top_p", "reasoning_effort", "thinki
 #: Every config key the code reads. ``load_config`` rejects anything else.
 ALLOWED_API_CONFIG_KEYS = frozenset(DEFAULT_API_CONFIG) | frozenset(OPTIONAL_REQUEST_KEYS) | {
     "timeout", "output_max_tokens", "batch_target_tokens", "batch_max_tokens",
-    "temperature", "price_per_million",
+    "temperature", "price_per_million", "build_page",
 }
 MODEL_DEFAULTS: dict[str, dict[str, Any]] = {
     "zai/glm-5.3-flash": {
@@ -117,6 +117,20 @@ def model_defaults(model: str) -> dict[str, Any]:
     return {}
 
 
+def build_page_tokens(config: dict[str, Any]) -> int | None:
+    """The ``build_page`` config key: true (the default budget), a positive token budget, or off."""
+    from cbe.build_page import DEFAULT_TOKENS
+
+    value = config.get("build_page")
+    if value is None or value is False:
+        return None
+    if value is True:
+        return DEFAULT_TOKENS
+    if type(value) is not int or value < 1:
+        raise ApiConfigError("build_page must be true, false or a positive token budget")
+    return value
+
+
 def _read_user_config(path: Path) -> dict[str, Any]:
     """The user's JSON settings as written (``{}`` when there is no file)."""
     if not path.is_file():
@@ -146,6 +160,7 @@ def load_config(path: Path, model: str = "") -> dict[str, Any]:
         raise ApiConfigError("batch_target_tokens must not exceed batch_max_tokens")
     if "batch_max_tokens" in value:
         value.setdefault("batch_target_tokens", target)
+    build_page_tokens(value)
     rates = value.get("price_per_million")
     if rates is not None:
         if (not isinstance(rates, list) or len(rates) != 3 or

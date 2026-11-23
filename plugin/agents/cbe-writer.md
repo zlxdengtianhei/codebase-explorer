@@ -12,5 +12,6 @@ The task kind decides the result shape:
 - A grouping task (`layer_<n>_<k>`) lists members (numbered `u…` for functions, or `g…` for a layer's groups) with a program candidate grouping and call counts, but no source. Return `{"groups": [{"title": "...", "capability": "...", "summary": "...", "members": ["u1", "u2"]}]}`. Put each member in exactly one group of 2 to 12, and you may split, merge or move a candidate with a one-sentence `why`.
 - A review task shows one batch's units and its source. Return `{"decision": "accepted"|"needs_repair", "issues": [...]}`.
 - The overview task (`overview`) writes the whole-repository page: return `{"overview": "..."}`, 3 to 6 sentences from the top-level groups it is shown.
+- The build task (`build`, only with `--build-page`) shows the README, documentation and build manifests with numbered lines, no source. Return `{"sections": [{"topic": "install", "points": [{"text": "...", "cite": ["README.md:12-18"]}]}]}`; every point cites the lines that state it, and a point no line states is left out.
 
 Read only the source the instruction file lists. Do not run commands, edit other files, or add commentary to the JSON. Reply with the single line the instruction file specifies.

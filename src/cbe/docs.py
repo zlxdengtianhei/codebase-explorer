@@ -191,7 +191,7 @@ def files_line(counts: list[tuple[str, int]]) -> str:
 
 def _entry_page(*, repo: str, nodes: dict, children: dict, roots: list[str],
                 overview: str | None, owner: dict, name_of: Callable[[str], str],
-                budget: int = INDEX_BUDGET) -> tuple[str, dict]:
+                budget: int = INDEX_BUDGET, build: bool = False) -> tuple[str, dict]:
     """INDEX.md: the overview, the module tree two levels deep (top-level groups, then one
     capability line per child), and the three commands written once (design 2.4). No file lists,
     unit counts or flows: structure lives in DEPENDENCIES.md and the catalog, not in the reading
@@ -235,6 +235,8 @@ def _entry_page(*, repo: str, nodes: dict, children: dict, roots: list[str],
                   '- `cbe find --run-dir "$RUN" --term "NAME"` — locate a unit, symbol or file by name',
                   '- `cbe query --run-dir "$RUN" --id "ID"` — the explanation, relations and evidence of one unit',
                   '- `cbe source --run-dir "$RUN" --id "ID" --context 2` — the frozen source, digest checked',
+                  *(["", "How to install, build, package, integrate and migrate, from the README, docs and "
+                     "build manifests: [BUILD.md](BUILD.md)"] if build else []),
                   "", "More: [DEPENDENCIES.md](DEPENDENCIES.md) · [RUN.md](RUN.md)"]
         return "\n".join(lines) + "\n"
 
@@ -413,12 +415,13 @@ def _write_node_pages(prep: _RenderPrep) -> None:
         (prep.nodes_dir / f"{nid}.md").write_text("\n".join(lines).strip() + "\n", encoding="utf-8")
 
 
-def _write_index(prep: _RenderPrep) -> dict:
+def _write_index(prep: _RenderPrep, build: bool = False) -> dict:
     """INDEX.md, the module tree entry page (see ``_entry_page``)."""
     roots = [nid for nid, node in prep.nodes.items() if not node.get("parent")]
     index_text, index_meta = _entry_page(
         repo=prep.source_root.name, nodes=prep.nodes, children=prep.children, roots=roots,
-        overview=(prep.overview or {}).get("overview"), owner=prep.owner, name_of=prep.name_of)
+        overview=(prep.overview or {}).get("overview"), owner=prep.owner, name_of=prep.name_of,
+        build=build)
     (prep.docs_dir / "INDEX.md").write_text(index_text, encoding="utf-8")
     return index_meta
 
@@ -659,8 +662,9 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
            index_notes: list[str] | None = None, overview: dict | None = None,
            graph: dict | None = None, context: dict | None = None, basis: dict | None = None,
            source_tokens: int | None = None, read_budget: dict | None = None,
-           clustering: dict | None = None) -> dict:
-    """Render node pages, INDEX.md, DEPENDENCIES.md, RUN.md and a catalog under ``run_dir/docs``.
+           clustering: dict | None = None, build_page: str | None = None) -> dict:
+    """Render node pages, INDEX.md, DEPENDENCIES.md, RUN.md and a catalog under ``run_dir/docs``,
+    and BUILD.md when ``build_page`` holds its text (``--build-page``).
 
     ``languages`` maps each path to the language frozen in the source context,
     so the catalog agrees with the plan even when it remapped a suffix.
@@ -671,8 +675,10 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
                            index_notes=index_notes, overview=overview, graph=graph, context=context,
                            basis=basis, source_tokens=source_tokens, read_budget=read_budget,
                            clustering=clustering)
+    if build_page is not None:
+        (prep.docs_dir / "BUILD.md").write_text(build_page, encoding="utf-8")
     _write_node_pages(prep)
-    index_meta = _write_index(prep)
+    index_meta = _write_index(prep, build=build_page is not None)
     _write_dependencies(prep)
     _write_run(prep)
     symbol_index = _write_catalog(prep)

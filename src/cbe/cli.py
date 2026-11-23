@@ -15,6 +15,16 @@ def _abs(value: str) -> Path:
     return path
 
 
+def _build_page_option(parser: argparse.ArgumentParser) -> None:
+    from cbe.build_page import DEFAULT_TOKENS
+
+    parser.add_argument("--build-page", nargs="?", const=DEFAULT_TOKENS, type=int, default=None,
+                        metavar="TOKENS",
+                        help="also write docs/BUILD.md, how to build and integrate, from the README, docs/ "
+                             f"and build manifests (not source), reading at most TOKENS (bare: {DEFAULT_TOKENS}); "
+                             "off unless given")
+
+
 def _run_dir(value: str) -> Path:
     """Read-only lookups (find, query, source, stale) accept a relative run directory."""
     return Path(value).expanduser().resolve()
@@ -73,6 +83,7 @@ def build_parser() -> argparse.ArgumentParser:
     generate_p.add_argument("--review", nargs="?", const="sample", choices=REVIEW_MODES,
                             default=DEFAULT_REVIEW,
                             help="separate reviewer and rewriter; off unless given (bare --review = sample)")
+    _build_page_option(generate_p)
     generate_p.add_argument("--resume", action="store_true",
                             help="continue the run in --run-dir (default: the repository's latest run)")
     generate_p.add_argument("--timeout", type=int, default=None,
@@ -93,6 +104,7 @@ def build_parser() -> argparse.ArgumentParser:
                            help="separate reviewer and rewriter; off unless given (bare --review = sample)")
     host_plan.add_argument("--jobs", type=int, default=4, help="maximum concurrently dispatched subagents")
     host_plan.add_argument("--host", default="other", help="label only, e.g. claude-code or codex")
+    _build_page_option(host_plan)
     for name, text in (("next", "Lease ready tasks up to the concurrency limit and write their instruction files"),
                        ("submit", f"Check one subagent result: detail (module/repair) allows {DETAIL_MAX_ATTEMPTS} answers, "
                                   f"others {MAX_ATTEMPTS}; a detail re-ask lists only the gaps and the last detail answer "
@@ -260,7 +272,7 @@ def _host(args: argparse.Namespace):
     command = args.host_command
     if command == "plan":
         return host_run.plan(args.repo, args.run_dir, review=args.review, jobs=args.jobs, host=args.host,
-                             graph_path=args.graph)
+                             graph_path=args.graph, build_tokens=args.build_page)
     if command == "update-graph":
         return host_run.update_graph(args.run_dir, args.graph)
     run_dir = args.run_dir or (host_run.latest_run(args.repo) if args.repo else None)
@@ -437,7 +449,7 @@ def main(argv: list[str] | None = None) -> int:
             value = generate(repo, run_dir, model=args.model, config=args.config,
                              jobs=args.jobs, review=args.review, timeout=args.timeout, default_timeout=420,
                              effort=args.effort,
-                             resume=args.resume, graph_path=args.graph,
+                             resume=args.resume, graph_path=args.graph, build_tokens=args.build_page,
                              api_base_url=args.base_url, api_key_env=args.api_key_env)
             print(json.dumps(value, ensure_ascii=False, indent=2))
             # 3 means docs were rendered but some tasks are still pending.

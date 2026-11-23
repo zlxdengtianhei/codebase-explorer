@@ -16,7 +16,8 @@ from typing import Any
 
 from cbe import batching, usage
 from cbe.api_completion import FIELDS, CSV_LOCK, invoke
-from cbe.model_settings import DEFAULT_API_CONFIG, explicit_effort, load_config, task_overrides
+from cbe.model_settings import (DEFAULT_API_CONFIG, build_page_tokens, explicit_effort, load_config,
+                                task_overrides)
 
 
 class GenerateError(ValueError):
@@ -161,10 +162,12 @@ def generate(repo: Path, run_dir: Path, *, model: str, config: Path | None = Non
              jobs: int = 4, review: str | None = None, timeout: int | None = None,
              resume: bool = False, effort: str | None = None,
              graph_path: Path | None = None, api_base_url: str | None = None,
-             api_key_env: str | None = None, default_timeout: int = 360) -> dict[str, Any]:
+             api_key_env: str | None = None, default_timeout: int = 360,
+             build_tokens: int | None = None) -> dict[str, Any]:
     """Script driver: the shared run state, with each task as one tool-free completion.
 
-    A task failure never voids the run. Finished modules render; failed parts
+    ``build_tokens`` (or the config key ``build_page``: true or a token count) adds the
+    BUILD.md task; off when both are unset. A task failure never voids the run. Finished modules render; failed parts
     stay pending in the run state, and ``resume=True`` continues the same run.
 
     Two hard delivery checks guard every call: a pre-flight that each prompt
@@ -217,7 +220,8 @@ def generate(repo: Path, run_dir: Path, *, model: str, config: Path | None = Non
         host_run.resume(run_dir, owner="api", graph_path=graph_path)
     else:
         host_run.plan(repo, run_dir, review=review, jobs=jobs, host="api", driver="script",
-                      graph_path=graph_path,
+                      graph_path=graph_path, build_tokens=build_tokens if build_tokens is not None
+                      else build_page_tokens(settings),
                       batch_target_tokens=settings.get("batch_target_tokens", batching.TARGET_TOKENS),
                       batch_max_tokens=settings.get("batch_max_tokens", batching.MAX_TOKENS))
     review = json.loads((run_dir / "host" / "state.json").read_text(encoding="utf-8"))["review"]

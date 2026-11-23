@@ -47,8 +47,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterator
 
-from cbe import (aggregation, batching, catalog_query, checks, docs, grounding, layers, prompts,
-                  skeleton, symbols, treename)
+from cbe import (aggregation, batching, build_page, catalog_query, checks, docs, grounding, layers,
+                  prompts, skeleton, symbols, treename)
 from cbe import __version__
 from cbe import source_context
 from cbe.grammars import ContextError
@@ -218,6 +218,8 @@ def _order(task: dict[str, Any]) -> tuple:
         return (4, task["module"] or 0)
     if kind == "overview":
         return (5, 0)
+    if kind == "build":
+        return (0, 0)   # reads no source and waits for nothing, so it runs beside the detail
     return (9, 0)
 
 
@@ -527,6 +529,25 @@ def _accepted(run_dir: Path, task_id: str) -> dict[str, Any] | None:
     return json.loads(path.read_text(encoding="utf-8")) if path.is_file() else None
 
 
+def _build_inputs(run_dir: Path) -> dict[str, Any]:
+    """The README, docs and manifest text the plan froze for the ``build`` task."""
+    return json.loads((state_dir(run_dir) / "build_inputs.json").read_text(encoding="utf-8"))
+
+
+def _build_markdown(run_dir: Path, state: dict[str, Any]) -> str | None:
+    """BUILD.md when the run asked for it; None (no page, no link) otherwise."""
+    if "build_page" not in state:
+        return None
+    task, answer = state["tasks"].get("build"), _accepted(run_dir, "build")
+    note = ("No README, documentation or build manifest was found, so no model was asked." if task is None
+            else "The `build` task failed; resume the run to retry it." if task["status"] == "failed"
+            else "The `build` task is not finished yet; only the program-read facts are shown."
+            if answer is None else
+            f"The citation check dropped part of the answer ({len(task['flags'])} problem(s), listed in "
+            "the `build` task's flags in host/state.json)." if task["flags"] else None)
+    return build_page.render(Path(state["repo"]).name, _build_inputs(run_dir), answer, note)
+
+
 def _module_task(state: dict[str, Any], number: int) -> dict[str, Any]:
     return state["tasks"][f"module_{number + 1}"]
 
@@ -602,7 +623,9 @@ def _runtime_environment() -> dict[str, Any]:
 def plan(repo: Path, run_dir: Path | None = None, *, review: str = DEFAULT_REVIEW, jobs: int = 4,
          host: str = "other", driver: str = "host",
          graph_path: Path | None = None, batch_target_tokens: int = batching.TARGET_TOKENS,
-         batch_max_tokens: int = batching.MAX_TOKENS) -> dict[str, Any]:
+         batch_max_tokens: int = batching.MAX_TOKENS, build_tokens: int | None = None) -> dict[str, Any]:
+    """Freeze the source and plan the tasks. ``build_tokens`` (off when None) also freezes the
+    README, docs and build manifests within that many tokens and queues the ``build`` task."""
     repo = repo.resolve()
     if not repo.is_dir():
         raise HostRunError("repository root is not a directory")
@@ -652,6 +675,12 @@ def plan(repo: Path, run_dir: Path | None = None, *, review: str = DEFAULT_REVIE
     host_dir = state_dir(run_dir)
     for name in ("tasks", "outbox", "accepted", "raw"):
         (host_dir / name).mkdir(parents=True, exist_ok=True)
+    if build_tokens is not None:
+        inputs = build_page.collect(repo, build_tokens)
+        write_json(host_dir / "build_inputs.json", inputs)
+        state["build_page"] = build_page.summary(inputs)
+        if inputs["files"]:
+            tasks["build"] = _task("build", "build")
     write_json(run_dir / "context.json", context)
     state["context"]["raw_digest"] = hashlib.sha256((run_dir / "context.json").read_bytes()).hexdigest()
     write_json(host_dir / "state.json", state)
@@ -665,6 +694,7 @@ def plan(repo: Path, run_dir: Path | None = None, *, review: str = DEFAULT_REVIE
     return {"run_dir": str(run_dir), "run_tag": state["run_tag"], "source_files": len(files),
             "source_tokens": sum(item.tokens for item in files), "modules": len(modules),
             "tasks": len(tasks), "review": review, "jobs": jobs,
+            **({"build_page_tokens": state["build_page"]["read_tokens"]} if "build_page" in state else {}),
             "progress_log": str(run_dir / "progress.log"),
             "next_action": f"cbe host next --run-dir {run_dir}"}
 
@@ -749,7 +779,7 @@ def _ready(state: dict[str, Any]) -> list[str]:
         kind = task["kind"]
         if kind in {"module", "repair"}:
             ok = True
-        elif kind in {"layer", "overview"}:
+        elif kind in {"layer", "overview", "build"}:
             ok = True
         elif kind == "review":
             ok = _module_task(state, task["module"])["status"] == "done"
@@ -875,6 +905,8 @@ def _body(run_dir: Path, state: dict[str, Any], task: dict[str, Any], *,
         return no_source, _layer_body(run_dir, state, task), 0
     if kind == "overview":
         return no_source, _overview_body(run_dir, state), 0
+    if kind == "build":
+        return no_source, build_page.prompt(Path(state["repo"]).name, _build_inputs(run_dir)), 0
     if kind == "review":
         units = _module_output(run_dir, state, task["module"])
         return (reading, prompts.review_prompt(
@@ -995,6 +1027,10 @@ def _checks(run_dir: Path, state: dict[str, Any], task: dict[str, Any]) -> tuple
     """(strict check, normalizer) for a non-detail task; both mutate the value they accept."""
     if task["kind"] == "review":
         return checks.check_review, checks.normalize_review
+    if task["kind"] == "build":
+        inputs = _build_inputs(run_dir)
+        return (lambda value: build_page.check(value, inputs),
+                lambda value: build_page.normalize(value, inputs))
     limit = checks.overview_limit()
     return (lambda value: checks.check_overview(value, limit),
             lambda value: checks.normalize_overview(value, limit))
@@ -1779,7 +1815,8 @@ def _provider_usage(run_dir: Path, state: dict[str, Any]) -> dict[str, Any]:
             rows = list(csv.DictReader(handle))
         for row in rows:
             name = row.get("task") or ""
-            kind = "layer" if name.startswith("layer_") else "overview" if name == "overview" else "detail"
+            kind = ("layer" if name.startswith("layer_") else name if name in {"overview", "build"}
+                    else "detail")
             try:
                 incoming = int(row.get("input_tokens") or 0) + int(row.get("cache_tokens") or 0)
                 produced = int(row.get("output_tokens") or 0)
@@ -1975,7 +2012,8 @@ def _render(run_dir: Path, state: dict[str, Any]) -> None:
                                overview=overview, read_budget=read_budget, clustering=clustering,
                                graph=context.get("graph"), context=context, basis=basis,
                                source_tokens=source_tokens,
-                               languages={row["path"]: row.get("language") or "unknown" for row in context["files"]})
+                               languages={row["path"]: row.get("language") or "unknown" for row in context["files"]},
+                               build_page=_build_markdown(run_dir, state))
     except symbols.SemanticError as exc:
         state["render_error"] = str(exc)
         log_event(run_dir, "render", f"failed: {exc}", error=str(exc))
@@ -1993,7 +2031,8 @@ def _render(run_dir: Path, state: dict[str, Any]) -> None:
                "source_files": len(state["files"]), "source_tokens": source_tokens,
                "modules": len(state["modules"]), "units": meta["units_rendered"],
                "semantic_nodes": meta["nodes"], "published_pages": published_pages,
-               "pending": pending + open_layers + (["overview"] if overview is None else []),
+               "pending": pending + open_layers + (["overview"] if overview is None else [])
+               + [tid for tid in ("build",) if state["tasks"].get(tid, {}).get("status", "done") != "done"],
                "normalized": normalized,
                "unexplained_count": len(unexplained_rows),
                "unexplained": unexplained_rows,
@@ -2015,6 +2054,11 @@ def _render(run_dir: Path, state: dict[str, Any]) -> None:
                "explain_length": dict(read_budget.get("explain_length") or {}),
                "layer_shape": shape,
                "budget_gated": bool(state.get("budget_gated"))}
+    if "build_page" in state:
+        build = state["build_page"]
+        summary["build_page"] = {"read_tokens": build["read_tokens"], "budget": build["budget"],
+                                 "files": len(build["files"]), "skipped": len(build["skipped"]),
+                                 "status": (state["tasks"].get("build") or {}).get("status", "no input")}
     ungrounded_count = sum(bool(unit.get("ungrounded")) for unit in units.values())
     if ungrounded_count:
         summary["ungrounded_count"] = ungrounded_count
