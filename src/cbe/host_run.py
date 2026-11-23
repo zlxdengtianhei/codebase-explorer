@@ -538,14 +538,15 @@ def _build_markdown(run_dir: Path, state: dict[str, Any]) -> str | None:
     """BUILD.md when the run asked for it; None (no page, no link) otherwise."""
     if "build_page" not in state:
         return None
+    inputs = _build_inputs(run_dir)
     task, answer = state["tasks"].get("build"), _accepted(run_dir, "build")
-    note = ("No README, documentation or build manifest was found, so no model was asked." if task is None
+    note = (build_page.no_task_note(inputs) if task is None
             else "The `build` task failed; resume the run to retry it." if task["status"] == "failed"
             else "The `build` task is not finished yet; only the program-read facts are shown."
             if answer is None else
             f"The citation check dropped part of the answer ({len(task['flags'])} problem(s), listed in "
             "the `build` task's flags in host/state.json)." if task["flags"] else None)
-    return build_page.render(Path(state["repo"]).name, _build_inputs(run_dir), answer, note)
+    return build_page.render(Path(state["repo"]).name, inputs, answer, note)
 
 
 def _module_task(state: dict[str, Any], number: int) -> dict[str, Any]:

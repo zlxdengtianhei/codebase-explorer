@@ -216,42 +216,149 @@ def normalize(value: Any, inputs: dict[str, Any]) -> list[str]:
     return problems
 
 
-def _line_of(text: str, pattern: str) -> int:
-    return next((number for number, line in enumerate(text.splitlines(), 1) if re.search(pattern, line)), 1)
+def _json_key_lines(text: str) -> dict[tuple[str, ...], int]:
+    """Line of every object key in ``text``, by the path of keys that leads to that key.
+
+    A key is recorded only where it opens an object of its own: the ``types`` inside
+    ``exports`` is at ``("exports", ".", "types")`` and never answers for the top-level
+    ``types``. Scalars and strings are read from the text, so a document that ``json``
+    accepts gives every key it holds."""
+    found: dict[tuple[str, ...], int] = {}
+    stack: list[tuple[str, tuple[str, ...]]] = []          # (kind, path of this container)
+    key, key_line = None, 0
+    line, index = 1, 0
+    while index < len(text):
+        char = text[index]
+        if char == "\n":
+            line, index = line + 1, index + 1
+        elif char in " \t\r":
+            index += 1
+        elif char == '"':
+            start, chars = line, []
+            index += 1
+            while index < len(text):
+                current = text[index]
+                if current == "\\":
+                    chars.append(text[index:index + 2])
+                    index += 2
+                    continue
+                if current == "\n":
+                    line += 1
+                if current == '"':
+                    index += 1
+                    break
+                chars.append(current)
+                index += 1
+            raw = "".join(chars)
+            try:
+                value = json.loads(f'"{raw}"')
+            except ValueError:
+                value = raw
+            if stack and stack[-1][0] == "object" and key is None:
+                key, key_line = value, start               # this string names a key
+            elif key is not None:
+                found[(*stack[-1][1], key)] = key_line     # a string value
+                key = None
+        elif char in "{[":
+            inside = stack[-1][1] if stack else ()
+            stack.append(("object" if char == "{" else "array", (*inside, key) if key is not None else inside))
+            key, index = None, index + 1
+        elif char in "}]":
+            if stack:
+                stack.pop()
+            key, index = None, index + 1
+        elif char == ",":
+            key, index = None, index + 1
+        elif char == ":":
+            index += 1
+        else:                                              # a number, true, false or null
+            end = index
+            while end < len(text) and text[end] not in ",}] \t\r\n":
+                end += 1
+            if key is not None:
+                found[(*stack[-1][1], key)] = key_line
+                key = None
+            index = end
+    return found
 
 
-def facts(inputs: dict[str, Any]) -> list[str]:
-    """Facts the program reads from the manifests, one bullet each with its line."""
+_SECTION = re.compile(r"^\s*\[\[?\s*([^\]]+?)\s*\]\]?\s*$")
+_QUOTED_KEY = re.compile(r'^\s*"?([^"=\s]+)"?\s*=')
+
+
+def _table_key_lines(text: str) -> dict[tuple[str, ...], int]:
+    """Line of every TOML or INI key, by the table header it sits under.
+
+    ``[tool.other] name`` does not answer for ``[project] name``, and a bracketed line
+    inside a multi-line value is not a header."""
+    found: dict[tuple[str, ...], int] = {}
+    table: tuple[str, ...] = ()
+    for number, line in enumerate(text.splitlines(), 1):
+        if header := _SECTION.match(line):
+            table = tuple(part.strip().strip("\"'") for part in header.group(1).split("."))
+        elif match := _QUOTED_KEY.match(line):
+            found.setdefault((*table, match.group(1)), number)
+    return found
+
+
+def _and(names: list[str]) -> str:
+    quoted = [f"`{name}`" for name in names]
+    return quoted[0] if len(quoted) == 1 else ", ".join(quoted[:-1]) + f" and {quoted[-1]}"
+
+
+def facts(inputs: dict[str, Any]) -> tuple[list[str], set[str]]:
+    """(the facts the program reads from the manifests, the manifests it read them from)."""
     rows: list[str] = []
+    read: set[str] = set()
     for row in inputs["files"]:
         path, text = row["path"], row["text"]
+        first = len(rows)
 
-        def add(label: str, value: str, key: str, toml: bool = False) -> None:
-            pattern = (rf'^\s*"?{re.escape(key)}"?\s*=' if toml else rf'"{re.escape(key)}"\s*:')
-            rows.append(f"- {label} `{value}` — `{path}:L{_line_of(text, pattern)}`")
+        def add(label: str, value: str, keys: tuple[str, ...], at: dict[tuple[str, ...], int]) -> None:
+            line = at.get(keys)
+            rows.append(f"- {label} `{value}` — `{path}:L{line}`" if line else f"- {label} `{value}` — `{path}`")
+
         try:
-            if path == "package.json":
+            if path in ("package.json", "composer.json"):
                 data = json.loads(text)
-                for key in ("name", "version", "main", "module", "types", "type"):
+                at = _json_key_lines(text)
+                keys = (("name", "version") if path == "composer.json"
+                        else ("name", "version", "main", "module", "types", "type"))
+                for key in keys:
                     if isinstance(data.get(key), str):
-                        add(f"package `{key}`", data[key], key)
+                        add(f"package `{key}`", data[key], (key,), at)
                 for name, command in list((data.get("scripts") or {}).items())[:20]:
-                    add(f"script `{name}` runs", str(command), name)
-                for name in sorted(data.get("peerDependencies") or {}):
-                    add("peer dependency", name, name)
+                    add(f"script `{name}` runs", str(command), ("scripts", name), at)
+                for key, label in (("peerDependencies", "peer dependency"), ("require", "requirement"),
+                                   ("require-dev", "development requirement")):
+                    required = data.get(key) or {}
+                    for name in list(required)[:20]:
+                        add(label if key == "peerDependencies" else f"{label} `{name}`",
+                            name if key == "peerDependencies" else str(required[name]), (key, name), at)
+            elif path == "setup.cfg":                              # INI, not TOML
+                at = _table_key_lines(text)
+                lines = text.splitlines()
+                for table in ("metadata", "options"):
+                    for key in ("name", "version", "python_requires"):
+                        if line := at.get((table, key)):
+                            add(f"`{key}`", lines[line - 1].split("=", 1)[1].strip(), (table, key), at)
             elif path in ("pyproject.toml", "Cargo.toml"):
                 data = tomllib.loads(text)
-                project = data.get("project") or data.get("package") or {}
+                at = _table_key_lines(text)
+                table = "project" if isinstance(data.get("project"), dict) else "package"
+                project = data.get(table) or {}
                 for key in ("name", "version", "requires-python", "rust-version"):
                     if isinstance(project.get(key), str):
-                        add(f"`{key}`", project[key], key, toml=True)
+                        add(f"`{key}`", project[key], (table, key), at)
                 for name in project.get("scripts") or {}:
-                    add("console script", name, name, toml=True)
-                for name in project.get("optional-dependencies") or data.get("features") or {}:
-                    add("optional extra / feature", name, name, toml=True)
+                    add("console script", name, (table, "scripts", name), at)
+                for name in project.get("optional-dependencies") or {}:
+                    add("optional extra / feature", name, (table, "optional-dependencies", name), at)
+                for name in data.get("features") or {}:
+                    add("optional extra / feature", name, ("features", name), at)
                 backend = (data.get("build-system") or {}).get("build-backend")
                 if backend:
-                    add("build backend", backend, "build-backend", toml=True)
+                    add("build backend", backend, ("build-system", "build-backend"), at)
             elif path in ("go.mod", "CMakeLists.txt", "Makefile"):
                 pattern = {"go.mod": r"^(module|go)\s+(\S+)",
                            "CMakeLists.txt": r"^\s*(project|add_library|add_executable|option)\s*\(\s*([\w.-]+)",
@@ -261,18 +368,40 @@ def facts(inputs: dict[str, Any]) -> list[str]:
                     rows.append(f"- {match.group(1).lower() or 'make target'} `{match.group(2)}` — `{path}:L{line}`")
         except (ValueError, tomllib.TOMLDecodeError, AttributeError, TypeError):
             rows.append(f"- `{path}` could not be parsed; its text is still among the sources read")
-    return rows
+            continue
+        if len(rows) > first:
+            read.add(path)
+    return rows, read
+
+
+def no_task_note(inputs: dict[str, Any]) -> str:
+    """The page's note when the plan queued no ``build`` task: no file, or no room for one."""
+    over = [row for row in inputs["skipped"] if row.get("reason") == "over the budget"]
+    if over:
+        return (f"Found {len(over)} README, documentation or build-manifest file(s), but the "
+                f"{inputs['budget']:,}-token budget left room for none of them, so no model was asked.")
+    if inputs["skipped"]:
+        return (f"Found {len(inputs['skipped'])} README, documentation or build-manifest file(s), but none "
+                f"could be read as UTF-8 text within the {inputs['budget']:,}-token budget, so no model was asked.")
+    return "No README, documentation or build manifest was found, so no model was asked."
 
 
 def render(repo: str, inputs: dict[str, Any], answer: dict[str, Any] | None, note: str | None) -> str:
     """BUILD.md: program-read facts, the model's cited points, and the list of what was read."""
+    found, read = facts(inputs)
+    if read:
+        header = f"The facts are read by the program from {_and(sorted(read))}; "
+    elif found:
+        header = "The program could not parse a fact from these build manifests; "
+    else:
+        header = "No build manifest here is one the program reads, so the page has no facts section; "
+    header += ("each point below was written by a model and cites the lines it comes from, and the program "
+               "checked that every cited file and line exists.")
     lines = [f"# {repo}: how to build and integrate", "",
              "Written from the README, documentation and build manifests listed at the end, not from the "
-             "source. The facts are read by the program; each point below was written by a model and cites "
-             "the lines it comes from, and the program checked that every cited file and line exists.", ""]
+             "source.", header, ""]
     if note:
         lines += [note, ""]
-    found = facts(inputs)
     if found:
         lines += ["## Facts from the build manifests", "", *found, ""]
     for section in (answer or {}).get("sections") or []:

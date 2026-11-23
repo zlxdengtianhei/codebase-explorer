@@ -143,9 +143,9 @@ cbe generate /abs/repo --model MODEL --base-url URL --api-key-env CBE_API_KEY --
 cbe host plan . --build-page        # 在编码 agent 里同样加这一项
 ```
 
-CBE 讲的是源码，而怎样安装、构建、接进框架、升到下一个大版本，源码里很少写，写在 README、`docs/` 和构建清单里。`--build-page`（或在 API 配置文件里写 `"build_page": true`）多加一个模型任务：只读这些文件、不读源码，写出 `docs/BUILD.md`，`INDEX.md` 链到它。页首的事实（包名、版本、脚本、peer 依赖、构建目标）由程序从清单里读；模型写的每一点都引出处的文件与行号，引到没给它看的文件或行，程序就拒收。缺省最多读 24,000 token（`--build-page 40000` 另设上限）：先 README 和构建清单，再按主题轮流取文档文件；页末列出读了哪些、跳过哪些。缺省关；不开时，一次运行读的和写的与以前完全一样。
+CBE 讲的是源码，而怎样安装、构建、接进框架、升到下一个大版本，源码里很少写，写在 README、`docs/` 和构建清单里。`--build-page`（或在 API 配置文件里写 `"build_page": true`）多加一个模型任务：只读这些文件、不读源码，写出 `docs/BUILD.md`，`INDEX.md` 链到它。页首的事实（包名、版本、脚本、peer 依赖、console script、extras、CMake 与 Make 目标）由程序从它解析的清单里读（`package.json`、`composer.json`、`pyproject.toml`、`Cargo.toml`、`setup.cfg`、`go.mod`、`CMakeLists.txt`、`Makefile`），每条写出自哪个键所在的行；它不解析的清单（`pom.xml`、`build.gradle(.kts)`、`Gemfile`、`setup.py`、`meson.build`）只读进任务输入，页上写明这些事实读自哪几份清单。模型写的每一点都引出处的文件与行号，引到没给它看的文件或行，程序就拒收。缺省最多读 24,000 token（`--build-page 40000` 另设上限）：先 README 和构建清单，再按主题轮流取文档文件；页末列出读了哪些、跳过哪些。缺省关；不开时，一次运行读的和写的与以前完全一样。
 
-在 Chart.js 上量过（源码同 3.0 重跑时的 `src/`，另加它的 README、`package.json`、`composer.json` 和 `docs/` 下的 Markdown；DeepSeek V4.1 Flash；跑 1 次）：这个任务读了 24,591 token（README、两份清单和 10 份文档；跳过 128 份），写了 7,275 token，按价目表约 0.008 美元，整次运行 0.20 美元。它和讲解批次并行，这一次用了 65 秒。读入倍数 1.78，不开时是 1.67 和 1.68。用 CodeWikiBench（61 条 rubric，两位判官：DeepSeek V4.1 Flash 和 GLM 5.3 Flash）判，“开发与集成”一项从 0.27 升到 0.87：把这一页加到旧运行的页面上再判，和开着开关重跑一次，都是 0.87；同一项 DeepWiki 是 0.67 和 0.87。其中框架集成、版本迁移两条从 0 变 1，无障碍仍是 0：这一页不讲它。rubric 是照 Chart.js 自己的文档写的，而这一页正好读了这些文档，所以这个分说明这些话题讲到了，不说明这一页写得更好。预算是固定的，小仓上占比更大：24,000 token 是 cJSON 源码的 0.7 倍。
+在 Chart.js 上量过（源码同 3.0 重跑时的 `src/`，另加它的 README、`package.json`、`composer.json` 和 `docs/` 下的 Markdown；DeepSeek V4.1 Flash；跑 1 次）：这个任务读了 13 份文件、占它 24,000 token 预算里的 23,967 token（README、两份清单和 10 份文档；跳过 128 份），写了 7,275 token。它收到的提示是 24,591 token，多出的 624 是任务说明；这次读入占整次运行 325,137 提示 token 的 7.6%。它和讲解批次并行，这一次用了 65 秒。读入倍数 1.78，不开时是 1.67 和 1.68。用 CodeWikiBench（61 条 rubric，两位判官：DeepSeek V4.1 Flash 和 GLM 5.3 Flash；1 个仓、1 次运行）判，“开发与集成”一项从 0.27 升到 0.87：把这一页加到旧运行的页面上再判，和开着开关重跑一次，都是 0.87；同一项 DeepWiki 是 0.67 和 0.87。其中框架集成、版本迁移两条从 0 变 1，无障碍仍是 0：这一页不讲它。rubric 是照 Chart.js 自己的文档写的，而这一页正好读了这些文档，所以这个分说明这些话题讲到了，不说明这一页写得更好。预算是固定的，小仓上占比更大：24,000 token 是 cJSON 源码的 0.7 倍。
 
 ## 成本
 

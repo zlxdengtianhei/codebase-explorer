@@ -16,6 +16,24 @@ generator = importlib.import_module("cbe.generate")
 PACKAGE = {"name": "reserve", "version": "1.2.0", "main": "dist/index.js",
            "scripts": {"build": "rollup -c", "test": "vitest"}, "peerDependencies": {"react": "^18"}}
 
+#: A ``types`` under ``exports`` (line 6) comes before the top-level ``types`` (line 10).
+NESTED = """{
+  "name": "fact-probe",
+  "version": "2.0.0",
+  "exports": {
+    ".": {
+      "types": "./dist/nested.d.ts",
+      "import": "./dist/n.js"
+    }
+  },
+  "types": "./dist/top.d.ts",
+  "main": "./dist/main.js",
+  "scripts": {
+    "build": "tsc"
+  }
+}
+"""
+
 
 def _repo(tmp_path):
     repo = tmp_path / "repo"
@@ -41,7 +59,7 @@ def _answer(prompt: str) -> dict:
                                         {"text": "An invented claim.", "cite": ["src/jobs.py:1"]}]}]}
 
 
-def _run(tmp_path, monkeypatch, **options):
+def _run(tmp_path, monkeypatch, repo=None, **options):
     prompts: list[tuple[str, str]] = []
 
     def fake_invoke(**kwargs):
@@ -53,7 +71,7 @@ def _run(tmp_path, monkeypatch, **options):
         return Completion(value, None, json.dumps(value), {"input": 200, "output": 2, "cache": 0}, 0.01)
 
     monkeypatch.setattr(generator, "invoke", fake_invoke)
-    repo, run_dir = _repo(tmp_path), tmp_path / "run"
+    repo, run_dir = (_repo(tmp_path) if repo is None else repo), tmp_path / "run"
     return repo, run_dir, generator.generate(repo, run_dir, model="example/model", jobs=1, **options), prompts
 
 
@@ -136,3 +154,78 @@ def test_host_plan_queues_the_build_task_first_and_the_cli_takes_the_flag(tmp_pa
     args = build_parser().parse_args(["host", "plan", str(repo), "--build-page"])
     assert args.build_page == build_page.DEFAULT_TOKENS
     assert build_parser().parse_args(["generate", str(repo)]).build_page is None
+
+
+def test_facts_anchor_the_top_level_key_not_a_nested_namesake(tmp_path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "package.json").write_text(NESTED, encoding="utf-8")
+    found, read = build_page.facts(build_page.collect(repo, 4000))
+    assert read == {"package.json"}
+    assert "- package `types` `./dist/top.d.ts` — `package.json:L10`" in found
+    assert "- script `build` runs `tsc` — `package.json:L13`" in found
+    assert "- package `types` `./dist/top.d.ts` — `package.json:L6`" not in found
+
+
+def test_facts_anchor_a_pyproject_key_in_its_own_table(tmp_path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "pyproject.toml").write_text(
+        '[build-system]\nrequires = ["setuptools"]\nbuild-backend = "setuptools.build_meta"\n\n'
+        '[tool.other]\nname = "not-the-project"\n\n'
+        '[project]\nname = "reserve"\nversion = "1.2.0"\n\n'
+        '[project.scripts]\nreserve = "reserve.cli:main"\n', encoding="utf-8")
+    found, read = build_page.facts(build_page.collect(repo, 4000))
+    assert read == {"pyproject.toml"}
+    assert "- `name` `reserve` — `pyproject.toml:L9`" in found
+    assert "- build backend `setuptools.build_meta` — `pyproject.toml:L3`" in found
+    assert "- console script `reserve` — `pyproject.toml:L13`" in found
+
+
+def test_facts_read_composer_json_and_setup_cfg(tmp_path) -> None:
+    repo = tmp_path / "composer"
+    repo.mkdir()
+    (repo / "composer.json").write_text(
+        '{\n  "name": "acme/widget",\n  "version": "2.1.0",\n'
+        '  "require": {\n    "php": ">=8.1"\n  },\n  "scripts": {\n    "test": "phpunit"\n  }\n}\n',
+        encoding="utf-8")
+    found, read = build_page.facts(build_page.collect(repo, 8000))
+    assert read == {"composer.json"}
+    assert "- package `name` `acme/widget` — `composer.json:L2`" in found
+    assert "- requirement `php` `>=8.1` — `composer.json:L5`" in found
+    assert "- script `test` runs `phpunit` — `composer.json:L8`" in found
+
+    cfg = tmp_path / "setupcfg"
+    cfg.mkdir()
+    (cfg / "setup.cfg").write_text(
+        "[metadata]\nname = widget\nversion = 2.1.0\n\n[options]\npython_requires = >=3.10\n", encoding="utf-8")
+    found, read = build_page.facts(build_page.collect(cfg, 8000))
+    assert read == {"setup.cfg"}
+    assert "- `name` `widget` — `setup.cfg:L2`" in found
+    assert "- `python_requires` `>=3.10` — `setup.cfg:L6`" in found
+
+
+def test_the_page_claims_program_read_facts_only_when_there_are_some(tmp_path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "README.md").write_text("# widget\n\nBuild it with maven.\n", encoding="utf-8")
+    (repo / "pom.xml").write_text("<project><modelVersion>4.0.0</modelVersion></project>\n", encoding="utf-8")
+    page = build_page.render("widget", build_page.collect(repo, 4000), None, None)
+    assert "The facts are read by the program" not in page
+    assert "No build manifest here is one the program reads" in page
+    assert "Build it with maven." in (repo / "README.md").read_text(encoding="utf-8")
+    (repo / "package.json").write_text('{"name": "widget", "version": "1.0.0"}\n', encoding="utf-8")
+    page = build_page.render("widget", build_page.collect(repo, 4000), None, None)
+    assert "The facts are read by the program from `package.json`" in page
+
+
+def test_a_budget_too_small_for_any_file_says_the_files_were_found(tmp_path, monkeypatch) -> None:
+    repo = tmp_path / "tiny"
+    (repo / "src").mkdir(parents=True)
+    (repo / "src" / "jobs.py").write_text("def run(value):\n    return value\n", encoding="utf-8")
+    (repo / "README.md").write_text("# tiny\n\n" + "word " * 600, encoding="utf-8")
+    _, run_dir, _, _ = _run(tmp_path, monkeypatch, repo=repo, build_tokens=100)
+    page = (run_dir / "docs" / "BUILD.md").read_text(encoding="utf-8")
+    assert "Found 1 README, documentation or build-manifest file(s)" in page
+    assert "no model was asked" in page and "Skipped (1)" in page
+    assert "No README, documentation or build manifest was found" not in page

@@ -256,8 +256,15 @@ in `host/build_inputs.json`. One `build` task, queued first and run beside the d
 points under fixed topics; each point cites `PATH:START-END` line ranges of the files it was
 shown, and the program refuses a citation that names another file or a line outside the shown
 range (re-asked once, then the point is dropped and flagged). The facts at the top of the page
-(name, version, scripts, peer dependencies, console scripts, extras, CMake and Make targets) are
-read by the program. The page ends with the files read and skipped. `INDEX.md` links to it,
+(name, version, scripts, peer dependencies and requirements, console scripts, extras, CMake and
+Make targets) are read by the program from the manifests it parses (`package.json`,
+`composer.json`, `pyproject.toml`, `Cargo.toml`, `setup.cfg`, `go.mod`, `CMakeLists.txt`,
+`Makefile`); a manifest it does not parse (`pom.xml`, `build.gradle(.kts)`, `Gemfile`,
+`setup.py`, `meson.build`) is read into the task's input only, and the page then says which
+manifests it read the facts from, or that it has none. Each bullet names the line of the key it
+came from, and only a key of the same table or object as the value: the `types` inside
+`exports` in `package.json` never stands for the top-level `types`. The page ends with the files
+read and those it skipped, and says so when the budget left room for none. `INDEX.md` links to it,
 `summary.json` has a `build_page` entry, and the read budget counts the task under `build`.
 
 `cbe find --run-dir "$RUN" LIMIT` accepts the same search term as `--term LIMIT`.
