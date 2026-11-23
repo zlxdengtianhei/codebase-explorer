@@ -773,6 +773,21 @@ def test_graph_rejects_unmanifested_repo_source(tmp_path):
     assert excinfo.value.code == "graph_unmanifested_source"
     assert excinfo.value.details["paths"] == ["sample.py"]
 
+    # A build file the analyzer read and hashed (Joern: package.json) may be a file node.
+    config = tmp_path / "config_repo"
+    config.mkdir()
+    (config / "sample.py").write_bytes((FIXTURES / "sample.py").read_bytes())
+    (config / "package.json").write_text('{"name": "x"}\n')
+    from cbe.graph import discover_config, discover_sources
+    node = {"id": "file:package.json", "kind": "file", "path": "package.json"}
+    graph_path.write_text(json.dumps({"schema": "cbe-graph/1", "source_manifest": discover_sources(config),
+                                      "provenance": {"config_manifest": discover_config(config)},
+                                      "nodes": [node], "edges": []}))
+    assert build_context(config, paths=["sample.py"], graph_path=graph_path)["graph_status"] == "provided"
+    (config / "package.json").write_text('{"name": "y"}\n')
+    with pytest.raises(ContextError):
+        build_context(config, paths=["sample.py"], graph_path=graph_path)
+
     # A valid empty graph is still accepted.
     empty = tmp_path / "empty.json"
     empty.write_text(json.dumps({"schema": "cbe-graph/1", "source_manifest": [], "nodes": [], "edges": []}))
