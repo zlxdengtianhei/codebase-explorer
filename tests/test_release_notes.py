@@ -13,9 +13,14 @@ def _read(name: str) -> str:
 
 
 def bullets(text: str) -> list[str]:
-    """The Unreleased entries, one whitespace-collapsed string per top-level bullet."""
-    unreleased = text.split("## Unreleased", 1)[1].split("\n## ", 1)[0]
-    return [re.sub(r"\s+", " ", part).strip() for part in re.split(r"\n(?=- )", unreleased) if part.strip()]
+    """The newest section that has entries ("Unreleased" while it has any, else the latest release),
+    one whitespace-collapsed string per top-level bullet."""
+    for section in text.split("\n## ")[1:]:
+        body = section.split("\n", 1)[1] if "\n" in section else ""
+        entries = [re.sub(r"\s+", " ", part).strip() for part in re.split(r"\n(?=- )", body) if part.strip().startswith("- ")]
+        if entries:
+            return entries
+    return []
 
 
 def test_a_score_quoted_in_a_release_note_states_the_rubric_limit():
