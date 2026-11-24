@@ -119,7 +119,7 @@ flowchart LR
   A["A：编码 agent 读 skill；<br/>它的子代理写讲解、做分组"] --> D["运行目录里的 docs/"]
   B["B：cbe generate 接<br/>OpenAI 兼容端点"] --> D
   D --> I["INDEX.md：各系统，以及每个模块一行"]
-  I -->|"打开一页"| M["页：一个组负责什么，<br/>每个函数一段讲解"]
+  I -->|"打开一页"| M["页：一个或几个组，<br/>每个函数一段讲解"]
   I -->|"按名字查"| N["cbe find：符号的 ID"]
   M -->|"要事实，不要散文"| N
   N --> Q["cbe query：签名与调用"]

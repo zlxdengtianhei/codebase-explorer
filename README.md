@@ -119,7 +119,7 @@ flowchart LR
   A["A: your coding agent loads the skill;<br/>its subagents write the explanations<br/>and group them"] --> D["docs/ in the run directory"]
   B["B: cbe generate with an<br/>OpenAI-compatible endpoint"] --> D
   D --> I["INDEX.md: the systems, and each module<br/>with its one line"]
-  I -->|"open a page"| M["Page: a group's responsibility,<br/>and each function's explanation"]
+  I -->|"open a page"| M["Page: one or more groups,<br/>and each function's explanation"]
   I -->|"look up a name"| N["cbe find: the symbol's ID"]
   M -->|"need the fact, not the prose"| N
   N --> Q["cbe query: signature and calls"]

@@ -18,7 +18,9 @@
 - A page's `Files:` line names every file its units live in (it used to name five and count
   the rest). `cbe host verify` has two new checks: `catalog_pages_match_plan` and
   `pages_respect_budget`, and a third, `source_files_named_on_a_page`: every source file that
-  has a unit printed on a page is named on at least one page.
+  has a unit printed on a page is named on at least one page. A run rendered before this
+  change can fail that check until it is rendered again: run `cbe host render` before
+  `cbe host verify` on an older run.
 - `cbe query --id NODE --units [--depth N]` prints the unit explanations of one tree node and
   the nodes below it, in the pages' format, from `catalog.json` and without a model call.
   `--units` takes text only (`--json` and `--edges` are refused).
