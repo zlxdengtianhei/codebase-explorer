@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 3.2.0 (2026-11-24)
 
 - Pages are now cut by a token budget at render time instead of one page per tree node.
   The tree and the unit explanations are not touched and no model is called: a node whose
@@ -21,6 +21,8 @@
   has a unit printed on a page is named on at least one page. A run rendered before this
   change can fail that check until it is rendered again: run `cbe host render` before
   `cbe host verify` on an older run.
+- The README install steps point at PyPI (`uv tool install codebase-explorer`); they still
+  named 2.3.0 as the newest release there and installed 3.x from GitHub.
 - `cbe query --id NODE --units [--depth N]` prints the unit explanations of one tree node and
   the nodes below it, in the pages' format, from `catalog.json` and without a model call.
   `--units` takes text only (`--json` and `--edges` are refused).

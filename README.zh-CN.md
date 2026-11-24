@@ -14,7 +14,7 @@ https://github.com/zlxdengtianhei/codebase-explorer/releases/download/walkthroug
 
 文件树只告诉你文件在哪，不告诉你每一块是干什么的。CBE 把仓库读一遍，给每个函数、方法和类写一段短讲解，再只拿这些讲解、一层一层聚成树：整个仓是干什么的、有哪几个系统、每个系统里的模块、模块里的函数。页面上放的是文字；签名、调用边和源码行用三条命令查，所以页面短，事实准。人从顶往下读这张地图；编码 agent 从 `docs/INDEX.md` 起，按名字查。
 
-**想试一下：** 3.0 从 GitHub 装：`uv tool install git+https://github.com/zlxdengtianhei/codebase-explorer`（需要 Python 3.12 或 3.13）；PyPI 上仍是 2.3.0。然后二选一：在 Claude Code 里用你自己的订阅生成；或在命令行接任意 OpenAI 兼容的端点生成（模型用 `--model` 指定）。步骤见[快速上手](#快速上手)。
+**想试一下：** `uv tool install codebase-explorer`（需要 Python 3.12 或 3.13）。然后二选一：在 Claude Code 里用你自己的订阅生成；或在命令行接任意 OpenAI 兼容的端点生成（模型用 `--model` 指定）。步骤见[快速上手](#快速上手)。
 
 ## 能得到什么
 
@@ -43,11 +43,11 @@ https://github.com/zlxdengtianhei/codebase-explorer/releases/download/walkthroug
 
 ## 快速上手
 
-CBE 在 PyPI 上叫 `codebase-explorer`，那里最新的版本是 2.3.0。3.0 还没上 PyPI：第 1 步从 GitHub 装。CBE 需要 Python 3.12 或 3.13。有两种跑法，结果都是同一个 `docs/` 目录。常用的是 A：编码 agent 读 skill，用你自己的订阅干完活。B 给脚本和批量跑用。
+CBE 在 PyPI 上叫 `codebase-explorer`。CBE 需要 Python 3.12 或 3.13。有两种跑法，结果都是同一个 `docs/` 目录。常用的是 A：编码 agent 读 skill，用你自己的订阅干完活。B 给脚本和批量跑用。
 
 **A. 常用：在编码 agent 里，用你自己的订阅。** 下面以 Claude Code 为例；skill 让子代理用它所在宿主能开的最低思考强度写讲解，宿主允许就关掉思考。分层与总览这两类任务要做决定（树的形状、整仓那一页），所以给它们宿主的低档而不是关思考。
 
-1. 安装。要 3.0 的地图与 `cbe video`，从 GitHub 装：`uv tool install git+https://github.com/zlxdengtianhei/codebase-explorer`（或 `pipx install git+https://github.com/zlxdengtianhei/codebase-explorer`）。`uv tool install codebase-explorer`（`pipx install codebase-explorer`）装到的是 2.3.0，没有 `cbe video`。`find`、`query`、`source` 用相对 `--run-dir`，以及 `cbe stale`，需要 2.3.0 或更新。
+1. 安装：`uv tool install codebase-explorer`（或 `pipx install codebase-explorer`）。`find`、`query`、`source` 用相对 `--run-dir`，以及 `cbe stale`，需要 2.3.0 或更新。
 2. 可选，要调用图才需要：`cbe graph setup` 把 Joern 和 Java 运行时下载到你的用户缓存目录（约 1.9 GB；在 Linux x86_64 上测过，macOS 还没测）。
 3. 在项目里装 skill：`cbe-install install --host claude-code`。
 4. 在那里启动 Claude Code，说：“Use the codebase-explorer skill to generate documentation for this repository.”

@@ -14,7 +14,7 @@ https://github.com/zlxdengtianhei/codebase-explorer/releases/download/walkthroug
 
 A file tree shows where files are, not what each part is for. CBE reads a repository once, writes one short explanation for every function, method and class, and then groups those explanations into a tree, one layer at a time: what the repository is for, its systems, their modules, and the functions under them. The pages hold prose. Signatures, call edges and source lines are looked up with three commands, so the pages stay short and the facts stay exact. A person reads the map from the top. A coding agent starts at `docs/INDEX.md` and looks up names.
 
-**To try it:** `uv tool install git+https://github.com/zlxdengtianhei/codebase-explorer` for 3.0 (Python 3.12 or 3.13); PyPI still carries 2.3.0. Then generate inside Claude Code on your own subscription, or from the command line with any OpenAI-compatible endpoint (you name the model with `--model`). The steps are in [Quickstart](#quickstart).
+**To try it:** `uv tool install codebase-explorer` (Python 3.12 or 3.13). Then generate inside Claude Code on your own subscription, or from the command line with any OpenAI-compatible endpoint (you name the model with `--model`). The steps are in [Quickstart](#quickstart).
 
 ## What you get
 
@@ -43,11 +43,11 @@ Full example: [flask](examples/flask/docs/INDEX.md). More in [Examples and docs]
 
 ## Quickstart
 
-CBE is on PyPI as `codebase-explorer`, and the newest release there is 2.3.0. 3.0 is not on PyPI yet: step 1 installs it from GitHub. CBE needs Python 3.12 or 3.13. There are two ways to run it. Both end in the same `docs/` folder. The usual one is A: your coding agent loads the skill and does the work on your own subscription. B is for scripts and batch runs.
+CBE is on PyPI as `codebase-explorer`. CBE needs Python 3.12 or 3.13. There are two ways to run it. Both end in the same `docs/` folder. The usual one is A: your coding agent loads the skill and does the work on your own subscription. B is for scripts and batch runs.
 
 **A. The usual way: inside your coding agent, on your own subscription.** The steps below use Claude Code; the skill makes its subagents write the explanations at the lowest reasoning effort their host offers, with thinking off where the host allows it. The layer and overview tasks decide something (the tree, the whole-repository page), so they get the host's low level instead of thinking off.
 
-1. Install CBE. For the 3.0 map and `cbe video`, install from GitHub: `uv tool install git+https://github.com/zlxdengtianhei/codebase-explorer` (or `pipx install git+https://github.com/zlxdengtianhei/codebase-explorer`). `uv tool install codebase-explorer` (`pipx install codebase-explorer`) gives 2.3.0, which has no `cbe video`. A relative `--run-dir` for `find`, `query` and `source`, and `cbe stale`, need 2.3.0 or newer.
+1. Install CBE: `uv tool install codebase-explorer` (or `pipx install codebase-explorer`). A relative `--run-dir` for `find`, `query` and `source`, and `cbe stale`, need 2.3.0 or newer.
 2. Optional, for the call graph: `cbe graph setup` downloads Joern and a Java runtime into your user cache directory (about 1.9 GB; tested on Linux x86_64, not yet on macOS).
 3. In your project, install the skill: `cbe-install install --host claude-code`.
 4. Start Claude Code there and ask: "Use the codebase-explorer skill to generate documentation for this repository."
