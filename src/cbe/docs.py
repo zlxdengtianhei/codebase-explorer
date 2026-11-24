@@ -255,6 +255,21 @@ def page_text(prep: _RenderPrep, root: str, members: tuple[str, ...] = ()) -> st
     return "\n".join(lines).strip() + "\n"
 
 
+def subtree_text(catalog: dict, nid: str, depth: int | None = None) -> str:
+    """The text of the pages for one node and the nodes below it (``depth`` levels, all when
+    None), built from ``catalog.json`` alone: what ``cbe query --id NODE --units`` prints."""
+    from types import SimpleNamespace
+
+    names = catalog.get("short_names") or {}
+    children = {kid: row.get("children") or [] for kid, row in catalog["nodes"].items()}
+    inventory_ids = {row["id"] for entry in catalog["inventory"].values() for row in entry["symbols"]}
+    prep = SimpleNamespace(nodes=catalog["nodes"], children=children, units=catalog["units"],
+                           symbol_records={sid: row for sid, row in catalog["symbols"].items()
+                                           if sid in inventory_ids},
+                           name_of=lambda uid: names.get(uid, short_name(uid)))
+    return page_text(prep, nid, page_budget.descendants(children, nid, depth))
+
+
 def _entry_page(*, repo: str, nodes: dict, children: dict, roots: list[str],
                 overview: str | None, owner: dict, name_of: Callable[[str], str],
                 budget: int = INDEX_BUDGET, build: bool = False,

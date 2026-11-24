@@ -19,6 +19,9 @@
   the rest). `cbe host verify` has two new checks: `catalog_pages_match_plan` and
   `pages_respect_budget`, and a third, `source_files_named_on_a_page`: every source file that
   has a unit printed on a page is named on at least one page.
+- `cbe query --id NODE --units [--depth N]` prints the unit explanations of one tree node and
+  the nodes below it, in the pages' format, from `catalog.json` and without a model call.
+  `--units` takes text only (`--json` and `--edges` are refused).
 
 ## 3.1.0 (2026-11-23)
 

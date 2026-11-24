@@ -143,3 +143,33 @@ def test_a_node_too_large_for_any_page_is_flagged_and_still_printed(tmp_path: Pa
     assert checks["pages_respect_budget"]["ok"]
     assert checks["pages_respect_budget"]["detail"]["pages_over_budget_with_reason"] == ["big"]
 
+
+def test_query_units_prints_a_node_and_its_subtree_like_the_page(tmp_path: Path) -> None:
+    run, meta, tree, units = _render(tmp_path, page_budget_tokens=100000)
+    page = (run / "docs" / "nodes" / "root.md").read_text(encoding="utf-8")
+    assert catalog_query.node_units_text(run, "root") == page
+    printed = catalog_query.node_units_text(run, "g1")
+    assert printed.count("### `") == 2 + 3 * 2 and "# G1" in printed and "G2" not in printed
+
+
+def test_query_units_depth_limits_how_far_below_the_node_it_prints(tmp_path: Path) -> None:
+    run, meta, tree, units = _render(tmp_path, page_budget_tokens=100000)
+    alone = catalog_query.node_units_text(run, "g1", depth=0)
+    assert alone.count("### `") == 2 and "G1A" not in alone.split("**Children.**")[0]
+    assert "**Children.**" in alone and "(g1a.md)" in alone
+    one = catalog_query.node_units_text(run, "g1", depth=1)
+    assert one.count("### `") == 2 + 3 * 2 and "## G1A" in one
+    assert catalog_query.node_units_text(run, "root", depth=1).count("### `") == 2 + 3 * 2
+
+
+def test_query_units_refuses_a_unit_and_the_options_it_does_not_take(tmp_path: Path, capsys) -> None:
+    from cbe import cli
+    from cbe.symbols import SemanticError
+
+    run, meta, tree, units = _render(tmp_path)
+    with pytest.raises(SemanticError, match="not a tree node"):
+        catalog_query.node_units_text(run, "grp:g1-0")
+    assert cli.main(["query", "--run-dir", str(run), "--id", "g1", "--units", "--depth", "0"]) == 0
+    assert capsys.readouterr().out.count("### `") == 2
+    assert cli.main(["query", "--run-dir", str(run), "--id", "g1", "--units", "--json"]) == 2
+    assert cli.main(["query", "--run-dir", str(run), "--id", "g1", "--depth", "1"]) == 2

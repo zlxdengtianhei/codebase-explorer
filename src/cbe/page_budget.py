@@ -75,16 +75,19 @@ class PagePlan:
                 "root_of": dict(sorted(self.root_of.items()))}
 
 
-def descendants(children: Mapping[str, Sequence[str]], nid: str) -> tuple[str, ...]:
-    """Every node below ``nid`` in pre-order."""
+def descendants(children: Mapping[str, Sequence[str]], nid: str,
+                depth: int | None = None) -> tuple[str, ...]:
+    """Every node below ``nid`` in pre-order, at most ``depth`` levels down (all when None)."""
     order: list[str] = []
 
-    def walk(current: str) -> None:
+    def walk(current: str, left: int | None) -> None:
+        if left == 0:
+            return
         for kid in children.get(current) or []:
             order.append(kid)
-            walk(kid)
+            walk(kid, None if left is None else left - 1)
 
-    walk(nid)
+    walk(nid, depth)
     return tuple(order)
 
 

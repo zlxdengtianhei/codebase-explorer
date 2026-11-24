@@ -270,6 +270,21 @@ def query(run_dir: Path, symbol_id: str, edges: str | None = None) -> dict[str, 
     return record
 
 
+def node_units_text(run_dir: Path, node: str, depth: int | None = None) -> str:
+    """Every unit explanation of one tree node and the nodes below it, in the pages' format.
+
+    ``node`` is a node ID or a name ``query`` resolves; ``depth`` limits how many levels
+    below it are printed (0 is the node alone). No model call."""
+    from cbe import docs
+
+    catalog = query_catalog(run_dir)
+    nid = node if node in catalog["nodes"] else resolve_name(catalog, node)
+    if nid not in catalog["nodes"]:
+        raise SemanticError(f"{node} is not a tree node; --units takes a node ID, for example one "
+                            f"in a page's Children list or from cbe find --run-dir {run_dir} --term {node}")
+    return docs.subtree_text(catalog, nid, depth)
+
+
 def query_text(record: dict) -> str:
     """Agent view: prose once, one line per relation or graph edge."""
     from cbe.records import summary_and_remainder

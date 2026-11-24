@@ -245,7 +245,7 @@ Read the table with these conditions:
 
 Open the `index` path in the generation result, `RUN/docs/INDEX.md`, where `RUN` is the run directory. The output is a prose module tree whose pages are cut by a token budget, and a machine-readable catalogue; the catalogue is the way to look up signatures, ranges and call edges.
 
-The page boundary is a render-time decision: `--pages group` keeps one page per tree node, and `--page-budget N` cuts the same frozen explanations at another size. Neither option calls a model, so an existing run re-renders with `cbe host render --run-dir RUN --page-budget N`; `RUN.md` records the boundary used and every page the budget could not fit. A run made before the page budget existed has no page setting in its state, so `cbe host render` cuts it by the 2,500-token budget; add `--pages group` to get its old one-page-per-node shape back.
+The page boundary is a render-time decision: `--pages group` keeps one page per tree node, and `--page-budget N` cuts the same frozen explanations at another size. Neither option calls a model, so an existing run re-renders with `cbe host render --run-dir RUN --page-budget N`; `RUN.md` records the boundary used and every page the budget could not fit. A run made before the page budget existed has no page setting in its state, so `cbe host render` cuts it by the 2,500-token budget; add `--pages group` to get its old one-page-per-node shape back. `cbe query --run-dir RUN --id NODE --units [--depth N]` prints one node's unit explanations, with the nodes below it, without opening a page.
 
 ### Run directory layout
 
