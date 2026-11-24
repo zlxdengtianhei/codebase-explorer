@@ -1,6 +1,6 @@
 ---
 name: codebase-explorer
-description: Read and query a repository's Codebase Explorer map, or generate one. A map is a source-grounded documentation set (INDEX, a module tree, module pages with explanations and program-derived source ranges, and a symbol catalogue). Use it when a repository has a `.codebase-analysis/` directory or its AGENTS.md or CLAUDE.md names a map, to look up symbols and source with `cbe find`, `cbe query` and `cbe source`, and to check which pages are stale. To generate inside Claude Code, Codex, or another agent harness with subagents, the host agent runs `cbe host` and dispatches one subagent per reading task on the user's own subscription; with an OpenAI-compatible endpoint, run `cbe generate`. Also use it to resume an interrupted run or report a run's token usage and cost.
+description: Read and query a repository's Codebase Explorer map, or generate one. A map is a source-grounded documentation set (INDEX, a module tree, pages with explanations and program-derived source ranges, and a symbol catalogue). Use it when a repository has a `.codebase-analysis/` directory or its AGENTS.md or CLAUDE.md names a map, to look up symbols and source with `cbe find`, `cbe query` and `cbe source`, and to check which pages are stale. To generate inside Claude Code, Codex, or another agent harness with subagents, the host agent runs `cbe host` and dispatches one subagent per reading task on the user's own subscription; with an OpenAI-compatible endpoint, run `cbe generate`. Also use it to resume an interrupted run or report a run's token usage and cost.
 ---
 
 # Codebase Explorer
@@ -9,9 +9,9 @@ description: Read and query a repository's Codebase Explorer map, or generate on
 
 A map is a run directory that holds `docs/INDEX.md` and `catalog.json`: the one the repository's AGENTS.md or CLAUDE.md names, or else the newest directory under `.codebase-analysis/runs/`. `RUN` below is that directory; `find`, `query`, `source` and `stale` accept it relative to where you are.
 
-1. Read `RUN/docs/INDEX.md`, then the module page that fits the question.
+1. Read `RUN/docs/INDEX.md`, then the page that fits the question.
 2. Look up exact facts with `cbe find --run-dir RUN --term NAME`, `cbe query` and `cbe source` ([Read and query the result](#read-and-query-the-result)). Where an explanation and the source disagree, the source is right.
-3. `cbe stale --repo . --run-dir RUN` lists the module pages that describe code changed since the map was made (exit 3); for those, read the source.
+3. `cbe stale --repo . --run-dir RUN` lists the pages that describe code changed since the map was made (exit 3); for those, read the source.
 
 ## Generate a map
 
@@ -82,7 +82,7 @@ Report cost after every run. The rule: **use the harness's exact numbers when it
 
 ## Read and query the result
 
-`INDEX.md` gives the overview, the module tree with one responsibility line per node, and the three lookup commands (once). Pages hold prose only: a node page has its responsibility, its summary and its children, each with one sentence; a leaf module page also lists each function's detail under its name. Signatures, source links, anchors and relation rows are not printed; `DEPENDENCIES.md` and `catalog.json` carry the call-edge structure, and `RUN.md` records graph coverage, the read budget and how the run was made.
+`INDEX.md` gives the overview, the module tree with one responsibility line per node, and the three lookup commands (once). Pages hold prose only: the program cuts them by a 2,500-token budget at render time, so one page may print several groups as sections, each with its responsibility, its summary, the children the page does not print (one sentence each) and each function's detail under its name; a node that is a section of a larger page has no page file of its own, so find it by its heading or with `cbe query --id`. Signatures, source links, anchors and relation rows are not printed; `DEPENDENCIES.md` and `catalog.json` carry the call-edge structure, and `RUN.md` records graph coverage, the read budget and how the run was made.
 
 Find an ID, then retrieve its complete explanation and evidence:
 

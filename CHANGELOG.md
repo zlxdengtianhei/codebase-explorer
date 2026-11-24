@@ -1,5 +1,25 @@
 # Changelog
 
+## Unreleased
+
+- Pages are now cut by a token budget at render time instead of one page per tree node.
+  The tree and the unit explanations are not touched and no model is called: a node whose
+  whole subtree fits 2,500 tokens becomes one page that prints its descendants as sections;
+  otherwise its children's pages are packed in tree order while they fit, and the rest keep
+  pages of their own. A page whose own explanations exceed the budget is flagged in `RUN.md`
+  and `catalog.json` (`pages`) instead of growing silently. `cbe host render` takes
+  `--pages {budget,group}` and `--page-budget TOKENS`; the choice is stored in the run state.
+  **Default changed:** the default was one page per tree node and is now `budget`. A run made
+  before this change has no `pages` field in its state, so `cbe host render` re-renders it by
+  the budget; `cbe host render --pages group` gives its old one-page-per-node shape. A node
+  printed as a section of a bigger page has no `nodes/<id>.md` file of its own; `catalog.json`
+  `pages.root_of` names the page that prints it, and `cbe find` and `cbe query` already return
+  that page.
+- A page's `Files:` line names every file its units live in (it used to name five and count
+  the rest). `cbe host verify` has two new checks: `catalog_pages_match_plan` and
+  `pages_respect_budget`, and a third, `source_files_named_on_a_page`: every source file that
+  has a unit printed on a page is named on at least one page.
+
 ## 3.1.0 (2026-11-23)
 
 - Optional build page: `--build-page [TOKENS]` on `cbe generate` and `cbe host plan`, or

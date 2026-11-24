@@ -44,8 +44,10 @@ def test_titles_escaped_in_outline_children_parent_and_dependencies(tmp_path):
                       {"id": "child", "parent": "root", "title": child_title, "unit_ids": ["grp:two"],
                        "capability": "Child capability.", "summary": "Child."}],
             "depends_on": [{"from": "root", "to": "child", "basis": "Uses child."}]}
+    # One page per node: this pins how a child link and a dependency row are escaped,
+    # which only exist when the two nodes are on separate pages.
     docs.render(run_dir=tmp_path, source_root=tmp_path, inventory={}, units=units, dispositions={},
-                languages={}, tree=tree)
+                languages={}, tree=tree, pages="group")
     expected_root = r"Root \[x\] \(detail\) \\\\ \*literal\*"
     expected_child = r"Child \] text \[z\]"
     root = (tmp_path / "docs/nodes/root.md").read_text()

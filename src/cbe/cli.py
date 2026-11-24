@@ -123,6 +123,12 @@ def build_parser() -> argparse.ArgumentParser:
         part = host_sub.add_parser(name, help=text)
         part.add_argument("--run-dir", type=_abs, default=None)
         part.add_argument("--repo", type=_abs, default=None, help="use the latest run of this repository")
+        if name == "render":
+            part.add_argument("--pages", choices=("budget", "group"), default=None,
+                              help="page boundary: `budget` (default) cuts pages from the frozen unit "
+                                   "explanations by --page-budget tokens; `group` is one page per tree node")
+            part.add_argument("--page-budget", type=int, default=None, metavar="TOKENS",
+                              help="tokens one page may use before it is split (default: 2500)")
         if name == "next":
             part.add_argument("--max", type=int, default=None)
             part.add_argument("--owner", default=None)
@@ -226,7 +232,7 @@ def build_parser() -> argparse.ArgumentParser:
     query_p.add_argument("--id")
     query_p.add_argument("--json", action="store_true", help="machine-readable object (no duplicate detail)")
     query_p.add_argument("--edges", default=None, help="expand frozen raw edges: all or comma-separated kinds")
-    stale_p = sub.add_parser("stale", help="List the files, units and module pages that no longer match the "
+    stale_p = sub.add_parser("stale", help="List the files, units and pages that no longer match the "
                              "source (no model call); exit 3 when something is stale")
     stale_p.add_argument("--run-dir", type=_run_dir, default=None)
     stale_p.add_argument("--repo", type=_run_dir, default=None,
@@ -301,7 +307,7 @@ def _host(args: argparse.Namespace):
     if command == "release":
         return host_run.release(run_dir, args.task)
     if command == "render":
-        return host_run.render(run_dir)
+        return host_run.render(run_dir, pages=args.pages, page_budget_tokens=args.page_budget)
     if command == "verify":
         return host_run.verify(run_dir)
     if command == "import-usage":

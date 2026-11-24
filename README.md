@@ -19,7 +19,7 @@ A file tree shows where files are, not what each part is for. CBE reads a reposi
 ## What you get
 
 - **A map you can read in one sitting.** `docs/INDEX.md` lists every system, and under it each module with one line on what it is responsible for. The page keeps to about 1,500 tokens; when two levels would pass that, it lists the top level only and says so.
-- **A page per module, prose only.** Each module page carries its responsibility line, a short summary, its children, and on a leaf page one paragraph per function, method and class. A leaf page also names the files its members live in, on one line under the title, most members first: after a 3.0 experiment, a model that read pages without paths guessed a wrong file path.
+- **Pages cut by a token budget, prose only.** The tree and the explanations are written once; the program then cuts them into pages at render time, by a 2,500-token budget, printing a group's children as sections of the same page while they fit. A page carries its responsibility line, a short summary, its children, and one paragraph per function, method and class. A page also names the files its members live in, on one line under the title, most members first: after a 3.0 experiment, a model that read pages without paths guessed a wrong file path.
 - **A tree built from the explanations, layer by layer.** A model groups the detail, not the source; the program checks every answer. How many layers exist follows from the answers: a layer with at most eight groups is the top.
 - **Facts from commands, not from the model.** `cbe find`, `cbe query` and `cbe source` resolve names from the pages. `cbe source` prints from the frozen snapshot and checks each file's SHA-256 against the digest recorded at freeze time before printing anything.
 - **A narrated film in one command.** `cbe video` turns a finished run into a two-to-three-minute film with voice and slides. The program assembles the script from the map's own text, so the film calls no model and the same run gives the same film.
@@ -37,7 +37,7 @@ The `Modules` section of a real `docs/INDEX.md`, generated for tsdown by the fin
 - [**Command and interactive UI**](nodes/command-and-interactive-ui.md) — Exposes command-line entry and debug controls, starts the optional devtools UI, and handles watch-interface shortcuts.
 ```
 
-That page stops at the top level and says why: two levels would take about 2,014 tokens, over its 1,500-token budget. When two levels fit, the page lists each module under its system; each module page lists its own children.
+That page stops at the top level and says why: two levels would take about 2,014 tokens, over its 1,500-token budget. When two levels fit, the page lists each module under its system; a page lists the children it does not print itself.
 
 Full example: [flask](examples/flask/docs/INDEX.md). More in [Examples and docs](#examples-and-docs).
 
@@ -94,7 +94,7 @@ flowchart TD
   F --> E["Program checks the layer: every member once,<br/>2 to 12 members, bounded summaries"]
   E -->|"next layer"| F
   E -->|"at most eight groups: the top"| G["Model writes the whole-repository page<br/>from the top groups"]
-  G --> H["Program renders INDEX.md, module pages, catalog.json"]
+  G --> H["Program renders INDEX.md, pages, catalog.json"]
   classDef program fill:#dff7f3,stroke:#0f9b8e,color:#0f1b2d
   classDef model fill:#fff0cc,stroke:#c98a00,color:#0f1b2d
   class A,B,C,D2,E,H program
@@ -108,7 +108,7 @@ Teal steps are ordinary code and make no model call. Amber steps are model calls
 - **Explain.** This is the only step that reads source. The model writes one detail for each function, method and class: one to three sentences, about 25 to 60 tokens. It names symbols by the short numbers in a list, so it cannot invent an ID. The program asks again only for the symbols the model skipped. A run stops asking for gaps once the embedded source would pass 1.5 times the source; the rest is listed as unexplained.
 - **Group.** The model reads the detail, never the source, and groups it into modules: each group gets a two-to-six-word title, one line of responsibility and a two-to-three-sentence summary. It also sees a candidate grouping and call counts from the program, and may split, merge or move candidates, except a linked set: a declaration and its implementation, a test and the code it tests, or a header and its source stay in one group (the program joins them before the leaf chunks are cut and sends an answer that splits them back once). The next layer groups those modules the same way, and so on. The program checks every answer: each member in exactly one group, 2 to 12 members, bounded summaries. A group above twelve members is asked again once; when the answer comes back wrong again the program cuts it along its candidate grouping and marks the result. A layer with at most eight groups is the top.
 - **Sum up.** The model writes the whole-repository page from the top groups: who uses the code, what it solves, and where to start reading.
-- **Render.** The program writes `docs/INDEX.md`, one page per module, `DEPENDENCIES.md` and `RUN.md`, and the `catalog.json` that `find`, `query` and `source` read. `RUN.md` lists the layers, every cut and merge the program made, and the read budget.
+- **Render.** The program writes `docs/INDEX.md`, the pages, `DEPENDENCIES.md` and `RUN.md`, and the `catalog.json` that `find`, `query` and `source` read. Pages are cut at render time from the frozen explanations by a 2,500-token budget: the same run re-renders with another budget or with `--pages group` (one page per tree node) without a model call, and `RUN.md` records the boundary it used. `RUN.md` lists the layers, every cut and merge the program made, and the read budget.
 
 Reviewing the explanations is optional and off by default: `--review` (bare = a sample of the largest batch, every batch if that one has a finding) or `--review all` asks a second model to check explanations against the source and rewrites each flagged batch once. On flask a sampled review was 14% of the run's input tokens, and reading every batch adds about 80% (both measured on 2.3.0; the review code did not change). `RUN.md` says which batches were read and what was found.
 
@@ -119,7 +119,7 @@ flowchart LR
   A["A: your coding agent loads the skill;<br/>its subagents write the explanations<br/>and group them"] --> D["docs/ in the run directory"]
   B["B: cbe generate with an<br/>OpenAI-compatible endpoint"] --> D
   D --> I["INDEX.md: the systems, and each module<br/>with its one line"]
-  I -->|"open a module"| M["Module page: its responsibility,<br/>and each function's explanation"]
+  I -->|"open a page"| M["Page: a group's responsibility,<br/>and each function's explanation"]
   I -->|"look up a name"| N["cbe find: the symbol's ID"]
   M -->|"need the fact, not the prose"| N
   N --> Q["cbe query: signature and calls"]
@@ -208,7 +208,7 @@ Without a graph, CBE still works. With one, the explanation tasks and the depend
 - C and C++ files are not preprocessed. A header with many macros is cut into coarse chunks, and a macro can be taken for a function name.
 - A model writes the explanations. `cbe host verify` passing shows that the structure and references are consistent. It does not show that an explanation is correct. Check explanations against the source (`cbe source`).
 - `docs/BUILD.md` (`--build-page`) is written from documentation, which can be older than the code. The program checks that every cited file and line exists, not that the lines say what the point says, and CBE does not run the commands the page names.
-- There are no incremental updates. When the source changes, `cbe stale` lists the units and module pages that describe changed files (judged per file); to refresh them, generate again.
+- There are no incremental updates. When the source changes, `cbe stale` lists the units and pages that describe changed files (judged per file); to refresh them, generate again.
 - `cbe video` needs headless Chrome, the Kokoro-82M model and its voices file, and ffmpeg. The script is assembled from the map's text rather than rewritten, so its wording is only as good as the map's.
 
 ## Examples and docs

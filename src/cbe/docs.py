@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable
 
-from cbe import concrete_facts
+from cbe import concrete_facts, page_budget
 from cbe.catalog_query import query_catalog
 from cbe.symbols import SemanticError, inventory_ids
 from cbe.token_budget import count_text_tokens
@@ -167,7 +167,7 @@ def _graph_coverage(graph: dict | None, source_root: Path) -> list[str]:
 
 INDEX_BUDGET = 1500      # tokens the entry page may use before it drops to one level
 INDEX_SHOWN_LEVELS = 2   # top-level groups, then one line per child
-FILES_SHOWN = 5          # file names on a leaf page before they are counted
+FILES_SHOWN = 5          # kept for callers that want the old abridged line; pages name every file
 
 
 def member_files(unit_ids: list[str], symbol_records: dict) -> list[tuple[str, int]]:
@@ -180,18 +180,85 @@ def member_files(unit_ids: list[str], symbol_records: dict) -> list[tuple[str, i
     return sorted(counts.items(), key=lambda pair: (-pair[1], pair[0]))
 
 
-def files_line(counts: list[tuple[str, int]]) -> str:
-    """The line under a leaf page's title: where its members live (the experiment showed a model
-    guessing file paths on pages that carried none)."""
-    line = "Files: " + ", ".join(f"`{path}`" for path, _ in counts[:FILES_SHOWN])
-    if len(counts) > FILES_SHOWN:
-        line += f" and {len(counts) - FILES_SHOWN} more ({len(counts)} files)"
+def files_line(counts: list[tuple[str, int]], shown: int | None = None) -> str:
+    """The line under a page's title: every file its members live in, most members first.
+
+    The names are the reader's only way to reach a file from a page (a 3.0 experiment
+    caught a model guessing paths on pages that carried none), and a page now covers
+    several groups, so the list is not abridged by default. ``shown`` keeps the older
+    five-name cut for callers that ask for it."""
+    listed = counts if shown is None else counts[:shown]
+    line = "Files: " + ", ".join(f"`{path}`" for path, _ in listed)
+    if len(counts) > len(listed):
+        line += f" and {len(counts) - len(listed)} more ({len(counts)} files)"
     return line + "."
+
+
+def _node_prose(prep: _RenderPrep, nid: str) -> list[str]:
+    """A node's own capability and summary lines, as its page prints them."""
+    node = prep.nodes[nid]
+    lines: list[str] = []
+    if (node.get("capability") or "").strip():
+        lines += [literal_links(node["capability"].strip()), ""]
+    if (node.get("summary") or "").strip():
+        lines += [literal_links(node["summary"].strip()), ""]
+    return lines
+
+
+def _unit_lines(prep: _RenderPrep, nid: str) -> list[str]:
+    """The unit explanations one node owns, each as its own block."""
+    lines: list[str] = []
+    for uid in prep.nodes[nid].get("unit_ids") or []:
+        if uid in prep.units:
+            lines += _build_unit_block(uid, prep.units, prep.name_of).splitlines() + [""]
+    return lines
+
+
+def page_text(prep: _RenderPrep, root: str, members: tuple[str, ...] = ()) -> str:
+    """One published page: the root node, then a section per further node it prints.
+
+    ``members`` names the other nodes printed here; their own units come with
+    them. A child that is not printed keeps its own page at ``nodes/<child>.md``
+    in both page modes, so a link needs no plan state and the page's token count
+    can be measured before the plan is final.
+    """
+    printed = [root, *members]
+    unit_ids = [uid for nid in printed for uid in prep.nodes[nid].get("unit_ids") or []
+                if uid in prep.units]
+    lines = [f"# {prep.nodes[root].get('title') or root}", ""]
+    counts = member_files(unit_ids, prep.symbol_records)
+    if counts:
+        lines += [files_line(counts), ""]
+    seen_titles: dict[str, str] = {str(prep.nodes[root].get("title") or root): root}
+    for level, nid in enumerate(printed):
+        node = prep.nodes[nid]
+        title = str(node.get("title") or nid)
+        if level:
+            heading = title
+            if title in seen_titles:
+                # Two nodes of one page share a title: the parent tells them apart.
+                parent = prep.nodes.get(node.get("parent") or "") or {}
+                heading = f"{title} ({parent.get('title') or parent.get('id') or 'same level'})"
+            seen_titles[title] = nid
+            lines += [f"## {heading}", ""]
+        lines += _node_prose(prep, nid)
+        left = [kid for kid in prep.children.get(nid) or [] if kid not in printed]
+        if left:
+            lines += ["**Children.**", ""]
+            for kid in left:
+                kid_node = prep.nodes[kid]
+                capability = literal_links((kid_node.get("capability") or "").strip())
+                lines.append(f"- [{link_text(kid_node.get('title') or kid)}]({kid}.md)"
+                             + (f" — {capability}" if capability else ""))
+            lines.append("")
+        lines += _unit_lines(prep, nid)
+    return "\n".join(lines).strip() + "\n"
 
 
 def _entry_page(*, repo: str, nodes: dict, children: dict, roots: list[str],
                 overview: str | None, owner: dict, name_of: Callable[[str], str],
-                budget: int = INDEX_BUDGET, build: bool = False) -> tuple[str, dict]:
+                budget: int = INDEX_BUDGET, build: bool = False,
+                pages: page_budget.PagePlan | None = None) -> tuple[str, dict]:
     """INDEX.md: the overview, the module tree two levels deep (top-level groups, then one
     capability line per child), and the three commands written once (design 2.4). No file lists,
     unit counts or flows: structure lives in DEPENDENCIES.md and the catalog, not in the reading
@@ -211,7 +278,8 @@ def _entry_page(*, repo: str, nodes: dict, children: dict, roots: list[str],
     def module_lines(nid: str, level: int, shown: int) -> list[str]:
         node = nodes[nid]
         capability = literal_links((node.get("capability") or "").strip())
-        rows = ["  " * level + f"- [**{link_text(node.get('title') or nid)}**](nodes/{nid}.md)"
+        href = f"nodes/{pages.page_of(nid) if pages else nid}.md"
+        rows = ["  " * level + f"- [**{link_text(node.get('title') or nid)}**]({href})"
                 + (f" — {capability}" if capability else "")]
         if level + 1 < shown:
             for kid in children.get(nid) or []:
@@ -223,12 +291,15 @@ def _entry_page(*, repo: str, nodes: dict, children: dict, roots: list[str],
         if (overview or "").strip():
             lines += [literal_links(overview.strip()), ""]
         lines += ["## Modules", ""]
+        if pages and pages.mode == "budget" and len(pages.pages) < len(nodes):
+            lines += [f"Pages are cut by a {pages.budget:,}-token budget: one page may carry several "
+                      "groups, printed on it as sections.", ""]
         for nid in top:
             lines += module_lines(nid, 0, shown)
         if two_level_tokens is not None:
             lines += ["", f"Two levels would take about {two_level_tokens:,} tokens, over this page's "
                       f"{budget:,}-token budget, so only the top level is listed here. "
-                      "Each module page lists its own children."]
+                      "Each page lists the children it does not print."]
         lines += ["", "## Read further", "",
                   "`RUN` is this run directory. Signatures, call edges and source are looked up here, "
                   "not printed on the pages:", "",
@@ -287,11 +358,18 @@ class _RenderPrep:
     labels: dict[str, str]
     edges_by_from: dict[str, list[dict]]
     edges_by_to: dict[str, list[dict]]
+    pages: page_budget.PagePlan = None  # type: ignore[assignment]  # set by attach_pages
+
     def name_of(self, uid: str) -> str:
         return self.names.get(uid, short_name(uid))
 
+    def page_link(self, nid: str, prefix: str = "") -> str:
+        """Link to the page that prints this node; a node printed as a section of a bigger
+        page is found by its heading there (pages carry no anchors, design 2.4)."""
+        return f"{prefix}{self.pages.page_of(nid)}.md"
+
     def dependency_line(self, edge, target, prefix=""):
-        return (f"- [{link_text(self.nodes[target].get('title') or target)}]({prefix}{target}.md) · "
+        return (f"- [{link_text(self.nodes[target].get('title') or target)}]({self.page_link(target, prefix)}) · "
                 + (f"containment · → {edge['count']} / ← {edge['reverse_count']} edge(s) "
                    f"(ancestor direct units and descendant subtree; → follows {code_text(edge['from'])} → {code_text(edge['to'])})"
                    if edge["source"] == "containment" else
@@ -386,33 +464,29 @@ def _prepare_render(*, run_dir: Path, source_root: Path, inventory: dict, units:
                        labels=labels, edges_by_from=edges_by_from, edges_by_to=edges_by_to)
 
 
+def attach_pages(prep: _RenderPrep, *, mode: str, budget: int) -> page_budget.PagePlan:
+    """Cut the frozen tree into pages and keep the plan on ``prep``.
+
+    ``cost`` measures the page text this renderer would write, so a page's token
+    count in the plan is the count of the bytes that land on disk."""
+    roots = [nid for nid, node in prep.nodes.items() if not node.get("parent")]
+    plan = page_budget.plan_pages(
+        nodes=prep.nodes, children=prep.children, roots=roots, budget=budget, mode=mode,
+        cost=lambda root, members: count_text_tokens(page_text(prep, root, members)))
+    prep.pages = plan
+    return plan
+
+
 def _write_node_pages(prep: _RenderPrep) -> None:
-    """One Markdown page per tree node under ``docs/nodes``: title, the files its members live in,
-    prose, children, and a leaf module's function details. Signatures, line links, anchors, relation
-    rows and repeated commands are gone (design 2.4); the commands are written once in INDEX.md."""
-    for nid, node in prep.nodes.items():
-        lines = [f"# {node.get('title') or nid}", ""]
-        counts = member_files([uid for uid in node.get("unit_ids") or [] if uid in prep.units],
-                              prep.symbol_records)
-        if counts:
-            lines += [files_line(counts), ""]
-        if (node.get("capability") or "").strip():
-            lines += [literal_links(node["capability"].strip()), ""]
-        if (node.get("summary") or "").strip():
-            lines += [literal_links(node["summary"].strip()), ""]
-        if prep.children.get(nid):
-            lines += ["**Children.**", ""]
-            for kid in prep.children[nid]:
-                kid_node = prep.nodes[kid]
-                capability = literal_links((kid_node.get("capability") or "").strip())
-                lines.append(f"- [{link_text(kid_node.get('title') or kid)}]({kid}.md)"
-                             + (f" — {capability}" if capability else ""))
-            lines.append("")
-        for uid in node.get("unit_ids") or []:
-            if uid not in prep.units:
-                continue
-            lines += _build_unit_block(uid, prep.units, prep.name_of).splitlines() + [""]
-        (prep.nodes_dir / f"{nid}.md").write_text("\n".join(lines).strip() + "\n", encoding="utf-8")
+    """One Markdown page per entry in the page plan under ``docs/nodes``.
+
+    A page carries the title, the files all its members live in, the prose of the
+    node it is rooted at, and a section per covered subtree (see ``page_text``).
+    Signatures, line links and repeated commands stay off the pages (design 2.4);
+    the commands are written once in INDEX.md."""
+    for page in prep.pages.pages:
+        text = page_text(prep, page.root, page.members)
+        (prep.nodes_dir / f"{page.root}.md").write_text(text, encoding="utf-8")
 
 
 def _write_index(prep: _RenderPrep, build: bool = False) -> dict:
@@ -421,7 +495,7 @@ def _write_index(prep: _RenderPrep, build: bool = False) -> dict:
     index_text, index_meta = _entry_page(
         repo=prep.source_root.name, nodes=prep.nodes, children=prep.children, roots=roots,
         overview=(prep.overview or {}).get("overview"), owner=prep.owner, name_of=prep.name_of,
-        build=build)
+        build=build, pages=prep.pages)
     (prep.docs_dir / "INDEX.md").write_text(index_text, encoding="utf-8")
     return index_meta
 
@@ -470,13 +544,13 @@ def _write_dependencies(prep: _RenderPrep) -> None:
         if edge["source"] == "within_containment":
             continue
         dep_lines += [f"- [{link_text(nodes[edge['from']].get('title') or edge['from'])}]"
-                      f"(nodes/{edge['from']}.md) → " + dependency_line(edge, edge["to"], "nodes/")[2:]]
+                      f"({prep.page_link(edge['from'], 'nodes/')}) → " + dependency_line(edge, edge["to"], "nodes/")[2:]]
     dep_lines += ["", f"Graph-only pairs are ranked by edge count; {relationships['graph_only_omitted']} omitted.",
                   "", "### Within containment", ""]
     for edge in relationships["dependencies"]:
         if edge["source"] == "within_containment":
             dep_lines += [f"- [{link_text(nodes[edge['from']].get('title') or edge['from'])}]"
-                          f"(nodes/{edge['from']}.md) → " + dependency_line(edge, edge["to"], "nodes/")[2:]]
+                          f"({prep.page_link(edge['from'], 'nodes/')}) → " + dependency_line(edge, edge["to"], "nodes/")[2:]]
     dep_lines += ["", f"Within containment: {relationships['within_containment_count']} pairs, ranked by edge count; "
                   f"{relationships['within_containment_omitted']} omitted. Each graph list keeps at most 40 pairs independently."]
     (prep.docs_dir / "DEPENDENCIES.md").write_text("\n".join(dep_lines) + "\n", encoding="utf-8")
@@ -544,6 +618,15 @@ def _write_run(prep: _RenderPrep) -> None:
     run_lines += ["", "## Pages", "",
                   f"- Published Markdown: {docs_tokens} tokens"
                   + (f" (ratio to source {ratio:.2f}; target 0.6, hard 0.7)" if ratio is not None else "")]
+    plan = prep.pages
+    run_lines += [f"- Page boundary: " + (
+        f"cut at render time by a {plan.budget:,}-token budget, not written by the model: "
+        f"{len(plan.pages)} page(s) for {len(prep.nodes)} tree node(s)" if plan.mode == "budget"
+        else f"one page per tree node ({len(plan.pages)} page(s))")]
+    if plan.mode == "budget":
+        over = plan.over_budget
+        run_lines += [f"- Pages over the budget: {len(over)}" + "".join(
+            f"; `{page.root}` {page.tokens:,} tokens ({page.over_budget})" for page in over[:8])]
     if prep.clustering:
         run_lines += ["", "## Clustering", ""] + _clustering_lines(prep.clustering)
     if prep.index_notes:
@@ -586,11 +669,16 @@ def _clustering_lines(clustering: dict) -> list[str]:
 def _write_catalog(prep: _RenderPrep) -> dict:
     """``catalog.json``: semantic index plus the per-id ``symbols`` and per-file ``files`` maps."""
     units, owner, nodes = prep.units, prep.owner, prep.nodes
+    plan = prep.pages
+
+    def page_of(node: str | None) -> str | None:
+        return f"nodes/{plan.page_of(node)}.md" if node in nodes else None
+
     symbol_index: dict[str, dict] = {}
     for uid in sorted(units):
         node = owner.get(uid)
         symbol_index[uid] = {"how": "unit", "unit": uid, "node": node,
-                             "page": f"nodes/{node}.md" if node in nodes else None,
+                             "page": page_of(node),
                              "anchor": f"#{anchor(uid)}"}
     for key in sorted(prep.dispositions):
         if key in symbol_index:
@@ -600,7 +688,7 @@ def _write_catalog(prep: _RenderPrep) -> dict:
         if entry.get("how") in {"unit", "grouped"} and target in units:
             node = owner.get(target)
             symbol_index[key] = {"how": entry.get("how"), "unit": target, "node": node,
-                                 "page": f"nodes/{node}.md" if node in nodes else None,
+                                 "page": page_of(node),
                                  "anchor": f"#{anchor(target)}"}
         else:
             symbol_index[key] = {"how": entry.get("how", "index_only"), "unit": None,
@@ -633,8 +721,9 @@ def _write_catalog(prep: _RenderPrep) -> dict:
     catalog = {
         "schema": SCHEMA, "project": "Codebase Explorer", "version": "",
         "units": {uid: {**units[uid], "node": owner.get(uid),
-                        "page": f"nodes/{owner[uid]}.md" if owner.get(uid) in nodes else None,
+                        "page": page_of(owner.get(uid)),
                         "anchor": f"#{anchor(uid)}"} for uid in sorted(units)},
+        "pages": plan.report(),
         "edges": prep.edge_table,
         "graph": None if (prep.context or {}).get("graph") is not None else prep.graph,
         "graph_ref": "context.json" if (prep.context or {}).get("graph") is not None else None,
@@ -662,12 +751,18 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
            index_notes: list[str] | None = None, overview: dict | None = None,
            graph: dict | None = None, context: dict | None = None, basis: dict | None = None,
            source_tokens: int | None = None, read_budget: dict | None = None,
-           clustering: dict | None = None, build_page: str | None = None) -> dict:
+           clustering: dict | None = None, build_page: str | None = None,
+           pages: str = page_budget.DEFAULT_PAGE_MODE,
+           page_budget_tokens: int = page_budget.DEFAULT_PAGE_BUDGET) -> dict:
     """Render node pages, INDEX.md, DEPENDENCIES.md, RUN.md and a catalog under ``run_dir/docs``,
     and BUILD.md when ``build_page`` holds its text (``--build-page``).
 
     ``languages`` maps each path to the language frozen in the source context,
     so the catalog agrees with the plan even when it remapped a suffix.
+
+    ``pages`` chooses the page boundary: ``budget`` (default) cuts pages by
+    ``page_budget_tokens`` from the frozen unit explanations, ``group`` keeps one
+    page per tree node. Neither mode calls a model.
 
     Returns metadata the caller stores in run state for verification."""
     prep = _prepare_render(run_dir=run_dir, source_root=source_root, inventory=inventory,
@@ -675,6 +770,7 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
                            index_notes=index_notes, overview=overview, graph=graph, context=context,
                            basis=basis, source_tokens=source_tokens, read_budget=read_budget,
                            clustering=clustering)
+    plan = attach_pages(prep, mode=pages, budget=page_budget_tokens)
     if build_page is not None:
         (prep.docs_dir / "BUILD.md").write_text(build_page, encoding="utf-8")
     _write_node_pages(prep)
@@ -685,6 +781,7 @@ def render(*, run_dir: Path, source_root: Path, inventory: dict, units: dict,
     page_tokens = sum(count_text_tokens(path.read_text(encoding="utf-8"))
                       for path in sorted(prep.docs_dir.rglob("*.md")))
     return {"units_rendered": len(prep.units), "nodes": len(prep.nodes), "owner": prep.owner,
+            "pages": plan.report(), "page_count": len(plan.pages),
             "relationship_counts": prep.relationships["counts"],
             "within_containment_count": prep.relationships["within_containment_count"],
             "page_tokens": page_tokens,
@@ -765,6 +862,33 @@ def _verify_catalog(checks: list[dict], run_dir: Path, inventory: dict, units: d
         _add_check(checks, "catalog_lists_every_file", not missing and not known_empty_missing,
                    {"inventory_files": len(inventory), "missing": missing[:12],
                     "known_empty_not_marked": known_empty_missing[:12]})
+        # The page a node lands on is the plan's decision, recorded in the catalog;
+        # a catalog without a plan is the older one-page-per-node shape.
+        root_of = {nid: str(catalog.get("pages", {}).get("root_of", {}).get(nid, nid))
+                   for nid in nodes}
+        page_files = {f"nodes/{root}.md" for root in set(root_of.values())}
+        rendered_pages = {name for name in page_texts if name.startswith("nodes/")}
+        _add_check(checks, "catalog_pages_match_plan",
+                   page_files == rendered_pages,
+                   {"pages": len(page_files), "missing": sorted(page_files - rendered_pages)[:12],
+                    "unplanned": sorted(rendered_pages - page_files)[:12]})
+        plan_pages = (catalog.get("pages") or {}).get("pages") or []
+        budget = (catalog.get("pages") or {}).get("budget") or 0
+        over = [f"{row['root']}: {row['tokens']} tokens" for row in plan_pages
+                if budget and row.get("tokens", 0) > budget and not row.get("over_budget")]
+        _add_check(checks, "pages_respect_budget", not over,
+                   {"budget": budget, "pages": len(plan_pages), "over_budget_without_reason": over[:12],
+                    "pages_over_budget_with_reason": [row["root"] for row in plan_pages
+                                                      if row.get("over_budget")][:12]})
+        # A page's Files line is a reader's only path to a file, so a source file that has
+        # a unit printed on a page must be named on at least one page. Files whose symbols
+        # only sit inside a group unit have no unit of their own and are not asked for.
+        named = {path for name, text in page_texts.items() if name.startswith("nodes/")
+                 for line in text.splitlines() if line.startswith("Files: ")
+                 for path in re.findall(r"`([^`]+)`", line)}
+        placed = {row["file"] for row in (catalog.get("symbols") or {}).values() if row.get("how") == "unit" and row.get("page")}
+        _add_check(checks, "source_files_named_on_a_page", placed <= named,
+                   {"files": len(placed), "unnamed": sorted(placed - named)[:12]})
         # Compare the actual CLI view with accepted ownership and rendered
         # anchors, not just the number of catalog entries.
         searchable = query_catalog(run_dir)["symbols"]
@@ -780,7 +904,7 @@ def _verify_catalog(checks: list[dict], run_dir: Path, inventory: dict, units: d
                     navigation_errors.append(f"{sid}: index-only disposition lost")
                 continue
             node = owner.get(target)
-            page = f"nodes/{node}.md"
+            page = f"nodes/{root_of.get(node, node)}.md"
             if (target not in units or node not in nodes
                     or not record or record.get("unit") != target or record.get("node") != node
                     or record.get("page") != page

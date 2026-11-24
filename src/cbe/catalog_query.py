@@ -76,7 +76,7 @@ def query_catalog(run_dir: Path) -> dict[str, Any]:
 
 
 def stale(run_dir: Path, repo: Path | None = None) -> dict[str, Any]:
-    """Which files, units and module pages of a run no longer match the source; no model call.
+    """Which files, units and pages of a run no longer match the source; no model call.
 
     Judged per file: a changed file marks every unit with a range in it, even a unit
     whose own lines did not change.
@@ -116,7 +116,7 @@ def stale_text(report: dict[str, Any]) -> str:
     lines += [f"files: {len(report['changed_files'])} changed, {len(report['removed_files'])} removed, "
               f"{len(report['new_files'])} new",
               f"units: {len(report['stale_units'])} stale (judged per file: a changed file marks all its units)",
-              f"pages: {len(report['stale_pages'])} module page(s) describe changed code; trust the source there"]
+              f"pages: {len(report['stale_pages'])} page(s) describe changed code; trust the source there"]
     for label, key, prefix in (("changed", "changed_files", ""), ("removed", "removed_files", ""),
                                ("new", "new_files", ""), ("page", "stale_pages", "docs/"),
                                ("unit", "stale_units", "")):
