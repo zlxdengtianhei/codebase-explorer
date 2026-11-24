@@ -48,7 +48,7 @@ from pathlib import Path
 from typing import Any, Iterator
 
 from cbe import (aggregation, batching, build_page, catalog_query, checks, docs, grounding, layers,
-                  prompts, skeleton, symbols, treename)
+                  page_budget, prompts, skeleton, symbols, treename)
 from cbe import __version__
 from cbe import source_context
 from cbe.grammars import ContextError
@@ -1947,6 +1947,13 @@ def _detail_stats(units: dict) -> dict:
     return stats
 
 
+def _pages_setting(state: dict[str, Any]) -> tuple[str, int]:
+    """The page boundary this run renders with; older runs predate the setting."""
+    rows = state.get("pages") or {}
+    return (rows.get("mode") or page_budget.DEFAULT_PAGE_MODE,
+            int(rows.get("budget") or page_budget.DEFAULT_PAGE_BUDGET))
+
+
 def _render(run_dir: Path, state: dict[str, Any]) -> None:
     try:
         context = _verified_context(run_dir, state)
@@ -2012,6 +2019,7 @@ def _render(run_dir: Path, state: dict[str, Any]) -> None:
     read_budget = _read_budget(run_dir, state)
     basis = _basis(run_dir, state, context)
     clustering = _clustering_report(run_dir, state, context)
+    pages_mode, page_budget_tokens = _pages_setting(state)
     try:
         meta = docs.render(run_dir=run_dir, source_root=Path(state["repo"]),
                                inventory=state.get("inventory") or {}, units=units,
@@ -2020,7 +2028,8 @@ def _render(run_dir: Path, state: dict[str, Any]) -> None:
                                graph=context.get("graph"), context=context, basis=basis,
                                source_tokens=source_tokens,
                                languages={row["path"]: row.get("language") or "unknown" for row in context["files"]},
-                               build_page=_build_markdown(run_dir, state))
+                               build_page=_build_markdown(run_dir, state),
+                               pages=pages_mode, page_budget_tokens=page_budget_tokens)
     except symbols.SemanticError as exc:
         state["render_error"] = str(exc)
         log_event(run_dir, "render", f"failed: {exc}", error=str(exc))
@@ -2165,9 +2174,19 @@ def _agents_md(run_dir: Path, state: dict[str, Any]) -> dict[str, Any]:
     return {"agents_md": {"note": AGENTS_MD_NOTE, "lines": agents_md_lines(relative)}}
 
 
-def render(run_dir: Path) -> dict[str, Any]:
-    """Render now, including placeholders for anything still pending."""
+def render(run_dir: Path, *, pages: str | None = None,
+           page_budget_tokens: int | None = None) -> dict[str, Any]:
+    """Render now, including placeholders for anything still pending.
+
+    ``pages`` and ``page_budget_tokens`` re-cut the page boundary without touching
+    the stored explanations; the choice is recorded in the run state, so ``verify``
+    and later renders agree with the catalog."""
     with locked_state(run_dir) as state:
+        if page_budget_tokens is not None and page_budget_tokens < 1:
+            raise HostRunError("page budget must be at least one token")
+        if pages or page_budget_tokens:
+            mode, budget = _pages_setting(state)
+            state["pages"] = {"mode": pages or mode, "budget": page_budget_tokens or budget}
         _render(run_dir, state)
         if state.get("render_error"):
             raise HostRunError(f"render failed: {state['render_error']}")

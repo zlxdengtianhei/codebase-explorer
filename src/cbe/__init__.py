@@ -29,7 +29,7 @@ def agents_md_lines(run_dir: str | None = None) -> list[str]:
         stale = "cbe stale --repo ."
         fill = " Replace NEWEST with that directory's name."
     return [f"This repository has a Codebase Explorer map in {where}. Before you search the code, "
-            f"read its `docs/INDEX.md`, then the module page that fits the task.{fill}",
+            f"read its `docs/INDEX.md`, then the page that fits the task.{fill}",
             f"Get exact facts with `cbe find --run-dir {run} NAME`, then `cbe query` and `cbe source` "
             f"with the same `--run-dir`.{fill} Where an explanation and the source disagree, the source is right.",
             f"`{stale}` lists the pages that describe code changed after the map was made; "

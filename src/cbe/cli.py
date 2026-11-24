@@ -50,6 +50,41 @@ class _UsageParser(argparse.ArgumentParser):
         super().error(message)
 
 
+def _lookup_parsers(sub) -> None:
+    """The read-side commands: find, query, stale and source."""
+    find_p = sub.add_parser("find", help="Search the generated symbol catalogue")
+    find_p.set_defaults(usage_parser=find_p)
+    find_p.add_argument("--run-dir", type=_run_dir, required=True)
+    find_p.add_argument("term_pos", nargs="?", metavar="TERM")
+    find_p.add_argument("--term")
+    find_p.add_argument("--limit", type=int, default=25)
+    find_p.add_argument("--json", action="store_true", help="machine-readable locator fields")
+
+    query_p = sub.add_parser("query", help="Return explanation and evidence by unit ID, symbol ID or file path")
+    query_p.set_defaults(usage_parser=query_p)
+    query_p.add_argument("--run-dir", type=_run_dir, required=True)
+    query_p.add_argument("id_pos", nargs="?", metavar="ID")
+    query_p.add_argument("--id")
+    query_p.add_argument("--json", action="store_true", help="machine-readable object (no duplicate detail)")
+    query_p.add_argument("--edges", default=None, help="expand frozen raw edges: all or comma-separated kinds")
+    query_p.add_argument("--units", action="store_true",
+                         help="print every unit explanation of a tree node and the nodes below it, "
+                              "in the pages' format (no model call)")
+    query_p.add_argument("--depth", type=int, default=None, metavar="N",
+                         help="with --units: levels below the node to print (0 is the node alone)")
+    stale_p = sub.add_parser("stale", help="List the files, units and pages that no longer match the "
+                             "source (no model call); exit 3 when something is stale")
+    stale_p.add_argument("--run-dir", type=_run_dir, default=None)
+    stale_p.add_argument("--repo", type=_run_dir, default=None,
+                         help="use this repository's latest run and compare against this checkout")
+    stale_p.add_argument("--json", action="store_true", help="machine-readable report")
+    source_p = sub.add_parser("source", help="Print frozen source by unit ID, symbol ID or file path; verify SHA-256 first")
+    source_p.add_argument("--run-dir", type=_run_dir, required=True)
+    source_p.add_argument("--id", required=True)
+    source_p.add_argument("--context", type=int, default=0, metavar="N",
+                          help="include N surrounding lines (nonnegative; default: 0)")
+
+
 def build_parser() -> argparse.ArgumentParser:
     from cbe.host_run import DEFAULT_REVIEW, DETAIL_MAX_ATTEMPTS, MAX_ATTEMPTS, REVIEW_MODES
     from cbe.model_settings import MODEL_DEFAULTS
@@ -123,6 +158,12 @@ def build_parser() -> argparse.ArgumentParser:
         part = host_sub.add_parser(name, help=text)
         part.add_argument("--run-dir", type=_abs, default=None)
         part.add_argument("--repo", type=_abs, default=None, help="use the latest run of this repository")
+        if name == "render":
+            part.add_argument("--pages", choices=("budget", "group"), default=None,
+                              help="page boundary: `budget` (default) cuts pages from the frozen unit "
+                                   "explanations by --page-budget tokens; `group` is one page per tree node")
+            part.add_argument("--page-budget", type=int, default=None, metavar="TOKENS",
+                              help="tokens one page may use before it is split (default: 2500)")
         if name == "next":
             part.add_argument("--max", type=int, default=None)
             part.add_argument("--owner", default=None)
@@ -211,32 +252,7 @@ def build_parser() -> argparse.ArgumentParser:
     context_query.add_argument("--context", type=_abs, required=True)
     context_query.add_argument("--path", action="append", dest="paths", required=True)
 
-    find_p = sub.add_parser("find", help="Search the generated symbol catalogue")
-    find_p.set_defaults(usage_parser=find_p)
-    find_p.add_argument("--run-dir", type=_run_dir, required=True)
-    find_p.add_argument("term_pos", nargs="?", metavar="TERM")
-    find_p.add_argument("--term")
-    find_p.add_argument("--limit", type=int, default=25)
-    find_p.add_argument("--json", action="store_true", help="machine-readable locator fields")
-
-    query_p = sub.add_parser("query", help="Return explanation and evidence by unit ID, symbol ID or file path")
-    query_p.set_defaults(usage_parser=query_p)
-    query_p.add_argument("--run-dir", type=_run_dir, required=True)
-    query_p.add_argument("id_pos", nargs="?", metavar="ID")
-    query_p.add_argument("--id")
-    query_p.add_argument("--json", action="store_true", help="machine-readable object (no duplicate detail)")
-    query_p.add_argument("--edges", default=None, help="expand frozen raw edges: all or comma-separated kinds")
-    stale_p = sub.add_parser("stale", help="List the files, units and module pages that no longer match the "
-                             "source (no model call); exit 3 when something is stale")
-    stale_p.add_argument("--run-dir", type=_run_dir, default=None)
-    stale_p.add_argument("--repo", type=_run_dir, default=None,
-                         help="use this repository's latest run and compare against this checkout")
-    stale_p.add_argument("--json", action="store_true", help="machine-readable report")
-    source_p = sub.add_parser("source", help="Print frozen source by unit ID, symbol ID or file path; verify SHA-256 first")
-    source_p.add_argument("--run-dir", type=_run_dir, required=True)
-    source_p.add_argument("--id", required=True)
-    source_p.add_argument("--context", type=int, default=0, metavar="N",
-                          help="include N surrounding lines (nonnegative; default: 0)")
+    _lookup_parsers(sub)
     from cbe.video import DEFAULT_MODULES as VIDEO_MODULES, DEFAULT_SECONDS as VIDEO_SECONDS
 
     video_p = sub.add_parser("video", help="Make a narrated short film from a completed run's map: "
@@ -301,7 +317,7 @@ def _host(args: argparse.Namespace):
     if command == "release":
         return host_run.release(run_dir, args.task)
     if command == "render":
-        return host_run.render(run_dir)
+        return host_run.render(run_dir, pages=args.pages, page_budget_tokens=args.page_budget)
     if command == "verify":
         return host_run.verify(run_dir)
     if command == "import-usage":
@@ -468,7 +484,8 @@ def main(argv: list[str] | None = None) -> int:
             value = _host(args)
             print(json.dumps(value, ensure_ascii=False, indent=2))
             return 3 if args.host_command == "verify" and not value["ok"] else 0
-        from cbe.catalog_query import find, find_text, query, query_text, source, stale, stale_text
+        from cbe.catalog_query import (find, find_text, node_units_text, query, query_text, source,
+                                       stale, stale_text)
 
         if args.command == "stale":
             from cbe.host_run import latest_run
@@ -489,6 +506,13 @@ def main(argv: list[str] | None = None) -> int:
             print(json.dumps(results, ensure_ascii=False, indent=2) if args.json else find_text(results),
                   end="\n" if args.json else "")
             return 0
+        if args.units:
+            if args.json or args.edges:
+                raise ValueError("cbe query --units prints text; drop --json and --edges")
+            print(node_units_text(args.run_dir, args.id, args.depth), end="")
+            return 0
+        if args.depth is not None:
+            raise ValueError("cbe query: --depth goes with --units")
         if args.edges:
             _require_frozen_context(args.run_dir, "raw edges cannot be expanded")
         record = query(args.run_dir, args.id, edges=args.edges)

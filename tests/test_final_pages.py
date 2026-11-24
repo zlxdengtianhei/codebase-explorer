@@ -31,12 +31,15 @@ def test_a_leaf_page_names_its_members_files_most_members_first():
     assert docs.files_line(counts) == "Files: `src/a.ts`, `src/b.ts`."
 
 
-def test_more_than_five_files_are_counted_not_listed():
+def test_a_page_names_every_file_its_members_live_in():
     counts = [(f"src/f{index}.ts", index) for index in range(7)]
     line = docs.files_line(counts)
     assert line.startswith("Files: `src/f0.ts`")
-    assert "`src/f4.ts`" in line and "`src/f5.ts`" not in line
-    assert line.endswith("and 2 more (7 files).")
+    assert all(f"`src/f{index}.ts`" in line for index in range(7))
+    assert line.endswith("`src/f6.ts`.")
+    # A page now covers several groups, so an abridged list would hide files a
+    # reader can reach no other way; the five-name cut stays available on request.
+    assert docs.files_line(counts, shown=5).endswith("and 2 more (7 files).")
 
 
 def test_a_member_without_a_recorded_file_falls_back_to_its_id_path():
@@ -64,7 +67,7 @@ def test_a_two_level_page_over_budget_keeps_the_top_level_and_says_why():
     text, meta = _entry(nodes)
     assert meta["levels"] == 2 and meta["levels_shown"] == 1
     assert "Two levels would take about" in text and f"{docs.INDEX_BUDGET:,}-token budget" in text
-    assert "Each module page lists its own children." in text
+    assert "Each page lists the children it does not print." in text
     assert "kid-0.md" not in text
     assert text.count("cbe find --run-dir") == 1
 

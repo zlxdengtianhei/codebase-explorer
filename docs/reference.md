@@ -135,7 +135,7 @@ cJSON_Delete | cJSON.c::function::cJSON_Delete::6306 | function | cJSON.c:L253-L
 
 Each line is `name | id | kind | location | summary | match: fields`. Only the first row is `cJSON_Parse` itself. `cJSON_New_Item` and `cJSON_Delete` match only in `incoming`: the parser calls them, so they are neighbors, not the symbol you searched for. `--json` prints the same rows as objects with `id`, `name`, `kind`, `location`, `summary` and `matched_fields`.
 
-`cbe query --run-dir RUN --id ID [--json] [--edges all|import,call,cfg,dataflow]` takes an ID: an inventory symbol ID or unit ID from `find`, a `grp:` group ID, a file path, or a responsibility-node ID (the node page name without `.md`, for example `core-parsing`). It also takes the names a page shows, tried in this order: a group unit's heading without the `grp:` prefix; a unit heading or its anchor (`u-…`, with or without `#`); a symbol name. When one ID matches, the output starts with `resolved: NAME -> ID`; when several match, it lists them and exits 2 without choosing. `cbe source` resolves names the same way. The text view prints the explanation once, then one line per relation or edge:
+`cbe query --run-dir RUN --id ID [--json] [--edges all|import,call,cfg,dataflow] [--units [--depth N]]` takes an ID: an inventory symbol ID or unit ID from `find`, a `grp:` group ID, a file path, or a responsibility-node ID (a tree node's ID, for example `core-parsing`; a node that a page prints as a section has no page file of its own, so `catalog.json` `pages.root_of` names the page that prints it, where you find the node by its heading). It also takes the names a page shows, tried in this order: a group unit's heading without the `grp:` prefix; a unit heading or its anchor (`u-…`, with or without `#`); a symbol name. When one ID matches, the output starts with `resolved: NAME -> ID`; when several match, it lists them and exits 2 without choosing. `cbe source` resolves names the same way. The text view prints the explanation once, then one line per relation or edge:
 
 ```text
 $ cbe query --run-dir /absolute/path/to/run --id 'cJSON.c::function::cJSON_Parse::33515'
@@ -152,6 +152,23 @@ outgoing: call cJSON_ParseWithOpts cJSON.c::function::cJSON_ParseWithOpts::31069
 ```
 
 Calls and imports keep their analyzer status (`resolved`, `unresolved`, `external`, `ambiguous`). CFG and dataflow edges inside the unit are only counted in `internal_edge_counts` (a graph built without dataflow shows no `dataflow` entry rather than 0); `--edges cfg,dataflow` or `--edges all` lists them from the frozen graph in `context.json`. `--edges dataflow` on a graph built without dataflow says to rebuild with `cbe graph build --with-dataflow`.
+
+**A whole node.** `cbe query --run-dir RUN --id NODE --units [--depth N]` prints the unit explanations of a tree node and of the nodes below it, in the pages' format: a heading per node, the files its units live in, its summary, then one block per unit. It reads `catalog.json` and calls no model. `--depth 0` prints the node alone, `--depth 1` adds its children, and with no `--depth` the whole subtree is printed; children the depth cuts off are listed under **Children.** NODE is a tree node's ID (a page's Children list gives it as the link name, and `catalog.json` lists it under `nodes`); it works for a node that a page prints as a section too. `--units` prints text only, so `--json` and `--edges` are refused. This is the way to take one group out of a large page without opening the page (this node has 12 units; the first is shown, from a Flask run):
+
+```text
+$ cbe query --run-dir /absolute/path/to/run --id request-lifecycle-hooks --units --depth 0
+# Request Lifecycle Hooks
+
+Files: `tests/test_basic.py`.
+
+Groups tests for request preprocessing, teardown hooks, routing errors, and registration timing.
+
+This group covers when request hooks run and how early returns, errors, and teardown callbacks interact. It also includes routing registration timing and request-local behavior.
+
+### `test-before-after-request-order-and-before1`
+
+`test_before_after_request_order` registers `before1`, `before2`, `after1`, `after2`, `finish1`, and `finish2` and asserts the call order.
+```
 
 **Grouped symbols.** The text view does not print a symbol's disposition, owning unit or page. Here `cJSON_Parse` has no unit of its own: the model folded it with `cJSON_ParseWithLength` into a group. `--json` shows this (excerpt):
 
@@ -209,14 +226,14 @@ $ cbe source --run-dir /absolute/path/to/run --id 'cJSON.c::function::cJSON_Pars
 1230: }
 ```
 
-`cbe stale --run-dir RUN [--repo REPO] [--json]` (or `cbe stale --repo REPO` for the repository's latest run) says which parts of a generated map no longer match the source. It calls no model. It compares each planned file's SHA-256 with the checkout, lists source files added since the plan (by the same rules `plan` uses), and maps changed or removed files to the units with a range in them and to those units' module pages. It judges per file: a change anywhere in a file marks every unit of that file. It exits 0 when the map is fresh and 3 when something is stale; published examples carry no run state, so it cannot run on them.
+`cbe stale --run-dir RUN [--repo REPO] [--json]` (or `cbe stale --repo REPO` for the repository's latest run) says which parts of a generated map no longer match the source. It calls no model. It compares each planned file's SHA-256 with the checkout, lists source files added since the plan (by the same rules `plan` uses), and maps changed or removed files to the units with a range in them and to those units' pages. It judges per file: a change anywhere in a file marks every unit of that file. It exits 0 when the map is fresh and 3 when something is stale; published examples carry no run state, so it cannot run on them.
 
 ```text
 $ cbe stale --repo /absolute/path/to/repo
 map: planned 2026-11-13T03:09:06Z from 3 files of /absolute/path/to/repo
 files: 1 changed, 0 removed, 1 new
 units: 3 stale (judged per file: a changed file marks all its units)
-pages: 1 module page(s) describe changed code; trust the source there
+pages: 1 page(s) describe changed code; trust the source there
 changed: src/pkg/jobs.py
 new: src/pkg/extra.py
 page: docs/nodes/module-m1-83acda.md

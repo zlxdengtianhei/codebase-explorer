@@ -90,7 +90,10 @@ def test_one_changed_file_marks_only_its_pages_in_a_multi_page_map(tmp_path: Pat
                 f"def {name}_close(y):\n    total = 0\n    for i in range(y):\n        total += {name}_open(i)\n"
                 f"    return total\n\nclass {name.title()}Store:\n    def put(self, k, v):\n        self.k = k\n"
                 f"        return {name}_close(v)\n", encoding="utf-8")
+    # `pages="group"` keeps one page per node: this test needs several pages in a
+    # small fixture, which the default token budget would merge into one.
     run_dir = Path(host_run.plan(repo, review="none", jobs=2, host="test")["run_dir"])
+    host_run.render(run_dir, pages="group")
     _drive(run_dir)
     units = _catalog(run_dir)["units"]
     all_pages = {unit["page"] for unit in units.values() if unit.get("page")}

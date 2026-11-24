@@ -76,7 +76,7 @@ def query_catalog(run_dir: Path) -> dict[str, Any]:
 
 
 def stale(run_dir: Path, repo: Path | None = None) -> dict[str, Any]:
-    """Which files, units and module pages of a run no longer match the source; no model call.
+    """Which files, units and pages of a run no longer match the source; no model call.
 
     Judged per file: a changed file marks every unit with a range in it, even a unit
     whose own lines did not change.
@@ -116,7 +116,7 @@ def stale_text(report: dict[str, Any]) -> str:
     lines += [f"files: {len(report['changed_files'])} changed, {len(report['removed_files'])} removed, "
               f"{len(report['new_files'])} new",
               f"units: {len(report['stale_units'])} stale (judged per file: a changed file marks all its units)",
-              f"pages: {len(report['stale_pages'])} module page(s) describe changed code; trust the source there"]
+              f"pages: {len(report['stale_pages'])} page(s) describe changed code; trust the source there"]
     for label, key, prefix in (("changed", "changed_files", ""), ("removed", "removed_files", ""),
                                ("new", "new_files", ""), ("page", "stale_pages", "docs/"),
                                ("unit", "stale_units", "")):
@@ -268,6 +268,21 @@ def query(run_dir: Path, symbol_id: str, edges: str | None = None) -> dict[str, 
         record["raw_edges"] = [e for e in graph.get("edges") or []
                                if (edges == "all" or e.get("kind") in edges.split(",")) and matches(e)]
     return record
+
+
+def node_units_text(run_dir: Path, node: str, depth: int | None = None) -> str:
+    """Every unit explanation of one tree node and the nodes below it, in the pages' format.
+
+    ``node`` is a node ID or a name ``query`` resolves; ``depth`` limits how many levels
+    below it are printed (0 is the node alone). No model call."""
+    from cbe import docs
+
+    catalog = query_catalog(run_dir)
+    nid = node if node in catalog["nodes"] else resolve_name(catalog, node)
+    if nid not in catalog["nodes"]:
+        raise SemanticError(f"{node} is not a tree node; --units takes a node ID, for example one "
+                            f"in a page's Children list or from cbe find --run-dir {run_dir} --term {node}")
+    return docs.subtree_text(catalog, nid, depth)
 
 
 def query_text(record: dict) -> str:
