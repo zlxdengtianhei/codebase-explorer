@@ -170,7 +170,7 @@ The settings that CBE ships (the table above, for `zai/glm-5.3-flash`) apply onl
 | `thinking` | Sent as given in the request body, for example `{"type": "disabled"}`; this is the switch DeepSeek documents, and on an SDK it belongs in `extra_body` | not sent (DeepSeek detail tasks: `{"type": "disabled"}`; its layer and overview tasks send `reasoning_effort: "low"` instead) |
 | `response_format` | Sent as given, for example `{"type": "json_object"}` | not sent |
 | `batch_target_tokens` | Target source tokens per reading batch; must not exceed `batch_max_tokens` | 20,000 |
-| `batch_max_tokens` | Cap on source tokens per reading batch; a file over it is read in parts that each fit (source plus a note naming the other parts' units) and no unit is split across two parts unless it alone is over the cap | 25,000 |
+| `batch_max_tokens` | Cap on source tokens per reading batch; a file over it is read in parts that each fit (source plus a note naming the other parts' units) and no unit is split across two parts unless it alone is over the cap (its pieces are then units of their own, and one more task writes the whole unit's explanation from them) | 25,000 |
 | `price_per_million` | `[INPUT, OUTPUT, CACHE]` in USD per million tokens; without it the cost is `null` | not set |
 | `top_p` | Sent as given when present | not sent |
 | `temperature` | Sent with every request | 0 |

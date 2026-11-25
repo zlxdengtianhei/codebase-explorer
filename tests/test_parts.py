@@ -209,3 +209,24 @@ def test_a_unit_made_of_several_slices_goes_into_one_part_whole(tmp_path: Path) 
     owners = {row["number"] for row in cut for sid in row["part"]["ids"] if sid in slices}
     assert len(owners) == 1
     assert not [s for s in state["inventory"]["pkg/big.py"]["symbols"] if "(part" in s["name"]]
+
+
+def test_the_whole_of_a_cut_unit_is_asked_only_when_every_piece_is_explained() -> None:
+    inventory = {"a.py": {"symbols": [
+        {"id": "a.py::function::f::1", "name": "f (part 1 of 3)", "kind": "function", "lines": [[1, 5]]},
+        {"id": "a.py::function::f::2", "name": "f (part 2-3 of 3)", "kind": "function", "lines": [[6, 9]]}]}}
+    units = {"a.py::function::f::2": {"id": "a.py::function::f::2", "kind": "function", "explain": "Second."},
+             "a.py::function::f::1": {"id": "a.py::function::f::1", "kind": "function", "explain": "First."}}
+    [task] = parts.whole_tasks(units, inventory)
+    assert task["members"] == ["a.py::function::f::1", "a.py::function::f::2"]  # in piece order
+    assert task["unit"] == "grp:f-whole" and task["name"] == "f"
+    prompt = parts.whole_prompt(task, units, inventory)
+    assert "1. f (part 1 of 3) L1-5: First." in prompt and "2. f (part 2-3 of 3) L6-9: Second." in prompt
+    del units["a.py::function::f::2"]  # a piece without an explanation: no whole is asked
+    assert parts.whole_tasks(units, inventory) == []
+    with pytest.raises(ValueError, match="non-empty"):
+        parts.check_whole({"explain": " "})
+    with pytest.raises(ValueError, match="over"):
+        parts.check_whole({"explain": "Word. " * 200})
+    answer = {"explain": "It does this. " * 60}
+    assert parts.normalize_whole(answer) and count_text_tokens(answer["explain"]) <= parts.WHOLE_CAP

@@ -10,6 +10,9 @@
   file, the part number and the names of the other parts' units; the note counts against the
   same limit. `cbe host plan` stores the part in each batch of `state.json` (`modules[].part`).
   A file within the limit is planned and prompted exactly as before.
+- When every piece of a cut unit is explained, one more `whole_N` task writes that unit's own
+  short explanation from the pieces' explanations alone (no source). It appears as a group
+  unit `grp:<name>-whole` whose members are the pieces; the pieces keep their own units.
 
 ## 3.2.0 (2026-11-24)
 
