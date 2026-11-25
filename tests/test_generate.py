@@ -144,12 +144,12 @@ def test_directory_plan_keeps_subsystems_and_their_tests_apart() -> None:
                for module in modules if not module.is_test)
 
 
-def test_plan_preserves_whole_large_file_and_rejects_oversized_one() -> None:
-    large = batching.SourceFile("pkg/huge.py", "", 31_000, "unused")
-    assert batching.plan([large])[0].files == [large]
-    too_large = batching.SourceFile("pkg/impossible.py", "", 60_001, "unused")
-    with pytest.raises(batching.BatchingError, match="one whole source file"):
-        batching.plan([too_large])
+def test_plan_keeps_a_large_file_as_one_batch_of_its_own_at_any_size() -> None:
+    """The batch plan no longer refuses a file: ``cbe.parts`` cuts one over the limit into parts."""
+    for tokens in (31_000, 60_001, 400_000):
+        large = batching.SourceFile("pkg/huge.py", "", tokens, "unused")
+        modules = batching.plan([large])
+        assert [module.files for module in modules] == [[large]] and modules[0].tokens == tokens
 
 
 def test_primary_directory_is_the_direct_parent_holding_most_files() -> None:

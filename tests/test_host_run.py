@@ -88,6 +88,8 @@ def _answer(task: dict, prompt: str, *, decision: str = "accepted") -> dict:
         return _gap_from_prompt(prompt) if "SYMBOLS STILL WITHOUT A DETAIL" in prompt else _detail_from_prompt(prompt)
     if kind == "layer":
         return _layer_from_prompt(prompt)
+    if kind == "whole":
+        return {"explain": "The whole unit does what its pieces do together."}
     if kind == "review":
         return {"decision": decision, "issues": ["the negative check is missing"] if decision != "accepted" else []}
     return {"overview": "A tiny job reservation package. Start at the modules below."}

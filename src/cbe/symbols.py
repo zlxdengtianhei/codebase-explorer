@@ -136,7 +136,7 @@ def _merge_key(symbol: dict) -> tuple[str, ...]:
     return ("chunk", symbol["id"])
 
 
-def _symbol_rows(path: str, symbols: list[dict]) -> list[dict]:
+def symbol_rows(path: str, symbols: list[dict]) -> list[dict]:
     """One row per symbol: the chunks of one symbol are merged before the model sees them."""
     rows: dict[tuple[str, ...], dict] = {}
     for symbol in symbols:
@@ -152,7 +152,8 @@ def _symbol_rows(path: str, symbols: list[dict]) -> list[dict]:
     return list(rows.values())
 
 
-def batch_table(paths: Iterable[str], inventory: dict[str, dict]) -> list[dict]:
+def batch_table(paths: Iterable[str], inventory: dict[str, dict],
+                only: Iterable[str] | None = None) -> list[dict]:
     """The short-number table of one detail batch.
 
     Rows are ``{n, id, path, kind, name, lines, ids}``; ``n`` counts from 1 in
@@ -160,9 +161,10 @@ def batch_table(paths: Iterable[str], inventory: dict[str, dict]) -> list[dict]:
     answer decoder derive the same numbers from the frozen inventory. ``ids``
     lists every inventory id the row explains: one per declaration the grammar cut
     into parts, all of a file's leftover regions in one row (design 2.1: one detail
-    per symbol, one per file for what is left)."""
+    per symbol, one per file for what is left). ``only`` keeps the inventory ids of one part of a long file."""
     rows: list[dict] = []
+    keep = None if only is None else set(only)
     for path in paths:
-        for row in _symbol_rows(path, inventory[path]["symbols"]):
+        for row in symbol_rows(path, [s for s in inventory[path]["symbols"] if keep is None or s["id"] in keep]):
             rows.append({"n": len(rows) + 1, **row})
     return rows
