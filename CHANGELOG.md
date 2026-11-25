@@ -47,8 +47,8 @@
     the files are the 85 and 746 of an earlier run's file list, for the other two the default
     file selection. By file path (a `test`, `tests`, `spec` or `fixtures` directory, or a
     `*.test.*` file), most of the extra units are in tests and fixtures: `flask` +228 of +279,
-    `chartjs` +342 of +493, `openworkflow` +46 of +84, `lodash` 0 of +9. The extra units come
-    from three kinds of declaration: same-name declarations that were folded (`flask`: 121
+    `chartjs` +342 of +493, `openworkflow` +46 of +84, `lodash` 0 of +9. The extra units include
+    three kinds of declaration: same-name declarations that were folded (`flask`: 121
     folded rows, 102 now apart); declarations made from a function-valued property (`chartjs`
     413, `openworkflow` 66, `lodash` 6); and `module_region` rows of TypeScript namespaces and
     `declare module` blocks (`chartjs` +2 and `openworkflow` +14 over the units of the commit
