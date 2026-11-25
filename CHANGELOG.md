@@ -6,13 +6,19 @@
   error above 60,000 tokens and no longer one oversized batch between 25,000 and 60,000. It is
   cut into parts of about equal size, one reading batch each: whole units go together, a unit
   that alone is over the limit is cut at slice boundaries and then at line ends, and its pieces
-  are units named `<name> (part k of N)`. Each part's prompt starts with a one-line note: the
-  file, the part number and the names of the other parts' units; the note counts against the
-  same limit. `cbe host plan` stores the part in each batch of `state.json` (`modules[].part`).
-  A file within the limit is planned and prompted exactly as before.
+  are units named `<name> (part k of N)`; pieces of one unit that land in the same part are one
+  unit, `<name> (part k-j of N)`. Each part's prompt starts with a fixed one-line note (file,
+  part number) that counts against the same limit. `cbe host plan` stores the part in each
+  batch of `state.json` (`modules[].part`). A file within the limit is planned and prompted
+  exactly as before.
 - When every piece of a cut unit is explained, one more `whole_N` task writes that unit's own
   short explanation from the pieces' explanations alone (no source). It appears as a group
-  unit `grp:<name>-whole` whose members are the pieces; the pieces keep their own units.
+  unit `grp:<name>-whole`, titled `<name>` on pages, whose `pieces` are the pieces; the pieces
+  keep their own units. A piece's record in `catalog.json` carries `piece` (`of`, `name`,
+  `first`, `last`, `count`), `piece_of` (the whole's id) and `siblings` (the other pieces), and
+  `cbe query` prints them. Calls into a cut function are attached to the whole (its `incoming`;
+  a piece has none, and the dependency edges between units end at the whole); a call made
+  inside a cut unit stays with the piece it is in. The raw edge table is unchanged.
 
 ## 3.2.0 (2026-11-24)
 

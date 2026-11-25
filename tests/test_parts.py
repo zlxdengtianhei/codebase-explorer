@@ -211,17 +211,25 @@ def test_a_unit_made_of_several_slices_goes_into_one_part_whole(tmp_path: Path) 
     assert not [s for s in state["inventory"]["pkg/big.py"]["symbols"] if "(part" in s["name"]]
 
 
+def _piece(whole: str, first: int, last: int, count: int = 3) -> dict:
+    return {"of": whole, "name": "f", "first": first, "last": last, "count": count}
+
+
 def test_the_whole_of_a_cut_unit_is_asked_only_when_every_piece_is_explained() -> None:
     inventory = {"a.py": {"symbols": [
-        {"id": "a.py::function::f::1", "name": "f (part 1 of 3)", "kind": "function", "lines": [[1, 5]]},
-        {"id": "a.py::function::f::2", "name": "f (part 2-3 of 3)", "kind": "function", "lines": [[6, 9]]}]}}
+        {"id": "a.py::function::f::1", "name": "whatever", "kind": "function", "lines": [[1, 5]],
+         "piece": _piece("grp:f-whole", 1, 1)},
+        {"id": "a.py::function::f::2", "name": "names do not matter", "kind": "function", "lines": [[6, 9]],
+         "piece": _piece("grp:f-whole", 2, 3)}]}}
     units = {"a.py::function::f::2": {"id": "a.py::function::f::2", "kind": "function", "explain": "Second."},
              "a.py::function::f::1": {"id": "a.py::function::f::1", "kind": "function", "explain": "First."}}
     [task] = parts.whole_tasks(units, inventory)
     assert task["members"] == ["a.py::function::f::1", "a.py::function::f::2"]  # in piece order
-    assert task["unit"] == "grp:f-whole" and task["name"] == "f"
+    assert task["unit"] == "grp:f-whole" and task["name"] == "f" and task["path"] == "a.py"
     prompt = parts.whole_prompt(task, units, inventory)
-    assert "1. f (part 1 of 3) L1-5: First." in prompt and "2. f (part 2-3 of 3) L6-9: Second." in prompt
+    assert "1. whatever L1-5: First." in prompt and "2. names do not matter L6-9: Second." in prompt
+    unit = parts.whole_unit(task, " Whole. ")
+    assert unit["pieces"] == unit["members"] == task["members"] and unit["explain"] == "Whole."
     del units["a.py::function::f::2"]  # a piece without an explanation: no whole is asked
     assert parts.whole_tasks(units, inventory) == []
     with pytest.raises(ValueError, match="non-empty"):
@@ -230,3 +238,79 @@ def test_the_whole_of_a_cut_unit_is_asked_only_when_every_piece_is_explained() -
         parts.check_whole({"explain": "Word. " * 200})
     answer = {"explain": "It does this. " * 60}
     assert parts.normalize_whole(answer) and count_text_tokens(answer["explain"]) <= parts.WHOLE_CAP
+
+
+def test_the_note_of_a_part_is_fixed_text(tmp_path: Path) -> None:
+    state = _plan(_long_repo(tmp_path), tmp_path / "run")
+    cut = _part_modules(state)
+    for row in cut:  # the same text for every part but its number: nothing from the file is listed
+        assert row["part"]["note"] == parts._note("pkg/big.py", row["part"]["index"], len(cut))
+    assert "handler_" not in cut[0]["part"]["note"]
+
+
+def test_a_piece_points_to_its_whole_and_its_siblings_and_is_titled_by_part(tmp_path: Path, capsys) -> None:
+    repo = _long_repo(tmp_path, functions=30, extra=_function(99, lines=400))
+    run_dir = tmp_path / "run"
+    host_run.plan(repo, run_dir, review="none", host="test", batch_target_tokens=1600, batch_max_tokens=LIMIT)
+    _drive(run_dir)
+    catalog = json.loads((run_dir / "catalog.json").read_text(encoding="utf-8"))
+    whole = catalog["units"]["grp:handler-99-whole"]
+    names = catalog["short_names"]
+    assert names["grp:handler-99-whole"] == "handler_99" and len(whole["pieces"]) >= 3
+    count = len(whole["pieces"])
+    for number, pid in enumerate(whole["pieces"], 1):
+        record = catalog["units"][pid]
+        assert record["piece_of"] == "grp:handler-99-whole" and record["piece"]["count"] == count
+        assert record["siblings"] == [p for p in whole["pieces"] if p != pid]
+        assert names[pid] == f"handler_99 (part {number} of {count})"
+    # the same through the command, from a piece
+    from cbe import cli
+    assert cli.main(["query", "--run-dir", str(run_dir), "--id", whole["pieces"][1]]) == 0
+    out = capsys.readouterr().out
+    assert "piece_of: grp:handler-99-whole" in out and f"siblings: \"{whole['pieces'][0]}\"" in out
+    assert cli.main(["query", "--run-dir", str(run_dir), "--id", "grp:handler-99-whole"]) == 0
+    assert "pieces: " in capsys.readouterr().out
+
+
+def test_a_call_into_a_cut_function_reaches_the_whole_not_its_first_piece(tmp_path: Path) -> None:
+    repo = _long_repo(tmp_path, functions=30, extra=_function(99, lines=400))
+    source = (repo / "pkg" / "big.py").read_text(encoding="utf-8").split("\n")
+    line = {name: next(i + 1 for i, text in enumerate(source) if text.startswith(f"def {name}(")) for name in
+            ("handler_3", "handler_99")}
+    import hashlib
+    from cbe.graph import graph_quality
+    manifest = [{"path": p, "language": "python", "sha256": hashlib.sha256((repo / p).read_bytes()).hexdigest()}
+                for p in ("pkg/big.py", "pkg/small.py")]
+    nodes = [{"id": "caller", "kind": "function", "path": "pkg/big.py", "start_line": line["handler_3"],
+              "end_line": line["handler_3"] + 5, "name": "handler_3"},
+             {"id": "callee", "kind": "function", "path": "pkg/big.py", "start_line": line["handler_99"],
+              "end_line": line["handler_99"] + 400, "name": "handler_99"}]
+    graph = {"schema": "cbe-graph/1", "source_manifest": manifest, "backend": {"name": "test", "version": "1"},
+             "nodes": nodes, "capabilities": [], "diagnostics": [],
+             "edges": [{"id": "call-1", "kind": "call", "source": "caller", "target": "callee",
+                        "status": "resolved", "path": "pkg/big.py", "line": line["handler_3"] + 2}]}
+    graph["quality"] = graph_quality(graph)
+    graph_path = tmp_path / "graph.json"
+    graph_path.write_text(json.dumps(graph), encoding="utf-8")
+    run_dir = tmp_path / "run"
+    host_run.plan(repo, run_dir, review="none", host="test", batch_target_tokens=1600, batch_max_tokens=LIMIT,
+                  graph_path=graph_path)
+    _drive(run_dir)
+    catalog = json.loads((run_dir / "catalog.json").read_text(encoding="utf-8"))
+    whole = catalog["units"]["grp:handler-99-whole"]
+    assert whole["incoming"] == ["call-1"]
+    assert all(catalog["units"][pid]["incoming"] == [] for pid in whole["pieces"])
+    assert catalog["edges"]["call-1"]["target_symbol"] == whole["pieces"][0]  # the raw edge is unchanged
+
+
+def test_unit_edges_end_at_the_whole_and_start_at_the_piece_that_calls() -> None:
+    from cbe import aggregation
+    records = {"a": {"folded_members": []}, "p1": {"folded_members": [], "piece_of": "w"},
+               "p2": {"folded_members": [], "piece_of": "w"},
+               "w": {"members": ["p1", "p2"], "pieces": ["p1", "p2"], "folded_members": ["p1", "p2"]},
+               "b": {"folded_members": []}}
+    edges = {"e1": {"id": "e1", "kind": "call", "status": "resolved", "source_symbol": "a", "target_symbol": "p1"},
+             "e2": {"id": "e2", "kind": "call", "status": "resolved", "source_symbol": "p2", "target_symbol": "b"},
+             "e3": {"id": "e3", "kind": "call", "status": "resolved", "source_symbol": "p2", "target_symbol": "p1"}}
+    assert aggregation.unit_edges(records, edges) == [
+        {"from": "a", "to": "w", "kind": "call", "count": 1}, {"from": "p2", "to": "b", "kind": "call", "count": 1}]

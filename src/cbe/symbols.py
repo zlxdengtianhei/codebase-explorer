@@ -46,6 +46,7 @@ def inventory_from_context(context: dict, paths: list[str] | None = None) -> dic
         entry["symbols"].append({
             "id": chunk["id"], "name": name, "kind": kind, "parent": None,
             "lines": [[int(chunk["start_line"]), int(chunk["end_line"])]],
+            **({"piece": chunk["piece"]} if chunk.get("piece") else {}),
         })
     for row in context.get("files") or []:
         path = row["path"]
@@ -145,7 +146,7 @@ def symbol_rows(path: str, symbols: list[dict]) -> list[dict]:
         if row is None:
             rows[key] = {"id": symbol["id"], "path": path, "kind": symbol["kind"],
                          "name": symbol["name"], "lines": [list(pair) for pair in symbol["lines"]],
-                         "ids": [symbol["id"]]}
+                         "ids": [symbol["id"]], **({"piece": symbol["piece"]} if symbol.get("piece") else {})}
             continue
         row["ids"].append(symbol["id"])
         row["lines"].extend(list(pair) for pair in symbol["lines"] if list(pair) not in row["lines"])

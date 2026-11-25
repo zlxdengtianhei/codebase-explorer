@@ -444,6 +444,12 @@ def _prepare_render(*, run_dir: Path, source_root: Path, inventory: dict, units:
         if "::module_residual::" in uid or symbol.get("kind") == "module_residual":
             # A file's leftover regions have no symbol name: the file is the name.
             base = f"{Path(symbol.get('file') or uid.split('::', 1)[0]).name} module code"
+        if units[uid].get("pieces"):
+            base = units[uid]["title"]  # the whole of a cut unit is named by its title, not its id
+        elif units[uid].get("piece"):
+            piece = units[uid]["piece"]
+            label = piece["first"] if piece["first"] == piece["last"] else f"{piece['first']}-{piece['last']}"
+            base = f"{base.split(' (part ')[0]} (part {label} of {piece['count']})"
         if base in taken:
             # Same name twice in the repository: the file tells them apart, then a number.
             file = Path(symbol.get("file") or uid.split("::", 1)[0]).name

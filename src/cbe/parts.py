@@ -6,8 +6,11 @@ a unit over the budget is cut into its slices; a slice over it is cut into its l
 (a line over it, into character spans). A piece of a cut unit is a unit of its own,
 named ``<name> (part k of N)``, and no unit is ever split across two parts otherwise.
 
-Each part carries a note for the author: which file, which part, and the names of the
-units in the other parts. The note counts against the same limit as the source.
+Each part carries a fixed note for the author (which file, which part). The note counts
+against the same limit as the source.
+
+A cut unit's pieces point back to it: each piece's chunks carry ``piece = {of, name, first,
+last, count}``, ``of`` being the id of the whole (a group unit ``grp:<name>-whole``).
 
 When every piece of a cut unit is explained, one more task writes the whole unit's short
 explanation from those pieces alone (the same rule as a tree node reading only its direct
@@ -17,14 +20,11 @@ children); the whole is a group unit whose members are the pieces.
 from __future__ import annotations
 
 import hashlib
-import re
 
 from cbe import batching, checks, symbols
 from cbe.token_budget import count_text_tokens
 
-NOTE_SHARE = 20      # the note may take at most 1/20 of the limit
 MARGIN_SHARE = 50    # room for token merges across a joint: 1/50 of the limit
-MORE = 4             # names left in a note's list when it has to be cut
 
 
 def even_groups(costs: list[int], budget: int) -> list[list[int]]:
@@ -78,19 +78,29 @@ def _pieces(text: str, budget: int) -> list[str]:
     return out
 
 
-def _cut(chunk: dict, budget: int) -> list[dict]:
-    """A chunk over the budget as exclusive slices at line ends; others unchanged."""
+def _whole_id(name: str, taken: set[str]) -> str:
+    """``grp:<name>-whole``, numbered when the name is taken; adds the id to ``taken``."""
+    stem = f"grp:{checks._kebab(name) or 'unit'}-whole"
+    uid = next(n for n in (stem, *(f"{stem}-{k}" for k in range(2, 100_000))) if n not in taken)
+    taken.add(uid)
+    return uid
+
+
+def _cut(chunk: dict, budget: int, taken: set[str]) -> list[dict]:
+    """A chunk over the budget as exclusive slices at line ends, each a piece of the chunk's unit."""
     if count_text_tokens(chunk["text"]) <= budget:
         return [chunk]
     pieces = _pieces(chunk["text"], budget)
     groups = even_groups([count_text_tokens(p) for p in pieces], budget)
     out, offset, line = [], chunk.get("start_byte") or 0, chunk["start_line"]
+    whole = _whole_id(chunk["name"], taken)
     for number, group in enumerate(groups, 1):
         text = "".join(pieces[i] for i in group)
         size, rows = len(text.encode("utf-8")), text.count("\n")
         last = number == len(groups)
         sid = f"{chunk['id']}::p{number}"
         out.append({**chunk, "id": sid, "symbol_id": sid, "name": f"{chunk['name']} (part {number} of {len(groups)})",
+                    "piece": {"of": whole, "name": chunk["name"], "first": number, "last": number, "count": len(groups)},
                     "text": text, "start_line": line, "start_byte": offset, "end_byte": offset + size,
                     "end_line": chunk["end_line"] if last else line + rows - (text.endswith("\n")),
                     "sha256": hashlib.sha256(text.encode("utf-8")).hexdigest()})
@@ -98,37 +108,20 @@ def _cut(chunk: dict, budget: int) -> list[dict]:
     return out
 
 
-def _note(path: str, index: int, count: int, others: list[tuple[int, list[str]]], cap: int) -> str:
-    """The author's note for one part; the names of other parts are cut (to ``MORE`` at the
-    least per part) until the note fits ``cap`` tokens."""
-    def build(shown: int) -> str:
-        lists = []
-        for number, names in others:
-            more = f" (+{len(names) - shown} more)" if len(names) > shown else ""
-            lists.append(f"part {number}: {', '.join(names[:shown])}{more}")
-        return (f"PART {index} OF {count}: {path} is over the read limit, so it is read in {count} parts, "
-                f"each its own task. This task has part {index} only: explain only the symbols listed "
-                f"below. A symbol named \"(part i of m)\" is one unit cut for length; explain only its "
-                f"piece. Units of the other parts: {'; '.join(lists) or 'none'}.\n")
-    shown = max((len(names) for _, names in others), default=0)
-    note = build(shown)
-    while count_text_tokens(note) > cap and shown > MORE:
-        shown = max(MORE, shown // 2)
-        note = build(shown)
-    return note
+def _note(path: str, index: int, count: int) -> str:
+    """The author's note for one part: fixed text, so its size does not depend on the file."""
+    return (f"PART {index} OF {count}: {path} is over the read limit, so it is read in {count} parts, each its "
+            f"own task. This task has part {index} only: explain only the symbols listed below; the rest of "
+            f"the file is in the other parts. A symbol named \"(part i of m)\" is one unit cut for length; "
+            f"explain only its piece.\n")
 
 
-def _names(chunks: list[dict], path: str) -> list[str]:
-    rows = symbols.symbol_rows(path, symbols.inventory_from_context({"chunks": chunks}, [path])[path]["symbols"])
-    return list(dict.fromkeys("module code" if row["kind"] == "module_residual" else row["name"]
-                              for row in rows))
-
-
-def _plan(path: str, chunks: list[dict], limit: int, margin: int) -> tuple[list[dict], list[dict]] | None:
-    """(the file's chunks after cutting, its parts) for one margin; ``None`` when one part is enough."""
-    probe = _note(path, 1, 99, [(2, _names(chunks, path))], limit // NOTE_SHARE)
-    budget = max(1, limit - min(limit // NOTE_SHARE, count_text_tokens(probe)) - margin)
-    chunks = [piece for chunk in chunks for piece in _cut(chunk, budget)]
+def _plan(path: str, chunks: list[dict], limit: int, margin: int,
+          taken: set[str]) -> tuple[list[dict], list[dict]] | None:
+    """(the file's chunks after cutting, its parts) for one margin; ``None`` when one part is enough.
+    The ids of the wholes it makes are added to ``taken``."""
+    budget = max(1, limit - count_text_tokens(_note(path, 99, 99)) - margin)
+    chunks = [piece for chunk in chunks for piece in _cut(chunk, budget, taken)]
 
     def cost(chunk: dict) -> int:
         return count_text_tokens(chunk["text"]) + count_text_tokens(_header(path, chunk))
@@ -144,43 +137,50 @@ def _plan(path: str, chunks: list[dict], limit: int, margin: int) -> tuple[list[
     groups = even_groups([sum(cost(by_id[sid]) for sid in atom[3]) for atom in atoms], budget)
     if len(groups) < 2:
         return None
-    for group in groups:  # name each piece of a cut unit; pieces of one unit in one part share a name
+    wholes: dict[int, str] = {}
+    for group in groups:  # name each piece of a cut unit; pieces of one unit in one part are one unit
         pieces: dict[int, list[int]] = {}
         for i in group:
             pieces.setdefault(atoms[i][0], []).append(atoms[i][1])
         for i in group:
-            number, piece, count, ids = atoms[i]
+            number, _, count, ids = atoms[i]
             if count > 1:
-                label = f"{min(pieces[number])}-{max(pieces[number])}" if len(pieces[number]) > 1 else f"{piece}"
+                first, last = min(pieces[number]), max(pieces[number])
+                label = f"{first}-{last}" if last > first else f"{first}"
+                base = by_id[ids[0]]["name"]
+                if number not in wholes:
+                    wholes[number] = _whole_id(base, taken)
+                whole = wholes[number]
                 for sid in ids:
                     by_id[sid]["name"] = f"{by_id[sid]['name']} (part {label} of {count})"
+                    by_id[sid]["piece"] = {"of": whole, "name": base, "first": first, "last": last, "count": count}
     members = [[sid for i in group for sid in atoms[i][3]] for group in groups]
-    names = [_names([by_id[sid] for sid in ids], path) for ids in members]
     parts = []
     for number, ids in enumerate(members, 1):
-        others = [(i, names[i - 1]) for i in range(1, len(members) + 1) if i != number]
-        note = _note(path, number, len(members), others, limit // NOTE_SHARE)
+        note = _note(path, number, len(members))
         text = source_text(path, chunks, set(ids))
         parts.append({"index": number, "count": len(members), "ids": ids, "note": note,
                       "tokens": count_text_tokens(text) + count_text_tokens(note)})
     return chunks, parts
 
 
-def split_file(path: str, context: dict, limit: int) -> list[dict]:
+def split_file(path: str, context: dict, limit: int, taken: set[str] | None = None) -> list[dict]:
     """The parts of one file; its chunks in ``context`` are replaced by the cut ones.
 
     Part tokens (source text with headers plus note) are at most ``limit``: if a joint
     merges tokens and one part passes it, the budget shrinks by the excess and the file
     is planned again. Returns ``[]`` when the file fits one part."""
     own = [dict(c) for c in context["chunks"] if c["path"] == path]
-    margin = limit // MARGIN_SHARE
+    margin, taken = limit // MARGIN_SHARE, set() if taken is None else taken
     for _ in range(50):
-        planned = _plan(path, [dict(c) for c in own], limit, margin)
+        used = set(taken)
+        planned = _plan(path, [dict(c) for c in own], limit, margin, used)
         if planned is None:
             return []
         chunks, parts = planned
         excess = max(part["tokens"] for part in parts) - limit
         if excess <= 0:
+            taken |= used
             first = next(i for i, c in enumerate(context["chunks"]) if c["path"] == path)
             rest = [c for c in context["chunks"] if c["path"] != path]
             context["chunks"] = rest[:first] + chunks + rest[first:]
@@ -206,8 +206,9 @@ def covered_files(modules: list[dict], inventory: dict) -> list[str]:
 def split_modules(modules: list[batching.Module], context: dict, limit: int) -> list[batching.Module]:
     """Replace each batch that is one file over ``limit`` by one batch per part."""
     out: list[batching.Module] = []
+    taken: set[str] = set()  # ids of the wholes made so far, over all files
     for module in modules:
-        parts = split_file(module.files[0].path, context, limit) if (
+        parts = split_file(module.files[0].path, context, limit, taken) if (
             module.tokens > limit and len(module.files) == 1) else []
         for part in parts or [None]:
             out.append(batching.Module(len(out), module.files, module.bucket, module.title, part))
@@ -216,38 +217,29 @@ def split_modules(modules: list[batching.Module], context: dict, limit: int) -> 
 
 # ------------------------------------------------------------ the whole of a cut unit
 
-PIECE = re.compile(r"^(.*) \(part (\d+)(?:-(\d+))? of (\d+)\)$")
 WHOLE_CAP = checks.DETAIL_MAX_TOKENS
 
 
-def find_wholes(units: dict, inventory: dict) -> list[dict]:
-    """Cut units whose pieces are all explained: ``{path, kind, name, pieces: [unit ids]}`` each."""
-    symbol_of = {s["id"]: s for entry in inventory.values() for s in entry["symbols"]}
-    found: dict[tuple, dict] = {}
-    for uid, unit in units.items():
-        symbol = symbol_of.get(uid)
-        match = PIECE.match(symbol["name"]) if symbol and unit.get("kind") != "group" else None
-        if match:
-            first, last = int(match[2]), int(match[3] or match[2])
-            row = found.setdefault((uid.split("::")[0], symbol["kind"], match[1], int(match[4])),
-                                   {"labels": set(), "pieces": []})
-            row["labels"] |= set(range(first, last + 1))
-            row["pieces"].append((first, uid))
-    return [{"path": key[0], "kind": key[1], "name": key[2], "pieces": [uid for _, uid in sorted(row["pieces"])]}
-            for key, row in sorted(found.items()) if row["labels"] == set(range(1, key[3] + 1))]
-
-
 def whole_tasks(units: dict, inventory: dict) -> list[dict]:
-    """The fields of one ``whole`` task per cut unit that is fully explained: the id of the
-    whole (a group unit, never an existing id), its member pieces and what to call it."""
-    taken, out = set(units), []
-    for whole in find_wholes(units, inventory):
-        stem = "grp:" + checks._kebab(whole["name"]) + "-whole"
-        uid = next(name for name in (stem, *(f"{stem}-{n}" for n in range(2, 10_000))) if name not in taken)
-        taken.add(uid)
-        out.append({"unit": uid, "members": whole["pieces"], "path": whole["path"], "name": whole["name"],
-                    "symbol_kind": whole["kind"],
-                    "title": whole["name"] + (" (module code)" if whole["kind"] == "module_residual" else "")})
+    """The fields of one ``whole`` task per cut unit whose pieces are all explained.
+
+    Pieces find their whole through the ``piece`` field their chunks carry (set when the
+    unit was cut), never through their names; a whole is asked only when the pieces'
+    ``first..last`` labels cover ``1..count``."""
+    symbol_of = {s["id"]: s for entry in inventory.values() for s in entry["symbols"]}
+    found: dict[str, list[tuple[int, str]]] = {}
+    for uid, unit in units.items():
+        piece = (symbol_of.get(uid) or {}).get("piece")
+        if piece and unit.get("kind") != "group":
+            found.setdefault(piece["of"], []).append((piece["first"], uid))
+    out = []
+    for whole, rows in sorted(found.items()):
+        symbol, piece = symbol_of[rows[0][1]], symbol_of[rows[0][1]]["piece"]
+        covered = {n for _, uid in rows for n in range(symbol_of[uid]["piece"]["first"], symbol_of[uid]["piece"]["last"] + 1)}
+        if covered == set(range(1, piece["count"] + 1)):
+            out.append({"unit": whole, "members": [uid for _, uid in sorted(rows)], "path": symbol["id"].split("::")[0],
+                        "name": piece["name"], "symbol_kind": symbol["kind"],
+                        "title": piece["name"] + (" (module code)" if symbol["kind"] == "module_residual" else "")})
     return out
 
 
@@ -288,5 +280,6 @@ def normalize_whole(value: dict) -> list[str]:
 
 
 def whole_unit(task: dict, explain: str) -> dict:
+    """The whole as a group unit: ``members`` give its source ranges, ``pieces`` mark it as a whole."""
     return {"id": task["unit"], "kind": "group", "title": task["title"], "members": task["members"],
-            "explain": explain.strip(), "extras": [], "uncertainties": []}
+            "pieces": task["members"], "explain": explain.strip(), "extras": [], "uncertainties": []}

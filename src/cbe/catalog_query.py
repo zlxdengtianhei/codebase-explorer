@@ -295,7 +295,7 @@ def query_text(record: dict) -> str:
     if record.get("ungrounded"):
         lines.append(f"check: names {', '.join(record['ungrounded'])}, not found in this unit's source")
     for field in ("dependencies", "depended_on_by", "signature", "signatures", "ranges", "summary", "explain", "extras",
-                  "uncertainties", "relations", "reverse_relations", "folded_members",
+                  "uncertainties", "relations", "reverse_relations", "piece_of", "siblings", "pieces", "folded_members",
                   "internal_edge_counts", "facts", "units", "symbols", "notice"):
         value = record.get(field)
         if not value or (field == "summary" and remainder != (record.get("explain") or "").strip()):

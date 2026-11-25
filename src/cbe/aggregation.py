@@ -23,11 +23,15 @@ def inputs(units: dict, dispositions: dict, inventory: dict, context: dict) -> t
 
 def unit_edges(records: dict, edge_table: dict) -> list[dict]:
     """Roll resolved raw edges through the catalog's folded-symbol ownership."""
-    owners = {sid: uid for uid, row in records.items()
+    owners = {sid: uid for uid, row in records.items() if not row.get("pieces")
               for sid in [uid] + row.get("folded_members", [])}
+    # A call reaches a unit cut for length as a whole; a call made inside it comes from its piece.
+    callee = {**owners, **{sid: uid for uid, row in records.items() for sid in row.get("pieces") or []}}
     counts = Counter()
     for edge in edge_table.values():
-        source, target = owners.get(edge.get("source_symbol")), owners.get(edge.get("target_symbol"))
+        source, target = owners.get(edge.get("source_symbol")), callee.get(edge.get("target_symbol"))
+        if target and records.get(source, {}).get("piece_of") == target:
+            continue  # a piece calling its own unit is not a relation between units
         if edge.get("status") == "resolved" and source and target and source != target:
             counts[source, target, edge["kind"]] += 1
     # File-level imports without two source-coordinate unit owners are not
