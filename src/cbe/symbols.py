@@ -45,6 +45,10 @@ def inventory_from_context(context: dict, paths: list[str] | None = None) -> dic
             kind = "module_region"
         entry["symbols"].append({
             "id": chunk["id"], "name": name, "kind": kind, "parent": None,
+            # Where the name is declared: ``Class.method`` and the object literal that holds it.
+            # A context frozen before these fields existed falls back to the bare name.
+            "qualified_name": chunk.get("qualified_name") or name,
+            "scope_anchor": chunk.get("scope_anchor"),
             "lines": [[int(chunk["start_line"]), int(chunk["end_line"])]],
             **({"piece": chunk["piece"]} if chunk.get("piece") else {}),
         })
@@ -127,13 +131,16 @@ def _merge_key(symbol: dict) -> tuple[str, ...]:
     """What makes two inventory chunks one explained symbol (design 2.1).
 
     A grammar cuts one declaration into several chunks (a long function, overloads);
-    they carry the same name, or the same declaration id for the ``::s<N>`` parts.
+    they carry the same name in the same scope, or the same declaration id for the
+    ``::s<N>`` parts. A declaration and its overload signatures, or a property getter and
+    its setter, are one thing: the same qualified name (``Class.method``) in the same
+    object literal. ``A.open`` and ``B.open`` are two things, each with its own unit.
     The leftover regions of one file are one symbol: what the file holds."""
     kind = symbol["kind"]
     if kind == "module_residual":
         return ("residual",)
     if kind in {"function", "method", "class", "type_alias", "interface"}:
-        return (kind, symbol["name"])
+        return (kind, symbol.get("qualified_name") or symbol["name"], str(symbol.get("scope_anchor")))
     return ("chunk", symbol["id"])
 
 

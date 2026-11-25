@@ -86,6 +86,15 @@ def _whole_id(name: str, taken: set[str]) -> str:
     return uid
 
 
+def _with_suffix(chunk: dict, suffix: str) -> dict:
+    """The chunk's names with ``suffix`` added: the pieces of one unit stay apart as symbols
+    (the inventory merges by qualified name, so that carries the piece label too)."""
+    named = {"name": f"{chunk['name']}{suffix}"}
+    if chunk.get("qualified_name"):
+        named["qualified_name"] = f"{chunk['qualified_name']}{suffix}"
+    return named
+
+
 def _cut(chunk: dict, budget: int, taken: set[str]) -> list[dict]:
     """A chunk over the budget as exclusive slices at line ends, each a piece of the chunk's unit."""
     if count_text_tokens(chunk["text"]) <= budget:
@@ -99,7 +108,8 @@ def _cut(chunk: dict, budget: int, taken: set[str]) -> list[dict]:
         size, rows = len(text.encode("utf-8")), text.count("\n")
         last = number == len(groups)
         sid = f"{chunk['id']}::p{number}"
-        out.append({**chunk, "id": sid, "symbol_id": sid, "name": f"{chunk['name']} (part {number} of {len(groups)})",
+        out.append({**chunk, "id": sid, "symbol_id": sid,
+                    **_with_suffix(chunk, f" (part {number} of {len(groups)})"),
                     "piece": {"of": whole, "name": chunk["name"], "first": number, "last": number, "count": len(groups)},
                     "text": text, "start_line": line, "start_byte": offset, "end_byte": offset + size,
                     "end_line": chunk["end_line"] if last else line + rows - (text.endswith("\n")),
@@ -152,7 +162,7 @@ def _plan(path: str, chunks: list[dict], limit: int, margin: int,
                     wholes[number] = _whole_id(base, taken)
                 whole = wholes[number]
                 for sid in ids:
-                    by_id[sid]["name"] = f"{by_id[sid]['name']} (part {label} of {count})"
+                    by_id[sid].update(_with_suffix(by_id[sid], f" (part {label} of {count})"))
                     by_id[sid]["piece"] = {"of": whole, "name": base, "first": first, "last": last, "count": count}
     members = [[sid for i in group for sid in atoms[i][3]] for group in groups]
     parts = []

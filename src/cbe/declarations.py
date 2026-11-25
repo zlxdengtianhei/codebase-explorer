@@ -49,6 +49,9 @@ class _Declaration:
     ancestors: tuple[str, ...] = ()
     signature: str = ""
     exclusive_end_byte: int | None = None
+    #: start byte of the innermost object literal that holds this declaration below its
+    #: parent declaration (``None`` outside object literals): two object literals are two scopes
+    scope_anchor: int | None = None
 
 
 def _text(offsets: OffsetMap, start_byte: int, end_byte: int) -> str:
@@ -285,7 +288,22 @@ class _DeclarationExtractor:
                         if decl.kind != "module_region" or not any(
                             other is not decl and decl.start_byte <= other.start_byte
                             and other.end_byte <= decl.end_byte for other in self.declarations)]
+        self._anchor_object_scopes(declarations)
         return _coalesce_declarations(self.offsets, declarations)
+
+    def _anchor_object_scopes(self, declarations: list[_Declaration]) -> None:
+        """Record which object literal holds each declaration (the scope it is named in)."""
+        if not self.spec.object_kinds:
+            return
+        by_id = {decl.symbol_id: decl for decl in declarations}
+        for decl in declarations:
+            owner = by_id.get(decl.parent_id) if decl.parent_id else None
+            ancestor = decl.node.parent
+            while ancestor is not None and (owner is None or ancestor != owner.node):
+                if ancestor.type in self.spec.object_kinds:
+                    decl.scope_anchor = ancestor.start_byte
+                    break
+                ancestor = ancestor.parent
 
     def visit(
         self,
@@ -314,6 +332,28 @@ class _DeclarationExtractor:
         if self.spec.grouped_type_declarations and ntype == "type_declaration" and scope != "function":
             self.visit_go_type(node, parent, prefix)
             return
+
+        if ntype in self.spec.object_kinds:
+            # An object literal is a scope, not a declaration. What a wrapper prefix
+            # (``export default``, ``const x =``) puts in front belongs to the whole literal,
+            # never to the first member inside it, so each member starts at its own text.
+            for child in node.named_children:
+                self.visit(child, parent, scope, [None])
+            return
+
+        if ntype in self.spec.property_kinds:
+            value = node.child_by_field_name("value")
+            key = node.child_by_field_name("key")
+            if value is not None and key is not None and value.type in self.spec.value_function_kinds:
+                # ``name: (a) => {...}`` / ``name: function () {...}`` is a method of the
+                # object, the same as the shorthand ``name(a) {...}``: one unit, its own range.
+                decl = _make_declaration(self.offsets, node, self.path, parent, "method", None,
+                                         name=_text(self.offsets, key.start_byte, key.end_byte))
+                self.declarations.append(decl)
+                if parent is not None:
+                    parent.children.append(decl)
+                self.visit(value, decl, "function", [None])
+                return
 
         if ntype in self.spec.class_kinds:
             if not _is_type_definition(self.spec, node):

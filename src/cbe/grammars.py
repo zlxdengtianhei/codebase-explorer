@@ -132,6 +132,10 @@ class GrammarSpec:
     grouped_type_declarations: bool = False
     #: type declarations retain the surrounding scope for their children
     preserve_type_scope: bool = False
+    #: object-literal node types: a scope of its own, without a declaration of its own
+    object_kinds: frozenset[str] = frozenset()
+    #: ``key: value`` entry node types of an object literal; a function value makes a method unit
+    property_kinds: frozenset[str] = frozenset()
 
 
 #: Frontend coverage for the languages already registered above.
@@ -239,6 +243,8 @@ GRAMMARS: tuple[GrammarSpec, ...] = (
         binding_kinds=frozenset({"variable_declarator"}),
         ordinary_declaration_kinds=frozenset({"variable_declarator"}),
         ordinary_name_style="bindings",
+        object_kinds=frozenset({"object"}),
+        property_kinds=frozenset({"pair"}),
     ),
     GrammarSpec(
         name="typescript",
@@ -266,6 +272,8 @@ GRAMMARS: tuple[GrammarSpec, ...] = (
         binding_kinds=frozenset({"variable_declarator"}),
         ordinary_declaration_kinds=frozenset({"variable_declarator"}),
         ordinary_name_style="bindings",
+        object_kinds=frozenset({"object"}),
+        property_kinds=frozenset({"pair"}),
     ),
     GrammarSpec(
         name="java",
@@ -428,6 +436,8 @@ _TSX_SPEC = GrammarSpec(
     binding_kinds=frozenset({"variable_declarator"}),
     ordinary_declaration_kinds=GRAMMARS[4].ordinary_declaration_kinds,
     ordinary_name_style=GRAMMARS[4].ordinary_name_style,
+    object_kinds=GRAMMARS[4].object_kinds,
+    property_kinds=GRAMMARS[4].property_kinds,
 )
 
 #: Extra specs added at runtime by ``register_language`` or a ``cbe.languages``
