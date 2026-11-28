@@ -1,0 +1,37 @@
+name: Module-tree replay
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CBE_EVAL_CLONES: ${{ github.workspace }}/.eval/clones
+      CBE_EVAL_LAB: ${{ github.workspace }}/.eval/lab
+      PYTHONPATH: ${{ github.workspace }}/src:${{ github.workspace }}/evaluation/tree
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.1.0
+      - name: Install
+        run: |
+          uv venv --python 3.12 "$RUNNER_TEMP/venv"
+          uv pip install --python "$RUNNER_TEMP/venv/bin/python" -e ".[graphs,languages]" pytest
+          echo "$RUNNER_TEMP/venv/bin" >> "$GITHUB_PATH"
+      - name: Cache key from the five pinned shas
+        id: shas
+        run: echo "key=tree-clones-$(python -c 'from common import REPOS; print("-".join(r["sha"][:12] for r in REPOS.values()))')" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v6
+        with:
+          path: .eval/clones
+          key: ${{ steps.shas.outputs.key }}
+      - name: Prepare clones (blobless, pinned shas verified)
+        run: python evaluation/tree/prepare.py --lab
+      - name: Replay A, B1, B2 on the published catalogs (no model)
+        run: |
+          : > "$RUNNER_TEMP/rows.jsonl"
+          for repo in ruby_llm gson tsdown fmt flask; do
+            python evaluation/tree/run.py row "$repo" T0 --no-c --out "$RUNNER_TEMP/rows.jsonl" > /dev/null
+          done
+      - name: Compare with replay_expected.json
+        run: python evaluation/tree/check_replay.py "$RUNNER_TEMP/rows.jsonl"

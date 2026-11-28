@@ -1,0 +1,87 @@
+name: Module-tree model tier (scale C)
+on:
+  workflow_dispatch:
+    inputs:
+      repo:
+        description: Repository to measure
+        type: choice
+        options: [ruby_llm, gson, tsdown, fmt, flask]
+        default: flask
+      model:
+        description: Short model name from locate.MODELS
+        type: string
+        default: deepseek-flash
+      tree:
+        description: Tree (T0, T1, T1f or a tree file path)
+        type: string
+        default: T0
+permissions:
+  contents: read
+jobs:
+  locate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CBE_EVAL_GATEWAY: ${{ secrets.CBE_EVAL_GATEWAY }}
+      CBE_EVAL_CLONES: ${{ github.workspace }}/.eval/clones
+      CBE_EVAL_LAB: ${{ github.workspace }}/.eval/lab
+      PYTHONPATH: ${{ github.workspace }}/src:${{ github.workspace }}/evaluation/tree
+      REPO: ${{ inputs.repo }}
+      MODEL: ${{ inputs.model }}
+      TREE: ${{ inputs.tree }}
+    steps:
+      - name: Gateway secret present?
+        id: gate
+        run: |
+          if [ -z "$CBE_EVAL_GATEWAY" ]; then
+            echo "CBE_EVAL_GATEWAY secret is not set; skipping the model tier."
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.gate.outputs.run == 'true'
+        uses: actions/checkout@v7
+      - if: steps.gate.outputs.run == 'true'
+        uses: astral-sh/setup-uv@v10.1.0
+      - name: Install
+        if: steps.gate.outputs.run == 'true'
+        run: |
+          uv venv --python 3.12 "$RUNNER_TEMP/venv"
+          uv pip install --python "$RUNNER_TEMP/venv/bin/python" -e ".[graphs,languages]" pytest
+          echo "$RUNNER_TEMP/venv/bin" >> "$GITHUB_PATH"
+      - name: Prepare clone and draw the scale-C commits
+        if: steps.gate.outputs.run == 'true'
+        run: python evaluation/tree/prepare.py "$REPO" --lab --commits
+      - name: Measure (calls the model for scale C)
+        if: steps.gate.outputs.run == 'true'
+        run: |
+          mkdir -p "$RUNNER_TEMP/out"
+          python evaluation/tree/run.py row "$REPO" "$TREE" --models "$MODEL" --out "$RUNNER_TEMP/out/row.jsonl" > /dev/null
+          python evaluation/tree/run.py table "$RUNNER_TEMP/out/row.jsonl" > "$RUNNER_TEMP/out/table.md"
+          cat "$RUNNER_TEMP/out/table.md" >> "$GITHUB_STEP_SUMMARY"
+      - name: Fail on an empty C or a view with no valid answer
+        if: steps.gate.outputs.run == 'true'
+        run: |
+          python - "$RUNNER_TEMP/out/row.jsonl" <<'PY'
+          import json, os, sys
+          r = json.loads(open(sys.argv[1]).readline())
+          model = os.environ["MODEL"]
+          if not r["C"]:
+              sys.exit("C is empty: no view was measured")
+          for view, v in r["C"].items():
+              m = v["models"].get(model)
+              if m is None:
+                  sys.exit(f"C[{view}] has no result for {model}")
+              print(f"{view}: modules={v['modules']} recall={m['recall']:.3f} no_valid_answer={m['no_valid_answer']}/{v['questions']}")
+              if m["no_valid_answer"] == v["questions"]:
+                  sys.exit(f"C[{view}]: no question got a valid answer (gateway error?)")
+          PY
+      - name: Upload row and table
+        if: always() && steps.gate.outputs.run == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: tree-model-${{ inputs.repo }}-${{ inputs.model }}
+          path: |
+            ${{ runner.temp }}/out/row.jsonl
+            ${{ runner.temp }}/out/table.md
+          if-no-files-found: warn
