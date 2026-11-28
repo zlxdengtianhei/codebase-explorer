@@ -7,11 +7,15 @@ from pathlib import Path
 
 import pytest
 
+from cbe.grammars import _grammar_for_suffix
 from cbe.source_context import build_context
 from cbe.symbols import batch_table, inventory_from_context
 
 
 def _table(tmp_path: Path, name: str, source: str) -> tuple[list[dict], dict]:
+    spec = _grammar_for_suffix(Path(name).suffix)
+    if spec is not None and importlib.util.find_spec(spec.module) is None:
+        pytest.skip(f"grammar package {spec.module} not installed")
     (tmp_path / name).write_text(source, encoding="utf-8")
     context = build_context(tmp_path, [name])
     return batch_table([name], inventory_from_context(context, [name])), context
@@ -229,15 +233,9 @@ SCOPES = {
 @pytest.mark.parametrize("language", sorted(SCOPES))
 def test_one_name_in_two_scopes_is_two_units_in_every_grammar(tmp_path: Path, language: str) -> None:
     filename, source, name = SCOPES[language]
-    if language.split()[0] in {"kotlin", "swift"} and not _grammar(language.split()[0]):
-        pytest.skip("grammar package not installed")
     table, _ = _table(tmp_path, filename, source)
     rows = [row for row in table if row["name"] == name and row["kind"] in {"function", "method"}]
     assert len(rows) == 2 and all(len(row["ids"]) == 1 for row in rows), rows
-
-
-def _grammar(name: str) -> bool:
-    return importlib.util.find_spec(f"tree_sitter_{name}") is not None
 
 
 def test_a_go_receiver_names_its_method_and_a_plain_function_stays_apart(tmp_path: Path) -> None:
