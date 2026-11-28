@@ -111,6 +111,7 @@ def _verify_embedded_source(run_dir: Path, task_id: str, prompt: str,
         return
     planned = {row["path"]: row for row in state["files"]}
     repo = Path(state["repo"])
+    part = state["modules"][state["tasks"][task_id]["module"]].get("part")
     for path in paths:
         row = planned[path]
         try:
@@ -122,6 +123,13 @@ def _verify_embedded_source(run_dir: Path, task_id: str, prompt: str,
         body = raw.decode("utf-8")
         if not body and not row["tokens"]:
             continue  # an empty file embeds nothing by design
+        if part:  # one part of a long file: every chunk of the part, verbatim
+            context = json.loads((run_dir / "context.json").read_text(encoding="utf-8"))
+            missing = [c["id"] for c in context["chunks"] if c["id"] in set(part["ids"]) and c["text"] not in prompt]
+            if missing:
+                raise SourceNotEmbedded(f"{path}: part {part['index']} of {part['count']} lacks "
+                                        f"{len(missing)} chunk(s) in the prompt, e.g. {missing[0]}; the model was not called")
+            continue
         if body not in prompt:
             raise SourceNotEmbedded(
                 f"{path}: not embedded in the prompt ({row['tokens']} planned tokens); the model was not called")

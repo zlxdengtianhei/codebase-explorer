@@ -2,7 +2,8 @@
 
 A batch (``Module``) is a reading unit, not a semantic module. Batches keep a
 subsystem and its tests apart, keep fitting directory subtrees whole, and join
-files linked by imports first, within a token target per batch.
+files linked by imports first, within a token target per batch. A file over the
+limit is a batch of its own here; ``cbe.parts`` then cuts it into parts.
 """
 
 from __future__ import annotations
@@ -24,7 +25,6 @@ class BatchingError(ValueError):
 
 TARGET_TOKENS = 20_000
 MAX_TOKENS = 25_000
-MAX_SINGLE_FILE_TOKENS = 60_000
 
 
 def is_test_path(path: str) -> bool:
@@ -50,10 +50,11 @@ class Module:
     files: list[SourceFile]
     bucket: str
     title: str = ""
+    part: dict | None = None  # one part of a file over the limit (see ``cbe.parts``)
 
     @property
     def tokens(self) -> int:
-        return sum(item.tokens for item in self.files)
+        return self.part["tokens"] if self.part else sum(item.tokens for item in self.files)
 
     @property
     def is_test(self) -> bool:
@@ -247,9 +248,6 @@ def plan(files: list[SourceFile], *, target_tokens: int = TARGET_TOKENS,
          max_tokens: int = MAX_TOKENS) -> list[Module]:
     if target_tokens < 1 or max_tokens < target_tokens:
         raise BatchingError("batch limits require 0 < target_tokens <= max_tokens")
-    for item in files:
-        if item.tokens > MAX_SINGLE_FILE_TOKENS:
-            raise BatchingError(f"one whole source file exceeds {MAX_SINGLE_FILE_TOKENS} tokens: {item.path}")
     production = [item for item in files if not item.is_test]
     root_tokens: dict[str, int] = {}
     for item in production:
@@ -275,7 +273,8 @@ def fallback_title(module: Module) -> str:
     directory = primary_directory(module)
     names = sorted(Path(item.path).name for item in module.files)
     more = f" (+{len(names) - 2})" if len(names) > 2 else ""
-    return f"{directory or '.'}: {', '.join(names[:2])}{more}"[:80]
+    tail = f" (part {module.part['index']} of {module.part['count']})" if module.part else ""
+    return f"{directory or '.'}: {', '.join(names[:2])}{more}"[:80 - len(tail)] + tail
 
 
 def primary_directory(module: Module) -> str:

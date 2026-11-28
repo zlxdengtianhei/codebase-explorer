@@ -195,8 +195,10 @@ def _estimate(run_dir: Path, state: dict[str, Any], task: dict[str, Any], overhe
     prompt = count_text_tokens(prompt_path.read_text(encoding="utf-8")) if prompt_path.is_file() else 0
     source, files = 0, 0
     if task["kind"] in {"module", "repair", "review"}:
-        paths = set(state["modules"][task["module"]]["files"])
-        source = sum(row["tokens"] for row in state["files"] if row["path"] in paths)
+        module = state["modules"][task["module"]]
+        paths = set(module["files"])
+        source = module["part"]["tokens"] if "part" in module else sum(
+            row["tokens"] for row in state["files"] if row["path"] in paths)
         files = len(paths)
     accepted = state_dir(run_dir) / "accepted" / f"{task['id']}.json"
     output = count_text_tokens(accepted.read_text(encoding="utf-8")) if accepted.is_file() else 1_000

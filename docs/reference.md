@@ -333,6 +333,25 @@ Adjacent value declarations of the same category and scope share one region when
 
 Macros are indexed as written, including definitions inside functions: CBE does not expand them, evaluate conditions or synthesize calls. Ordinary C/C++ declarations require a confirmed file or namespace scope; error nodes, function bodies, parameter lists and type bodies exclude them. For ambiguous C++ `.h` files parsed as C, a C++ tree confirms declaration scope when the C tree has syntax errors; declarations whose scope cannot be confirmed remain residual source. When C++ header parsing has syntax errors, individual declarations can be assigned the wrong scope, including with `--header-language cpp`. Function-local variables (including local `static` variables), C/C++ function prototypes, C/C++ struct fields and enum members do not become additional named regions. Python assignment behavior is unchanged. A mixed JavaScript declaration such as `export const value=1, helper=()=>2` keeps the existing function unit's id and range; `value` is searchable through that unit's signature rather than receiving a separate region. New child regions can change a containing namespace/class/module's exclusive source ranges and segment ids; existing declaration canonical ids and full spans remain stable when rebuilding the same source.
 
+## Units and the scope a name is declared in
+
+A unit is a declaration's own line range, and the unit table (the numbered list the model reads, and the plan) has one row per symbol. CBE merges chunks into one row only when they are one declaration of one name in one scope: the overload signatures of a TypeScript function and its implementation, a Python property getter and setter, a JavaScript or TypeScript getter and setter, C++ overloads, the `::sN` segments of one long declaration (`max_segment_bytes`), and a static method with an instance method of the same name in one class. The merge key is (kind, qualified name, anonymous scope).
+
+A declaration's qualified name is the name of what holds it, then its own name. The holder is declared in the grammar table (`GrammarSpec` in `grammars.py`), not by file or name:
+
+| Holder | Grammars | Qualified name |
+|---|---|---|
+| Class, interface, struct, enum, trait, module, namespace (a block) | all | `Holder.name`, nested holders chained |
+| Receiver type of a method | Go (`receiver_field`) | `A.Run` for `func (a *A) Run()`; `*` and type parameters dropped |
+| `Scope::` of a definition outside its class | C, C++ (`scoped_name_kinds`) | `A.run` for `int A::run() {...}` |
+| Type an impl is for | Rust (`name_fields`) | impl named `Trait for Type` (`Type` for an inherent impl) |
+| Object literal, TypeScript object type | JavaScript, TypeScript, TSX (`object_kinds`) | no name; told apart by the byte where the literal starts |
+| Anonymous class, enum constant or entry body | Java, PHP, Kotlin (`object_kinds`) | same |
+| Unnamed class (`const A = class {...}`, `export default class {...}`) | JavaScript, TypeScript | same |
+| Ruby `do ... end` or `{ ... }` block, `class << self` | Ruby | same |
+
+In JavaScript, TypeScript and TSX an object-literal property whose value is a function (`name: () => {...}`, `name: function () {...}`) is a method unit with its own range (`property_kinds`); the literal's own lines stay with the file's module code. A TypeScript `namespace`, `module` or `declare module` block is a holder with a body (`bodied_kinds`); the statement forms PHP `namespace N;` and C# `namespace N;` are not holders, so two statement-form namespaces of one PHP file that declare one name are one unit. Two declarations of one name that this table does not separate stay one unit. A run frozen before these fields existed has no anonymous-scope field and, for Go, C++ and Rust, the old names; it keeps the units it was made with.
+
 ## Worked example: cJSON, step by step
 
 This is the step-by-step run that the README's earlier Quickstart documented. It was written and run at an earlier version of CBE (before the program-built module tree), on four files of [cJSON](https://github.com/DaveGamble/cJSON) at commit `6d9f244`. Steps 1–3 run locally and make no model call. Step 5 needs a model. The outputs shown are from that earlier run; the graph counts and the generation figures in particular differ at the current version (see the README, "How well does it work").

@@ -49,6 +49,9 @@ class _Declaration:
     ancestors: tuple[str, ...] = ()
     signature: str = ""
     exclusive_end_byte: int | None = None
+    #: start byte of the anonymous scope that holds this declaration (an object literal, an
+    #: anonymous class, an unnamed class), inherited from the parent; ``None`` in a named scope
+    scope_anchor: int | None = None
 
 
 def _text(offsets: OffsetMap, start_byte: int, end_byte: int) -> str:
@@ -231,6 +234,25 @@ def _ordinary_name(spec: GrammarSpec, offsets: OffsetMap, node: Any, scope: str 
     return ", ".join(_text(offsets, child.start_byte, child.end_byte) for child in names)
 
 
+def _declared_owner(spec: GrammarSpec, offsets: OffsetMap, node: Any) -> tuple[str, str | None]:
+    """The owner a declaration is named under and its own name, when its syntax spells them:
+    a Go method's receiver type, the ``A::`` of a C++ ``A::run`` definition."""
+    receiver = node.child_by_field_name(spec.receiver_field) if spec.receiver_field else None
+    while receiver is not None and receiver.type not in _IDENTIFIER_TYPES:
+        receiver = receiver.child_by_field_name("type") or next(iter(receiver.named_children), None)
+    if receiver is not None:
+        return _text(offsets, receiver.start_byte, receiver.end_byte), None
+    scoped, scopes = node.child_by_field_name("declarator"), []
+    while scoped is not None and spec.scoped_name_kinds and scoped.type not in spec.scoped_name_kinds:
+        scoped = scoped.child_by_field_name("declarator")
+    while scoped is not None and scoped.type in spec.scoped_name_kinds:
+        scopes += [_text(offsets, part.start_byte, part.end_byte) for part in [scoped.child_by_field_name("scope")] if part]
+        scoped = scoped.child_by_field_name("name")
+    if not scopes or scoped is None:
+        return "", None
+    return ".".join(scopes).replace("::", "."), _text(offsets, scoped.start_byte, scoped.end_byte)
+
+
 class _DeclarationExtractor:
     def __init__(self, spec: GrammarSpec, offsets: OffsetMap, root: Any, path: str) -> None:
         self.spec = spec
@@ -249,6 +271,11 @@ class _DeclarationExtractor:
                 self.header_root = _make_parser(self.cpp_spec).parse(offsets.raw).root_node
             except (ImportError, AttributeError):
                 pass  # Without scope evidence, leave uncertain declarations residual.
+
+    def _add(self, decl: _Declaration, parent: _Declaration | None) -> None:
+        self.declarations.append(decl)
+        if parent is not None:
+            parent.children.append(decl)
 
     def header_scope_matches(self, node: Any, name: str) -> bool:
         if not self.check_header_scope or node.type in {"preproc_def", "preproc_function_def"}:
@@ -285,7 +312,25 @@ class _DeclarationExtractor:
                         if decl.kind != "module_region" or not any(
                             other is not decl and decl.start_byte <= other.start_byte
                             and other.end_byte <= decl.end_byte for other in self.declarations)]
+        self._anchor_scopes(declarations)
         return _coalesce_declarations(self.offsets, declarations)
+
+    def _anchor_scopes(self, declarations: list[_Declaration]) -> None:
+        """Record the anonymous scope that holds each declaration: two object literals, two
+        anonymous classes or two unnamed classes are two scopes, however alike their members."""
+        by_id = {decl.symbol_id: decl for decl in declarations}
+        for decl in declarations:
+            if decl.scope_anchor is not None:
+                continue  # an unnamed declaration is its own scope
+            owner = by_id.get(decl.parent_id) if decl.parent_id else None
+            ancestor = decl.node.parent
+            while ancestor is not None and (owner is None or ancestor != owner.node):
+                if ancestor.type in self.spec.object_kinds:
+                    decl.scope_anchor = ancestor.start_byte
+                    break
+                ancestor = ancestor.parent
+            if decl.scope_anchor is None and owner is not None:
+                decl.scope_anchor = owner.scope_anchor
 
     def visit(
         self,
@@ -315,6 +360,26 @@ class _DeclarationExtractor:
             self.visit_go_type(node, parent, prefix)
             return
 
+        if ntype in self.spec.object_kinds:
+            # An object literal is a scope, not a declaration. What a wrapper prefix
+            # (``export default``, ``const x =``) puts in front belongs to the whole literal,
+            # never to the first member inside it, so each member starts at its own text.
+            for child in node.named_children:
+                self.visit(child, parent, scope, [None])
+            return
+
+        if ntype in self.spec.property_kinds:
+            value = node.child_by_field_name("value")
+            key = node.child_by_field_name("key")
+            if value is not None and key is not None and value.type in self.spec.value_function_kinds:
+                # ``name: (a) => {...}`` / ``name: function () {...}`` is a method of the
+                # object, the same as the shorthand ``name(a) {...}``: one unit, its own range.
+                decl = _make_declaration(self.offsets, node, self.path, parent, "method", None,
+                                         name=_text(self.offsets, key.start_byte, key.end_byte))
+                self._add(decl, parent)
+                self.visit(value, decl, "function", [None])
+                return
+
         if ntype in self.spec.class_kinds:
             if not _is_type_definition(self.spec, node):
                 # C/C++ type reference or forward declaration: not a chunk
@@ -322,12 +387,13 @@ class _DeclarationExtractor:
                 for child in node.named_children:
                     self.visit(child, parent, scope, prefix)
                 return
+            fields = self.spec.name_fields.get(ntype, ())
+            spelled = " for ".join(" ".join(_text(self.offsets, part.start_byte, part.end_byte).split())
+                                   for part in map(node.child_by_field_name, fields) if part).replace("::", ".")
             decl = _make_declaration(
-                self.offsets, node, self.path, parent, self.spec.class_kinds[ntype], prefix[0])
+                self.offsets, node, self.path, parent, self.spec.class_kinds[ntype], prefix[0], name=spelled or None)
             prefix[0] = None
-            self.declarations.append(decl)
-            if parent is not None:
-                parent.children.append(decl)
+            self._add(decl, parent)
             child_scope = scope if decl.kind in {"namespace", "module"} or self.spec.preserve_type_scope else "class"
             for child in node.named_children:
                 self.visit(child, decl, child_scope, [None])
@@ -336,11 +402,10 @@ class _DeclarationExtractor:
         if ntype in self.spec.function_kinds:
             declared = self.spec.function_kinds[ntype]
             kind = "method" if declared == "function" and scope == "class" else declared
-            decl = _make_declaration(self.offsets, node, self.path, parent, kind, prefix[0])
+            owner, name = _declared_owner(self.spec, self.offsets, node)
+            decl = _make_declaration(self.offsets, node, self.path, parent, kind, prefix[0], name=name, owner=owner)
             prefix[0] = None
-            self.declarations.append(decl)
-            if parent is not None:
-                parent.children.append(decl)
+            self._add(decl, parent)
             for child in node.named_children:
                 self.visit(child, decl, "function", [None])
             return
@@ -351,9 +416,7 @@ class _DeclarationExtractor:
                 kind = "method" if scope == "class" else "function"
                 decl = _make_declaration(self.offsets, node, self.path, parent, kind, prefix[0])
                 prefix[0] = None
-                self.declarations.append(decl)
-                if parent is not None:
-                    parent.children.append(decl)
+                self._add(decl, parent)
                 self.visit(value, decl, "function", [None])
                 return
             # Function bindings retain their established extraction path.
@@ -371,15 +434,11 @@ class _DeclarationExtractor:
                 legacy.exclusive_end_byte = (child.end_byte if owns_first else child.start_byte)
                 if len(specs) == 1 and owns_first:
                     legacy.exclusive_end_byte = None
-                self.declarations.append(legacy)
-                if parent is not None:
-                    parent.children.append(legacy)
+                self._add(legacy, parent)
                 if owns_first:
                     continue
             decl = _make_declaration(self.offsets, child, self.path, parent, "module_region", None)
-            self.declarations.append(decl)
-            if parent is not None:
-                parent.children.append(decl)
+            self._add(decl, parent)
 
     def visit_ordinary(
         self, node: Any, parent: _Declaration | None, scope: str | None, prefix: list[int | None]
@@ -431,9 +490,7 @@ class _DeclarationExtractor:
             prefix[0] = None
             if node.type == "variable_declarator" and node == node.parent.named_children[-1]:
                 decl.end_byte = node.parent.end_byte
-            self.declarations.append(decl)
-            if parent is not None:
-                parent.children.append(decl)
+            self._add(decl, parent)
             return
         for child in node.named_children:
             self.visit(child, parent, scope, prefix)
@@ -484,14 +541,15 @@ def _coalesce_declarations(offsets: OffsetMap, declarations: list[_Declaration])
 
 
 def _is_type_definition(spec: GrammarSpec, node: Any) -> bool:
-    """True when a C/C++ type node actually defines a body.
+    """True when a type node actually defines a body.
 
     ``struct Point p = {...}`` and ``class Foo;`` carry a type node without a
-    body and must not split the enclosing function or introduce a chunk.
-    Other grammars only emit type declaration nodes for real definitions.
+    body and must not split the enclosing function or introduce a chunk; nor does PHP's
+    ``namespace N;`` (``bodied_kinds``). Other grammars only emit type declaration nodes
+    for real definitions.
     """
 
-    if not spec.c_declaration_rules:
+    if not spec.c_declaration_rules and node.type not in spec.bodied_kinds:
         return True
     return node.child_by_field_name("body") is not None
 
@@ -505,14 +563,15 @@ def _make_declaration(
     extend_start: int | None,
     *,
     name: str | None = None,
+    owner: str = "",
 ) -> _Declaration:
     start_byte = node.start_byte
     if extend_start is not None:
         start_byte = min(start_byte, extend_start)
     end_byte = node.end_byte
     name = name if name is not None else _node_name(offsets, node)
-    scope = parent.qualified_name if parent is not None else ""
-    qualified = f"{parent.qualified_name}.{name}" if parent is not None and name else (name or scope)
+    scope = ".".join(part for part in (parent.qualified_name if parent is not None else "", owner) if part)
+    qualified = f"{scope}.{name}" if scope and name else (name or scope)
     symbol_id = canonical_symbol_id(path, kind, qualified or name, start_byte)
     ancestors = (parent.ancestors + (parent.qualified_name,)) if parent is not None else ()
     body_start = _body_start(node)
@@ -532,6 +591,7 @@ def _make_declaration(
         end_byte=end_byte,
         ancestors=ancestors,
         signature=signature,
+        scope_anchor=None if name else start_byte,
     )
 
 

@@ -209,6 +209,7 @@ class _ChunkPlan:
     full_end_byte: int
     segment_index: int
     segment_count: int
+    scope_anchor: int | None = None
 
 
 def _plan_chunks(
@@ -273,6 +274,7 @@ def _plan_chunks(
                 full_end_byte=decl.end_byte,
                 segment_index=index,
                 segment_count=count,
+                scope_anchor=decl.scope_anchor,
             )
         )
 
@@ -362,7 +364,7 @@ def _chunk_from_plan(plan: _ChunkPlan, offsets: OffsetMap, starts: tuple[int, ..
     chunk_id = plan.symbol_id
     if plan.segment_count > 1:
         chunk_id = f"{chunk_id}::s{plan.segment_index}"
-    return {
+    chunk = {
         "id": chunk_id,
         "path": plan.path,
         "language": plan.language,
@@ -385,6 +387,10 @@ def _chunk_from_plan(plan: _ChunkPlan, offsets: OffsetMap, starts: tuple[int, ..
         "full_start_byte": plan.full_start_byte,
         "full_end_byte": plan.full_end_byte,
     }
+    if plan.scope_anchor is not None:
+        # Only a declaration inside an object literal carries it: the literal is its scope.
+        chunk["scope_anchor"] = plan.scope_anchor
+    return chunk
 
 
 # ---------------------------------------------------------------------------

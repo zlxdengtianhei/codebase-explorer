@@ -48,7 +48,7 @@ from pathlib import Path
 from typing import Any, Iterator
 
 from cbe import (aggregation, batching, build_page, catalog_query, checks, docs, grounding, layers,
-                  page_budget, prompts, skeleton, symbols, treename)
+                  page_budget, parts, prompts, skeleton, symbols, treename)
 from cbe import __version__
 from cbe import source_context
 from cbe.grammars import ContextError
@@ -173,6 +173,16 @@ def _build_context(repo: Path, paths: list[str],
 
 
 def _semantic_units(run_dir: Path, state: dict[str, Any]) -> tuple[dict[str, dict], dict[str, dict]]:
+    """The detail units plus the whole units of cut units (see ``cbe.parts``)."""
+    units, dispositions = _detail_units(run_dir, state)
+    for task in state["tasks"].values():
+        answer = _accepted(run_dir, task["id"]) if task["kind"] == "whole" and task["status"] == "done" else None
+        if answer:
+            units[task["unit"]] = parts.whole_unit(task, answer["explain"])
+    return units, dispositions
+
+
+def _detail_units(run_dir: Path, state: dict[str, Any]) -> tuple[dict[str, dict], dict[str, dict]]:
     """Merge accepted module/repair detail payloads into (units, dispositions).
 
     A repair output supersedes its module's original output, matching
@@ -218,6 +228,8 @@ def _order(task: dict[str, Any]) -> tuple:
         return (4, task["module"] or 0)
     if kind == "overview":
         return (5, 0)
+    if kind == "whole":
+        return (2.5, task["id"])
     if kind == "build":
         return (0, 0)   # reads no source and waits for nothing, so it runs beside the detail
     return (9, 0)
@@ -282,6 +294,9 @@ def _detail_fingerprint(run_dir: Path, state: dict[str, Any]) -> str:
         path = state_dir(run_dir) / "accepted" / f"{tid}.json"
         if state["tasks"][tid]["status"] == "done" and path.is_file():
             digest.update(path.read_bytes())
+    for tid, task in state["tasks"].items():
+        if task["kind"] == "whole" and task["status"] == "done":
+            digest.update((state_dir(run_dir) / "accepted" / f"{tid}.json").read_bytes())
     return digest.hexdigest()
 
 
@@ -347,6 +362,24 @@ def _invalidate_clustering(run_dir: Path, state: dict[str, Any]) -> None:
     state.pop("clustering", None)
 
 
+def _drop_wholes(run_dir: Path, state: dict[str, Any]) -> None:
+    """Forget the whole-unit tasks (their pieces changed); the next call plans them again."""
+    for tid, task in list(state["tasks"].items()):
+        if task["kind"] == "whole":
+            del state["tasks"][tid]
+            (state_dir(run_dir) / "accepted" / f"{tid}.json").unlink(missing_ok=True)
+    state.pop("wholes", None)
+
+
+def _prepare_wholes(run_dir: Path, state: dict[str, Any]) -> bool:
+    """Queue one task per cut unit whose pieces are all explained; True once all are settled."""
+    if "wholes" not in state:
+        wholes = parts.whole_tasks(_detail_units(run_dir, state)[0], state["inventory"])
+        state["tasks"].update({f"whole_{n}": _task(f"whole_{n}", "whole", **row) for n, row in enumerate(wholes, 1)})
+        state["wholes"] = len(wholes)
+    return all(_settled(state, task) for task in state["tasks"].values() if task["kind"] == "whole")
+
+
 def _prepare_layers(run_dir: Path, state: dict[str, Any]) -> None:
     """Once all detail and review is settled, group it layer by layer (design 2.3).
 
@@ -356,6 +389,8 @@ def _prepare_layers(run_dir: Path, state: dict[str, Any]) -> None:
     tasks = state["tasks"]
     if not _done_modules(state) or not all(
             _settled(state, task) for task in tasks.values() if task["kind"] in {"module", "repair", "review"}):
+        return
+    if not _prepare_wholes(run_dir, state):
         return
     fingerprint = _detail_fingerprint(run_dir, state)
     clustering = state.get("clustering")
@@ -424,9 +459,11 @@ def _known_unit_ids(run_dir: Path, state: dict[str, Any], *, exclude: int | None
 
 def _module_inventory_ids(state: dict[str, Any], module: dict[str, Any]) -> list[str]:
     inventory = state.get("inventory") or {}
+    keep = (module.get("part") or {}).get("ids")
     return [symbol["id"]
             for path in module["files"]
-            for symbol in (inventory.get(path) or {}).get("symbols") or []]
+            for symbol in (inventory.get(path) or {}).get("symbols") or []
+            if keep is None or symbol["id"] in keep]
 
 
 def _auto_complete_empty_modules(run_dir: Path, state: dict[str, Any]) -> list[str]:
@@ -649,6 +686,7 @@ def plan(repo: Path, run_dir: Path | None = None, *, review: str = DEFAULT_REVIE
     selected = [item.path for item in files]
     context = _build_context(repo, selected, graph_path=graph_path)
     symbols.ensure_chunk_coverage(context, repo, selected)
+    modules = parts.split_modules(modules, context, batch_max_tokens)
     inventory = symbols.inventory_from_context(context, selected)
     tasks: dict[str, dict[str, Any]] = {}
     for module in modules:
@@ -669,7 +707,8 @@ def plan(repo: Path, run_dir: Path | None = None, *, review: str = DEFAULT_REVIE
         "inventory": inventory,
         "files": [{"path": item.path, "tokens": item.tokens, "digest": item.digest} for item in files],
         "modules": [{"number": module.number, "bucket": module.bucket, "title": batching.fallback_title(module),
-                     "files": [item.path for item in module.files]} for module in modules],
+                     "files": [item.path for item in module.files],
+                     **({"part": module.part} if module.part else {})} for module in modules],
         "tasks": tasks, "rendered": False, "verify": None,
         "runtime_environments": [_runtime_environment()],
     }
@@ -784,7 +823,7 @@ def _ready(state: dict[str, Any]) -> list[str]:
         kind = task["kind"]
         if kind in {"module", "repair"}:
             ok = True
-        elif kind in {"layer", "overview", "build"}:
+        elif kind in {"layer", "overview", "build", "whole"}:
             ok = True
         elif kind == "review":
             ok = _module_task(state, task["module"])["status"] == "done"
@@ -809,6 +848,7 @@ def _detail_task(run_dir: Path, state: dict[str, Any], task: dict[str, Any], *, 
     source blocks (design 2.2), never the whole batch again. A task whose earlier answer
     was too long gets ``shorten``: only those units, with their own source."""
     paths = list(state["modules"][task["module"]]["files"])
+    part = state["modules"][task["module"]].get("part")
     _assert_paths_unchanged(state, paths)
     context = _verified_context(run_dir, state)
     wanted = set(paths)
@@ -833,7 +873,7 @@ def _detail_task(run_dir: Path, state: dict[str, Any], task: dict[str, Any], *, 
             invalid=invalid, problem=problem, embed=embed)
     return prompts.detail_prompt(
         paths, state["inventory"], chunks=chunks, source_root=source_root,
-        context_diagnostics=diagnostics if with_diagnostics else None, issues=issues, embed=embed)
+        context_diagnostics=diagnostics if with_diagnostics else None, issues=issues, embed=embed, part=part)
 
 
 def _detail_source_tokens(run_dir: Path, state: dict[str, Any], task: dict[str, Any], *,
@@ -852,8 +892,8 @@ def _detail_source_tokens(run_dir: Path, state: dict[str, Any], task: dict[str, 
         covered = {sid for unit in units for sid in checks.covered_ids([unit], table)} | set(shorten)
         return sum(sources[sid]["tokens"] for sid in covered if sid in sources)
     only = {row["id"] for row in gaps[0]} if gaps else None
-    return prompts.embedded_source_tokens(paths, context.get("chunks") or [],
-                                          Path(state["repo"]), only=only)
+    return prompts.embedded_source_tokens(paths, context.get("chunks") or [], Path(state["repo"]), only=only,
+                                          part=state["modules"][task["module"]].get("part"))
 
 
 def _layer_body(run_dir: Path, state: dict[str, Any], task: dict[str, Any]) -> str:
@@ -897,6 +937,8 @@ def _body(run_dir: Path, state: dict[str, Any], task: dict[str, Any], *,
     sent twice. Layer and overview tasks never read source."""
     kind = task["kind"]
     reading = prompts.NO_FILE_RULES if embed or state.get("driver") == "script" else prompts.FILE_TASK_RULES
+    if kind in {"module", "repair", "review"} and "part" in state["modules"][task["module"]]:
+        reading = reading.replace(prompts.FILE_TASK_RULES, prompts.PART_TASK_RULES)
     no_source = prompts.NO_FILE_RULES
     if not embed and state.get("driver") != "script":
         no_source += (" Use your file-writing tool to write the result JSON. "
@@ -911,6 +953,8 @@ def _body(run_dir: Path, state: dict[str, Any], task: dict[str, Any], *,
         return no_source, _layer_body(run_dir, state, task), 0
     if kind == "overview":
         return no_source, _overview_body(run_dir, state), 0
+    if kind == "whole":
+        return no_source, parts.whole_prompt(task, _detail_units(run_dir, state)[0], state["inventory"]), 0
     if kind == "build":
         return no_source, build_page.prompt(Path(state["repo"]).name, _build_inputs(run_dir)), 0
     if kind == "review":
@@ -1033,6 +1077,8 @@ def _checks(run_dir: Path, state: dict[str, Any], task: dict[str, Any]) -> tuple
     """(strict check, normalizer) for a non-detail task; both mutate the value they accept."""
     if task["kind"] == "review":
         return checks.check_review, checks.normalize_review
+    if task["kind"] == "whole":
+        return parts.check_whole, parts.normalize_whole
     if task["kind"] == "build":
         inputs = _build_inputs(run_dir)
         return (lambda value: build_page.check(value, inputs),
@@ -1058,7 +1104,8 @@ def _load_partial(run_dir: Path, task_id: str) -> dict[str, Any]:
 
 
 def _detail_table(state: dict[str, Any], task: dict[str, Any]) -> list[dict]:
-    return symbols.batch_table(state["modules"][task["module"]]["files"], state["inventory"])
+    module = state["modules"][task["module"]]
+    return symbols.batch_table(module["files"], state["inventory"], only=(module.get("part") or {}).get("ids"))
 
 
 def _detail_sources(run_dir: Path, state: dict[str, Any], table: list[dict]) -> dict[str, dict]:
@@ -1493,6 +1540,7 @@ def _apply_submit(run_dir: Path, state: dict[str, Any], task: dict[str, Any], re
     elif task["kind"] in {"module", "repair"}:
         # The layers describe a fixed detail snapshot: a repair or a late module changes
         # the unit set, so the grouping is made again when the next call asks for it.
+        _drop_wholes(run_dir, state)
         if state.get("clustering"):
             _invalidate_clustering(run_dir, state)
     _maybe_render(run_dir, state, force=task["kind"] == "overview")
@@ -2125,7 +2173,7 @@ def verify_state(run_dir: Path, state: dict[str, Any]) -> dict[str, Any]:
     changed = _drift(state)
     check("sources_unchanged", not changed, changed[:20])
     planned = [row["path"] for row in state["files"]]
-    assigned = [path for module in state["modules"] for path in module["files"]]
+    assigned = parts.covered_files(state["modules"], state["inventory"])
     duplicates = sorted({path for path in assigned if assigned.count(path) > 1})
     check("each_file_in_exactly_one_module", sorted(assigned) == sorted(planned) and not duplicates,
           {"planned": len(planned), "assigned": len(assigned), "duplicates": duplicates[:20]})

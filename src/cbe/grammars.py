@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field, replace
 from pathlib import Path, PurePosixPath
 from typing import Any
 
@@ -132,6 +132,18 @@ class GrammarSpec:
     grouped_type_declarations: bool = False
     #: type declarations retain the surrounding scope for their children
     preserve_type_scope: bool = False
+    #: object-literal node types: a scope of its own, without a declaration of its own
+    object_kinds: frozenset[str] = frozenset()
+    #: ``key: value`` entry node types of an object literal; a function value makes a method unit
+    property_kinds: frozenset[str] = frozenset()
+    #: class-like node types that are a unit only when they have a body (``namespace N {}``, not ``namespace N;``)
+    bodied_kinds: frozenset[str] = frozenset()
+    #: field of a method declaration that names the type it belongs to (a Go receiver)
+    receiver_field: str = ""
+    #: node type -> fields that spell the declared name (a Rust impl is ``Trait for Type``, not ``Trait``)
+    name_fields: dict[str, tuple[str, ...]] = field(default_factory=dict)
+    #: node types of a ``Scope::name`` declarator: the name is the last part, the scope its owner
+    scoped_name_kinds: frozenset[str] = frozenset()
 
 
 #: Frontend coverage for the languages already registered above.
@@ -185,6 +197,7 @@ GRAMMARS: tuple[GrammarSpec, ...] = (
         ),
         c_declaration_rules=True,
         recovery_type_keywords=frozenset({"class"}),
+        scoped_name_kinds=frozenset({"qualified_identifier"}),
     ),
     GrammarSpec(
         name="cpp",
@@ -207,6 +220,7 @@ GRAMMARS: tuple[GrammarSpec, ...] = (
         ),
         c_declaration_rules=True,
         recovery_type_keywords=frozenset({"import", "module"}),
+        scoped_name_kinds=frozenset({"qualified_identifier"}),
     ),
     GrammarSpec(
         name="python",
@@ -239,6 +253,8 @@ GRAMMARS: tuple[GrammarSpec, ...] = (
         binding_kinds=frozenset({"variable_declarator"}),
         ordinary_declaration_kinds=frozenset({"variable_declarator"}),
         ordinary_name_style="bindings",
+        object_kinds=frozenset({"object"}),
+        property_kinds=frozenset({"pair"}),
     ),
     GrammarSpec(
         name="typescript",
@@ -258,6 +274,9 @@ GRAMMARS: tuple[GrammarSpec, ...] = (
             "interface_declaration": "interface",
             "enum_declaration": "enum",
             "type_alias_declaration": "type_alias",
+            "internal_module": "namespace",
+            "module": "module",
+            "class": "class",
         },
         wrappers=frozenset(
             {"export_statement", "ambient_declaration", "lexical_declaration", "variable_declaration", "declare_statement"}
@@ -266,6 +285,9 @@ GRAMMARS: tuple[GrammarSpec, ...] = (
         binding_kinds=frozenset({"variable_declarator"}),
         ordinary_declaration_kinds=frozenset({"variable_declarator"}),
         ordinary_name_style="bindings",
+        object_kinds=frozenset({"object", "object_type"}),
+        property_kinds=frozenset({"pair"}),
+        bodied_kinds=frozenset({"module"}),
     ),
     GrammarSpec(
         name="java",
@@ -288,6 +310,7 @@ GRAMMARS: tuple[GrammarSpec, ...] = (
         ordinary_declaration_kinds=frozenset({"field_declaration", "constant_declaration"}),
         ordinary_name_style="fields",
         ordinary_in_class_scope=True,
+        object_kinds=frozenset({"object_creation_expression", "enum_constant"}),
     ),
     GrammarSpec(
         name="go",
@@ -305,6 +328,7 @@ GRAMMARS: tuple[GrammarSpec, ...] = (
         ordinary_name_style="grouped_names",
         grouped_type_declarations=True,
         preserve_type_scope=True,
+        receiver_field="receiver",
     ),
     # --- Joern extra native frontends, wired with mature tree-sitter grammars ---
     GrammarSpec(
@@ -320,6 +344,7 @@ GRAMMARS: tuple[GrammarSpec, ...] = (
         ordinary_declaration_kinds=frozenset({"assignment"}),
         ordinary_name_style="constants",
         ordinary_in_class_scope=True,
+        object_kinds=frozenset({"do_block", "block"}),
     ),
     GrammarSpec(
         name="rust",
@@ -338,6 +363,7 @@ GRAMMARS: tuple[GrammarSpec, ...] = (
         wrappers=frozenset(),
         value_function_kinds=frozenset(),
         joern_frontends=("rust2cpg",),
+        name_fields={"impl_item": ("trait", "type")},
     ),
     GrammarSpec(
         name="php",
@@ -350,10 +376,13 @@ GRAMMARS: tuple[GrammarSpec, ...] = (
             "interface_declaration": "interface",
             "trait_declaration": "trait",
             "enum_declaration": "enum",
+            "namespace_definition": "namespace",
         },
         wrappers=frozenset(),
         value_function_kinds=frozenset(),
         joern_frontends=("php2cpg",),
+        bodied_kinds=frozenset({"namespace_definition"}),
+        object_kinds=frozenset({"anonymous_class"}),
     ),
     GrammarSpec(
         name="c_sharp",
@@ -390,6 +419,7 @@ GRAMMARS: tuple[GrammarSpec, ...] = (
         value_function_kinds=frozenset(),
         provenance="community",
         joern_frontends=("kotlin2cpg",),
+        object_kinds=frozenset({"object_literal", "enum_entry"}),
     ),
     GrammarSpec(
         name="swift",
@@ -416,19 +446,7 @@ GRAMMARS: tuple[GrammarSpec, ...] = (
 )
 
 # TSX shares the TypeScript package but a different language function.
-_TSX_SPEC = GrammarSpec(
-    name="tsx",
-    suffixes=(".tsx",),
-    module="tree_sitter_typescript",
-    attr="language_tsx",
-    function_kinds=GRAMMARS[4].function_kinds,
-    class_kinds=GRAMMARS[4].class_kinds,
-    wrappers=GRAMMARS[4].wrappers,
-    value_function_kinds=_VARIABLE_FUNCTION_VALUES,
-    binding_kinds=frozenset({"variable_declarator"}),
-    ordinary_declaration_kinds=GRAMMARS[4].ordinary_declaration_kinds,
-    ordinary_name_style=GRAMMARS[4].ordinary_name_style,
-)
+_TSX_SPEC = replace(GRAMMARS[4], name="tsx", suffixes=(".tsx",), attr="language_tsx")
 
 #: Extra specs added at runtime by ``register_language`` or a ``cbe.languages``
 #: entry point.  This is the unified extension seam: a grammar pack makes a

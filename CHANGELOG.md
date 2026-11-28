@@ -1,5 +1,76 @@
 # Changelog
 
+## Unreleased
+
+- **Units: function-valued object properties, and the scope a name is declared in.**
+  - *Now a unit:* in JavaScript, TypeScript and TSX, an object-literal property whose value is a
+    function (`name: (a) => {...}`, `name: function () {...}`) is a method unit with its own line
+    range, the same as the shorthand `name(a) {...}`. The literal's own lines stay with the
+    file's module code, so the first shorthand method of a literal no longer takes the
+    `export default {` head and no longer covers the whole literal (`chartjs`,
+    `src/plugins/plugin.decimation.js`: `destroy` was L197-286 and `beforeElementsUpdate` was no unit).
+    Also new as declarations: TypeScript `namespace`, `module` and `declare module` blocks
+    (as in C++ and C#, the block's own lines are `module_region` rows between its members), and
+    TypeScript `class` expressions (as in JavaScript).
+  - *No longer folded:* the inventory used to merge chunks by bare name, so two declarations of
+    one name in different scopes were one unit, explained once (flask: `open_session` of
+    `SessionInterface` and of `SecureCookieSessionInterface`). The merge key is now
+    (kind, qualified name, anonymous scope), and a declaration is named under what holds it: a
+    class, interface, struct, enum, trait, module or namespace (all grammars); an object
+    literal, a TypeScript object type, an anonymous class (`new X() {...}` in Java, `new class`
+    in PHP, `object : T {...}` in Kotlin), an enum constant or entry body (Java, Kotlin), an
+    unnamed class (`const A = class {...}`, `export default class {...}`), a Ruby block
+    (`describe ... do`) and a Ruby `class << self`, each told apart by where it starts; the
+    receiver type of a Go method (`func (a *A) Run()` is `A.Run`; pointer and type parameters
+    are dropped); the `A::` of a C or C++ out-of-class definition (`int A::run()` is `A.run`;
+    it used to be named `A`, so `A::run` and `A::stop` were one unit); and the type an impl is
+    for in Rust (an impl is named `Trait for Type`, it was named after the trait only, so
+    `impl Display for A` and `impl Display for B` were one unit). The rule is in the grammar
+    table (`GrammarSpec`: `object_kinds`, `property_kinds`, `bodied_kinds`, `receiver_field`,
+    `name_fields`, `scoped_name_kinds`), not in the code that merges. Unit ids of Go methods,
+    C++ out-of-class definitions and Rust impls change with it (`a.go::method::A.Run::44`).
+  - *Still merged:* chunks of one name in one scope: a TypeScript overload signature and its
+    implementation, a Python property getter and setter, a JavaScript or TypeScript getter and
+    setter, C++ overloads in one scope, the `::sN` parts of one long declaration, and a
+    static method with an instance method of the same name in one class (JavaScript, Ruby).
+    Not told apart: declarations after a `namespace N;` statement in PHP or C#. The statement is
+    not a block, so a later declaration is a sibling of it, not inside it; a PHP file that
+    declares two statement-form namespaces and one name in both keeps them as one unit.
+  - *Existing runs:* a run frozen before this change has no scope fields in its inventory and
+    keeps its units: the unit table of the three frozen runs we compared (`flask` and `chartjs`
+    made at 3.1.0, `openworkflow` at 3.2.0) is the same row for row. A new `cbe host plan` makes
+    more units. Counted on four repositories (`chartjs` is the name of the clone directory), the
+    unit table has, at 3.2.0 and now: `flask` 1,497 and 1,776; `chartjs` 2,658 and 3,151;
+    `openworkflow` 1,108 and 1,192; `lodash` 516 and 525. The counted checkouts are `flask`
+    49943b5a, `chartjs` ff1bdc38, `openworkflow` 71778a8 and `lodash` 4.17.21 (`lodash.js` and
+    its `fp/` files, a copy of the npm release, not a git checkout); for `flask` and `chartjs`
+    the files are the 85 and 746 of an earlier run's file list, for the other two the default
+    file selection. By file path (a `test`, `tests`, `spec` or `fixtures` directory, or a
+    `*.test.*` file), most of the extra units are in tests and fixtures: `flask` +228 of +279,
+    `chartjs` +342 of +493, `openworkflow` +46 of +84, `lodash` 0 of +9. The extra units include
+    three kinds of declaration: same-name declarations that were folded (`flask`: 121
+    folded rows, 102 now apart); declarations made from a function-valued property (`chartjs`
+    413, `openworkflow` 66, `lodash` 6); and `module_region` rows of TypeScript namespaces and
+    `declare module` blocks (`chartjs` +2 and `openworkflow` +14 over the units of the commit
+    before this one). A one-line unit counts as a unit like any other.
+- A source file over the reading-batch maximum (`batch_max_tokens`, 25,000) is no longer an
+  error above 60,000 tokens and no longer one oversized batch between 25,000 and 60,000. It is
+  cut into parts of about equal size, one reading batch each: whole units go together, a unit
+  that alone is over the limit is cut at slice boundaries and then at line ends, and its pieces
+  are units named `<name> (part k of N)`; pieces of one unit that land in the same part are one
+  unit, `<name> (part k-j of N)`. Each part's prompt starts with a fixed one-line note (file,
+  part number) that counts against the same limit. `cbe host plan` stores the part in each
+  batch of `state.json` (`modules[].part`). A file within the limit is planned and prompted
+  exactly as before.
+- When every piece of a cut unit is explained, one more `whole_N` task writes that unit's own
+  short explanation from the pieces' explanations alone (no source). It appears as a group
+  unit `grp:<name>-whole`, titled `<name>` on pages, whose `pieces` are the pieces; the pieces
+  keep their own units. A piece's record in `catalog.json` carries `piece` (`of`, `name`,
+  `first`, `last`, `count`), `piece_of` (the whole's id) and `siblings` (the other pieces), and
+  `cbe query` prints them. Calls into a cut function are attached to the whole (its `incoming`;
+  a piece has none, and the dependency edges between units end at the whole); a call made
+  inside a cut unit stays with the piece it is in. The raw edge table is unchanged.
+
 ## 3.2.0 (2026-11-24)
 
 - Pages are now cut by a token budget at render time instead of one page per tree node.

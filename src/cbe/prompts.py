@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from cbe import symbols
+from cbe import parts, symbols
 from cbe.token_budget import count_text_tokens
 
 
@@ -21,6 +21,10 @@ FILE_TASK_RULES = (
     "(If your harness has no file-reading or file-writing tool, use the plainest command that reads or writes that one file.) "
     "Separate observed syntax from inferred behavior; state uncertainty instead "
     "of inventing runtime facts. Be concise.")
+#: A part of a long file: only the listed line spans are read, never the whole file.
+PART_TASK_RULES = FILE_TASK_RULES.replace(
+    "Read every listed source file completely with your file-reading tool; page through long files. ",
+    "Read only the listed line spans of the listed file with your file-reading tool. ")
 NO_FILE_RULES = (
     "Everything you need is in this file. Do not read source files, run code, search the web, or modify "
     "the repository. Do not invent details that the supplied material does not show.")
@@ -43,7 +47,8 @@ DETAIL_STYLE = """DETAIL STYLE:
 - `extras` (optional list): {"topic": condition|failure|side_effect|field|contract, "note": one statement} only when the explain cannot carry it."""
 
 
-def symbol_lines(paths: list[str], inventory: dict[str, dict], table: list[dict]) -> list[str]:
+def symbol_lines(paths: list[str], inventory: dict[str, dict], table: list[dict],
+                 part: dict | None = None) -> list[str]:
     """The numbered symbol list: one line per symbol, grouped by file."""
     rows_by_path: dict[str, list[dict]] = {}
     for row in table:
@@ -51,7 +56,8 @@ def symbol_lines(paths: list[str], inventory: dict[str, dict], table: list[dict]
     lines = []
     for path in paths:
         entry = inventory[path]
-        lines.append(f"== {path} ({entry.get('tokens', 0)} tokens)"
+        shown = f"part {part['index']} of {part['count']}, " if part else ""
+        lines.append(f"== {path} ({shown}{entry.get('tokens', 0)} tokens)"
                      + (" [empty file: no symbols]" if entry.get("known_empty") else ""))
         for row in rows_by_path.get(path, []):
             spans = ",".join(f"{a}-{b}" for a, b in row["lines"])
@@ -105,23 +111,25 @@ def detail_prompt(paths: list[str], inventory: dict[str, dict], *,
                   source_root: Path | None = None,
                   context_diagnostics: list[dict] | None = None,
                   issues: list[str] | None = None,
-                  embed: bool = True) -> str:
-    """One detail task for a reading batch.
+                  embed: bool = True, part: dict | None = None) -> str:
+    """One detail task for a reading batch (``part``: one part of a file over the limit).
 
     ``embed=True`` is the tool-free script driver: each file's source is inlined
     once. ``embed=False`` is the host-agent driver: the prompt lists the absolute
     file paths and chunk line ranges instead, so the text is not sent twice."""
-    table = symbols.batch_table(paths, inventory)
+    table = symbols.batch_table(paths, inventory, only=part["ids"] if part else None)
     header = _detail_header()
     if issues:
         header.append("Correct these review findings without broadening claims: "
                       + json.dumps(issues, ensure_ascii=False))
-    body: list[str] = ["SYMBOLS (this batch; number, kind, name, source lines):",
-                       *symbol_lines(paths, inventory, table), ""]
+    body: list[str] = ([part["note"].rstrip("\n"), ""] if part else [])
+    body += ["SYMBOLS (this batch; number, kind, name, source lines):",
+             *symbol_lines(paths, inventory, table, part), ""]
     if context_diagnostics:
         body += ["SOURCE CONTEXT NOTES (program diagnostics, not model evidence):",
                  json.dumps(context_diagnostics[:10], ensure_ascii=False), ""]
-    body += _source_blocks(paths, inventory, chunks, source_root, embed)
+    body += _source_blocks(paths, inventory, chunks, source_root, embed,
+                           only=set(part["ids"]) if part else None, part=part)
     return "\n".join(header + body)
 
 
@@ -178,8 +186,11 @@ def gap_detail_prompt(paths: list[str], inventory: dict[str, dict], gaps: list[d
 
 def _source_blocks(paths: list[str], inventory: dict[str, dict], chunks: list[dict] | None,
                    source_root: Path | None, embed: bool,
-                   only: set[str] | None = None) -> list[str]:
+                   only: set[str] | None = None, part: dict | None = None) -> list[str]:
     """The source part of a detail prompt: whole files, or listed paths and spans."""
+    if embed and part:
+        return ["SOURCE (verbatim; the program derives all line ranges, so the model never needs to emit one):",
+                parts.source_text(paths[0], chunks or [], set(part["ids"]))]
     if embed:
         out = ["SOURCE (verbatim; the program derives all line ranges, so the model "
                "never needs to emit one):"]
@@ -199,7 +210,8 @@ def _source_blocks(paths: list[str], inventory: dict[str, dict], chunks: list[di
                             else "(source text was not available; describe only the listed symbols)")
             out += [f"==== FILE {path} ====", note]
         return out
-    out = ["SOURCE FILES (read each listed file completely; read no other file):"]
+    out = ["SOURCE FILES (read each listed file completely; read no other file):"
+           if not part else "SOURCE FILES (one part of a long file: read only the listed line spans, not the whole file; read no other file):"]
     for path in paths:
         rows = [chunk for chunk in (chunks or []) if chunk.get("path") == path
                 and (only is None or chunk["id"] in only)]
@@ -213,8 +225,11 @@ def _source_blocks(paths: list[str], inventory: dict[str, dict], chunks: list[di
 
 
 def embedded_source_tokens(paths: list[str], chunks: list[dict] | None,
-                           source_root: Path | None, only: set[str] | None = None) -> int:
+                           source_root: Path | None, only: set[str] | None = None,
+                           part: dict | None = None) -> int:
     """Program count of the source text a prompt puts in front of the model."""
+    if part and only is None:
+        return count_text_tokens(parts.source_text(paths[0], chunks or [], set(part["ids"])))
     total = 0
     for path in paths:
         text = ""

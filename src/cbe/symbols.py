@@ -45,7 +45,12 @@ def inventory_from_context(context: dict, paths: list[str] | None = None) -> dic
             kind = "module_region"
         entry["symbols"].append({
             "id": chunk["id"], "name": name, "kind": kind, "parent": None,
+            # Where the name is declared: ``Class.method`` and the object literal that holds it.
+            # A context frozen before these fields existed falls back to the bare name.
+            "qualified_name": chunk.get("qualified_name") or name,
+            "scope_anchor": chunk.get("scope_anchor"),
             "lines": [[int(chunk["start_line"]), int(chunk["end_line"])]],
+            **({"piece": chunk["piece"]} if chunk.get("piece") else {}),
         })
     for row in context.get("files") or []:
         path = row["path"]
@@ -126,17 +131,20 @@ def _merge_key(symbol: dict) -> tuple[str, ...]:
     """What makes two inventory chunks one explained symbol (design 2.1).
 
     A grammar cuts one declaration into several chunks (a long function, overloads);
-    they carry the same name, or the same declaration id for the ``::s<N>`` parts.
+    they carry the same name in the same scope, or the same declaration id for the
+    ``::s<N>`` parts. A declaration and its overload signatures, or a property getter and
+    its setter, are one thing: the same qualified name (``Class.method``) in the same
+    object literal. ``A.open`` and ``B.open`` are two things, each with its own unit.
     The leftover regions of one file are one symbol: what the file holds."""
     kind = symbol["kind"]
     if kind == "module_residual":
         return ("residual",)
     if kind in {"function", "method", "class", "type_alias", "interface"}:
-        return (kind, symbol["name"])
+        return (kind, symbol.get("qualified_name") or symbol["name"], str(symbol.get("scope_anchor")))
     return ("chunk", symbol["id"])
 
 
-def _symbol_rows(path: str, symbols: list[dict]) -> list[dict]:
+def symbol_rows(path: str, symbols: list[dict]) -> list[dict]:
     """One row per symbol: the chunks of one symbol are merged before the model sees them."""
     rows: dict[tuple[str, ...], dict] = {}
     for symbol in symbols:
@@ -145,14 +153,15 @@ def _symbol_rows(path: str, symbols: list[dict]) -> list[dict]:
         if row is None:
             rows[key] = {"id": symbol["id"], "path": path, "kind": symbol["kind"],
                          "name": symbol["name"], "lines": [list(pair) for pair in symbol["lines"]],
-                         "ids": [symbol["id"]]}
+                         "ids": [symbol["id"]], **({"piece": symbol["piece"]} if symbol.get("piece") else {})}
             continue
         row["ids"].append(symbol["id"])
         row["lines"].extend(list(pair) for pair in symbol["lines"] if list(pair) not in row["lines"])
     return list(rows.values())
 
 
-def batch_table(paths: Iterable[str], inventory: dict[str, dict]) -> list[dict]:
+def batch_table(paths: Iterable[str], inventory: dict[str, dict],
+                only: Iterable[str] | None = None) -> list[dict]:
     """The short-number table of one detail batch.
 
     Rows are ``{n, id, path, kind, name, lines, ids}``; ``n`` counts from 1 in
@@ -160,9 +169,10 @@ def batch_table(paths: Iterable[str], inventory: dict[str, dict]) -> list[dict]:
     answer decoder derive the same numbers from the frozen inventory. ``ids``
     lists every inventory id the row explains: one per declaration the grammar cut
     into parts, all of a file's leftover regions in one row (design 2.1: one detail
-    per symbol, one per file for what is left)."""
+    per symbol, one per file for what is left). ``only`` keeps the inventory ids of one part of a long file."""
     rows: list[dict] = []
+    keep = None if only is None else set(only)
     for path in paths:
-        for row in _symbol_rows(path, inventory[path]["symbols"]):
+        for row in symbol_rows(path, [s for s in inventory[path]["symbols"] if keep is None or s["id"] in keep]):
             rows.append({"n": len(rows) + 1, **row})
     return rows

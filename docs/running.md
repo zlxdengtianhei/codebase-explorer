@@ -139,8 +139,8 @@ cbe generate /absolute/path/to/repo \
 For the model `glm-5.3-flash` (under any gateway prefix, for example `zai/glm-5.3-flash` or `group/glm-5.3-flash`) selects resource defaults from
 `cbe/model_settings.py`: 1,800 seconds per call, `output_max_tokens: 49152` (including
 reasoning), `reasoning_effort: "low"`, JSON object response mode, and reading-batch target/max of
-8,000/10,000 source tokens. Whole files stay intact; a single file may exceed
-the batch maximum up to the existing 60,000-token file limit. Other API model
+8,000/10,000 source tokens. A file over the batch maximum is read in parts
+(see the batch maximum below), one reading batch per part. Other API model
 IDs retain 420 seconds, no explicit output/reasoning limit, and the original
 20,000/25,000 batch sizes.
 
@@ -170,7 +170,7 @@ The settings that CBE ships (the table above, for `zai/glm-5.3-flash`) apply onl
 | `thinking` | Sent as given in the request body, for example `{"type": "disabled"}`; this is the switch DeepSeek documents, and on an SDK it belongs in `extra_body` | not sent (DeepSeek detail tasks: `{"type": "disabled"}`; its layer and overview tasks send `reasoning_effort: "low"` instead) |
 | `response_format` | Sent as given, for example `{"type": "json_object"}` | not sent |
 | `batch_target_tokens` | Target source tokens per reading batch; must not exceed `batch_max_tokens` | 20,000 |
-| `batch_max_tokens` | Cap on source tokens per reading batch (a whole file stays intact) | 25,000 |
+| `batch_max_tokens` | Cap on source tokens per reading batch; a file over it is read in parts that each fit (source plus a fixed one-line note) and no unit is split across two parts unless it alone is over the cap (its pieces are then units of their own, named `<name> (part k of N)`, each pointing to the whole in `piece_of`, and one more task writes the whole unit's explanation from them) | 25,000 |
 | `price_per_million` | `[INPUT, OUTPUT, CACHE]` in USD per million tokens; without it the cost is `null` | not set |
 | `top_p` | Sent as given when present | not sent |
 | `temperature` | Sent with every request | 0 |

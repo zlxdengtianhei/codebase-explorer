@@ -121,7 +121,8 @@ def build_records(units: dict, dispositions: dict, inventory: dict, ranges: dict
                                   chunk.get("signature") or ""))
             symbols[sid] = {"id": sid, "kind": symbol["kind"], "name": symbol["name"],
                             "file": path, "signature": signature,
-                            "ranges": [{"path": path, "lines": symbol["lines"]}]}
+                            "ranges": [{"path": path, "lines": symbol["lines"]}],
+                            **({"piece": symbol["piece"]} if symbol.get("piece") else {})}
 
     def resolve(sid):
         return sid if sid in units else (dispositions.get(sid) or {}).get("unit")
@@ -168,6 +169,10 @@ def build_records(units: dict, dispositions: dict, inventory: dict, ranges: dict
                       internal_edge_counts=dict(internal[sid]))
 
     records = {}
+    cut: dict[str, list[str]] = defaultdict(list)  # whole id -> the units that are its pieces
+    for uid in units:
+        if "piece" in symbols.get(uid, {}):
+            cut[symbols[uid]["piece"]["of"]].append(uid)
     for uid, unit in units.items():
         declared_members = [member for member in unit.get("members") or [] if isinstance(member, str)]
         members = list(dict.fromkeys(([uid] if uid in symbols else []) + declared_members +
@@ -194,6 +199,13 @@ def build_records(units: dict, dispositions: dict, inventory: dict, ranges: dict
         record["internal_edge_counts"] = {
             kind: sum(internal[sid].get(kind, 0) for sid in members)
             for kind in (("cfg",) if no_dataflow else ("cfg", "dataflow"))}
+        piece = symbols.get(uid, {}).get("piece")
+        if piece:  # one piece of a unit cut for length: point at the whole and the other pieces
+            record.update(piece=piece, piece_of=piece["of"],
+                          siblings=[other for other in sorted(cut[piece["of"]], key=lambda x: symbols[x]["piece"]["first"])
+                                    if other != uid])
+            if piece["of"] in units:  # calls reach the unit as a whole, not its first piece
+                record["incoming"] = []
         for field in ("extras", "relations", "uncertainties"):
             record.setdefault(field, [])
         records[uid] = record
