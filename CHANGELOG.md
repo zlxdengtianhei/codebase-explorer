@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 3.3.0 (2026-11-28)
 
 - **Units: function-valued object properties, and the scope a name is declared in.**
   - *Now a unit:* in JavaScript, TypeScript and TSX, an object-literal property whose value is a
